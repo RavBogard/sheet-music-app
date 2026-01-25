@@ -48,6 +48,7 @@ export default function Home() {
   // Setlist State
   const [editingSetlist, setEditingSetlist] = useState<Setlist | null>(null)
   const [importedTracks, setImportedTracks] = useState<SetlistTrack[]>([])
+  const [suggestedSetlistName, setSuggestedSetlistName] = useState("")
   const [showImportModal, setShowImportModal] = useState(false)
 
   // 1. Initial Load
@@ -243,8 +244,9 @@ export default function Home() {
         <ImportModal
           driveFiles={driveFiles}
           onClose={() => setShowImportModal(false)}
-          onImport={(tracks) => {
+          onImport={(tracks, suggestedName) => {
             setImportedTracks(tracks)
+            setSuggestedSetlistName(suggestedName)
             setEditingSetlist(null)
             setShowImportModal(false)
             setView('setlist_editor')
@@ -259,10 +261,21 @@ export default function Home() {
     <SetlistEditor
       setlistId={editingSetlist?.id}
       initialTracks={editingSetlist?.tracks || importedTracks}
-      initialName={editingSetlist?.name || "New Setlist"}
+      initialName={editingSetlist?.name || ""}
+      suggestedName={suggestedSetlistName}
       driveFiles={driveFiles}
-      onBack={() => setView('setlist_dashboard')}
-      onSave={() => setView('setlist_dashboard')}
+      onBack={() => {
+        setEditingSetlist(null)
+        setImportedTracks([])
+        setSuggestedSetlistName("")
+        setView('setlist_dashboard')
+      }}
+      onSave={() => {
+        setEditingSetlist(null)
+        setImportedTracks([])
+        setSuggestedSetlistName("")
+        setView('setlist_dashboard')
+      }}
     />
   )
 

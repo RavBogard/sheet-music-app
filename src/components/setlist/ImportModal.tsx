@@ -4,6 +4,7 @@ import { useState } from "react"
 import { X, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { SetlistTrack } from "@/lib/setlist-firebase"
 
 interface DriveFile {
     id: string
@@ -14,7 +15,7 @@ interface DriveFile {
 interface ImportModalProps {
     driveFiles: DriveFile[]
     onClose: () => void
-    onImport: (tracks: any[]) => void
+    onImport: (tracks: SetlistTrack[], suggestedName: string) => void
 }
 
 export function ImportModal({ driveFiles, onClose, onImport }: ImportModalProps) {
@@ -48,11 +49,18 @@ export function ImportModal({ driveFiles, onClose, onImport }: ImportModalProps)
             const data = await res.json()
 
             if (!res.ok) {
-                throw new Error(data.error || "Failed to parse document")
+                throw new Error(data.error || data.details || "Failed to parse document")
             }
 
-            onImport(data.tracks)
-            onClose()
+            // Suggest name based on file name (remove extension and clean up)
+            const suggestedName = file.name
+                .replace(/\.(xlsx|xls|doc|docx)$/i, '')
+                .replace(/_/g, ' ')
+                .replace(/-/g, ' ')
+                .trim()
+
+            onImport(data.tracks, suggestedName)
+            // Don't close here - let parent handle navigation
         } catch (e: any) {
             setError(e.message)
             setImporting(false)
@@ -71,7 +79,8 @@ export function ImportModal({ driveFiles, onClose, onImport }: ImportModalProps)
 
                 {error && (
                     <div className="bg-red-500/20 border border-red-500/50 text-red-300 p-3 rounded-lg mb-4">
-                        {error}
+                        <p className="font-semibold">Import Failed</p>
+                        <p className="text-sm">{error}</p>
                     </div>
                 )}
 
