@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
 import { DriveClient } from "@/lib/google-drive"
 
 export async function GET(request: Request) {
-    const session = await getServerSession(authOptions)
-
-    if (!session || !session.accessToken) {
-        return new NextResponse("Unauthorized", { status: 401 })
-    }
+    // NO SESSION CHECK NEEDED (Public Kiosk Mode)
+    // The Service Account has access, and we trust the Env Vars.
 
     try {
         const { searchParams } = new URL(request.url)
-        const folderId = searchParams.get('folderId') ?? undefined
+        const folderId = searchParams.get('folderId')
 
-        const drive = new DriveClient(session.accessToken as string)
-        const files = await drive.listFiles(folderId)
+        if (!folderId) {
+            return new NextResponse("Missing folderId", { status: 400 })
+        }
+
+        const drive = new DriveClient()
+        // Use listAllFiles for recursive search
+        const files = await drive.listAllFiles(folderId)
 
         return NextResponse.json(files)
     } catch (error) {

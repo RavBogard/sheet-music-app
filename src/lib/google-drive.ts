@@ -3,44 +3,64 @@ import { google } from "googleapis"
 export class DriveClient {
     private drive
 
-    constructor(accessToken: string) {
-        const auth = new google.auth.OAuth2()
-        auth.setCredentials({ access_token: accessToken })
+    constructor() {
+        // Use Service Account from Env Vars
+        const auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Fix newlines if passed via one-line env
+            },
+            scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+        })
 
         this.drive = google.drive({ version: 'v3', auth })
     }
 
-    async listFiles(folderId?: string) {
+    // Recursive function to get ALL files in specific folder
+    async listAllFiles(folderId: string) {
+        let allFiles: any[] = []
+
         try {
-            // Query for PDF, XML, Folder, AND Excel files.
-            // If folderId is provided, restrict search to parents = 'folderId'
-            const mimeTypes = [
-                "application/pdf",
-                "application/xml",
-                "text/xml",
-                "application/vnd.google-apps.folder",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.google-apps.spreadsheet"
-            ]
+            // 1. Get files in CURRENT folder
+            const q = `'${folderId}' in parents and trashed = false`
 
-            const typeQuery = mimeTypes.map(t => `mimeType = '${t}'`).join(' or ')
-            let q = `(${typeQuery}) and trashed = false`
+            let nextPageToken: string | undefined = undefined;
 
-            if (folderId) {
-                q += ` and '${folderId}' in parents`
-            }
+            do {
+                const res = await this.drive.files.list({
+                    pageSize: 100,
+                    fields: 'nextPageToken, files(id, name, mimeType, webContentLink, parents)',
+                    q,
+                    pageToken: nextPageToken
+                }) as any // Type casting for ease
 
-            const res = await this.drive.files.list({
-                pageSize: 100, // Increased page size
-                fields: 'nextPageToken, files(id, name, mimeType, webContentLink, thumbnailLink)',
-                q,
-                orderBy: 'folder, name'
+                if (res.data.files) {
+                    allFiles.push(...res.data.files)
+                }
+                nextPageToken = res.data.nextPageToken
+            } while (nextPageToken)
+
+            // 2. Separate Folders and Files
+            const folders = allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
+            const files = allFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder')
+
+            // 3. Recursively fetch subfolders
+            // Using Promise.all so it's faster, but be careful of rate limits.
+            // For a synagogue library (hundreds of songs), this is fine. 
+            // For huge enterprise drives, we'd need a queue.
+            const subFolderFiles = await Promise.all(
+                folders.map(folder => this.listAllFiles(folder.id))
+            )
+
+            // Flatten results
+            subFolderFiles.forEach(subFiles => {
+                files.push(...subFiles)
             })
 
-            return res.data.files || []
+            return files
         } catch (error) {
-            console.error("Error listing files:", error)
-            throw error
+            console.error(`Error listing folder ${folderId}:`, error)
+            return [] // Continue even if one folder fails
         }
     }
 
