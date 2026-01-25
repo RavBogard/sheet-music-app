@@ -6,9 +6,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const folderId = searchParams.get('folderId')
 
-        if (!folderId) {
-            return new NextResponse(JSON.stringify({ error: "Missing folderId configuration" }), { status: 400 })
-        }
+        // If folderId is not provided, we just pass undefined to listAllFiles, which triggers Global Search
 
         const drive = new DriveClient()
 

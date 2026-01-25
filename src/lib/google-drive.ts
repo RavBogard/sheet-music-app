@@ -42,13 +42,17 @@ export class DriveClient {
         this.drive = google.drive({ version: 'v3', auth })
     }
 
-    async listAllFiles(folderId: string) {
+    async listAllFiles(folderId?: string) {
         let allFiles: any[] = []
 
         try {
-            console.log(`[Drive] Listing folder: ${folderId}`)
+            console.log(folderId ? `[Drive] Listing folder: ${folderId}` : `[Drive] Global Search (Shared with me)`)
 
-            const q = `'${folderId}' in parents and trashed = false`
+            // If folderId is provided, search inside it. If not, search EVERYTHING (except folders)
+            const q = folderId
+                ? `'${folderId}' in parents and trashed = false`
+                : `trashed = false and mimeType != 'application/vnd.google-apps.folder'`
+
             let nextPageToken: string | undefined = undefined;
 
             do {
@@ -67,20 +71,21 @@ export class DriveClient {
                 nextPageToken = res.data.nextPageToken
             } while (nextPageToken)
 
-            // Recursion
-            const folders = allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
-
-            if (folders.length > 0) {
-                console.log(`[Drive] Digging into ${folders.length} subfolders...`)
-                const subFolderResults = await Promise.all(
-                    folders.map(folder => this.listAllFiles(folder.id))
-                )
-                subFolderResults.forEach(subFiles => allFiles.push(...subFiles))
+            // Recursion ONLY if we are in folder-mode
+            if (folderId) {
+                const folders = allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
+                if (folders.length > 0) {
+                    console.log(`[Drive] Digging into ${folders.length} subfolders...`)
+                    const subFolderResults = await Promise.all(
+                        folders.map(folder => this.listAllFiles(folder.id))
+                    )
+                    subFolderResults.forEach(subFiles => allFiles.push(...subFiles))
+                }
             }
 
             return allFiles
         } catch (error) {
-            console.error(`[Drive] Error listing folder ${folderId}:`, error)
+            console.error(`[Drive] List Error:`, error)
             return allFiles
         }
     }
@@ -98,6 +103,21 @@ export class DriveClient {
             return res.data
         } catch (error: any) {
             console.error(`[Drive] Error getting file ${fileId}:`, error.message)
+            throw error
+        }
+    }
+
+    async exportDoc(fileId: string) {
+        try {
+            const res = await this.drive.files.export({
+                fileId,
+                mimeType: 'text/plain',
+            }, {
+                responseType: 'text', // Get text content
+            } as any)
+            return res.data
+        } catch (error: any) {
+            console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
             throw error
         }
     }

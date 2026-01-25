@@ -46,7 +46,9 @@ export default function Home() {
     async function fetchFiles() {
       try {
         setLoadingFiles(true)
-        const res = await fetch(`/api/drive/list?folderId=${MASTER_FOLDER_ID}`)
+        setLoadingFiles(true)
+        // No folderId param = Global Search (All Shared Files)
+        const res = await fetch(`/api/drive/list`)
         if (!res.ok) throw new Error("Failed to sync library")
 
         const data = await res.json()
@@ -267,7 +269,7 @@ export default function Home() {
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-2">
               {driveFiles
-                .filter(f => f.mimeType.includes('spreadsheet') || f.name.endsWith('.xlsx'))
+                .filter(f => f.mimeType.includes('spreadsheet') || f.name.endsWith('.xlsx') || f.mimeType === 'application/vnd.google-apps.document')
                 .map(file => (
                   <button
                     key={file.id}
