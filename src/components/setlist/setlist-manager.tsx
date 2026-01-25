@@ -60,11 +60,22 @@ function SortableItem({ item, isActive, onDelete, onSelect }: {
                 onClick={() => onSelect(item)}
             >
                 <div className="flex items-center gap-2 font-medium text-sm truncate">
-                    {item.type === 'musicxml' ? <Music2 className="h-3 w-3 text-blue-400" /> : <FileText className="h-3 w-3 text-red-400" />}
-                    <span className="truncate">{item.name}</span>
+                    {item.url ? (
+                        item.type === 'musicxml' ? <Music2 className="h-4 w-4 text-blue-400" /> : <FileText className="h-4 w-4 text-red-400" />
+                    ) : (
+                        <div className="h-4 w-4 flex items-center justify-center bg-destructive/20 rounded-sm">
+                            <span className="text-[10px] font-bold text-destructive">!</span>
+                        </div>
+                    )}
+
+                    <span className={`truncate ${!item.url ? 'text-muted-foreground italic' : ''}`}>
+                        {item.name}
+                    </span>
+
+                    {!item.url && <span className="text-[10px] text-destructive bg-destructive/10 px-1 rounded">No File</span>}
                 </div>
                 {(item.transposition !== undefined && item.transposition !== 0) && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground ml-6">
                         Key: {item.transposition > 0 ? `+${item.transposition}` : item.transposition}
                     </div>
                 )}

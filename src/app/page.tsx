@@ -78,16 +78,28 @@ export default function Home() {
 
         clearSetlist()
         data.forEach((row: any) => {
-          const name = row['Song'] || row['Name'] || Object.values(row)[0]
-          const match = driveFiles.find(df =>
-            df.name.toLowerCase().includes(String(name).toLowerCase()) &&
-            !df.mimeType.includes('folder') && !df.mimeType.includes('spreadsheet')
-          )
+          const rawName = row['Song'] || row['Name'] || Object.values(row)[0]
+          if (!rawName) return
 
-          if (name) {
+          const cleanTarget = String(rawName).toLowerCase().trim()
+
+          // Find best match
+          const match = driveFiles.find(df => {
+            if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) return false
+            const cleanFile = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '').trim()
+
+            // 1. Exact match (cleaned)
+            if (cleanFile === cleanTarget) return true
+            // 2. File contains Song Name (e.g. "01 Barechu" contains "Barechu")
+            if (cleanFile.includes(cleanTarget)) return true
+            // 3. Song Name contains File Name (Rare, but possible)
+            return false
+          })
+
+          if (rawName) {
             addItem({
-              fileId: match ? match.id : 'placeholder',
-              name: String(name),
+              fileId: match ? match.id : `missing-${Math.random()}`, // Unique ID for missing items
+              name: String(rawName),
               type: match && match.mimeType.includes('xml') ? 'musicxml' : 'pdf',
               url: match ? `/api/drive/file/${match.id}` : undefined,
               transposition: Number(row['Key'] || 0) || 0
