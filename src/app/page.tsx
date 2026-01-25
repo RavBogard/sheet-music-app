@@ -88,8 +88,8 @@ export default function Home() {
           let bestMatch: DriveFile | undefined = undefined
           let bestScore = 0 // Higher is better
 
-          driveFiles.forEach(df => {
-            if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) return
+          for (const df of driveFiles) {
+            if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) continue
 
             // Normalize: remove extensions, lower case, replace underscores/hyphens with spaces
             const rawFileName = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '')
@@ -98,13 +98,13 @@ export default function Home() {
             // 1. Direct Inclusion (Score: 100)
             if (cleanFileName === cleanTarget) {
               if (bestScore < 100) { bestScore = 100; bestMatch = df; }
-              return
+              continue
             }
 
             // 2. Starts With (Score: 90) - e.g. "Ma Tovu" matches "Ma tovu_Hinei..."
             if (cleanFileName.startsWith(cleanTarget)) {
               if (bestScore < 90) { bestScore = 90; bestMatch = df; }
-              return
+              continue
             }
 
             // 3. Fuzzy Token Match (Score: 70-80)
@@ -135,7 +135,7 @@ export default function Home() {
               const score = 60
               if (score > bestScore) { bestScore = score; bestMatch = df; }
             }
-          })
+          }
 
           if (rawName) {
             addItem({
