@@ -6,7 +6,10 @@ import { useSession } from "next-auth/react"
 import { useMusicStore, FileType } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FileMusic, Music2, Share2, Printer, Settings, Loader2, FileText, LayoutTemplate, AlertCircle } from "lucide-react"
+import { FileMusic, Music2, Share2, Printer, Settings, Loader2, FileText, LayoutTemplate, AlertCircle, ListPlus } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useSetlistStore } from "@/lib/setlist-store"
+import { SetlistManager } from "@/components/setlist/setlist-manager"
 import { UserNav } from "@/components/user-nav"
 
 // Dynamic import for client components that use browser APIs
@@ -23,6 +26,7 @@ interface DriveFile {
 export default function Home() {
   const { data: session } = useSession()
   const { fileType, fileUrl, setFile, transposition, setTransposition } = useMusicStore()
+  const { addItem } = useSetlistStore()
 
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(false)
@@ -99,62 +103,98 @@ export default function Home() {
 
         {/* Sidebar / Library */}
         <aside className="w-80 border-r bg-muted/30 flex flex-col hidden md:flex">
-          <div className="p-4 border-b">
-            <h2 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-2">My Library</h2>
-            {!session && (
-              <div className="bg-blue-500/10 text-blue-500 p-3 rounded-md text-xs flex gap-2 items-start">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Sign in to see your Google Drive files.</span>
-              </div>
-            )}
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {/* Hardcoded Demo Section */}
-              <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">Demos</div>
-              <Button
-                variant={fileType === 'musicxml' && fileUrl?.includes('demo') ? "secondary" : "ghost"}
-                className="w-full justify-start font-normal"
-                onClick={() => setFile('/demo.musicxml', 'musicxml')}
-              >
-                <FileMusic className="mr-2 h-4 w-4" /> Demo Song (Smart)
-              </Button>
-              <Button
-                variant={fileType === 'pdf' && fileUrl?.includes('sample') ? "secondary" : "ghost"}
-                className="w-full justify-start font-normal"
-                onClick={() => setFile('https://pdfobject.com/pdf/sample.pdf', 'pdf')}
-              >
-                <LayoutTemplate className="mr-2 h-4 w-4" /> Sample PDF
-              </Button>
-
-              {/* Dynamic Drive Section */}
-              {session && (
-                <>
-                  <div className="px-2 py-1.5 mt-4 text-xs text-muted-foreground font-medium flex items-center justify-between">
-                    <span>Google Drive</span>
-                    {loadingFiles && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </div>
-                  {driveFiles.map(file => (
-                    <Button
-                      key={file.id}
-                      variant="ghost"
-                      className="w-full justify-start font-normal truncate"
-                      onClick={() => loadDriveFile(file)}
-                    >
-                      {file.mimeType.includes('pdf') ? <FileText className="mr-2 h-4 w-4 text-red-400" /> : <FileMusic className="mr-2 h-4 w-4 text-blue-400" />}
-                      <span className="truncate">{file.name}</span>
-                    </Button>
-                  ))}
-                  {driveFiles.length === 0 && !loadingFiles && (
-                    <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-                      No music files found in Drive root.
-                    </div>
-                  )}
-                </>
-              )}
+          <Tabs defaultValue="library" className="flex-1 flex flex-col h-full">
+            <div className="p-4 border-b">
+              <TabsList className="w-full">
+                <TabsTrigger value="library" className="flex-1">Library</TabsTrigger>
+                <TabsTrigger value="setlist" className="flex-1">Setlist</TabsTrigger>
+              </TabsList>
             </div>
-          </ScrollArea>
+
+            <TabsContent value="library" className="flex-1 min-h-0 m-0">
+              <div className="p-4 border-b">
+                {!session && (
+                  <div className="bg-blue-500/10 text-blue-500 p-3 rounded-md text-xs flex gap-2 items-start">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>Sign in to see your Google Drive files.</span>
+                  </div>
+                )}
+              </div>
+
+              <ScrollArea className="h-full">
+                <div className="p-2 space-y-1">
+                  {/* Hardcoded Demo Section */}
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">Demos</div>
+                  <div className="flex items-center gap-1 group">
+                    <Button
+                      variant={fileType === 'musicxml' && fileUrl?.includes('demo') ? "secondary" : "ghost"}
+                      className="flex-1 justify-start font-normal"
+                      onClick={() => setFile('/demo.musicxml', 'musicxml')}
+                    >
+                      <FileMusic className="mr-2 h-4 w-4" /> Demo Song (Smart)
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                      onClick={() => addItem({
+                        fileId: 'demo',
+                        name: 'Demo Song (Smart)',
+                        type: 'musicxml',
+                        url: '/demo.musicxml'
+                      })}
+                    >
+                      <ListPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Dynamic Drive Section */}
+                  {session && (
+                    <>
+                      <div className="px-2 py-1.5 mt-4 text-xs text-muted-foreground font-medium flex items-center justify-between">
+                        <span>Google Drive</span>
+                        {loadingFiles && <Loader2 className="h-3 w-3 animate-spin" />}
+                      </div>
+                      {driveFiles.map(file => (
+                        <div key={file.id} className="flex items-center gap-1 group">
+                          <Button
+                            variant="ghost"
+                            className="flex-1 justify-start font-normal truncate"
+                            onClick={() => loadDriveFile(file)}
+                          >
+                            {file.mimeType.includes('pdf') ? <FileText className="mr-2 h-4 w-4 text-red-400" /> : <FileMusic className="mr-2 h-4 w-4 text-blue-400" />}
+                            <span className="truncate">{file.name}</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                            onClick={() => addItem({
+                              fileId: file.id,
+                              name: file.name,
+                              type: file.mimeType.includes('pdf') ? 'pdf' : 'musicxml',
+                              url: file.webContentLink
+                            })}
+                          >
+                            <ListPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {driveFiles.length === 0 && !loadingFiles && (
+                        <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+                          No music files found in Drive root.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="setlist" className="flex-1 min-h-0 m-0 p-4">
+              <SetlistManager />
+            </TabsContent>
+          </Tabs>
         </aside>
 
         {/* Viewer Area */}
