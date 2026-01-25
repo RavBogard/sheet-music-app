@@ -16,18 +16,32 @@ export async function POST(request: Request) {
         let textContent = ""
 
         // 1. Get file content based on type
-        if (mimeType === "application/vnd.google-apps.document") {
-            // Google Doc -> Export as text
-            textContent = await drive.exportDoc(fileId)
-        } else if (mimeType?.includes("spreadsheet") || mimeType?.includes("excel")) {
-            // Excel -> We'll need to parse it differently
-            // For now, let's get raw content and let Gemini figure it out
-            const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
-            textContent = Buffer.from(buffer).toString("utf-8")
-        } else {
-            // Other text files
-            const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
-            textContent = Buffer.from(buffer).toString("utf-8")
+        try {
+            if (mimeType === "application/vnd.google-apps.document") {
+                // Google Doc -> Export as text
+                const exported = await drive.exportDoc(fileId)
+                textContent = typeof exported === 'string' ? exported : String(exported)
+            } else if (mimeType?.includes("spreadsheet") || mimeType?.includes("excel")) {
+                // Excel -> We'll need to parse it differently
+                const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
+                textContent = Buffer.from(buffer).toString("utf-8")
+            } else {
+                // Other text files
+                const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
+                textContent = Buffer.from(buffer).toString("utf-8")
+            }
+        } catch (driveError: any) {
+            console.error("Drive fetch error:", driveError)
+            return NextResponse.json({
+                error: "Failed to fetch file from Drive",
+                details: driveError.message
+            }, { status: 500 })
+        }
+
+        if (!textContent || textContent.length === 0) {
+            return NextResponse.json({
+                error: "File content is empty"
+            }, { status: 400 })
         }
 
         // 2. Send to Gemini for parsing
