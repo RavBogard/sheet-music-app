@@ -11,8 +11,11 @@ export async function GET(request: Request) {
     }
 
     try {
+        const { searchParams } = new URL(request.url)
+        const folderId = searchParams.get('folderId') ?? undefined
+
         const drive = new DriveClient(session.accessToken as string)
-        const files = await drive.listFiles()
+        const files = await drive.listFiles(folderId)
 
         return NextResponse.json(files)
     } catch (error) {

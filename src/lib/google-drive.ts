@@ -10,13 +10,28 @@ export class DriveClient {
         this.drive = google.drive({ version: 'v3', auth })
     }
 
-    async listFiles(query?: string) {
+    async listFiles(folderId?: string) {
         try {
-            // Basic query to find PDF and XML files, excluding trash
-            const q = query || "(mimeType = 'application/pdf' or mimeType = 'application/xml' or mimeType = 'text/xml' or mimeType = 'application/vnd.google-apps.folder') and trashed = false"
+            // Query for PDF, XML, Folder, AND Excel files.
+            // If folderId is provided, restrict search to parents = 'folderId'
+            const mimeTypes = [
+                "application/pdf",
+                "application/xml",
+                "text/xml",
+                "application/vnd.google-apps.folder",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.google-apps.spreadsheet"
+            ]
+
+            const typeQuery = mimeTypes.map(t => `mimeType = '${t}'`).join(' or ')
+            let q = `(${typeQuery}) and trashed = false`
+
+            if (folderId) {
+                q += ` and '${folderId}' in parents`
+            }
 
             const res = await this.drive.files.list({
-                pageSize: 50,
+                pageSize: 100, // Increased page size
                 fields: 'nextPageToken, files(id, name, mimeType, webContentLink, thumbnailLink)',
                 q,
                 orderBy: 'folder, name'

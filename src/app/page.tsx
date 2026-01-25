@@ -11,10 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { SetlistManager } from "@/components/setlist/setlist-manager"
 import { UserNav } from "@/components/user-nav"
+import * as XLSX from 'xlsx'
 
 // Dynamic import for client components that use browser APIs
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
+
+// Hardcoded Master Folder ID
+const MASTER_FOLDER_ID = "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK"
 
 interface DriveFile {
   id: string
@@ -26,20 +30,21 @@ interface DriveFile {
 export default function Home() {
   const { data: session } = useSession()
   const { fileType, fileUrl, setFile, transposition, setTransposition } = useMusicStore()
-  const { addItem } = useSetlistStore()
+  const { addItem, clear: clearSetlist } = useSetlistStore()
 
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(false)
   const [errorFiles, setErrorFiles] = useState<string | null>(null)
 
-  // Fetch Drive Files
+  // Fetch Drive Files (Targeting Master Folder)
   useEffect(() => {
     async function fetchFiles() {
       if (!session) return
 
       try {
         setLoadingFiles(true)
-        const res = await fetch('/api/drive/list')
+        // Use the Master Folder ID
+        const res = await fetch(`/api/drive/list?folderId=${MASTER_FOLDER_ID}`)
         if (!res.ok) throw new Error("Failed to search Drive")
         const data = await res.json()
         setDriveFiles(data)
@@ -54,29 +59,56 @@ export default function Home() {
     fetchFiles()
   }, [session])
 
-  // Helper to load file
-  const loadDriveFile = (file: DriveFile) => {
-    // For now, we use the webContentLink or a direct proxy if needed.
-    // NOTE: Google Drive webContentLink often requires cookies/auth that the 
-    // iframe/viewer might not share. A proxy endpoint is better for robustness.
-    // For MVP, we can try using the proxy link we haven't built yet, or just the demo.
-
-    // For this build, we will simulate loading by checking type.
-    // Real implementation requires /api/drive/get/[id]
+  // Helper to load file (Handle Excel Parsing & Proxy loading)
+  const loadDriveFile = async (file: DriveFile) => {
 
     const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
+    const isExcel = file.mimeType.includes('spreadsheet') || file.name.endsWith('.xlsx')
+
+    if (isExcel) {
+      // Parse Excel Setlist
+      try {
+        const res = await fetch(`/api/drive/file/${file.id}`)
+        if (!res.ok) throw new Error("Failed to fetch Excel file")
+        const blob = await res.blob()
+        const buffer = await blob.arrayBuffer()
+
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const sheetName = workbook.SheetNames[0]
+        const sheet = workbook.Sheets[sheetName]
+        const data = XLSX.utils.sheet_to_json(sheet)
+
+        console.log("Parsed Excel:", data)
+
+        if (confirm(`Found ${data.length} songs in setlist. Replace current setlist?`)) {
+          clearSetlist()
+          // Iterate and add placeholder items
+          data.forEach((row: any) => {
+            const name = row['Song'] || row['Name'] || Object.values(row)[0]
+            if (name) {
+              addItem({
+                fileId: 'placeholder',
+                name: String(name),
+                type: 'pdf', // default
+                transposition: Number(row['Key'] || 0) || 0
+              })
+            }
+          })
+        }
+
+      } catch (e) {
+        console.error(e)
+        alert("Failed to parse setlist file.")
+      }
+      return
+    }
+
     const type: FileType = isXml ? 'musicxml' : 'pdf'
 
-    // Using a PROXY endpoint for content (TODO: Build /api/drive/get)
-    // For now, let's use the webContentLink if available, but it might fail CORS.
-    // Fallback to demo for demonstration if it fails.
-
-    if (file.webContentLink) {
-      setFile(file.webContentLink, type)
-    } else {
-      // Fallback/Placeholder logic
-      alert("File link not available yet. Please implement /api/drive/get/[id]")
-    }
+    // Use the PROXY endpoint for content loading to avoid CORS/Auth issues
+    // This allows the viewer to load the binary stream directly
+    const proxyUrl = `/api/drive/file/${file.id}`
+    setFile(proxyUrl, type)
   }
 
   return (
@@ -162,7 +194,9 @@ export default function Home() {
                             className="flex-1 justify-start font-normal truncate"
                             onClick={() => loadDriveFile(file)}
                           >
-                            {file.mimeType.includes('pdf') ? <FileText className="mr-2 h-4 w-4 text-red-400" /> : <FileMusic className="mr-2 h-4 w-4 text-blue-400" />}
+                            {file.mimeType.includes('pdf') ? <FileText className="mr-2 h-4 w-4 text-red-500" /> :
+                              file.mimeType.includes('spreadsheet') ? <LayoutTemplate className="mr-2 h-4 w-4 text-green-500" /> :
+                                <FileMusic className="mr-2 h-4 w-4 text-blue-400" />}
                             <span className="truncate">{file.name}</span>
                           </Button>
                           <Button
@@ -173,7 +207,7 @@ export default function Home() {
                               fileId: file.id,
                               name: file.name,
                               type: file.mimeType.includes('pdf') ? 'pdf' : 'musicxml',
-                              url: file.webContentLink
+                              url: file.webContentLink // In real apps, we'd want the ID to load via proxy
                             })}
                           >
                             <ListPlus className="h-4 w-4" />
@@ -182,7 +216,7 @@ export default function Home() {
                       ))}
                       {driveFiles.length === 0 && !loadingFiles && (
                         <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-                          No music files found in Drive root.
+                          No music files found in Folder.
                         </div>
                       )}
                     </>
