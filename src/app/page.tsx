@@ -130,7 +130,7 @@ export default function Home() {
           <div className="bg-primary h-10 w-10 rounded-full flex items-center justify-center">
             <Music2 className="text-black h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold">Synagogue Kiosk</h1>
+          <h1 className="text-2xl font-bold">CRC Music Books</h1>
         </div>
         <Button variant="outline" size="lg" onClick={() => window.location.reload()}>
           {loadingFiles ? <Loader2 className="animate-spin mr-2" /> : null} Sync Drive

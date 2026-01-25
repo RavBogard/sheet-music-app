@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Synagogue Music Manager",
-  description: "A professional sheet music manager for musicians",
+  title: "CRC Music Books",
+  description: "Digital Sheet Music Library for Central Reform Congregation",
 };
 
 export default function RootLayout({
