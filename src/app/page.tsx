@@ -148,7 +148,7 @@ export default function Home() {
 
       {/* Quick Resume */}
       {fileUrl && (
-        <Button size="xl" className="h-20 text-xl" onClick={() => setView('performer')}>
+        <Button size="lg" className="h-20 text-xl" onClick={() => setView('performer')}>
           Resume Performance <PlayCircle className="ml-2 h-6 w-6" />
         </Button>
       )}
