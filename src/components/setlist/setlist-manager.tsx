@@ -63,7 +63,7 @@ function SortableItem({ item, isActive, onDelete, onSelect }: {
                     {item.type === 'musicxml' ? <Music2 className="h-3 w-3 text-blue-400" /> : <FileText className="h-3 w-3 text-red-400" />}
                     <span className="truncate">{item.name}</span>
                 </div>
-                {item.transposition !== 0 && (
+                {(item.transposition !== undefined && item.transposition !== 0) && (
                     <div className="text-xs text-muted-foreground">
                         Key: {item.transposition > 0 ? `+${item.transposition}` : item.transposition}
                     </div>
