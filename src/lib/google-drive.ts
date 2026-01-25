@@ -113,9 +113,12 @@ export class DriveClient {
                 fileId,
                 mimeType: 'text/plain',
             }, {
-                responseType: 'text', // Get text content
+                responseType: 'arraybuffer', // Safest for binary/text mix
             } as any)
-            return res.data
+
+            // Convert buffer to string
+            const buffer = Buffer.from(res.data as any)
+            return buffer.toString('utf-8')
         } catch (error: any) {
             console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
             throw error
