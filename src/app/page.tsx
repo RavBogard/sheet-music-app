@@ -14,6 +14,8 @@ import { useSetlistStore } from "@/lib/setlist-store"
 import { SetlistManager } from "@/components/setlist/setlist-manager"
 import * as XLSX from 'xlsx'
 
+import buildInfo from "@/build-info.json"
+
 // Components
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
