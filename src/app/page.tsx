@@ -84,17 +84,57 @@ export default function Home() {
 
           const cleanTarget = String(rawName).toLowerCase().trim()
 
-          // Find best match
-          const match = driveFiles.find(df => {
-            if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) return false
-            const cleanFile = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '').trim()
+          // Fuzzy Search: Find the file with the lowest "Score"
+          let bestMatch: DriveFile | undefined = undefined
+          let bestScore = 0 // Higher is better
 
-            // 1. Exact match (cleaned)
-            if (cleanFile === cleanTarget) return true
-            // 2. File contains Song Name (e.g. "01 Barechu" contains "Barechu")
-            if (cleanFile.includes(cleanTarget)) return true
-            // 3. Song Name contains File Name (Rare, but possible)
-            return false
+          driveFiles.forEach(df => {
+            if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) return
+
+            // Normalize: remove extensions, lower case, replace underscores/hyphens with spaces
+            const rawFileName = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '')
+            const cleanFileName = rawFileName.replace(/[_\-]/g, ' ').trim()
+
+            // 1. Direct Inclusion (Score: 100)
+            if (cleanFileName === cleanTarget) {
+              if (bestScore < 100) { bestScore = 100; bestMatch = df; }
+              return
+            }
+
+            // 2. Starts With (Score: 90) - e.g. "Ma Tovu" matches "Ma tovu_Hinei..."
+            if (cleanFileName.startsWith(cleanTarget)) {
+              if (bestScore < 90) { bestScore = 90; bestMatch = df; }
+              return
+            }
+
+            // 3. Fuzzy Token Match (Score: 70-80)
+            // this handles "Mah Tovu" vs "Ma Tovu" even if filenames are long
+            const targetTokens = cleanTarget.split(' ').filter(t => t.length > 0)
+            const fileTokens = cleanFileName.split(' ').filter(t => t.length > 0)
+
+            let matchedTokenCount = 0
+            targetTokens.forEach(tToken => {
+              // Does this token exist in the file tokens? (Fuzzy)
+              const found = fileTokens.some(fToken => {
+                if (fToken === tToken) return true // Exact token match
+                if (Math.abs(fToken.length - tToken.length) > 2) return false // Length too different
+                return levenshtein(fToken, tToken) <= 1 // Allow 1 typo per word (Mah vs Ma)
+              })
+              if (found) matchedTokenCount++
+            })
+
+            const matchRatio = matchedTokenCount / targetTokens.length
+
+            // If we matched 100% of the words (fuzzily)
+            if (matchRatio === 1) {
+              const score = 80
+              if (score > bestScore) { bestScore = score; bestMatch = df; }
+            }
+            // If we matched "most" words (e.g. 2 out of 3)
+            else if (matchRatio >= 0.66) {
+              const score = 60
+              if (score > bestScore) { bestScore = score; bestMatch = df; }
+            }
           })
 
           if (rawName) {
