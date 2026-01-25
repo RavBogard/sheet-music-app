@@ -139,10 +139,10 @@ export default function Home() {
 
           if (rawName) {
             addItem({
-              fileId: match ? match.id : `missing-${Math.random()}`, // Unique ID for missing items
+              fileId: bestMatch ? bestMatch.id : `missing-${Math.random()}`, // Unique ID for missing items
               name: String(rawName),
-              type: match && match.mimeType.includes('xml') ? 'musicxml' : 'pdf',
-              url: match ? `/api/drive/file/${match.id}` : undefined,
+              type: bestMatch && bestMatch.mimeType.includes('xml') ? 'musicxml' : 'pdf',
+              url: bestMatch ? `/api/drive/file/${bestMatch.id}` : undefined,
               transposition: Number(row['Key'] || 0) || 0
             })
           }
