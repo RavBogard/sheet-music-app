@@ -263,6 +263,8 @@ export default function Home() {
       initialTracks={editingSetlist?.tracks || importedTracks}
       initialName={editingSetlist?.name || ""}
       suggestedName={suggestedSetlistName}
+      initialIsPublic={editingSetlist?.isPublic || false}
+      initialOwnerId={editingSetlist?.ownerId}
       driveFiles={driveFiles}
       onBack={() => {
         setEditingSetlist(null)

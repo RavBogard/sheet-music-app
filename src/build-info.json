@@ -1,11 +1,11 @@
 {
-  "version": "master-26f456e",
-  "buildDate": "1/25/2026, 5:40:05 PM",
+  "version": "master-2799a25",
+  "buildDate": "1/25/2026, 5:47:14 PM",
   "changelog": [
-    "26f456e - UX Enhancements: Auto-save, Name Prompt, Add Songs Multi-Select (5 minutes ago)",
-    "58c6f14 - Add detailed error logging to setlist parse API (14 minutes ago)",
-    "7b6b5b5 - Fix: Correct Gemini model name to gemini-3-flash-preview (16 minutes ago)",
-    "1aac93e - Setlist Manager 2.0: AI Import with Gemini 3.0, Dashboard, Editor (20 minutes ago)",
-    "d8846ac - Firebase: Install SDK and Create Setlist Service (32 minutes ago)"
+    "2799a25 - Feature: Clickable songs in setlist open music viewer (7 minutes ago)",
+    "26f456e - UX Enhancements: Auto-save, Name Prompt, Add Songs Multi-Select (12 minutes ago)",
+    "58c6f14 - Add detailed error logging to setlist parse API (21 minutes ago)",
+    "7b6b5b5 - Fix: Correct Gemini model name to gemini-3-flash-preview (23 minutes ago)",
+    "1aac93e - Setlist Manager 2.0: AI Import with Gemini 3.0, Dashboard, Editor (27 minutes ago)"
   ]
 }

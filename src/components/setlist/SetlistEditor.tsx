@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { SetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
-import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play } from "lucide-react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { createSetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
+import { useAuth } from "@/lib/auth-context"
+import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play, Globe, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,6 +36,8 @@ interface SetlistEditorProps {
     initialTracks?: SetlistTrack[]
     initialName?: string
     suggestedName?: string
+    initialIsPublic?: boolean
+    initialOwnerId?: string
     driveFiles: DriveFile[]
     onBack: () => void
     onSave?: (id: string) => void
@@ -47,7 +50,8 @@ function SortableTrack({
     onDelete,
     onMatchFile,
     onPlay,
-    driveFiles
+    driveFiles,
+    readOnly
 }: {
     track: SetlistTrack
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
@@ -55,6 +59,7 @@ function SortableTrack({
     onMatchFile: (trackId: string) => void
     onPlay?: (fileId: string, fileName: string) => void
     driveFiles: DriveFile[]
+    readOnly?: boolean
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: track.id })
 
@@ -78,12 +83,13 @@ function SortableTrack({
             style={style}
             className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center gap-4 group"
         >
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
-                <GripVertical className="h-5 w-5 text-zinc-600" />
-            </div>
+            {!readOnly && (
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
+                    <GripVertical className="h-5 w-5 text-zinc-600" />
+                </div>
+            )}
 
             <div className="flex-1 space-y-2">
-                {/* CLICKABLE TITLE - Opens the music viewer */}
                 <div className="flex items-center gap-2">
                     {matchedFile && onPlay && (
                         <Button
@@ -95,40 +101,56 @@ function SortableTrack({
                             <Play className="h-4 w-4" />
                         </Button>
                     )}
-                    <Input
-                        value={track.title}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                        className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
-                        placeholder="Song title"
-                        onClick={matchedFile ? handleTitleClick : undefined}
-                        readOnly={!!matchedFile}
-                    />
+                    {readOnly ? (
+                        <span
+                            className={`text-lg font-medium ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
+                            onClick={matchedFile ? handleTitleClick : undefined}
+                        >
+                            {track.title}
+                        </span>
+                    ) : (
+                        <Input
+                            value={track.title}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
+                            className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
+                            placeholder="Song title"
+                            onClick={matchedFile ? handleTitleClick : undefined}
+                        />
+                    )}
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                    <Input
-                        value={track.key || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
-                        className="bg-zinc-800 w-20 h-8 text-center"
-                        placeholder="Key"
-                    />
-                    <Input
-                        value={track.notes || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { notes: e.target.value })}
-                        className="bg-zinc-800 flex-1 h-8"
-                        placeholder="Notes..."
-                    />
-                </div>
+                {!readOnly && (
+                    <div className="flex items-center gap-4 text-sm">
+                        <Input
+                            value={track.key || ""}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
+                            className="bg-zinc-800 w-20 h-8 text-center"
+                            placeholder="Key"
+                        />
+                        <Input
+                            value={track.notes || ""}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { notes: e.target.value })}
+                            className="bg-zinc-800 flex-1 h-8"
+                            placeholder="Notes..."
+                        />
+                    </div>
+                )}
+                {readOnly && (track.key || track.notes) && (
+                    <div className="flex items-center gap-4 text-sm text-zinc-500">
+                        {track.key && <span className="bg-zinc-800 px-2 py-1 rounded">{track.key}</span>}
+                        {track.notes && <span>{track.notes}</span>}
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-2">
                 {matchedFile ? (
                     <div
                         className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded cursor-pointer hover:bg-green-400/20"
-                        onClick={() => onMatchFile(track.id)}
+                        onClick={readOnly ? handleTitleClick : () => onMatchFile(track.id)}
                     >
                         ✓ Linked
                     </div>
-                ) : (
+                ) : !readOnly && (
                     <Button
                         size="sm"
                         variant="outline"
@@ -139,14 +161,16 @@ function SortableTrack({
                         Link File
                     </Button>
                 )}
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100"
-                    onClick={() => onDelete(track.id)}
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                {!readOnly && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100"
+                        onClick={() => onDelete(track.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
         </div>
     )
@@ -157,15 +181,31 @@ export function SetlistEditor({
     initialTracks = [],
     initialName = "",
     suggestedName = "",
+    initialIsPublic = false,
+    initialOwnerId,
     driveFiles,
     onBack,
     onSave,
     onPlayTrack
 }: SetlistEditorProps) {
+    const { user } = useAuth()
+
+    // Create user-specific service
+    const setlistService = useMemo(() => {
+        if (user) {
+            return createSetlistService(user.uid, user.displayName)
+        }
+        return null
+    }, [user])
+
+    // Determine if user can edit (owner or new setlist)
+    const canEdit = !initialOwnerId || initialOwnerId === user?.uid
+
     // Core state
     const [setlistId, setSetlistId] = useState<string | undefined>(initialSetlistId)
     const [name, setName] = useState(initialName || suggestedName || "")
     const [tracks, setTracks] = useState<SetlistTrack[]>(initialTracks)
+    const [isPublic, setIsPublic] = useState(initialIsPublic)
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
@@ -177,7 +217,6 @@ export function SetlistEditor({
     const [searchQuery, setSearchQuery] = useState("")
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const hasChangesRef = useRef(false)
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -186,34 +225,34 @@ export function SetlistEditor({
 
     // Auto-save with debounce
     const triggerAutoSave = useCallback(() => {
+        if (!canEdit || !setlistService) return
+
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current)
         }
-        hasChangesRef.current = true
         saveTimeoutRef.current = setTimeout(async () => {
-            if (!name || name.length === 0) return // Don't save without a name
+            if (!name || name.length === 0) return
 
             setSaving(true)
             try {
                 if (setlistId) {
-                    await SetlistService.updateSetlist(setlistId, { name, tracks, trackCount: tracks.length })
+                    await setlistService.updateSetlist(setlistId, isPublic, { name, tracks, trackCount: tracks.length })
                 } else {
-                    const newId = await SetlistService.createSetlist(name, tracks)
+                    const newId = await setlistService.createSetlist(name, tracks, isPublic)
                     setSetlistId(newId)
                     onSave?.(newId)
                 }
                 setLastSaved(new Date())
-                hasChangesRef.current = false
             } catch (e) {
                 console.error("Auto-save failed:", e)
             }
             setSaving(false)
-        }, 1000) // 1 second debounce
-    }, [setlistId, name, tracks, onSave])
+        }, 1000)
+    }, [setlistId, name, tracks, isPublic, onSave, setlistService, canEdit])
 
     // Trigger auto-save on changes
     useEffect(() => {
-        if (name && tracks.length >= 0) {
+        if (name && canEdit) {
             triggerAutoSave()
         }
         return () => {
@@ -221,9 +260,10 @@ export function SetlistEditor({
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [name, tracks, triggerAutoSave])
+    }, [name, tracks, isPublic, triggerAutoSave, canEdit])
 
     const handleDragEnd = (event: DragEndEvent) => {
+        if (!canEdit) return
         const { active, over } = event
         if (over && active.id !== over.id) {
             setTracks((items) => {
@@ -235,10 +275,12 @@ export function SetlistEditor({
     }
 
     const updateTrack = (id: string, data: Partial<SetlistTrack>) => {
+        if (!canEdit) return
         setTracks(tracks.map(t => t.id === id ? { ...t, ...data } : t))
     }
 
     const deleteTrack = (id: string) => {
+        if (!canEdit) return
         setTracks(tracks.filter(t => t.id !== id))
     }
 
@@ -249,9 +291,9 @@ export function SetlistEditor({
     }
 
     const addSongsFromLibrary = () => {
+        if (!canEdit) return
         const newTracks: SetlistTrack[] = Array.from(selectedFiles).map((fileId, index) => {
             const file = driveFiles.find(f => f.id === fileId)
-            // Smart name: strip extension and clean up
             const cleanName = file?.name
                 .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
                 .replace(/_/g, ' ')
@@ -299,7 +341,7 @@ export function SetlistEditor({
     return (
         <div className="h-screen flex flex-col bg-zinc-950 text-white">
             {/* Name Prompt Modal */}
-            {showNamePrompt && (
+            {showNamePrompt && canEdit && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
                     <div className="bg-zinc-900 rounded-xl p-8 w-full max-w-md">
                         <h2 className="text-2xl font-bold mb-4">Name Your Setlist</h2>
@@ -311,6 +353,27 @@ export function SetlistEditor({
                             autoFocus
                             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && confirmName()}
                         />
+
+                        {/* Public/Private Toggle */}
+                        <div className="flex items-center gap-4 mb-6 p-4 bg-zinc-800 rounded-lg">
+                            <button
+                                onClick={() => setIsPublic(false)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${!isPublic ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
+                                    }`}
+                            >
+                                <Lock className="h-4 w-4" />
+                                Personal
+                            </button>
+                            <button
+                                onClick={() => setIsPublic(true)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${isPublic ? 'bg-green-600 text-white' : 'text-zinc-400 hover:text-white'
+                                    }`}
+                            >
+                                <Globe className="h-4 w-4" />
+                                Public
+                            </button>
+                        </div>
+
                         <div className="flex gap-2">
                             <Button onClick={onBack} variant="ghost" className="flex-1">Cancel</Button>
                             <Button onClick={confirmName} className="flex-1" disabled={!name.trim()}>
@@ -326,15 +389,34 @@ export function SetlistEditor({
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
-                <Input
-                    value={name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                    className="text-2xl font-bold bg-transparent border-0 flex-1 h-auto focus-visible:ring-0"
-                    placeholder="Setlist name"
-                />
-                <div className="text-sm text-zinc-500">
-                    {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
+
+                {canEdit ? (
+                    <Input
+                        value={name}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                        className="text-2xl font-bold bg-transparent border-0 flex-1 h-auto focus-visible:ring-0"
+                        placeholder="Setlist name"
+                    />
+                ) : (
+                    <h1 className="text-2xl font-bold flex-1">{name}</h1>
+                )}
+
+                {/* Public/Private indicator */}
+                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                    {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {isPublic ? 'Public' : 'Personal'}
                 </div>
+
+                {!canEdit && (
+                    <div className="text-sm text-zinc-500">View Only</div>
+                )}
+
+                {canEdit && (
+                    <div className="text-sm text-zinc-500">
+                        {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
+                    </div>
+                )}
             </div>
 
             {/* Track List */}
@@ -355,24 +437,27 @@ export function SetlistEditor({
                                     onMatchFile={setMatchingTrackId}
                                     onPlay={onPlayTrack}
                                     driveFiles={driveFiles}
+                                    readOnly={!canEdit}
                                 />
                             ))}
 
                             {/* Add Songs Button */}
-                            <button
-                                onClick={() => setShowAddSongs(true)}
-                                className="w-full p-4 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-500 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <Plus className="h-5 w-5" />
-                                Add Songs from Library
-                            </button>
+                            {canEdit && (
+                                <button
+                                    onClick={() => setShowAddSongs(true)}
+                                    className="w-full p-4 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-500 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                    Add Songs from Library
+                                </button>
+                            )}
                         </div>
                     </SortableContext>
                 </DndContext>
             </ScrollArea>
 
             {/* Match File Modal */}
-            {matchingTrackId && (
+            {matchingTrackId && canEdit && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
                     <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
                         <div className="flex items-center justify-between mb-4">
@@ -406,7 +491,7 @@ export function SetlistEditor({
             )}
 
             {/* Add Songs Modal (Multi-Select) */}
-            {showAddSongs && (
+            {showAddSongs && canEdit && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
                     <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
                         <div className="flex items-center justify-between mb-4">
