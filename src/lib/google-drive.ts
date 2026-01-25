@@ -8,7 +8,7 @@ export class DriveClient {
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Fix newlines if passed via one-line env
+                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
             },
             scopes: ['https://www.googleapis.com/auth/drive.readonly'],
         })
@@ -32,7 +32,7 @@ export class DriveClient {
                     fields: 'nextPageToken, files(id, name, mimeType, webContentLink, parents)',
                     q,
                     pageToken: nextPageToken
-                }) as any // Type casting for ease
+                }) as any
 
                 if (res.data.files) {
                     allFiles.push(...res.data.files)
@@ -45,22 +45,22 @@ export class DriveClient {
             const files = allFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder')
 
             // 3. Recursively fetch subfolders
-            // Using Promise.all so it's faster, but be careful of rate limits.
-            // For a synagogue library (hundreds of songs), this is fine. 
-            // For huge enterprise drives, we'd need a queue.
-            const subFolderFiles = await Promise.all(
-                folders.map(folder => this.listAllFiles(folder.id))
-            )
+            if (folders.length > 0) {
+                console.log(`Found ${folders.length} subfolders in ${folderId}, digging deeper...`)
+                const subFolderResults = await Promise.all(
+                    folders.map(folder => this.listAllFiles(folder.id))
+                )
 
-            // Flatten results
-            subFolderFiles.forEach(subFiles => {
-                files.push(...subFiles)
-            })
+                subFolderResults.forEach(subFiles => {
+                    files.push(...subFiles)
+                })
+            }
 
             return files
         } catch (error) {
             console.error(`Error listing folder ${folderId}:`, error)
-            return [] // Continue even if one folder fails
+            // Return whatever we found so far, don't crash everything
+            return allFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder')
         }
     }
 
