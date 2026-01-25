@@ -91,46 +91,48 @@ export default function Home() {
           for (const df of driveFiles) {
             if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) continue
 
-            // Normalize: remove extensions, lower case, replace underscores/hyphens with spaces
+            // Normalize: remove extensions, lower case, then replace ALL non-alphanumeric with spaces
+            // This handles "d'zimrah" -> "d zimrah", "s_fatai" -> "s fatai", "(Complete)" -> " complete "
             const rawFileName = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '')
-            const cleanFileName = rawFileName.replace(/[_\-]/g, ' ').trim()
+            const cleanFileName = rawFileName.replace(/[^a-z0-9]/g, ' ').trim()
+
+            // Normalize Target too
+            const cleanTargetAlpha = cleanTarget.replace(/[^a-z0-9]/g, ' ').trim()
 
             // 1. Direct Inclusion (Score: 100)
-            if (cleanFileName === cleanTarget) {
+            if (cleanFileName === cleanTargetAlpha) {
               if (bestScore < 100) { bestScore = 100; bestMatch = df; }
               continue
             }
 
-            // 2. Starts With (Score: 90) - e.g. "Ma Tovu" matches "Ma tovu_Hinei..."
-            if (cleanFileName.startsWith(cleanTarget)) {
+            // 2. Starts With (Score: 90)
+            if (cleanFileName.startsWith(cleanTargetAlpha)) {
               if (bestScore < 90) { bestScore = 90; bestMatch = df; }
               continue
             }
 
             // 3. Fuzzy Token Match (Score: 70-80)
-            // this handles "Mah Tovu" vs "Ma Tovu" even if filenames are long
-            const targetTokens = cleanTarget.split(' ').filter(t => t.length > 0)
+            const targetTokens = cleanTargetAlpha.split(' ').filter(t => t.length > 0)
             const fileTokens = cleanFileName.split(' ').filter(t => t.length > 0)
 
             let matchedTokenCount = 0
             targetTokens.forEach(tToken => {
-              // Does this token exist in the file tokens? (Fuzzy)
               const found = fileTokens.some(fToken => {
-                if (fToken === tToken) return true // Exact token match
-                if (Math.abs(fToken.length - tToken.length) > 2) return false // Length too different
-                return levenshtein(fToken, tToken) <= 1 // Allow 1 typo per word (Mah vs Ma)
+                if (fToken === tToken) return true
+                // Allow small length diffs
+                if (Math.abs(fToken.length - tToken.length) > 2) return false
+                // Allow typos (levenshtein)
+                return levenshtein(fToken, tToken) <= 1
               })
               if (found) matchedTokenCount++
             })
 
             const matchRatio = matchedTokenCount / targetTokens.length
 
-            // If we matched 100% of the words (fuzzily)
             if (matchRatio === 1) {
               const score = 80
               if (score > bestScore) { bestScore = score; bestMatch = df; }
             }
-            // If we matched "most" words (e.g. 2 out of 3)
             else if (matchRatio >= 0.66) {
               const score = 60
               if (score > bestScore) { bestScore = score; bestMatch = df; }
