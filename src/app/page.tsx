@@ -242,7 +242,7 @@ export default function Home() {
         {/* Active Setlist - Reuse existing component but ensure it fits */}
         <div className="flex-1 bg-zinc-950 p-4 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-hidden">
-            <SetlistManager />
+            <SetlistManager onSongSelect={() => setView('performer')} />
           </div>
         </div>
       </div>

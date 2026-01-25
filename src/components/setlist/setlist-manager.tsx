@@ -93,7 +93,7 @@ function SortableItem({ item, isActive, onDelete, onSelect }: {
     )
 }
 
-export function SetlistManager() {
+export function SetlistManager({ onSongSelect }: { onSongSelect?: () => void }) {
     const { items, moveItem, removeItem, activeIndex, setActiveIndex } = useSetlistStore()
     const { setFile, setTransposition, reset } = useMusicStore()
 
@@ -124,6 +124,8 @@ export function SetlistManager() {
             } else {
                 setTransposition(0)
             }
+            // Trigger view switch if provided
+            if (onSongSelect) onSongSelect()
         }
     }
 
