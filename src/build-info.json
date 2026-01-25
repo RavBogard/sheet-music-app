@@ -1,11 +1,11 @@
 {
-  "version": "master-57de21e",
-  "buildDate": "1/25/2026, 3:57:20 PM",
+  "version": "master-d8846ac",
+  "buildDate": "1/25/2026, 5:19:10 PM",
   "changelog": [
-    "57de21e - UI: Immersive Performer Mode + Full Width PDF Scaling (25 seconds ago)",
-    "dbd3680 - Fix build error: Correct invalid button size to lg (6 minutes ago)",
-    "2fe8af9 - UI Overhaul: Mobile-First Kiosk Design + PDF Fixes (10 minutes ago)",
-    "eb0d418 - Fix: Prioritize GOOGLE_CREDENTIALS_JSON environment variable (17 minutes ago)",
-    "b636583 - Add /api/diagnose route for debugging (20 minutes ago)"
+    "d8846ac - Firebase: Install SDK and Create Setlist Service (11 minutes ago)",
+    "86161c3 - Fix Setlist Parsing (Take 4): Force update files with correct logic (23 minutes ago)",
+    "318ffc8 - Fix Build: Handle null search params correctly (39 minutes ago)",
+    "ba7ada4 - Enhance Library: Global Search + Google Doc Setlists (41 minutes ago)",
+    "4ab6364 - Fix Matching: Aggressive normalization (ignore all punctuation) (42 minutes ago)"
   ]
 }

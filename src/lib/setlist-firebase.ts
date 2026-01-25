@@ -14,11 +14,10 @@ import {
 
 export interface SetlistTrack {
     id: string
-    originalTitle: string
-    matchedFileId?: string
-    customTitle?: string
-    notes?: string
+    title: string
+    fileId?: string
     key?: string
+    notes?: string
 }
 
 export interface Setlist {

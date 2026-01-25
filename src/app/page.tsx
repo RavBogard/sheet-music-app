@@ -13,6 +13,10 @@ import {
 } from "lucide-react"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { SetlistManager } from "@/components/setlist/setlist-manager"
+import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
+import { SetlistEditor } from "@/components/setlist/SetlistEditor"
+import { ImportModal } from "@/components/setlist/ImportModal"
+import { Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import * as XLSX from 'xlsx'
 
 import buildInfo from "@/build-info.json"
@@ -29,7 +33,7 @@ interface DriveFile {
   mimeType: string
 }
 
-type ViewMode = 'home' | 'library' | 'setlist' | 'performer'
+type ViewMode = 'home' | 'library' | 'setlist' | 'setlist_dashboard' | 'setlist_editor' | 'performer'
 
 export default function Home() {
   const { fileType, fileUrl, setFile, transposition, setTransposition } = useMusicStore()
@@ -40,6 +44,11 @@ export default function Home() {
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(false)
   const [errorMSG, setErrorMSG] = useState<string | null>(null)
+
+  // Setlist State
+  const [editingSetlist, setEditingSetlist] = useState<Setlist | null>(null)
+  const [importedTracks, setImportedTracks] = useState<SetlistTrack[]>([])
+  const [showImportModal, setShowImportModal] = useState(false)
 
   // 1. Initial Load
   useEffect(() => {
@@ -194,14 +203,14 @@ export default function Home() {
         </button>
 
         <button
-          onClick={() => setView('setlist')}
+          onClick={() => setView('setlist_dashboard')}
           className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
         >
           <div className="bg-green-500/20 p-6 rounded-full group-hover:bg-green-500/30 transition-colors">
             <ListMusic className="h-16 w-16 text-green-400" />
           </div>
           <h2 className="text-3xl font-bold">Setlists</h2>
-          <p className="text-zinc-400 text-lg">Manage Active Set or Import from Excel</p>
+          <p className="text-zinc-400 text-lg">Manage or Import Setlists</p>
         </button>
       </div>
 
@@ -214,7 +223,50 @@ export default function Home() {
     </div>
   )
 
-  // B. Library View (Touch List)
+  // B. Setlist Dashboard (Firebase)
+  if (view === 'setlist_dashboard') return (
+    <>
+      <SetlistDashboard
+        onBack={() => setView('home')}
+        onSelect={(setlist) => {
+          setEditingSetlist(setlist)
+          setView('setlist_editor')
+        }}
+        onImport={() => setShowImportModal(true)}
+        onCreateNew={() => {
+          setEditingSetlist(null)
+          setImportedTracks([])
+          setView('setlist_editor')
+        }}
+      />
+      {showImportModal && (
+        <ImportModal
+          driveFiles={driveFiles}
+          onClose={() => setShowImportModal(false)}
+          onImport={(tracks) => {
+            setImportedTracks(tracks)
+            setEditingSetlist(null)
+            setShowImportModal(false)
+            setView('setlist_editor')
+          }}
+        />
+      )}
+    </>
+  )
+
+  // C. Setlist Editor
+  if (view === 'setlist_editor') return (
+    <SetlistEditor
+      setlistId={editingSetlist?.id}
+      initialTracks={editingSetlist?.tracks || importedTracks}
+      initialName={editingSetlist?.name || "New Setlist"}
+      driveFiles={driveFiles}
+      onBack={() => setView('setlist_dashboard')}
+      onSave={() => setView('setlist_dashboard')}
+    />
+  )
+
+  // D. Library View (Touch List)
   if (view === 'library') return (
     <div className="h-screen flex flex-col bg-zinc-950 text-white">
       <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
