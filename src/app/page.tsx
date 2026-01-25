@@ -235,43 +235,45 @@ export default function Home() {
     </div>
   )
 
-  // D. Performer View (Fullscreen Music)
+  // D. Performer View (Immersive)
   return (
-    <div className="h-screen flex flex-col bg-zinc-950 text-white">
-      {/* Top Bar - Hideable? For now just minimal */}
-      <div className="h-16 flex items-center justify-between px-4 bg-zinc-900 border-b border-zinc-800 z-10">
-        <Button size="icon" variant="ghost" onClick={() => setView('home')}>
-          <HomeIcon className="h-6 w-6" />
-        </Button>
+    <div className="h-screen flex flex-col bg-black text-white relative">
 
-        {/* Key Controls (Center) - Only for XML */}
+      {/* Floating Controls (Top) - Auto-hides or stays minimal */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex justify-between items-start p-2 pointer-events-none">
+        {/* Back / Menu Pill */}
+        <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 pl-2 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
+          <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20" onClick={() => setView('home')}>
+            <HomeIcon className="h-6 w-6" />
+          </Button>
+          <div className="h-6 w-px bg-white/20 mx-1"></div>
+          <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20" onClick={() => setView('setlist')}>
+            <ListMusic className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* Transposition Pill (Only XML) */}
         {fileType === 'musicxml' && (
-          <div className="flex items-center gap-2 bg-black/40 rounded-full p-1">
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-xl" onClick={() => setTransposition(transposition - 1)}>-</Button>
-            <span className="w-12 text-center font-bold text-xl font-mono">
+          <div className="pointer-events-auto flex items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
+            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition(transposition - 1)}>-</Button>
+            <span className="w-8 text-center font-bold text-lg font-mono">
               {transposition > 0 ? `+${transposition}` : transposition}
             </span>
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-xl" onClick={() => setTransposition(transposition + 1)}>+</Button>
+            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition(transposition + 1)}>+</Button>
           </div>
         )}
-
-        <Button variant="ghost" onClick={() => setView('setlist')}>
-          <ListMusic className="h-6 w-6 mr-2" /> Setlist
-        </Button>
       </div>
 
-      <div className="flex-1 overflow-hidden relative bg-white/5">
-        {/* Render Viewer */}
-        <div className="absolute inset-0 overflow-auto flex justify-center p-4">
-          {fileType === 'musicxml' && fileUrl && <SmartScoreViewer url={fileUrl} />}
-          {fileType === 'pdf' && fileUrl && <PDFViewer url={fileUrl} />}
-          {!fileUrl && (
-            <div className="m-auto text-2xl text-muted-foreground flex flex-col items-center gap-4">
-              <Music2 className="h-16 w-16 opacity-20" />
-              No Song Selected
-            </div>
-          )}
-        </div>
+      <div className="flex-1 w-full h-full bg-black overflow-hidden relative">
+        {/* Render Viewer (Edge to Edge) */}
+        {/* We remove padding and centering divs to let the Viewer control scaling */}
+        {fileType === 'musicxml' && fileUrl && <SmartScoreViewer url={fileUrl} />}
+        {fileType === 'pdf' && fileUrl && <PDFViewer url={fileUrl} />}
+        {!fileUrl && (
+          <div className="flex w-full h-full items-center justify-center text-zinc-500">
+            No Song Selected
+          </div>
+        )}
       </div>
     </div>
   )

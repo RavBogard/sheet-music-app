@@ -1,16 +1,14 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ZoomIn, ZoomOut, Maximize, Minimize } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useMusicStore } from '@/lib/store'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-// Configure worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 interface PDFViewerProps {
@@ -19,54 +17,79 @@ interface PDFViewerProps {
 
 export function PDFViewer({ url }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
+    const [width, setWidth] = useState<number>(0)
+    const containerRef = useRef<HTMLDivElement>(null)
     const { zoom, setZoom } = useMusicStore()
+
+    // 1. Auto-Resize to fit Width
+    useEffect(() => {
+        if (!containerRef.current) return
+
+        const updateWidth = () => {
+            if (containerRef.current) {
+                // Subtract a tiny bit for scrollbar safety
+                setWidth(containerRef.current.clientWidth - 4)
+            }
+        }
+
+        updateWidth()
+        window.addEventListener('resize', updateWidth)
+        return () => window.removeEventListener('resize', updateWidth)
+    }, [])
 
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
         setNumPages(numPages)
     }
 
     return (
-        <div className="flex flex-col items-center gap-4 p-4 w-full">
-            <div className="flex gap-2 sticky top-2 z-10 bg-background/80 backdrop-blur p-2 rounded-lg border">
-                <Button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} variant="outline" size="sm">
-                    -
+        <div className="flex flex-col h-full w-full relative group">
+
+            {/* Floating Zoom Controls (Bottom Right) */}
+            <div className="absolute bottom-6 right-6 z-50 flex gap-2 bg-black/60 backdrop-blur rounded-full p-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                <Button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20">
+                    <ZoomOut className="h-5 w-5" />
                 </Button>
-                <span className="flex items-center text-sm font-mono min-w-[3ch]">
+                <Button onClick={() => setZoom(1)} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20 font-mono">
                     {Math.round(zoom * 100)}%
-                </span>
-                <Button onClick={() => setZoom(Math.min(3, zoom + 0.1))} variant="outline" size="sm">
-                    +
+                </Button>
+                <Button onClick={() => setZoom(Math.min(3, zoom + 0.1))} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20">
+                    <ZoomIn className="h-5 w-5" />
                 </Button>
             </div>
 
-            <Card className="p-4 bg-muted/20 min-h-[0px] w-full flex justify-center overflow-auto">
+            {/* Scrollable Container */}
+            <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center">
                 <Document
                     file={url}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={
-                        <div className="flex items-center gap-2 h-96">
-                            <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
-                            <span className="text-muted-foreground">Loading Score...</span>
+                        <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4 mt-20">
+                            <Loader2 className="animate-spin h-10 w-10" />
+                            <p>Loading Chart...</p>
                         </div>
                     }
                     error={
-                        <div className="text-destructive p-4">
+                        <div className="text-destructive p-10 text-center">
                             Failed to load PDF.
                         </div>
                     }
+                    className="flex flex-col items-center min-h-screen"
                 >
                     {Array.from(new Array(numPages), (el, index) => (
-                        <div key={`page_${index + 1}`} className="mb-4 shadow-lg">
+                        <div key={`page_${index + 1}`} className="mb-2 shadow-2xl bg-white">
                             <Page
                                 pageNumber={index + 1}
-                                scale={zoom}
+                                width={width * zoom} // Dynamic Width * Zoom Factor
                                 renderTextLayer={false}
                                 renderAnnotationLayer={false}
+                                loading={
+                                    <div className="h-[800px] w-full bg-white/5 animate-pulse" />
+                                }
                             />
                         </div>
                     ))}
                 </Document>
-            </Card>
+            </div>
         </div>
     )
 }
