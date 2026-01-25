@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
         // 2. Recursive Search
         console.log(`Starting recursive search for folder: ${folderId}`)
-        const files = await drive.listAllFiles(folderId)
+        const files = await drive.listAllFiles(folderId || undefined)
         console.log(`Found ${files.length} total files`)
 
         return NextResponse.json(files)
