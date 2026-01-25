@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { SetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
-import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check } from "lucide-react"
+import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -38,6 +38,7 @@ interface SetlistEditorProps {
     driveFiles: DriveFile[]
     onBack: () => void
     onSave?: (id: string) => void
+    onPlayTrack?: (fileId: string, fileName: string) => void
 }
 
 function SortableTrack({
@@ -45,12 +46,14 @@ function SortableTrack({
     onUpdate,
     onDelete,
     onMatchFile,
+    onPlay,
     driveFiles
 }: {
     track: SetlistTrack
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
     onDelete: (id: string) => void
     onMatchFile: (trackId: string) => void
+    onPlay?: (fileId: string, fileName: string) => void
     driveFiles: DriveFile[]
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: track.id })
@@ -63,23 +66,44 @@ function SortableTrack({
 
     const matchedFile = driveFiles.find(f => f.id === track.fileId)
 
+    const handleTitleClick = () => {
+        if (matchedFile && onPlay) {
+            onPlay(matchedFile.id, matchedFile.name)
+        }
+    }
+
     return (
         <div
             ref={setNodeRef}
             style={style}
             className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center gap-4 group"
         >
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
                 <GripVertical className="h-5 w-5 text-zinc-600" />
             </div>
 
             <div className="flex-1 space-y-2">
-                <Input
-                    value={track.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                    className="bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0"
-                    placeholder="Song title"
-                />
+                {/* CLICKABLE TITLE - Opens the music viewer */}
+                <div className="flex items-center gap-2">
+                    {matchedFile && onPlay && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-400/10"
+                            onClick={handleTitleClick}
+                        >
+                            <Play className="h-4 w-4" />
+                        </Button>
+                    )}
+                    <Input
+                        value={track.title}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
+                        className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
+                        placeholder="Song title"
+                        onClick={matchedFile ? handleTitleClick : undefined}
+                        readOnly={!!matchedFile}
+                    />
+                </div>
                 <div className="flex items-center gap-4 text-sm">
                     <Input
                         value={track.key || ""}
@@ -102,17 +126,17 @@ function SortableTrack({
                         className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded cursor-pointer hover:bg-green-400/20"
                         onClick={() => onMatchFile(track.id)}
                     >
-                        ✓ {matchedFile.name.substring(0, 20)}...
+                        ✓ Linked
                     </div>
                 ) : (
                     <Button
                         size="sm"
                         variant="outline"
                         onClick={() => onMatchFile(track.id)}
-                        className="h-8 gap-1"
+                        className="h-8 gap-1 text-yellow-400 border-yellow-400/50"
                     >
                         <Search className="h-3 w-3" />
-                        Match
+                        Link File
                     </Button>
                 )}
                 <Button
@@ -135,7 +159,8 @@ export function SetlistEditor({
     suggestedName = "",
     driveFiles,
     onBack,
-    onSave
+    onSave,
+    onPlayTrack
 }: SetlistEditorProps) {
     // Core state
     const [setlistId, setSetlistId] = useState<string | undefined>(initialSetlistId)
@@ -328,6 +353,7 @@ export function SetlistEditor({
                                     onUpdate={updateTrack}
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
+                                    onPlay={onPlayTrack}
                                     driveFiles={driveFiles}
                                 />
                             ))}
@@ -350,7 +376,7 @@ export function SetlistEditor({
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
                     <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xl font-bold">Match to File</h3>
+                            <h3 className="text-xl font-bold">Link to Music File</h3>
                             <Button size="icon" variant="ghost" onClick={() => setMatchingTrackId(null)}>
                                 <X className="h-5 w-5" />
                             </Button>
@@ -407,8 +433,8 @@ export function SetlistEditor({
                                         key={file.id}
                                         onClick={() => toggleFileSelection(file.id)}
                                         className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${selectedFiles.has(file.id)
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-zinc-800 hover:bg-zinc-700'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-zinc-800 hover:bg-zinc-700'
                                             }`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedFiles.has(file.id) ? 'bg-white border-white' : 'border-zinc-600'

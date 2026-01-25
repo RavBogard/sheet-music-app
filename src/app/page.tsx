@@ -276,6 +276,13 @@ export default function Home() {
         setSuggestedSetlistName("")
         setView('setlist_dashboard')
       }}
+      onPlayTrack={(fileId, fileName) => {
+        // Find the file in driveFiles to get mimeType
+        const file = driveFiles.find(f => f.id === fileId)
+        if (file) {
+          loadFile(file)
+        }
+      }}
     />
   )
 
