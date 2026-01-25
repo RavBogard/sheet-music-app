@@ -1,11 +1,22 @@
 import type { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
+
+if (!process.env.GOOGLE_CLIENT_ID) {
+    console.error("CRITICAL ERROR: GOOGLE_CLIENT_ID is missing from environment variables.")
+}
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+    console.error("CRITICAL ERROR: GOOGLE_CLIENT_SECRET is missing from environment variables.")
+}
+if (!process.env.NEXTAUTH_SECRET) {
+    console.error("CRITICAL ERROR: NEXTAUTH_SECRET is missing. This will cause 500 errors in production.")
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
         GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            clientId: process.env.GOOGLE_CLIENT_ID || "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
             authorization: {
                 params: {
                     scope: "openid email profile https://www.googleapis.com/auth/drive.readonly",
