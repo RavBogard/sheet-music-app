@@ -106,8 +106,8 @@ function PDFPageWrapper({ pageNumber, width, zoom, transposition }: { pageNumber
                 }
             />
             {/* Overlay Layer */}
-            {/* Overlay Layer */}
-            <TransposerOverlay parentRef={ref as React.RefObject<HTMLDivElement>} pageNumber={pageNumber} transposition={transposition} />
+            {/* Overlay Layer - Temporarily Disabled for Debugging */}
+            {/* <TransposerOverlay parentRef={ref as React.RefObject<HTMLDivElement>} pageNumber={pageNumber} transposition={transposition} /> */}
         </div>
     )
 }
