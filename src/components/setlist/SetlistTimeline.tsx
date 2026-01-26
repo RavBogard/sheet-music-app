@@ -21,7 +21,7 @@ export function SetlistTimeline({ tracks, onPlay }: SetlistTimelineProps) {
                     {tracks.map((track, i) => (
                         <div
                             key={i}
-                            onClick={() => onPlay(track.fileId)}
+                            onClick={() => track.fileId && onPlay(track.fileId)}
                             className="bg-black border border-zinc-800 hover:border-zinc-600 rounded-xl p-4 w-60 shrink-0 cursor-pointer transition-colors relative group"
                         >
                             {/* Connector Line */}

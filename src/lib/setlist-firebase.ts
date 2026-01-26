@@ -21,6 +21,7 @@ export interface SetlistTrack {
     audioFileId?: string  // Linked audio/MP3 file for practice
     key?: string
     notes?: string
+    duration?: string
 }
 
 export interface Setlist {
