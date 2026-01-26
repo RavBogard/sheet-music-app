@@ -118,8 +118,8 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 </Button>
             </div>
 
-            {/* Transposer Toggle (Top Right) */}
-            <div className="absolute top-6 right-6 z-50 flex gap-2">
+            {/* Transposer Toggle (Bottom Left - Moved to avoid blocking top controls) */}
+            <div className="absolute bottom-6 left-6 z-50 flex gap-2">
                 {status === 'ready' && (
                     <div className="bg-white/90 text-black px-3 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2 border border-purple-100">
                         <div className="text-xs font-bold text-purple-600 uppercase tracking-wider">
