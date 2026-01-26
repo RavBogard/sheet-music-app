@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useMusicStore, FileType } from "@/lib/store"
 import { levenshtein } from "@/lib/utils"
 import { useSetlistStore } from "@/lib/setlist-store"
+import { useWakeLock } from "@/hooks/use-wake-lock"
 import { SetlistEditor } from "@/components/setlist/SetlistEditor"
 import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
 import { AudioLibrary } from "@/components/audio/AudioLibrary"
@@ -204,6 +205,17 @@ export default function Home() {
   }
 
   // --- VIEWS ---
+
+  // Wake Lock Logic
+  const { requestWakeLock, releaseWakeLock } = useWakeLock()
+
+  useEffect(() => {
+    if (view === 'performer') {
+      requestWakeLock()
+    } else {
+      releaseWakeLock()
+    }
+  }, [view, requestWakeLock, releaseWakeLock])
 
   if (view === 'home') return (
     <HomeView

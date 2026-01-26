@@ -14,9 +14,32 @@ interface PerformerViewProps {
     onSetlist: () => void
 }
 
+import { useDrag } from '@use-gesture/react'
+import { useMusicStore } from '@/lib/store'
+
+// ... existing dynamic imports
+
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
+    const { nextSong, prevSong } = useMusicStore()
+
+    const bind = useDrag(({ swipe: [swipeX] }) => {
+        if (swipeX === -1) {
+            nextSong()
+        } else if (swipeX === 1) {
+            prevSong()
+        }
+    }, {
+        axis: 'x',
+        filterTaps: true,
+        swipe: {
+            duration: 2000,
+            distance: 50,
+            velocity: 0.5
+        }
+    })
+
     return (
-        <div className="h-screen flex flex-col bg-black text-white relative">
+        <div {...bind()} className="h-screen flex flex-col bg-black text-white relative touch-none">
 
             {/* Main Content Area (with bottom padding for toolbar) */}
             <div className="flex-1 w-full h-full bg-black overflow-hidden relative pb-16">
