@@ -44,50 +44,109 @@ export async function POST(request: Request) {
             }, { status: 400 })
         }
 
-        // 2. Send to Gemini for parsing
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
+        console.log("Document content preview:", textContent.substring(0, 500))
+
+        // 2. Send to Gemini for parsing with improved prompt
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
         const prompt = `You are a setlist parser for a music app. Extract song names from this setlist document.
 
+CRITICAL: You MUST return ONLY a valid JSON array. No text before or after.
+
 Rules:
-- Return ONLY a JSON array of objects
-- Each object should have: { "title": "Song Name", "key": "optional key like 'G' or 'Bm'", "notes": "any other info" }
-- Ignore headers, dates, page numbers, and other non-song content
-- If a line has a number prefix like "1." or "-", strip it
-- If you see key information like "(Key of G)" or "[Em]", extract it to the "key" field
-- Be intelligent about what is a song vs what is metadata
+- Return ONLY a JSON array of objects, nothing else
+- Each object: { "title": "Song Name", "key": "", "notes": "" }
+- Ignore headers, dates, page numbers, footers
+- Strip number prefixes like "1." or "-"
+- Extract key info like "(Key of G)" to the "key" field
+- If you can't parse it, return an empty array: []
 
 Document content:
-${textContent.substring(0, 10000)}
+${textContent.substring(0, 8000)}
 
-Return ONLY the JSON array, no markdown, no explanation.`
+Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","notes":""},{"title":"Song 2","key":"","notes":""}]`
 
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const text = response.text()
-
-        // 3. Parse the JSON response
-        let tracks = []
+        let text = ""
         try {
-            // Clean up potential markdown code blocks
-            const cleanJson = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-            tracks = JSON.parse(cleanJson)
-        } catch (e) {
-            console.error("Failed to parse Gemini response:", text)
+            const result = await model.generateContent(prompt)
+            const response = await result.response
+            text = response.text()
+            console.log("Gemini raw response:", text.substring(0, 500))
+        } catch (geminiError: any) {
+            console.error("Gemini API error:", geminiError)
             return NextResponse.json({
-                error: "Failed to parse AI response",
-                raw: text
+                error: "AI processing failed",
+                details: geminiError.message
             }, { status: 500 })
+        }
+
+        // 3. Parse the JSON response with multiple fallback strategies
+        let tracks = []
+
+        // Strategy 1: Direct parse
+        try {
+            const cleanJson = text
+                .replace(/```json\n?/g, "")
+                .replace(/```\n?/g, "")
+                .trim()
+            tracks = JSON.parse(cleanJson)
+        } catch (e1) {
+            console.log("Direct parse failed, trying extraction...")
+
+            // Strategy 2: Find JSON array in response
+            try {
+                const arrayMatch = text.match(/\[[\s\S]*\]/)
+                if (arrayMatch) {
+                    tracks = JSON.parse(arrayMatch[0])
+                } else {
+                    throw new Error("No JSON array found")
+                }
+            } catch (e2) {
+                console.log("Array extraction failed, trying line-by-line...")
+
+                // Strategy 3: Parse as simple line list and create tracks
+                try {
+                    const lines = textContent
+                        .split('\n')
+                        .map(l => l.trim())
+                        .filter(l => l.length > 2 && l.length < 100)
+                        .filter(l => !l.match(/^(page|date|setlist|service|shabbat|morning|evening|friday|saturday)/i))
+                        .filter(l => !l.match(/^\d{1,2}[\/\-]\d{1,2}/)) // Skip dates
+                        .slice(0, 30) // Max 30 songs
+
+                    tracks = lines.map((line, i) => ({
+                        title: line.replace(/^[\d\.\-\s]+/, '').trim(),
+                        key: "",
+                        notes: ""
+                    })).filter(t => t.title.length > 1)
+
+                    console.log("Fallback line parsing created", tracks.length, "tracks")
+                } catch (e3) {
+                    console.error("All parsing strategies failed")
+                    return NextResponse.json({
+                        error: "Failed to parse document",
+                        details: "The document format couldn't be processed. Try a simpler format.",
+                        raw: text.substring(0, 500)
+                    }, { status: 500 })
+                }
+            }
+        }
+
+        // Validate tracks is an array
+        if (!Array.isArray(tracks)) {
+            tracks = []
         }
 
         // 4. Add IDs to each track
         const tracksWithIds = tracks.map((track: any, index: number) => ({
             id: `track-${Date.now()}-${index}`,
-            title: track.title || "Untitled",
-            key: track.key || "",
-            notes: track.notes || "",
-            fileId: null // Will be matched later
+            title: String(track.title || track.name || "Untitled").substring(0, 100),
+            key: String(track.key || "").substring(0, 10),
+            notes: String(track.notes || "").substring(0, 200),
+            fileId: null
         }))
+
+        console.log("Successfully parsed", tracksWithIds.length, "tracks")
 
         return NextResponse.json({ tracks: tracksWithIds })
 
