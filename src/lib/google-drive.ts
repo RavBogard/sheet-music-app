@@ -51,7 +51,7 @@ export class DriveClient {
             // If folderId is provided, search inside it. If not, search EVERYTHING (except folders)
             const q = folderId
                 ? `'${folderId}' in parents and trashed = false`
-                : `trashed = false and mimeType != 'application/vnd.google-apps.folder'`
+                : `trashed = false` // Fetch EVERYTHING (files + folders) so we can build the tree
 
             let nextPageToken: string | undefined = undefined;
 

@@ -22,57 +22,115 @@ interface SongChartsLibraryProps {
 export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChartsLibraryProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('alphabetical')
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
-    // Filter to music/PDF files (not audio)
-    const musicFiles = driveFiles.filter(f =>
-        !f.mimeType.startsWith('audio/') &&
-        !f.name.match(/\.(mp3|m4a|wav|aac|ogg|flac)$/i) &&
-        !f.mimeType.includes('folder') &&
-        (f.mimeType.includes('pdf') ||
-            f.mimeType.includes('xml') ||
-            f.name.endsWith('.pdf') ||
-            f.name.endsWith('.musicxml') ||
-            f.name.endsWith('.xml'))
-    )
+    // 1. Separate Folders and Files
+    const { folders, files, fileMap, folderMap } = useMemo(() => {
+        const folders: DriveFile[] = []
+        const files: DriveFile[] = []
+        const fileMap = new Map<string, DriveFile>()
+        const folderMap = new Map<string, DriveFile>()
 
-    // Build folder structure from file names (extract folder-like prefixes)
-    const folderStructure = useMemo(() => {
-        const folders: { [key: string]: DriveFile[] } = { "All Files": [] }
-
-        musicFiles.forEach(file => {
-            // Try to extract folder from filename patterns like "FolderName - FileName.pdf"
-            const match = file.name.match(/^(.+?)\s*[-–]\s*/)
-            if (match) {
-                const folderName = match[1].trim()
-                if (!folders[folderName]) folders[folderName] = []
-                folders[folderName].push(file)
-            } else {
-                folders["All Files"].push(file)
+        driveFiles.forEach(f => {
+            if (f.mimeType.includes('folder')) {
+                folders.push(f)
+                folderMap.set(f.id, f)
+            } else if (
+                (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
+                !f.mimeType.startsWith('audio/')
+            ) {
+                files.push(f)
+                fileMap.set(f.id, f)
             }
         })
+        return { folders, files, fileMap, folderMap }
+    }, [driveFiles])
 
-        return folders
-    }, [musicFiles])
-
-    const toggleFolder = (folderName: string) => {
-        const newExpanded = new Set(expandedFolders)
-        if (newExpanded.has(folderName)) {
-            newExpanded.delete(folderName)
-        } else {
-            newExpanded.add(folderName)
+    // 2. Build Tree / Current View Logic
+    const currentViewItems = useMemo(() => {
+        if (viewMode === 'alphabetical') {
+            return files
+                .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                .sort((a, b) => a.name.localeCompare(b.name))
         }
-        setExpandedFolders(newExpanded)
-    }
 
-    const filteredFiles = musicFiles
-        .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .sort((a, b) => a.name.localeCompare(b.name))
+        // Folders View
+        // If searchQuery exists, show FLAT list of matches (files + folders)
+        if (searchQuery) {
+            return [
+                ...folders.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())),
+                ...files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            ].sort((a, b) => a.name.localeCompare(b.name))
+        }
+
+        // Navigation View (Hierarchy)
+        // Find items whose parent is currentFolderId (or root if null)
+        // Note: Drive files can have multiple parents using `parents` array.
+        // If we don't have parent info, we assume root (this might be a limitation of our simple list)
+
+        return [
+            ...folders.filter(f => {
+                if (currentFolderId) return f.parents?.includes(currentFolderId)
+                return !f.parents || f.parents.length === 0
+            }),
+            ...files.filter(f => {
+                if (currentFolderId) return f.parents?.includes(currentFolderId)
+                // For root files, we only show them if they have NO parents or if we can't find their parent in our list
+                // (which implies they are in root or a shared folder we didn't fetch)
+                if (!f.parents || f.parents.length === 0) return true
+
+                // Tricky: If a file has a parent ID that IS NOT in our folder list, it's effectively an "Orphan" or Root file for our purposes
+                // But generally, shared files appear in root.
+                const hasKnownParent = f.parents.some(pid => folderMap.has(pid))
+                return !hasKnownParent
+            })
+        ].sort((a, b) => {
+            // Folders first
+            if (a.mimeType.includes('folder') && !b.mimeType.includes('folder')) return -1
+            if (!a.mimeType.includes('folder') && b.mimeType.includes('folder')) return 1
+            return a.name.localeCompare(b.name)
+        })
+
+    }, [viewMode, searchQuery, currentFolderId, files, folders, folderMap])
+
+    // Breadcrumbs Logic
+    const breadcrumbs = useMemo(() => {
+        if (!currentFolderId) return []
+        const crumbs = []
+        let curr = folderMap.get(currentFolderId)
+        while (curr) {
+            crumbs.unshift(curr)
+            if (curr.parents && curr.parents.length > 0) {
+                // Determine next parent (simple tree assumption: take first known parent)
+                // This prevents infinite loops if there are circular refs (unlikely in Drive but possible)
+                const parentId = curr.parents[0]
+                const next = folderMap.get(parentId)
+                if (next && next.id !== curr.id && !crumbs.includes(next)) {
+                    curr = next
+                } else {
+                    curr = undefined
+                }
+            } else {
+                curr = undefined
+            }
+        }
+        return crumbs
+    }, [currentFolderId, folderMap])
 
     const getCleanName = (name: string) => {
         return name
             .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
             .replace(/_/g, ' ')
+    }
+
+    const handleItemClick = (item: DriveFile) => {
+        if (item.mimeType.includes('folder')) {
+            setCurrentFolderId(item.id)
+            setSearchQuery("") // Clear search on navigation
+        } else {
+            onSelectFile(item)
+        }
     }
 
     return (
@@ -89,7 +147,7 @@ export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChar
                     <Button
                         size="sm"
                         variant={viewMode === 'alphabetical' ? 'default' : 'ghost'}
-                        onClick={() => setViewMode('alphabetical')}
+                        onClick={() => { setViewMode('alphabetical'); setCurrentFolderId(null); }}
                         className="gap-1"
                     >
                         <List className="h-4 w-4" />
@@ -107,12 +165,12 @@ export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChar
                 </div>
 
                 <div className="text-sm text-zinc-500">
-                    {musicFiles.length} charts
+                    {files.length} charts
                 </div>
             </div>
 
-            {/* Search */}
-            <div className="p-4 border-b border-zinc-800">
+            {/* Sub-Header: Search OR Breadcrumbs */}
+            <div className="p-4 border-b border-zinc-800 space-y-4">
                 <div className="relative max-w-xl mx-auto">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
                     <Input
@@ -122,73 +180,74 @@ export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChar
                         className="pl-10 h-12 text-lg"
                     />
                 </div>
+
+                {/* Breadcrumbs (only in Folder view and not searching) */}
+                {viewMode === 'folders' && !searchQuery && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 text-sm">
+                        <button
+                            onClick={() => setCurrentFolderId(null)}
+                            className={`flex items-center hover:text-white transition-colors ${!currentFolderId ? 'text-white font-bold' : 'text-zinc-500'}`}
+                        >
+                            <Folder className="h-4 w-4 mr-1" />
+                            Home
+                        </button>
+                        {breadcrumbs.map((folder, i) => (
+                            <div key={folder.id} className="flex items-center shrink-0">
+                                <ChevronRight className="h-4 w-4 text-zinc-600 mx-1" />
+                                <button
+                                    onClick={() => setCurrentFolderId(folder.id)}
+                                    className={`hover:text-white transition-colors ${i === breadcrumbs.length - 1 ? 'text-white font-bold' : 'text-zinc-500'}`}
+                                >
+                                    {folder.name}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
-                {viewMode === 'alphabetical' ? (
-                    // A-Z View
-                    <div className="max-w-2xl mx-auto space-y-2">
-                        {filteredFiles.map(file => (
-                            <button
-                                key={file.id}
-                                onClick={() => onSelectFile(file)}
-                                className="w-full text-left p-4 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-4"
-                            >
-                                <FileMusic className="h-6 w-6 text-blue-400 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">
-                                        {getCleanName(file.name)}
-                                    </div>
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-zinc-600" />
-                            </button>
-                        ))}
-                    </div>
-                ) : (
-                    // Folders View
-                    <div className="max-w-2xl mx-auto space-y-2">
-                        {Object.entries(folderStructure)
-                            .filter(([name, files]) => files.length > 0)
-                            .sort(([a], [b]) => a.localeCompare(b))
-                            .map(([folderName, files]) => (
-                                <div key={folderName}>
-                                    <button
-                                        onClick={() => toggleFolder(folderName)}
-                                        className="w-full text-left p-4 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-4"
-                                    >
-                                        {expandedFolders.has(folderName) ? (
-                                            <FolderOpen className="h-6 w-6 text-yellow-400 shrink-0" />
-                                        ) : (
-                                            <Folder className="h-6 w-6 text-yellow-400 shrink-0" />
-                                        )}
-                                        <div className="flex-1 font-medium">{folderName}</div>
-                                        <span className="text-sm text-zinc-500">{files.length} files</span>
-                                        <ChevronRight className={`h-5 w-5 text-zinc-600 transition-transform ${expandedFolders.has(folderName) ? 'rotate-90' : ''
-                                            }`} />
-                                    </button>
+                <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2">
+                    {currentViewItems.length === 0 && (
+                        <div className="text-center text-zinc-500 py-12">
+                            {searchQuery ? "No matches found" : "This folder is empty"}
+                        </div>
+                    )}
 
-                                    {expandedFolders.has(folderName) && (
-                                        <div className="ml-6 mt-2 space-y-1 border-l-2 border-zinc-800 pl-4">
-                                            {files
-                                                .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                                .sort((a, b) => a.name.localeCompare(b.name))
-                                                .map(file => (
-                                                    <button
-                                                        key={file.id}
-                                                        onClick={() => onSelectFile(file)}
-                                                        className="w-full text-left p-3 bg-zinc-900/50 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-3"
-                                                    >
-                                                        <FileMusic className="h-5 w-5 text-blue-400 shrink-0" />
-                                                        <span className="flex-1 truncate">{getCleanName(file.name)}</span>
-                                                    </button>
-                                                ))}
+                    {currentViewItems.map(item => {
+                        const isFolder = item.mimeType.includes('folder')
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => handleItemClick(item)}
+                                className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
+                                        ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
+                                        : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
+                                    }`}
+                            >
+                                {isFolder ? (
+                                    <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                ) : (
+                                    <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                )}
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-lg truncate">
+                                        {isFolder ? item.name : getCleanName(item.name)}
+                                    </div>
+                                    {!isFolder && (
+                                        <div className="text-xs text-zinc-500 truncate mt-1">
+                                            {/* Show parent folder hint if searching */}
+                                            {searchQuery && item.parents && item.parents[0] && folderMap.get(item.parents[0])?.name}
                                         </div>
                                     )}
                                 </div>
-                            ))}
-                    </div>
-                )}
+                                <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
+                            </button>
+                        )
+                    })}
+                </div>
             </ScrollArea>
         </div>
     )
