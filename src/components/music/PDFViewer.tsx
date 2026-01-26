@@ -77,37 +77,20 @@ export function PDFViewer({ url }: PDFViewerProps) {
                     className="flex flex-col items-center min-h-screen"
                 >
                     {Array.from(new Array(numPages), (el, index) => (
-                        <PDFPageWrapper
-                            key={`page_${index + 1}`}
-                            pageNumber={index + 1}
-                            width={width}
-                            zoom={zoom}
-                            transposition={transposition}
-                        />
+                        <div key={`page_${index + 1}`} className="mb-2 shadow-2xl bg-white relative group/page">
+                            <Page
+                                pageNumber={index + 1}
+                                width={width * zoom}
+                                renderTextLayer={false}
+                                renderAnnotationLayer={false}
+                                loading={
+                                    <div className="h-[800px] w-full bg-white/5 animate-pulse" />
+                                }
+                            />
+                        </div>
                     ))}
                 </Document>
             </div>
-        </div>
-    )
-}
-
-function PDFPageWrapper({ pageNumber, width, zoom, transposition }: { pageNumber: number, width: number, zoom: number, transposition: number }) {
-    const ref = useRef<HTMLDivElement>(null)
-
-    return (
-        <div ref={ref} className="mb-2 shadow-2xl bg-white relative group/page">
-            <Page
-                pageNumber={pageNumber}
-                width={width * zoom} // Dynamic Width * Zoom Factor
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                loading={
-                    <div className="h-[800px] w-full bg-white/5 animate-pulse" />
-                }
-            />
-            {/* Overlay Layer */}
-            {/* Overlay Layer - Temporarily Disabled for Debugging */}
-            {/* <TransposerOverlay parentRef={ref as React.RefObject<HTMLDivElement>} pageNumber={pageNumber} transposition={transposition} /> */}
         </div>
     )
 }
