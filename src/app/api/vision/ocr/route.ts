@@ -3,28 +3,46 @@ import { ImageAnnotatorClient } from "@google-cloud/vision"
 
 // Initialize Vision Client
 // We reuse the credentials env vars we already set up for Drive
+// Initialize Vision Client
+// We reuse the credentials env vars we already set up for Drive
 const getCredentials = () => {
-    if (process.env.GOOGLE_CREDENTIALS_JSON) {
-        try {
+    try {
+        if (process.env.GOOGLE_CREDENTIALS_JSON) {
+            console.log("Parsing GOOGLE_CREDENTIALS_JSON...")
             let jsonString = process.env.GOOGLE_CREDENTIALS_JSON
-            // Unwrap if double-quoted string
+            // Unwrap if double-quoted string (common Vercel issue)
             if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
                 jsonString = JSON.parse(jsonString)
             }
             return typeof jsonString === 'object' ? jsonString : JSON.parse(jsonString as string)
-        } catch (e) {
-            console.error("Failed to parse GOOGLE_CREDENTIALS_JSON for Vision", e)
         }
-    }
-    return {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+
+        console.log("Using separate GOOGLE_SERVICE_ACCOUNT_EMAIL and PRIVATE_KEY")
+        if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) console.error("Missing GOOGLE_SERVICE_ACCOUNT_EMAIL")
+        if (!process.env.GOOGLE_PRIVATE_KEY) console.error("Missing GOOGLE_PRIVATE_KEY")
+
+        return {
+            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            // Handle both literal '\n' characters and escaped newlines
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }
+    } catch (e) {
+        console.error("Credential Parsing Error:", e)
+        throw e
     }
 }
 
-const client = new ImageAnnotatorClient({
-    credentials: getCredentials()
-})
+// Lazy init to prevent cold start crashes if creds are bad
+let client: ImageAnnotatorClient | null = null;
+const getClient = () => {
+    if (!client) {
+        console.log("Initializing Vision Client...")
+        client = new ImageAnnotatorClient({
+            credentials: getCredentials()
+        })
+    }
+    return client
+}
 
 export async function POST(request: Request) {
     try {
@@ -38,7 +56,11 @@ export async function POST(request: Request) {
         const base64Content = imageBase64.replace(/^data:image\/\w+;base64,/, "")
 
         // Call Vision API
-        const [result] = await client.textDetection({
+        const visionClient = getClient()
+        if (!visionClient) throw new Error("Vision Client failed to initialize")
+
+        console.log("Sending image to Vision API...")
+        const [result] = await visionClient.textDetection({
             image: {
                 content: base64Content
             }
