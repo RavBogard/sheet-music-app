@@ -52,7 +52,11 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 body: JSON.stringify({ imageBase64 })
             })
 
-            if (!res.ok) throw new Error("OCR Failed")
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                console.error("OCR API Error Details:", errData)
+                throw new Error(errData.details || errData.error || "OCR Request Failed")
+            }
             const data = await res.json()
             const { chordBlocks, detectedKey } = identifyChords(data.blocks)
 
@@ -69,9 +73,10 @@ export function PDFViewer({ url }: PDFViewerProps) {
             setVisibleKey(detectedKey)
             setStatus('ready')
 
-        } catch (e) {
+        } catch (e: any) {
             console.error(e)
             setStatus('error')
+            alert(`Scan Failed: ${e.message}`)
         }
     }
 
