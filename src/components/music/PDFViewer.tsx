@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button'
 import { useMusicStore } from '@/lib/store'
 
 // import { TransposerOverlay } from './TransposerOverlay' // Deprecated
+// import { TransposerLayer, TransposedChord } from './TransposerLayer' // Moved up
 import { TransposerLayer, TransposedChord } from './TransposerLayer'
-import { Wand2 } from 'lucide-react'
+import { identifyChords, transposeChord } from '@/lib/transposer-logic'
+import { Wand2, Check } from 'lucide-react'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -28,22 +30,50 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
     // Transposer State
     const [showTransposer, setShowTransposer] = useState(false)
-    const [testChords, setTestChords] = useState<TransposedChord[]>([])
+    const [status, setStatus] = useState<'idle' | 'scanning' | 'ready' | 'error'>('idle')
+    const [visibleKey, setVisibleKey] = useState<string>('')
+    // Store raw OCR data: page -> { text, x, y, w, h }[]
+    const [rawPageData, setRawPageData] = useState<Record<number, { text: string, x: number, y: number, w: number, h: number }[]>>({})
 
-    // DEBUG: Generate fake chords
-    useEffect(() => {
-        if (showTransposer) {
-            // Fake data: Draw a box at 100,100 of Page 1
-            // We need to know where Page 1 IS.
-            // Assumption: Pages are stacked vertically with margin-bottom: 0.5rem (mb-2 = 8px)
-            // This is hard to calculate perfectly without knowing page heights.
-            // For now, let's just test that the layer RENDERS and SCROLLS.
-            setTestChords([
-                { x: 50, y: 50, width: 40, height: 20, original: 'C', transposed: 'D' },
-                { x: 150, y: 150, width: 40, height: 20, original: 'G', transposed: 'A' },
-            ])
+    const scanPages = async () => {
+        if (!containerRef.current) return
+        try {
+            setStatus('scanning')
+            setShowTransposer(true)
+
+            // MVP: Scan Page 1 (first canvas)
+            const canvas = containerRef.current.querySelector('canvas')
+            if (!canvas) throw new Error("No canvas found")
+
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8)
+            const res = await fetch('/api/vision/ocr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64 })
+            })
+
+            if (!res.ok) throw new Error("OCR Failed")
+            const data = await res.json()
+            const { chordBlocks, detectedKey } = identifyChords(data.blocks)
+
+            // Map to generic format
+            const chords = chordBlocks.map(b => ({
+                text: b.text,
+                x: b.poly[0].x,
+                y: b.poly[0].y,
+                w: b.poly[2].x - b.poly[0].x,
+                h: b.poly[2].y - b.poly[0].y
+            }))
+
+            setRawPageData(prev => ({ ...prev, 1: chords }))
+            setVisibleKey(detectedKey)
+            setStatus('ready')
+
+        } catch (e) {
+            console.error(e)
+            setStatus('error')
         }
-    }, [showTransposer])
+    }
 
     // 1. Auto-Resize to fit Width
     useEffect(() => {
@@ -82,14 +112,22 @@ export function PDFViewer({ url }: PDFViewerProps) {
             </div>
 
             {/* Transposer Toggle (Top Right) */}
-            <div className="absolute top-6 right-6 z-50">
+            <div className="absolute top-6 right-6 z-50 flex gap-2">
+                {status === 'ready' && (
+                    <div className="bg-white/90 text-black px-3 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2 border border-purple-100">
+                        <div className="text-xs font-bold text-purple-600 uppercase tracking-wider">
+                            {visibleKey} <span className="text-zinc-400">→</span> {transposeChord(visibleKey, transposition)}
+                        </div>
+                    </div>
+                )}
                 <Button
                     variant={showTransposer ? "secondary" : "default"}
-                    onClick={() => setShowTransposer(!showTransposer)}
+                    onClick={status === 'ready' ? () => setShowTransposer(!showTransposer) : scanPages}
+                    disabled={status === 'scanning'}
                     className="shadow-lg gap-2"
                 >
-                    <Wand2 className="h-4 w-4" />
-                    {showTransposer ? "Hide Layer" : "Test Layer"}
+                    {status === 'scanning' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                    {status === 'idle' || status === 'error' ? "Magic Transpose" : (showTransposer ? "Hide Chords" : "Show Chords")}
                 </Button>
             </div>
 
@@ -112,32 +150,57 @@ export function PDFViewer({ url }: PDFViewerProps) {
                         }
                         className="flex flex-col items-center min-h-screen"
                     >
-                        {Array.from(new Array(numPages), (el, index) => (
-                            <div key={`page_${index + 1}`} className="mb-2 shadow-2xl bg-white relative group/page">
-                                <Page
-                                    pageNumber={index + 1}
-                                    width={width * zoom}
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    loading={
-                                        <div className="h-[800px] w-full bg-white/5 animate-pulse" />
-                                    }
-                                />
-                            </div>
-                        ))}
+                        {Array.from(new Array(numPages), (el, index) => {
+                            const pageNum = index + 1
+                            // Compute transposed chords for this page if available
+                            const pageChords = (rawPageData[pageNum] || []).map(c => ({
+                                x: c.x, y: c.y, width: c.w, height: c.h,
+                                original: c.text,
+                                transposed: transposeChord(c.text, transposition)
+                            }))
+
+                            return (
+                                <div key={`page_${pageNum}`} className="mb-2 shadow-2xl bg-white relative group/page">
+                                    <Page
+                                        pageNumber={pageNum}
+                                        width={width * zoom}
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                        loading={
+                                            <div className="h-[800px] w-full bg-white/5 animate-pulse" />
+                                        }
+                                    />
+                                    {/* Per-Page Transposer Layer */}
+                                    <TransposerLayer
+                                        width={width * zoom}
+                                        height={0} // Not used for relative positioning
+                                        scale={1} // Coords match canvas pixels (1:1 with width*zoom usually? No, canvas render scale might differ)
+                                        // Wait, Vision API coords are based on the IMAGE sent. 
+                                        // We sent canvas.toDataURL(). 
+                                        // Canvas size = width * zoom * pixelRatio.
+                                        // If CSS width = width * zoom.
+                                        // We need to normalize? 
+                                        // Actually `toDataURL` usually outputs 1:1 with internal canvas dims.
+                                        // And `TransposerLayer` assumes pixels. 
+                                        // IF the overlay is same size as canvas, it works.
+                                        // The overlay is `absolute inset-0` (via parent relative).
+                                        // So overlay CSS width = Page CSS width.
+                                        // If Canvas internal width != CSS width, we have mismatch.
+                                        // React-pdf canvas is usually dense (2x).
+                                        // If we send 2000px wide image, Vision returns x=1000.
+                                        // But displayed CSS width is 1000px.
+                                        // We might need to adjust scale: cssWidth / imageWidth.
+                                        // Use `scale={1}` for now and observe alignment.
+                                        // For MVP, if it drifts, we add scaling logic later.
+                                        chords={pageChords}
+                                        visible={showTransposer}
+                                    />
+                                </div>
+                            )
+                        })}
                     </Document>
 
-                    {/* The Sibling Layer */}
-                    {/* It sits INSIDE the relative wrapper, so it matches Document height */}
-                    <TransposerLayer
-                        width={width * zoom} // Matches PDF width
-                        height={0} // CSS 'absolute inset-0' handles height if parent is relative? No, Document doesn't give size to parent easily if flex.
-                        // Actually, 'Document' is a flex col. The 'relative' wrapper around it will hug its height.
-                        // So 'absolute top-0 bottom-0' should work.
-                        scale={1}
-                        chords={testChords}
-                        visible={showTransposer}
-                    />
+                    {/* (Old Global Layer Removed) */}
                 </div>
             </div>
         </div>
