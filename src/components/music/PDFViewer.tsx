@@ -32,8 +32,8 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [showTransposer, setShowTransposer] = useState(false)
     const [status, setStatus] = useState<'idle' | 'scanning' | 'ready' | 'error'>('idle')
     const [visibleKey, setVisibleKey] = useState<string>('')
-    // Store raw OCR data: page -> { text, x, y, w, h }[]
-    const [rawPageData, setRawPageData] = useState<Record<number, { text: string, x: number, y: number, w: number, h: number }[]>>({})
+    // Store raw OCR data: page -> { text, x, y, w, h, refWidth, refHeight }[]
+    const [rawPageData, setRawPageData] = useState<Record<number, { text: string, x: number, y: number, w: number, h: number, refWidth: number, refHeight: number }[]>>({})
 
     const scanPages = async () => {
         if (!containerRef.current) return
@@ -66,7 +66,9 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 x: b.poly[0].x,
                 y: b.poly[0].y,
                 w: b.poly[2].x - b.poly[0].x,
-                h: b.poly[2].y - b.poly[0].y
+                h: b.poly[2].y - b.poly[0].y,
+                refWidth: canvas.width,    // Store the pixel width of the image sent to AI
+                refHeight: canvas.height
             }))
 
             setRawPageData(prev => ({ ...prev, 1: chords }))
@@ -176,30 +178,19 @@ export function PDFViewer({ url }: PDFViewerProps) {
                                         }
                                     />
                                     {/* Per-Page Transposer Layer */}
-                                    <TransposerLayer
-                                        width={width * zoom}
-                                        height={0} // Not used for relative positioning
-                                        scale={1} // Coords match canvas pixels (1:1 with width*zoom usually? No, canvas render scale might differ)
-                                        // Wait, Vision API coords are based on the IMAGE sent. 
-                                        // We sent canvas.toDataURL(). 
-                                        // Canvas size = width * zoom * pixelRatio.
-                                        // If CSS width = width * zoom.
-                                        // We need to normalize? 
-                                        // Actually `toDataURL` usually outputs 1:1 with internal canvas dims.
-                                        // And `TransposerLayer` assumes pixels. 
-                                        // IF the overlay is same size as canvas, it works.
-                                        // The overlay is `absolute inset-0` (via parent relative).
-                                        // So overlay CSS width = Page CSS width.
-                                        // If Canvas internal width != CSS width, we have mismatch.
-                                        // React-pdf canvas is usually dense (2x).
-                                        // If we send 2000px wide image, Vision returns x=1000.
-                                        // But displayed CSS width is 1000px.
-                                        // We might need to adjust scale: cssWidth / imageWidth.
-                                        // Use `scale={1}` for now and observe alignment.
-                                        // For MVP, if it drifts, we add scaling logic later.
-                                        chords={pageChords}
-                                        visible={showTransposer}
-                                    />
+                                    {pageChords.length > 0 && (
+                                        <TransposerLayer
+                                            width={width * zoom}
+                                            height={0} // Relative positioning handles this
+                                            // The scale is key! 
+                                            // The coordinates (c.x) are based on `c.refWidth`.
+                                            // The current DOM is `width * zoom`.
+                                            // So scale = (width * zoom) / c.refWidth
+                                            scale={(width * zoom) / (rawPageData[pageNum]?.[0]?.refWidth || 1)}
+                                            chords={pageChords}
+                                            visible={showTransposer}
+                                        />
+                                    )}
                                 </div>
                             )
                         })}

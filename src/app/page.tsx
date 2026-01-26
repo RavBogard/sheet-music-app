@@ -400,14 +400,14 @@ export default function Home() {
 
         {/* Keyboard navigation handled by useEffect at component top level */}
 
-        {/* Transposition Pill (Only XML) */}
-        {fileType === 'musicxml' && (
+        {/* Transposition Pill (XML & PDF) */}
+        {(fileType === 'musicxml' || fileType === 'pdf') && (
           <div className="pointer-events-auto flex items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition(transposition - 1)}>-</Button>
+            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition((transposition || 0) - 1)}>-</Button>
             <span className="w-8 text-center font-bold text-lg font-mono">
-              {transposition > 0 ? `+${transposition}` : transposition}
+              {(transposition || 0) > 0 ? `+${transposition}` : (transposition || 0)}
             </span>
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition(transposition + 1)}>+</Button>
+            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition((transposition || 0) + 1)}>+</Button>
           </div>
         )}
       </div>
