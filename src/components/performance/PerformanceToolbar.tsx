@@ -135,43 +135,78 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             {/* Right: Tools */}
             <div className="flex items-center gap-2">
 
-                {/* PDF AI Toggle */}
-                {fileType === 'pdf' && (
-                    <Button
-                        size="sm"
-                        variant={aiTransposer.isVisible ? "secondary" : "ghost"}
-                        className={`gap-2 ${aiTransposer.isVisible ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400"}`}
-                        onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
-                    >
-                        {aiTransposer.status === 'scanning' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                        <span className="hidden md:inline">Magic</span>
-                    </Button>
-                )}
-
-                {/* Transpose / Capo Menu */}
-                <Popover>
+                {/* Unified Transpose Menu */}
+                <Popover onOpenChange={(open) => {
+                    // Auto-trigger scan if opening menu, it's a PDF, and we haven't started yet
+                    if (open && fileType === 'pdf' && aiTransposer.status === 'idle') {
+                        setTransposerState({ isVisible: true })
+                    }
+                }}>
                     <PopoverTrigger asChild>
-                        <Button variant={capo.active ? "default" : "secondary"} size="sm" className="gap-2 min-w-[80px]">
-                            {capo.active ? (
-                                <>
-                                    <Guitar className="h-4 w-4" />
-                                    <span>Capo {capo.fret}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Music2 className="h-4 w-4" />
-                                    <span>
-                                        {transposition > 0 ? `+${transposition}` : transposition}
-                                    </span>
-                                </>
-                            )}
+                        <Button
+                            variant={transposition !== 0 || capo.active ? "default" : "secondary"}
+                            size="sm"
+                            className="gap-2 min-w-[100px]"
+                        >
+                            <Music2 className="h-4 w-4" />
+                            <span>
+                                {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Transpose")}
+                            </span>
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-4 bg-zinc-900 border-zinc-700 text-white mb-2" align="end" sideOffset={10}>
                         <div className="space-y-4">
+                            <h3 className="font-bold text-lg border-b border-zinc-800 pb-2 mb-4">Transposition</h3>
+
+                            {/* PDF Status / Loader */}
+                            {fileType === 'pdf' && (
+                                <div className="bg-zinc-800/50 rounded-lg p-3 mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-zinc-400">Smart Chords</span>
+                                        {aiTransposer.status === 'scanning' && <Loader2 className="h-4 w-4 animate-spin text-purple-400" />}
+                                        {aiTransposer.status === 'ready' && <Wand2 className="h-4 w-4 text-purple-400" />}
+                                    </div>
+
+                                    {aiTransposer.status === 'idle' && (
+                                        <p className="text-xs text-zinc-500">Menu opening triggers scan...</p>
+                                    )}
+
+                                    {aiTransposer.status === 'scanning' && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-zinc-300">Analyzing sheet music...</p>
+                                            <div className="h-1 bg-zinc-700 rounded-full overflow-hidden">
+                                                <div className="h-full bg-purple-500 animate-indeterminate" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {aiTransposer.status === 'ready' && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-zinc-300">
+                                                Detected Key: <span className="text-white font-bold">{aiTransposer.detectedKey}</span>
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 text-xs text-zinc-400 hover:text-white"
+                                                onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
+                                            >
+                                                {aiTransposer.isVisible ? "Hide Overlay" : "Show Overlay"}
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {aiTransposer.status === 'error' && (
+                                        <div className="text-xs text-red-400">
+                                            Scan failed. <Button variant="link" className="text-red-400 p-0 h-auto" onClick={() => setTransposerState({ status: 'idle', isVisible: true })}>Retry</Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Standard Transpose */}
                             <div>
-                                <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Manual Transpose</h4>
+                                <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Manual Shift</h4>
                                 <div className="flex items-center justify-center gap-4 bg-zinc-800 rounded-lg p-2">
                                     <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition - 1)}>-</Button>
                                     <span className="font-mono text-xl font-bold w-8 text-center">{transposition}</span>
@@ -180,10 +215,16 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                             </div>
 
                             {/* Capo Mode (Only if Key Detected) */}
-                            {aiTransposer.detectedKey ? (
+                            {aiTransposer.detectedKey && (
                                 <div>
-                                    <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Guitar Capo Mode</h4>
-                                    <p className="text-xs text-zinc-400 mb-2">Original Key: <span className="text-purple-400 font-bold">{aiTransposer.detectedKey}</span></p>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-xs font-bold text-zinc-500 uppercase">Guitar Capo</h4>
+                                        {capo.active && (
+                                            <Button variant="ghost" size="sm" className="h-4 p-0 text-[10px] text-red-400 hover:text-red-300" onClick={clearCapo}>
+                                                Clear
+                                            </Button>
+                                        )}
+                                    </div>
 
                                     <div className="grid grid-cols-5 gap-1">
                                         {SHAPES.map(shape => (
@@ -198,16 +239,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                                             </Button>
                                         ))}
                                     </div>
-
-                                    {capo.active && (
-                                        <Button variant="ghost" size="sm" className="w-full mt-2 text-red-400 hover:text-red-300 h-8" onClick={clearCapo}>
-                                            Clear Capo
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="text-xs text-zinc-500 italic text-center p-2">
-                                    Use Magic Wand to enable Capo Mode
+                                    <p className="text-[10px] text-zinc-500 mt-2 text-center">
+                                        Select a shape to play in. We'll show you where to capo.
+                                    </p>
                                 </div>
                             )}
                         </div>
