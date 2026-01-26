@@ -7,12 +7,10 @@ import { levenshtein } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  FileMusic, Music2, Share2, Printer, Settings, Loader2,
-  FileText, LayoutTemplate, ListPlus, FolderOpen, ChevronLeft,
-  PlayCircle, Home as HomeIcon, Library as LibIcon, ListMusic, Headphones
+  FileMusic, Music2, Loader2, ChevronLeft,
+  PlayCircle, Home as HomeIcon, ListMusic, Headphones
 } from "lucide-react"
 import { useSetlistStore } from "@/lib/setlist-store"
-import { SetlistManager } from "@/components/setlist/setlist-manager"
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
 import { SetlistEditor } from "@/components/setlist/SetlistEditor"
 import { ImportModal } from "@/components/setlist/ImportModal"
@@ -321,87 +319,7 @@ export default function Home() {
     />
   )
 
-  // F. Legacy Library View (Touch List)
-  if (view === 'library') return (
-    <div className="h-screen flex flex-col bg-zinc-950 text-white">
-      <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
-        <Button size="icon" variant="ghost" className="h-12 w-12" onClick={() => setView('home')}>
-          <ChevronLeft className="h-8 w-8" />
-        </Button>
-        <h1 className="text-2xl font-bold flex-1">All Songs</h1>
-      </div>
-
-      <ScrollArea className="flex-1 p-4">
-        {loadingFiles && <div className="p-8 text-center text-xl">Loading...</div>}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {driveFiles
-            .filter(f => !f.mimeType.includes('folder') && !f.mimeType.includes('spreadsheet') && !f.name.endsWith('.xlsx'))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(file => (
-              <button
-                key={file.id}
-                onClick={() => loadFile(file)}
-                className="flex items-center gap-4 p-4 text-left bg-zinc-900 rounded-xl hover:bg-zinc-800 border border-zinc-800 transition-colors active:scale-98"
-              >
-                {file.mimeType.includes('pdf') ?
-                  <FileText className="h-8 w-8 text-red-400 shrink-0" /> :
-                  <Music2 className="h-8 w-8 text-blue-400 shrink-0" />
-                }
-                <span className="font-medium text-lg truncate flex-1">{file.name}</span>
-              </button>
-            ))}
-        </div>
-      </ScrollArea>
-    </div>
-  )
-
-  // C. Setlist View
-  if (view === 'setlist') return (
-    <div className="h-screen flex flex-col bg-zinc-950 text-white">
-      <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
-        <Button size="icon" variant="ghost" className="h-12 w-12" onClick={() => setView('home')}>
-          <ChevronLeft className="h-8 w-8" />
-        </Button>
-        <h1 className="text-2xl font-bold flex-1">Setlist Manager</h1>
-        <Button onClick={() => setView('performer')}>
-          Perform Set <PlayCircle className="ml-2 h-5 w-5" />
-        </Button>
-      </div>
-
-      <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-x divide-zinc-800 overflow-hidden">
-        {/* Excel Import List */}
-        <div className="md:w-1/3 bg-zinc-900/50 flex flex-col">
-          <div className="p-4 font-semibold text-zinc-400 uppercase text-sm tracking-wider">Import from Drive</div>
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-2">
-              {driveFiles
-                .filter(f => f.mimeType.includes('spreadsheet') || f.name.endsWith('.xlsx') || f.mimeType === 'application/vnd.google-apps.document')
-                .map(file => (
-                  <button
-                    key={file.id}
-                    onClick={() => loadFile(file)}
-                    className="w-full flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-green-500/50 transition-colors text-left"
-                  >
-                    <LayoutTemplate className="h-6 w-6 text-green-500 shrink-0" />
-                    <span className="font-medium">{file.name}</span>
-                  </button>
-                ))}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Active Setlist - Reuse existing component but ensure it fits */}
-        <div className="flex-1 bg-zinc-950 p-4 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <SetlistManager onSongSelect={() => setView('performer')} />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
-  // D. Performer View (Immersive)
+  // Performer View (Immersive)
   return (
     <div className="h-screen flex flex-col bg-black text-white relative">
 

@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
-import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play, Globe, Lock } from "lucide-react"
+import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play, Globe, Lock, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { PrintModal } from "@/components/setlist/PrintModal"
 import {
     DndContext,
     closestCenter,
@@ -215,6 +216,7 @@ export function SetlistEditor({
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
+    const [showPrintModal, setShowPrintModal] = useState(false)
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -401,6 +403,17 @@ export function SetlistEditor({
                     <h1 className="text-2xl font-bold flex-1">{name}</h1>
                 )}
 
+                {/* Print Button */}
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowPrintModal(true)}
+                    className="h-10 w-10"
+                    title="Print setlist"
+                >
+                    <Printer className="h-5 w-5" />
+                </Button>
+
                 {/* Public/Private toggle (clickable for owner of existing setlists) */}
                 {canEdit && setlistId ? (
                     <button
@@ -576,6 +589,16 @@ export function SetlistEditor({
                         </Button>
                     </div>
                 </div>
+            )}
+
+            {/* Print Modal */}
+            {showPrintModal && (
+                <PrintModal
+                    setlistName={name}
+                    tracks={tracks}
+                    driveFiles={driveFiles}
+                    onClose={() => setShowPrintModal(false)}
+                />
             )}
         </div>
     )

@@ -1,11 +1,11 @@
 {
-  "version": "master-e04a11b",
-  "buildDate": "1/25/2026, 6:12:52 PM",
+  "version": "master-45d2470",
+  "buildDate": "1/25/2026, 7:05:09 PM",
   "changelog": [
-    "e04a11b - Fix: Restore gemini-3-flash-preview with DO NOT CHANGE comment (9 minutes ago)",
-    "4c68228 - Fix: Robust setlist parsing with multiple fallback strategies (10 minutes ago)",
-    "8f89806 - Firebase Auth: Google Sign-In, Personal/Public Setlists, Copy Feature (25 minutes ago)",
-    "2799a25 - Feature: Clickable songs in setlist open music viewer (32 minutes ago)",
-    "26f456e - UX Enhancements: Auto-save, Name Prompt, Add Songs Multi-Select (38 minutes ago)"
+    "45d2470 - Feature: Song Charts (A-Z/Folder), Audio Files (MP3 Player), Visibility Toggle (52 minutes ago)",
+    "e04a11b - Fix: Restore gemini-3-flash-preview with DO NOT CHANGE comment (62 minutes ago)",
+    "4c68228 - Fix: Robust setlist parsing with multiple fallback strategies (63 minutes ago)",
+    "8f89806 - Firebase Auth: Google Sign-In, Personal/Public Setlists, Copy Feature (77 minutes ago)",
+    "2799a25 - Feature: Clickable songs in setlist open music viewer (85 minutes ago)"
   ]
 }
