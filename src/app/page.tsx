@@ -7,7 +7,7 @@ import { levenshtein } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  FileMusic, Music2, Loader2, ChevronLeft,
+  FileMusic, Music2, Loader2, ChevronLeft, ChevronRight,
   PlayCircle, Home as HomeIcon, ListMusic, Headphones
 } from "lucide-react"
 import { useSetlistStore } from "@/lib/setlist-store"
@@ -36,7 +36,7 @@ interface DriveFile {
 type ViewMode = 'home' | 'song_charts' | 'audio' | 'library' | 'setlist' | 'setlist_dashboard' | 'setlist_editor' | 'performer'
 
 export default function Home() {
-  const { fileType, fileUrl, setFile, transposition, setTransposition } = useMusicStore()
+  const { fileType, fileUrl, setFile, transposition, setTransposition, playbackQueue, queueIndex, nextSong, prevSong } = useMusicStore()
   const { addItem, clear: clearSetlist } = useSetlistStore()
 
   // State
@@ -293,10 +293,31 @@ export default function Home() {
         setView('setlist_dashboard')
       }}
       onPlayTrack={(fileId, fileName) => {
-        // Find the file in driveFiles to get mimeType
-        const file = driveFiles.find(f => f.id === fileId)
-        if (file) {
-          loadFile(file)
+        // Find the index of the clicked track
+        const trackIndex = (editingSetlist?.tracks || importedTracks).findIndex(t => t.fileId === fileId)
+        if (trackIndex === -1) return
+
+        // Build queue from valid tracks
+        const queue = (editingSetlist?.tracks || importedTracks)
+          .filter(t => t.fileId) // Ensure fileId exists
+          .map(t => {
+            // Find matching Drive file for metadata (like type)
+            const driveFile = driveFiles.find(df => df.id === t.fileId)
+            // Default to PDF if we can't find it (safe fallback)
+            const type: FileType = driveFile?.name.endsWith('.xml') || driveFile?.name.endsWith('.musicxml') || driveFile?.mimeType.includes('xml') ? 'musicxml' : 'pdf'
+            return {
+              name: t.title,
+              fileId: t.fileId as string, // Safe cast
+              type: type,
+              transposition: Number(t.key) || 0
+            }
+          })
+
+        // Initialize Queue at the specific index
+        const clickedItemIndex = queue.findIndex(q => q.fileId === fileId)
+        if (clickedItemIndex !== -1) {
+          useMusicStore.getState().setQueue(queue, clickedItemIndex)
+          setView('performer')
         }
       }}
     />
@@ -334,6 +355,49 @@ export default function Home() {
           <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20" onClick={() => setView('setlist')}>
             <ListMusic className="h-6 w-6" />
           </Button>
+        </div>
+
+        {/* Setlist Navigation Pill (Middle) */}
+        {playbackQueue.length > 0 && (
+          <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 text-white rounded-full hover:bg-white/20"
+              onClick={prevSong}
+              disabled={queueIndex <= 0}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+
+            <div className="flex flex-col items-center px-2 min-w-[100px]">
+              <span className="text-sm font-medium truncate max-w-[150px]">{playbackQueue[queueIndex]?.name}</span>
+              <span className="text-[10px] text-zinc-400">{queueIndex + 1} / {playbackQueue.length}</span>
+            </div>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 text-white rounded-full hover:bg-white/20"
+              onClick={nextSong}
+              disabled={queueIndex >= playbackQueue.length - 1}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </div>
+        )}
+
+        {/* Keyboard Listeners for Navigation */}
+        <div className="hidden">
+          {useEffect(() => {
+            if (view !== 'performer') return
+            const handleKeyDown = (e: KeyboardEvent) => {
+              if (e.key === 'ArrowRight') nextSong()
+              if (e.key === 'ArrowLeft') prevSong()
+            }
+            window.addEventListener('keydown', handleKeyDown)
+            return () => window.removeEventListener('keydown', handleKeyDown)
+          }, [view, nextSong, prevSong]) as any}
         </div>
 
         {/* Transposition Pill (Only XML) */}
