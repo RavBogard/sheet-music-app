@@ -19,7 +19,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'personal' | 'public'>('personal')
+    const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
 
     // Create user-specific service when user is available
     const setlistService = useMemo(() => {
@@ -153,8 +153,8 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 <button
                     onClick={() => setActiveTab('personal')}
                     className={`flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'personal'
-                            ? 'text-white border-b-2 border-blue-500'
-                            : 'text-zinc-500 hover:text-zinc-300'
+                        ? 'text-white border-b-2 border-blue-500'
+                        : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                 >
                     <Lock className="h-4 w-4" />
@@ -163,8 +163,8 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 <button
                     onClick={() => setActiveTab('public')}
                     className={`flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${activeTab === 'public'
-                            ? 'text-white border-b-2 border-green-500'
-                            : 'text-zinc-500 hover:text-zinc-300'
+                        ? 'text-white border-b-2 border-green-500'
+                        : 'text-zinc-500 hover:text-zinc-300'
                         }`}
                 >
                     <Globe className="h-4 w-4" />

@@ -7,6 +7,7 @@ interface QueueItem {
     fileId: string
     type: FileType
     transposition?: number
+    targetKey?: string // For auto-transpose
 }
 
 interface MusicState {
@@ -19,6 +20,13 @@ interface MusicState {
     playbackQueue: QueueItem[]
     queueIndex: number // -1 if not playing from queue
 
+    // AI Transposer State (Hoisted from PDFViewer)
+    aiTransposer: {
+        isVisible: boolean
+        status: 'idle' | 'scanning' | 'ready' | 'error'
+        detectedKey: string
+    }
+
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
@@ -27,6 +35,10 @@ interface MusicState {
     setQueue: (items: QueueItem[], startIndex?: number) => void
     nextSong: () => QueueItem | null
     prevSong: () => QueueItem | null
+
+    // Transposer Actions
+    setTransposerState: (state: Partial<MusicState['aiTransposer']>) => void
+    resetTransposer: () => void
 
     reset: () => void
 }
@@ -40,9 +52,23 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     playbackQueue: [],
     queueIndex: -1,
 
+    aiTransposer: {
+        isVisible: false,
+        status: 'idle',
+        detectedKey: ''
+    },
+
     setFile: (url, type) => set({ fileUrl: url, fileType: type }),
     setTransposition: (t) => set({ transposition: t }),
     setZoom: (z) => set({ zoom: z }),
+
+    setTransposerState: (newState) => set((state) => ({
+        aiTransposer: { ...state.aiTransposer, ...newState }
+    })),
+
+    resetTransposer: () => set({
+        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+    }),
 
     setQueue: (items, startIndex = 0) => {
         set({ playbackQueue: items, queueIndex: startIndex })
@@ -66,7 +92,9 @@ export const useMusicStore = create<MusicState>((set, get) => ({
                 queueIndex: nextIndex,
                 fileUrl: `/api/drive/file/${nextItem.fileId}`,
                 fileType: nextItem.type,
-                transposition: nextItem.transposition || 0
+                transposition: nextItem.transposition || 0,
+                // Reset transposer on song change (component will re-enable if targetKey exists)
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
             })
             return nextItem
         }
@@ -82,7 +110,8 @@ export const useMusicStore = create<MusicState>((set, get) => ({
                 queueIndex: prevIndex,
                 fileUrl: `/api/drive/file/${prevItem.fileId}`,
                 fileType: prevItem.type,
-                transposition: prevItem.transposition || 0
+                transposition: prevItem.transposition || 0,
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
             })
             return prevItem
         }

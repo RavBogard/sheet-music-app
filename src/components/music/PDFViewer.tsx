@@ -26,20 +26,15 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [width, setWidth] = useState<number>(0)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    const { zoom, setZoom, transposition } = useMusicStore()
+    const { zoom, setZoom, transposition, aiTransposer, setTransposerState } = useMusicStore()
 
-    // Transposer State
-    const [showTransposer, setShowTransposer] = useState(false)
-    const [status, setStatus] = useState<'idle' | 'scanning' | 'ready' | 'error'>('idle')
-    const [visibleKey, setVisibleKey] = useState<string>('')
     // Store raw OCR data: page -> { text, x, y, w, h, refWidth, refHeight }[]
     const [rawPageData, setRawPageData] = useState<Record<number, { text: string, x: number, y: number, w: number, h: number, refWidth: number, refHeight: number }[]>>({})
 
     const scanPages = async () => {
         if (!containerRef.current) return
         try {
-            setStatus('scanning')
-            setShowTransposer(true)
+            setTransposerState({ status: 'scanning' })
 
             // MVP: Scan Page 1 (first canvas)
             const canvas = containerRef.current.querySelector('canvas')
@@ -72,15 +67,25 @@ export function PDFViewer({ url }: PDFViewerProps) {
             }))
 
             setRawPageData(prev => ({ ...prev, 1: chords }))
-            setVisibleKey(detectedKey)
-            setStatus('ready')
+
+            // Update Global Store
+            setTransposerState({ status: 'ready', detectedKey })
 
         } catch (e: any) {
             console.error(e)
-            setStatus('error')
+            setTransposerState({ status: 'error' })
             alert(`Scan Failed: ${e.message}`)
         }
     }
+
+    // Effect: Watch for global activation
+    useEffect(() => {
+        if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
+            // Trigger scan automatically when turned on
+            // Small delay to ensure canvas is rendered
+            setTimeout(() => scanPages(), 500)
+        }
+    }, [aiTransposer.isVisible, aiTransposer.status])
 
     // 1. Auto-Resize to fit Width
     useEffect(() => {
@@ -118,25 +123,10 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 </Button>
             </div>
 
-            {/* Transposer Toggle (Bottom Left - Moved to avoid blocking top controls) */}
-            <div className="absolute bottom-6 left-6 z-50 flex gap-2">
-                {status === 'ready' && (
-                    <div className="bg-white/90 text-black px-3 py-2 rounded-lg shadow-xl backdrop-blur flex items-center gap-2 border border-purple-100">
-                        <div className="text-xs font-bold text-purple-600 uppercase tracking-wider">
-                            {visibleKey} <span className="text-zinc-400">→</span> {transposeChord(visibleKey, transposition)}
-                        </div>
-                    </div>
-                )}
-                <Button
-                    variant={showTransposer ? "secondary" : "default"}
-                    onClick={status === 'ready' ? () => setShowTransposer(!showTransposer) : scanPages}
-                    disabled={status === 'scanning'}
-                    className="shadow-lg gap-2"
-                >
-                    {status === 'scanning' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                    {status === 'idle' || status === 'error' ? "Magic Transpose" : (showTransposer ? "Hide Chords" : "Show Chords")}
-                </Button>
-            </div>
+            {/* Local Controls Removed - Hoisted to page.tsx */}
+            {/* But keep the Key Display overlay? User wants minimal UI blocking. */}
+            {/* Maybe we show the detected key briefly or let page.tsx handle it entirely. */}
+            {/* Let's remove the bottom-left controls completely. */}
 
             {/* Scrollable Container */}
             <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative">
@@ -188,7 +178,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
                                             // So scale = (width * zoom) / c.refWidth
                                             scale={(width * zoom) / (rawPageData[pageNum]?.[0]?.refWidth || 1)}
                                             chords={pageChords}
-                                            visible={showTransposer}
+                                            visible={aiTransposer.isVisible}
                                         />
                                     )}
                                 </div>

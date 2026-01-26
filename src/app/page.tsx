@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   FileMusic, Music2, Loader2, ChevronLeft, ChevronRight,
-  PlayCircle, Home as HomeIcon, ListMusic, Headphones
+  PlayCircle, Home as HomeIcon, ListMusic, Headphones, Wand2
 } from "lucide-react"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
@@ -36,7 +36,59 @@ interface DriveFile {
 type ViewMode = 'home' | 'song_charts' | 'audio' | 'library' | 'setlist' | 'setlist_dashboard' | 'setlist_editor' | 'performer'
 
 export default function Home() {
-  const { fileType, fileUrl, setFile, transposition, setTransposition, playbackQueue, queueIndex, nextSong, prevSong } = useMusicStore()
+  const {
+    fileType,
+    fileUrl,
+    setFile,
+    transposition,
+    setTransposition,
+    playbackQueue,
+    queueIndex,
+    nextSong,
+    prevSong,
+    aiTransposer,
+    setTransposerState
+  } = useMusicStore() // removed resetTransposer to match store signature
+
+  // Auto-Transpose Logic
+  // 1. Trigger Transposer if PDF has target key
+  useEffect(() => {
+    const currentTrack = playbackQueue[queueIndex]
+    // If track has a target key (and it's a PDF)
+    if (currentTrack?.targetKey && fileType === 'pdf') {
+      // Only enable if not already active/scanned
+      if (!aiTransposer.isVisible && aiTransposer.status === 'idle') {
+        setTransposerState({ isVisible: true })
+      }
+    }
+  }, [queueIndex, fileType, playbackQueue])
+
+  // 2. Once key is detected, set transposition to match target
+  useEffect(() => {
+    const currentTrack = playbackQueue[queueIndex]
+    if (currentTrack?.targetKey && aiTransposer.detectedKey) {
+      const target = currentTrack.targetKey.replace(/m$/, '') // Remove minor 'm' for simple scaling
+      const detected = aiTransposer.detectedKey.replace(/m$/, '')
+
+      // Simple chromatic map
+      const keys = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+      const tIndex = keys.indexOf(target)
+      const dIndex = keys.indexOf(detected)
+
+      if (tIndex !== -1 && dIndex !== -1) {
+        let delta = tIndex - dIndex
+        // Normalize to smallest jump (e.g. +11 -> -1)
+        if (delta > 6) delta -= 12
+        if (delta < -6) delta += 12
+
+        setTransposition(delta)
+      }
+    }
+  }, [aiTransposer.detectedKey, queueIndex])
+
+  const toggleTransposer = () => {
+    setTransposerState({ isVisible: !aiTransposer.isVisible })
+  }
   const { addItem, clear: clearSetlist } = useSetlistStore()
 
   // State
@@ -320,7 +372,10 @@ export default function Home() {
               name: t.title,
               fileId: t.fileId as string, // Safe cast
               type: type,
-              transposition: Number(t.key) || 0
+              transposition: Number(t.key) ? 0 : 0, // Manual transpose is 0 initially? Or store delta? 
+              // Actually, SetlistTrack.key is the TARGET KEY (e.g. "G"). 
+              // We store it in targetKey so page.tsx can compute the delta.
+              targetKey: t.key || undefined
             }
           })
 
@@ -400,9 +455,27 @@ export default function Home() {
 
         {/* Keyboard navigation handled by useEffect at component top level */}
 
-        {/* Transposition Pill (XML & PDF) */}
+        {/* Unified Transposition Controls (XML & PDF) */}
         {(fileType === 'musicxml' || fileType === 'pdf') && (
           <div className="pointer-events-auto flex items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
+
+            {/* PDF Magic Wand Toggle */}
+            {fileType === 'pdf' && (
+              <>
+                <Button
+                  size="icon"
+                  variant={aiTransposer.isVisible ? "secondary" : "ghost"}
+                  className={`h-10 w-10 rounded-full transition-colors ${aiTransposer.isVisible ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}
+                  onClick={toggleTransposer}
+                  disabled={aiTransposer.status === 'scanning'}
+                >
+                  {aiTransposer.status === 'scanning' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                </Button>
+                {/* Separator if visible */}
+                <div className="w-px h-4 bg-white/20 mx-1" />
+              </>
+            )}
+
             <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition((transposition || 0) - 1)}>-</Button>
             <span className="w-8 text-center font-bold text-lg font-mono">
               {(transposition || 0) > 0 ? `+${transposition}` : (transposition || 0)}
