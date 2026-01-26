@@ -5,6 +5,7 @@ import { Document, Page, pdfjs } from 'react-pdf'
 import { Loader2, ZoomIn, ZoomOut, Maximize, Minimize } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMusicStore } from '@/lib/store'
+import { TransposerOverlay } from './TransposerOverlay'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -19,7 +20,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
     const containerRef = useRef<HTMLDivElement>(null)
-    const { zoom, setZoom } = useMusicStore()
+    const { zoom, setZoom, transposition } = useMusicStore()
 
     // 1. Auto-Resize to fit Width
     useEffect(() => {
@@ -76,20 +77,37 @@ export function PDFViewer({ url }: PDFViewerProps) {
                     className="flex flex-col items-center min-h-screen"
                 >
                     {Array.from(new Array(numPages), (el, index) => (
-                        <div key={`page_${index + 1}`} className="mb-2 shadow-2xl bg-white">
-                            <Page
-                                pageNumber={index + 1}
-                                width={width * zoom} // Dynamic Width * Zoom Factor
-                                renderTextLayer={false}
-                                renderAnnotationLayer={false}
-                                loading={
-                                    <div className="h-[800px] w-full bg-white/5 animate-pulse" />
-                                }
-                            />
-                        </div>
+                        <PDFPageWrapper
+                            key={`page_${index + 1}`}
+                            pageNumber={index + 1}
+                            width={width}
+                            zoom={zoom}
+                            transposition={transposition}
+                        />
                     ))}
                 </Document>
             </div>
+        </div>
+    )
+}
+
+function PDFPageWrapper({ pageNumber, width, zoom, transposition }: { pageNumber: number, width: number, zoom: number, transposition: number }) {
+    const ref = useRef<HTMLDivElement>(null)
+
+    return (
+        <div ref={ref} className="mb-2 shadow-2xl bg-white relative group/page">
+            <Page
+                pageNumber={pageNumber}
+                width={width * zoom} // Dynamic Width * Zoom Factor
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                loading={
+                    <div className="h-[800px] w-full bg-white/5 animate-pulse" />
+                }
+            />
+            {/* Overlay Layer */}
+            {/* Overlay Layer */}
+            <TransposerOverlay parentRef={ref as React.RefObject<HTMLDivElement>} pageNumber={pageNumber} transposition={transposition} />
         </div>
     )
 }
