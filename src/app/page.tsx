@@ -73,7 +73,18 @@ export default function Home() {
     fetchFiles()
   }, [])
 
-  // 2. Logic: Load File (and switch to Performer)
+  // 2. Keyboard Navigation for Performer Mode
+  useEffect(() => {
+    if (view !== 'performer') return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') nextSong()
+      if (e.key === 'ArrowLeft') prevSong()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [view, nextSong, prevSong])
+
+  // 3. Logic: Load File (and switch to Performer)
   const loadFile = async (file: DriveFile) => {
     const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
     const isExcel = file.mimeType.includes('spreadsheet') || file.name.endsWith('.xlsx')
@@ -387,18 +398,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Keyboard Listeners for Navigation */}
-        <div className="hidden">
-          {useEffect(() => {
-            if (view !== 'performer') return
-            const handleKeyDown = (e: KeyboardEvent) => {
-              if (e.key === 'ArrowRight') nextSong()
-              if (e.key === 'ArrowLeft') prevSong()
-            }
-            window.addEventListener('keydown', handleKeyDown)
-            return () => window.removeEventListener('keydown', handleKeyDown)
-          }, [view, nextSong, prevSong]) as any}
-        </div>
+        {/* Keyboard navigation handled by useEffect at component top level */}
 
         {/* Transposition Pill (Only XML) */}
         {fileType === 'musicxml' && (
