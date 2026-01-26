@@ -507,9 +507,9 @@ export function SetlistEditor({
 
             {/* Match File Modal */}
             {matchingTrackId && canEdit && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                    <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 sm:p-4">
+                    <div className="w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-2xl bg-zinc-900 sm:rounded-xl flex flex-col p-4 sm:p-6 overflow-hidden">
+                        <div className="flex items-center justify-between mb-4 shrink-0">
                             <h3 className="text-xl font-bold">Link to Music File</h3>
                             <Button size="icon" variant="ghost" onClick={() => setMatchingTrackId(null)}>
                                 <X className="h-5 w-5" />
@@ -519,11 +519,11 @@ export function SetlistEditor({
                             value={searchQuery}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                             placeholder="Search files..."
-                            className="mb-4"
+                            className="mb-4 shrink-0"
                             autoFocus
                         />
-                        <ScrollArea className="flex-1">
-                            <div className="space-y-2">
+                        <div className="flex-1 overflow-y-auto -mx-2 px-2">
+                            <div className="space-y-2 pb-20 sm:pb-0">
                                 {filteredFiles.slice(0, 50).map(file => (
                                     <button
                                         key={file.id}
@@ -534,16 +534,16 @@ export function SetlistEditor({
                                     </button>
                                 ))}
                             </div>
-                        </ScrollArea>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Add Songs Modal (Multi-Select) */}
             {showAddSongs && canEdit && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                    <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 sm:p-4">
+                    <div className="w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-2xl bg-zinc-900 sm:rounded-xl flex flex-col p-4 sm:p-6 overflow-hidden">
+                        <div className="flex items-center justify-between mb-4 shrink-0">
                             <h3 className="text-xl font-bold">Add Songs ({selectedFiles.size} selected)</h3>
                             <Button size="icon" variant="ghost" onClick={() => {
                                 setShowAddSongs(false)
@@ -557,11 +557,11 @@ export function SetlistEditor({
                             value={searchQuery}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                             placeholder="Search library..."
-                            className="mb-4"
+                            className="mb-4 shrink-0"
                             autoFocus
                         />
-                        <ScrollArea className="flex-1 mb-4">
-                            <div className="space-y-2">
+                        <div className="flex-1 overflow-y-auto -mx-2 px-2 mb-4">
+                            <div className="space-y-2 pb-20 sm:pb-0">
                                 {filteredFiles.slice(0, 100).map(file => (
                                     <button
                                         key={file.id}
@@ -579,11 +579,11 @@ export function SetlistEditor({
                                     </button>
                                 ))}
                             </div>
-                        </ScrollArea>
+                        </div>
                         <Button
                             onClick={addSongsFromLibrary}
                             disabled={selectedFiles.size === 0}
-                            className="w-full"
+                            className="w-full shrink-0"
                         >
                             Add {selectedFiles.size} Song{selectedFiles.size !== 1 ? 's' : ''}
                         </Button>
