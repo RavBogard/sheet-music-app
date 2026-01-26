@@ -24,6 +24,7 @@ import buildInfo from "@/build-info.json"
 // Components
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
+import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 
 const MASTER_FOLDER_ID = "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK"
 
@@ -410,84 +411,9 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-black text-white relative">
 
-      {/* Floating Controls (Top) - Auto-hides or stays minimal */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex justify-between items-start p-2 pointer-events-none">
-        {/* Back / Menu Pill */}
-        <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 pl-2 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
-          <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20" onClick={() => setView('home')}>
-            <HomeIcon className="h-6 w-6" />
-          </Button>
-          <div className="h-6 w-px bg-white/20 mx-1"></div>
-          <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20" onClick={() => setView('setlist')}>
-            <ListMusic className="h-6 w-6" />
-          </Button>
-        </div>
-
-        {/* Setlist Navigation Pill (Middle) */}
-        {playbackQueue.length > 0 && (
-          <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 text-white rounded-full hover:bg-white/20"
-              onClick={prevSong}
-              disabled={queueIndex <= 0}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-
-            <div className="flex flex-col items-center px-2 min-w-[100px]">
-              <span className="text-sm font-medium truncate max-w-[150px]">{playbackQueue[queueIndex]?.name}</span>
-              <span className="text-[10px] text-zinc-400">{queueIndex + 1} / {playbackQueue.length}</span>
-            </div>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 text-white rounded-full hover:bg-white/20"
-              onClick={nextSong}
-              disabled={queueIndex >= playbackQueue.length - 1}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
-          </div>
-        )}
-
-        {/* Keyboard navigation handled by useEffect at component top level */}
-
-        {/* Unified Transposition Controls (XML & PDF) */}
-        {(fileType === 'musicxml' || fileType === 'pdf') && (
-          <div className="pointer-events-auto flex items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl transition-opacity hover:opacity-100 opacity-50 hover:bg-black/80">
-
-            {/* PDF Magic Wand Toggle */}
-            {fileType === 'pdf' && (
-              <>
-                <Button
-                  size="icon"
-                  variant={aiTransposer.isVisible ? "secondary" : "ghost"}
-                  className={`h-10 w-10 rounded-full transition-colors ${aiTransposer.isVisible ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}
-                  onClick={toggleTransposer}
-                  disabled={aiTransposer.status === 'scanning'}
-                >
-                  {aiTransposer.status === 'scanning' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
-                </Button>
-                {/* Separator if visible */}
-                <div className="w-px h-4 bg-white/20 mx-1" />
-              </>
-            )}
-
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition((transposition || 0) - 1)}>-</Button>
-            <span className="w-8 text-center font-bold text-lg font-mono">
-              {(transposition || 0) > 0 ? `+${transposition}` : (transposition || 0)}
-            </span>
-            <Button size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full text-xl hover:bg-white/20" onClick={() => setTransposition((transposition || 0) + 1)}>+</Button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 w-full h-full bg-black overflow-hidden relative">
+      {/* Main Content Area (with bottom padding for toolbar) */}
+      <div className="flex-1 w-full h-full bg-black overflow-hidden relative pb-16">
         {/* Render Viewer (Edge to Edge) */}
-        {/* We remove padding and centering divs to let the Viewer control scaling */}
         {fileType === 'musicxml' && fileUrl && <SmartScoreViewer url={fileUrl} />}
         {fileType === 'pdf' && fileUrl && <PDFViewer url={fileUrl} />}
         {!fileUrl && (
@@ -496,6 +422,12 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Unified Performance Toolbar */}
+      <PerformanceToolbar
+        onHome={() => setView('home')}
+        onSetlist={() => setView('setlist')}
+      />
     </div>
   )
 }

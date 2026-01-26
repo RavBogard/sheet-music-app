@@ -27,6 +27,13 @@ interface MusicState {
         detectedKey: string
     }
 
+    // Capo State
+    capo: {
+        active: boolean
+        targetShape: string // e.g. "G"
+        fret: number // e.g. 3
+    }
+
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
@@ -39,6 +46,9 @@ interface MusicState {
     // Transposer Actions
     setTransposerState: (state: Partial<MusicState['aiTransposer']>) => void
     resetTransposer: () => void
+
+    // Capo Actions
+    setCapoState: (state: Partial<MusicState['capo']>) => void
 
     reset: () => void
 }
@@ -58,6 +68,12 @@ export const useMusicStore = create<MusicState>((set, get) => ({
         detectedKey: ''
     },
 
+    capo: {
+        active: false,
+        targetShape: '',
+        fret: 0
+    },
+
     setFile: (url, type) => set({ fileUrl: url, fileType: type }),
     setTransposition: (t) => set({ transposition: t }),
     setZoom: (z) => set({ zoom: z }),
@@ -69,6 +85,10 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     resetTransposer: () => set({
         aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
     }),
+
+    setCapoState: (newState) => set((state) => ({
+        capo: { ...state.capo, ...newState }
+    })),
 
     setQueue: (items, startIndex = 0) => {
         set({ playbackQueue: items, queueIndex: startIndex })

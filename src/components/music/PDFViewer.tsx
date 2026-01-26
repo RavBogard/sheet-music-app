@@ -110,23 +110,10 @@ export function PDFViewer({ url }: PDFViewerProps) {
     return (
         <div className="flex flex-col h-full w-full relative group">
 
-            {/* Floating Zoom Controls (Bottom Right) */}
-            <div className="absolute bottom-6 right-6 z-50 flex gap-2 bg-black/60 backdrop-blur rounded-full p-2 opacity-30 group-hover:opacity-100 transition-opacity">
-                <Button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20">
-                    <ZoomOut className="h-5 w-5" />
-                </Button>
-                <Button onClick={() => setZoom(1)} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20 font-mono">
-                    {Math.round(zoom * 100)}%
-                </Button>
-                <Button onClick={() => setZoom(Math.min(3, zoom + 0.1))} size="icon" variant="ghost" className="h-10 w-10 text-white rounded-full hover:bg-white/20">
-                    <ZoomIn className="h-5 w-5" />
-                </Button>
-            </div>
 
-            {/* Local Controls Removed - Hoisted to page.tsx */}
-            {/* But keep the Key Display overlay? User wants minimal UI blocking. */}
-            {/* Maybe we show the detected key briefly or let page.tsx handle it entirely. */}
-            {/* Let's remove the bottom-left controls completely. */}
+            {/* Local Controls Removed - Hoisted to PerformanceToolbar */}
+            {/* We maintain only the document container here */}
+
 
             {/* Scrollable Container */}
             <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative">
