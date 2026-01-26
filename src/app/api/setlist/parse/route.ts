@@ -47,7 +47,8 @@ export async function POST(request: Request) {
         console.log("Document content preview:", textContent.substring(0, 500))
 
         // 2. Send to Gemini for parsing with improved prompt
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+        // ⚠️ DO NOT CHANGE THIS MODEL - User requirement: gemini-3-flash-preview
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
         const prompt = `You are a setlist parser for a music app. Extract song names from this setlist document.
 
