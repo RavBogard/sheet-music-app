@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
+import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
     ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar
@@ -230,6 +231,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
             {/* Right: Tools */}
             <div className="flex items-center gap-2">
+                <BackingTrackPlayer />
 
                 {/* Unified Transpose Menu */}
                 <Popover onOpenChange={(open) => {

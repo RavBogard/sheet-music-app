@@ -16,9 +16,10 @@ interface DriveFile {
 interface AudioLibraryProps {
     driveFiles: DriveFile[]
     onBack: () => void
+    onSelectFile?: (file: DriveFile) => void
 }
 
-export function AudioLibrary({ driveFiles, onBack }: AudioLibraryProps) {
+export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -58,7 +59,7 @@ export function AudioLibrary({ driveFiles, onBack }: AudioLibraryProps) {
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
-                <h1 className="text-2xl font-bold flex-1">Audio Files</h1>
+                <h1 className="text-2xl font-bold flex-1">{onSelectFile ? "Select Audio Track" : "Audio Files"}</h1>
                 <div className="text-sm text-zinc-500">
                     {audioFiles.length} audio files
                 </div>
@@ -102,10 +103,16 @@ export function AudioLibrary({ driveFiles, onBack }: AudioLibraryProps) {
                         {filteredFiles.map(file => (
                             <button
                                 key={file.id}
-                                onClick={() => playFile(file)}
+                                onClick={() => {
+                                    if (onSelectFile) {
+                                        onSelectFile(file)
+                                    } else {
+                                        playFile(file)
+                                    }
+                                }}
                                 className={`w-full text-left p-4 rounded-lg transition-colors flex items-center gap-4 ${playingFile?.id === file.id
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-zinc-900 hover:bg-zinc-800'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-zinc-900 hover:bg-zinc-800'
                                     }`}
                             >
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${playingFile?.id === file.id ? 'bg-white/20' : 'bg-zinc-800'

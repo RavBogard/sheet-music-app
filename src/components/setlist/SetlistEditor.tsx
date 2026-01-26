@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOfflineSync } from "@/hooks/use-offline-sync"
-import { Trash2, Save, ArrowLeft, GripVertical, Download, Link, Share2, Play, Search, X, Plus, Check, Globe, Lock, Printer, CloudDownload, CloudOff, ChevronLeft } from "lucide-react"
+import { Trash2, Save, ArrowLeft, GripVertical, Download, Link, Share2, Play, Search, X, Plus, Check, Globe, Lock, Printer, CloudDownload, CloudOff, ChevronLeft, Music } from "lucide-react"
 import { SetlistTimeline } from "./SetlistTimeline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PrintModal } from "@/components/setlist/PrintModal"
+import { AudioLibrary } from "@/components/audio/AudioLibrary"
 import {
     DndContext,
     closestCenter,
@@ -52,6 +53,7 @@ function SortableTrack({
     onUpdate,
     onDelete,
     onMatchFile,
+    onLinkAudio,
     onPlay,
     driveFiles,
     readOnly
@@ -60,6 +62,7 @@ function SortableTrack({
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
     onDelete: (id: string) => void
     onMatchFile: (trackId: string) => void
+    onLinkAudio: (trackId: string) => void
     onPlay?: (fileId: string, fileName: string) => void
     driveFiles: DriveFile[]
     readOnly?: boolean
@@ -166,6 +169,17 @@ function SortableTrack({
                 )}
                 {!readOnly && (
                     <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onLinkAudio(track.id)}
+                        className={`h-8 w-8 p-0 ${track.audioFileId ? 'text-blue-400 border-blue-400/50' : 'text-zinc-600 border-zinc-800'}`}
+                        title={track.audioFileId ? "Audio Linked" : "Link Audio"}
+                    >
+                        <Music className="h-3 w-3" />
+                    </Button>
+                )}
+                {!readOnly && (
+                    <Button
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100"
@@ -235,6 +249,7 @@ export function SetlistEditor({
     // Modal states
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
+    const [audioPickingTrackId, setAudioPickingTrackId] = useState<string | null>(null)
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
@@ -529,6 +544,7 @@ export function SetlistEditor({
                                     onUpdate={updateTrack}
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
+                                    onLinkAudio={setAudioPickingTrackId}
                                     onPlay={onPlayTrack}
                                     driveFiles={driveFiles}
                                     readOnly={!canEdit}
@@ -644,6 +660,20 @@ export function SetlistEditor({
                     driveFiles={driveFiles}
                     onClose={() => setShowPrintModal(false)}
                 />
+            )}
+
+            {/* Audio Picker Modal */}
+            {audioPickingTrackId && canEdit && (
+                <div className="fixed inset-0 z-50 bg-zinc-950">
+                    <AudioLibrary
+                        driveFiles={driveFiles}
+                        onBack={() => setAudioPickingTrackId(null)}
+                        onSelectFile={(file) => {
+                            updateTrack(audioPickingTrackId, { audioFileId: file.id })
+                            setAudioPickingTrackId(null)
+                        }}
+                    />
+                </div>
             )}
         </div>
     )

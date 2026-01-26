@@ -12,6 +12,9 @@ export function useOfflineSync() {
             if (track.fileId) {
                 status[track.fileId] = await isFileOffline(track.fileId);
             }
+            if (track.audioFileId) {
+                status[track.audioFileId] = await isFileOffline(track.audioFileId);
+            }
         }
         setOfflineStatus(status);
         return status;
@@ -40,9 +43,16 @@ export function useOfflineSync() {
     }, [downloading]);
 
     const syncSetlist = useCallback(async (tracks: SetlistTrack[]) => {
-        const tasks = tracks
-            .filter(t => t.fileId && !offlineStatus[t.fileId])
-            .map(t => downloadFile(t.fileId!, t.title));
+        const tasks: Promise<void>[] = []
+
+        tracks.forEach(t => {
+            if (t.fileId && !offlineStatus[t.fileId]) {
+                tasks.push(downloadFile(t.fileId, t.title))
+            }
+            if (t.audioFileId && !offlineStatus[t.audioFileId]) {
+                tasks.push(downloadFile(t.audioFileId, `${t.title} (Audio)`))
+            }
+        })
 
         await Promise.all(tasks);
     }, [downloadFile, offlineStatus]);

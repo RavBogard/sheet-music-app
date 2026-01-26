@@ -6,6 +6,7 @@ interface QueueItem {
     name: string
     fileId: string
     type: FileType
+    audioFileId?: string
     transposition?: number
     targetKey?: string // For auto-transpose
 }
@@ -25,6 +26,15 @@ interface MusicState {
         isVisible: boolean
         status: 'idle' | 'scanning' | 'ready' | 'error'
         detectedKey: string
+    }
+
+    // Audio State
+    audio: {
+        fileId: string | null
+        url: string | null
+        isPlaying: boolean
+        volume: number
+        isLooping: boolean
     }
 
     // Capo State
@@ -49,6 +59,9 @@ interface MusicState {
     // Transposer Actions
     setTransposerState: (state: Partial<MusicState['aiTransposer']>) => void
     resetTransposer: () => void
+
+    // Audio Actions
+    setAudioState: (state: Partial<MusicState['audio']>) => void
 
     // Capo Actions
     setCapoState: (state: Partial<MusicState['capo']>) => void
@@ -77,6 +90,14 @@ export const useMusicStore = create<MusicState>((set, get) => ({
         fret: 0
     },
 
+    audio: {
+        fileId: null,
+        url: null,
+        isPlaying: false,
+        volume: 1,
+        isLooping: false
+    },
+
     isGigMode: false,
     setGigMode: (isGigMode) => set({ isGigMode }),
 
@@ -92,6 +113,10 @@ export const useMusicStore = create<MusicState>((set, get) => ({
         aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
     }),
 
+    setAudioState: (newState) => set((state) => ({
+        audio: { ...state.audio, ...newState }
+    })),
+
     setCapoState: (newState) => set((state) => ({
         capo: { ...state.capo, ...newState }
     })),
@@ -104,7 +129,13 @@ export const useMusicStore = create<MusicState>((set, get) => ({
             set({
                 fileUrl: `/api/drive/file/${first.fileId}`,
                 fileType: first.type,
-                transposition: first.transposition || 0
+                transposition: first.transposition || 0,
+                audio: {
+                    ...get().audio,
+                    fileId: first.audioFileId || null,
+                    url: first.audioFileId ? `/api/drive/file/${first.audioFileId}` : null,
+                    isPlaying: false
+                }
             })
         }
     },
@@ -119,6 +150,13 @@ export const useMusicStore = create<MusicState>((set, get) => ({
                 fileUrl: `/api/drive/file/${nextItem.fileId}`,
                 fileType: nextItem.type,
                 transposition: nextItem.transposition || 0,
+                // Load Audio
+                audio: {
+                    ...get().audio,
+                    fileId: nextItem.audioFileId || null,
+                    url: nextItem.audioFileId ? `/api/drive/file/${nextItem.audioFileId}` : null,
+                    isPlaying: false
+                },
                 // Reset transposer on song change (component will re-enable if targetKey exists)
                 aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
             })
@@ -137,6 +175,13 @@ export const useMusicStore = create<MusicState>((set, get) => ({
                 fileUrl: `/api/drive/file/${prevItem.fileId}`,
                 fileType: prevItem.type,
                 transposition: prevItem.transposition || 0,
+                // Load Audio
+                audio: {
+                    ...get().audio,
+                    fileId: prevItem.audioFileId || null,
+                    url: prevItem.audioFileId ? `/api/drive/file/${prevItem.audioFileId}` : null,
+                    isPlaying: false
+                },
                 aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
             })
             return prevItem

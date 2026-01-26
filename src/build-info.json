@@ -1,11 +1,11 @@
 {
-  "version": "master-afac0c4",
-  "buildDate": "1/26/2026, 3:56:36 PM",
+  "version": "master-006e73b",
+  "buildDate": "1/26/2026, 4:04:27 PM",
   "changelog": [
-    "afac0c4 - fix(build): resolve SetlistTimeline type errors (6 minutes ago)",
-    "00dc0f0 - fix: force webpack build to support next-pwa (10 minutes ago)",
-    "e0aa674 - feat: offline sync, gig mode, and timeline view (16 minutes ago)",
-    "37972f9 - Polish: Unified Transpose Menu with Auto-Scan (Retry) (2 hours ago)",
-    "92be085 - Feature: Performance View Redesign (Bottom Bar) & Capo Mode (2 hours ago)"
+    "006e73b - feat: wake lock and gesture controls (phase 3 complete) (7 minutes ago)",
+    "afac0c4 - fix(build): resolve SetlistTimeline type errors (14 minutes ago)",
+    "00dc0f0 - fix: force webpack build to support next-pwa (18 minutes ago)",
+    "e0aa674 - feat: offline sync, gig mode, and timeline view (24 minutes ago)",
+    "37972f9 - Polish: Unified Transpose Menu with Auto-Scan (Retry) (2 hours ago)"
   ]
 }
