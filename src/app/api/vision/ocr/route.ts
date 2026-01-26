@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { ImageAnnotatorClient } from "@google-cloud/vision"
+import { db } from "@/lib/firebase"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 
-// Initialize Vision Client
-// We reuse the credentials env vars we already set up for Drive
 // Initialize Vision Client
 // We reuse the credentials env vars we already set up for Drive
 const getCredentials = () => {
@@ -46,10 +46,26 @@ const getClient = () => {
 
 export async function POST(request: Request) {
     try {
-        const { imageBase64 } = await request.json()
+        const { imageBase64, fileId, pageNumber = 1 } = await request.json()
 
         if (!imageBase64) {
             return new NextResponse("Missing image data", { status: 400 })
+        }
+
+        // 1. Check Cache
+        if (fileId) {
+            const cacheKey = `${fileId}_${pageNumber}`
+            const docRef = doc(db, "ocr_cache", cacheKey)
+
+            try {
+                const docSnap = await getDoc(docRef)
+                if (docSnap.exists()) {
+                    console.log(`[OCR] Cache Hit for ${cacheKey}`)
+                    return NextResponse.json(docSnap.data())
+                }
+            } catch (e) {
+                console.warn("[OCR] Cache Read Failed (likely permissions or cold start):", e)
+            }
         }
 
         // Remove data URL prefix if present (e.g., "data:image/png;base64,...")
@@ -81,10 +97,23 @@ export async function POST(request: Request) {
             poly: text.boundingPoly?.vertices // [{x,y}, {x,y}...]
         }))
 
-        return NextResponse.json({
+        const responseData = {
             text: fullText,
             blocks: blocks
-        })
+        }
+
+        // 2. Save to Cache
+        if (fileId) {
+            const cacheKey = `${fileId}_${pageNumber}`
+            try {
+                await setDoc(doc(db, "ocr_cache", cacheKey), responseData)
+                console.log(`[OCR] Cached result for ${cacheKey}`)
+            } catch (e) {
+                console.warn("[OCR] Cache Write Failed:", e)
+            }
+        }
+
+        return NextResponse.json(responseData)
 
     } catch (error) {
         console.error("Vision API Error:", error)

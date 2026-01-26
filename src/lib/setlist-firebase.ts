@@ -187,42 +187,4 @@ export function createSetlistService(userId: string, userName?: string | null) {
 }
 
 // Legacy global service (deprecated)
-export const SetlistService = {
-    async createSetlist(name: string, tracks: SetlistTrack[]) {
-        console.warn("Using global SetlistService - setlists won't be user-specific");
-        const docRef = await addDoc(collection(db, "setlists"), {
-            name,
-            date: serverTimestamp(),
-            tracks,
-            trackCount: tracks.length
-        });
-        return docRef.id;
-    },
-    subscribeToSetlists(callback: (setlists: Setlist[]) => void) {
-        const q = query(collection(db, "setlists"), orderBy("date", "desc"));
-        return onSnapshot(q, (snapshot) => {
-            const setlists = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Setlist[];
-            callback(setlists);
-        });
-    },
-    subscribeToSetlist(id: string, callback: (setlist: Setlist | null) => void) {
-        const docRef = doc(db, "setlists", id);
-        return onSnapshot(docRef, (doc) => {
-            if (doc.exists()) {
-                callback({ id: doc.id, ...doc.data() } as Setlist);
-            } else {
-                callback(null);
-            }
-        });
-    },
-    async updateSetlist(id: string, data: Partial<Setlist>) {
-        const docRef = doc(db, "setlists", id);
-        await updateDoc(docRef, data);
-    },
-    async deleteSetlist(id: string) {
-        await deleteDoc(doc(db, "setlists", id));
-    }
-};
+

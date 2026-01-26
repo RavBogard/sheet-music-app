@@ -21,9 +21,49 @@ interface PDFViewerProps {
     url: string
 }
 
+// ... imports
+import { getOfflineFile } from '@/lib/offline-store'
+
+// ...
+
 export function PDFViewer({ url }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
+
+    // Offline / Source URL Logic
+    const [sourceUrl, setSourceUrl] = useState<string>(url)
+
+    useEffect(() => {
+        let active = true
+        let objectUrl: string | null = null
+
+        const loadOffline = async () => {
+            // Extract File ID from URL: /api/drive/file/[FILE_ID]
+            const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+            const fileId = fileIdMatch ? fileIdMatch[1] : null
+
+            if (fileId) {
+                const offlineFile = await getOfflineFile(fileId)
+                if (active && offlineFile) {
+                    console.log("Serving offline file for:", fileId)
+                    objectUrl = URL.createObjectURL(offlineFile.blob)
+                    setSourceUrl(objectUrl)
+                } else if (active) {
+                    setSourceUrl(url)
+                }
+            } else {
+                if (active) setSourceUrl(url)
+            }
+        }
+
+        loadOffline()
+
+        return () => {
+            active = false
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
+        }
+    }, [url])
+
     const containerRef = useRef<HTMLDivElement>(null)
 
     const { zoom, setZoom, transposition, aiTransposer, setTransposerState } = useMusicStore()
@@ -40,11 +80,20 @@ export function PDFViewer({ url }: PDFViewerProps) {
             const canvas = containerRef.current.querySelector('canvas')
             if (!canvas) throw new Error("No canvas found")
 
+            // Extract File ID from URL for Caching
+            // URL format: /api/drive/file/[FILE_ID]
+            const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+            const fileId = fileIdMatch ? fileIdMatch[1] : null
+
             const imageBase64 = canvas.toDataURL('image/jpeg', 0.8)
             const res = await fetch('/api/vision/ocr', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64 })
+                body: JSON.stringify({
+                    imageBase64,
+                    fileId,
+                    pageNumber: 1
+                })
             })
 
             if (!res.ok) {
@@ -119,7 +168,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
             <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative">
                 <div className="relative">
                     <Document
-                        file={url}
+                        file={sourceUrl}
                         onLoadSuccess={onDocumentLoadSuccess}
                         loading={
                             <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4 mt-20">

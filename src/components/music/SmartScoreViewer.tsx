@@ -6,6 +6,9 @@ import { Loader2, Music2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { Card } from '@/components/ui/card'
 
+// ... imports
+import { getOfflineFile } from '@/lib/offline-store'
+
 interface SmartScoreViewerProps {
     url: string
 }
@@ -15,6 +18,38 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
     const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    // Offline / Source URL Logic
+    const [sourceUrl, setSourceUrl] = useState<string>(url)
+
+    useEffect(() => {
+        let active = true
+        let objectUrl: string | null = null
+
+        const loadOffline = async () => {
+            // Extract File ID from URL: /api/drive/file/[FILE_ID]
+            const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+            const fileId = fileIdMatch ? fileIdMatch[1] : null
+
+            if (fileId) {
+                const offlineFile = await getOfflineFile(fileId)
+                if (active && offlineFile) {
+                    console.log("Serving offline file for:", fileId)
+                    objectUrl = URL.createObjectURL(offlineFile.blob)
+                    setSourceUrl(objectUrl)
+                } else if (active) {
+                    setSourceUrl(url)
+                }
+            } else {
+                if (active) setSourceUrl(url)
+            }
+        }
+        loadOffline()
+        return () => {
+            active = false
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
+        }
+    }, [url])
 
     const { transposition, zoom } = useMusicStore()
 
@@ -40,11 +75,13 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
     // Load File
     useEffect(() => {
         const loadScore = async () => {
-            if (!osmdRef.current || !url) return
+            if (!osmdRef.current || !sourceUrl) return
 
             try {
                 setLoading(true)
-                await osmdRef.current.load(url)
+                await osmdRef.current.load(sourceUrl)
+                osmdRef.current.render()
+
                 osmdRef.current.render()
                 setLoading(false)
             } catch (err) {
@@ -55,7 +92,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
         }
 
         loadScore()
-    }, [url])
+    }, [sourceUrl])
 
     // Handle Transposition & Zoom
     useEffect(() => {

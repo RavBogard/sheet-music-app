@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
+import { unstable_cache } from "next/cache"
+
+const getCachedFiles = unstable_cache(
+    async (folderId: string | undefined) => {
+        const drive = new DriveClient()
+        console.log(`[Cache Miss] Fetching files from Drive for: ${folderId || 'Global'}`)
+        return drive.listAllFiles(folderId)
+    },
+    ['drive-files-list'], // Base Key
+    { revalidate: 300, tags: ['drive-files'] } // 5 Minutes
+)
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const folderId = searchParams.get('folderId')
-
-        // If folderId is not provided, we just pass undefined to listAllFiles, which triggers Global Search
-
-        const drive = new DriveClient()
+        const folderId = searchParams.get('folderId') || undefined
 
         // 1. Debug Access Check: Is the folder even visible?
         try {
@@ -19,10 +26,10 @@ export async function GET(request: Request) {
             console.error("Setup Check Failed", e)
         }
 
-        // 2. Recursive Search
-        console.log(`Starting recursive search for folder: ${folderId}`)
-        const files = await drive.listAllFiles(folderId || undefined)
-        console.log(`Found ${files.length} total files`)
+        // 2. Recursive Search (Cached)
+        console.log(`Requesting files for folder: ${folderId}`)
+        const files = await getCachedFiles(folderId)
+        console.log(`Returned ${files.length} files`)
 
         return NextResponse.json(files)
     } catch (error) {

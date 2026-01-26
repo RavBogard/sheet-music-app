@@ -8,7 +8,6 @@ import {
     ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { transposeChord } from "@/lib/transposer-logic"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -32,43 +31,41 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         aiTransposer,
         setTransposerState,
         capo,
-        setCapoState
+        setCapoState,
+        isGigMode,
+        setGigMode
     } = useMusicStore()
 
     const currentTrack = playbackQueue[queueIndex]
 
+    // Long Press Logic for Exit
+    const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null)
+    const [isHolding, setIsHolding] = useState(false)
+
+    const startExit = () => {
+        setIsHolding(true)
+        const timeout = setTimeout(() => {
+            setGigMode(false)
+            setIsHolding(false)
+        }, 2000) // 2 seconds hold
+        setHoldTimeout(timeout)
+    }
+
+    const cancelExit = () => {
+        if (holdTimeout) clearTimeout(holdTimeout)
+        setIsHolding(false)
+    }
+
     // Capo Calculation Helper
-    // Returns { delta, fret }
     const calculateCapo = (sourceKey: string, targetShape: string) => {
-        const sIndex = KEYS.indexOf(sourceKey.replace(/m$/, '')) // simplify
+        const sIndex = KEYS.indexOf(sourceKey.replace(/m$/, ''))
         const tIndex = KEYS.indexOf(targetShape.replace(/m$/, ''))
 
         if (sIndex === -1 || tIndex === -1) return null
 
-        let delta = tIndex - sIndex // How much to shift CHORDS
-        // Example: Key F (5), Shape G (7). Delta = +2. Shift chords UP 2? 
-        // No, if playing G shapes to sound like F... wait.
-        // To Sound Like (Source) using Shapes (Target).
-        // F (Real) = G (Shape) + Capo? 
-        // No, F is LOWER than G. F = G - 2 semitones. 
-        // Capo only goes UP. 
-        // So F = E (Shape) + 1 fret (Capo 1).
-
-        // Correct Math: Capo Fret = Source - Target (mod 12)
-        // Example: Source F (5), Target E (4). Fret = 5 - 4 = 1. Capo 1. Correct.
-        // Example: Source F (5), Target G (7). Fret = 5 - 7 = -2 -> +12 = 10. Capo 10.
-
         let fret = sIndex - tIndex
         if (fret < 0) fret += 12
-
-        // The TRANSPOSITION needed for the text is: Target - Source.
-        // We want the text to say "G". It currently says "F".
-        // Delta = G - F = +2. 
-        // So we transpose +2 (or +14, or -10).
-        // Let's check: transposeChord("F", +2) -> "G". Correct.
-
         let transposeDelta = tIndex - sIndex
-
         return { fret, transposeDelta }
     }
 
@@ -87,6 +84,95 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposition(0)
     }
 
+    if (isGigMode) {
+        return (
+            <>
+                {/* Red Mode Filter (Backdrop) */}
+                <style jsx global>{`
+                    html {
+                        filter: sepia(100%) saturate(300%) hue-rotate(320deg) brightness(0.8) contrast(1.2) !important;
+                        background: #000 !important;
+                    }
+                `}</style>
+
+                <div className="fixed bottom-0 left-0 right-0 h-24 bg-black border-t-2 border-red-900/50 flex items-center justify-between px-8 z-50">
+
+                    {/* Emergency Exit (Long Press) */}
+                    <button
+                        onMouseDown={startExit}
+                        onMouseUp={cancelExit}
+                        onMouseLeave={cancelExit}
+                        onTouchStart={startExit}
+                        onTouchEnd={cancelExit}
+                        className={`
+                            border-2 border-red-900 rounded-full h-16 w-16 flex items-center justify-center transition-all duration-200
+                            ${isHolding ? 'bg-red-900 scale-95' : 'bg-black'}
+                        `}
+                    >
+                        <div className={`h-12 w-12 rounded-full border border-red-800 ${isHolding ? 'animate-ping opacity-75' : 'opacity-0'}`} />
+                        <span className="absolute text-[10px] text-red-700 font-bold uppercase tracking-widest">
+                            {isHolding ? "HOLD..." : "EXIT"}
+                        </span>
+                    </button>
+
+                    {/* Simple Prev/Next - HUGE Targets */}
+                    <div className="flex items-center gap-12">
+                        <Button
+                            variant="ghost"
+                            className="h-20 w-32 border border-red-900/30 text-red-500 hover:bg-red-900/20 active:bg-red-900/40 rounded-2xl"
+                            onClick={prevSong}
+                            disabled={queueIndex <= 0}
+                        >
+                            <ChevronLeft className="h-12 w-12" />
+                        </Button>
+
+                        <div className="flex flex-col items-center">
+                            <span className="text-xl font-bold text-red-500 max-w-[300px] truncate text-center">
+                                {currentTrack?.name || "No Song"}
+                            </span>
+                            <span className="text-sm text-red-800 font-mono">
+                                {queueIndex + 1} / {playbackQueue.length}
+                            </span>
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            className="h-20 w-32 border border-red-900/30 text-red-500 hover:bg-red-900/20 active:bg-red-900/40 rounded-2xl"
+                            onClick={nextSong}
+                            disabled={queueIndex >= playbackQueue.length - 1}
+                        >
+                            <ChevronRight className="h-12 w-12" />
+                        </Button>
+                    </div>
+
+                    {/* Minimal Tools (Transpose ONLY) */}
+                    <div className="flex gap-4">
+                        <div className="flex flex-col gap-1 items-center">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setTransposition(transposition + 1)}
+                                className="border-red-900/50 text-red-500 hover:bg-red-900/20 h-10 w-10"
+                            >
+                                +
+                            </Button>
+                            <span className="text-red-500 font-mono font-bold text-lg">{transposition}</span>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setTransposition(transposition - 1)}
+                                className="border-red-900/50 text-red-500 hover:bg-red-900/20 h-10 w-10"
+                            >
+                                -
+                            </Button>
+                        </div>
+                    </div>
+
+                </div>
+            </>
+        )
+    }
+
     return (
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between px-4 z-50">
 
@@ -97,6 +183,16 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </Button>
                 <Button variant="ghost" size="icon" onClick={onSetlist} className="text-zinc-400 hover:text-white">
                     <ListMusic className="h-5 w-5" />
+                </Button>
+                {/* Gig Mode Entry */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setGigMode(true)}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-900/30 gap-2 px-3 ml-2"
+                >
+                    <Guitar className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">Gig Mode</span>
                 </Button>
             </div>
 

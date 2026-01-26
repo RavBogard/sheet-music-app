@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
-import { ChevronLeft, GripVertical, Trash2, Search, X, Plus, Check, Play, Globe, Lock, Printer } from "lucide-react"
+import { useOfflineSync } from "@/hooks/use-offline-sync"
+import { Trash2, Save, ArrowLeft, GripVertical, Download, Link, Share2, Play, Search, X, Plus, Check, Globe, Lock, Printer, CloudDownload, CloudOff, ChevronLeft } from "lucide-react"
+import { SetlistTimeline } from "./SetlistTimeline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -209,6 +211,26 @@ export function SetlistEditor({
     const [isPublic, setIsPublic] = useState(initialIsPublic)
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+    // Offline Sync Hook
+    const {
+        checkOfflineStatus,
+        syncSetlist,
+        downloading,
+        offlineStatus
+    } = useOfflineSync()
+
+    useEffect(() => {
+        if (tracks.length > 0) {
+            checkOfflineStatus(tracks)
+        }
+    }, [tracks, checkOfflineStatus])
+
+    // Calculate sync progress
+    const totalTracksWithFiles = tracks.filter(t => t.fileId).length
+    const offlineCount = tracks.filter(t => t.fileId && offlineStatus[t.fileId]).length
+    const isFullyOffline = totalTracksWithFiles > 0 && offlineCount === totalTracksWithFiles
+    const isSyncing = Object.values(downloading).some(Boolean)
 
     // Modal states
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
@@ -461,12 +483,35 @@ export function SetlistEditor({
                     <div className="text-sm text-zinc-500">View Only</div>
                 )}
 
+                {/* Sync Button */}
+                {canEdit && (
+                    <Button
+                        size="sm"
+                        variant={isFullyOffline ? "default" : "secondary"}
+                        onClick={() => syncSetlist(tracks)}
+                        disabled={isSyncing || isFullyOffline}
+                        className={`gap-2 ${isFullyOffline ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    >
+                        {isSyncing ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                        ) : isFullyOffline ? (
+                            <Check className="h-4 w-4" />
+                        ) : (
+                            <Download className="h-4 w-4" />
+                        )}
+                        {isSyncing ? "Syncing..." : isFullyOffline ? "Offline Ready" : "Download All"}
+                    </Button>
+                )}
+
                 {canEdit && (
                     <div className="text-sm text-zinc-500">
                         {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
                     </div>
                 )}
             </div>
+
+            {/* Timeline View */}
+            <SetlistTimeline tracks={tracks} onPlay={(fid) => onPlayTrack?.(fid, "song")} />
 
             {/* Track List */}
             <ScrollArea className="flex-1 p-6">
