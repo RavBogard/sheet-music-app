@@ -9,13 +9,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   FileMusic, Music2, Share2, Printer, Settings, Loader2,
   FileText, LayoutTemplate, ListPlus, FolderOpen, ChevronLeft,
-  PlayCircle, Home as HomeIcon, Library as LibIcon, ListMusic
+  PlayCircle, Home as HomeIcon, Library as LibIcon, ListMusic, Headphones
 } from "lucide-react"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { SetlistManager } from "@/components/setlist/setlist-manager"
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
 import { SetlistEditor } from "@/components/setlist/SetlistEditor"
 import { ImportModal } from "@/components/setlist/ImportModal"
+import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
+import { AudioLibrary } from "@/components/audio/AudioLibrary"
 import { Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import * as XLSX from 'xlsx'
 
@@ -33,7 +35,7 @@ interface DriveFile {
   mimeType: string
 }
 
-type ViewMode = 'home' | 'library' | 'setlist' | 'setlist_dashboard' | 'setlist_editor' | 'performer'
+type ViewMode = 'home' | 'song_charts' | 'audio' | 'library' | 'setlist' | 'setlist_dashboard' | 'setlist_editor' | 'performer'
 
 export default function Home() {
   const { fileType, fileUrl, setFile, transposition, setTransposition } = useMusicStore()
@@ -191,18 +193,20 @@ export default function Home() {
         </Button>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Song Charts */}
         <button
-          onClick={() => setView('library')}
+          onClick={() => setView('song_charts')}
           className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
         >
           <div className="bg-blue-500/20 p-6 rounded-full group-hover:bg-blue-500/30 transition-colors">
-            <LibIcon className="h-16 w-16 text-blue-400" />
+            <FileMusic className="h-16 w-16 text-blue-400" />
           </div>
-          <h2 className="text-3xl font-bold">Files Library</h2>
-          <p className="text-zinc-400 text-lg">Browse {driveFiles.length} songs (PDF / XML)</p>
+          <h2 className="text-3xl font-bold">Song Charts</h2>
+          <p className="text-zinc-400 text-lg">Browse {driveFiles.filter(f => !f.mimeType.startsWith('audio/')).length} charts</p>
         </button>
 
+        {/* Setlists */}
         <button
           onClick={() => setView('setlist_dashboard')}
           className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
@@ -211,7 +215,19 @@ export default function Home() {
             <ListMusic className="h-16 w-16 text-green-400" />
           </div>
           <h2 className="text-3xl font-bold">Setlists</h2>
-          <p className="text-zinc-400 text-lg">Manage or Import Setlists</p>
+          <p className="text-zinc-400 text-lg">Manage or Import</p>
+        </button>
+
+        {/* Audio Files */}
+        <button
+          onClick={() => setView('audio')}
+          className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
+        >
+          <div className="bg-purple-500/20 p-6 rounded-full group-hover:bg-purple-500/30 transition-colors">
+            <Headphones className="h-16 w-16 text-purple-400" />
+          </div>
+          <h2 className="text-3xl font-bold">Audio Files</h2>
+          <p className="text-zinc-400 text-lg">Practice recordings</p>
         </button>
       </div>
 
@@ -288,7 +304,24 @@ export default function Home() {
     />
   )
 
-  // D. Library View (Touch List)
+  // D. Song Charts Library (A-Z or Folder view)
+  if (view === 'song_charts') return (
+    <SongChartsLibrary
+      driveFiles={driveFiles}
+      onBack={() => setView('home')}
+      onSelectFile={(file) => loadFile(file)}
+    />
+  )
+
+  // E. Audio Library (MP3 Player)
+  if (view === 'audio') return (
+    <AudioLibrary
+      driveFiles={driveFiles}
+      onBack={() => setView('home')}
+    />
+  )
+
+  // F. Legacy Library View (Touch List)
   if (view === 'library') return (
     <div className="h-screen flex flex-col bg-zinc-950 text-white">
       <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">

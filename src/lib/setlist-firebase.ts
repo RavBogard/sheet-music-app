@@ -10,13 +10,15 @@ import {
     orderBy,
     serverTimestamp,
     Timestamp,
-    where
+    where,
+    getDoc
 } from "firebase/firestore";
 
 export interface SetlistTrack {
     id: string
     title: string
-    fileId?: string
+    fileId?: string       // PDF/sheet music file
+    audioFileId?: string  // Linked audio/MP3 file for practice
     key?: string
     notes?: string
 }
@@ -27,7 +29,7 @@ export interface Setlist {
     date: Timestamp
     tracks: SetlistTrack[]
     trackCount: number
-    // New fields for public/private
+    // Fields for public/private
     isPublic?: boolean
     ownerId?: string
     ownerName?: string
@@ -130,6 +132,54 @@ export function createSetlistService(userId: string, userName?: string | null) {
                 return docRef.id;
             } catch (e) {
                 console.error("Error copying setlist: ", e);
+                throw e;
+            }
+        },
+
+        // Make a personal setlist public (moves from personal to public collection)
+        async makePublic(setlistId: string, setlistData: Setlist) {
+            try {
+                // 1. Create in public collection
+                const newDocRef = await addDoc(collection(db, PUBLIC_PATH), {
+                    name: setlistData.name,
+                    date: serverTimestamp(),
+                    tracks: setlistData.tracks,
+                    trackCount: setlistData.tracks.length,
+                    isPublic: true,
+                    ownerId: userId,
+                    ownerName: userName || "Anonymous"
+                });
+
+                // 2. Delete from personal collection
+                await deleteDoc(doc(db, PERSONAL_PATH, setlistId));
+
+                return newDocRef.id;
+            } catch (e) {
+                console.error("Error making setlist public: ", e);
+                throw e;
+            }
+        },
+
+        // Make a public setlist private (moves from public to personal collection)
+        async makePrivate(setlistId: string, setlistData: Setlist) {
+            try {
+                // 1. Create in personal collection
+                const newDocRef = await addDoc(collection(db, PERSONAL_PATH), {
+                    name: setlistData.name,
+                    date: serverTimestamp(),
+                    tracks: setlistData.tracks,
+                    trackCount: setlistData.tracks.length,
+                    isPublic: false,
+                    ownerId: userId,
+                    ownerName: userName || "Anonymous"
+                });
+
+                // 2. Delete from public collection
+                await deleteDoc(doc(db, PUBLIC_PATH, setlistId));
+
+                return newDocRef.id;
+            } catch (e) {
+                console.error("Error making setlist private: ", e);
                 throw e;
             }
         }

@@ -401,12 +401,48 @@ export function SetlistEditor({
                     <h1 className="text-2xl font-bold flex-1">{name}</h1>
                 )}
 
-                {/* Public/Private indicator */}
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-                    }`}>
-                    {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                    {isPublic ? 'Public' : 'Personal'}
-                </div>
+                {/* Public/Private toggle (clickable for owner of existing setlists) */}
+                {canEdit && setlistId ? (
+                    <button
+                        onClick={async () => {
+                            if (!setlistService || !setlistId) return
+
+                            const action = isPublic ? "make private" : "make public"
+                            const message = isPublic
+                                ? "Make this setlist private? Only you will be able to see it."
+                                : "Make this setlist public? Anyone with the app can view (but not edit) it."
+
+                            if (!confirm(message)) return
+
+                            setSaving(true)
+                            try {
+                                const newId = isPublic
+                                    ? await setlistService.makePrivate(setlistId, { id: setlistId, name, tracks, trackCount: tracks.length, isPublic, date: null as any })
+                                    : await setlistService.makePublic(setlistId, { id: setlistId, name, tracks, trackCount: tracks.length, isPublic, date: null as any })
+
+                                setSetlistId(newId)
+                                setIsPublic(!isPublic)
+                                alert(`Setlist is now ${!isPublic ? 'public' : 'private'}!`)
+                            } catch (e) {
+                                console.error("Toggle visibility failed:", e)
+                                alert("Failed to change visibility")
+                            }
+                            setSaving(false)
+                        }}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm cursor-pointer hover:opacity-80 transition-opacity ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                            }`}
+                        title="Click to toggle visibility"
+                    >
+                        {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                        {isPublic ? 'Public' : 'Personal'}
+                    </button>
+                ) : (
+                    <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                        }`}>
+                        {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                        {isPublic ? 'Public' : 'Personal'}
+                    </div>
+                )}
 
                 {!canEdit && (
                     <div className="text-sm text-zinc-500">View Only</div>
@@ -518,8 +554,8 @@ export function SetlistEditor({
                                         key={file.id}
                                         onClick={() => toggleFileSelection(file.id)}
                                         className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${selectedFiles.has(file.id)
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-zinc-800 hover:bg-zinc-700'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-zinc-800 hover:bg-zinc-700'
                                             }`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedFiles.has(file.id) ? 'bg-white border-white' : 'border-zinc-600'
