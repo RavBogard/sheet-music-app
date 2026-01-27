@@ -24,7 +24,7 @@ interface SongChartsLibraryProps {
 
 export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }: SongChartsLibraryProps) {
     const [searchQuery, setSearchQuery] = useState("")
-    const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('alphabetical')
+    const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('folders')
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 

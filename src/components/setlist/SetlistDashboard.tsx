@@ -166,7 +166,39 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
 
     return (
         <div className="h-screen flex flex-col bg-zinc-950 text-white">
-            {/* ... Header ... */}
+            {/* Header */}
+            <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4 shrink-0">
+                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
+                    <ChevronLeft className="h-8 w-8" />
+                </Button>
+                <div className="flex items-center gap-3 flex-1">
+                    <img
+                        src="/logo.jpg"
+                        alt="CRC"
+                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                    />
+                    <h1 className="text-2xl font-bold">My Setlists</h1>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button
+                        onClick={onImport}
+                        variant="outline"
+                        size="sm"
+                        className="hidden sm:flex gap-2 border-zinc-800 hover:bg-zinc-800"
+                    >
+                        <FileText className="h-4 w-4" />
+                        Import Excel
+                    </Button>
+                    <Button
+                        onClick={onCreateNew}
+                        className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6"
+                    >
+                        <Plus className="h-5 w-5" />
+                        New Setlist
+                    </Button>
+                </div>
+            </div>
 
             {/* Transfer Dialog Overlay */}
             {showTransferDialog && (
@@ -192,10 +224,54 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 </div>
             )}
 
-            {/* ... Tabs ... */}
+            {/* Tabs */}
+            <div className="px-6 pt-6 shrink-0">
+                <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
+                    <button
+                        onClick={() => setActiveTab('public')}
+                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'public'
+                            ? 'bg-zinc-800 text-white shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                    >
+                        Public Library
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('personal')}
+                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'personal'
+                            ? 'bg-zinc-800 text-white shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                    >
+                        My Personal
+                    </button>
+                </div>
+            </div>
 
             <ScrollArea className="flex-1 p-6">
-                {/* ... Loading/Empty States ... */}
+                {/* Empty State */}
+                {!loading && displayedSetlists.length === 0 && (
+                    <div className="max-w-md mx-auto mt-20">
+                        <EmptyState
+                            icon={Plus}
+                            title={activeTab === 'personal' ? "No Personal Setlists" : "No Public Setlists"}
+                            description={activeTab === 'personal'
+                                ? "You haven't created any setlists yet. Start by creating a new one or importing from Excel."
+                                : "There are no public setlists available yet."
+                            }
+                            actionLabel={activeTab === 'personal' ? "Create Your First Setlist" : undefined}
+                            onAction={activeTab === 'personal' ? onCreateNew : undefined}
+                        />
+                    </div>
+                )}
+
+                {loading && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="h-48 bg-zinc-900/50 rounded-xl animate-pulse border border-zinc-800" />
+                        ))}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {displayedSetlists.map(setlist => (

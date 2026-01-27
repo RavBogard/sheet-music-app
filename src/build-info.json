@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.27-1220",
-  "commit": "666fd3e",
+  "version": "2026.01.27-1232",
+  "commit": "38fa1f6",
   "branch": "master",
-  "buildDate": "1/27/2026, 12:20:17 PM",
+  "buildDate": "1/27/2026, 12:32:45 PM",
   "changelog": [
-    "666fd3e - fix(performance): resolve song synchronization bug in setlists (9 minutes ago)",
-    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (26 minutes ago)",
-    "f311636 - feat(versioning): automate human-readable CalVer versioning (34 minutes ago)",
-    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (41 minutes ago)",
-    "d978577 - fix(pdf-viewer): ensure transposer scan triggers on menu open (62 minutes ago)"
+    "38fa1f6 - feat(ux): implement hierarchical setlist navigation, functional header search, and profile management (11 minutes ago)",
+    "666fd3e - fix(performance): resolve song synchronization bug in setlists (22 minutes ago)",
+    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (39 minutes ago)",
+    "f311636 - feat(versioning): automate human-readable CalVer versioning (47 minutes ago)",
+    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (54 minutes ago)"
   ]
 }
