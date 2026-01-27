@@ -1,7 +1,12 @@
-// Regex for common chord patterns:
-// Matches: A, Bb, F#m, G/B, Cmaj7, Ddim, E+
-// We want to be strict to avoid detecting lyrics "The", "And" as chords.
+// Regex for strictly valid chords
+// Excludes single "I" or "A" which are common lyrics
+// Matches: Bb, F#m, G/B, Cmaj7, Ddim, E+, Am7, Sus4
+// We enforce that single letters must be followed by something OR be in a context where they look like chords (handled by logic)
+// But to be safe, we'll allow single letters A-G, but filter them out later if they appear to be lyrics.
 const CHORD_REGEX = /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|\+)?(?:7|9|11|13)?(?:sus[24])?(?:\/[A-G](?:#|b)?)?$/
+
+// Common English words that look like chords but shouldn't be treated as such unless surrounded by other chords
+const FALSE_POSITIVES = new Set(["I", "A", "a", "Am", "To", "Be", "Is", "In", "On", "At", "No", "So", "Do", "Go", "Up", "Or", "If", "As", "By", "My", "We", "He", "Us"])
 
 // Nashville Number System Map
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -31,13 +36,7 @@ export function transposeChord(chord: string, semitones: number): string {
 
     let newNote = NOTES[newIndex]
 
-    // Simplified Flat logic: If original was flat, try to return flat if appropriate?
-    // For now, let's stick to sharps/naturals unless we implement full key awareness.
-    // MVP: If the original key was likely "Flat-heavy" (F, Bb, Eb), we should probably output flats.
-    // For this beta, let's just use a simple lookup:
-    // Prefer flats for: F (d-minor?), Bb (g-minor), Eb, Ab, Db
-
-    // Quick Hack: If original was flat, maybe use flat for black keys?
+    // Preserve flats preference if original used flats or target is a "flat key"
     if (root.includes('b') && REVERSE_FLATS[newNote]) {
         newNote = REVERSE_FLATS[newNote]
     }
@@ -61,28 +60,87 @@ export function transposeChord(chord: string, semitones: number): string {
 }
 
 export function identifyChords(blocks: { text: string, poly: any }[]) {
-    // 1. Filter blocks that look like chords
-    const chordBlocks = blocks.filter(b => {
-        // remove trailing punctuation sometimes picked up
-        const cleanText = b.text.replace(/[,\.]/g, '')
-        return CHORD_REGEX.test(cleanText)
-    })
+    // 1. Group blocks into lines based on Y coordinate (with tolerance)
+    const lines: { y: number, blocks: typeof blocks }[] = []
+    const Y_TOLERANCE = 15 // pixels
 
-    // 2. Simple Key Detection
-    // Count root notes
-    const counts: { [key: string]: number } = {}
-    chordBlocks.forEach(b => {
-        const match = b.text.match(/^([A-G](?:#|b)?)/)
-        if (match) {
-            const root = match[1]
-            counts[root] = (counts[root] || 0) + 1
+    // Sort blocks by Y first
+    const sortedBlocks = [...blocks].sort((a, b) => a.poly[0].y - b.poly[0].y)
+
+    sortedBlocks.forEach(block => {
+        const y = block.poly[0].y
+        // Find existing line
+        const line = lines.find(l => Math.abs(l.y - y) < Y_TOLERANCE)
+        if (line) {
+            line.blocks.push(block)
+        } else {
+            lines.push({ y, blocks: [block] })
         }
     })
 
-    // Naive: Most frequent chord is likely I, IV, or V.
-    // Let's just find the most frequent start note.
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
-    const detectedKey = sorted.length > 0 ? sorted[0][0] : 'C'
+    const finalChordBlocks: typeof blocks = []
+    const keyVotes: { [key: string]: number } = {}
 
-    return { chordBlocks, detectedKey }
+    // 2. Analyze each line
+    lines.forEach(line => {
+        const lineBlocks = line.blocks
+        const totalTokens = lineBlocks.length
+
+        let possibleChords = 0
+        let strictChords = 0 // Chords that definitely aren't words (e.g. G7, F#m, Asus)
+
+        lineBlocks.forEach(b => {
+            const txt = b.text.replace(/[,\.]/g, '') // remove punctuation
+            if (CHORD_REGEX.test(txt)) {
+                possibleChords++
+                // Check if it's a strict chord (has #, b, 7, m, sus, or slash)
+                if (txt.match(/[#b7msu\/]/) && txt !== 'I') {
+                    strictChords++
+                }
+            }
+        })
+
+        const density = possibleChords / totalTokens
+
+        // HEURISTIC: A line is a "Chord Line" if:
+        // A) Density is high (> 50% are potential chords)
+        // B) Contains at least one "Strict Chord" (definitely not a word) AND density > 20%
+        // C) It's a sparse line (few tokens) and they are all valid notes (e.g. "G   C   D")
+
+        const isChordLine = (density > 0.5) || (strictChords > 0 && density > 0.2)
+
+        if (isChordLine) {
+            // Processing this line as chords
+            lineBlocks.forEach(b => {
+                const txt = b.text.replace(/[,\.]/g, '')
+                // Even in a chord line, ignore obvious non-chords (e.g. "Chorus:", "Intro")
+                // But include "I" or "A" if the line is determined to be chords
+                if (CHORD_REGEX.test(txt)) {
+                    // Filter out words that happen to be chord names if they appear in a mixed context?
+                    // No, if the whole line is chords, assume they are chords.
+                    // EXCEPT: standard exclusion list if density is borderline
+                    if (density < 0.8 && FALSE_POSITIVES.has(txt) && txt !== 'A') {
+                        // "I" might be a chord in a chord line? unlikely. "I" is not a chord. "A" is.
+                        if (txt === 'I') return
+                        // "A" is valid.
+                    }
+
+                    finalChordBlocks.push(b)
+
+                    // Key Detection Voting
+                    const match = txt.match(/^([A-G](?:#|b)?)/)
+                    if (match) {
+                        const root = match[1]
+                        keyVotes[root] = (keyVotes[root] || 0) + 1
+                    }
+                }
+            })
+        }
+    })
+
+    // 3. Simple Key Detection
+    const sortedKeys = Object.entries(keyVotes).sort((a, b) => b[1] - a[1])
+    const detectedKey = sortedKeys.length > 0 ? sortedKeys[0][0] : 'C'
+
+    return { chordBlocks: finalChordBlocks, detectedKey }
 }

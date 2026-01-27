@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth-context"
 import { ChevronLeft, Plus, FileText, Trash2, Calendar, LogIn, LogOut, User, Globe, Lock, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ExportDataButton } from "@/components/settings/ExportDataButton"
 
 interface SetlistDashboardProps {
     onBack: () => void
@@ -138,6 +140,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                     </div>
                 )}
 
+                <ExportDataButton />
                 <Button onClick={onImport} className="h-12 px-6 gap-2">
                     <FileText className="h-5 w-5" />
                     Import

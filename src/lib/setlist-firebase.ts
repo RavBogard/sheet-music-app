@@ -22,6 +22,7 @@ export interface SetlistTrack {
     key?: string
     notes?: string
     duration?: string
+    type?: 'song' | 'header'
 }
 
 export interface Setlist {

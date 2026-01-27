@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PrintModal } from "@/components/setlist/PrintModal"
-import { AudioLibrary } from "@/components/audio/AudioLibrary"
+import { AudioFilePicker } from "@/components/setlist/AudioFilePicker"
 import {
     DndContext,
     closestCenter,
@@ -53,7 +53,6 @@ function SortableTrack({
     onUpdate,
     onDelete,
     onMatchFile,
-    onLinkAudio,
     onPlay,
     driveFiles,
     readOnly
@@ -62,7 +61,6 @@ function SortableTrack({
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
     onDelete: (id: string) => void
     onMatchFile: (trackId: string) => void
-    onLinkAudio: (trackId: string) => void
     onPlay?: (fileId: string, fileName: string) => void
     driveFiles: DriveFile[]
     readOnly?: boolean
@@ -81,6 +79,50 @@ function SortableTrack({
         if (matchedFile && onPlay) {
             onPlay(matchedFile.id, matchedFile.name)
         }
+    }
+
+    const isHeader = track.type === 'header'
+
+    if (isHeader) {
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-3 flex items-center gap-4 group mt-4 mb-2"
+            >
+                {!readOnly && (
+                    <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-zinc-500 hover:text-zinc-300">
+                        <GripVertical className="h-5 w-5" />
+                    </div>
+                )}
+
+                <div className="flex-1">
+                    {!readOnly ? (
+                        <Input
+                            value={track.title}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
+                            className="bg-transparent border-0 text-lg font-bold text-center text-zinc-300 placeholder:text-zinc-600 focus-visible:ring-0"
+                            placeholder="SECTION HEADER"
+                        />
+                    ) : (
+                        <div className="text-lg font-bold text-center text-zinc-300 uppercase tracking-wider">
+                            {track.title}
+                        </div>
+                    )}
+                </div>
+
+                {!readOnly && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => onDelete(track.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
+        )
     }
 
     return (
@@ -168,15 +210,20 @@ function SortableTrack({
                     </Button>
                 )}
                 {!readOnly && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onLinkAudio(track.id)}
-                        className={`h-8 w-8 p-0 ${track.audioFileId ? 'text-blue-400 border-blue-400/50' : 'text-zinc-600 border-zinc-800'}`}
-                        title={track.audioFileId ? "Audio Linked" : "Link Audio"}
-                    >
-                        <Music className="h-3 w-3" />
-                    </Button>
+                    <AudioFilePicker
+                        currentFileId={track.audioFileId}
+                        onSelect={(fileId) => onUpdate(track.id, { audioFileId: fileId })}
+                        trigger={
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-8 w-8 p-0 ${track.audioFileId ? 'text-blue-400 border-blue-400/50' : 'text-zinc-600 border-zinc-800'}`}
+                                title={track.audioFileId ? "Audio Linked" : "Link Audio"}
+                            >
+                                <Music className="h-3 w-3" />
+                            </Button>
+                        }
+                    />
                 )}
                 {!readOnly && (
                     <Button
@@ -249,7 +296,6 @@ export function SetlistEditor({
     // Modal states
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
-    const [audioPickingTrackId, setAudioPickingTrackId] = useState<string | null>(null)
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
@@ -544,7 +590,6 @@ export function SetlistEditor({
                                     onUpdate={updateTrack}
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
-                                    onLinkAudio={setAudioPickingTrackId}
                                     onPlay={onPlayTrack}
                                     driveFiles={driveFiles}
                                     readOnly={!canEdit}
@@ -662,19 +707,7 @@ export function SetlistEditor({
                 />
             )}
 
-            {/* Audio Picker Modal */}
-            {audioPickingTrackId && canEdit && (
-                <div className="fixed inset-0 z-50 bg-zinc-950">
-                    <AudioLibrary
-                        driveFiles={driveFiles}
-                        onBack={() => setAudioPickingTrackId(null)}
-                        onSelectFile={(file) => {
-                            updateTrack(audioPickingTrackId, { audioFileId: file.id })
-                            setAudioPickingTrackId(null)
-                        }}
-                    />
-                </div>
-            )}
+
         </div>
     )
 }

@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, FileMusic, Folder, FolderOpen, List, LayoutG
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { LibrarySkeleton } from "./LibrarySkeleton"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface DriveFile {
     id: string
@@ -15,11 +17,12 @@ interface DriveFile {
 
 interface SongChartsLibraryProps {
     driveFiles: DriveFile[]
+    loading?: boolean
     onBack: () => void
     onSelectFile: (file: DriveFile) => void
 }
 
-export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChartsLibraryProps) {
+export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }: SongChartsLibraryProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('alphabetical')
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
@@ -208,46 +211,53 @@ export function SongChartsLibrary({ driveFiles, onBack, onSelectFile }: SongChar
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
-                <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2">
-                    {currentViewItems.length === 0 && (
-                        <div className="text-center text-zinc-500 py-12">
-                            {searchQuery ? "No matches found" : "This folder is empty"}
-                        </div>
-                    )}
+                {loading ? (
+                    <LibrarySkeleton />
+                ) : (
+                    <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2">
+                        {currentViewItems.length === 0 && (
+                            <EmptyState
+                                icon={searchQuery ? Search : FolderOpen}
+                                title={searchQuery ? "No matches found" : "This folder is empty"}
+                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Try checking another folder or search for a specific song."}
+                                className="py-12"
+                            />
+                        )}
 
-                    {currentViewItems.map(item => {
-                        const isFolder = item.mimeType.includes('folder')
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => handleItemClick(item)}
-                                className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
+                        {currentViewItems.map(item => {
+                            const isFolder = item.mimeType.includes('folder')
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => handleItemClick(item)}
+                                    className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
                                         ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
                                         : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
-                                    }`}
-                            >
-                                {isFolder ? (
-                                    <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
-                                ) : (
-                                    <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
-                                )}
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-lg truncate">
-                                        {isFolder ? item.name : getCleanName(item.name)}
-                                    </div>
-                                    {!isFolder && (
-                                        <div className="text-xs text-zinc-500 truncate mt-1">
-                                            {/* Show parent folder hint if searching */}
-                                            {searchQuery && item.parents && item.parents[0] && folderMap.get(item.parents[0])?.name}
-                                        </div>
+                                        }`}
+                                >
+                                    {isFolder ? (
+                                        <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                    ) : (
+                                        <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
                                     )}
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
-                            </button>
-                        )
-                    })}
-                </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-lg truncate">
+                                            {isFolder ? item.name : getCleanName(item.name)}
+                                        </div>
+                                        {!isFolder && (
+                                            <div className="text-xs text-zinc-500 truncate mt-1">
+                                                {/* Show parent folder hint if searching */}
+                                                {searchQuery && item.parents && item.parents[0] && folderMap.get(item.parents[0])?.name}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
             </ScrollArea>
         </div>
     )

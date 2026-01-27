@@ -12,7 +12,16 @@ const getCachedFiles = unstable_cache(
     { revalidate: 300, tags: ['drive-files'] } // 5 Minutes
 )
 
+import { globalLimiter } from "@/lib/rate-limit"
+
 export async function GET(request: Request) {
+    // Simple IP-based imitation (Next.js Edge can give proper IP, in Node runtime it's harder)
+    // We'll use a static key for now or try headers
+    const ip = request.headers.get("x-forwarded-for") || "unknown"
+    if (!globalLimiter.check(ip)) {
+        return new NextResponse(JSON.stringify({ error: "Too Many Requests" }), { status: 429 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const folderId = searchParams.get('folderId') || undefined

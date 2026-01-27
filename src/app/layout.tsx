@@ -3,6 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { validateEnv } from "@/lib/env"
+import { Toaster } from "sonner"
+
+// Validate Env on load
+validateEnv()
+
 
 
 const geistSans = Geist({
@@ -36,9 +43,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ClientProviders>
-            {children}
-          </ClientProviders>
+          <ErrorBoundary>
+            <ClientProviders>
+              {children}
+            </ClientProviders>
+            <Toaster richColors position="top-center" theme="dark" />
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>

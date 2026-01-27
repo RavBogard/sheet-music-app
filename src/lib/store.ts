@@ -44,8 +44,7 @@ interface MusicState {
         fret: number // e.g. 3
     }
 
-    isGigMode: boolean
-    setGigMode: (isGigMode: boolean) => void
+
 
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
@@ -98,8 +97,7 @@ export const useMusicStore = create<MusicState>((set, get) => ({
         isLooping: false
     },
 
-    isGigMode: false,
-    setGigMode: (isGigMode) => set({ isGigMode }),
+
 
     setFile: (url, type) => set({ fileUrl: url, fileType: type }),
     setTransposition: (t) => set({ transposition: t }),

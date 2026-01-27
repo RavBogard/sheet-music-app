@@ -13,7 +13,18 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // We can add typical Next.js config here if needed (e.g. images)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com', // For profile pics
+      }
+    ],
+  },
 };
 
 export default withPWA(nextConfig);

@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
+import { Tuner } from "@/components/tools/Tuner"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
     ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { NetworkStatus } from "@/components/network-status"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -33,29 +35,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposerState,
         capo,
         setCapoState,
-        isGigMode,
-        setGigMode
     } = useMusicStore()
 
     const currentTrack = playbackQueue[queueIndex]
-
-    // Long Press Logic for Exit
-    const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null)
-    const [isHolding, setIsHolding] = useState(false)
-
-    const startExit = () => {
-        setIsHolding(true)
-        const timeout = setTimeout(() => {
-            setGigMode(false)
-            setIsHolding(false)
-        }, 2000) // 2 seconds hold
-        setHoldTimeout(timeout)
-    }
-
-    const cancelExit = () => {
-        if (holdTimeout) clearTimeout(holdTimeout)
-        setIsHolding(false)
-    }
 
     // Capo Calculation Helper
     const calculateCapo = (sourceKey: string, targetShape: string) => {
@@ -85,145 +67,69 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposition(0)
     }
 
-    if (isGigMode) {
-        return (
-            <>
-                {/* Red Mode Filter (Backdrop) */}
-                <style jsx global>{`
-                    html {
-                        filter: sepia(100%) saturate(300%) hue-rotate(320deg) brightness(0.8) contrast(1.2) !important;
-                        background: #000 !important;
-                    }
-                `}</style>
+    // Focus Mode Logic
+    const [visible, setVisible] = useState(true)
 
-                <div className="fixed bottom-0 left-0 right-0 h-24 bg-black border-t-2 border-red-900/50 flex items-center justify-between px-8 z-50">
+    useEffect(() => {
+        let timeout: NodeJS.Timeout
 
-                    {/* Emergency Exit (Long Press) */}
-                    {/* Emergency Exit (Long Press) */}
-                    <button
-                        onMouseDown={startExit}
-                        onMouseUp={cancelExit}
-                        onMouseLeave={cancelExit}
-                        onTouchStart={startExit}
-                        onTouchEnd={cancelExit}
-                        className={`
-                            relative overflow-hidden
-                            border-2 border-red-900/60 rounded-xl h-20 w-32 flex flex-col items-center justify-center transition-all duration-200
-                            ${isHolding ? 'scale-95 border-red-500' : 'bg-black hover:border-red-700'}
-                        `}
-                    >
-                        {/* Progress Fill */}
-                        <div
-                            className={`absolute inset-0 bg-red-900 transition-all ease-linear origin-left`}
-                            style={{
-                                width: isHolding ? '100%' : '0%',
-                                transitionDuration: isHolding ? '2000ms' : '150ms'
-                            }}
-                        />
+        const resetTimer = () => {
+            setVisible(true)
+            clearTimeout(timeout)
+            timeout = setTimeout(() => {
+                // Only hide if not interacting with a menu
+                // Simple heuristic: if we are here, we are interacting.
+                // But we need to handle "mouse stop".
+                // Actually, a simpler way is: hide after 3s of no mouse move.
+                // But we don't want to hide if hovering the toolbar itself?
+                // Let's implement simple "hide after 3s" but listener is on window.
+                setVisible(false)
+            }, 3000)
+        }
 
-                        <span className="relative text-sm font-bold text-red-500 uppercase tracking-widest z-10">
-                            {isHolding ? "EXITING..." : "EXIT"}
-                        </span>
-                        <span className="relative text-[10px] text-red-500/70 z-10 mt-1 font-mono">
-                            Hold 2s
-                        </span>
-                    </button>
+        window.addEventListener('mousemove', resetTimer)
+        window.addEventListener('touchstart', resetTimer)
+        window.addEventListener('click', resetTimer)
 
-                    {/* Simple Prev/Next - HUGE Targets */}
-                    <div className="flex items-center gap-12">
-                        <Button
-                            variant="ghost"
-                            className="h-20 w-32 border border-red-900/30 text-red-500 hover:bg-red-900/20 active:bg-red-900/40 rounded-2xl"
-                            onClick={prevSong}
-                            disabled={queueIndex <= 0}
-                        >
-                            <ChevronLeft className="h-12 w-12" />
-                        </Button>
+        resetTimer()
 
-                        <div className="flex flex-col items-center">
-                            <span className="text-xl font-bold text-red-500 max-w-[300px] truncate text-center">
-                                {currentTrack?.name || "No Song"}
-                            </span>
-                            <span className="text-sm text-red-800 font-mono">
-                                {queueIndex + 1} / {playbackQueue.length}
-                            </span>
-                        </div>
-
-                        <Button
-                            variant="ghost"
-                            className="h-20 w-32 border border-red-900/30 text-red-500 hover:bg-red-900/20 active:bg-red-900/40 rounded-2xl"
-                            onClick={nextSong}
-                            disabled={queueIndex >= playbackQueue.length - 1}
-                        >
-                            <ChevronRight className="h-12 w-12" />
-                        </Button>
-                    </div>
-
-                    {/* Minimal Tools (Transpose ONLY) */}
-                    <div className="flex gap-4">
-                        <div className="flex flex-col gap-1 items-center">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setTransposition(transposition + 1)}
-                                className="border-red-900/50 text-red-500 hover:bg-red-900/20 h-10 w-10"
-                            >
-                                +
-                            </Button>
-                            <span className="text-red-500 font-mono font-bold text-lg">{transposition}</span>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setTransposition(transposition - 1)}
-                                className="border-red-900/50 text-red-500 hover:bg-red-900/20 h-10 w-10"
-                            >
-                                -
-                            </Button>
-                        </div>
-                    </div>
-
-                </div>
-            </>
-        )
-    }
+        return () => {
+            clearTimeout(timeout)
+            window.removeEventListener('mousemove', resetTimer)
+            window.removeEventListener('touchstart', resetTimer)
+            window.removeEventListener('click', resetTimer)
+        }
+    }, [])
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between px-4 z-50">
+        <div
+            className={`fixed bottom-0 left-0 right-0 h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between px-2 sm:px-4 z-50 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}
+        >
 
             {/* Left: Navigation */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
                 <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white">
                     <Home className="h-5 w-5" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={onSetlist} className="text-zinc-400 hover:text-white">
                     <ListMusic className="h-5 w-5" />
                 </Button>
-                {/* Gig Mode Entry */}
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setGigMode(true)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-900/30 gap-2 px-3 ml-2"
-                >
-                    <Guitar className="h-4 w-4" />
-                    <span className="text-xs font-bold uppercase">Gig Mode</span>
-                </Button>
             </div>
 
             {/* Center: Playback */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-center max-w-[50%] sm:max-w-none">
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={prevSong}
                     disabled={queueIndex <= 0}
-                    className="text-white"
+                    className="text-white hidden sm:flex"
                 >
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
 
-                <div className="flex flex-col items-center">
-                    <span className="text-sm font-bold max-w-[200px] truncate text-center">
+                <div className="flex flex-col items-center overflow-hidden">
+                    <span className="text-sm font-bold truncate text-center w-full px-2">
                         {currentTrack?.name || "No Song Selected"}
                     </span>
                     <span className="text-[10px] text-zinc-500">
@@ -236,15 +142,27 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     size="icon"
                     onClick={nextSong}
                     disabled={queueIndex >= playbackQueue.length - 1}
-                    className="text-white"
+                    className="text-white hidden sm:flex"
                 >
                     <ChevronRight className="h-6 w-6" />
                 </Button>
             </div>
 
             {/* Right: Tools */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 justify-end">
                 <BackingTrackPlayer />
+
+                {/* Tuner */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" title="Tuner">
+                            <Guitar className="h-5 w-5" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                        <Tuner />
+                    </PopoverContent>
+                </Popover>
 
                 {/* Transposer Visibility Toggle (Direct Access) */}
                 {aiTransposer.status === 'ready' && (
@@ -270,12 +188,18 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         <Button
                             variant={transposition !== 0 || capo.active ? "default" : "secondary"}
                             size="sm"
-                            className="gap-2 min-w-[100px]"
+                            className="gap-2 min-w-[50px] sm:min-w-[100px]"
                         >
                             <Music2 className="h-4 w-4" />
-                            <span>
+                            <span className="hidden sm:inline">
                                 {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Transpose")}
                             </span>
+                            {/* Mobile Only Value Indicator */}
+                            {(transposition !== 0 || capo.active) && (
+                                <span className="sm:hidden text-xs font-bold">
+                                    {capo.active ? `C${capo.fret}` : (transposition > 0 ? `+${transposition}` : transposition)}
+                                </span>
+                            )}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-4 bg-zinc-900 border-zinc-700 text-white mb-2" align="end" sideOffset={10}>
@@ -373,7 +297,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </Popover>
 
                 {/* Zoom */}
-                <div className="flex items-center bg-zinc-800 rounded-lg ml-2">
+                <div className="flex items-center bg-zinc-800 rounded-lg ml-2 hidden sm:flex">
                     <Button variant="ghost" size="icon" onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} className="h-8 w-8">
                         <ZoomOut className="h-4 w-4" />
                     </Button>
@@ -381,7 +305,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         <ZoomIn className="h-4 w-4" />
                     </Button>
                 </div>
-
+                <NetworkStatus />
             </div>
         </div>
     )

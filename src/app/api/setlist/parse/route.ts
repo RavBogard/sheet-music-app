@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { DriveClient } from "@/lib/google-drive"
+import * as XLSX from 'xlsx'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
@@ -19,14 +20,25 @@ export async function POST(request: Request) {
         try {
             if (mimeType === "application/vnd.google-apps.document") {
                 // Google Doc -> Export as text
-                const exported = await drive.exportDoc(fileId)
-                textContent = typeof exported === 'string' ? exported : String(exported)
-            } else if (mimeType?.includes("spreadsheet") || mimeType?.includes("excel")) {
-                // Excel -> We'll need to parse it differently
-                const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
+                const buffer = await drive.exportDoc(fileId, 'text/plain') as any
                 textContent = Buffer.from(buffer).toString("utf-8")
+            } else if (mimeType === "application/vnd.google-apps.spreadsheet") {
+                // Google Sheet -> Export as Excel then parse
+                const buffer = await drive.exportDoc(fileId, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') as any
+                const workbook = XLSX.read(buffer, { type: 'buffer' })
+                const sheetName = workbook.SheetNames[0]
+                const worksheet = workbook.Sheets[sheetName]
+                // Convert to CSV to keep structure for AI context
+                textContent = XLSX.utils.sheet_to_csv(worksheet)
+            } else if (mimeType?.includes("spreadsheet") || mimeType?.includes("excel") || mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+                // Excel File -> Read directly
+                const buffer = await drive.getFile(fileId) as any
+                const workbook = XLSX.read(buffer, { type: 'buffer' })
+                const sheetName = workbook.SheetNames[0]
+                const worksheet = workbook.Sheets[sheetName]
+                textContent = XLSX.utils.sheet_to_csv(worksheet)
             } else {
-                // Other text files
+                // Other text files (PDFs might fallback here but they need OCR - we assume text/plain compatible here)
                 const buffer = await drive.getFile(fileId) as unknown as ArrayBuffer
                 textContent = Buffer.from(buffer).toString("utf-8")
             }
@@ -50,22 +62,29 @@ export async function POST(request: Request) {
         // ⚠️ DO NOT CHANGE THIS MODEL - User requirement: gemini-3-flash-preview
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
-        const prompt = `You are a setlist parser for a music app. Extract song names from this setlist document.
-
+        const prompt = `You are a setlist parser for a music app. Parse the following document content into a structured setlist.
+        
 CRITICAL: You MUST return ONLY a valid JSON array. No text before or after.
 
 Rules:
-- Return ONLY a JSON array of objects, nothing else
-- Each object: { "title": "Song Name", "key": "", "notes": "" }
-- Ignore headers, dates, page numbers, footers
-- Strip number prefixes like "1." or "-"
-- Extract key info like "(Key of G)" to the "key" field
-- If you can't parse it, return an empty array: []
+1. Identify "Songs" vs "Section Headers".
+   - A **Section Header** is usually a broad category like "Torah Service", "Kabbalat Shabbat", "Shacharit", "Encores". It often appears alone on a line, or is formatted differently (like bold in the original, though here you only have text). Use context to distinguish.
+   - A **Song** is specific musical piece.
+2. Return a JSON array of objects.
+3. Schema:
+   {
+      "title": "String (Required)",
+      "type": "song" OR "header",
+      "key": "String (Optional, e.g. 'G', 'Am')",
+      "notes": "String (Optional)"
+   }
+4. Ignore useless filler like date, page numbers, or "Chazan / Leader".
+5. For songs, strip numbering (e.g. "1. Adon Olam" -> "Adon Olam").
 
-Document content:
-${textContent.substring(0, 8000)}
+Document content (CSV/Text representation):
+${textContent.substring(0, 15000)}
 
-Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","notes":""},{"title":"Song 2","key":"","notes":""}]`
+Remember: Return ONLY the JSON array.`
 
         let text = ""
         try {
@@ -81,10 +100,8 @@ Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","not
             }, { status: 500 })
         }
 
-        // 3. Parse the JSON response with multiple fallback strategies
+        // 3. Parse the JSON response
         let tracks = []
-
-        // Strategy 1: Direct parse
         try {
             const cleanJson = text
                 .replace(/```json\n?/g, "")
@@ -93,8 +110,6 @@ Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","not
             tracks = JSON.parse(cleanJson)
         } catch (e1) {
             console.log("Direct parse failed, trying extraction...")
-
-            // Strategy 2: Find JSON array in response
             try {
                 const arrayMatch = text.match(/\[[\s\S]*\]/)
                 if (arrayMatch) {
@@ -103,33 +118,11 @@ Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","not
                     throw new Error("No JSON array found")
                 }
             } catch (e2) {
-                console.log("Array extraction failed, trying line-by-line...")
-
-                // Strategy 3: Parse as simple line list and create tracks
-                try {
-                    const lines = textContent
-                        .split('\n')
-                        .map(l => l.trim())
-                        .filter(l => l.length > 2 && l.length < 100)
-                        .filter(l => !l.match(/^(page|date|setlist|service|shabbat|morning|evening|friday|saturday)/i))
-                        .filter(l => !l.match(/^\d{1,2}[\/\-]\d{1,2}/)) // Skip dates
-                        .slice(0, 30) // Max 30 songs
-
-                    tracks = lines.map((line, i) => ({
-                        title: line.replace(/^[\d\.\-\s]+/, '').trim(),
-                        key: "",
-                        notes: ""
-                    })).filter(t => t.title.length > 1)
-
-                    console.log("Fallback line parsing created", tracks.length, "tracks")
-                } catch (e3) {
-                    console.error("All parsing strategies failed")
-                    return NextResponse.json({
-                        error: "Failed to parse document",
-                        details: "The document format couldn't be processed. Try a simpler format.",
-                        raw: text.substring(0, 500)
-                    }, { status: 500 })
-                }
+                console.error("Parsing failed completely")
+                return NextResponse.json({
+                    error: "Failed to parse AI response",
+                    raw: text
+                }, { status: 500 })
             }
         }
 
@@ -144,10 +137,9 @@ Remember: Return ONLY the JSON array. Example: [{"title":"Song 1","key":"G","not
             title: String(track.title || track.name || "Untitled").substring(0, 100),
             key: String(track.key || "").substring(0, 10),
             notes: String(track.notes || "").substring(0, 200),
+            type: (track.type === 'header' || track.type === 'section') ? 'header' : 'song',
             fileId: null
         }))
-
-        console.log("Successfully parsed", tracksWithIds.length, "tracks")
 
         return NextResponse.json({ tracks: tracksWithIds })
 

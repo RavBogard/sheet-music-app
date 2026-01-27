@@ -53,7 +53,7 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
     }
 
     return (
-        <div className="h-screen flex flex-col bg-zinc-950 text-white">
+        <div className="h-full flex flex-col bg-zinc-950 text-white">
             {/* Header */}
             <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
