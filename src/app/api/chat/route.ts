@@ -44,7 +44,12 @@ export async function POST(request: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } })
+    // User requested "Gemini 3 Flash Preview" (gemini-3-flash-preview)
+    // Note: If this fails, it might be restricted access.
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3-flash-preview",
+      generationConfig: { responseMimeType: "application/json" }
+    })
 
     // Construct the context
     const libraryContext = libraryFiles.slice(0, 500).map((f: any) => `${f.name} (ID: ${f.id})`).join("\n")
