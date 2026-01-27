@@ -60,7 +60,10 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
                 })
             })
 
-            if (!res.ok) throw new Error("Failed to fetch")
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}))
+                throw new Error(errorData.error || `Server error (${res.status})`)
+            }
 
             const data = await res.json()
 
@@ -70,9 +73,9 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
                 onApplyEdits(data.edits)
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I had trouble connecting. Please try again." }])
+            setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message || "I had trouble connecting."} Please check your API Key configuration.` }])
         } finally {
             setLoading(false)
         }
