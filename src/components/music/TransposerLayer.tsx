@@ -31,34 +31,39 @@ export function TransposerLayer({ width, height, scale, chords, visible }: Trans
                 height: height
             }}
         >
-            {chords.map((chord, i) => (
-                <div
-                    key={i}
-                    className="absolute flex items-center justify-center bg-white shadow-sm border border-zinc-100/50 z-20"
-                    style={{
-                        left: chord.x * scale,
-                        top: chord.y * scale,
-                        width: chord.width * scale,
-                        height: chord.height * scale,
-                        // Padding to ensure we cover any slight drift or descenders
-                        padding: '2px',
-                        boxSizing: 'content-box',
-                        transform: 'translate(-2px, -2px)' // Slight nudge to center the "whiteout" coverage
-                    }}
-                >
-                    <span
-                        className="font-bold text-blue-600 leading-none whitespace-nowrap"
+            {chords.map((chord, i) => {
+                // SAFETY: Never render a white box if we don't have a new chord to show.
+                if (!chord.transposed || chord.transposed.trim() === '') return null
+
+                return (
+                    <div
+                        key={i}
+                        className="absolute flex items-center justify-center bg-white shadow-sm border border-zinc-100/50 z-20"
                         style={{
-                            // Make font slightly larger than the box height for readability
-                            fontSize: (chord.height * scale) * 1.0,
-                            // Use a font that looks good for chords
-                            fontFamily: 'monospace'
+                            left: chord.x * scale,
+                            top: chord.y * scale,
+                            width: chord.width * scale,
+                            height: chord.height * scale,
+                            // Padding to ensure we cover any slight drift or descenders
+                            padding: '2px',
+                            boxSizing: 'content-box',
+                            transform: 'translate(-2px, -2px)' // Slight nudge to center the "whiteout" coverage
                         }}
                     >
-                        {chord.transposed}
-                    </span>
-                </div>
-            ))}
+                        <span
+                            className="font-bold text-blue-600 leading-none whitespace-nowrap"
+                            style={{
+                                // Make font slightly larger than the box height for readability
+                                fontSize: (chord.height * scale) * 1.0,
+                                // Use a font that looks good for chords
+                                fontFamily: 'monospace'
+                            }}
+                        >
+                            {chord.transposed}
+                        </span>
+                    </div>
+                )
+            })}
         </div>
     )
 }

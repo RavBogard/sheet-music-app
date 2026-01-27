@@ -1,11 +1,11 @@
 {
-  "version": "master-8f14826",
-  "buildDate": "1/27/2026, 10:58:06 AM",
+  "version": "master-6f0be1e",
+  "buildDate": "1/27/2026, 11:03:56 AM",
   "changelog": [
-    "8f14826 - feat: add transfer ownership and duplicate setlist features (11 minutes ago)",
-    "e292cb6 - feat: migrate setlist service to use root collection (14 minutes ago)",
-    "61aaf8f - feat: database migration route & instructions (19 minutes ago)",
-    "49aab2c - feat: admin bootstrap route & updated setup guide (39 minutes ago)",
-    "19b8b30 - feat: security phase 1 - frontend lockdown & api protection (47 minutes ago)"
+    "6f0be1e - fix(security): inject auth token in pdf viewer and disable migration route (5 minutes ago)",
+    "8f14826 - feat: add transfer ownership and duplicate setlist features (16 minutes ago)",
+    "e292cb6 - feat: migrate setlist service to use root collection (20 minutes ago)",
+    "61aaf8f - feat: database migration route & instructions (25 minutes ago)",
+    "49aab2c - feat: admin bootstrap route & updated setup guide (45 minutes ago)"
   ]
 }
