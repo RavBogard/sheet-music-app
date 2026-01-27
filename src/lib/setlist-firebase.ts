@@ -78,7 +78,7 @@ export function createSetlistService(userId: string, userName?: string | null) {
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("ownerId", "==", userId),
-                where("isPublic", "==", false),
+                // where("isPublic", "==", false), // Removed to include ALL my setlists (public or private)
                 orderBy("date", "desc")
             );
 
