@@ -108,18 +108,30 @@ export class DriveClient {
         }
     }
 
-    async exportDoc(fileId: string) {
+    async getFileMetadata(fileId: string) {
+        try {
+            const res = await this.drive.files.get({
+                fileId,
+                fields: 'id, name, mimeType',
+                supportsAllDrives: true
+            })
+            return res.data
+        } catch (error: any) {
+            console.error(`[Drive] Error getting file metadata ${fileId}:`, error.message)
+            throw error
+        }
+    }
+
+    async exportDoc(fileId: string, mimeType = 'application/pdf') {
         try {
             const res = await this.drive.files.export({
                 fileId,
-                mimeType: 'text/plain',
+                mimeType,
             }, {
-                responseType: 'arraybuffer', // Safest for binary/text mix
+                responseType: 'arraybuffer',
             } as any)
 
-            // Convert buffer to string
-            const buffer = Buffer.from(res.data as any)
-            return buffer.toString('utf-8')
+            return res.data
         } catch (error: any) {
             console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
             throw error
