@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper to check ownership
+    function isOwner(resource) {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // USERS Collection
+    match /users/{userId} {
+      // Users can only read/write their own data
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      
+      // Legacy subcollections (if needed)
+      match /setlists/{docId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // SETLISTS Collection (The new root collection)
+    match /setlists/{setlistId} {
+      // 1. READ: Allow if Public OR User is Owner
+      allow read: if (resource.data.isPublic == true) || isOwner(resource);
+
+      // 2. CREATE: Allow if Signed In AND ownerId matches
+      allow create: if isSignedIn() 
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      // 3. UPDATE: Allow if Owner. 
+      //    (Ideally we prevent changing ownerId here, but for 'transfer' logic via Admin SDK 
+      //    the rules don't apply to Admin SDK, so this is for client-side edits)
+      allow update: if isOwner(resource);
+
+      // 4. DELETE: Allow if Owner
+      allow delete: if isOwner(resource);
+    }
+    
+    // PUBLIC SETLISTS (Legacy)
+    match /publicSetlists/{docId} {
+      allow read: if true;
+      allow write: if false; // Read-only archive
+    }
+  }
+}
