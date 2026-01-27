@@ -157,6 +157,14 @@ export function PDFViewer({ url }: PDFViewerProps) {
         }
     }
 
+    // Effect: Watch for global activation (Fix for "Menu opening triggers scan..." hanging)
+    useEffect(() => {
+        if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
+            console.log("Transposer activated, triggering scan...")
+            scanPages()
+        }
+    }, [aiTransposer.isVisible, aiTransposer.status])
+
     return (
         <div className="flex flex-col h-full w-full relative group">
             <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative">

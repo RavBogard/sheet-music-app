@@ -1,11 +1,11 @@
 {
-  "version": "master-6f0be1e",
-  "buildDate": "1/27/2026, 11:03:56 AM",
+  "version": "master-b616fb0",
+  "buildDate": "1/27/2026, 11:16:24 AM",
   "changelog": [
-    "6f0be1e - fix(security): inject auth token in pdf viewer and disable migration route (5 minutes ago)",
-    "8f14826 - feat: add transfer ownership and duplicate setlist features (16 minutes ago)",
-    "e292cb6 - feat: migrate setlist service to use root collection (20 minutes ago)",
-    "61aaf8f - feat: database migration route & instructions (25 minutes ago)",
-    "49aab2c - feat: admin bootstrap route & updated setup guide (45 minutes ago)"
+    "b616fb0 - fix(transposer): prevent empty overlays from hiding original chords (11 minutes ago)",
+    "6f0be1e - fix(security): inject auth token in pdf viewer and disable migration route (17 minutes ago)",
+    "8f14826 - feat: add transfer ownership and duplicate setlist features (29 minutes ago)",
+    "e292cb6 - feat: migrate setlist service to use root collection (33 minutes ago)",
+    "61aaf8f - feat: database migration route & instructions (38 minutes ago)"
   ]
 }
