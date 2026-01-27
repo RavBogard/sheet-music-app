@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect } from 'react'
-import { useMusicStore } from '@/lib/store'
+import { useMusicStore, FileType } from '@/lib/store'
 
 const STORAGE_KEY = 'sheet-music-last-session'
 
 interface SessionData {
     fileUrl: string | null
-    fileType: 'pdf' | 'musicxml'
+    fileType: FileType
 }
 
 export function useLastOpened() {

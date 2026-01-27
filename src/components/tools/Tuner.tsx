@@ -64,7 +64,7 @@ export function Tuner() {
     const audioContextRef = useRef<AudioContext | null>(null)
     const analyserRef = useRef<AnalyserNode | null>(null)
     const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-    const rafRef = useRef<number>()
+    const rafRef = useRef<number | null>(null)
 
     const startTuner = async () => {
         try {
