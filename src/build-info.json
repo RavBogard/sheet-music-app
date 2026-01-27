@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.27-1202",
-  "commit": "a2bf374",
+  "version": "2026.01.27-1220",
+  "commit": "666fd3e",
   "branch": "master",
-  "buildDate": "1/27/2026, 12:02:31 PM",
+  "buildDate": "1/27/2026, 12:20:17 PM",
   "changelog": [
-    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (9 minutes ago)",
-    "f311636 - feat(versioning): automate human-readable CalVer versioning (17 minutes ago)",
-    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (23 minutes ago)",
-    "d978577 - fix(pdf-viewer): ensure transposer scan triggers on menu open (45 minutes ago)",
-    "b616fb0 - fix(transposer): prevent empty overlays from hiding original chords (58 minutes ago)"
+    "666fd3e - fix(performance): resolve song synchronization bug in setlists (9 minutes ago)",
+    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (26 minutes ago)",
+    "f311636 - feat(versioning): automate human-readable CalVer versioning (34 minutes ago)",
+    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (41 minutes ago)",
+    "d978577 - fix(pdf-viewer): ensure transposer scan triggers on menu open (62 minutes ago)"
   ]
 }
