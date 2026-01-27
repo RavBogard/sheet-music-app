@@ -25,17 +25,14 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar'>('list')
 
-    // Create user-specific service when user is available
+    // Create service (works for guest too)
     const setlistService = useMemo(() => {
-        if (user) {
-            return createSetlistService(user.uid, user.displayName)
-        }
-        return null
+        return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user])
 
-    // Subscribe to personal setlists
+    // Subscribe to personal setlists (Only if user exists)
     useEffect(() => {
-        if (!setlistService) {
+        if (!user || !setlistService) {
             setLoading(false)
             return
         }
@@ -46,9 +43,9 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
             setLoading(false)
         })
         return () => unsubscribe()
-    }, [setlistService])
+    }, [setlistService, user])
 
-    // Subscribe to public setlists
+    // Subscribe to public setlists (Everyone)
     useEffect(() => {
         if (!setlistService) return
 
@@ -57,6 +54,11 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         })
         return () => unsubscribe()
     }, [setlistService])
+
+    // Force 'public' tab if guest
+    useEffect(() => {
+        if (!user) setActiveTab('public')
+    }, [user])
 
     const [showTransferDialog, setShowTransferDialog] = useState(false)
     const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
@@ -224,24 +226,32 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        onClick={onImport}
-                        variant="outline"
-                        size="sm"
-                        className="hidden sm:flex gap-2 border-zinc-800 hover:bg-zinc-800"
-                    >
-                        <FileText className="h-4 w-4" />
-                        Import Excel
+                {user && (
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={onImport}
+                            variant="outline"
+                            size="sm"
+                            className="hidden sm:flex gap-2 border-zinc-800 hover:bg-zinc-800"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Import Excel
+                        </Button>
+                        <Button
+                            onClick={onCreateNew}
+                            className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6"
+                        >
+                            <Plus className="h-5 w-5" />
+                            New Setlist
+                        </Button>
+                    </div>
+                )}
+                {!user && (
+                    <Button onClick={signIn} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-500">
+                        <LogIn className="h-4 w-4" />
+                        Sign In
                     </Button>
-                    <Button
-                        onClick={onCreateNew}
-                        className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6"
-                    >
-                        <Plus className="h-5 w-5" />
-                        New Setlist
-                    </Button>
-                </div>
+                )}
             </div>
 
             {/* Transfer Dialog Overlay */}
@@ -280,15 +290,17 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                     >
                         Public Library
                     </button>
-                    <button
-                        onClick={() => setActiveTab('personal')}
-                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'personal'
-                            ? 'bg-zinc-800 text-white shadow-sm'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
-                    >
-                        My Personal
-                    </button>
+                    {user && (
+                        <button
+                            onClick={() => setActiveTab('personal')}
+                            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'personal'
+                                ? 'bg-zinc-800 text-white shadow-sm'
+                                : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                        >
+                            My Personal
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
@@ -366,16 +378,18 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                         <h3 className="text-xl font-semibold truncate max-w-[200px]">{setlist.name}</h3>
                                     </div>
                                     <div className="flex gap-1">
-                                        {/* Duplicate Button (Available to everyone) */}
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 hover:bg-zinc-700 text-zinc-400 hover:text-white"
-                                            onClick={(e) => handleDuplicate(setlist, e)}
-                                            title="Duplicate / Copy"
-                                        >
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
+                                        {/* Duplicate Button (Only Logged In) */}
+                                        {user && (
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 hover:bg-zinc-700 text-zinc-400 hover:text-white"
+                                                onClick={(e) => handleDuplicate(setlist, e)}
+                                                title="Duplicate / Copy"
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        )}
 
                                         {/* Transfer Button (Only Owner) */}
                                         {setlist.ownerId === user?.uid && (

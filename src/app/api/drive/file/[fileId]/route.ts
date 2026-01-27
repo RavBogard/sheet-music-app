@@ -7,12 +7,9 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
-    const authHeader = request.headers.get("Authorization")
-    const token = authHeader?.split("Bearer ")[1]
-
-    if (!token || !(await verifyIdToken(token))) {
-        return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
-    }
+    // Public Access: We allow anyone with the file ID to proxy the file.
+    // This supports the "Public Setlist" feature where users can listen/view without login.
+    // Security is based on the obscurity of the fileId.
 
     try {
         const { fileId } = await params

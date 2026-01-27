@@ -12,7 +12,7 @@ import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user } = useAuth()
+    const { user, signIn } = useAuth()
     const { driveFiles, loading, fetchFiles } = useLibraryStore()
     const { fileUrl } = useMusicStore()
     const { restoreSession } = useLastOpened()
@@ -65,14 +65,24 @@ export default function DashboardPage() {
         <div className="flex flex-col p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
 
             {/* Sync Drive Button */}
-            <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => fetchFiles(true)} className="text-zinc-400 border-zinc-800 hover:text-white">
-                    {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Sync Drive
-                </Button>
-            </div>
+            {/* Sync Drive Button (Restricted) */}
+            {user && (
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => fetchFiles(true)} className="text-zinc-400 border-zinc-800 hover:text-white">
+                        {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Sync Drive
+                    </Button>
+                </div>
+            )}
+            {!user && (
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={signIn} className="text-blue-400 border-zinc-800 hover:text-white hover:bg-blue-600">
+                        Sign In for Full Access
+                    </Button>
+                </div>
+            )}
 
-            {/* Upcoming Events Section */}
-            {upcomingSetlists.length > 0 && (
+            {/* Upcoming Events Section (Personal Only) */}
+            {user && upcomingSetlists.length > 0 && (
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <CalendarIcon className="h-5 w-5 text-blue-400" />
@@ -106,19 +116,21 @@ export default function DashboardPage() {
             )}
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Song Charts */}
-                <button
-                    onClick={() => router.push('/library')}
-                    className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
-                >
-                    <div className="bg-blue-500/20 p-6 rounded-full group-hover:bg-blue-500/30 transition-colors">
-                        <FileMusic className="h-16 w-16 text-blue-400" />
-                    </div>
-                    <h2 className="text-3xl font-bold">Song Charts</h2>
-                    <p className="text-zinc-400 text-lg">Browse {driveFiles.filter(f => !f.mimeType.startsWith('audio/')).length} charts</p>
-                </button>
+                {/* Song Charts (Restricted) */}
+                {user && (
+                    <button
+                        onClick={() => router.push('/library')}
+                        className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
+                    >
+                        <div className="bg-blue-500/20 p-6 rounded-full group-hover:bg-blue-500/30 transition-colors">
+                            <FileMusic className="h-16 w-16 text-blue-400" />
+                        </div>
+                        <h2 className="text-3xl font-bold">Song Charts</h2>
+                        <p className="text-zinc-400 text-lg">Browse {driveFiles.filter(f => !f.mimeType.startsWith('audio/')).length} charts</p>
+                    </button>
+                )}
 
-                {/* Setlists */}
+                {/* Setlists (Public or Private) */}
                 <button
                     onClick={() => router.push('/setlists')}
                     className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
@@ -126,21 +138,23 @@ export default function DashboardPage() {
                     <div className="bg-green-500/20 p-6 rounded-full group-hover:bg-green-500/30 transition-colors">
                         <ListMusic className="h-16 w-16 text-green-400" />
                     </div>
-                    <h2 className="text-3xl font-bold">Setlists</h2>
-                    <p className="text-zinc-400 text-lg">Manage or Import</p>
+                    <h2 className="text-3xl font-bold">{user ? "Setlists" : "Public Setlists"}</h2>
+                    <p className="text-zinc-400 text-lg">{user ? "Manage or Import" : "View Community & Services"}</p>
                 </button>
 
-                {/* Audio Files */}
-                <button
-                    onClick={() => router.push('/audio')}
-                    className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
-                >
-                    <div className="bg-purple-500/20 p-6 rounded-full group-hover:bg-purple-500/30 transition-colors">
-                        <Headphones className="h-16 w-16 text-purple-400" />
-                    </div>
-                    <h2 className="text-3xl font-bold">Audio Files</h2>
-                    <p className="text-zinc-400 text-lg">Practice recordings</p>
-                </button>
+                {/* Audio Files (Restricted) */}
+                {user && (
+                    <button
+                        onClick={() => router.push('/audio')}
+                        className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
+                    >
+                        <div className="bg-purple-500/20 p-6 rounded-full group-hover:bg-purple-500/30 transition-colors">
+                            <Headphones className="h-16 w-16 text-purple-400" />
+                        </div>
+                        <h2 className="text-3xl font-bold">Audio Files</h2>
+                        <p className="text-zinc-400 text-lg">Practice recordings</p>
+                    </button>
+                )}
             </div>
 
             {/* Quick Resume */}

@@ -42,7 +42,7 @@ export interface Setlist {
 }
 
 // User-specific setlist service
-export function createSetlistService(userId: string, userName?: string | null) {
+export function createSetlistService(userId: string | null, userName?: string | null) {
     const COLLECTION_PATH = 'setlists';
 
     return {
