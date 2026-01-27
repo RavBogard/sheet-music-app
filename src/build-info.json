@@ -1,11 +1,11 @@
 {
-  "version": "master-49aab2c",
-  "buildDate": "1/27/2026, 10:37:59 AM",
+  "version": "master-61aaf8f",
+  "buildDate": "1/27/2026, 10:43:18 AM",
   "changelog": [
-    "49aab2c - feat: admin bootstrap route & updated setup guide (19 minutes ago)",
-    "19b8b30 - feat: security phase 1 - frontend lockdown & api protection (26 minutes ago)",
-    "5d7aaea - feat: branding integration & fix: audio picker scrolling (34 minutes ago)",
-    "4b55a88 - fix: public setlists bugs & feat: site footer and changelog (43 minutes ago)",
-    "fd3f757 - fix: resolve typescript errors in tuner and session hook (58 minutes ago)"
+    "61aaf8f - feat: database migration route & instructions (5 minutes ago)",
+    "49aab2c - feat: admin bootstrap route & updated setup guide (25 minutes ago)",
+    "19b8b30 - feat: security phase 1 - frontend lockdown & api protection (32 minutes ago)",
+    "5d7aaea - feat: branding integration & fix: audio picker scrolling (40 minutes ago)",
+    "4b55a88 - fix: public setlists bugs & feat: site footer and changelog (49 minutes ago)"
   ]
 }

@@ -37,18 +37,16 @@ export interface Setlist {
     ownerName?: string
 }
 
-// User-specific setlist service (for personal setlists)
+// User-specific setlist service
 export function createSetlistService(userId: string, userName?: string | null) {
-    const PERSONAL_PATH = `users/${userId}/setlists`;
-    const PUBLIC_PATH = `publicSetlists`;
+    const COLLECTION_PATH = 'setlists';
 
     return {
         // ===== PERSONAL SETLISTS =====
 
         async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false) {
-            const collectionPath = isPublic ? PUBLIC_PATH : PERSONAL_PATH;
             try {
-                const docRef = await addDoc(collection(db, collectionPath), {
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
                     tracks,
@@ -64,23 +62,34 @@ export function createSetlistService(userId: string, userName?: string | null) {
             }
         },
 
-        // Subscribe to user's personal setlists
+        // Subscribe to user's personal setlists (FILTERED)
         subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void) {
-            const q = query(collection(db, PERSONAL_PATH), orderBy("date", "desc"));
+            // Query: ownerId == userId AND isPublic == false
+            // Note: We might want valid indexes for this. For now client-side filtering can work if dataset is small,
+            // but server-side filtering is better.
+
+            // Simpler query: Just get all owned by user.
+            // Then let the UI separate them? 
+            // Or explicit query:
+            const q = query(
+                collection(db, COLLECTION_PATH),
+                where("ownerId", "==", userId),
+                where("isPublic", "==", false),
+                orderBy("date", "desc")
+            );
+
             return onSnapshot(q, (snapshot) => {
                 const setlists = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data(),
-                    isPublic: false
+                    ...doc.data()
                 })) as Setlist[];
                 callback(setlists);
             });
         },
 
-        // Subscribe to a single personal setlist
+        // Subscribe to a single setlist (ANY)
         subscribeToSetlist(id: string, isPublic: boolean, callback: (setlist: Setlist | null) => void) {
-            const collectionPath = isPublic ? PUBLIC_PATH : PERSONAL_PATH;
-            const docRef = doc(db, collectionPath, id);
+            const docRef = doc(db, COLLECTION_PATH, id);
             return onSnapshot(docRef, (doc) => {
                 if (doc.exists()) {
                     callback({ id: doc.id, ...doc.data() } as Setlist);
@@ -90,29 +99,31 @@ export function createSetlistService(userId: string, userName?: string | null) {
             });
         },
 
-        // Update a setlist (only works if user owns it)
+        // Update a setlist
         async updateSetlist(id: string, isPublic: boolean, data: Partial<Setlist>) {
-            const collectionPath = isPublic ? PUBLIC_PATH : PERSONAL_PATH;
-            const docRef = doc(db, collectionPath, id);
+            const docRef = doc(db, COLLECTION_PATH, id);
             await updateDoc(docRef, data);
         },
 
         // Delete a setlist
         async deleteSetlist(id: string, isPublic: boolean) {
-            const collectionPath = isPublic ? PUBLIC_PATH : PERSONAL_PATH;
-            await deleteDoc(doc(db, collectionPath, id));
+            await deleteDoc(doc(db, COLLECTION_PATH, id));
         },
 
         // ===== PUBLIC SETLISTS =====
 
         // Subscribe to ALL public setlists
         subscribeToPublicSetlists(callback: (setlists: Setlist[]) => void) {
-            const q = query(collection(db, PUBLIC_PATH), orderBy("date", "desc"));
+            const q = query(
+                collection(db, COLLECTION_PATH),
+                where("isPublic", "==", true),
+                orderBy("date", "desc")
+            );
+
             return onSnapshot(q, (snapshot) => {
                 const setlists = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data(),
-                    isPublic: true
+                    ...doc.data()
                 })) as Setlist[];
                 callback(setlists);
             });
@@ -121,7 +132,8 @@ export function createSetlistService(userId: string, userName?: string | null) {
         // Copy a public setlist to personal collection
         async copyToPersonal(publicSetlistId: string, setlistData: Setlist) {
             try {
-                const docRef = await addDoc(collection(db, PERSONAL_PATH), {
+                // Just create a new doc in the SAME collection, but owned by ME and PRIVATE
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
                     tracks: setlistData.tracks,
@@ -138,48 +150,29 @@ export function createSetlistService(userId: string, userName?: string | null) {
             }
         },
 
-        // Make a personal setlist public (moves from personal to public collection)
+        // Make a personal setlist public (UPDATE field)
         async makePublic(setlistId: string, setlistData: Setlist) {
             try {
-                // 1. Create in public collection
-                const newDocRef = await addDoc(collection(db, PUBLIC_PATH), {
-                    name: setlistData.name,
-                    date: serverTimestamp(),
-                    tracks: setlistData.tracks,
-                    trackCount: setlistData.tracks.length,
+                const docRef = doc(db, COLLECTION_PATH, setlistId);
+                await updateDoc(docRef, {
                     isPublic: true,
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous"
+                    ownerName: userName || "Anonymous" // Update name in case it changed
                 });
-
-                // 2. Delete from personal collection
-                await deleteDoc(doc(db, PERSONAL_PATH, setlistId));
-
-                return newDocRef.id;
+                return setlistId;
             } catch (e) {
                 console.error("Error making setlist public: ", e);
                 throw e;
             }
         },
 
-        // Make a public setlist private (moves from public to personal collection)
+        // Make a public setlist private (UPDATE field)
         async makePrivate(setlistId: string, setlistData: Setlist) {
             try {
-                // 1. Create in personal collection
-                const newDocRef = await addDoc(collection(db, PERSONAL_PATH), {
-                    name: setlistData.name,
-                    date: serverTimestamp(),
-                    tracks: setlistData.tracks,
-                    trackCount: setlistData.tracks.length,
-                    isPublic: false,
-                    ownerId: userId,
-                    ownerName: userName || "Anonymous"
+                const docRef = doc(db, COLLECTION_PATH, setlistId);
+                await updateDoc(docRef, {
+                    isPublic: false
                 });
-
-                // 2. Delete from public collection
-                await deleteDoc(doc(db, PUBLIC_PATH, setlistId));
-
-                return newDocRef.id;
+                return setlistId;
             } catch (e) {
                 console.error("Error making setlist private: ", e);
                 throw e;
@@ -187,6 +180,3 @@ export function createSetlistService(userId: string, userName?: string | null) {
         }
     };
 }
-
-// Legacy global service (deprecated)
-
