@@ -35,22 +35,22 @@ Rules for "edits":
 `
 
 export async function POST(request: Request) {
-    try {
-        const { messages, currentSetlist, libraryFiles } = await request.json()
-        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
+  try {
+    const { messages, currentSetlist, libraryFiles } = await request.json()
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
-        if (!apiKey) {
-            return NextResponse.json({ error: "Missing API Key" }, { status: 500 })
-        }
+    if (!apiKey) {
+      return NextResponse.json({ error: "Missing API Key" }, { status: 500 })
+    }
 
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } })
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } })
 
-        // Construct the context
-        const libraryContext = libraryFiles.slice(0, 500).map((f: any) => `${f.name} (ID: ${f.id})`).join("\n")
-        const setlistContext = currentSetlist.map((t: any, i: number) => `${i + 1}. ${t.title}`).join("\n")
+    // Construct the context
+    const libraryContext = libraryFiles.slice(0, 500).map((f: any) => `${f.name} (ID: ${f.id})`).join("\n")
+    const setlistContext = currentSetlist.map((t: any, i: number) => `${i + 1}. ${t.title}`).join("\n")
 
-        const prompt = `
+    const prompt = `
 ${SYSTEM_PROMPT}
 
 CONTEXT:
@@ -66,13 +66,17 @@ USER MESSAGE:
 ${messages[messages.length - 1].content}
 `
 
-        const result = await model.generateContent(prompt)
-        const responseText = result.response.text()
+    const result = await model.generateContent(prompt)
+    const responseText = result.response.text()
 
-        return NextResponse.json(JSON.parse(responseText))
+    return NextResponse.json(JSON.parse(responseText))
 
-    } catch (error) {
-        console.error("Chat API Error:", error)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
-    }
+  } catch (error: any) {
+    console.error("Chat API Error:", error)
+    // Return actual error message for debugging purposes
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 }
