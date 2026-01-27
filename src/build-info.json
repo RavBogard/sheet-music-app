@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.27-1152",
-  "commit": "f311636",
+  "version": "2026.01.27-1202",
+  "commit": "a2bf374",
   "branch": "master",
-  "buildDate": "1/27/2026, 11:52:46 AM",
+  "buildDate": "1/27/2026, 12:02:31 PM",
   "changelog": [
-    "f311636 - feat(versioning): automate human-readable CalVer versioning (7 minutes ago)",
-    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (14 minutes ago)",
-    "d978577 - fix(pdf-viewer): ensure transposer scan triggers on menu open (35 minutes ago)",
-    "b616fb0 - fix(transposer): prevent empty overlays from hiding original chords (48 minutes ago)",
-    "6f0be1e - fix(security): inject auth token in pdf viewer and disable migration route (54 minutes ago)"
+    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (9 minutes ago)",
+    "f311636 - feat(versioning): automate human-readable CalVer versioning (17 minutes ago)",
+    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (23 minutes ago)",
+    "d978577 - fix(pdf-viewer): ensure transposer scan triggers on menu open (45 minutes ago)",
+    "b616fb0 - fix(transposer): prevent empty overlays from hiding original chords (58 minutes ago)"
   ]
 }

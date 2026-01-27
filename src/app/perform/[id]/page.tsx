@@ -18,11 +18,15 @@ export default function PerformPage() {
     // Sync URL with Store
     useEffect(() => {
         // If 'resume', we just let the persisted store take over.
-        // The PerformerView will render whatever fileUrl is in the store.
         if (fileId && fileId !== 'resume') {
             const expectedUrl = `/api/drive/file/${fileId}`
-            if (fileUrl !== expectedUrl) {
-                // If it's a new direct link, we default to PDF
+
+            // CRITICAL: Only update the store if the URL actually represents a different file
+            // than what is currently loaded. This prevents "Store Reversion" where 
+            // the store updates to Song 5, but this effect sees Song 4 in the URL 
+            // and reverts it.
+            if (!fileUrl?.includes(fileId)) {
+                console.log("URL change detected, syncing store to:", fileId)
                 setFile(expectedUrl, 'pdf')
             }
         }

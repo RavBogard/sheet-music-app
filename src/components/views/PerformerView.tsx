@@ -68,8 +68,8 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
             {/* Main Content Area (with bottom padding for toolbar) */}
             <div className="flex-1 w-full h-full bg-black overflow-hidden relative pb-16">
                 {/* Render Viewer (Edge to Edge) */}
-                {fileType === 'musicxml' && fileUrl && <SmartScoreViewer url={fileUrl} />}
-                {fileType === 'pdf' && fileUrl && <PDFViewer url={fileUrl} />}
+                {fileType === 'musicxml' && fileUrl && <SmartScoreViewer key={fileUrl} url={fileUrl} />}
+                {fileType === 'pdf' && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
                 {!fileUrl && (
                     <div className="flex w-full h-full items-center justify-center text-zinc-500">
                         No Song Selected

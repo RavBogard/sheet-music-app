@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
@@ -21,6 +22,7 @@ const SHAPES = ['C', 'A', 'G', 'E', 'D'] // CAGED system
 const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
+    const router = useRouter()
     const {
         fileType,
         playbackQueue,
@@ -123,7 +125,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     size="icon"
                     onClick={() => {
                         const prev = prevSong()
-                        if (prev) window.history.pushState(null, '', `/perform/${prev.fileId}`)
+                        if (prev) router.replace(`/perform/${prev.fileId}`)
                     }}
                     disabled={queueIndex <= 0}
                     className="text-white"
@@ -145,7 +147,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     size="icon"
                     onClick={() => {
                         const next = nextSong()
-                        if (next) window.history.pushState(null, '', `/perform/${next.fileId}`)
+                        if (next) router.replace(`/perform/${next.fileId}`)
                     }}
                     disabled={queueIndex >= playbackQueue.length - 1}
                     className="text-white"
