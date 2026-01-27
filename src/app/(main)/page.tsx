@@ -20,20 +20,16 @@ export default function DashboardPage() {
     }, [fetchFiles]) // restoreSession is stable (or should be, but let's exclude it to be safe or verify hook)
 
     return (
-        <div className="min-h-screen flex flex-col bg-zinc-950 text-white p-6 gap-6">
-            <header className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                    <img
-                        src="/logo.jpg"
-                        alt="CRC"
-                        className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
-                    />
-                    <h1 className="text-2xl font-bold">CRC Music Books</h1>
-                </div>
-                <Button variant="outline" size="lg" onClick={() => fetchFiles(true)}>
-                    {loading ? <Loader2 className="animate-spin mr-2" /> : null} Sync Drive
+        <div className="flex flex-col p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
+            {/* Sync Drive Button (Moved from Header to inline tool or just kept here as a utility) */}
+            {/* Actually, user might still want a sync button. Let's keep it but make it less header-like, or move to Settings.
+                For now, let's keep it as a 'Quick Action' at the top of the dashboard.
+            */}
+            <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => fetchFiles(true)} className="text-zinc-400 border-zinc-800 hover:text-white">
+                    {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Sync Drive
                 </Button>
-            </header>
+            </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Song Charts */}
