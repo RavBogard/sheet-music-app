@@ -43,12 +43,12 @@ export default function DashboardPage() {
                 const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as any).toDate()
                 // Reset time for comparison
                 d.setHours(0, 0, 0, 0)
-                return d >= now && d <= nextWeek
+                return d >= now
             }).sort((a, b) => {
                 const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
                 const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
                 return da.getTime() - db.getTime()
-            })
+            }).slice(0, 3) // Take next 3 events
 
             setUpcomingSetlists(upcoming)
         })
@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <CalendarIcon className="h-5 w-5 text-blue-400" />
-                        Upcoming this Week
+                        Upcoming Events
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {upcomingSetlists.map(setlist => {
@@ -85,21 +85,17 @@ export default function DashboardPage() {
                             return (
                                 <button
                                     key={setlist.id}
-                                    onClick={() => router.push(`/setlists?id=${setlist.id}`)} // Or implement a way to open directly? 
-                                    // Actually SetlistDashboard handles selecting setlists.
-                                    // We might need to handle routing to /setlists and auto-opening.
-                                    // For now, let's just go to /setlists and maybe pass a query param if supported, or just let user find it.
-                                    // User asked for "quick links". 
-                                    // Best UX: router.push(`/setlists?open=${setlist.id}`) and handle in SetlistDashboard.
-                                    className="bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition-colors border border-zinc-700/50 group"
+                                    onClick={() => router.push(`/setlists/${setlist.id}`)}
+                                    className="bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition-colors border border-zinc-700/50 group h-full flex flex-col"
                                 >
                                     <div className="text-sm text-blue-400 font-medium mb-1">
                                         {dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                     </div>
-                                    <div className="font-semibold text-lg group-hover:text-white/90 truncate">
+                                    <div className="font-semibold text-lg group-hover:text-white/90 truncate w-full mb-auto">
                                         {setlist.name}
                                     </div>
-                                    <div className="text-zinc-500 text-sm mt-1">
+                                    <div className="text-zinc-500 text-sm mt-3 flex items-center gap-2">
+                                        <ListMusic className="h-3 w-3" />
                                         {setlist.tracks?.length || 0} songs
                                     </div>
                                 </button>
