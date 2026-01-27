@@ -25,6 +25,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CRC Music Books",
   description: "Digital Sheet Music Library for Central Reform Congregation",
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg"
+  }
 };
 
 export default function RootLayout({

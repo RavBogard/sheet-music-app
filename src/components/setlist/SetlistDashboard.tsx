@@ -97,7 +97,11 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center gap-6">
                     <div className="text-center">
-                        <User className="h-16 w-16 mx-auto mb-4 text-zinc-600" />
+                        <img
+                            src="/logo.jpg"
+                            alt="CRC"
+                            className="h-20 w-20 rounded-full border-2 border-zinc-700 object-cover mx-auto mb-4"
+                        />
                         <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
                         <p className="text-zinc-500 max-w-md">
                             Sign in with your Google account to create and manage your personal setlists.
@@ -121,7 +125,14 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
-                <h1 className="text-2xl font-bold flex-1">Setlists</h1>
+                <div className="flex items-center gap-3 flex-1">
+                    <img
+                        src="/logo.jpg"
+                        alt="CRC"
+                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                    />
+                    <h1 className="text-2xl font-bold">Setlists</h1>
+                </div>
 
                 {/* User Info & Sign Out */}
                 {user && (

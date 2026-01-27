@@ -23,9 +23,11 @@ export default function DashboardPage() {
         <div className="min-h-screen flex flex-col bg-zinc-950 text-white p-6 gap-6">
             <header className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="bg-primary h-10 w-10 rounded-full flex items-center justify-center">
-                        <Music2 className="text-black h-6 w-6" />
-                    </div>
+                    <img
+                        src="/logo.jpg"
+                        alt="CRC"
+                        className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
+                    />
                     <h1 className="text-2xl font-bold">CRC Music Books</h1>
                 </div>
                 <Button variant="outline" size="lg" onClick={() => fetchFiles(true)}>

@@ -51,7 +51,7 @@ export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFileP
                     />
                 </div>
 
-                <ScrollArea className="flex-1 -mx-2 px-2">
+                <ScrollArea className="h-[300px] -mx-2 px-2 border border-zinc-800/50 rounded-md bg-zinc-950/50">
                     {loading && <div className="text-center py-8 text-zinc-500">Loading library...</div>}
 
                     {!loading && filteredFiles.length === 0 && (

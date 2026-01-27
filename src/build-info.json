@@ -1,11 +1,11 @@
 {
-  "version": "master-fd3f757",
-  "buildDate": "1/27/2026, 9:53:58 AM",
+  "version": "master-4b55a88",
+  "buildDate": "1/27/2026, 10:01:45 AM",
   "changelog": [
-    "fd3f757 - fix: resolve typescript errors in tuner and session hook (14 minutes ago)",
-    "cd383bf - feat: complete v1.0 roadmap (tuner, audio linking, caching, stability) (15 minutes ago)",
+    "4b55a88 - fix: public setlists bugs & feat: site footer and changelog (7 minutes ago)",
+    "fd3f757 - fix: resolve typescript errors in tuner and session hook (22 minutes ago)",
+    "cd383bf - feat: complete v1.0 roadmap (tuner, audio linking, caching, stability) (23 minutes ago)",
     "90c3a51 - fix: auto-export google docs as PDF in drive proxy (16 hours ago)",
-    "ce80b4f - fix: add supportsAllDrives and acknowledgeAbuse to drive file fetch (16 hours ago)",
-    "dade1bd - feat: audio backing tracks (phase 4 complete) (18 hours ago)"
+    "ce80b4f - fix: add supportsAllDrives and acknowledgeAbuse to drive file fetch (16 hours ago)"
   ]
 }

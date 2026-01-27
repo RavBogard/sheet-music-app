@@ -143,7 +143,14 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
-                <h1 className="text-2xl font-bold flex-1">Song Charts</h1>
+                <div className="flex items-center gap-3 flex-1">
+                    <img
+                        src="/logo.jpg"
+                        alt="CRC"
+                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                    />
+                    <h1 className="text-2xl font-bold">Song Charts</h1>
+                </div>
 
                 {/* View Toggle */}
                 <div className="flex bg-zinc-800 rounded-lg p-1">
