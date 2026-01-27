@@ -1,11 +1,11 @@
 {
-  "version": "master-90c3a51",
-  "buildDate": "1/27/2026, 9:37:54 AM",
+  "version": "master-fd3f757",
+  "buildDate": "1/27/2026, 9:53:58 AM",
   "changelog": [
-    "90c3a51 - fix: auto-export google docs as PDF in drive proxy (15 hours ago)",
+    "fd3f757 - fix: resolve typescript errors in tuner and session hook (14 minutes ago)",
+    "cd383bf - feat: complete v1.0 roadmap (tuner, audio linking, caching, stability) (15 minutes ago)",
+    "90c3a51 - fix: auto-export google docs as PDF in drive proxy (16 hours ago)",
     "ce80b4f - fix: add supportsAllDrives and acknowledgeAbuse to drive file fetch (16 hours ago)",
-    "dade1bd - feat: audio backing tracks (phase 4 complete) (18 hours ago)",
-    "006e73b - feat: wake lock and gesture controls (phase 3 complete) (18 hours ago)",
-    "afac0c4 - fix(build): resolve SetlistTimeline type errors (18 hours ago)"
+    "dade1bd - feat: audio backing tracks (phase 4 complete) (18 hours ago)"
   ]
 }

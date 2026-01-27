@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { useLibraryStore } from "@/lib/library-store"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { useMusicStore, FileType } from "@/lib/store"
@@ -12,7 +12,9 @@ import { useAuth } from "@/lib/auth-context"
 export default function SetlistEditorPage() {
     const router = useRouter()
     const params = useParams()
+    const searchParams = useSearchParams()
     const id = params?.id as string
+    const isPublic = searchParams?.get('public') === 'true'
 
     const { driveFiles, fetchFiles } = useLibraryStore()
     const { items: pendingItems, clear: clearPending } = useSetlistStore()
@@ -31,7 +33,7 @@ export default function SetlistEditorPage() {
     useEffect(() => {
         if (id && id !== 'new' && user) {
             const service = createSetlistService(user.uid, user.displayName)
-            const unsubscribe = service.subscribeToSetlist(id, false, (data: any) => {
+            const unsubscribe = service.subscribeToSetlist(id, isPublic, (data: any) => {
                 if (data) {
                     setExistingSetlist(data)
                 }
@@ -41,7 +43,7 @@ export default function SetlistEditorPage() {
         } else {
             setLoading(false)
         }
-    }, [id, user])
+    }, [id, user, isPublic])
 
     if (loading) return <div className="h-screen flex items-center justify-center text-white">Loading...</div>
 
