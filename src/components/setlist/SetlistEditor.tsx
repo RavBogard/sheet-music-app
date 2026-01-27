@@ -308,10 +308,13 @@ export function SetlistEditor({
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
 
     // Chat State
-    const [isChatOpen, setIsChatOpen] = useState(false)
+    const [isChatOpen, setIsChatOpen] = useState(true)
 
     const handleApplyEdits = (edits: any[]) => {
-        if (!canEdit) return
+        if (!canEdit) {
+            alert("You must be in edit mode (or own this setlist) to apply changes.")
+            return
+        }
 
         // Create a copy of current tracks to mutate
         let newTracks = [...tracks]
@@ -627,18 +630,16 @@ export function SetlistEditor({
                     <div className="text-sm text-zinc-500">View Only</div>
                 )}
 
-                {/* Chat Toggle (Only Edit Mode) */}
-                {canEdit && (
-                    <Button
-                        size="sm"
-                        variant={isChatOpen ? "default" : "outline"}
-                        onClick={() => setIsChatOpen(!isChatOpen)}
-                        className={`gap-2 ${isChatOpen ? "bg-purple-600 hover:bg-purple-500" : "border-purple-500/50 text-purple-400 hover:bg-purple-500/10"}`}
-                    >
-                        <Sparkles className="h-4 w-4" />
-                        <span className="hidden sm:inline">AI Assistant</span>
-                    </Button>
-                )}
+                {/* Chat Toggle (Always Visible) */}
+                <Button
+                    size="sm"
+                    variant={isChatOpen ? "default" : "outline"}
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    className={`gap-2 ${isChatOpen ? "bg-purple-600 hover:bg-purple-500" : "border-purple-500/50 text-purple-400 hover:bg-purple-500/10"}`}
+                >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">AI Assistant</span>
+                </Button>
 
                 {/* Sync Button */}
                 {canEdit && (
