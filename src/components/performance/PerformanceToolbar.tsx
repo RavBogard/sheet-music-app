@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
-    ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar
+    ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
@@ -99,6 +99,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <div className="fixed bottom-0 left-0 right-0 h-24 bg-black border-t-2 border-red-900/50 flex items-center justify-between px-8 z-50">
 
                     {/* Emergency Exit (Long Press) */}
+                    {/* Emergency Exit (Long Press) */}
                     <button
                         onMouseDown={startExit}
                         onMouseUp={cancelExit}
@@ -106,13 +107,25 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         onTouchStart={startExit}
                         onTouchEnd={cancelExit}
                         className={`
-                            border-2 border-red-900 rounded-full h-16 w-16 flex items-center justify-center transition-all duration-200
-                            ${isHolding ? 'bg-red-900 scale-95' : 'bg-black'}
+                            relative overflow-hidden
+                            border-2 border-red-900/60 rounded-xl h-20 w-32 flex flex-col items-center justify-center transition-all duration-200
+                            ${isHolding ? 'scale-95 border-red-500' : 'bg-black hover:border-red-700'}
                         `}
                     >
-                        <div className={`h-12 w-12 rounded-full border border-red-800 ${isHolding ? 'animate-ping opacity-75' : 'opacity-0'}`} />
-                        <span className="absolute text-[10px] text-red-700 font-bold uppercase tracking-widest">
-                            {isHolding ? "HOLD..." : "EXIT"}
+                        {/* Progress Fill */}
+                        <div
+                            className={`absolute inset-0 bg-red-900 transition-all ease-linear origin-left`}
+                            style={{
+                                width: isHolding ? '100%' : '0%',
+                                transitionDuration: isHolding ? '2000ms' : '150ms'
+                            }}
+                        />
+
+                        <span className="relative text-sm font-bold text-red-500 uppercase tracking-widest z-10">
+                            {isHolding ? "EXITING..." : "EXIT"}
+                        </span>
+                        <span className="relative text-[10px] text-red-500/70 z-10 mt-1 font-mono">
+                            Hold 2s
                         </span>
                     </button>
 
@@ -232,6 +245,19 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             {/* Right: Tools */}
             <div className="flex items-center gap-2">
                 <BackingTrackPlayer />
+
+                {/* Transposer Visibility Toggle (Direct Access) */}
+                {aiTransposer.status === 'ready' && (
+                    <Button
+                        variant={aiTransposer.isVisible ? "default" : "ghost"}
+                        size="icon"
+                        onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
+                        className={`h-9 w-9 ${aiTransposer.isVisible ? 'bg-purple-600 hover:bg-purple-700' : 'text-zinc-500'}`}
+                        title={aiTransposer.isVisible ? "Hide Chords" : "Show Chords"}
+                    >
+                        {aiTransposer.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </Button>
+                )}
 
                 {/* Unified Transpose Menu */}
                 <Popover onOpenChange={(open) => {

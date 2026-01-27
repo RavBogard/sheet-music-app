@@ -77,8 +77,22 @@ export function PDFViewer({ url }: PDFViewerProps) {
             setTransposerState({ status: 'scanning' })
 
             // MVP: Scan Page 1 (first canvas)
-            const canvas = containerRef.current.querySelector('canvas')
-            if (!canvas) throw new Error("No canvas found")
+            // Retry mechanism for mobile/slow rendering
+            let canvas: HTMLCanvasElement | null = null
+            for (let i = 0; i < 10; i++) {
+                // Try specific class first (more robust)
+                canvas = containerRef.current.querySelector('.react-pdf__Page__canvas') as HTMLCanvasElement
+                if (!canvas) {
+                    canvas = containerRef.current.querySelector('canvas')
+                }
+
+                if (canvas) break
+
+                // Wait 200ms
+                await new Promise(r => setTimeout(r, 200))
+            }
+
+            if (!canvas) throw new Error("No canvas found after retries")
 
             // Extract File ID from URL for Caching
             // URL format: /api/drive/file/[FILE_ID]
@@ -128,13 +142,12 @@ export function PDFViewer({ url }: PDFViewerProps) {
     }
 
     // Effect: Watch for global activation
-    useEffect(() => {
-        if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
-            // Trigger scan automatically when turned on
-            // Small delay to ensure canvas is rendered
-            setTimeout(() => scanPages(), 500)
-        }
-    }, [aiTransposer.isVisible, aiTransposer.status])
+    // Logic moved to onRenderSuccess of Page component to avoid race conditions
+    // useEffect(() => {
+    //     if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
+    //         setTimeout(() => scanPages(), 500)
+    //     }
+    // }, [aiTransposer.isVisible, aiTransposer.status])
 
     // 1. Auto-Resize to fit Width
     useEffect(() => {
@@ -199,6 +212,12 @@ export function PDFViewer({ url }: PDFViewerProps) {
                                         width={width * zoom}
                                         renderTextLayer={false}
                                         renderAnnotationLayer={false}
+                                        onRenderSuccess={() => {
+                                            if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
+                                                console.log("Page rendered, triggering scan...")
+                                                scanPages()
+                                            }
+                                        }}
                                         loading={
                                             <div className="h-[800px] w-full bg-white/5 animate-pulse" />
                                         }

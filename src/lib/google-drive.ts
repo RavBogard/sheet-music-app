@@ -95,9 +95,10 @@ export class DriveClient {
             const res = await this.drive.files.get({
                 fileId,
                 alt: 'media',
+                supportsAllDrives: true,
+                acknowledgeAbuse: true
             }, {
-                responseType: 'arraybuffer',
-                supportsAllDrives: true
+                responseType: 'arraybuffer'
             } as any)
 
             return res.data
