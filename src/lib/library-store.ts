@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { auth } from "@/lib/firebase"
 
 export interface DriveFile {
     id: string
@@ -32,7 +33,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
         set({ loading: true, error: null })
         try {
-            const res = await fetch(`/api/drive/list`)
+            const user = auth.currentUser
+            const headers: HeadersInit = {}
+            if (user) {
+                const token = await user.getIdToken()
+                headers['Authorization'] = `Bearer ${token}`
+            }
+
+            const res = await fetch(`/api/drive/list`, { headers })
             if (!res.ok) throw new Error("Failed to sync library")
 
             const data = await res.json()

@@ -14,13 +14,30 @@ const getCachedFiles = unstable_cache(
 
 import { globalLimiter } from "@/lib/rate-limit"
 
+import { verifyIdToken } from "@/lib/firebase-admin"
+
+// ... 
+
 export async function GET(request: Request) {
-    // Simple IP-based imitation (Next.js Edge can give proper IP, in Node runtime it's harder)
-    // We'll use a static key for now or try headers
-    const ip = request.headers.get("x-forwarded-for") || "unknown"
-    if (!globalLimiter.check(ip)) {
-        return new NextResponse(JSON.stringify({ error: "Too Many Requests" }), { status: 429 })
+    const authHeader = request.headers.get("Authorization")
+    const token = authHeader?.split("Bearer ")[1]
+
+    // In strict mode, we require the token. 
+    // For now, if no env vars are set, this might block everyone, so let's be careful.
+    // Ideally:
+    if (!token) {
+        return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
     }
+
+    const decodedToken = await verifyIdToken(token)
+    if (!decodedToken) {
+        return new NextResponse(JSON.stringify({ error: "Invalid Token" }), { status: 403 })
+    }
+
+    // Rate Limit (User ID based now possible!)
+    // const ip = request.headers.get("x-forwarded-for") || "unknown"
+    // if (!globalLimiter.check(decodedToken.uid)) ...
+
 
     try {
         const { searchParams } = new URL(request.url)

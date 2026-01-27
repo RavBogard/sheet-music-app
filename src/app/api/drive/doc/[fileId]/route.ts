@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
 
+import { verifyIdToken } from "@/lib/firebase-admin"
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
+    const authHeader = request.headers.get("Authorization")
+    const token = authHeader?.split("Bearer ")[1]
+
+    if (!token || !(await verifyIdToken(token))) {
+        return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
+    }
+
     try {
         const { fileId } = await params
         const drive = new DriveClient()
