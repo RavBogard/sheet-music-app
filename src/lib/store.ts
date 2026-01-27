@@ -1,8 +1,9 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type FileType = 'pdf' | 'musicxml' | 'chordpro'
 
-interface QueueItem {
+export interface QueueItem {
     name: string
     fileId: string
     type: FileType
@@ -11,7 +12,7 @@ interface QueueItem {
     targetKey?: string // For auto-transpose
 }
 
-interface MusicState {
+export interface MusicState {
     fileType: FileType | null
     fileUrl: string | null
     transposition: number // 0 = original key, +1 = semitone up
@@ -44,8 +45,6 @@ interface MusicState {
         fret: number // e.g. 3
     }
 
-
-
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
@@ -68,124 +67,136 @@ interface MusicState {
     reset: () => void
 }
 
-export const useMusicStore = create<MusicState>((set, get) => ({
-    fileType: null,
-    fileUrl: null,
-    transposition: 0,
-    zoom: 1,
+export const useMusicStore = create<MusicState>()(
+    persist(
+        (set, get) => ({
+            fileType: null,
+            fileUrl: null,
+            transposition: 0,
+            zoom: 1,
 
-    playbackQueue: [],
-    queueIndex: -1,
+            playbackQueue: [],
+            queueIndex: -1,
 
-    aiTransposer: {
-        isVisible: false,
-        status: 'idle',
-        detectedKey: ''
-    },
+            aiTransposer: {
+                isVisible: false,
+                status: 'idle',
+                detectedKey: ''
+            },
 
-    capo: {
-        active: false,
-        targetShape: '',
-        fret: 0
-    },
+            capo: {
+                active: false,
+                targetShape: '',
+                fret: 0
+            },
 
-    audio: {
-        fileId: null,
-        url: null,
-        isPlaying: false,
-        volume: 1,
-        isLooping: false
-    },
+            audio: {
+                fileId: null,
+                url: null,
+                isPlaying: false,
+                volume: 1,
+                isLooping: false
+            },
 
+            setFile: (url: string, type: FileType) => set({ fileUrl: url, fileType: type }),
+            setTransposition: (t: number) => set({ transposition: t }),
+            setZoom: (z: number) => set({ zoom: z }),
 
+            setTransposerState: (newState: Partial<MusicState['aiTransposer']>) => set((state) => ({
+                aiTransposer: { ...state.aiTransposer, ...newState }
+            })),
 
-    setFile: (url, type) => set({ fileUrl: url, fileType: type }),
-    setTransposition: (t) => set({ transposition: t }),
-    setZoom: (z) => set({ zoom: z }),
+            resetTransposer: () => set({
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+            }),
 
-    setTransposerState: (newState) => set((state) => ({
-        aiTransposer: { ...state.aiTransposer, ...newState }
-    })),
+            setAudioState: (newState: Partial<MusicState['audio']>) => set((state) => ({
+                audio: { ...state.audio, ...newState }
+            })),
 
-    resetTransposer: () => set({
-        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
-    }),
+            setCapoState: (newState: Partial<MusicState['capo']>) => set((state) => ({
+                capo: { ...state.capo, ...newState }
+            })),
 
-    setAudioState: (newState) => set((state) => ({
-        audio: { ...state.audio, ...newState }
-    })),
-
-    setCapoState: (newState) => set((state) => ({
-        capo: { ...state.capo, ...newState }
-    })),
-
-    setQueue: (items, startIndex = 0) => {
-        set({ playbackQueue: items, queueIndex: startIndex })
-        // Auto-load the first song
-        const first = items[startIndex]
-        if (first) {
-            set({
-                fileUrl: `/api/drive/file/${first.fileId}`,
-                fileType: first.type,
-                transposition: first.transposition || 0,
-                audio: {
-                    ...get().audio,
-                    fileId: first.audioFileId || null,
-                    url: first.audioFileId ? `/api/drive/file/${first.audioFileId}` : null,
-                    isPlaying: false
+            setQueue: (items: QueueItem[], startIndex = 0) => {
+                set({ playbackQueue: items, queueIndex: startIndex })
+                const item = items[startIndex]
+                if (item) {
+                    set({
+                        fileUrl: `/api/drive/file/${item.fileId}`,
+                        fileType: item.type,
+                        transposition: item.transposition || 0,
+                        audio: {
+                            ...get().audio,
+                            fileId: item.audioFileId || null,
+                            url: item.audioFileId ? `/api/drive/file/${item.audioFileId}` : null,
+                            isPlaying: false
+                        },
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                    })
                 }
-            })
-        }
-    },
+            },
 
-    nextSong: () => {
-        const { playbackQueue, queueIndex } = get()
-        if (queueIndex < playbackQueue.length - 1) {
-            const nextIndex = queueIndex + 1
-            const nextItem = playbackQueue[nextIndex]
-            set({
-                queueIndex: nextIndex,
-                fileUrl: `/api/drive/file/${nextItem.fileId}`,
-                fileType: nextItem.type,
-                transposition: nextItem.transposition || 0,
-                // Load Audio
-                audio: {
-                    ...get().audio,
-                    fileId: nextItem.audioFileId || null,
-                    url: nextItem.audioFileId ? `/api/drive/file/${nextItem.audioFileId}` : null,
-                    isPlaying: false
-                },
-                // Reset transposer on song change (component will re-enable if targetKey exists)
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
-            })
-            return nextItem
-        }
-        return null
-    },
+            nextSong: () => {
+                const { playbackQueue, queueIndex } = get()
+                if (queueIndex < playbackQueue.length - 1) {
+                    const nextIndex = queueIndex + 1
+                    const nextItem = playbackQueue[nextIndex]
+                    set({
+                        queueIndex: nextIndex,
+                        fileUrl: `/api/drive/file/${nextItem.fileId}`,
+                        fileType: nextItem.type,
+                        transposition: nextItem.transposition || 0,
+                        audio: {
+                            ...get().audio,
+                            fileId: nextItem.audioFileId || null,
+                            url: nextItem.audioFileId ? `/api/drive/file/${nextItem.audioFileId}` : null,
+                            isPlaying: false
+                        },
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                    })
+                    return nextItem
+                }
+                return null
+            },
 
-    prevSong: () => {
-        const { playbackQueue, queueIndex } = get()
-        if (queueIndex > 0) {
-            const prevIndex = queueIndex - 1
-            const prevItem = playbackQueue[prevIndex]
-            set({
-                queueIndex: prevIndex,
-                fileUrl: `/api/drive/file/${prevItem.fileId}`,
-                fileType: prevItem.type,
-                transposition: prevItem.transposition || 0,
-                // Load Audio
-                audio: {
-                    ...get().audio,
-                    fileId: prevItem.audioFileId || null,
-                    url: prevItem.audioFileId ? `/api/drive/file/${prevItem.audioFileId}` : null,
-                    isPlaying: false
-                },
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
-            })
-            return prevItem
-        }
-        return null
-    },
+            prevSong: () => {
+                const { playbackQueue, queueIndex } = get()
+                if (queueIndex > 0) {
+                    const prevIndex = queueIndex - 1
+                    const prevItem = playbackQueue[prevIndex]
+                    set({
+                        queueIndex: prevIndex,
+                        fileUrl: `/api/drive/file/${prevItem.fileId}`,
+                        fileType: prevItem.type,
+                        transposition: prevItem.transposition || 0,
+                        audio: {
+                            ...get().audio,
+                            fileId: prevItem.audioFileId || null,
+                            url: prevItem.audioFileId ? `/api/drive/file/${prevItem.audioFileId}` : null,
+                            isPlaying: false
+                        },
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                    })
+                    return prevItem
+                }
+                return null
+            },
 
-    reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1 }),
-}))
+            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1 }),
+        }),
+        {
+            name: 'music-storage',
+            partialize: (state) => ({
+                playbackQueue: state.playbackQueue,
+                queueIndex: state.queueIndex,
+                transposition: state.transposition,
+                zoom: state.zoom,
+                fileUrl: state.fileUrl,
+                fileType: state.fileType,
+                audio: state.audio,
+                capo: state.capo
+            }),
+        }
+    )
+)

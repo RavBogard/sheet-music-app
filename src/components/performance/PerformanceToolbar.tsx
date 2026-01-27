@@ -121,9 +121,12 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={prevSong}
+                    onClick={() => {
+                        const prev = prevSong()
+                        if (prev) window.history.pushState(null, '', `/perform/${prev.fileId}`)
+                    }}
                     disabled={queueIndex <= 0}
-                    className="text-white hidden sm:flex"
+                    className="text-white"
                 >
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
@@ -140,9 +143,12 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={nextSong}
+                    onClick={() => {
+                        const next = nextSong()
+                        if (next) window.history.pushState(null, '', `/perform/${next.fileId}`)
+                    }}
                     disabled={queueIndex >= playbackQueue.length - 1}
-                    className="text-white hidden sm:flex"
+                    className="text-white"
                 >
                     <ChevronRight className="h-6 w-6" />
                 </Button>
