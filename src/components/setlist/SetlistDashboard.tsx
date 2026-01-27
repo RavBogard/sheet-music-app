@@ -176,36 +176,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         }
     }
 
-    // Show sign-in prompt if not authenticated
-    if (!authLoading && !user) {
-        return (
-            <div className="h-screen flex flex-col bg-zinc-950 text-white">
-                <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
-                    <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
-                        <ChevronLeft className="h-8 w-8" />
-                    </Button>
-                    <h1 className="text-2xl font-bold flex-1">My Setlists</h1>
-                </div>
-                <div className="flex-1 flex flex-col items-center justify-center gap-6">
-                    <div className="text-center">
-                        <img
-                            src="/logo.jpg"
-                            alt="CRC"
-                            className="h-20 w-20 rounded-full border-2 border-zinc-700 object-cover mx-auto mb-4"
-                        />
-                        <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
-                        <p className="text-zinc-500 max-w-md">
-                            Sign in with your Google account to create and manage your personal setlists.
-                        </p>
-                    </div>
-                    <Button onClick={signIn} size="lg" className="gap-2 h-14 px-8 text-lg">
-                        <LogIn className="h-5 w-5" />
-                        Sign in with Google
-                    </Button>
-                </div>
-            </div>
-        )
-    }
+
 
     const displayedSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
 

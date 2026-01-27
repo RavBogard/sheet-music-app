@@ -21,22 +21,18 @@ export default function DashboardPage() {
 
     // Setlist Service
     const setlistService = useMemo(() => {
-        if (user) {
-            return createSetlistService(user.uid, user.displayName)
-        }
-        return null
+        return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user])
 
     // Fetch Setlists & Filter
     useEffect(() => {
         if (!setlistService) return
 
-        const unsubscribe = setlistService.subscribeToPersonalSetlists((setlists) => {
+        let unsubscribe: () => void
+
+        const handleSetlists = (setlists: Setlist[]) => {
             const now = new Date()
             now.setHours(0, 0, 0, 0)
-
-            const nextWeek = new Date(now)
-            nextWeek.setDate(now.getDate() + 7)
 
             const upcoming = setlists.filter(s => {
                 if (!s.eventDate) return false
@@ -51,10 +47,17 @@ export default function DashboardPage() {
             }).slice(0, 3) // Take next 3 events
 
             setUpcomingSetlists(upcoming)
-        })
+        }
+
+        if (user) {
+            unsubscribe = setlistService.subscribeToPersonalSetlists(handleSetlists)
+        } else {
+            // Guest: Subscribe to PUBLIC setlists
+            unsubscribe = setlistService.subscribeToPublicSetlists(handleSetlists)
+        }
 
         return () => unsubscribe()
-    }, [setlistService])
+    }, [setlistService, user])
 
     useEffect(() => {
         fetchFiles()
@@ -81,8 +84,8 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Upcoming Events Section (Personal Only) */}
-            {user && upcomingSetlists.length > 0 && (
+            {/* Upcoming Events Section (Personal or Public) */}
+            {upcomingSetlists.length > 0 && (
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <CalendarIcon className="h-5 w-5 text-blue-400" />
