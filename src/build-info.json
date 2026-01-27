@@ -1,11 +1,11 @@
 {
-  "version": "master-19b8b30",
-  "buildDate": "1/27/2026, 10:18:17 AM",
+  "version": "master-49aab2c",
+  "buildDate": "1/27/2026, 10:37:59 AM",
   "changelog": [
-    "19b8b30 - feat: security phase 1 - frontend lockdown & api protection (7 minutes ago)",
-    "5d7aaea - feat: branding integration & fix: audio picker scrolling (15 minutes ago)",
-    "4b55a88 - fix: public setlists bugs & feat: site footer and changelog (24 minutes ago)",
-    "fd3f757 - fix: resolve typescript errors in tuner and session hook (38 minutes ago)",
-    "cd383bf - feat: complete v1.0 roadmap (tuner, audio linking, caching, stability) (39 minutes ago)"
+    "49aab2c - feat: admin bootstrap route & updated setup guide (19 minutes ago)",
+    "19b8b30 - feat: security phase 1 - frontend lockdown & api protection (26 minutes ago)",
+    "5d7aaea - feat: branding integration & fix: audio picker scrolling (34 minutes ago)",
+    "4b55a88 - fix: public setlists bugs & feat: site footer and changelog (43 minutes ago)",
+    "fd3f757 - fix: resolve typescript errors in tuner and session hook (58 minutes ago)"
   ]
 }
