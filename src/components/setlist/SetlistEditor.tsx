@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService, Setlist, SetlistTrack } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOfflineSync } from "@/hooks/use-offline-sync"
-import { Trash2, Save, ArrowLeft, GripVertical, Download, Link, Share2, Play, Search, X, Plus, Check, Globe, Lock, Printer, CloudDownload, CloudOff, ChevronLeft, Music } from "lucide-react"
+import { Trash2, Save, ArrowLeft, GripVertical, Download, Link, Share2, Play, Search, X, Plus, Check, Globe, Lock, Printer, CloudDownload, CloudOff, ChevronLeft, Music, Sparkles } from "lucide-react"
 import { SetlistTimeline } from "./SetlistTimeline"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { PrintModal } from "@/components/setlist/PrintModal"
 import { AudioFilePicker } from "@/components/setlist/AudioFilePicker"
+import { ChatPanel } from "@/components/setlist/ChatPanel" // [NEW] Chat Import
 import {
     DndContext,
     closestCenter,
@@ -306,6 +307,48 @@ export function SetlistEditor({
     // Folder Navigation State
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
 
+    // Chat State
+    const [isChatOpen, setIsChatOpen] = useState(false)
+
+    const handleApplyEdits = (edits: any[]) => {
+        if (!canEdit) return
+
+        // Create a copy of current tracks to mutate
+        let newTracks = [...tracks]
+
+        edits.forEach(edit => {
+            if (edit.action === 'add') {
+                const newTrack: SetlistTrack = {
+                    id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    title: edit.title,
+                    fileId: edit.fileId || undefined,
+                    key: '',
+                    notes: ''
+                }
+
+                if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
+                    newTracks.splice(edit.index, 0, newTrack)
+                } else {
+                    newTracks.push(newTrack)
+                }
+            }
+            // Use title matching or index for removal if ID isn't known
+            else if (edit.action === 'remove') {
+                if (typeof edit.index === 'number' && newTracks[edit.index]) {
+                    newTracks.splice(edit.index, 1)
+                }
+            }
+            else if (edit.action === 'reorder') {
+                if (newTracks[edit.fromIndex] && newTracks.length > edit.toIndex) {
+                    const [moved] = newTracks.splice(edit.fromIndex, 1)
+                    newTracks.splice(edit.toIndex, 0, moved)
+                }
+            }
+        })
+
+        setTracks(newTracks)
+    }
+
     // Helper: Get Breadcrumbs
     const breadcrumbs = useMemo(() => {
         const path = []
@@ -582,6 +625,19 @@ export function SetlistEditor({
 
                 {!canEdit && (
                     <div className="text-sm text-zinc-500">View Only</div>
+                )}
+
+                {/* Chat Toggle (Only Edit Mode) */}
+                {canEdit && (
+                    <Button
+                        size="sm"
+                        variant={isChatOpen ? "default" : "outline"}
+                        onClick={() => setIsChatOpen(!isChatOpen)}
+                        className={`gap-2 ${isChatOpen ? "bg-purple-600 hover:bg-purple-500" : "border-purple-500/50 text-purple-400 hover:bg-purple-500/10"}`}
+                    >
+                        <Sparkles className="h-4 w-4" />
+                        <span className="hidden sm:inline">AI Assistant</span>
+                    </Button>
                 )}
 
                 {/* Sync Button */}
@@ -881,6 +937,14 @@ export function SetlistEditor({
                 />
             )}
 
+            {/* Chat Panel - Fixed to right side */}
+            <ChatPanel
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                onApplyEdits={handleApplyEdits}
+                currentSetlist={tracks}
+                libraryFiles={driveFiles}
+            />
 
         </div>
     )

@@ -28,13 +28,17 @@ export interface SetlistTrack {
 export interface Setlist {
     id: string
     name: string
-    date: Timestamp
+    date: Timestamp // Creation date
+    eventDate?: Timestamp | string // Scheduled performance date
     tracks: SetlistTrack[]
     trackCount: number
     // Fields for public/private
     isPublic?: boolean
     ownerId?: string
     ownerName?: string
+    // Template fields
+    isTemplate?: boolean
+    templateType?: 'shabbat_morning' | 'friday_night' | 'other'
 }
 
 // User-specific setlist service
