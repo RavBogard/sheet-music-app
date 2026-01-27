@@ -1,35 +1,113 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
+import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useLastOpened } from "@/hooks/use-last-opened"
 import { Button } from "@/components/ui/button"
-import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle } from "lucide-react"
+import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar as CalendarIcon } from "lucide-react"
 
 export default function DashboardPage() {
     const router = useRouter()
+    const { user } = useAuth()
     const { driveFiles, loading, fetchFiles } = useLibraryStore()
     const { fileUrl } = useMusicStore()
     const { restoreSession } = useLastOpened()
 
+    const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
+
+    // Setlist Service
+    const setlistService = useMemo(() => {
+        if (user) {
+            return createSetlistService(user.uid, user.displayName)
+        }
+        return null
+    }, [user])
+
+    // Fetch Setlists & Filter
+    useEffect(() => {
+        if (!setlistService) return
+
+        const unsubscribe = setlistService.subscribeToPersonalSetlists((setlists) => {
+            const now = new Date()
+            now.setHours(0, 0, 0, 0)
+
+            const nextWeek = new Date(now)
+            nextWeek.setDate(now.getDate() + 7)
+
+            const upcoming = setlists.filter(s => {
+                if (!s.eventDate) return false
+                const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as any).toDate()
+                // Reset time for comparison
+                d.setHours(0, 0, 0, 0)
+                return d >= now && d <= nextWeek
+            }).sort((a, b) => {
+                const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
+                const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
+                return da.getTime() - db.getTime()
+            })
+
+            setUpcomingSetlists(upcoming)
+        })
+
+        return () => unsubscribe()
+    }, [setlistService])
+
     useEffect(() => {
         fetchFiles()
         restoreSession()
-    }, [fetchFiles]) // restoreSession is stable (or should be, but let's exclude it to be safe or verify hook)
+    }, [fetchFiles])
 
     return (
         <div className="flex flex-col p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
-            {/* Sync Drive Button (Moved from Header to inline tool or just kept here as a utility) */}
-            {/* Actually, user might still want a sync button. Let's keep it but make it less header-like, or move to Settings.
-                For now, let's keep it as a 'Quick Action' at the top of the dashboard.
-            */}
+
+            {/* Sync Drive Button */}
             <div className="flex justify-end">
                 <Button variant="outline" size="sm" onClick={() => fetchFiles(true)} className="text-zinc-400 border-zinc-800 hover:text-white">
                     {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Sync Drive
                 </Button>
             </div>
+
+            {/* Upcoming Events Section */}
+            {upcomingSetlists.length > 0 && (
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <CalendarIcon className="h-5 w-5 text-blue-400" />
+                        Upcoming this Week
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {upcomingSetlists.map(setlist => {
+                            const dateObj = typeof setlist.eventDate === 'string' ? new Date(setlist.eventDate) : (setlist.eventDate as any).toDate()
+
+                            return (
+                                <button
+                                    key={setlist.id}
+                                    onClick={() => router.push(`/setlists?id=${setlist.id}`)} // Or implement a way to open directly? 
+                                    // Actually SetlistDashboard handles selecting setlists.
+                                    // We might need to handle routing to /setlists and auto-opening.
+                                    // For now, let's just go to /setlists and maybe pass a query param if supported, or just let user find it.
+                                    // User asked for "quick links". 
+                                    // Best UX: router.push(`/setlists?open=${setlist.id}`) and handle in SetlistDashboard.
+                                    className="bg-zinc-800 hover:bg-zinc-700 p-4 rounded-xl text-left transition-colors border border-zinc-700/50 group"
+                                >
+                                    <div className="text-sm text-blue-400 font-medium mb-1">
+                                        {dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </div>
+                                    <div className="font-semibold text-lg group-hover:text-white/90 truncate">
+                                        {setlist.name}
+                                    </div>
+                                    <div className="text-zinc-500 text-sm mt-1">
+                                        {setlist.tracks?.length || 0} songs
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Song Charts */}
@@ -72,15 +150,6 @@ export default function DashboardPage() {
             {/* Quick Resume */}
             {fileUrl && (
                 <Button size="lg" className="h-20 text-xl" onClick={() => router.push('/perform/resume')}>
-                    {/* Note: 'resume' isn't a strict ID, but we can handle it in the performer page or layout */}
-                    {/* For now, linking to last song might be complex without the ID. 
-                         Let's just use a special route or handle it in global state. 
-                         Actually, the 'performer' view relies on the store having the FILE selected.
-                         So we just go to a generic performer page which reads the store?
-                         Or we should redirect to /perform/[fileId].
-                         Let's assume we can get the ID from the URL or store for now.
-                         Ideally we redirect to `/perform/${fileId}`.
-                      */}
                     Resume Performance <PlayCircle className="ml-2 h-6 w-6" />
                 </Button>
             )}
