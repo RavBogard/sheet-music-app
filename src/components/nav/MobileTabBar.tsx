@@ -18,30 +18,22 @@ export function MobileTabBar() {
             active: pathname === "/"
         },
         {
-            label: "Library",
-            href: "/library",
-            icon: Library,
-            active: pathname.startsWith("/library")
-        },
-        // Center Action Button (Gig Mode)
-        {
-            label: "Perform",
-            href: "/perform/resume", // Or a dedicated gig hub
-            icon: PlayCircle,
-            isCenter: true,
-            active: pathname.startsWith("/perform")
-        },
-        {
             label: "Setlists",
             href: "/setlists",
             icon: ListMusic,
             active: pathname.startsWith("/setlists")
         },
         {
-            label: "Audio",
-            href: "/audio",
-            icon: Music2,
-            active: pathname.startsWith("/audio")
+            label: "Library",
+            href: "/library",
+            icon: Library,
+            active: pathname.startsWith("/library")
+        },
+        {
+            label: "Settings",
+            href: "/settings",
+            icon: Settings,
+            active: pathname.startsWith("/settings")
         }
     ]
 
@@ -54,27 +46,7 @@ export function MobileTabBar() {
                 {navItems.map((item) => {
                     const Icon = item.icon
 
-                    if (item.isCenter) {
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className="relative -top-5 group"
-                            >
-                                <div className={cn(
-                                    "flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-all duration-300",
-                                    "bg-gradient-to-tr from-blue-600 to-purple-600 text-white",
-                                    "group-active:scale-95 group-hover:shadow-blue-500/50 shadow-blue-900/20"
-                                )}>
-                                    <Icon className="w-7 h-7 fill-white/20" />
-                                </div>
-                                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                    Resume
-                                </span>
-                            </Link>
-                        )
-                    }
-
+                    // Standard Tab Item
                     return (
                         <Link
                             key={item.href}

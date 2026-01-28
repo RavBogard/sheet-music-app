@@ -156,12 +156,12 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             {/* Sub-Header: Search OR Breadcrumbs */}
             <div className="p-4 border-b border-zinc-800 space-y-4">
                 <div className="relative max-w-xl mx-auto">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-500" />
                     <Input
                         value={searchQuery}
                         onChange={handleSearchChange}
                         placeholder="Search charts..."
-                        className="pl-10 h-12 text-lg"
+                        className="pl-12 h-14 text-xl rounded-full bg-zinc-900 border-zinc-700 focus:border-blue-500"
                     />
                 </div>
 
@@ -214,23 +214,23 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                     <ContextMenuTrigger asChild>
                                         <button
                                             onClick={() => handleItemClick(item)}
-                                            className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
+                                            className={`w-full text-left p-6 rounded-2xl transition-all flex items-center gap-5 group ${isFolder
                                                 ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
                                                 : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
                                                 }`}
                                         >
                                             {isFolder ? (
-                                                <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                                <Folder className="h-10 w-10 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
                                             ) : (
-                                                <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                                <FileMusic className="h-10 w-10 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
                                             )}
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-lg truncate">
+                                                <div className="font-bold text-xl truncate">
                                                     {isFolder ? item.name : getCleanName(item.name)}
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
+                                            <ChevronRight className="h-6 w-6 text-zinc-600 group-hover:text-white" />
                                         </button>
                                     </ContextMenuTrigger>
                                     <ContextMenuContent>

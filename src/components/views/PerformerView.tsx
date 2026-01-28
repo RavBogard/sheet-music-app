@@ -62,7 +62,8 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         <div
             {...bind()}
             onClick={handleTap}
-            className="h-screen flex flex-col bg-black text-white relative touch-none select-none"
+            // Allow native touch actions for zoom (pinch) but we still capture swipes via useDrag
+            className="h-screen flex flex-col bg-black text-white relative"
         >
 
             {/* Main Content Area (with bottom padding for toolbar) */}

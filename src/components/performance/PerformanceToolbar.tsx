@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NetworkStatus } from "@/components/network-status"
+import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -113,9 +114,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white">
                     <Home className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onSetlist} className="text-zinc-400 hover:text-white">
-                    <ListMusic className="h-5 w-5" />
-                </Button>
+
+                {/* Setlist Drawer */}
+                <SetlistDrawer />
             </div>
 
             {/* Center: Playback */}
@@ -315,6 +316,6 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </div>
                 <NetworkStatus />
             </div>
-        </div>
+        </div >
     )
 }
