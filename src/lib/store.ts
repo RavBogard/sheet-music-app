@@ -98,7 +98,13 @@ export const useMusicStore = create<MusicState>()(
                 isLooping: false
             },
 
-            setFile: (url: string, type: FileType) => set({ fileUrl: url, fileType: type }),
+            setFile: (url: string, type: FileType) => set({
+                fileUrl: url,
+                fileType: type,
+                transposition: 0,
+                capo: { active: false, targetShape: '', fret: 0 },
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+            }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
 
@@ -119,7 +125,7 @@ export const useMusicStore = create<MusicState>()(
             })),
 
             setQueue: (items: QueueItem[], startIndex = 0) => {
-                set({ playbackQueue: items, queueIndex: startIndex })
+                set({ playbackQueue: items, queueIndex: startIndex, capo: { active: false, targetShape: '', fret: 0 } })
                 const item = items[startIndex]
                 if (item) {
                     set({
@@ -147,6 +153,7 @@ export const useMusicStore = create<MusicState>()(
                         fileUrl: `/api/drive/file/${nextItem.fileId}`,
                         fileType: nextItem.type,
                         transposition: nextItem.transposition || 0,
+                        capo: { active: false, targetShape: '', fret: 0 },
                         audio: {
                             ...get().audio,
                             fileId: nextItem.audioFileId || null,
@@ -170,6 +177,7 @@ export const useMusicStore = create<MusicState>()(
                         fileUrl: `/api/drive/file/${prevItem.fileId}`,
                         fileType: prevItem.type,
                         transposition: prevItem.transposition || 0,
+                        capo: { active: false, targetShape: '', fret: 0 },
                         audio: {
                             ...get().audio,
                             fileId: prevItem.audioFileId || null,
@@ -183,7 +191,7 @@ export const useMusicStore = create<MusicState>()(
                 return null
             },
 
-            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1 }),
+            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1, capo: { active: false, targetShape: '', fret: 0 } }),
         }),
         {
             name: 'music-storage',
