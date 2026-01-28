@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.28-1609",
-  "commit": "681ada0",
+  "version": "2026.01.28-1642",
+  "commit": "86b11b8",
   "branch": "master",
-  "buildDate": "1/28/2026, 4:09:14 PM",
+  "buildDate": "1/28/2026, 4:42:01 PM",
   "changelog": [
-    "681ada0 - Feat: Add Mobile Admin Access (5 minutes ago)",
-    "b785bd4 - refactor: remove resume setlist feature (27 minutes ago)",
-    "b5370be - feat: complete phase 4 - context menus, optimistic ui, dnd (35 minutes ago)",
-    "3ee0882 - Feat: Implement Standardized API Middleware and refactor Drive API (5 hours ago)",
-    "b195c42 - Fix: Make Google env vars optional to fully unblock Vercel build (5 hours ago)"
+    "86b11b8 - Fix: Restore Vision API OCR route (31 minutes ago)",
+    "681ada0 - Feat: Add Mobile Admin Access (38 minutes ago)",
+    "b785bd4 - refactor: remove resume setlist feature (60 minutes ago)",
+    "b5370be - feat: complete phase 4 - context menus, optimistic ui, dnd (68 minutes ago)",
+    "3ee0882 - Feat: Implement Standardized API Middleware and refactor Drive API (5 hours ago)"
   ]
 }

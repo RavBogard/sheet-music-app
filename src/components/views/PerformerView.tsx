@@ -1,6 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import { useDrag } from '@use-gesture/react'
 import { useMusicStore } from '@/lib/store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
@@ -40,21 +41,23 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         }
     }
 
+    const router = useRouter() // Ensure this is imported from next/navigation
+
     const bind = useDrag(({ swipe: [swipeX] }) => {
         if (swipeX === -1) {
             const next = nextSong()
-            if (next) window.history.pushState(null, '', `/perform/${next.fileId}`)
+            if (next) router.push(`/perform/${next.fileId}`)
         } else if (swipeX === 1) {
             const prev = prevSong()
-            if (prev) window.history.pushState(null, '', `/perform/${prev.fileId}`)
+            if (prev) router.push(`/perform/${prev.fileId}`)
         }
     }, {
         axis: 'x',
         filterTaps: true,
         swipe: {
             duration: 500,
-            distance: 30,
-            velocity: 0.1
+            distance: 50, // Increased slightly to avoid accidental triggers while panning
+            velocity: 0.3
         }
     })
 
