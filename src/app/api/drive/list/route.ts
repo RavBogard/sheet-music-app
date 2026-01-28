@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
 import { unstable_cache } from "next/cache"
+import { withAuth } from "@/lib/api-middleware"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,25 +15,8 @@ const getCachedFiles = unstable_cache(
     { revalidate: 300, tags: ['drive-files'] } // 5 Minutes
 )
 
-import { globalLimiter } from "@/lib/rate-limit"
-
-import { verifyIdToken } from "@/lib/firebase-admin"
-
-// ... 
-
-export async function GET(request: Request) {
-    const authHeader = request.headers.get("Authorization")
-    const token = authHeader?.split("Bearer ")[1]
-
-    if (!token) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decodedToken = await verifyIdToken(token)
-    if (!decodedToken) {
-        return NextResponse.json({ error: "Invalid Token" }, { status: 403 })
-    }
-
+// Main Handler wrapped in Middleware
+export const GET = withAuth(async (request: Request) => {
     try {
         const { searchParams } = new URL(request.url)
         const folderId = searchParams.get('folderId') || undefined
@@ -62,7 +46,9 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
-        console.error("Drive API Error:", error)
-        return NextResponse.json({ error: "Internal Server Error", details: String(error) }, { status: 500 })
+        // Middleware catches unhandled errors too, but we can handle specific API logic here if needed.
+        // For now, rethrow to let middleware handle it or return specific drive error
+        console.error("Drive API Logic Error:", error)
+        throw error
     }
-}
+})
