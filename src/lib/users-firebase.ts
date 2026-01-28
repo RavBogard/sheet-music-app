@@ -1,4 +1,4 @@
-import { db } from "./firebase"
+import { db, auth } from "./firebase"
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
 
@@ -85,8 +85,29 @@ export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, on
 
 /**
  * Update a user's role (Admin only)
+ * Calls the Secure API to set Custom Claims.
  */
 export async function updateUserRole(targetUid: string, newRole: UserRole) {
-    const ref = doc(db, "users", targetUid)
-    await updateDoc(ref, { role: newRole })
+    const user = auth.currentUser
+    if (!user) throw new Error("Not authenticated")
+
+    const token = await user.getIdToken()
+
+    // Call the API
+    const res = await fetch("/api/admin/set-role", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ targetUserId: targetUid, newRole })
+    })
+
+    if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg)
+    }
+
+    // The API handles the Firestore update too, so we don't need to do it here.
+    // Client snapshot listeners will update the UI automatically.
 }

@@ -15,10 +15,20 @@ service cloud.firestore {
 
     // Helper to check if the CURRENT user is an Admin
     function isAdmin() {
-      // 1. Check strict UID (From Debug Panel)
-      // 2. Check Email as backup
+      // 1. Check strict UID (Bootstrap)
+      // 2. Check Custom Claim
       return request.auth.uid == '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3' 
-          || request.auth.token.email == 'daniel@centralreform.org';
+          || request.auth.token.role == 'admin';
+    }
+
+    // Leader: Can Create/Edit Public Setlists
+    function isLeader() {
+      return isAdmin() || request.auth.token.role == 'leader';
+    }
+
+    // Member: Can Read Library
+    function isMember() {
+      return isLeader() || request.auth.token.role == 'member';
     }
 
     // USERS Collection
@@ -38,17 +48,21 @@ service cloud.firestore {
       // 1. READ: Allow if Public OR User is Owner
       allow read: if (resource.data.isPublic == true) || isOwner(resource);
 
-      // 2. CREATE: Allow if Signed In AND ownerId matches
+      // 2. CREATE: 
+      //    - Members can create private setlists.
+      //    - Only Leaders/Admins can create PUBLIC setlists.
       allow create: if isSignedIn() 
-                    && request.resource.data.ownerId == request.auth.uid;
+                    && request.resource.data.ownerId == request.auth.uid
+                    && (request.resource.data.isPublic != true || isLeader());
 
-      // 3. UPDATE: Allow if Owner. 
-      //    (Ideally we prevent changing ownerId here, but for 'transfer' logic via Admin SDK 
-      //    the rules don't apply to Admin SDK, so this is for client-side edits)
-      allow update: if isOwner(resource);
+      // 3. UPDATE: 
+      //    - Owner can always update.
+      //    - Leaders/Admins can update ANY Public setlist.
+      allow update: if isOwner(resource) 
+                    || (resource.data.isPublic == true && isLeader());
 
-      // 4. DELETE: Allow if Owner
-      allow delete: if isOwner(resource);
+      // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
+      allow delete: if isOwner(resource) || isAdmin();
     }
     
     // PUBLIC SETLISTS (Legacy)
