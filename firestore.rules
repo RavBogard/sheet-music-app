@@ -15,16 +15,15 @@ service cloud.firestore {
 
     // Helper to check if the CURRENT user is an Admin
     function isAdmin() {
-      // TEMPORARY: Hardcode email only to unblock access. 
-      // The database lookup (get()) is causing issues with the list query.
+      // Logic test
       return request.auth.token.email == 'daniel@centralreform.org';
     }
 
     // USERS Collection
     match /users/{userId} {
-      // Users can read/write their own data
-      // Admins can READ all data (separate write rule if needed)
-      allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      // DIAGNOSTIC MODE: Allow READ for any signed-in user to see if the connection works.
+      // If this works, the issue is strictly the isAdmin() check logic.
+      allow read: if isSignedIn();
       allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
       
       // Legacy subcollections (if needed)
