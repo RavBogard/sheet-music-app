@@ -14,8 +14,8 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().optional(),
         NEXT_PUBLIC_FIREBASE_APP_ID: z.string().optional(),
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().optional(),
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1),
-        NEXT_PUBLIC_GOOGLE_API_KEY: z.string().min(1),
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
+        NEXT_PUBLIC_GOOGLE_API_KEY: z.string().optional(),
     },
     runtimeEnv: {
         FIREBASE_SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
