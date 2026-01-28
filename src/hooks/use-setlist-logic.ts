@@ -23,20 +23,22 @@ interface UseSetlistLogicProps {
     suggestedName?: string
     initialIsPublic?: boolean
     initialOwnerId?: string
+    initialEventDate?: string | Date | null
     driveFiles: DriveFile[]
     onSave?: (id: string) => void
 }
 
-export function useSetlistLogic({
-    initialSetlistId,
-    initialTracks = [],
-    initialName = "",
-    suggestedName = "",
-    initialIsPublic = false,
-    initialOwnerId,
-    driveFiles,
-    onSave
-}: UseSetlistLogicProps) {
+export function useSetlistLogic(props: UseSetlistLogicProps) {
+    const {
+        initialSetlistId,
+        initialTracks = [],
+        initialName = "",
+        suggestedName = "",
+        initialIsPublic = false,
+        initialOwnerId,
+        driveFiles,
+        onSave
+    } = props
     const { user, isLeader } = useAuth()
 
     // Create user-specific service
@@ -55,6 +57,7 @@ export function useSetlistLogic({
     const [name, setName] = useState(initialName || suggestedName || "")
     const [tracks, setTracks] = useState<SetlistTrack[]>(initialTracks)
     const [isPublic, setIsPublic] = useState(initialIsPublic)
+    const [eventDate, setEventDate] = useState<Date | null>(props.initialEventDate ? new Date(props.initialEventDate) : null)
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
@@ -168,10 +171,27 @@ export function useSetlistLogic({
 
             setSaving(true)
             try {
+                const dataToSave = {
+                    name,
+                    tracks,
+                    trackCount: tracks.length,
+                    eventDate: eventDate ? eventDate.toISOString() : null
+                }
+
                 if (setlistId) {
-                    await setlistService.updateSetlist(setlistId, isPublic, { name, tracks, trackCount: tracks.length })
+                    await setlistService.updateSetlist(setlistId, isPublic, dataToSave)
                 } else {
+                    // eventDate added to create payload interface in implementation plan check
+                    // If createSetlist doesn't support eventDate 4th arg, we might need to update immediately after
+                    // BUT for now, let's assume we update logic or use updateSetlist pattern if create is strict.
+                    // Actually, let's look at createSetlist signature from user code? We don't have it fully.
+                    // Safer to create then update if we aren't sure, OR just rely on updateSetlist handling it if we can.
                     const newId = await setlistService.createSetlist(name, tracks, isPublic)
+                    // Immediate update for metadata that might be missed in create
+                    if (eventDate) {
+                        await setlistService.updateSetlist(newId, isPublic, { eventDate: eventDate.toISOString() })
+                    }
+
                     setSetlistId(newId)
                     onSave?.(newId)
                 }
@@ -181,7 +201,7 @@ export function useSetlistLogic({
             }
             setSaving(false)
         }, 1000)
-    }, [setlistId, name, tracks, isPublic, onSave, setlistService, canEdit])
+    }, [setlistId, name, tracks, isPublic, eventDate, onSave, setlistService, canEdit])
 
     // Trigger auto-save on changes
     useEffect(() => {
@@ -309,6 +329,8 @@ export function useSetlistLogic({
         deleteTrack,
         matchFile,
         addSongsFromLibrary,
-        togglePublic
+        togglePublic,
+        eventDate,
+        setEventDate
     }
 }

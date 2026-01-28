@@ -59,6 +59,7 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
 
     return (
         <div className="flex flex-col h-full bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
+
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900">
                 <div className="flex items-center gap-4">
@@ -87,9 +88,10 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
             </div>
 
             {/* Grid Body */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-zinc-900">
+            <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-zinc-900 overflow-y-auto">
                 {days.map((date, i) => {
-                    if (!date) return <div key={`empty-${i}`} className="bg-zinc-950/30 border-b border-r border-zinc-800 min-h-[120px]" />
+                    if (!date) return <div key={`empty-${i}`} className="bg-zinc-950/30 border-b border-r border-zinc-800" />
+
 
                     const daySetlists = getSetlistsForDate(date)
                     const isSaturday = date.getDay() === 6
@@ -97,7 +99,7 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
                     const isToday = new Date().toDateString() === date.toDateString()
 
                     return (
-                        <div key={date.toISOString()} className={`relative p-2 border-b border-r border-zinc-800 min-h-[120px] group transition-colors hover:bg-zinc-800/20 ${isToday ? 'bg-blue-500/5' : ''}`}>
+                        <div key={date.toISOString()} className={`relative p-2 border-b border-r border-zinc-800 group transition-colors hover:bg-zinc-800/20 ${isToday ? 'bg-blue-500/5' : ''}`}>
                             <div className="flex items-center justify-between mb-2">
                                 <span className={`text-sm font-medium h-7 w-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-zinc-400'}`}>
                                     {date.getDate()}

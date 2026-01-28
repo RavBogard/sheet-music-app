@@ -36,6 +36,7 @@ interface SetlistEditorProps {
     suggestedName?: string
     initialIsPublic?: boolean
     initialOwnerId?: string
+    initialEventDate?: string | Date | null
     driveFiles: DriveFile[]
     onBack: () => void
     onSave?: (id: string) => void
@@ -49,6 +50,7 @@ export function SetlistEditor({
     suggestedName = "",
     initialIsPublic = false,
     initialOwnerId,
+    initialEventDate,
     driveFiles,
     onBack,
     onSave,
@@ -64,6 +66,8 @@ export function SetlistEditor({
         tracks,
         isPublic,
         setIsPublic,
+        eventDate,
+        setEventDate,
         saving,
         lastSaved,
         isSyncing,
@@ -82,6 +86,7 @@ export function SetlistEditor({
         suggestedName,
         initialIsPublic,
         initialOwnerId,
+        initialEventDate,
         driveFiles,
         onSave
     })
@@ -112,10 +117,12 @@ export function SetlistEditor({
                 onClose={() => setShowNamePrompt(false)}
                 initialName={name}
                 initialIsPublic={isPublic}
+                initialDate={eventDate ? new Date(eventDate) : null}
                 isLeader={isLeader}
-                onConfirm={(newName, newIsPublic) => {
+                onConfirm={(newName, newIsPublic, newDate) => {
                     setName(newName)
                     setIsPublic(newIsPublic)
+                    setEventDate(newDate)
                     setShowNamePrompt(false)
                 }}
             />

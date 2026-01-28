@@ -89,18 +89,7 @@ export function SetlistHeader({
                 <div className="text-sm text-zinc-500">View Only</div>
             )}
 
-            {/* Chat Toggle (Only Editors) */}
-            {canEdit && (
-                <Button
-                    size="sm"
-                    variant={isChatOpen ? "default" : "outline"}
-                    onClick={toggle}
-                    className={`gap-2 ${isChatOpen ? "bg-purple-600 hover:bg-purple-500" : "border-purple-500/50 text-purple-400 hover:bg-purple-500/10"}`}
-                >
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden sm:inline">AI Assistant</span>
-                </Button>
-            )}
+
 
             {/* Sync Button */}
             {canEdit && (

@@ -90,6 +90,7 @@ export default function SetlistEditorPage() {
             initialName={name}
             initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
+            initialEventDate={existingSetlist?.eventDate}
             driveFiles={activeFiles}
             onBack={() => {
                 clearPending()

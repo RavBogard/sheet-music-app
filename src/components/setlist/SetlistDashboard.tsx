@@ -138,7 +138,8 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
     const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
         if (!setlistService || !user) return
 
-        const name = type === 'shabbat_morning' ? 'Shabbat Morning' : 'New Setlist'
+        const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        const name = type === 'shabbat_morning' ? `Shabbat Morning ${formattedDate}` : 'New Setlist'
         // Future: Pre-fill tracks based on type
         // For now, empty, but we set the date.
 

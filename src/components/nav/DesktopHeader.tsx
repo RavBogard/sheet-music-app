@@ -163,7 +163,7 @@ export function DesktopHeader() {
                             )}
                         >
                             <Sparkles className="h-4 w-4" />
-                            <span className="hidden lg:inline">AI Chat</span>
+                            <span className="hidden lg:inline">AI Assistant</span>
                         </Button>
 
                         {/* Search Bar */}

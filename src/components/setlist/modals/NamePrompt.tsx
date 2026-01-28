@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Lock, Globe } from "lucide-react"
+import { Lock, Globe, Calendar as CalendarIcon } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -9,14 +9,19 @@ import {
     DialogTitle,
     DialogFooter
 } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface NamePromptProps {
     isOpen: boolean
     onClose: () => void
     initialName: string
     initialIsPublic: boolean
+    initialDate?: Date | null
     isLeader: boolean
-    onConfirm: (name: string, isPublic: boolean) => void
+    onConfirm: (name: string, isPublic: boolean, date: Date | null) => void
 }
 
 export function NamePrompt({
@@ -24,15 +29,17 @@ export function NamePrompt({
     onClose,
     initialName,
     initialIsPublic,
+    initialDate,
     isLeader,
     onConfirm
 }: NamePromptProps) {
     const [name, setName] = useState(initialName)
     const [isPublic, setIsPublic] = useState(initialIsPublic)
+    const [date, setDate] = useState<Date | undefined>(initialDate || undefined)
 
     const handleConfirm = () => {
         if (name.trim()) {
-            onConfirm(name, isPublic)
+            onConfirm(name, isPublic, date || null)
         }
     }
 
@@ -48,10 +55,40 @@ export function NamePrompt({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Shabbat Morning, Friday Night..."
-                        className="text-xl h-12"
+                        className="text-xl h-12 bg-zinc-950/50 border-zinc-800"
                         autoFocus
                         onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
                     />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Date Picker */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-medium text-zinc-400">Date (Optional)</label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal bg-zinc-950/50 border-zinc-800",
+                                            !date && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-800" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={setDate}
+                                        initialFocus
+                                        className="text-white"
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    </div>
 
                     {/* Public/Private Toggle */}
                     <div className="flex items-center gap-4 p-4 bg-zinc-800/50 rounded-lg border border-zinc-700/50">

@@ -35,27 +35,6 @@ export default function AdminUsersPage() {
         return () => unsubscribe()
     }, [isAdmin])
 
-    // Render Debug Panel helper
-    const DebugPanel = () => (
-        <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl text-xs font-mono space-y-2 mb-8">
-            <h3 className="text-red-300 font-bold uppercase mb-2">Debug Diagnostics</h3>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <span className="text-zinc-500 block">User Email (Auth)</span>
-                    <span className="text-white">{user?.email}</span>
-                </div>
-                <div>
-                    <span className="text-zinc-500 block">User UID</span>
-                    <span className="text-white bg-black/50 px-2 py-1 rounded select-all">{user?.uid}</span>
-                </div>
-                <div>
-                    <span className="text-zinc-500 block">Firebase Project</span>
-                    <span className="text-white">{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "Unknown"}</span>
-                </div>
-            </div>
-        </div>
-    )
-
     if (authLoading) {
         return (
             <div className="h-screen bg-zinc-950 flex items-center justify-center text-white">
@@ -65,7 +44,7 @@ export default function AdminUsersPage() {
     }
 
     if (!isAdmin) {
-        return null
+        return null // Will redirect
     }
 
     return (
@@ -91,8 +70,6 @@ export default function AdminUsersPage() {
                         </div>
                     </div>
                 </div>
-
-                <DebugPanel />
 
                 {loading && (
                     <div className="flex justify-center p-12">
