@@ -23,6 +23,23 @@ const getCredentials = () => {
             console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY")
         }
     }
+    // 2. Google Vision Specific Env Vars (Prioritize these!)
+    else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        let projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID; // Fallback
+
+        // Try to extract project ID from service account email
+        // Format: service-account@project-id.iam.gserviceaccount.com
+        const match = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL.match(/@(.*)\.iam\.gserviceaccount\.com/);
+        if (match && match[1]) {
+            projectId = match[1];
+        }
+
+        creds = {
+            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY,
+            project_id: projectId
+        }
+    }
     // 3. Individual Firebase Env Vars (Fallback for Vercel)
     else if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
         creds = {
@@ -31,18 +48,14 @@ const getCredentials = () => {
             project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
         }
     }
-    // 4. Individual Google Env Vars (Fallback)
-    else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
-        creds = {
-            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY,
-            project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID // Fallback to firebase project id
-        }
-    }
 
     if (creds && typeof creds.private_key === 'string') {
         // Sanitize private key (handle actual newlines vs escaped newlines)
         creds.private_key = creds.private_key.replace(/\\n/g, '\n')
+    }
+
+    if (creds) {
+        console.log(`[Vision API] Loaded credentials. Project: ${creds.project_id}. Client Email: ${creds.client_email?.substring(0, 5)}...`)
     }
 
     return creds;
