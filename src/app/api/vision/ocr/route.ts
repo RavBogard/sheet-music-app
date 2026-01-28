@@ -23,6 +23,22 @@ const getCredentials = () => {
             console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY")
         }
     }
+    // 3. Individual Firebase Env Vars (Fallback for Vercel)
+    else if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+        creds = {
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY,
+            project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        }
+    }
+    // 4. Individual Google Env Vars (Fallback)
+    else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        creds = {
+            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY,
+            project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID // Fallback to firebase project id
+        }
+    }
 
     if (creds && typeof creds.private_key === 'string') {
         // Sanitize private key (handle actual newlines vs escaped newlines)
