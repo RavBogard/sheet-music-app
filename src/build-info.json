@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.28-0953",
-  "commit": "e7ce0a5",
+  "version": "2026.01.28-1036",
+  "commit": "dfb9754",
   "branch": "master",
-  "buildDate": "1/28/2026, 9:53:01 AM",
+  "buildDate": "1/28/2026, 10:36:33 AM",
   "changelog": [
-    "e7ce0a5 - Fix build: Add missing calendar component (36 minutes ago)",
-    "cab700c - Update calendar view, setlist naming, and AI Assistant UI (38 minutes ago)",
-    "7cb4485 - Feat: Implement RBAC API and update Security Rules (12 hours ago)",
-    "bb3434e - Fix: Wait for user auth before fetching Drive files (12 hours ago)",
-    "276abbf - Fix: Remove duplicate rules nesting caused by bad merge (12 hours ago)"
+    "dfb9754 - Refactor: Implement library pagination, remove prop drilling, and fix build errors (24 minutes ago)",
+    "e7ce0a5 - Fix build: Add missing calendar component (80 minutes ago)",
+    "cab700c - Update calendar view, setlist naming, and AI Assistant UI (82 minutes ago)",
+    "7cb4485 - Feat: Implement RBAC API and update Security Rules (13 hours ago)",
+    "bb3434e - Fix: Wait for user auth before fetching Drive files (13 hours ago)"
   ]
 }
