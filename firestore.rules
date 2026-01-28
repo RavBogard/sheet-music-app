@@ -23,9 +23,9 @@ service cloud.firestore {
 
     // USERS Collection
     match /users/{userId} {
-      // NUCLEAR DEBUG MODE: PUBLIC ACCESS
-      // If this fails, the app is NOT connected to this project rules.
-      allow read, write: if true;
+      // Secure Rule: Own data OR Admin
+      allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
 
       // Legacy subcollections (if needed)
       match /setlists/{docId} {
