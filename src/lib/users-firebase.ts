@@ -11,6 +11,9 @@ export type { UserProfile, UserRole }
  * Creates one with 'pending' role if it doesn't exist.
  */
 export async function ensureUserProfile(user: User): Promise<UserProfile> {
+    if (!db || Object.keys(db).length === 0) {
+        return { uid: user.uid, role: "pending" } as UserProfile
+    }
     const ref = doc(db, "users", user.uid)
     const snap = await getDoc(ref)
 
@@ -51,6 +54,7 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
  * Subscribe to the current user's profile
  */
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
+    if (!db || Object.keys(db).length === 0) return () => { }
     const ref = doc(db, "users", uid)
     return onSnapshot(ref, (snap) => {
         if (snap.exists()) {
@@ -64,7 +68,13 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
 /**
  * Subscribe to ALL users (for Admin page)
  */
+/**
+ * Subscribe to ALL users (for Admin page)
+ */
 export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: any) => void) {
+    // Build safety
+    if (!db || Object.keys(db).length === 0) return () => { }
+
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"))
     return onSnapshot(q, (snap) => {
         const users = snap.docs.map(d => d.data() as UserProfile)

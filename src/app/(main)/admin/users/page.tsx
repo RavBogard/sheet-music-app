@@ -9,6 +9,7 @@ import { UserProfile, subscribeToAllUsers } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 
 export default function AdminUsersPage() {
     const { user, isAdmin, loading: authLoading } = useAuth()
@@ -90,9 +91,11 @@ export default function AdminUsersPage() {
                         ))}
 
                         {users.length === 0 && (
-                            <div className="text-center p-8 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
-                                No users found (or Access Denied).
-                            </div>
+                            <EmptyState
+                                icon={ShieldAlert}
+                                title="No users found"
+                                description="There are no registered users yet, or you don't have permission to view them."
+                            />
                         )}
                     </div>
                 )}

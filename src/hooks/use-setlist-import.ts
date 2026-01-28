@@ -4,6 +4,7 @@ import { DriveFile, useLibraryStore } from '@/lib/library-store'
 import { useSetlistStore } from '@/lib/setlist-store'
 import { levenshtein } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner' // Added import
 
 export function useSetlistImport() {
     const { driveFiles } = useLibraryStore()
@@ -12,7 +13,8 @@ export function useSetlistImport() {
     const router = useRouter()
 
     const importSetlistFromExcel = async (file: DriveFile) => {
-        if (!confirm(`Import Setlist "${file.name}"? This will replace your current list.`)) return
+        // Removed blocking confirm. Assumes UI handled it.
+        // if (!confirm(`Import Setlist "${file.name}"? This will replace your current list.`)) return
 
         setImporting(true)
         try {
@@ -30,12 +32,6 @@ export function useSetlistImport() {
                 if (!rawName) return
 
                 const cleanTarget = String(rawName).toLowerCase().trim()
-
-                // If it looks like a header (e.g. "Torah Service"), simple add as header?
-                // For now, we stick to the existing logic which tries to match files.
-                // Improvement: We can check if it's bolded in the future, but here we only have JSON data.
-                // Let's assume broad categories might not match any file and thus be added as text?
-                // The current logic adds a "missing" file entry.
 
                 let bestMatch: DriveFile | undefined = undefined
                 let bestScore = 0
@@ -96,7 +92,7 @@ export function useSetlistImport() {
 
         } catch (e) {
             console.error(e)
-            alert("Failed to parse setlist")
+            toast.error("Failed to parse setlist")
         } finally {
             setImporting(false)
         }

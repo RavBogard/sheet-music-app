@@ -65,7 +65,7 @@ export default function DashboardPage() {
     }, [fetchFiles])
 
     return (
-        <div className="flex flex-col p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
+        <div id="tour-welcome" className="flex flex-col p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
 
             {/* Sync Drive Button */}
             {/* Sync Drive Button (Restricted) */}
@@ -86,7 +86,7 @@ export default function DashboardPage() {
 
             {/* Upcoming Events Section (Personal or Public) */}
             {upcomingSetlists.length > 0 && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+                <div id="tour-calendar-view" className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <CalendarIcon className="h-5 w-5 text-blue-400" />
                         Upcoming Events
@@ -122,6 +122,7 @@ export default function DashboardPage() {
                 {/* Song Charts (Restricted) */}
                 {user && (
                     <button
+                        id="tour-library-tab"
                         onClick={() => router.push('/library')}
                         className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
                     >
@@ -135,6 +136,7 @@ export default function DashboardPage() {
 
                 {/* Setlists (Public or Private) */}
                 <button
+                    id="tour-setlists-tab"
                     onClick={() => router.push('/setlists')}
                     className="bg-zinc-900 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-center group"
                 >

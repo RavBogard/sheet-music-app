@@ -86,7 +86,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     const handleApplyEdits = useCallback((edits: EditAction[]) => {
         if (!canEdit) {
-            alert("You must be in edit mode (or own this setlist) to apply changes.")
+            toast.error("You must be in edit mode (or own this setlist) to apply changes.")
             return
         }
 
@@ -180,23 +180,19 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 if (setlistId) {
                     await setlistService.updateSetlist(setlistId, isPublic, dataToSave)
                 } else {
-                    // eventDate added to create payload interface in implementation plan check
-                    // If createSetlist doesn't support eventDate 4th arg, we might need to update immediately after
-                    // BUT for now, let's assume we update logic or use updateSetlist pattern if create is strict.
-                    // Actually, let's look at createSetlist signature from user code? We don't have it fully.
-                    // Safer to create then update if we aren't sure, OR just rely on updateSetlist handling it if we can.
-                    const newId = await setlistService.createSetlist(name, tracks, isPublic)
-                    // Immediate update for metadata that might be missed in create
-                    if (eventDate) {
-                        await setlistService.updateSetlist(newId, isPublic, { eventDate: eventDate.toISOString() })
-                    }
-
+                    const newId = await setlistService.createSetlist(name, tracks, isPublic, {
+                        eventDate: eventDate ? eventDate.toISOString() : undefined
+                    })
                     setSetlistId(newId)
                     onSave?.(newId)
                 }
                 setLastSaved(new Date())
             } catch (e) {
                 console.error("Auto-save failed:", e)
+                toast.error("Failed to save changes", {
+                    description: "Please check your internet connection.",
+                    duration: 5000
+                })
             }
             setSaving(false)
         }, 1000)
@@ -244,7 +240,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 onClick: () => {
                     setTracks(current => {
                         const newTracks = [...current]
-                        // Clamp index to valid range in case array size changed drastically
                         const safeIndex = Math.min(trackIndex, newTracks.length)
                         newTracks.splice(safeIndex, 0, trackToDelete)
                         return newTracks
@@ -257,7 +252,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const matchFile = (trackId: string, fileId: string, fileName?: string) => {
         setTracks(prev => prev.map(t =>
             t.id === trackId
-                ? { ...t, fileId, fileName: fileName || t.fileName } // Update cache if provided
+                ? { ...t, fileId, fileName: fileName || t.fileName }
                 : t
         ))
     }
@@ -287,30 +282,33 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     const togglePublic = async () => {
         if (!setlistService || !setlistId) return
-        // Only Leaders can Make Public
         if (!isPublic && !isLeader) {
-            alert("Only Leaders can make setlists public.")
+            toast.error("Only Leaders can make setlists public.")
             return
         }
 
-        const message = isPublic
-            ? "Make this setlist private? Only you will be able to see it."
-            : "Make this setlist public? Anyone with the app can view it."
+        const previousState = isPublic
+        const previousId = setlistId
 
-        if (!confirm(message)) return
-
+        // Optimistic Update
+        setIsPublic(!previousState)
         setSaving(true)
+
         try {
-            const newId = isPublic
+            const newId = previousState
                 ? await setlistService.makePrivate(setlistId, {} as unknown as Setlist)
                 : await setlistService.makePublic(setlistId, {} as unknown as Setlist)
 
             setSetlistId(newId)
-            setIsPublic(!isPublic)
-            alert(`Setlist is now ${!isPublic ? 'public' : 'private'}!`)
+            toast.success(`Setlist is now ${!previousState ? 'public' : 'private'}!`)
         } catch (e) {
+            // Revert on error
             console.error("Toggle visibility failed:", e)
-            alert("Failed to change visibility")
+            setIsPublic(previousState)
+            setSetlistId(previousId)
+            toast.error("Failed to change visibility", {
+                description: "Reverting changes..."
+            })
         }
         setSaving(false)
     }

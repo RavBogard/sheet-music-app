@@ -68,19 +68,21 @@ export function SetlistHeader({
 
             {/* Public/Private toggle (clickable for owner or leader) */}
             {canEdit && setlistId ? (
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onTogglePublic}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-opacity ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+                    className={`gap-2 rounded-full transition-colors ${isPublic ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={!isPublic && !isLeader ? "Only Leaders can make setlists public" : "Click to toggle visibility"}
                     disabled={!isPublic && !isLeader}
                 >
-                    {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     {isPublic ? 'Public' : 'Personal'}
-                </button>
+                </Button>
             ) : (
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
                     }`}>
-                    {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     {isPublic ? 'Public' : 'Personal'}
                 </div>
             )}

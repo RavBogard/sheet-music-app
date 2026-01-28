@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.28-1036",
-  "commit": "dfb9754",
+  "version": "2026.01.28-1531",
+  "commit": "3ee0882",
   "branch": "master",
-  "buildDate": "1/28/2026, 10:36:33 AM",
+  "buildDate": "1/28/2026, 3:31:51 PM",
   "changelog": [
-    "dfb9754 - Refactor: Implement library pagination, remove prop drilling, and fix build errors (24 minutes ago)",
-    "e7ce0a5 - Fix build: Add missing calendar component (80 minutes ago)",
-    "cab700c - Update calendar view, setlist naming, and AI Assistant UI (82 minutes ago)",
-    "7cb4485 - Feat: Implement RBAC API and update Security Rules (13 hours ago)",
-    "bb3434e - Fix: Wait for user auth before fetching Drive files (13 hours ago)"
+    "3ee0882 - Feat: Implement Standardized API Middleware and refactor Drive API (4 hours ago)",
+    "b195c42 - Fix: Make Google env vars optional to fully unblock Vercel build (4 hours ago)",
+    "5ed2040 - Fix: Make env vars optional to unblock Vercel build (validation failed despite dynamic export) (4 hours ago)",
+    "ffcc948 - Fix: Make admin users page dynamic to prevent static generation build error (4 hours ago)",
+    "e441a31 - Docs: Update walkthrough and build artifacts (5 hours ago)"
   ]
 }

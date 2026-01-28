@@ -39,6 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isMember = profile?.role === 'member' || isLeader
 
     useEffect(() => {
+        // Build-time safety: If auth is mock (empty object), return
+        if (!auth || Object.keys(auth).length === 0) {
+            setLoading(false)
+            return
+        }
+
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser)
             if (currentUser) {

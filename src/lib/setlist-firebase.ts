@@ -29,7 +29,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
     return {
         // ===== PERSONAL SETLISTS =====
 
-        async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false) {
+        async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false, additionalData: Partial<Setlist> = {}) {
             try {
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
@@ -38,7 +38,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     trackCount: tracks.length,
                     isPublic,
                     ownerId: userId,
-                    ownerName: userName || "Anonymous"
+                    ownerName: userName || "Anonymous",
+                    ...additionalData // Atomic merge
                 });
                 return docRef.id;
             } catch (e) {
@@ -48,7 +49,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Subscribe to user's personal setlists (FILTERED)
-        subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void) {
+        subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
             // Query: ownerId == userId AND isPublic == false
             // Note: We might want valid indexes for this. For now client-side filtering can work if dataset is small,
             // but server-side filtering is better.
@@ -63,12 +64,18 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 orderBy("date", "desc")
             );
 
-            return onSnapshot(q, (snapshot) => {
-                const setlists = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as Setlist[];
-                callback(setlists);
+            return onSnapshot(q, {
+                next: (snapshot) => {
+                    const setlists = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })) as Setlist[];
+                    callback(setlists);
+                },
+                error: (error) => {
+                    console.error("Error subscribing to personal setlists:", error);
+                    if (onError) onError(error);
+                }
             });
         },
 
@@ -98,19 +105,25 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // ===== PUBLIC SETLISTS =====
 
         // Subscribe to ALL public setlists
-        subscribeToPublicSetlists(callback: (setlists: Setlist[]) => void) {
+        subscribeToPublicSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("isPublic", "==", true),
                 orderBy("date", "desc")
             );
 
-            return onSnapshot(q, (snapshot) => {
-                const setlists = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as Setlist[];
-                callback(setlists);
+            return onSnapshot(q, {
+                next: (snapshot) => {
+                    const setlists = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })) as Setlist[];
+                    callback(setlists);
+                },
+                error: (error) => {
+                    console.error("Error subscribing to public setlists:", error)
+                    if (onError) onError(error)
+                }
             });
         },
 

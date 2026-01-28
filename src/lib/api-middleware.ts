@@ -16,7 +16,8 @@ export function withAuth(handler: ApiHandler, options: MiddlewareOptions = {}): 
             // 1. Rate Limiting
             if (options.rateLimit !== false) {
                 const ip = req.headers.get("x-forwarded-for") || "unknown"
-                if (!globalLimiter.check(ip)) {
+                const allowed = await globalLimiter.check(ip)
+                if (!allowed) {
                     return NextResponse.json(
                         { error: "Too Many Requests", code: "rate_limit_exceeded" },
                         { status: 429 }

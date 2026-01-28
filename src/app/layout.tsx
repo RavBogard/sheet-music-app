@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
+import { CommandPalette } from "@/components/layout/CommandPalette"
+import { OnboardingTour } from "@/components/layout/OnboardingTour"
 
 
 
@@ -37,6 +39,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <div className="bg-noise" />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -45,6 +48,8 @@ export default function RootLayout({
         >
           <ErrorBoundary>
             <ClientProviders>
+              <OnboardingTour />
+              <CommandPalette />
               {children}
             </ClientProviders>
             <Toaster richColors position="top-center" theme="dark" />

@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+
 import { useState, useRef, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { Loader2 } from 'lucide-react'
@@ -153,7 +155,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
         } catch (e: any) {
             console.error(e)
             setTransposerState({ status: 'error' })
-            alert(`Scan Failed: ${e.message}`)
+            toast.error(`Scan Failed: ${e.message}`)
         }
     }
 

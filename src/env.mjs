@@ -16,6 +16,8 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().optional(),
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
         NEXT_PUBLIC_GOOGLE_API_KEY: z.string().optional(),
+        UPSTASH_REDIS_REST_URL: z.string().optional(),
+        UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
     },
     runtimeEnv: {
         FIREBASE_SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
@@ -28,6 +30,8 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
         NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+        UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+        UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

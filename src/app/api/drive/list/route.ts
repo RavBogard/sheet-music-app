@@ -1,19 +1,10 @@
 import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
-import { unstable_cache } from "next/cache"
 import { withAuth } from "@/lib/api-middleware"
 
 export const dynamic = 'force-dynamic'
 
-const getCachedFiles = unstable_cache(
-    async (folderId: string | undefined) => {
-        const drive = new DriveClient()
-        console.log(`[Cache Miss] Fetching files from Drive for: ${folderId || 'Global'}`)
-        return drive.listAllFiles(folderId)
-    },
-    ['drive-files-list'], // Base Key
-    { revalidate: 300, tags: ['drive-files'] } // 5 Minutes
-)
+
 
 // Main Handler wrapped in Middleware
 export const GET = withAuth(async (request: Request) => {
@@ -41,7 +32,7 @@ export const GET = withAuth(async (request: Request) => {
         return NextResponse.json(result, {
             headers: {
                 // Short cache for listings is fine, but pagination tokens expire so be careful.
-                // 'Cache-Control': 'private, max-age=60' 
+                'Cache-Control': 'private, max-age=30, stale-while-revalidate=59'
             }
         })
 

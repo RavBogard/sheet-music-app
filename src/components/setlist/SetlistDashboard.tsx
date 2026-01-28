@@ -2,14 +2,28 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
+import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
 import { ChevronLeft, Plus, FileText, Trash2, Calendar, LogIn, LogOut, User, Globe, Lock, Copy, List } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ExportDataButton } from "@/components/settings/ExportDataButton"
+
+
+import { toast } from "sonner"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SetlistDashboardProps {
     onBack: () => void
@@ -31,6 +45,8 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user])
 
+    const [error, setError] = useState<string | null>(null)
+
     // Subscribe to personal setlists (Only if user exists)
     useEffect(() => {
         if (!user || !setlistService) {
@@ -39,10 +55,18 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         }
 
         setLoading(true)
-        const unsubscribe = setlistService.subscribeToPersonalSetlists((data) => {
-            setPersonalSetlists(data)
-            setLoading(false)
-        })
+        setError(null)
+        const unsubscribe = setlistService.subscribeToPersonalSetlists(
+            (data) => {
+                setPersonalSetlists(data)
+                setLoading(false)
+            },
+            (err) => {
+                console.error("Personal setlist subscription error:", err)
+                setError("Failed to load your personal setlists. Please check your connection.")
+                setLoading(false)
+            }
+        )
         return () => unsubscribe()
     }, [setlistService, user])
 
@@ -50,9 +74,16 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
     useEffect(() => {
         if (!setlistService) return
 
-        const unsubscribe = setlistService.subscribeToPublicSetlists((data) => {
-            setPublicSetlists(data)
-        })
+        const unsubscribe = setlistService.subscribeToPublicSetlists(
+            (data) => {
+                setPublicSetlists(data)
+            },
+            (err) => {
+                // Non-blocking error for public list if main personal list might still work?
+                // Or just show global error? Let's show specific error if active tab is public?
+                console.error("Public setlist subscription error:", err)
+            }
+        )
         return () => unsubscribe()
     }, [setlistService])
 
@@ -61,26 +92,35 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         if (!user) setActiveTab('public')
     }, [user])
 
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+    const [setlistToDelete, setSetlistToDelete] = useState<Setlist | null>(null)
+
+    const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+    const [setlistToDuplicate, setSetlistToDuplicate] = useState<Setlist | null>(null)
+
     const [showTransferDialog, setShowTransferDialog] = useState(false)
     const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
     const [transferEmail, setTransferEmail] = useState("")
 
-    // ... existing hooks ...
-
-    const handleDuplicate = async (setlist: Setlist, e: React.MouseEvent) => {
+    const handleDuplicateClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (!setlistService || !user) return
+        setSetlistToDuplicate(setlist)
+        setDuplicateConfirmOpen(true)
+    }
 
-        if (!confirm(`Create a copy of "${setlist.name}"?`)) return
+    const confirmDuplicate = async () => {
+        if (!setlistService || !user || !setlistToDuplicate) return
 
         try {
-            await setlistService.copyToPersonal(setlist.id, setlist)
-            alert("Setlist duplicated successfully!")
+            await setlistService.copyToPersonal(setlistToDuplicate.id, setlistToDuplicate)
+            toast.success("Setlist duplicated successfully!")
             setActiveTab('personal')
         } catch (err) {
             console.error("Duplicate failed:", err)
-            alert("Failed to duplicate setlist.")
+            toast.error("Failed to duplicate setlist.")
         }
+        setDuplicateConfirmOpen(false)
+        setSetlistToDuplicate(null)
     }
 
     const openTransferDialog = (setlist: Setlist, e: React.MouseEvent) => {
@@ -111,28 +151,39 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 throw new Error(msg)
             }
 
-            alert("Transfer Successful!")
+            toast.success("Transfer Successful!")
             setShowTransferDialog(false)
             setTransferEmail("")
             setSelectedSetlistForTransfer(null)
         } catch (err: any) {
-            alert(`Transfer Failed: ${err.message}`)
+            toast.error(`Transfer Failed: ${err.message}`)
         }
     }
 
-    const handleDelete = async (setlist: Setlist, e: React.MouseEvent) => {
+    const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
         if (!setlistService) return
 
         // Only owner can delete
         if (setlist.isPublic && setlist.ownerId !== user?.uid) {
-            alert("You can only delete setlists you created")
+            toast.error("You can only delete setlists you created")
             return
         }
 
-        if (confirm("Delete this setlist?")) {
-            await setlistService.deleteSetlist(setlist.id, setlist.isPublic || false)
+        setSetlistToDelete(setlist)
+        setDeleteConfirmOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!setlistService || !setlistToDelete) return
+        try {
+            await setlistService.deleteSetlist(setlistToDelete.id, setlistToDelete.isPublic || false)
+            toast.success("Setlist deleted")
+        } catch (error) {
+            toast.error("Failed to delete setlist")
         }
+        setDeleteConfirmOpen(false)
+        setSetlistToDelete(null)
     }
 
     const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
@@ -140,32 +191,20 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
 
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
         const name = type === 'shabbat_morning' ? `Shabbat Morning ${formattedDate}` : 'New Setlist'
-        // Future: Pre-fill tracks based on type
-        // For now, empty, but we set the date.
 
         try {
-            // We need to support passing eventDate to createSetlist in the service. 
-            // Since the service method signature is fixed in the file we didn't fully see or edit (we only edited interface), 
-            // we should assume we might need to update the service OR update the doc after creation.
-            // Let's create then update.
-
-            const id = await setlistService.createSetlist(name, [], false)
-            await setlistService.updateSetlist(id, false, {
-                eventDate: date.toISOString(), // Storing as string for simplicity or update types to handle Timestamp conversion 
+            const id = await setlistService.createSetlist(name, [], false, {
+                eventDate: date.toISOString(),
                 templateType: type
             })
+            // await setlistService.updateSetlist(id, false, { ... }) // Removed in favor of atomic create
 
-            // Fetch the new setlist object to pass to onSelect
-            // Since we don't have it synchronously, we can just trigger onSelect with a Partial or wait for subscription?
-            // Subscription will update the list, but we want to navigate.
-
-            // Hack: Construct a temporary object
             const newSetlist: Setlist = {
                 id,
                 name,
                 tracks: [],
                 trackCount: 0,
-                date: { seconds: Date.now() / 1000, nanoseconds: 0 } as any, // Mock timestamp
+                date: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
                 eventDate: date.toISOString(),
                 ownerId: user.uid,
                 isPublic: false
@@ -174,14 +213,11 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
 
         } catch (e) {
             console.error("Failed to create from calendar", e)
-            alert("Failed to create setlist")
+            toast.error("Failed to create setlist")
         }
     }
 
-
-
     const displayedSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
-
 
     return (
         <div className="h-screen flex flex-col bg-zinc-950 text-white">
@@ -227,6 +263,37 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 )}
             </div>
 
+            {/* Dialogs */}
+            <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Setlist?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete "{setlistToDelete?.name}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Duplicate Setlist</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Create a personal copy of "{setlistToDuplicate?.name}"?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDuplicate}>Duplicate</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Transfer Dialog Overlay */}
             {showTransferDialog && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -254,49 +321,45 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
             {/* Tabs & View Toggle */}
             <div className="px-6 pt-6 shrink-0 flex items-center justify-between">
                 <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
-                    <button
+                    <Button
+                        variant={activeTab === 'public' ? 'secondary' : 'ghost'}
+                        size="sm"
                         onClick={() => setActiveTab('public')}
-                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'public'
-                            ? 'bg-zinc-800 text-white shadow-sm'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
+                        className={`transition-all ${activeTab === 'public' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
                     >
                         Public Library
-                    </button>
+                    </Button>
                     {user && (
-                        <button
+                        <Button
+                            variant={activeTab === 'personal' ? 'secondary' : 'ghost'}
+                            size="sm"
                             onClick={() => setActiveTab('personal')}
-                            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'personal'
-                                ? 'bg-zinc-800 text-white shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-300'
-                                }`}
+                            className={`transition-all ${activeTab === 'personal' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
                         >
                             My Personal
-                        </button>
+                        </Button>
                     )}
                 </div>
 
                 <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
-                    <button
+                    <Button
+                        variant={view === 'list' ? 'secondary' : 'ghost'}
+                        size="icon"
                         onClick={() => setView('list')}
-                        className={`p-2 rounded-lg transition-all ${view === 'list'
-                            ? 'bg-zinc-800 text-white shadow-sm'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
+                        className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
                         title="List View"
                     >
-                        <List className="h-5 w-5" />
-                    </button>
-                    <button
+                        <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant={view === 'calendar' ? 'secondary' : 'ghost'}
+                        size="icon"
                         onClick={() => setView('calendar')}
-                        className={`p-2 rounded-lg transition-all ${view === 'calendar'
-                            ? 'bg-zinc-800 text-white shadow-sm'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
+                        className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
                         title="Calendar View"
                     >
-                        <Calendar className="h-5 w-5" />
-                    </button>
+                        <Calendar className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
 
@@ -310,8 +373,19 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                 </div>
             ) : (
                 <ScrollArea className="flex-1 p-6">
+                    {/* Error State */}
+                    {!loading && error && (
+                        <div className="max-w-md mx-auto mt-20">
+                            <ErrorState
+                                title="Unable to Load Setlists"
+                                description={error}
+                                onRetry={() => window.location.reload()} // Simple retry for now
+                            />
+                        </div>
+                    )}
+
                     {/* Empty State */}
-                    {!loading && displayedSetlists.length === 0 && (
+                    {!loading && !error && displayedSetlists.length === 0 && (
                         <div className="max-w-md mx-auto mt-20">
                             <EmptyState
                                 icon={Plus}
@@ -357,7 +431,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                                 size="icon"
                                                 variant="ghost"
                                                 className="h-8 w-8 hover:bg-zinc-700 text-zinc-400 hover:text-white"
-                                                onClick={(e) => handleDuplicate(setlist, e)}
+                                                onClick={(e) => handleDuplicateClick(setlist, e)}
                                                 title="Duplicate / Copy"
                                             >
                                                 <Copy className="h-4 w-4" />
@@ -383,7 +457,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                                 size="icon"
                                                 variant="ghost"
                                                 className="h-8 w-8 hover:bg-zinc-700 text-zinc-400 hover:text-red-400"
-                                                onClick={(e) => handleDelete(setlist, e)}
+                                                onClick={(e) => handleDeleteClick(setlist, e)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -412,6 +486,11 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                     </div>
                 </ScrollArea>
             )}
+
+            {/* Version Footer */}
+            <div className="absolute bottom-2 right-2 text-[10px] text-zinc-800 pointer-events-none select-none z-50">
+                v{buildInfo.version}
+            </div>
         </div>
     )
 }

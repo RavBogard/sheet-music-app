@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+
 import { useEffect, useRef, useState } from "react"
 import { Mic, MicOff, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -89,7 +91,7 @@ export function Tuner() {
 
         } catch (e) {
             console.error("Microphone access denied or error", e)
-            alert("Could not access microphone for tuner")
+            toast.error("Could not access microphone for tuner")
         }
     }
 

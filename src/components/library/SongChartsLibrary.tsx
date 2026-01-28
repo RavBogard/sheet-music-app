@@ -7,8 +7,15 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 
 interface SongChartsLibraryProps {
     onBack: () => void
@@ -22,6 +29,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         fetchFiles,
         nextPageToken,
         initialized,
+        error,
         reset
     } = useLibraryStore()
 
@@ -180,6 +188,14 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             <ScrollArea className="flex-1 p-4">
                 {!initialized && loading ? (
                     <LibrarySkeleton />
+                ) : !initialized && error ? ( // Access error from store directly or via hook
+                    <div className="max-w-md mx-auto mt-20">
+                        <ErrorState
+                            title="Library Error"
+                            description={error || "Failed to load files"}
+                            onRetry={() => fetchFiles({ force: true, folderId: currentFolderId, query: searchQuery })}
+                        />
+                    </div>
                 ) : (
                     <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2 pb-10">
                         {combinedItems.length === 0 && !loading && (
@@ -194,27 +210,40 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         {combinedItems.map(item => {
                             const isFolder = item.mimeType.includes('folder')
                             return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleItemClick(item)}
-                                    className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
-                                        ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
-                                        : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    {isFolder ? (
-                                        <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
-                                    ) : (
-                                        <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
-                                    )}
+                                <ContextMenu key={item.id}>
+                                    <ContextMenuTrigger asChild>
+                                        <button
+                                            onClick={() => handleItemClick(item)}
+                                            className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 group ${isFolder
+                                                ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
+                                                : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
+                                                }`}
+                                        >
+                                            {isFolder ? (
+                                                <Folder className="h-8 w-8 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                            ) : (
+                                                <FileMusic className="h-8 w-8 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                            )}
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-lg truncate">
-                                            {isFolder ? item.name : getCleanName(item.name)}
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
-                                </button>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium text-lg truncate">
+                                                    {isFolder ? item.name : getCleanName(item.name)}
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
+                                        </button>
+                                    </ContextMenuTrigger>
+                                    <ContextMenuContent>
+                                        <ContextMenuItem onClick={() => handleItemClick(item)}>
+                                            {isFolder ? "Open Folder" : "Select / View"}
+                                        </ContextMenuItem>
+                                        {!isFolder && (
+                                            <ContextMenuItem disabled>
+                                                Add to Setlist (Coming Soon)
+                                            </ContextMenuItem>
+                                        )}
+                                    </ContextMenuContent>
+                                </ContextMenu>
                             )
                         })}
 
