@@ -62,6 +62,13 @@ export function DesktopHeader() {
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    // Initial Sync (Only when user is ready)
+    useEffect(() => {
+        if (user) {
+            fetchFiles()
+        }
+    }, [user])
+
     const handleSelectSong = (file: any) => {
         const type = file.name.endsWith('.xml') || file.name.endsWith('.musicxml') ? 'musicxml' : 'pdf'
         setQueue([{
