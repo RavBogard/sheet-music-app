@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.28-1531",
-  "commit": "3ee0882",
+  "version": "2026.01.28-1538",
+  "commit": "b5370be",
   "branch": "master",
-  "buildDate": "1/28/2026, 3:31:51 PM",
+  "buildDate": "1/28/2026, 3:38:53 PM",
   "changelog": [
+    "b5370be - feat: complete phase 4 - context menus, optimistic ui, dnd (5 minutes ago)",
     "3ee0882 - Feat: Implement Standardized API Middleware and refactor Drive API (4 hours ago)",
     "b195c42 - Fix: Make Google env vars optional to fully unblock Vercel build (4 hours ago)",
     "5ed2040 - Fix: Make env vars optional to unblock Vercel build (validation failed despite dynamic export) (4 hours ago)",
-    "ffcc948 - Fix: Make admin users page dynamic to prevent static generation build error (4 hours ago)",
-    "e441a31 - Docs: Update walkthrough and build artifacts (5 hours ago)"
+    "ffcc948 - Fix: Make admin users page dynamic to prevent static generation build error (5 hours ago)"
   ]
 }

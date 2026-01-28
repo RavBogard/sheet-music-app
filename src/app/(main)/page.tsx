@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
-import { useLastOpened } from "@/hooks/use-last-opened"
+
 import { Button } from "@/components/ui/button"
 import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar as CalendarIcon } from "lucide-react"
 
@@ -15,7 +15,7 @@ export default function DashboardPage() {
     const { user, signIn } = useAuth()
     const { driveFiles, loading, fetchFiles } = useLibraryStore()
     const { fileUrl } = useMusicStore()
-    const { restoreSession } = useLastOpened()
+
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
 
@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchFiles()
-        restoreSession()
+
     }, [fetchFiles])
 
     return (
@@ -162,12 +162,7 @@ export default function DashboardPage() {
                 )}
             </div>
 
-            {/* Quick Resume */}
-            {fileUrl && (
-                <Button size="lg" className="h-20 text-xl" onClick={() => router.push('/perform/resume')}>
-                    Resume Performance <PlayCircle className="ml-2 h-6 w-6" />
-                </Button>
-            )}
+
         </div>
     )
 }
