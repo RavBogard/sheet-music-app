@@ -24,52 +24,45 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get("Authorization")
     const token = authHeader?.split("Bearer ")[1]
 
-    // In strict mode, we require the token. 
-    // For now, if no env vars are set, this might block everyone, so let's be careful.
-    // Ideally:
     if (!token) {
-        return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const decodedToken = await verifyIdToken(token)
     if (!decodedToken) {
-        return new NextResponse(JSON.stringify({ error: "Invalid Token" }), { status: 403 })
+        return NextResponse.json({ error: "Invalid Token" }, { status: 403 })
     }
-
-    // Rate Limit (User ID based now possible!)
-    // const ip = request.headers.get("x-forwarded-for") || "unknown"
-    // if (!globalLimiter.check(decodedToken.uid)) ...
-
 
     try {
         const { searchParams } = new URL(request.url)
         const folderId = searchParams.get('folderId') || undefined
+        const pageToken = searchParams.get('pageToken') || undefined
+        const limit = parseInt(searchParams.get('limit') || '50')
+        const q = searchParams.get('q') || undefined
 
-        // 1. Debug Access Check: Is the folder even visible?
-        try {
-            // Just try to get metadata of the folder
-            // We can't use getFile('media') on a folder, so we use list or get metadata
-            // Let's just try listing it. checking if we fail immediately.
-        } catch (e) {
-            console.error("Setup Check Failed", e)
-        }
+        const drive = new DriveClient()
 
-        // 2. Recursive Search (Cached)
-        console.log(`Requesting files for folder: ${folderId}`)
-        const files = await getCachedFiles(folderId)
-        console.log(`Returned ${files.length} files`)
+        // If no folderId and no query, we are at "Root".
+        // But if the user has a massive root, we still need pagination.
+        // We do typically want to support "Everything" if the UI expects it, but we can't efficiently.
+        // The UI must adapt to pagination.
 
-        console.log(`Returned ${files.length} files`)
+        const result = await drive.listFiles({
+            folderId,
+            pageToken,
+            pageSize: limit,
+            query: q
+        })
 
-        return NextResponse.json(files, {
+        return NextResponse.json(result, {
             headers: {
-                'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
-                'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
-                'Vary': 'Authorization'
+                // Short cache for listings is fine, but pagination tokens expire so be careful.
+                // 'Cache-Control': 'private, max-age=60' 
             }
         })
+
     } catch (error) {
         console.error("Drive API Error:", error)
-        return new NextResponse(JSON.stringify({ error: "Internal Server Error", details: String(error) }), { status: 500 })
+        return NextResponse.json({ error: "Internal Server Error", details: String(error) }, { status: 500 })
     }
 }

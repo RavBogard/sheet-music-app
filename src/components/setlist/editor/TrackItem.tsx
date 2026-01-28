@@ -1,10 +1,12 @@
+"use client"
+
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Trash2, Play, Search, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AudioFilePicker } from "../AudioFilePicker"
-import { SetlistTrack, DriveFile } from "@/types/api"
+import { SetlistTrack } from "@/types/models"
 
 interface TrackItemProps {
     track: SetlistTrack
@@ -12,7 +14,6 @@ interface TrackItemProps {
     onDelete: (id: string) => void
     onMatchFile: (trackId: string) => void
     onPlay?: (fileId: string, fileName: string) => void
-    driveFiles: DriveFile[]
     readOnly?: boolean
 }
 
@@ -22,7 +23,6 @@ export function TrackItem({
     onDelete,
     onMatchFile,
     onPlay,
-    driveFiles,
     readOnly
 }: TrackItemProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: track.id })
@@ -33,11 +33,12 @@ export function TrackItem({
         opacity: isDragging ? 0.5 : 1
     }
 
-    const matchedFile = driveFiles.find(f => f.id === track.fileId)
+    const hasFile = !!track.fileId
+    const fileName = track.fileName || (hasFile ? "Linked File" : "")
 
     const handleTitleClick = () => {
-        if (matchedFile && onPlay) {
-            onPlay(matchedFile.id, matchedFile.name)
+        if (hasFile && track.fileId && onPlay) {
+            onPlay(track.fileId, fileName)
         }
     }
 
@@ -99,7 +100,7 @@ export function TrackItem({
 
             <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2">
-                    {matchedFile && onPlay && (
+                    {hasFile && onPlay && (
                         <Button
                             size="icon"
                             variant="ghost"
@@ -111,8 +112,8 @@ export function TrackItem({
                     )}
                     {readOnly ? (
                         <span
-                            className={`text-lg font-medium ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
-                            onClick={matchedFile ? handleTitleClick : undefined}
+                            className={`text-lg font-medium ${hasFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
+                            onClick={hasFile ? handleTitleClick : undefined}
                         >
                             {track.title}
                         </span>
@@ -120,9 +121,9 @@ export function TrackItem({
                         <Input
                             value={track.title}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                            className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${matchedFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
+                            className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${hasFile ? 'cursor-pointer hover:text-blue-400' : ''}`}
                             placeholder="Song title"
-                            onClick={matchedFile ? handleTitleClick : undefined}
+                            onClick={hasFile ? handleTitleClick : undefined}
                         />
                     )}
                 </div>
@@ -151,10 +152,11 @@ export function TrackItem({
             </div>
 
             <div className="flex items-center gap-2">
-                {matchedFile ? (
+                {hasFile ? (
                     <div
                         className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded cursor-pointer hover:bg-green-400/20"
                         onClick={readOnly ? handleTitleClick : () => onMatchFile(track.id)}
+                        title={fileName}
                     >
                         ✓ Linked
                     </div>
@@ -189,7 +191,7 @@ export function TrackItem({
                     <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100"
+                        className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100"
                         onClick={() => onDelete(track.id)}
                     >
                         <Trash2 className="h-4 w-4" />

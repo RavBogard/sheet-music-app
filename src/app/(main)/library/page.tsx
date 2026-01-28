@@ -66,8 +66,6 @@ export default function LibraryPage() {
 
     return (
         <SongChartsLibrary
-            driveFiles={driveFiles}
-            loading={loading}
             onBack={() => router.back()}
             onSelectFile={handleSelectFile}
         />

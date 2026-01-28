@@ -1,18 +1,10 @@
 import { db, auth } from "./firebase"
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
+import { UserProfile, UserRole } from "@/types/models"
 
-export type UserRole = 'pending' | 'member' | 'leader' | 'admin'
+export type { UserProfile, UserRole }
 
-export interface UserProfile {
-    uid: string
-    email: string
-    displayName: string
-    photoURL?: string
-    role: UserRole
-    createdAt: Timestamp
-    lastLoginAt?: Timestamp
-}
 
 /**
  * Ensures a user profile exists in Firestore.

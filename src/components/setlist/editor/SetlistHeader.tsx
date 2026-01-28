@@ -112,9 +112,20 @@ export function SetlistHeader({
             )}
 
             {canEdit && (
-                <div className="text-sm text-zinc-500">
-                    {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
-                </div>
+                <>
+                    {/* Desktop: Full Text */}
+                    <div className="hidden md:block text-sm text-zinc-500 whitespace-nowrap">
+                        {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ""}
+                    </div>
+                    {/* Mobile: Simple Dot Indicator */}
+                    <div className="md:hidden">
+                        {saving ? (
+                            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" title="Saving..." />
+                        ) : lastSaved ? (
+                            <div className="h-2 w-2 rounded-full bg-green-500/50" title="Saved" />
+                        ) : null}
+                    </div>
+                </>
             )}
         </div>
     )

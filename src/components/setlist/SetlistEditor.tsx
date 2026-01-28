@@ -37,7 +37,6 @@ interface SetlistEditorProps {
     initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
-    driveFiles: DriveFile[]
     onBack: () => void
     onSave?: (id: string) => void
     onPlayTrack?: (fileId: string, fileName: string) => void
@@ -51,7 +50,6 @@ export function SetlistEditor({
     initialIsPublic = false,
     initialOwnerId,
     initialEventDate,
-    driveFiles,
     onBack,
     onSave,
     onPlayTrack
@@ -87,7 +85,6 @@ export function SetlistEditor({
         initialIsPublic,
         initialOwnerId,
         initialEventDate,
-        driveFiles,
         onSave
     })
 
@@ -164,7 +161,6 @@ export function SetlistEditor({
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
                                     onPlay={onPlayTrack}
-                                    driveFiles={driveFiles}
                                     readOnly={!canEdit}
                                 />
                             ))}
@@ -187,14 +183,12 @@ export function SetlistEditor({
             <MatchFileModal
                 isOpen={!!matchingTrackId && canEdit}
                 onClose={() => setMatchingTrackId(null)}
-                driveFiles={driveFiles}
                 onMatch={(fileId) => matchingTrackId && matchFile(matchingTrackId, fileId)}
             />
 
             <AddSongsModal
                 isOpen={showAddSongs && canEdit}
                 onClose={() => setShowAddSongs(false)}
-                driveFiles={driveFiles}
                 onAdd={(files) => {
                     addSongsFromLibrary(files)
                     setShowAddSongs(false)
@@ -206,7 +200,6 @@ export function SetlistEditor({
                 <PrintModal
                     setlistName={name}
                     tracks={tracks}
-                    driveFiles={driveFiles}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

@@ -15,13 +15,18 @@ interface LibraryState {
     error: string | null
     initialized: boolean
 
-    // Actions
-    fetchFiles: (force?: boolean) => Promise<void>
-    setFiles: (files: DriveFile[]) => void
+    nextPageToken: string | null
+    currentFolderId: string | null
+    searchQuery: string
 
-    // Selectors / Helpers
-    getFolders: () => DriveFile[]
-    getFilesByParent: (parentId?: string) => DriveFile[]
+    // Actions
+    fetchFiles: (options?: { force?: boolean, loadMore?: boolean, folderId?: string | null, query?: string }) => Promise<void>
+    setFiles: (files: DriveFile[]) => void
+    reset: () => void
+
+    // Selectors
+    // We remove getFolders/getFilesByParent because we now fetch *precisely* what is viewable
+    // But we might want to keep some helpers if the UI expects separated lists
 }
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
@@ -29,26 +34,34 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     loading: false,
     error: null,
     initialized: false,
+    nextPageToken: null,
+    currentFolderId: null,
+    searchQuery: "",
 
     setFiles: (files) => set({ driveFiles: files }),
 
-    getFolders: () => get().driveFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
+    reset: () => set({ driveFiles: [], nextPageToken: null, currentFolderId: null, searchQuery: "", initialized: false }),
 
-    getFilesByParent: (parentId) => {
-        const all = get().driveFiles
-        if (!parentId) {
-            // Root files (no parents or parent is not in our list... 
-            // but Drive "root" is better handled by checking if parents contains the root ID if known,
-            // or just files where parent is not found in our file list)
-            return all.filter(f => !f.parents || f.parents.length === 0)
+    fetchFiles: async (options = {}) => {
+        const { force = false, loadMore = false, folderId = null, query = "" } = options
+
+        // State updates based on intent
+        if (!loadMore) {
+            // New Search or Navigation: Reset list
+            set({
+                driveFiles: [],
+                nextPageToken: null,
+                currentFolderId: folderId || null,
+                searchQuery: query,
+                loading: true,
+                error: null
+            })
+        } else {
+            // Load More: Don't verify initialized, just check if we have more to load
+            if (!get().nextPageToken) return // No more pages
+            set({ loading: true })
         }
-        return all.filter(f => f.parents?.includes(parentId))
-    },
 
-    fetchFiles: async (force = false) => {
-        if (!force && get().initialized && get().driveFiles.length > 0) return
-
-        set({ loading: true, error: null })
         try {
             const user = auth.currentUser
             const headers: HeadersInit = {}
@@ -57,11 +70,23 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            const res = await fetch(`/api/drive/list`, { headers })
+            const params = new URLSearchParams()
+            if (folderId) params.set('folderId', folderId)
+            if (query) params.set('q', query)
+            if (loadMore && get().nextPageToken) params.set('pageToken', get().nextPageToken!)
+            params.set('limit', '50')
+
+            const res = await fetch(`/api/drive/list?${params.toString()}`, { headers })
             if (!res.ok) throw new Error("Failed to sync library")
 
-            const data = await res.json()
-            set({ driveFiles: data, initialized: true })
+            const data = await res.json() // { files: [], nextPageToken: "" }
+
+            set(state => ({
+                driveFiles: loadMore ? [...state.driveFiles, ...data.files] : data.files,
+                nextPageToken: data.nextPageToken,
+                initialized: true
+            }))
+
         } catch (err: any) {
             console.error(err)
             set({ error: err.message || "Failed to fetch files" })

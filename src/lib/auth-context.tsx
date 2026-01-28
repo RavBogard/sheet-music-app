@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
-import { UserProfile, ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
+import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
+import { UserProfile } from "@/types/models"
 
 interface AuthContextType {
     user: User | null

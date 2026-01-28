@@ -4,16 +4,15 @@ import { useState } from "react"
 import { X, Printer, Download, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SetlistTrack } from "@/lib/setlist-firebase"
+import { SetlistTrack } from "@/types/models"
 
 interface PrintModalProps {
     setlistName: string
     tracks: SetlistTrack[]
-    driveFiles: { id: string; name: string; mimeType: string }[]
     onClose: () => void
 }
 
-export function PrintModal({ setlistName, tracks, driveFiles, onClose }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(new Date().toLocaleDateString('en-US', {
         weekday: 'long',
@@ -26,11 +25,14 @@ export function PrintModal({ setlistName, tracks, driveFiles, onClose }: PrintMo
     const [generating, setGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Get linked PDF files for tracks
+    // Get linked PDF files for tracks based on cached fileName
+    // We assume if a file is linked, it's printable if it looks like a PDF or MusicXML, 
+    // but the print endpoint might mainly support PDFs. 
+    // The previous logic checked mimeType 'pdf' OR name ending in '.pdf'.
     const linkedPdfTracks = tracks.filter(t => {
         if (!t.fileId) return false
-        const file = driveFiles.find(f => f.id === t.fileId)
-        return file && (file.mimeType.includes('pdf') || file.name.endsWith('.pdf'))
+        const name = t.fileName?.toLowerCase() || ""
+        return name.endsWith('.pdf')
     })
 
     const handleGenerate = async (mode: 'download' | 'print') => {

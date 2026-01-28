@@ -4,11 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
-import { validateEnv } from "@/lib/env"
 import { Toaster } from "sonner"
-
-// Validate Env on load
-validateEnv()
 
 
 

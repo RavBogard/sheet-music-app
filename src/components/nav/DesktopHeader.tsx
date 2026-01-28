@@ -218,7 +218,7 @@ export function DesktopHeader() {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => fetchFiles(true)}
+                                            onClick={() => fetchFiles({ force: true })}
                                             disabled={loading}
                                             className="h-8 text-[11px] border-zinc-800"
                                         >

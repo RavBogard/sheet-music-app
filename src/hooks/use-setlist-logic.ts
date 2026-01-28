@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useOfflineSync } from "@/hooks/use-offline-sync"
 import { useChatStore } from "@/lib/chat-store"
 import { arrayMove } from "@dnd-kit/sortable"
-import { SetlistTrack, DriveFile, Setlist } from "@/types/api"
+import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
 import { toast } from "sonner"
 
 interface EditAction {
@@ -24,7 +24,7 @@ interface UseSetlistLogicProps {
     initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
-    driveFiles: DriveFile[]
+
     onSave?: (id: string) => void
 }
 
@@ -36,7 +36,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         suggestedName = "",
         initialIsPublic = false,
         initialOwnerId,
-        driveFiles,
+
         onSave
     } = props
     const { user, isLeader } = useAuth()
@@ -147,10 +147,9 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     useEffect(() => {
         setContextData({
-            currentSetlist: tracks,
-            libraryFiles: driveFiles
+            currentSetlist: tracks
         })
-    }, [tracks, driveFiles, setContextData])
+    }, [tracks, setContextData])
 
     useEffect(() => {
         registerOnApplyEdits(handleApplyEdits)
@@ -255,8 +254,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
-    const matchFile = (trackId: string, fileId: string) => {
-        updateTrack(trackId, { fileId })
+    const matchFile = (trackId: string, fileId: string, fileName?: string) => {
+        setTracks(prev => prev.map(t =>
+            t.id === trackId
+                ? { ...t, fileId, fileName: fileName || t.fileName } // Update cache if provided
+                : t
+        ))
     }
 
     const addSongsFromLibrary = (files: DriveFile[]) => {
@@ -272,8 +275,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 id: `track-${Date.now()}-${file.id}-${index}`,
                 title: cleanName,
                 fileId: file.id,
+                fileName: file.name,
                 key: "",
-                notes: ""
+                notes: "",
+                type: 'song'
             }
         })
 

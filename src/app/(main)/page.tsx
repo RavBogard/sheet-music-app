@@ -71,7 +71,7 @@ export default function DashboardPage() {
             {/* Sync Drive Button (Restricted) */}
             {user && (
                 <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={() => fetchFiles(true)} className="text-zinc-400 border-zinc-800 hover:text-white">
+                    <Button variant="outline" size="sm" onClick={() => fetchFiles({ force: true })} className="text-zinc-400 border-zinc-800 hover:text-white">
                         {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Sync Drive
                     </Button>
                 </div>

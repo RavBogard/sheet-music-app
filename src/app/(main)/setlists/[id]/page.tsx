@@ -91,7 +91,6 @@ export default function SetlistEditorPage() {
             initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
             initialEventDate={existingSetlist?.eventDate}
-            driveFiles={activeFiles}
             onBack={() => {
                 clearPending()
                 router.back()
@@ -103,18 +102,19 @@ export default function SetlistEditorPage() {
             onPlayTrack={(fileId, fileName) => {
                 // Play Logic
                 const trackList = tracks
-                const trackIndex = trackList.findIndex((t: any) => t.fileId === fileId)
-                if (trackIndex === -1) return
 
                 const queue = trackList
                     .filter((t: any) => t.fileId)
                     .map((t: any) => {
-                        const driveFile = activeFiles.find(df => df.id === t.fileId)
-                        // Fallback type if driveFile missing (unlikely if metadata fetched) or unknown
-                        const isXml = driveFile?.name.endsWith('.xml') ||
-                            driveFile?.name.endsWith('.musicxml') ||
-                            driveFile?.mimeType?.includes('xml')
+                        // Use provided fileName or fallback to activeFiles lookup for legacy tracks
+                        let name = t.fileName || fileName
+                        if (!name && t.fileId) {
+                            const driveFile = activeFiles.find(df => df.id === t.fileId)
+                            name = driveFile?.name
+                        }
 
+                        // Determine type from name
+                        const isXml = name?.endsWith('.xml') || name?.endsWith('.musicxml')
                         const type: FileType = isXml ? 'musicxml' : 'pdf'
 
                         return {

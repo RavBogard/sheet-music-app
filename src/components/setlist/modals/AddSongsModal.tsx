@@ -1,10 +1,12 @@
+"use client"
+
 import { MIME_TYPES } from "@/lib/constants"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Check, ChevronLeft, Music, Plus } from "lucide-react"
+import { Check, ChevronLeft, Music, Plus, Folder, Search, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DriveFile } from "@/types/api"
+import { DriveFile } from "@/types/models"
 import {
     Dialog,
     DialogContent,
@@ -12,82 +14,130 @@ import {
     DialogTitle,
     DialogFooter
 } from "@/components/ui/dialog"
+import { useLibraryStore } from "@/lib/library-store"
 
 interface AddSongsModalProps {
     isOpen: boolean
     onClose: () => void
-    driveFiles: DriveFile[]
     onAdd: (files: DriveFile[]) => void
 }
 
 export function AddSongsModal({
     isOpen,
     onClose,
-    driveFiles,
     onAdd
 }: AddSongsModalProps) {
-    const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
+    const {
+        driveFiles,
+        loading,
+        fetchFiles,
+        nextPageToken,
+        reset
+    } = useLibraryStore()
+
+    const [selectedFiles, setSelectedFiles] = useState<Map<string, DriveFile>>(new Map())
     const [searchQuery, setSearchQuery] = useState("")
-    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
 
-    // Logic for Breadcrumbs & Filtering (Internalized)
-    const breadcrumbs = useMemo(() => {
-        const path = []
-        let currentId = currentFolderId
-        while (currentId) {
-            const folder = driveFiles.find(f => f.id === currentId)
-            if (folder) {
-                path.unshift(folder)
-                currentId = folder.parents?.[0] || null
-            } else {
-                break
-            }
+    // Breadcrumbs State
+    const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string }[]>([
+        { id: null, name: 'Library' }
+    ])
+    const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
+
+    // Fetch on mount/change
+    useEffect(() => {
+        if (isOpen) {
+            fetchFiles({
+                folderId: currentFolderId,
+                query: searchQuery,
+                force: true
+            })
         }
-        return path
-    }, [currentFolderId, driveFiles])
+    }, [isOpen, currentFolderId, searchQuery, fetchFiles])
 
-    const filteredFiles = driveFiles.filter(f => {
-        const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase())
-        const isNotDoc = !f.mimeType.includes(MIME_TYPES.SPREADSHEET) && !f.mimeType.includes(MIME_TYPES.DOCUMENT)
+    // Cleanup when modal closes (reset library store so main view isn't affected? 
+    // Actually, we probably want to leave it alone or reset it. 
+    // Resetting is safer to ensure consistent state next open.
+    // BUT if we reset on unmount, verify we don't break main library if it's mounted behind.
+    // Given the modal is used in Editor (separate page usually), it's fine.
 
-        if (searchQuery) return matchesSearch && isNotDoc
-
-        if (!currentFolderId) {
-            return isNotDoc && (!f.parents || f.parents.length === 0 || !driveFiles.some(df => f.parents?.includes(df.id)))
-        }
-        return isNotDoc && f.parents?.includes(currentFolderId)
-    })
-
-    const toggleFileSelection = (fileId: string) => {
-        const newSelection = new Set(selectedFiles)
-        if (newSelection.has(fileId)) {
-            newSelection.delete(fileId)
-        } else {
-            newSelection.add(fileId)
-        }
-        setSelectedFiles(newSelection)
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
     }
 
-    const addFolderSongs = (folderId: string) => {
-        const folderFiles = driveFiles.filter(f =>
-            f.parents?.includes(folderId) &&
-            f.mimeType !== MIME_TYPES.FOLDER &&
-            !f.mimeType.includes(MIME_TYPES.SPREADSHEET) &&
-            !f.mimeType.includes(MIME_TYPES.DOCUMENT)
-        )
-        const newSelection = new Set(selectedFiles)
-        folderFiles.forEach(f => newSelection.add(f.id))
-        setSelectedFiles(newSelection)
+    const { folders, files } = useMemo(() => {
+        const folders: DriveFile[] = []
+        const files: DriveFile[] = []
+
+        driveFiles.forEach(f => {
+            if (f.mimeType.includes('folder')) {
+                folders.push(f)
+            } else if (
+                !f.mimeType.includes(MIME_TYPES.SPREADSHEET) &&
+                !f.mimeType.includes(MIME_TYPES.DOCUMENT)
+            ) {
+                files.push(f)
+            }
+        })
+        return { folders, files }
+    }, [driveFiles])
+
+    const combinedItems = [...folders, ...files]
+
+    const toggleFileSelection = (file: DriveFile) => {
+        const newMap = new Map(selectedFiles)
+        if (newMap.has(file.id)) {
+            newMap.delete(file.id)
+        } else {
+            newMap.set(file.id, file)
+        }
+        setSelectedFiles(newMap)
+    }
+
+    const addVisibleSongs = () => {
+        const newMap = new Map(selectedFiles)
+        files.forEach(f => newMap.set(f.id, f))
+        setSelectedFiles(newMap)
     }
 
     const handleConfirm = () => {
-        const filesToAdd = driveFiles.filter(f => selectedFiles.has(f.id))
-        onAdd(filesToAdd)
-        // Reset state
-        setSelectedFiles(new Set())
+        onAdd(Array.from(selectedFiles.values()))
+        setSelectedFiles(new Map())
         setSearchQuery("")
-        onClose() // Calling onClose to signal close, but parent re-renders and closes it
+        onClose()
     }
+
+    const navigateFolder = (folder: DriveFile | null) => {
+        if (folder) {
+            setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }])
+        } else {
+            setBreadcrumbs([{ id: null, name: 'Library' }])
+        }
+        setSearchQuery("")
+    }
+
+    const handleBreadcrumbClick = (index: number) => {
+        setBreadcrumbs(prev => prev.slice(0, index + 1))
+        setSearchQuery("")
+    }
+
+    // Infinite Scroll Observer
+    const observerTarget = useRef<HTMLDivElement>(null)
+    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+        const [target] = entries
+        if (target.isIntersecting && nextPageToken && !loading) {
+            fetchFiles({ loadMore: true })
+        }
+    }, [nextPageToken, loading, fetchFiles])
+
+    useEffect(() => {
+        const element = observerTarget.current
+        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
+        if (element) observer.observe(element)
+        return () => {
+            if (element) observer.unobserve(element)
+        }
+    }, [handleObserver, driveFiles]) // Re-attach when list changes
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -100,21 +150,14 @@ export function AddSongsModal({
                     {/* Breadcrumbs for Navigation */}
                     {!searchQuery && (
                         <div className="flex items-center gap-1 text-sm text-zinc-500 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
-                            <button
-                                onClick={() => setCurrentFolderId(null)}
-                                className={cn("hover:text-blue-400 flex items-center gap-1", !currentFolderId && "text-blue-400 font-bold")}
-                                style={{ minWidth: 'fit-content' }}
-                            >
-                                Library
-                            </button>
-                            {breadcrumbs.map(bc => (
-                                <div key={bc.id} className="flex items-center gap-1 shrink-0">
-                                    <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />
+                            {breadcrumbs.map((crumb, i) => (
+                                <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
+                                    {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
                                     <button
-                                        onClick={() => setCurrentFolderId(bc.id)}
-                                        className={cn("hover:text-blue-400 truncate max-w-[120px]", currentFolderId === bc.id && "text-blue-400 font-bold")}
+                                        onClick={() => handleBreadcrumbClick(i)}
+                                        className={cn("hover:text-blue-400 truncate max-w-[120px]", i === breadcrumbs.length - 1 && "text-blue-400 font-bold")}
                                     >
-                                        {bc.name}
+                                        {crumb.name}
                                     </button>
                                 </div>
                             ))}
@@ -123,10 +166,10 @@ export function AddSongsModal({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => addFolderSongs(currentFolderId)}
+                                    onClick={addVisibleSongs}
                                     className="ml-auto h-7 text-[10px] uppercase tracking-tighter bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white"
                                 >
-                                    Add Folder
+                                    Add Visible
                                 </Button>
                             )}
                         </div>
@@ -134,7 +177,7 @@ export function AddSongsModal({
 
                     <Input
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={handleSearchChange}
                         placeholder="Search library..."
                         className="mb-4 shrink-0 bg-zinc-800 border-zinc-700"
                         autoFocus
@@ -142,8 +185,8 @@ export function AddSongsModal({
 
                     <div className="flex-1 overflow-y-auto -mx-2 px-2">
                         <div className="grid grid-cols-1 gap-2 pb-2">
-                            {filteredFiles.slice(0, 100).map(file => {
-                                const isFolder = file.mimeType === 'application/vnd.google-apps.folder'
+                            {combinedItems.map(file => {
+                                const isFolder = file.mimeType.includes('folder')
                                 const isSelected = selectedFiles.has(file.id)
 
                                 return (
@@ -151,9 +194,9 @@ export function AddSongsModal({
                                         key={file.id}
                                         onClick={() => {
                                             if (isFolder) {
-                                                setCurrentFolderId(file.id)
+                                                navigateFolder(file)
                                             } else {
-                                                toggleFileSelection(file.id)
+                                                toggleFileSelection(file)
                                             }
                                         }}
                                         className={cn(
@@ -163,7 +206,7 @@ export function AddSongsModal({
                                     >
                                         {isFolder ? (
                                             <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-zinc-400">
-                                                <ChevronLeft className="h-5 w-5 rotate-180" />
+                                                <Folder className="h-5 w-5 text-yellow-500" />
                                             </div>
                                         ) : (
                                             <div className={cn(
@@ -182,23 +225,18 @@ export function AddSongsModal({
                                                 {isFolder ? "Folder" : file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                             </div>
                                         </div>
-                                        {isFolder && (
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-10 w-10 hover:bg-blue-500 hover:text-white"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    addFolderSongs(file.id)
-                                                }}
-                                                title="Add all songs in folder"
-                                            >
-                                                <Plus className="h-5 w-5" />
-                                            </Button>
-                                        )}
                                     </button>
                                 )
                             })}
+                            {/* Infinite Scroll Loader */}
+                            <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
+                                {loading && nextPageToken && (
+                                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading more...
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

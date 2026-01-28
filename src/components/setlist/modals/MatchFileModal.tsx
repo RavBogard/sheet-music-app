@@ -1,60 +1,111 @@
-import { useState, useMemo } from "react"
+"use client"
+
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronLeft, Music } from "lucide-react"
+import { Check, ChevronLeft, Music, Folder, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MIME_TYPES } from "@/lib/constants"
-import { DriveFile } from "@/types/api"
+import { DriveFile } from "@/types/models"
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle
 } from "@/components/ui/dialog"
+import { useLibraryStore } from "@/lib/library-store"
 
 interface MatchFileModalProps {
     isOpen: boolean
     onClose: () => void
-    driveFiles: DriveFile[]
     onMatch: (fileId: string) => void
 }
 
 export function MatchFileModal({
     isOpen,
     onClose,
-    driveFiles,
     onMatch
 }: MatchFileModalProps) {
+    const {
+        driveFiles,
+        loading,
+        fetchFiles,
+        nextPageToken
+    } = useLibraryStore()
+
     const [searchQuery, setSearchQuery] = useState("")
-    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
 
-    // Logic for Breadcrumbs & Filtering (Internalized)
-    const breadcrumbs = useMemo(() => {
-        const path = []
-        let currentId = currentFolderId
-        while (currentId) {
-            const folder = driveFiles.find(f => f.id === currentId)
-            if (folder) {
-                path.unshift(folder)
-                currentId = folder.parents?.[0] || null
-            } else {
-                break
+    // Breadcrumbs State
+    const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string }[]>([
+        { id: null, name: 'Library' }
+    ])
+    const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
+
+    // Fetch on mount/change
+    useEffect(() => {
+        if (isOpen) {
+            fetchFiles({
+                folderId: currentFolderId,
+                query: searchQuery,
+                force: true
+            })
+        }
+    }, [isOpen, currentFolderId, searchQuery, fetchFiles])
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+    }
+
+    const { folders, files } = useMemo(() => {
+        const folders: DriveFile[] = []
+        const files: DriveFile[] = []
+
+        driveFiles.forEach(f => {
+            if (f.mimeType.includes('folder')) {
+                folders.push(f)
+            } else if (
+                !f.mimeType.includes(MIME_TYPES.SPREADSHEET) &&
+                !f.mimeType.includes(MIME_TYPES.DOCUMENT)
+            ) {
+                files.push(f)
             }
+        })
+        return { folders, files }
+    }, [driveFiles])
+
+    const combinedItems = [...folders, ...files]
+
+    const navigateFolder = (folder: DriveFile | null) => {
+        if (folder) {
+            setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }])
+        } else {
+            setBreadcrumbs([{ id: null, name: 'Library' }])
         }
-        return path
-    }, [currentFolderId, driveFiles])
+        setSearchQuery("")
+    }
 
-    const filteredFiles = driveFiles.filter(f => {
-        const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase())
-        const isNotDoc = !f.mimeType.includes(MIME_TYPES.SPREADSHEET) && !f.mimeType.includes(MIME_TYPES.DOCUMENT)
+    const handleBreadcrumbClick = (index: number) => {
+        setBreadcrumbs(prev => prev.slice(0, index + 1))
+        setSearchQuery("")
+    }
 
-        if (searchQuery) return matchesSearch && isNotDoc
-
-        if (!currentFolderId) {
-            return isNotDoc && (!f.parents || f.parents.length === 0 || !driveFiles.some(df => f.parents?.includes(df.id)))
+    // Infinite Scroll Observer
+    const observerTarget = useRef<HTMLDivElement>(null)
+    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+        const [target] = entries
+        if (target.isIntersecting && nextPageToken && !loading) {
+            fetchFiles({ loadMore: true })
         }
-        return isNotDoc && f.parents?.includes(currentFolderId)
-    })
+    }, [nextPageToken, loading, fetchFiles])
+
+    useEffect(() => {
+        const element = observerTarget.current
+        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
+        if (element) observer.observe(element)
+        return () => {
+            if (element) observer.unobserve(element)
+        }
+    }, [handleObserver, driveFiles])
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -66,22 +117,15 @@ export function MatchFileModal({
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
                     {/* Breadcrumbs for Navigation */}
                     {!searchQuery && (
-                        <div className="flex items-center gap-1 text-sm text-zinc-500 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0">
-                            <button
-                                onClick={() => setCurrentFolderId(null)}
-                                className={cn("hover:text-blue-400 truncate", !currentFolderId && "text-blue-400 font-bold")}
-                                style={{ minWidth: 'fit-content' }}
-                            >
-                                Library
-                            </button>
-                            {breadcrumbs.map(bc => (
-                                <div key={bc.id} className="flex items-center gap-1 shrink-0">
-                                    <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />
+                        <div className="flex items-center gap-1 text-sm text-zinc-500 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
+                            {breadcrumbs.map((crumb, i) => (
+                                <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
+                                    {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
                                     <button
-                                        onClick={() => setCurrentFolderId(bc.id)}
-                                        className={cn("hover:text-blue-400 truncate max-w-[120px]", currentFolderId === bc.id && "text-blue-400 font-bold")}
+                                        onClick={() => handleBreadcrumbClick(i)}
+                                        className={cn("hover:text-blue-400 truncate max-w-[120px]", i === breadcrumbs.length - 1 && "text-blue-400 font-bold")}
                                     >
-                                        {bc.name}
+                                        {crumb.name}
                                     </button>
                                 </div>
                             ))}
@@ -90,7 +134,7 @@ export function MatchFileModal({
 
                     <Input
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={handleSearchChange}
                         placeholder="Search files..."
                         className="mb-4 shrink-0 bg-zinc-800 border-zinc-700"
                         autoFocus
@@ -98,26 +142,28 @@ export function MatchFileModal({
 
                     <div className="flex-1 overflow-y-auto -mx-2 px-2">
                         <div className="grid grid-cols-1 gap-2 pb-2">
-                            {filteredFiles.slice(0, 100).map(file => {
-                                const isFolder = file.mimeType === 'application/vnd.google-apps.folder'
+                            {combinedItems.map(file => {
+                                const isFolder = file.mimeType.includes('folder')
+
                                 return (
                                     <button
                                         key={file.id}
                                         onClick={() => {
                                             if (isFolder) {
-                                                setCurrentFolderId(file.id)
+                                                navigateFolder(file)
                                             } else {
                                                 onMatch(file.id)
+                                                onClose()
                                             }
                                         }}
                                         className={cn(
                                             "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isFolder ? "bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50" : "bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800"
+                                            isFolder ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300" : "bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800 text-white"
                                         )}
                                     >
                                         {isFolder ? (
-                                            <div className="w-10 h-10 rounded-lg bg-zinc-700/30 flex items-center justify-center text-zinc-400 group-hover:text-blue-400">
-                                                <ChevronLeft className="h-5 w-5 rotate-180" />
+                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-zinc-400">
+                                                <Folder className="h-5 w-5 text-yellow-500" />
                                             </div>
                                         ) : (
                                             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -133,6 +179,15 @@ export function MatchFileModal({
                                     </button>
                                 )
                             })}
+                            {/* Infinite Scroll Loader */}
+                            <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
+                                {loading && nextPageToken && (
+                                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading more...
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

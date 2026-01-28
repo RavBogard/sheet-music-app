@@ -90,6 +90,53 @@ export class DriveClient {
         }
     }
 
+    async listFiles(params: {
+        folderId?: string
+        pageToken?: string
+        pageSize?: number
+        query?: string
+    }) {
+        try {
+            const { folderId, pageToken, pageSize = 50, query } = params
+
+            // Construct Query
+            let q = "trashed = false"
+
+            // 1. Folder Context or Global
+            if (folderId) {
+                q += ` and '${folderId}' in parents`
+            }
+
+            // 2. Text Search (if provided)
+            if (query) {
+                // Escape simple quotes for safety (basic)
+                const safeQuery = query.replace(/'/g, "\\'")
+                q += ` and name contains '${safeQuery}'`
+            }
+
+            console.log(`[Drive] Fetching page. Token: ${!!pageToken}, Limit: ${pageSize}, Q: ${q}`)
+
+            const res = await this.drive.files.list({
+                pageSize,
+                fields: 'nextPageToken, files(id, name, mimeType, webContentLink, parents)',
+                q,
+                pageToken,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true,
+                orderBy: 'folder,name' // Folders first, then name
+            }) as any
+
+            return {
+                files: res.data.files || [],
+                nextPageToken: res.data.nextPageToken || null
+            }
+
+        } catch (error: any) {
+            console.error("[Drive] Pagination Error:", error)
+            throw error
+        }
+    }
+
     async getFile(fileId: string) {
         try {
             const res = await this.drive.files.get({

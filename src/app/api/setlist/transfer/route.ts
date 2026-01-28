@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { transferSetlistSchema } from "@/lib/validations"
 import { version } from "os"
 
 export async function POST(request: Request) {
@@ -12,10 +13,17 @@ export async function POST(request: Request) {
         }
 
         // Parse Body
-        const { setlistId, newOwnerEmail } = await request.json()
-        if (!setlistId || !newOwnerEmail) {
-            return new NextResponse("Missing required fields", { status: 400 })
+        const body = await request.json()
+        const validationResult = transferSetlistSchema.safeParse(body)
+
+        if (!validationResult.success) {
+            return new NextResponse(JSON.stringify({
+                error: "Validation failed",
+                details: validationResult.error.format()
+            }), { status: 400 })
         }
+
+        const { setlistId, newOwnerEmail } = validationResult.data
 
         initAdmin()
         const auth = getAuth()

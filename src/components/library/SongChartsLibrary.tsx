@@ -1,125 +1,86 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { ChevronLeft, ChevronRight, FileMusic, Folder, FolderOpen, List, LayoutGrid, Search } from "lucide-react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import { ChevronLeft, ChevronRight, FileMusic, Folder, FolderOpen, List, LayoutGrid, Search, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
 import { EmptyState } from "@/components/ui/empty-state"
-
-interface DriveFile {
-    id: string
-    name: string
-    mimeType: string
-    parents?: string[]
-}
+import { useLibraryStore } from "@/lib/library-store"
+import { DriveFile } from "@/types/models"
 
 interface SongChartsLibraryProps {
-    driveFiles: DriveFile[]
-    loading?: boolean
     onBack: () => void
     onSelectFile: (file: DriveFile) => void
 }
 
-export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }: SongChartsLibraryProps) {
+export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryProps) {
+    const {
+        driveFiles,
+        loading,
+        fetchFiles,
+        nextPageToken,
+        initialized,
+        reset
+    } = useLibraryStore()
+
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('folders')
-    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
-    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
-    // 1. Separate Folders and Files
-    const { folders, files, fileMap, folderMap } = useMemo(() => {
+    // Breadcrumbs State: [{id: null, name: 'Home'}, {id: '123', name: 'Folder'}]
+    // We use null for Root
+    const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string }[]>([
+        { id: null, name: 'Home' }
+    ])
+
+    const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
+
+    // Debounce Search
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Initial Load & Navigation Effect
+    useEffect(() => {
+        // Fetch files for current folder / query
+        // This runs when folder changes or query changes
+        fetchFiles({
+            folderId: currentFolderId,
+            query: searchQuery,
+            force: true // Always force a refresh on navigation
+        })
+    }, [currentFolderId, searchQuery, fetchFiles])
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            reset()
+        }
+    }, [reset])
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value
+        setSearchQuery(val)
+        // Note: Effect above triggers fetch. 
+        // Ideally we'd debounce the set state or the effect. 
+        // For now, standard React update. Infinite scroll handles "load more".
+    }
+
+    const { folders, files } = useMemo(() => {
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
-        const fileMap = new Map<string, DriveFile>()
-        const folderMap = new Map<string, DriveFile>()
 
         driveFiles.forEach(f => {
             if (f.mimeType.includes('folder')) {
                 folders.push(f)
-                folderMap.set(f.id, f)
             } else if (
                 (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
                 !f.mimeType.startsWith('audio/')
             ) {
                 files.push(f)
-                fileMap.set(f.id, f)
             }
         })
-        return { folders, files, fileMap, folderMap }
+        return { folders, files }
     }, [driveFiles])
-
-    // 2. Build Tree / Current View Logic
-    const currentViewItems = useMemo(() => {
-        if (viewMode === 'alphabetical') {
-            return files
-                .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                .sort((a, b) => a.name.localeCompare(b.name))
-        }
-
-        // Folders View
-        // If searchQuery exists, show FLAT list of matches (files + folders)
-        if (searchQuery) {
-            return [
-                ...folders.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())),
-                ...files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            ].sort((a, b) => a.name.localeCompare(b.name))
-        }
-
-        // Navigation View (Hierarchy)
-        // Find items whose parent is currentFolderId (or root if null)
-        // Note: Drive files can have multiple parents using `parents` array.
-        // If we don't have parent info, we assume root (this might be a limitation of our simple list)
-
-        return [
-            ...folders.filter(f => {
-                if (currentFolderId) return f.parents?.includes(currentFolderId)
-                return !f.parents || f.parents.length === 0
-            }),
-            ...files.filter(f => {
-                if (currentFolderId) return f.parents?.includes(currentFolderId)
-                // For root files, we only show them if they have NO parents or if we can't find their parent in our list
-                // (which implies they are in root or a shared folder we didn't fetch)
-                if (!f.parents || f.parents.length === 0) return true
-
-                // Tricky: If a file has a parent ID that IS NOT in our folder list, it's effectively an "Orphan" or Root file for our purposes
-                // But generally, shared files appear in root.
-                const hasKnownParent = f.parents.some(pid => folderMap.has(pid))
-                return !hasKnownParent
-            })
-        ].sort((a, b) => {
-            // Folders first
-            if (a.mimeType.includes('folder') && !b.mimeType.includes('folder')) return -1
-            if (!a.mimeType.includes('folder') && b.mimeType.includes('folder')) return 1
-            return a.name.localeCompare(b.name)
-        })
-
-    }, [viewMode, searchQuery, currentFolderId, files, folders, folderMap])
-
-    // Breadcrumbs Logic
-    const breadcrumbs = useMemo(() => {
-        if (!currentFolderId) return []
-        const crumbs = []
-        let curr = folderMap.get(currentFolderId)
-        while (curr) {
-            crumbs.unshift(curr)
-            if (curr.parents && curr.parents.length > 0) {
-                // Determine next parent (simple tree assumption: take first known parent)
-                // This prevents infinite loops if there are circular refs (unlikely in Drive but possible)
-                const parentId = curr.parents[0]
-                const next = folderMap.get(parentId)
-                if (next && next.id !== curr.id && !crumbs.includes(next)) {
-                    curr = next
-                } else {
-                    curr = undefined
-                }
-            } else {
-                curr = undefined
-            }
-        }
-        return crumbs
-    }, [currentFolderId, folderMap])
 
     const getCleanName = (name: string) => {
         return name
@@ -129,12 +90,38 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
 
     const handleItemClick = (item: DriveFile) => {
         if (item.mimeType.includes('folder')) {
-            setCurrentFolderId(item.id)
-            setSearchQuery("") // Clear search on navigation
+            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name }])
+            setSearchQuery("") // Clear search on drill down
         } else {
             onSelectFile(item)
         }
     }
+
+    const handleBreadcrumbClick = (index: number) => {
+        setBreadcrumbs(prev => prev.slice(0, index + 1))
+        setSearchQuery("")
+    }
+
+    // Infinite Scroll Observer
+    const observerTarget = useRef<HTMLDivElement>(null)
+    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+        const [target] = entries
+        if (target.isIntersecting && nextPageToken && !loading) {
+            fetchFiles({ loadMore: true })
+        }
+    }, [nextPageToken, loading, fetchFiles])
+
+    useEffect(() => {
+        const element = observerTarget.current
+        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
+        if (element) observer.observe(element)
+        return () => {
+            if (element) observer.unobserve(element)
+        }
+    }, [handleObserver])
+
+
+    const combinedItems = [...folders, ...files]
 
     return (
         <div className="h-screen flex flex-col bg-zinc-950 text-white">
@@ -152,28 +139,7 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
 
-                {/* View Toggle */}
-                <div className="flex bg-zinc-800 rounded-lg p-1">
-                    <Button
-                        size="sm"
-                        variant={viewMode === 'alphabetical' ? 'default' : 'ghost'}
-                        onClick={() => { setViewMode('alphabetical'); setCurrentFolderId(null); }}
-                        className="gap-1"
-                    >
-                        <List className="h-4 w-4" />
-                        A-Z
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant={viewMode === 'folders' ? 'default' : 'ghost'}
-                        onClick={() => setViewMode('folders')}
-                        className="gap-1"
-                    >
-                        <LayoutGrid className="h-4 w-4" />
-                        Folders
-                    </Button>
-                </div>
-
+                {/* Sort Toggle (Visual Only for now as API sorts by folder,name default) */}
                 <div className="text-sm text-zinc-500">
                     {files.length} charts
                 </div>
@@ -185,30 +151,24 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
                     <Input
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={handleSearchChange}
                         placeholder="Search charts..."
                         className="pl-10 h-12 text-lg"
                     />
                 </div>
 
-                {/* Breadcrumbs (only in Folder view and not searching) */}
-                {viewMode === 'folders' && !searchQuery && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 text-sm">
-                        <button
-                            onClick={() => setCurrentFolderId(null)}
-                            className={`flex items-center hover:text-white transition-colors ${!currentFolderId ? 'text-white font-bold' : 'text-zinc-500'}`}
-                        >
-                            <Folder className="h-4 w-4 mr-1" />
-                            Home
-                        </button>
-                        {breadcrumbs.map((folder, i) => (
-                            <div key={folder.id} className="flex items-center shrink-0">
-                                <ChevronRight className="h-4 w-4 text-zinc-600 mx-1" />
+                {/* Breadcrumbs */}
+                {!searchQuery && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 text-sm no-scrollbar">
+                        {breadcrumbs.map((crumb, i) => (
+                            <div key={crumb.id || 'root'} className="flex items-center shrink-0">
+                                {i > 0 && <ChevronRight className="h-4 w-4 text-zinc-600 mx-1" />}
                                 <button
-                                    onClick={() => setCurrentFolderId(folder.id)}
-                                    className={`hover:text-white transition-colors ${i === breadcrumbs.length - 1 ? 'text-white font-bold' : 'text-zinc-500'}`}
+                                    onClick={() => handleBreadcrumbClick(i)}
+                                    className={`flex items-center hover:text-white transition-colors ${i === breadcrumbs.length - 1 ? 'text-white font-bold' : 'text-zinc-500'}`}
                                 >
-                                    {folder.name}
+                                    {crumb.id === null && <Folder className="h-4 w-4 mr-1" />}
+                                    {crumb.name}
                                 </button>
                             </div>
                         ))}
@@ -218,20 +178,20 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
-                {loading ? (
+                {!initialized && loading ? (
                     <LibrarySkeleton />
                 ) : (
-                    <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2">
-                        {currentViewItems.length === 0 && (
+                    <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2 pb-10">
+                        {combinedItems.length === 0 && !loading && (
                             <EmptyState
                                 icon={searchQuery ? Search : FolderOpen}
                                 title={searchQuery ? "No matches found" : "This folder is empty"}
-                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Try checking another folder or search for a specific song."}
+                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Try checking another folder."}
                                 className="py-12"
                             />
                         )}
 
-                        {currentViewItems.map(item => {
+                        {combinedItems.map(item => {
                             const isFolder = item.mimeType.includes('folder')
                             return (
                                 <button
@@ -252,17 +212,21 @@ export function SongChartsLibrary({ driveFiles, loading, onBack, onSelectFile }:
                                         <div className="font-medium text-lg truncate">
                                             {isFolder ? item.name : getCleanName(item.name)}
                                         </div>
-                                        {!isFolder && (
-                                            <div className="text-xs text-zinc-500 truncate mt-1">
-                                                {/* Show parent folder hint if searching */}
-                                                {searchQuery && item.parents && item.parents[0] && folderMap.get(item.parents[0])?.name}
-                                            </div>
-                                        )}
                                     </div>
                                     <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-white" />
                                 </button>
                             )
                         })}
+
+                        {/* Infinite Scroll Loader */}
+                        <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
+                            {loading && nextPageToken && (
+                                <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading more...
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </ScrollArea>

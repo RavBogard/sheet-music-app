@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.27-2024",
-  "commit": "4c02875",
+  "version": "2026.01.28-0953",
+  "commit": "e7ce0a5",
   "branch": "master",
-  "buildDate": "1/27/2026, 8:24:23 PM",
+  "buildDate": "1/28/2026, 9:53:01 AM",
   "changelog": [
-    "4c02875 - fix(guest): load file metadata for public setlists and hide AI chat (4 hours ago)",
-    "de0168f - fix: restore public setlists access and upcoming events for guests (4 hours ago)",
-    "3f0fb82 - fix: remove ProtectedLayout from main layout to allow guest access (4 hours ago)",
-    "9e14722 - feat: implement guest mode for public access (dashboard, header, api unblock) (4 hours ago)",
-    "19d6465 - fix: include public setlists in personal query so they appear in upcoming events (4 hours ago)"
+    "e7ce0a5 - Fix build: Add missing calendar component (36 minutes ago)",
+    "cab700c - Update calendar view, setlist naming, and AI Assistant UI (38 minutes ago)",
+    "7cb4485 - Feat: Implement RBAC API and update Security Rules (12 hours ago)",
+    "bb3434e - Fix: Wait for user auth before fetching Drive files (12 hours ago)",
+    "276abbf - Fix: Remove duplicate rules nesting caused by bad merge (12 hours ago)"
   ]
 }
