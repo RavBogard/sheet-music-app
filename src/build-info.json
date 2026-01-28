@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.28-1602",
-  "commit": "b785bd4",
+  "version": "2026.01.28-1609",
+  "commit": "681ada0",
   "branch": "master",
-  "buildDate": "1/28/2026, 4:02:26 PM",
+  "buildDate": "1/28/2026, 4:09:14 PM",
   "changelog": [
-    "b785bd4 - refactor: remove resume setlist feature (20 minutes ago)",
-    "b5370be - feat: complete phase 4 - context menus, optimistic ui, dnd (28 minutes ago)",
+    "681ada0 - Feat: Add Mobile Admin Access (5 minutes ago)",
+    "b785bd4 - refactor: remove resume setlist feature (27 minutes ago)",
+    "b5370be - feat: complete phase 4 - context menus, optimistic ui, dnd (35 minutes ago)",
     "3ee0882 - Feat: Implement Standardized API Middleware and refactor Drive API (5 hours ago)",
-    "b195c42 - Fix: Make Google env vars optional to fully unblock Vercel build (5 hours ago)",
-    "5ed2040 - Fix: Make env vars optional to unblock Vercel build (validation failed despite dynamic export) (5 hours ago)"
+    "b195c42 - Fix: Make Google env vars optional to fully unblock Vercel build (5 hours ago)"
   ]
 }
