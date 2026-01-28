@@ -8,6 +8,7 @@ import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { EmptyState } from "@/components/ui/empty-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ExportDataButton } from "@/components/settings/ExportDataButton"
 
 interface SetlistDashboardProps {
@@ -327,7 +328,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                     {loading && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="h-48 bg-zinc-900/50 rounded-xl animate-pulse border border-zinc-800" />
+                                <Skeleton key={i} className="h-48 rounded-xl bg-zinc-900/50 border border-zinc-800" />
                             ))}
                         </div>
                     )}

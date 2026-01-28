@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, Bell, UserCircle, Menu, LogOut, Settings, User, Cloud, CloudOff, Loader2 } from "lucide-react"
+import { Search, Bell, UserCircle, Menu, LogOut, Settings, User, Cloud, CloudOff, Loader2, UserCheck, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
+import { useChatStore } from "@/lib/chat-store"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,9 +25,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export function DesktopHeader() {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, signIn, signOut } = useAuth()
+    const { user, profile, isMember, isAdmin, signIn, signOut } = useAuth()
     const { driveFiles, loading, fetchFiles } = useLibraryStore()
     const { setQueue } = useMusicStore()
+    const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("")
@@ -36,7 +38,7 @@ export function DesktopHeader() {
     const navLinks = [
         { label: "Dashboard", href: "/" },
         { label: "Public Setlists", href: "/setlists", public: true },
-        // Restricted Links
+        // Restricted Links (Require Member Role)
         { label: "Library", href: "/library", restricted: true },
         { label: "Audio", href: "/audio", restricted: true },
     ]
@@ -72,6 +74,20 @@ export function DesktopHeader() {
         setShowResults(false)
     }
 
+    const [isOnline, setIsOnline] = useState(true)
+
+    useEffect(() => {
+        setIsOnline(navigator.onLine)
+        const handleOnline = () => setIsOnline(true)
+        const handleOffline = () => setIsOnline(false)
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [])
+
     return (
         <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-6 bg-zinc-950/80 backdrop-blur-md border-b border-white/5">
             {/* Logo Area */}
@@ -90,7 +106,13 @@ export function DesktopHeader() {
                 {/* Main Nav */}
                 <nav className="flex items-center gap-1">
                     {navLinks
-                        .filter(link => user || link.public || link.label === "Dashboard")
+                        .filter(link => {
+                            if (link.public) return true
+                            if (link.label === "Dashboard") return true
+                            // Restricted links: Only show if user is a Member (not just generic 'user')
+                            if (link.restricted) return isMember
+                            return false
+                        })
                         .map(link => {
                             const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
                             return (
@@ -115,6 +137,28 @@ export function DesktopHeader() {
             <div className="flex items-center gap-4">
                 {user ? (
                     <>
+                        {/* Offline Warning Banner (optional, but requested ring) */}
+                        {!isOnline && (
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
+                                <CloudOff className="h-3 w-3" />
+                                Offline
+                            </div>
+                        )}
+
+                        {/* AI Chat Button */}
+                        <Button
+                            variant={isChatOpen ? "default" : "ghost"}
+                            size="sm"
+                            onClick={toggleChat}
+                            className={cn(
+                                "gap-2 rounded-full transition-colors",
+                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"
+                            )}
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            <span className="hidden lg:inline">AI Chat</span>
+                        </Button>
+
                         {/* Search Bar */}
                         <div className="relative group" ref={searchRef}>
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
@@ -184,7 +228,14 @@ export function DesktopHeader() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white rounded-full overflow-hidden">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn(
+                                        "text-zinc-400 hover:text-white rounded-full overflow-hidden transition-all",
+                                        !isOnline ? "ring-2 ring-red-500" : ""
+                                    )}
+                                >
                                     {user?.photoURL ? (
                                         <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-zinc-800" />
                                     ) : (
@@ -197,9 +248,16 @@ export function DesktopHeader() {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || "Musician"}</p>
                                         <p className="text-xs leading-none text-zinc-500">{user?.email}</p>
+                                        <p className="text-[10px] uppercase font-bold text-blue-400 mt-1">{profile?.role || "Pending"}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-zinc-800" />
+                                {isAdmin && (
+                                    <DropdownMenuItem className="hover:bg-white/5 cursor-pointer text-red-300" onClick={() => router.push('/admin/users')}>
+                                        <UserCheck className="mr-2 h-4 w-4" />
+                                        <span>User Management</span>
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem className="hover:bg-white/5 cursor-pointer">
                                     <User className="mr-2 h-4 w-4" />
                                     <span>My Profile</span>

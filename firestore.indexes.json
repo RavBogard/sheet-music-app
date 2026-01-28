@@ -1,37 +1,33 @@
 {
-    "indexes": [
+  "indexes": [
+    {
+      "collectionGroup": "setlists",
+      "queryScope": "COLLECTION",
+      "fields": [
         {
-            "collectionGroup": "setlists",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "ownerId",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "isPublic",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "date",
-                    "order": "DESCENDING"
-                }
-            ]
+          "fieldPath": "ownerId",
+          "order": "ASCENDING"
         },
         {
-            "collectionGroup": "setlists",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "isPublic",
-                    "order": "ASCENDING"
-                },
-                {
-                    "fieldPath": "date",
-                    "order": "DESCENDING"
-                }
-            ]
+          "fieldPath": "date",
+          "order": "DESCENDING"
         }
-    ],
-    "fieldOverrides": []
+      ]
+    },
+    {
+      "collectionGroup": "setlists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isPublic",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
 }

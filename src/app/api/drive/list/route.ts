@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
 import { unstable_cache } from "next/cache"
 
+export const dynamic = 'force-dynamic'
+
 const getCachedFiles = unstable_cache(
     async (folderId: string | undefined) => {
         const drive = new DriveClient()
@@ -57,7 +59,15 @@ export async function GET(request: Request) {
         const files = await getCachedFiles(folderId)
         console.log(`Returned ${files.length} files`)
 
-        return NextResponse.json(files)
+        console.log(`Returned ${files.length} files`)
+
+        return NextResponse.json(files, {
+            headers: {
+                'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+                'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+                'Vary': 'Authorization'
+            }
+        })
     } catch (error) {
         console.error("Drive API Error:", error)
         return new NextResponse(JSON.stringify({ error: "Internal Server Error", details: String(error) }), { status: 500 })

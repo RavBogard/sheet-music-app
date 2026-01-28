@@ -3,31 +3,63 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
+import { UserProfile, ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 
 interface AuthContextType {
     user: User | null
+    profile: UserProfile | null
     loading: boolean
     signIn: () => Promise<void>
     signOut: () => Promise<void>
+    isAdmin: boolean
+    isMember: boolean
+    isLeader: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
+    profile: null,
     loading: true,
     signIn: async () => { },
-    signOut: async () => { }
+    signOut: async () => { },
+    isAdmin: false,
+    isMember: false,
+    isLeader: false
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
+    const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
 
+    // Derived roles for convenience
+    const isAdmin = profile?.role === 'admin'
+    const isLeader = profile?.role === 'leader' || isAdmin
+    const isMember = profile?.role === 'member' || isLeader
+
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user)
-            setLoading(false)
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser)
+            if (currentUser) {
+                // 1. Ensure profile exists (create if new)
+                try {
+                    await ensureUserProfile(currentUser)
+                    // 2. Subscribe to profile updates
+                    subscribeToUserProfile(currentUser.uid, (p) => {
+                        setProfile(p)
+                        setLoading(false)
+                    })
+                } catch (e) {
+                    console.error("Error fetching user profile", e)
+                    setLoading(false)
+                }
+            } else {
+                setProfile(null)
+                setLoading(false)
+            }
         })
-        return () => unsubscribe()
+
+        return () => unsubscribeAuth()
     }, [])
 
     const signIn = async () => {
@@ -47,7 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+        <AuthContext.Provider value={{
+            user,
+            profile,
+            loading,
+            signIn,
+            signOut,
+            isAdmin,
+            isLeader,
+            isMember
+        }}>
             {children}
         </AuthContext.Provider>
     )

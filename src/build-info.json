@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.27-1232",
-  "commit": "38fa1f6",
+  "version": "2026.01.27-2024",
+  "commit": "4c02875",
   "branch": "master",
-  "buildDate": "1/27/2026, 12:32:45 PM",
+  "buildDate": "1/27/2026, 8:24:23 PM",
   "changelog": [
-    "38fa1f6 - feat(ux): implement hierarchical setlist navigation, functional header search, and profile management (11 minutes ago)",
-    "666fd3e - fix(performance): resolve song synchronization bug in setlists (22 minutes ago)",
-    "a2bf374 - fix(performance): persist state, sync navigation URLs, and add tap-to-turn (39 minutes ago)",
-    "f311636 - feat(versioning): automate human-readable CalVer versioning (47 minutes ago)",
-    "2796984 - feat(ux): implement global navigation with mobile tab bar and desktop header (54 minutes ago)"
+    "4c02875 - fix(guest): load file metadata for public setlists and hide AI chat (4 hours ago)",
+    "de0168f - fix: restore public setlists access and upcoming events for guests (4 hours ago)",
+    "3f0fb82 - fix: remove ProtectedLayout from main layout to allow guest access (4 hours ago)",
+    "9e14722 - feat: implement guest mode for public access (dashboard, header, api unblock) (4 hours ago)",
+    "19d6465 - fix: include public setlists in personal query so they appear in upcoming events (4 hours ago)"
   ]
 }

@@ -1,5 +1,6 @@
 import { Footer } from "@/components/Footer"
 import { AppNavigation } from "@/components/nav/AppNavigation"
+import { ChatPanel } from "@/components/setlist/ChatPanel"
 
 export default function MainLayout({
     children,
@@ -20,6 +21,7 @@ export default function MainLayout({
             <div className="hidden md:block">
                 <Footer />
             </div>
+            <ChatPanel />
         </div>
     )
 }

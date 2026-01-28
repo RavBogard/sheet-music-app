@@ -6,22 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import { useChatStore } from "@/lib/chat-store"
 
-interface ChatPanelProps {
-    isOpen: boolean
-    onClose: () => void
-    onApplyEdits: (edits: any[]) => void
-    currentSetlist: any[]
-    libraryFiles: any[]
-}
-
-interface Message {
-    role: 'user' | 'assistant'
-    content: string
-}
-
-export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libraryFiles }: ChatPanelProps) {
-    const [messages, setMessages] = useState<Message[]>([])
+export function ChatPanel() {
+    const { isOpen, close, messages, addMessage, contextData, onApplyEdits } = useChatStore()
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -45,7 +33,7 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
         if (!input.trim() || loading) return
 
         const userMsg = { role: 'user' as const, content: input }
-        setMessages(prev => [...prev, userMsg])
+        addMessage(userMsg)
         setInput("")
         setLoading(true)
 
@@ -55,8 +43,8 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
-                    currentSetlist,
-                    libraryFiles: libraryFiles.map(f => ({ id: f.id, name: f.name })) // Minimize payload
+                    currentSetlist: contextData.currentSetlist || [],
+                    libraryFiles: contextData.libraryFiles?.map(f => ({ id: f.id, name: f.name })) || []
                 })
             })
 
@@ -67,15 +55,15 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
 
             const data = await res.json()
 
-            setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+            addMessage({ role: 'assistant', content: data.message })
 
-            if (data.edits && data.edits.length > 0) {
+            if (data.edits && data.edits.length > 0 && onApplyEdits) {
                 onApplyEdits(data.edits)
             }
 
         } catch (error: any) {
             console.error(error)
-            setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message || "I had trouble connecting."} Please check your API Key configuration.` }])
+            addMessage({ role: 'assistant', content: `Error: ${error.message || "I had trouble connecting."} Please check your API Key configuration.` })
         } finally {
             setLoading(false)
         }
@@ -84,14 +72,14 @@ export function ChatPanel({ isOpen, onClose, onApplyEdits, currentSetlist, libra
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-zinc-900 border-l border-zinc-800 shadow-2xl z-50 flex flex-col transition-transform">
+        <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-zinc-900 border-l border-zinc-800 shadow-2xl z-50 flex flex-col transition-transform animate-in slide-in-from-right">
             {/* Header */}
             <div className="h-16 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-900/50 backdrop-blur-md">
                 <div className="flex items-center gap-2 text-blue-400">
                     <Sparkles className="h-5 w-5" />
                     <h2 className="font-bold">Cantor AI</h2>
                 </div>
-                <Button size="icon" variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white">
+                <Button size="icon" variant="ghost" onClick={close} className="text-zinc-400 hover:text-white">
                     <X className="h-5 w-5" />
                 </Button>
             </div>

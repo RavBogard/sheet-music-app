@@ -14,32 +14,13 @@ import {
     getDoc
 } from "firebase/firestore";
 
-export interface SetlistTrack {
-    id: string
-    title: string
-    fileId?: string       // PDF/sheet music file
-    audioFileId?: string  // Linked audio/MP3 file for practice
-    key?: string
-    notes?: string
-    duration?: string
-    type?: 'song' | 'header'
-}
+import { SetlistTrack } from "@/types/api"
 
-export interface Setlist {
-    id: string
-    name: string
-    date: Timestamp // Creation date
-    eventDate?: Timestamp | string // Scheduled performance date
-    tracks: SetlistTrack[]
-    trackCount: number
-    // Fields for public/private
-    isPublic?: boolean
-    ownerId?: string
-    ownerName?: string
-    // Template fields
-    isTemplate?: boolean
-    templateType?: 'shabbat_morning' | 'friday_night' | 'other'
-}
+// export interface SetlistTrack { ... } // Removed local definition
+export type { SetlistTrack }
+
+import { Setlist } from "@/types/api"
+export type { Setlist }
 
 // User-specific setlist service
 export function createSetlistService(userId: string | null, userName?: string | null) {
