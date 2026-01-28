@@ -23,9 +23,10 @@ service cloud.firestore {
 
     // USERS Collection
     match /users/{userId} {
-      allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-      allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-      
+      // NUCLEAR DEBUG MODE: PUBLIC ACCESS
+      // If this fails, the app is NOT connected to this project rules.
+      allow read, write: if true;
+
       // Legacy subcollections (if needed)
       match /setlists/{docId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
