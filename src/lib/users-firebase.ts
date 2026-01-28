@@ -72,11 +72,14 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
 /**
  * Subscribe to ALL users (for Admin page)
  */
-export function subscribeToAllUsers(callback: (users: UserProfile[]) => void) {
+export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: any) => void) {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"))
     return onSnapshot(q, (snap) => {
         const users = snap.docs.map(d => d.data() as UserProfile)
         callback(users)
+    }, (error) => {
+        if (onError) onError(error)
+        else console.error("Snapshot error:", error)
     })
 }
 

@@ -28,11 +28,35 @@ export default function AdminUsersPage() {
         const unsubscribe = subscribeToAllUsers((data) => {
             setUsers(data)
             setLoading(false)
+        }, (error) => {
+            console.error("Subscription failed:", error)
+            setLoading(false) // Stop loading even if error
         })
         return () => unsubscribe()
     }, [isAdmin])
 
-    if (authLoading || (isAdmin && loading)) {
+    // Render Debug Panel helper
+    const DebugPanel = () => (
+        <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl text-xs font-mono space-y-2 mb-8">
+            <h3 className="text-red-300 font-bold uppercase mb-2">Debug Diagnostics</h3>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <span className="text-zinc-500 block">User Email (Auth)</span>
+                    <span className="text-white">{user?.email}</span>
+                </div>
+                <div>
+                    <span className="text-zinc-500 block">User UID</span>
+                    <span className="text-white bg-black/50 px-2 py-1 rounded select-all">{user?.uid}</span>
+                </div>
+                <div>
+                    <span className="text-zinc-500 block">Firebase Project</span>
+                    <span className="text-white">{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "Unknown"}</span>
+                </div>
+            </div>
+        </div>
+    )
+
+    if (authLoading) {
         return (
             <div className="h-screen bg-zinc-950 flex items-center justify-center text-white">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -41,7 +65,7 @@ export default function AdminUsersPage() {
     }
 
     if (!isAdmin) {
-        return null // Will redirect
+        return null
     }
 
     return (
@@ -68,41 +92,31 @@ export default function AdminUsersPage() {
                     </div>
                 </div>
 
-                {/* DEBUG PANEL */}
-                <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl text-xs font-mono space-y-2">
-                    <h3 className="text-red-300 font-bold uppercase mb-2">Debug Diagnostics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <span className="text-zinc-500 block">User Email (Auth)</span>
-                            <span className="text-white">{user?.email}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-500 block">User UID</span>
-                            <span className="text-white bg-black/50 px-2 py-1 rounded select-all">{user?.uid}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-500 block">Firebase Project</span>
-                            <span className="text-white">{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "Unknown"}</span>
-                        </div>
+                <DebugPanel />
+
+                {loading && (
+                    <div className="flex justify-center p-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
                     </div>
-                </div>
+                )}
 
-                {/* User List */}
-                <div className="grid gap-3">
-                    {users.map((u) => (
-                        <UserRow
-                            key={u.uid}
-                            user={u}
-                            currentUserUid={user?.uid || ""}
-                        />
-                    ))}
+                {!loading && (
+                    <div className="grid gap-3">
+                        {users.map((u) => (
+                            <UserRow
+                                key={u.uid}
+                                user={u}
+                                currentUserUid={user?.uid || ""}
+                            />
+                        ))}
 
-                    {users.length === 0 && (
-                        <div className="text-center p-8 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
-                            No users found.
-                        </div>
-                    )}
-                </div>
+                        {users.length === 0 && (
+                            <div className="text-center p-8 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+                                No users found (or Access Denied).
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
