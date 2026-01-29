@@ -35,7 +35,10 @@ export function PruneManager() {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            if (!scanRes.ok) throw new Error("Scan failed")
+            if (!scanRes.ok) {
+                const errText = await scanRes.text()
+                throw new Error(errText || "Scan failed")
+            }
             const data = await scanRes.json()
 
             if (data.ghostCount === 0) {
