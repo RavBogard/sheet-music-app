@@ -75,8 +75,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     return (
         <div
             {...bind()}
-            style={{ touchAction: 'pan-y' }}
-            className="h-screen flex flex-col bg-black text-white relative"
+            className="h-[100dvh] flex flex-col bg-black text-white relative"
         >
 
             {/* Main Content Area */}

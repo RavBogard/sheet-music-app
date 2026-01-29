@@ -84,15 +84,22 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
     // 2. Auto-Resize Logic
     const containerRef = useRef<HTMLDivElement>(null)
+    // 2. Auto-Resize Logic (Responsive to container changes)
+    const containerRef = useRef<HTMLDivElement>(null)
     useEffect(() => {
-        const updateWidth = () => {
-            if (containerRef.current) {
-                setWidth(containerRef.current.clientWidth - 4)
+        if (!containerRef.current) return
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.contentRect) {
+                    // Subtract small buffer to prevent horizontal scrollbars
+                    setWidth(entry.contentRect.width - 4)
+                }
             }
-        }
-        updateWidth()
-        window.addEventListener('resize', updateWidth)
-        return () => window.removeEventListener('resize', updateWidth)
+        })
+
+        observer.observe(containerRef.current)
+        return () => observer.disconnect()
     }, [])
 
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {

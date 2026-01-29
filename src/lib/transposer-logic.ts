@@ -144,3 +144,23 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
 
     return { chordBlocks: finalChordBlocks, detectedKey }
 }
+
+export function calculateCapo(originalKey: string, targetShape: string) {
+    // Returns { fret, transposition }
+    // e.g. Orig: F, Target: D -> F - D = 3 semitones. Capo 3. Transposition -3 (visual).
+    // e.g. Orig: C, Target: G -> C - G = -7 -> +5 semitones. Capo 5. Transposition -5.
+
+    const origIndex = toSemis(originalKey)
+    const targetIndex = toSemis(targetShape)
+
+    if (origIndex === -1 || targetIndex === -1) return null
+
+    let diff = origIndex - targetIndex
+    if (diff < 0) diff += 12
+
+    // Capo shouldn't really go above 11 (or even 7-9 realistically, but math is math)
+    return {
+        fret: diff,
+        transposition: -diff
+    }
+}
