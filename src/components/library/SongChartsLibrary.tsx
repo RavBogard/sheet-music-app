@@ -133,8 +133,22 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                 body: JSON.stringify({ fileId: file.id })
             })
 
+            // Handle non-JSON errors (Timeouts, 500s)
+            if (!omrRes.ok) {
+                if (omrRes.status === 504) {
+                    throw new Error("The AI took too long to respond. The file might be too complex or large.")
+                }
+                const text = await omrRes.text()
+                try {
+                    const json = JSON.parse(text)
+                    throw new Error(json.error || "Digitization failed")
+                } catch (e) {
+                    // Start of the actual error might be in the text
+                    throw new Error(`Server Error (${omrRes.status}): ${text.substring(0, 50)}...`)
+                }
+            }
+
             const omrData = await omrRes.json()
-            if (!omrRes.ok) throw new Error(omrData.error || "Digitization failed")
 
             // 2. Save XML
             toast.info("Saving MusicXML...")
@@ -158,6 +172,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             fetchFiles({ force: true, folderId: currentFolderId, query: searchQuery })
 
         } catch (e: any) {
+            console.error("Digitize Error:", e)
             toast.error(e.message)
         } finally {
             setDigitizing(null)

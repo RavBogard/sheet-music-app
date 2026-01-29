@@ -7,7 +7,7 @@ import { DriveClient } from "@/lib/google-drive";
 // Ensure Firebase Admin is initialized
 initAdmin();
 
-export const maxDuration = 60; // Allow 60 seconds for AI processing
+export const maxDuration = 300; // Allow 5 minutes for AI processing (Vercel Pro)
 
 export async function POST(req: NextRequest) {
     try {
