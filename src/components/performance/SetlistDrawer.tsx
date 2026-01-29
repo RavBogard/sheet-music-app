@@ -19,8 +19,8 @@ export function SetlistDrawer() {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
-                    <ListMusic className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
+                    <ListMusic className="h-6 w-6" />
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[80vh] bg-zinc-950 border-t border-zinc-800 p-0 flex flex-col">

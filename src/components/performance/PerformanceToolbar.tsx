@@ -58,17 +58,29 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             )}
         >
             {/* ZONE 1: System (Left) */}
-            <div className="flex-1 flex items-center justify-start gap-2 w-full sm:w-auto absolute top-2 left-2 sm:static sm:top-auto sm:left-auto">
-                <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-10 w-10">
-                    <Home className="h-5 w-5" />
+            <div className="flex-1 flex items-center justify-start gap-4 w-full sm:w-auto absolute top-2 left-2 sm:static sm:top-auto sm:left-auto">
+                <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
+                    <Home className="h-6 w-6" />
                 </Button>
                 <SetlistDrawer />
+
+                {/* Tuner (Moved to Left) */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
+                            <span className="font-bold text-xs">TUNE</span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="start" side="top">
+                        <Tuner />
+                    </PopoverContent>
+                </Popover>
             </div>
 
             {/* ZONE 2: Playback (Center) */}
-            <div className="w-full sm:w-auto flex-2 flex justify-center mt-8 sm:mt-0 absolute left-0 right-0 top-2 sm:static pointer-events-none sm:pointer-events-auto">
+            <div className="w-full sm:w-auto flex-2 flex justify-center mt-12 sm:mt-0 absolute left-0 right-0 top-0 sm:static pointer-events-none sm:pointer-events-auto">
                 {/* Pointer events workaround to let clicks pass through to layer below if needed, but buttons need pointer-events-auto */}
-                <div className="pointer-events-auto w-full flex justify-center">
+                <div className="pointer-events-auto w-full flex justify-center transform sm:translate-y-0 translate-y-2">
                     <SongNavigation />
                 </div>
             </div>
@@ -76,23 +88,11 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             {/* ZONE 3: Tools (Right) */}
             <div className="flex-1 flex items-center justify-end gap-1 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static">
                 {/* Hidden on very small screens? or adapt? */}
-                <div className="flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
+                <div className="hidden sm:flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
                     <MetronomeControl />
                 </div>
 
                 <BackingTrackPlayer />
-
-                {/* Tuner */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white h-10 w-10" title="Tuner">
-                            <span className="font-bold text-xs">TUNE</span>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                        <Tuner />
-                    </PopoverContent>
-                </Popover>
 
                 <div className="flex items-center gap-2">
                     <TransposeControl />
