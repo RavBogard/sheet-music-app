@@ -270,18 +270,30 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                             onClick={() => handleItemClick(item)}
                                             className={`w-full text-left p-6 rounded-2xl transition-all flex items-center gap-5 group ${isFolder
                                                 ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
-                                                : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
+                                                : digitizing === item.id
+                                                    ? 'bg-purple-900/20 border border-purple-500/50 cursor-wait'
+                                                    : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
                                                 }`}
                                         >
                                             {isFolder ? (
                                                 <Folder className="h-10 w-10 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                            ) : digitizing === item.id ? (
+                                                <div className="relative">
+                                                    <FileMusic className="h-10 w-10 text-purple-500 shrink-0 opacity-50" />
+                                                    <Loader2 className="h-5 w-5 text-purple-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+                                                </div>
                                             ) : (
                                                 <FileMusic className="h-10 w-10 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
                                             )}
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="font-bold text-xl truncate">
+                                                <div className="font-bold text-xl truncate flex items-center gap-3">
                                                     {isFolder ? item.name : getCleanName(item.name)}
+                                                    {digitizing === item.id && (
+                                                        <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
+                                                            Digitizing...
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <ChevronRight className="h-6 w-6 text-zinc-600 group-hover:text-white" />
