@@ -169,43 +169,52 @@ export class DriveClient {
         }
     }
 
+    async exportDoc(fileId: string, mimeType = 'application/pdf') {
+        try {
+            const res = await this.drive.files.export({
+                fileId,
+                mimeType,
+            }, {
+                responseType: 'arraybuffer',
+            } as any)
+
             return res.data
         } catch (error: any) {
-    console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
-    throw error
-}
+            console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
+            throw error
+        }
     }
 
     async createFile(params: { name: string; mimeType: string; content: string; parents?: string[] }) {
-    try {
-        const { name, mimeType, content, parents } = params
+        try {
+            const { name, mimeType, content, parents } = params
 
-        const media = {
-            mimeType,
-            body: content
+            const media = {
+                mimeType,
+                body: content
+            }
+
+            const fileMetadata: any = {
+                name,
+                mimeType
+            }
+
+            if (parents && parents.length > 0) {
+                fileMetadata.parents = parents
+            }
+
+            const res = await this.drive.files.create({
+                requestBody: fileMetadata,
+                media: media,
+                fields: 'id, name, webContentLink'
+            })
+
+            console.log(`[Drive] Created file: ${res.data.id}`)
+            return res.data
+
+        } catch (error: any) {
+            console.error(`[Drive] Create Error:`, error)
+            throw error
         }
-
-        const fileMetadata: any = {
-            name,
-            mimeType
-        }
-
-        if (parents && parents.length > 0) {
-            fileMetadata.parents = parents
-        }
-
-        const res = await this.drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, name, webContentLink'
-        })
-
-        console.log(`[Drive] Created file: ${res.data.id}`)
-        return res.data
-
-    } catch (error: any) {
-        console.error(`[Drive] Create Error:`, error)
-        throw error
     }
-}
 }
