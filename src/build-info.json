@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
-  "commit": "beec86d",
+  "commit": "c7aa876",
   "branch": "master",
-  "buildDate": "1/29/2026, 3:03:30 PM",
+  "buildDate": "1/29/2026, 3:13:17 PM",
   "changelog": [
-    "beec86d - Feat: Smart Enrichment (Phase 4) - AI Metadata Extraction & UI Integration (5 minutes ago)",
-    "5d2f480 - Feat: Complete Native Library Switch (Phase 2) - App now reads from Firestore Index (17 minutes ago)",
-    "d218f6c - Fix: Add missing onClick handler to Settings dropdown link (20 minutes ago)",
-    "2116e00 - Feat: Native Library Sync Phase 1 (Indexer, API, Admin Dashboard) (25 minutes ago)",
-    "c093d13 - Refactor: Remove legacy Digitize (MusicXML) feature; Fix PDF loading race condition (2 hours ago)"
+    "c7aa876 - Refactor: Unify DriveFile type definition, fix imports, and cleanup store (9 minutes ago)",
+    "beec86d - Feat: Smart Enrichment (Phase 4) - AI Metadata Extraction & UI Integration (14 minutes ago)",
+    "5d2f480 - Feat: Complete Native Library Switch (Phase 2) - App now reads from Firestore Index (27 minutes ago)",
+    "d218f6c - Fix: Add missing onClick handler to Settings dropdown link (29 minutes ago)",
+    "2116e00 - Feat: Native Library Sync Phase 1 (Indexer, API, Admin Dashboard) (35 minutes ago)"
   ]
 }

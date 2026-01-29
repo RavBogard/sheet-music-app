@@ -4,13 +4,14 @@ import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
-import { ChevronLeft, Plus, FileText, Trash2, Calendar, LogIn, LogOut, User, Globe, Lock, Copy, List } from "lucide-react"
+import { ChevronLeft, Plus, FileText, Trash2, Calendar, LogIn, LogOut, User, Globe, Lock, Copy, List, Download } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useOfflineManager } from "@/hooks/use-offline-manager"
 
 
 import { toast } from "sonner"
@@ -34,6 +35,8 @@ interface SetlistDashboardProps {
 
 export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: SetlistDashboardProps) {
     const { user, loading: authLoading, signIn, signOut } = useAuth()
+    const { downloadSetlist, isDownloading } = useOfflineManager() // Import Hook
+
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(true)
@@ -474,8 +477,34 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                                             </div>
 
                                                             <div className="relative z-10">
-                                                                <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider mb-2">
-                                                                    {new Date(setlist.eventDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                                                                        {new Date(setlist.eventDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                                    </div>
+                                                                    {/* Offline Button */}
+                                                                    <div
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation()
+                                                                            if (setlist.tracks && setlist.tracks.length > 0) {
+                                                                                // Map SetlistTrack to QueueItem structure for the downloader
+                                                                                const queueItems = setlist.tracks
+                                                                                    .filter(t => t.fileId) // Only download tracks with files
+                                                                                    .map(t => ({
+                                                                                        name: t.title, // Map title -> name
+                                                                                        fileId: t.fileId!, // Assert non-null after filter
+                                                                                        type: 'pdf' as const,
+                                                                                        key: t.key
+                                                                                    }))
+                                                                                await downloadSetlist(queueItems)
+                                                                            } else {
+                                                                                toast.error("No tracks to download in this setlist")
+                                                                            }
+                                                                        }}
+                                                                        className="p-2 -mr-2 -mt-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                                                                        title="Download for Offline"
+                                                                    >
+                                                                        <Download className={`h-4 w-4 text-zinc-400 hover:text-white ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
+                                                                    </div>
                                                                 </div>
                                                                 <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
                                                                 {setlist.ownerName && <p className="text-zinc-500 text-sm">Leader: {setlist.ownerName}</p>}
