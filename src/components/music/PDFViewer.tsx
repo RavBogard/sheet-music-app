@@ -22,15 +22,17 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
-    const { user } = useAuth()
+    const { user, loading } = useAuth()
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
 
     // sourceUrl can be a string (online URL or blob URL) or an object (online URL + headers)
-    const [source, setSource] = useState<any>(url)
+    const [source, setSource] = useState<any>(null) // Default to null until resolved
 
     // 1. Resolve Source (Offline vs Online + Auth)
     useEffect(() => {
+        if (loading) return // Wait for auth to settle
+
         let active = true
         let objectUrl: string | null = null
 
@@ -78,7 +80,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
             active = false
             if (objectUrl) URL.revokeObjectURL(objectUrl)
         }
-    }, [url, user])
+    }, [url, user, loading])
 
     // 2. Auto-Resize Logic
     const containerRef = useRef<HTMLDivElement>(null)
