@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { DriveFile, useLibraryStore } from '@/lib/library-store'
+import { useLibraryStore } from '@/lib/library-store'
+import { DriveFile } from '@/types/models'
 import { useSetlistStore } from '@/lib/setlist-store'
 import { levenshtein } from '@/lib/utils'
 import { useRouter } from 'next/navigation'

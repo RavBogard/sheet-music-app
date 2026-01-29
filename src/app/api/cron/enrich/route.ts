@@ -5,7 +5,7 @@ import { enrichFile } from '@/lib/enrichment-engine'
 
 // Initialize Admin
 initAdmin()
-const db = Firestore()
+const db = new Firestore()
 
 export const dynamic = 'force-dynamic'
 // Allow longer timeout for enrichment batch
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
                 // It calls `adminDb.collection...doc(fileId).update(...)`. 
                 // It looks standalone.
 
-                await enrichFile(doc.id, data.name, data.mimeType)
+                await enrichFile(doc.id)
                 stats.success++
                 console.log(`[Cron] Enriched ${data.name}`)
             } catch (e) {
