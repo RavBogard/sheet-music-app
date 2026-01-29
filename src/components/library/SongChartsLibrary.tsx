@@ -305,8 +305,23 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                             )}
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="font-bold text-xl truncate flex items-center gap-3">
-                                                    {isFolder ? item.name : getCleanName(item.name)}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="font-bold text-xl truncate">
+                                                        {isFolder ? item.name : getCleanName(item.name)}
+                                                    </div>
+
+                                                    {/* AI Tags */}
+                                                    {!isFolder && item.metadata?.key && (
+                                                        <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md border border-zinc-700 font-mono">
+                                                            {item.metadata.key}
+                                                        </span>
+                                                    )}
+                                                    {!isFolder && item.metadata?.bpm && (
+                                                        <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md border border-zinc-700 font-mono">
+                                                            {item.metadata.bpm} bpm
+                                                        </span>
+                                                    )}
+
                                                     {digitizing === item.id && (
                                                         <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
                                                             Digitizing...

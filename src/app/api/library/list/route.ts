@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
                 name: data.name,
                 mimeType: data.mimeType,
                 parents: data.parents,
-                webViewLink: data.webViewLink
+                webViewLink: data.webViewLink,
+                metadata: data.metadata || null // Expose enrichment data
             }
         })
 
