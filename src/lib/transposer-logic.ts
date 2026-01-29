@@ -150,8 +150,18 @@ export function calculateCapo(originalKey: string, targetShape: string) {
     // e.g. Orig: F, Target: D -> F - D = 3 semitones. Capo 3. Transposition -3 (visual).
     // e.g. Orig: C, Target: G -> C - G = -7 -> +5 semitones. Capo 5. Transposition -5.
 
-    const origIndex = toSemis(originalKey)
-    const targetIndex = toSemis(targetShape)
+    // 1. Extract Roots (Strip 'm', 'maj', etc.)
+    // We only care about the root distance. e.g. Am -> Em is same distance as A -> E.
+    const extractRoot = (k: string) => {
+        const match = k.match(/^([A-G](?:#|b)?)/)
+        return match ? match[1] : ''
+    }
+
+    const origRoot = extractRoot(originalKey)
+    const targetRoot = extractRoot(targetShape)
+
+    const origIndex = toSemis(origRoot)
+    const targetIndex = toSemis(targetRoot)
 
     if (origIndex === -1 || targetIndex === -1) return null
 
