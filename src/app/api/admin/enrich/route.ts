@@ -5,8 +5,8 @@ import { getAuth } from "firebase-admin/auth"
 import { enrichFile } from "@/lib/enrichment-engine"
 
 initAdmin()
-initAdmin()
-const db = getFirestore()
+
+
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +16,9 @@ export const maxDuration = 60
 export async function POST(req: NextRequest) {
     try {
         // 1. Verify Admin
+        initAdmin()
+        const db = getFirestore()
+
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -1,13 +1,13 @@
 {
-  "version": "1.0.2",
-  "commit": "e8d7c95",
+  "version": "1.0.7",
+  "commit": "caec38f",
   "branch": "master",
-  "buildDate": "1/29/2026, 4:20:22 PM",
+  "buildDate": "1/29/2026, 4:27:56 PM",
   "changelog": [
-    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (2 minutes ago)",
-    "9dca110 - feat: smart capo transposition (shape selector) and UI resize fixes (3 minutes ago)",
-    "54407ca - fix(admin): display actual server error in PruneManager (11 minutes ago)",
-    "800f3b4 - feat: unified Settings & Admin dashboard, fixed PruneManager build error (18 minutes ago)",
-    "0b6a6ca - refactor: automate Prune tool (remove manual review) and doc updates (25 minutes ago)"
+    "caec38f - fix: build errors in PDFViewer (duplicate decl) and TransposeControl (syntax) (7 minutes ago)",
+    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (9 minutes ago)",
+    "9dca110 - feat: smart capo transposition (shape selector) and UI resize fixes (11 minutes ago)",
+    "54407ca - fix(admin): display actual server error in PruneManager (19 minutes ago)",
+    "800f3b4 - feat: unified Settings & Admin dashboard, fixed PruneManager build error (25 minutes ago)"
   ]
 }

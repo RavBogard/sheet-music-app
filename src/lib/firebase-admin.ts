@@ -12,8 +12,10 @@ const serviceAccount = {
 
 export function initAdmin() {
     if (getApps().length === 0) {
-        if (!serviceAccount.clientEmail || !serviceAccount.privateKey) {
-            console.warn("Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY. API protection will fail.");
+        const { projectId, clientEmail, privateKey } = serviceAccount;
+        if (!projectId || !clientEmail || !privateKey) {
+            console.warn("Firebase Admin credentials missing (Build/Dev). Skipping initialization.");
+            return;
         }
         initializeApp({
             credential: cert(serviceAccount)

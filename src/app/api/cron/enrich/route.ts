@@ -5,13 +5,14 @@ import { enrichFile } from '@/lib/enrichment-engine'
 
 // Initialize Admin
 initAdmin()
-const db = getFirestore()
 
 export const dynamic = 'force-dynamic'
 // Allow longer timeout for enrichment batch
 export const maxDuration = 60
 
 export async function GET(request: Request) {
+    initAdmin()
+    const db = getFirestore()
     try {
         const authHeader = request.headers.get('authorization')
         if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
