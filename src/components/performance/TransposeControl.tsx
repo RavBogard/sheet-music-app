@@ -156,10 +156,24 @@ export function TransposeControl() {
 
                     {/* AI Chords Toggle */}
                     <div className="pt-4 mt-4 border-t border-zinc-800 flex items-center justify-between">
-                        <span className="text-xs font-bold text-zinc-500 uppercase">Show Chords</span>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-zinc-500 uppercase">Show Transposed Chords</span>
+                            {aiTransposer.status === 'scanning' && (
+                                <span className="text-[10px] font-bold text-orange-400 animate-pulse mt-0.5 flex items-center gap-1">
+                                    Scanning...
+                                </span>
+                            )}
+                            {aiTransposer.status === 'error' && (
+                                <span className="text-[10px] font-bold text-red-400 mt-0.5">
+                                    Scan Failed
+                                </span>
+                            )}
+                        </div>
+
                         <button
                             onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
                             className={`w-10 h-6 rounded-full transition-colors relative ${aiTransposer.isVisible ? 'bg-green-500' : 'bg-zinc-700'}`}
+                            disabled={aiTransposer.status === 'scanning'}
                         >
                             <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${aiTransposer.isVisible ? 'translate-x-4' : 'translate-x-0'}`} />
                         </button>
