@@ -190,7 +190,12 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         if (!setlistService || !user) return
 
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-        const name = type === 'shabbat_morning' ? `Shabbat Morning ${formattedDate}` : 'New Setlist'
+
+        let name = 'New Setlist'
+        // Auto-detect Shabbat Morning if it's a Saturday (Day 6)
+        if (type === 'shabbat_morning' || date.getDay() === 6) {
+            name = `Shabbat Morning ${formattedDate}`
+        }
 
         try {
             const id = await setlistService.createSetlist(name, [], false, {
@@ -425,7 +430,8 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                 // 3. Generate Placeholders (Only for Public View & Logged In Users who can edit - essentially all logged in users for now)
                                 // "Clarify that someone should grab it and create a setlist"
                                 const placeholders = []
-                                if (user && activeTab === 'public') { // Only show suggest placeholders in public library context? Or maybe Personal too? Protocol says "Planned services... listed" usually implies public/team context.
+                                if (user && activeTab === 'public') {
+                                    // Look ahead 7 days
                                     for (let i = 0; i < 7; i++) {
                                         const d = new Date(today)
                                         d.setDate(today.getDate() + i)
@@ -437,14 +443,9 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
                                         })
 
                                         if (!exists) {
-                                            // Is this a "Planned Service" day?
-                                            // User said "Planned services that still need to be created". 
-                                            // Assuming for now ALL next 6 days are valid slots, specifically Shabbat (Fri/Sat) are strictly required, but let's just show slots for next 6 days as requested.
-                                            // Maybe emphasize Fri/Sat?
-                                            const isShabbat = d.getDay() === 5 || d.getDay() === 6
-
-                                            if (true) { // Show for all days or just Shabbat? "anything within the next 6 days should be listed" -> All days.
-                                                placeholders.push({ date: d, isShabbat })
+                                            // User requested ONLY Saturday Morning suggestions
+                                            if (d.getDay() === 6) {
+                                                placeholders.push({ date: d, isShabbat: true })
                                             }
                                         }
                                     }
