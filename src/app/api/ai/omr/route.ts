@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         const fileData = await driveClient.getFile(fileId);
 
         // Convert to Base64 (getFile returns ArrayBuffer)
-        const pdfBuffer = Buffer.from(fileData as ArrayBuffer);
+        const pdfBuffer = Buffer.from(fileData as any);
         const base64Data = pdfBuffer.toString("base64");
 
 
