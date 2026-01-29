@@ -107,7 +107,11 @@ export default function SetlistEditorPage() {
                     .filter((t: any) => t.fileId)
                     .map((t: any) => {
                         // Determine type from fileId
-                        const type: FileType = (t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl')) ? 'musicxml' : 'pdf'
+                        const type: FileType = (t.fileId?.startsWith('db-') || t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl'))
+                            ? 'musicxml'
+                            : t.fileId?.endsWith('.chordpro')
+                                ? 'chordpro'
+                                : 'pdf'
 
                         return {
                             name: t.title,

@@ -28,6 +28,7 @@ interface TrackItemProps {
     readOnly?: boolean
     isEditMode?: boolean
     onEditDetails?: (track: SetlistTrack) => void
+    onDuplicate?: (trackId: string, overrides?: Partial<SetlistTrack>) => void
 }
 
 export function TrackItem({
@@ -38,7 +39,8 @@ export function TrackItem({
     onPlay,
     readOnly,
     isEditMode,
-    onEditDetails
+    onEditDetails,
+    onDuplicate
 }: TrackItemProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: track.id,
@@ -156,13 +158,22 @@ export function TrackItem({
 
             const saveData = await saveRes.json()
 
-            // 3. Auto-link to the new file
-            onUpdate(track.id, {
-                fileId: saveData.id,
-                fileName: `${track.title} (AI)`
-            })
-
-            toast.success("Digitized & Linked! You can now play this chart.")
+            // 3. Create NEW Track for the Digital Version (Duplicate)
+            if (onDuplicate) {
+                onDuplicate(track.id, {
+                    fileId: saveData.id,
+                    fileName: `${track.title} (Digital).musicxml`,
+                    title: `${track.title} (Digital Version)`
+                })
+                toast.success("Digitized! New digital version added to setlist.")
+            } else {
+                // Fallback (shouldn't happen with updated parent)
+                onUpdate(track.id, {
+                    fileId: saveData.id,
+                    fileName: `${track.title} (AI)`
+                })
+                toast.success("Digitized & Linked!")
+            }
 
         } catch (e: any) {
             console.error("Digitize Error:", e)

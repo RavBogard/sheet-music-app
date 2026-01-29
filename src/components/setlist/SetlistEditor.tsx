@@ -84,8 +84,11 @@ export function SetlistEditor({
         togglePublic,
         undo,
         redo,
+        undo,
+        redo,
         canUndo,
-        canRedo
+        canRedo,
+        duplicateTrack
     } = useSetlistLogic({
         initialSetlistId,
         initialTracks,
@@ -195,6 +198,7 @@ export function SetlistEditor({
                                     readOnly={!canEdit} // Still needed for non-editors
                                     isEditMode={canEdit && isEditMode} // Separate visual edit mode
                                     onEditDetails={canEdit ? setEditingTrack : undefined}
+                                    onDuplicate={duplicateTrack}
                                 />
                             ))}
 

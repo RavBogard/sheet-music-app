@@ -296,6 +296,27 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
+    const duplicateTrack = (originalTrackId: string, overrides: Partial<SetlistTrack> = {}) => {
+        if (!canEdit) return
+
+        setTracks(prev => {
+            addToHistory(prev)
+            const index = prev.findIndex(t => t.id === originalTrackId)
+            if (index === -1) return prev
+
+            const original = prev[index]
+            const newTrack: SetlistTrack = {
+                ...original,
+                id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                ...overrides
+            }
+
+            const newTracks = [...prev]
+            newTracks.splice(index + 1, 0, newTrack)
+            return newTracks
+        })
+    }
+
     const addSongsFromLibrary = (files: DriveFile[]) => {
         if (!canEdit) return
         const newTracks: SetlistTrack[] = files.map((file, index) => {
@@ -376,6 +397,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         deleteTrack,
         matchFile,
         addSongsFromLibrary,
+        duplicateTrack,
         togglePublic,
         eventDate,
         setEventDate,
