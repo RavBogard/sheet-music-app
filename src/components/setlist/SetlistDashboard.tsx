@@ -200,7 +200,7 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
         try {
             const id = await setlistService.createSetlist(name, [], false, {
                 eventDate: date.toISOString(),
-                templateType: type
+                templateType: type || null
             })
             // await setlistService.updateSetlist(id, false, { ... }) // Removed in favor of atomic create
 
