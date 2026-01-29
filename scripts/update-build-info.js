@@ -10,16 +10,9 @@ try {
     // Get Last 5 Commits for Changelog
     const changelog = execSync('git log -5 --pretty=format:"%h - %s (%cr)"').toString().trim().split('\n');
 
-    // CalVer Format: YYYY.MM.DD-HHmm
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-
-    // e.g. 2024.01.27-1145
-    const humanVersion = `${year}.${month}.${day}-${hours}${minutes}`;
+    // CalVer / SemVer
+    const packageJson = require('../package.json');
+    const humanVersion = packageJson.version;
 
     const buildInfo = {
         version: humanVersion,
