@@ -18,13 +18,18 @@ export default function PerformPage() {
     // Sync URL with Store
     useEffect(() => {
         if (fileId) {
-            const expectedUrl = `/api/drive/file/${fileId}`
+            // Determine API Endpoint based on ID type
+            const isDbFile = fileId.startsWith('db-')
+            const expectedUrl = isDbFile
+                ? `/api/library/file/${fileId}`
+                : `/api/drive/file/${fileId}`
 
             // CRITICAL: Only update the store if the URL actually represents a different file
             // than what is currently loaded.
             if (!fileUrl?.includes(fileId)) {
                 console.log("URL change detected, syncing store to:", fileId)
-                setFile(expectedUrl, 'pdf')
+                // Use 'musicxml' type for DB files since they are always XML, otherwise default to PDF (SmartScoreViewer will detect content anyway)
+                setFile(expectedUrl, isDbFile ? 'musicxml' : 'pdf')
             }
         }
     }, [fileId, fileUrl, setFile])

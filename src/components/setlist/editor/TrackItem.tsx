@@ -133,9 +133,9 @@ export function TrackItem({
 
             const omrData = await omrRes.json()
 
-            // 2. Save XML
-            toast.info("Saving MusicXML...")
-            const saveRes = await fetch('/api/drive/save', {
+            // 2. Save XML to App Library (Firestore)
+            toast.info("Saving to Digital Library...")
+            const saveRes = await fetch('/api/library/save-generated', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,7 +143,9 @@ export function TrackItem({
                 },
                 body: JSON.stringify({
                     sourceFileId: track.fileId,
-                    xmlContent: omrData.xml
+                    xmlContent: omrData.xml,
+                    title: track.title,
+                    originalName: track.fileName
                 })
             })
 
@@ -152,9 +154,15 @@ export function TrackItem({
                 throw new Error(saveError.error || "Failed to save XML")
             }
 
-            toast.success("Saved! You may need to re-link to the new XML file if you prefer it.")
-            // Note: We don't automatically swap the file on the track to the XML one here, usually user wants to keep PDF.
-            // But maybe we should? For now, just save it.
+            const saveData = await saveRes.json()
+
+            // 3. Auto-link to the new file
+            onUpdate(track.id, {
+                fileId: saveData.id,
+                fileName: `${track.title} (AI)`
+            })
+
+            toast.success("Digitized & Linked! You can now play this chart.")
 
         } catch (e: any) {
             console.error("Digitize Error:", e)
