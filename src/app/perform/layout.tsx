@@ -8,8 +8,8 @@ export default function PerformLayout({
     children: React.ReactNode
 }) {
     return (
-        <ProtectedLayout>
+        <>
             {children}
-        </ProtectedLayout>
+        </>
     )
 }
