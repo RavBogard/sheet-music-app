@@ -15,6 +15,9 @@ import {
     ContextMenuTrigger,
     ContextMenuSeparator,
 } from "@/components/ui/context-menu"
+import { useAuth } from "@/lib/auth-context"
+import { toast } from "sonner"
+import { Loader2, Wand2 } from "lucide-react"
 
 interface TrackItemProps {
     track: SetlistTrack
@@ -91,6 +94,72 @@ export function TrackItem({
 
     // --- Long Press Logic --
     // REMOVED: Native Context Menu handles long press now.
+
+    // --- AI Digitize Logic ---
+    const { isAdmin, user } = useAuth()
+    const [digitizing, setDigitizing] = useState(false)
+
+    const handleDigitize = async () => {
+        if (!track.fileId) return
+
+        try {
+            setDigitizing(true)
+            toast.info(`Digitizing "${track.fileName}"... This may take ~5 mins`)
+
+            const token = await user?.getIdToken()
+
+            // 1. Generate XML
+            const omrRes = await fetch('/api/ai/omr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ fileId: track.fileId })
+            })
+
+            if (!omrRes.ok) {
+                if (omrRes.status === 504) {
+                    throw new Error("The AI took too long to respond.")
+                }
+                const text = await omrRes.text()
+                try {
+                    const json = JSON.parse(text)
+                    throw new Error(json.error || "Digitization failed")
+                } catch (e) {
+                    throw new Error(`Server Error (${omrRes.status}): ${text.substring(0, 50)}...`)
+                }
+            }
+
+            const omrData = await omrRes.json()
+
+            // 2. Save XML
+            toast.info("Saving MusicXML...")
+            const saveRes = await fetch('/api/drive/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    sourceFileId: track.fileId,
+                    xmlContent: omrData.xml
+                })
+            })
+
+            if (!saveRes.ok) throw new Error("Failed to save XML")
+
+            toast.success("Saved! You may need to re-link to the new XML file if you prefer it.")
+            // Note: We don't automatically swap the file on the track to the XML one here, usually user wants to keep PDF.
+            // But maybe we should? For now, just save it.
+
+        } catch (e: any) {
+            console.error("Digitize Error:", e)
+            toast.error(e.message)
+        } finally {
+            setDigitizing(false)
+        }
+    }
 
     const handleTitleClick = () => {
         if (hasFile && track.fileId && onPlay) {
@@ -320,6 +389,25 @@ export function TrackItem({
                             <Search className="h-4 w-4 mr-2" />
                             {hasFile ? "Change File" : "Link File"}
                         </ContextMenuItem>
+
+                        {/* Admin OMR */}
+                        {isAdmin && hasFile && (track.fileName?.toLowerCase().includes('.pdf') || true) && (
+                            <ContextMenuItem
+                                onClick={handleDigitize}
+                                disabled={digitizing}
+                                className="text-purple-400 focus:text-purple-300 focus:bg-purple-900/50"
+                            >
+                                {digitizing ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" /> Digitizing...
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <Wand2 className="h-4 w-4" /> Digitize (AI)
+                                    </span>
+                                )}
+                            </ContextMenuItem>
+                        )}
                     </>
                 )}
             </ContextMenuContent>

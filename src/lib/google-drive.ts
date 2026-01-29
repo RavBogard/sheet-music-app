@@ -159,7 +159,7 @@ export class DriveClient {
         try {
             const res = await this.drive.files.get({
                 fileId,
-                fields: 'id, name, mimeType',
+                fields: 'id, name, mimeType, parents',
                 supportsAllDrives: true
             })
             return res.data

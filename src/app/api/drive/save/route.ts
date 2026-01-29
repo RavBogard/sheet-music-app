@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("Save Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Save Error Details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        return NextResponse.json({ error: `Save Failed: ${error.message}` }, { status: 500 });
     }
 }
