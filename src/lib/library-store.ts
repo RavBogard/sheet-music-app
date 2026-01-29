@@ -73,17 +73,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             const params = new URLSearchParams()
             if (folderId) params.set('folderId', folderId)
             if (query) params.set('q', query)
-            if (loadMore && get().nextPageToken) params.set('pageToken', get().nextPageToken!)
-            params.set('limit', '50')
+            // if (loadMore && get().nextPageToken) params.set('pageToken', get().nextPageToken!) // Pagination paused for Phase 2
+            params.set('limit', '100')
 
-            const res = await fetch(`/api/drive/list?${params.toString()}`, { headers })
-            if (!res.ok) throw new Error("Failed to sync library")
+            // SWITCHED: Now calling local Firestore Index instead of Drive API
+            const res = await fetch(`/api/library/list?${params.toString()}`, { headers })
+            if (!res.ok) throw new Error("Failed to load library")
 
-            const data = await res.json() // { files: [], nextPageToken: "" }
+            const data = await res.json() // { files: [], nextPageToken: null }
 
             set(state => ({
                 driveFiles: loadMore ? [...state.driveFiles, ...data.files] : data.files,
-                nextPageToken: data.nextPageToken,
+                nextPageToken: null, // data.nextPageToken,
                 initialized: true
             }))
 
