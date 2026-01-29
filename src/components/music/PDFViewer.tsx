@@ -85,7 +85,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
     // 2. Auto-Resize Logic
     const containerRef = useRef<HTMLDivElement>(null)
     // 2. Auto-Resize Logic (Responsive to container changes)
-    const containerRef = useRef<HTMLDivElement>(null)
+
     useEffect(() => {
         if (!containerRef.current) return
 

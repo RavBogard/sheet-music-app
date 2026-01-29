@@ -1,13 +1,13 @@
 {
-  "version": "1.0.1",
-  "commit": "737773e",
+  "version": "1.0.2",
+  "commit": "e8d7c95",
   "branch": "master",
-  "buildDate": "1/29/2026, 3:34:35 PM",
+  "buildDate": "1/29/2026, 4:20:22 PM",
   "changelog": [
-    "737773e - fix(api): use getFirestore() instead of new Firestore() to resolve Project Id error (3 minutes ago)",
-    "db53af6 - feat: redesign performance toolbar to player bar layout, fix build errors (7 minutes ago)",
-    "baae57a - fix: resolve build errors (DriveFile import, Firestore usage, enrichFile args) (16 minutes ago)",
-    "eb0b585 - feat: robust offline manager, refined UI & backend automation (21 minutes ago)",
-    "c7aa876 - Refactor: Unify DriveFile type definition, fix imports, and cleanup store (30 minutes ago)"
+    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (2 minutes ago)",
+    "9dca110 - feat: smart capo transposition (shape selector) and UI resize fixes (3 minutes ago)",
+    "54407ca - fix(admin): display actual server error in PruneManager (11 minutes ago)",
+    "800f3b4 - feat: unified Settings & Admin dashboard, fixed PruneManager build error (18 minutes ago)",
+    "0b6a6ca - refactor: automate Prune tool (remove manual review) and doc updates (25 minutes ago)"
   ]
 }
