@@ -1,13 +1,13 @@
 {
-  "version": "2026.01.29-1031",
-  "commit": "4b06afc",
+  "version": "2026.01.29-1043",
+  "commit": "1664b9c",
   "branch": "master",
-  "buildDate": "1/29/2026, 10:31:50 AM",
+  "buildDate": "1/29/2026, 10:43:16 AM",
   "changelog": [
-    "4b06afc - feat: UX Improvements - Public access, Tap Tempo, Interaction Logic, and Theme Refresh (5 minutes ago)",
-    "ed37328 - fix: Add @radix-ui/react-label dependency (22 minutes ago)",
-    "6f14bfe - fix: Add missing closing brace in SetlistEditor (26 minutes ago)",
-    "daabe03 - feat: Add Setlist Edit Mode, BPM Metronome, and detailed Track Editor (27 minutes ago)",
-    "2c4299d - fix: reset capo and transposition state when changing songs (17 hours ago)"
+    "1664b9c - feat: Implement Setlist Undo, Public Access, Tap Tempo, and Theme improvements (8 minutes ago)",
+    "4b06afc - feat: UX Improvements - Public access, Tap Tempo, Interaction Logic, and Theme Refresh (16 minutes ago)",
+    "ed37328 - fix: Add @radix-ui/react-label dependency (33 minutes ago)",
+    "6f14bfe - fix: Add missing closing brace in SetlistEditor (37 minutes ago)",
+    "daabe03 - feat: Add Setlist Edit Mode, BPM Metronome, and detailed Track Editor (39 minutes ago)"
   ]
 }

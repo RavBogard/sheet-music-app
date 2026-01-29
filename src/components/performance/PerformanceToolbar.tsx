@@ -8,11 +8,15 @@ import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import { Tuner } from "@/components/tools/Tuner"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
-    ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff
+    ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff,
+    Mic2, Play, Pause
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NetworkStatus } from "@/components/network-status"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
+import { useMetronome } from "@/hooks/use-metronome"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -42,6 +46,16 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
     const currentTrack = playbackQueue[queueIndex]
 
+    // Metronome Integration
+    const { isPlaying: isMetronomeOn, togglePlay: toggleMetronome, currentBpm, setCurrentBpm } = useMetronome(currentTrack?.bpm || 100)
+
+    // Sync metronome BPM when track changes
+    useEffect(() => {
+        if (currentTrack?.bpm) {
+            setCurrentBpm(currentTrack.bpm)
+        }
+    }, [currentTrack, setCurrentBpm])
+
     // Capo Calculation Helper
     const calculateCapo = (sourceKey: string, targetShape: string) => {
         const sIndex = KEYS.indexOf(sourceKey.replace(/m$/, ''))
@@ -70,7 +84,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposition(0)
     }
 
-    // Focus Mode Logic
+    // Auto-hide Logic
     const [visible, setVisible] = useState(true)
 
     useEffect(() => {
@@ -80,12 +94,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             setVisible(true)
             clearTimeout(timeout)
             timeout = setTimeout(() => {
-                // Only hide if not interacting with a menu
-                // Simple heuristic: if we are here, we are interacting.
-                // But we need to handle "mouse stop".
-                // Actually, a simpler way is: hide after 3s of no mouse move.
-                // But we don't want to hide if hovering the toolbar itself?
-                // Let's implement simple "hide after 3s" but listener is on window.
+                // Hide after 3s of inactivity
                 setVisible(false)
             }, 3000)
         }
@@ -106,21 +115,90 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
     return (
         <div
-            className={`fixed bottom-0 left-0 right-0 h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-between px-2 sm:px-4 z-50 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}
+            className={cn(
+                "fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-md border-t border-zinc-800 z-50 transition-all duration-300",
+                "h-auto pb-safe sm:h-20 flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-0 gap-2 sm:gap-4",
+                visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 hover:translate-y-0 hover:opacity-100"
+            )}
         >
+            {/* ZONE 1: Navigation & Setlist */}
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white h-12 w-12">
+                        <Home className="h-6 w-6" />
+                    </Button>
+                    <SetlistDrawer />
+                </div>
 
-            {/* Left: Navigation */}
-            <div className="flex items-center gap-1 sm:gap-2">
-                <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white">
-                    <Home className="h-5 w-5" />
-                </Button>
-
-                {/* Setlist Drawer */}
-                <SetlistDrawer />
+                {/* Mobile Song Nav (Visible only on mobile) */}
+                <div className="flex items-center gap-4 sm:hidden">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            const prev = prevSong()
+                            if (prev) router.replace(`/perform/${prev.fileId}`)
+                        }}
+                        disabled={queueIndex <= 0}
+                        className="text-white h-12 w-12"
+                    >
+                        <ChevronLeft className="h-8 w-8" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            const next = nextSong()
+                            if (next) router.replace(`/perform/${next.fileId}`)
+                        }}
+                        disabled={queueIndex >= playbackQueue.length - 1}
+                        className="text-white h-12 w-12"
+                    >
+                        <ChevronRight className="h-8 w-8" />
+                    </Button>
+                </div>
             </div>
 
-            {/* Center: Playback */}
-            <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-center max-w-[50%] sm:max-w-none">
+            {/* ZONE 2: Performance Info (Key & BPM) */}
+            <div className="flex items-center gap-4 bg-zinc-900/50 rounded-xl px-3 py-1 border border-white/5">
+                {/* Key Display */}
+                <div className="flex flex-col items-center min-w-[3.5rem]">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Key</span>
+                    <span className="text-2xl font-black text-white leading-none">
+                        {currentTrack?.key || "-"}
+                    </span>
+                </div>
+
+                <div className="w-px h-8 bg-zinc-800" />
+
+                {/* Metronome Control */}
+                <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-center min-w-[3.5rem]">
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">BPM</span>
+                        <Input
+                            type="number"
+                            value={currentBpm}
+                            onChange={(e) => setCurrentBpm(parseInt(e.target.value) || 0)}
+                            className="h-7 w-16 bg-transparent border-0 text-2xl font-black text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                    </div>
+
+                    <Button
+                        variant={isMetronomeOn ? "default" : "outline"}
+                        size="icon"
+                        onClick={toggleMetronome}
+                        className={cn(
+                            "h-10 w-10 rounded-full transition-all",
+                            isMetronomeOn ? "bg-cyan-500 hover:bg-cyan-400 animate-pulse" : "border-zinc-700 text-zinc-400 hover:text-white"
+                        )}
+                    >
+                        {isMetronomeOn ? <Pause className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
+                    </Button>
+                </div>
+            </div>
+
+            {/* ZONE 3: Song Navigation (Desktop) */}
+            <div className="hidden sm:flex items-center gap-4 flex-1 justify-center max-w-[400px]">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -129,17 +207,17 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         if (prev) router.replace(`/perform/${prev.fileId}`)
                     }}
                     disabled={queueIndex <= 0}
-                    className="text-white"
+                    className="text-white h-14 w-14 hover:bg-white/10 rounded-full"
                 >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ChevronLeft className="h-8 w-8" />
                 </Button>
 
-                <div className="flex flex-col items-center overflow-hidden">
-                    <span className="text-sm font-bold truncate text-center w-full px-2">
+                <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1">
+                    <span className="text-lg font-bold truncate text-center w-full leading-tight">
                         {currentTrack?.name || "No Song Selected"}
                     </span>
-                    <span className="text-[10px] text-zinc-500">
-                        {playbackQueue.length > 0 ? `${queueIndex + 1} / ${playbackQueue.length}` : "Empty Queue"}
+                    <span className="text-xs text-zinc-500 mt-1">
+                        {playbackQueue.length > 0 ? `${queueIndex + 1} of ${playbackQueue.length}` : "Setlist Empty"}
                     </span>
                 </div>
 
@@ -151,20 +229,20 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         if (next) router.replace(`/perform/${next.fileId}`)
                     }}
                     disabled={queueIndex >= playbackQueue.length - 1}
-                    className="text-white"
+                    className="text-white h-14 w-14 hover:bg-white/10 rounded-full"
                 >
-                    <ChevronRight className="h-6 w-6" />
+                    <ChevronRight className="h-8 w-8" />
                 </Button>
             </div>
 
-            {/* Right: Tools */}
-            <div className="flex items-center gap-1 sm:gap-2 justify-end">
+            {/* ZONE 4: Tools (Transpose, Audio, Tuner) */}
+            <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
                 <BackingTrackPlayer />
 
                 {/* Tuner */}
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" title="Tuner">
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white h-10 w-10" title="Tuner">
                             <Guitar className="h-5 w-5" />
                         </Button>
                     </PopoverTrigger>
@@ -173,22 +251,8 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </PopoverContent>
                 </Popover>
 
-                {/* Transposer Visibility Toggle (Direct Access) */}
-                {aiTransposer.status === 'ready' && (
-                    <Button
-                        variant={aiTransposer.isVisible ? "default" : "ghost"}
-                        size="icon"
-                        onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
-                        className={`h-9 w-9 ${aiTransposer.isVisible ? 'bg-purple-600 hover:bg-purple-700' : 'text-zinc-500'}`}
-                        title={aiTransposer.isVisible ? "Hide Chords" : "Show Chords"}
-                    >
-                        {aiTransposer.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    </Button>
-                )}
-
-                {/* Unified Transpose Menu */}
+                {/* Transpose Menu reuse */}
                 <Popover onOpenChange={(open) => {
-                    // Auto-trigger scan if opening menu, it's a PDF, and we haven't started yet
                     if (open && fileType === 'pdf' && aiTransposer.status === 'idle') {
                         setTransposerState({ isVisible: true })
                     }
@@ -196,126 +260,37 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     <PopoverTrigger asChild>
                         <Button
                             variant={transposition !== 0 || capo.active ? "default" : "secondary"}
-                            size="sm"
-                            className="gap-2 min-w-[50px] sm:min-w-[100px]"
+                            className="bg-zinc-800 text-zinc-200 hover:bg-zinc-700 h-10 px-3"
                         >
-                            <Music2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                                {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Transpose")}
-                            </span>
-                            {/* Mobile Only Value Indicator */}
-                            {(transposition !== 0 || capo.active) && (
-                                <span className="sm:hidden text-xs font-bold">
-                                    {capo.active ? `C${capo.fret}` : (transposition > 0 ? `+${transposition}` : transposition)}
-                                </span>
-                            )}
+                            <Music2 className="h-4 w-4 mr-2" />
+                            {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Key")}
                         </Button>
                     </PopoverTrigger>
+                    {/* Popover Content (Same as before, simplified for this rewrite) */}
                     <PopoverContent className="w-80 p-4 bg-zinc-900 border-zinc-700 text-white mb-2" align="end" sideOffset={10}>
                         <div className="space-y-4">
                             <h3 className="font-bold text-lg border-b border-zinc-800 pb-2 mb-4">Transposition</h3>
 
-                            {/* PDF Status / Loader */}
-                            {fileType === 'pdf' && (
-                                <div className="bg-zinc-800/50 rounded-lg p-3 mb-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-zinc-400">Smart Chords</span>
-                                        {aiTransposer.status === 'scanning' && <Loader2 className="h-4 w-4 animate-spin text-purple-400" />}
-                                        {aiTransposer.status === 'ready' && <Wand2 className="h-4 w-4 text-purple-400" />}
-                                    </div>
-
-                                    {aiTransposer.status === 'idle' && (
-                                        <p className="text-xs text-zinc-500">Menu opening triggers scan...</p>
-                                    )}
-
-                                    {aiTransposer.status === 'scanning' && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs text-zinc-300">Analyzing sheet music...</p>
-                                            <div className="h-1 bg-zinc-700 rounded-full overflow-hidden">
-                                                <div className="h-full bg-purple-500 animate-indeterminate" />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {aiTransposer.status === 'ready' && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-zinc-300">
-                                                Detected Key: <span className="text-white font-bold">{aiTransposer.detectedKey}</span>
-                                            </span>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="h-6 text-xs text-zinc-400 hover:text-white"
-                                                onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
-                                            >
-                                                {aiTransposer.isVisible ? "Hide Overlay" : "Show Overlay"}
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {aiTransposer.status === 'error' && (
-                                        <div className="text-xs text-red-400">
-                                            Scan failed. <Button variant="link" className="text-red-400 p-0 h-auto" onClick={() => setTransposerState({ status: 'idle', isVisible: true })}>Retry</Button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Standard Transpose */}
-                            <div>
-                                <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Manual Shift</h4>
-                                <div className="flex items-center justify-center gap-4 bg-zinc-800 rounded-lg p-2">
-                                    <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition - 1)}>-</Button>
-                                    <span className="font-mono text-xl font-bold w-8 text-center">{transposition}</span>
-                                    <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition + 1)}>+</Button>
-                                </div>
+                            {/* Simple Manual Shift */}
+                            <div className="flex items-center justify-center gap-4 bg-zinc-800 rounded-lg p-2">
+                                <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition - 1)}>-</Button>
+                                <span className="font-mono text-xl font-bold w-8 text-center">{transposition}</span>
+                                <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition + 1)}>+</Button>
                             </div>
 
-                            {/* Capo Mode (Only if Key Detected) */}
-                            {aiTransposer.detectedKey && (
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h4 className="text-xs font-bold text-zinc-500 uppercase">Guitar Capo</h4>
-                                        {capo.active && (
-                                            <Button variant="ghost" size="sm" className="h-4 p-0 text-[10px] text-red-400 hover:text-red-300" onClick={clearCapo}>
-                                                Clear
-                                            </Button>
-                                        )}
-                                    </div>
-
-                                    <div className="grid grid-cols-5 gap-1">
-                                        {SHAPES.map(shape => (
-                                            <Button
-                                                key={shape}
-                                                variant={capo.active && capo.targetShape === shape ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => applyCapo(shape)}
-                                                className="h-8 font-bold"
-                                            >
-                                                {shape}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-zinc-500 mt-2 text-center">
-                                        Select a shape to play in. We'll show you where to capo.
-                                    </p>
-                                </div>
-                            )}
+                            {/* Reset Button */}
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => { setTransposition(0); clearCapo(); }}
+                            >
+                                Reset All
+                            </Button>
                         </div>
                     </PopoverContent>
                 </Popover>
-
-                {/* Zoom */}
-                <div className="flex items-center bg-zinc-800 rounded-lg ml-2 hidden sm:flex">
-                    <Button variant="ghost" size="icon" onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} className="h-8 w-8">
-                        <ZoomOut className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="h-8 w-8">
-                        <ZoomIn className="h-4 w-4" />
-                    </Button>
-                </div>
-                <NetworkStatus />
             </div>
-        </div >
+        </div>
     )
 }

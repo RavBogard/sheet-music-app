@@ -10,6 +10,8 @@ export interface QueueItem {
     audioFileId?: string
     transposition?: number
     targetKey?: string // For auto-transpose
+    bpm?: number
+    key?: string
 }
 
 export interface MusicState {

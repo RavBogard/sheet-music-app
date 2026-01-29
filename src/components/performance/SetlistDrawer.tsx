@@ -31,7 +31,7 @@ export function SetlistDrawer() {
                     </SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 h-full">
                     <div className="flex flex-col p-2 gap-1">
                         {playbackQueue.map((track, index) => {
                             const isCurrent = index === queueIndex

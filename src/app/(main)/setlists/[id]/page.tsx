@@ -106,23 +106,16 @@ export default function SetlistEditorPage() {
                 const queue = trackList
                     .filter((t: any) => t.fileId)
                     .map((t: any) => {
-                        // Use provided fileName or fallback to activeFiles lookup for legacy tracks
-                        let name = t.fileName || fileName
-                        if (!name && t.fileId) {
-                            const driveFile = activeFiles.find(df => df.id === t.fileId)
-                            name = driveFile?.name
-                        }
-
-                        // Determine type from name
-                        const isXml = name?.endsWith('.xml') || name?.endsWith('.musicxml')
-                        const type: FileType = isXml ? 'musicxml' : 'pdf'
+                        // Determine type from fileId
+                        const type: FileType = (t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl')) ? 'musicxml' : 'pdf'
 
                         return {
                             name: t.title,
                             fileId: t.fileId as string,
                             type: type,
-                            transposition: Number(t.key) ? 0 : 0,
-                            targetKey: t.key || undefined
+                            audioFileId: t.audioFileId,
+                            bpm: t.bpm,
+                            key: t.key
                         }
                     })
 
