@@ -110,24 +110,26 @@ export function PruneManager() {
                         </span>
                     </div>
                 )}
-                <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
-                    {scanData.ghosts.map(g => (
-                        <div key={g.id} className="flex justify-between">
-                            <span className="truncate max-w-[200px]">{g.name}</span>
-                            <span className="font-mono opacity-50">{g.id}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-                )}
 
-            {scanData && scanData.ghosts.length === 0 && (
-                <div className="flex items-center gap-2 text-green-500 bg-green-500/10 p-2 rounded">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">System Clean. Database is in sync.</span>
-                </div>
-            )}
-        </CardContent>
-        </Card >
+                {scanData && scanData.ghosts.length > 0 && (
+                    <div className="bg-black/20 rounded-lg p-4 border border-red-500/20 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-red-400 font-bold flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                {scanData.ghosts.length} Ghosts Found
+                            </h4>
+                        </div>
+                        <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
+                            {scanData.ghosts.map(g => (
+                                <div key={g.id} className="flex justify-between">
+                                    <span className="truncate max-w-[200px]">{g.name}</span>
+                                    <span className="font-mono opacity-50">{g.id}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     )
 }

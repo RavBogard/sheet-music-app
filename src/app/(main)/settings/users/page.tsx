@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 
-export default function AdminUsersPage() {
+export default function SettingsUsersPage() {
     const { user, isAdmin, loading: authLoading } = useAuth()
     const router = useRouter()
     const [users, setUsers] = useState<UserProfile[]>([])
@@ -33,7 +33,7 @@ export default function AdminUsersPage() {
             setLoading(false)
         }, (error) => {
             console.error("Subscription failed:", error)
-            setLoading(false) // Stop loading even if error
+            setLoading(false)
         })
         return () => unsubscribe()
     }, [isAdmin])
@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => router.push("/")}
+                            onClick={() => router.push("/settings")}
                             className="rounded-full hover:bg-white/10"
                         >
                             <ArrowLeft className="w-5 h-5" />

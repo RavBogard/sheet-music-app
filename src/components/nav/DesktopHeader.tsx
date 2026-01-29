@@ -259,16 +259,7 @@ export function DesktopHeader() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-zinc-800" />
-                                {isAdmin && (
-                                    <DropdownMenuItem className="hover:bg-white/5 cursor-pointer text-red-300" onClick={() => router.push('/admin/users')}>
-                                        <UserCheck className="mr-2 h-4 w-4" />
-                                        <span>User Management</span>
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem className="hover:bg-white/5 cursor-pointer">
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>My Profile</span>
-                                </DropdownMenuItem>
+
                                 <DropdownMenuItem
                                     className="hover:bg-white/5 cursor-pointer"
                                     onClick={() => router.push('/settings')}
