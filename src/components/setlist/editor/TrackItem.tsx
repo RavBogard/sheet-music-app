@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2, Play, Search, Music } from "lucide-react"
+import { GripVertical, Trash2, Play, Search, Music, CheckCircle2 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
 import { Loader2, Wand2 } from "lucide-react"
+import { isFileOffline } from "@/lib/offline-store"
 
 interface TrackItemProps {
     track: SetlistTrack
@@ -55,6 +56,14 @@ export function TrackItem({
 
     const hasFile = !!track.fileId
     const fileName = track.fileName || (hasFile ? "Linked File" : "")
+
+    // --- Offline Check ---
+    const [isCached, setIsCached] = useState(false)
+    useEffect(() => {
+        if (track.fileId) {
+            isFileOffline(track.fileId).then(setIsCached)
+        }
+    }, [track.fileId])
 
     // --- Metronome Logic ---
     const [isBlinking, setIsBlinking] = useState(false)

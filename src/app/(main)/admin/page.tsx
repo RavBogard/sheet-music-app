@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2, ShieldAlert, Users, Database, Repeat, AlertTriangle, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
 import { SyncStats } from "@/lib/sync-engine"
+import { PruneManager } from "@/components/admin/PruneManager"
 
 export default function AdminDashboardPage() {
     const { user, isAdmin, loading: authLoading } = useAuth()
@@ -197,6 +198,9 @@ export default function AdminDashboardPage() {
                             </div>
                         )}
                     </div>
+
+                    {/* Card 4: Prune Manager */}
+                    <PruneManager />
                 </div>
             </div>
         </div>

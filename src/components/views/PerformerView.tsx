@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { useDrag } from '@use-gesture/react'
 import { useMusicStore } from '@/lib/store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
@@ -19,37 +20,41 @@ interface PerformerViewProps {
 
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent } = useMusicStore()
+    const [toolbarVisible, setToolbarVisible] = useState(true)
 
-    const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
-        // Only trigger on main content, not toolbar
-        const target = e.target as HTMLElement
-        if (target.closest('.performance-toolbar')) return
-
-        const x = 'touches' in e ? e.touches[0].clientX : e.clientX
-        const width = window.innerWidth
-
-        // Find the PDF container to scroll
-        const container = document.querySelector('.react-pdf__Document')?.parentElement
-        if (!container) return
-
-        if (x < width * 0.25) {
-            // Tap Left: Scroll Up (Previous Page)
-            container.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
-        } else if (x > width * 0.75) {
-            // Tap Right: Scroll Down (Next Page)
-            container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
-        } else {
-            // Tap Center: Toggle Toolbar
-            window.dispatchEvent(new CustomEvent('toggle-toolbar'))
-        }
-    }
+    useEffect(() => {
+        const handleToggle = () => setToolbarVisible(prev => !prev)
+        window.addEventListener('toggle-toolbar', handleToggle)
+        return () => window.removeEventListener('toggle-toolbar', handleToggle)
+    }, [])
 
     const router = useRouter()
 
-    const bind = useDrag(({ swipe: [swipeX], tap }) => {
-        // If it's a tap, ignore here (handled by onClick)
-        if (tap) return
+    const bind = useDrag(({ swipe: [swipeX], tap, down, movement: [mx, my], event }) => {
+        // Handle Tap (Reliable)
+        if (tap) {
+            const e = event as any
+            const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
+            const width = window.innerWidth
 
+            // Check if click was on toolbar
+            const target = e.target as HTMLElement
+            if (target.closest('.performance-toolbar')) return
+
+            const container = document.querySelector('.react-pdf__Document')?.parentElement
+            if (!container) return
+
+            if (x < width * 0.25) {
+                container.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
+            } else if (x > width * 0.75) {
+                container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
+            } else {
+                setToolbarVisible(v => !v)
+            }
+            return
+        }
+
+        // Handle Swipe
         if (swipeX === -1) {
             const next = nextSong()
             if (next) router.push(`/perform/${next.fileId}`)
@@ -61,8 +66,8 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         axis: 'x',
         filterTaps: true,
         swipe: {
-            duration: 500,
-            distance: 40,
+            duration: 800,
+            distance: 50,
             velocity: 0.2
         }
     })
@@ -70,19 +75,14 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     return (
         <div
             {...bind()}
-            onClick={handleTap}
-            // Allow native touch actions for vertical scroll, but capture horizontal via useDrag
             style={{ touchAction: 'pan-y' }}
             className="h-screen flex flex-col bg-black text-white relative"
         >
 
-            {/* Main Content Area (with bottom padding for toolbar) */}
-            <div className="flex-1 w-full h-full bg-black overflow-hidden relative pb-16">
+            {/* Main Content Area */}
+            <div className={`flex-1 w-full h-full bg-black overflow-hidden relative transition-all duration-300 ${toolbarVisible ? 'pb-16' : 'pb-0'}`}>
                 {/* Render Viewer (Edge to Edge) */}
-                {/* IF MusicXML OR AI Content is present, use SmartScoreViewer */}
                 {(fileType === 'musicxml' || aiXmlContent) && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
-
-                {/* ELSE IF PDF and NO AI Content, use PDFViewer */}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
 
                 {!fileUrl && (
@@ -93,7 +93,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
             </div>
 
             {/* Unified Performance Toolbar */}
-            <div className="performance-toolbar">
+            <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${toolbarVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <PerformanceToolbar
                     onHome={onHome}
                     onSetlist={onSetlist}
