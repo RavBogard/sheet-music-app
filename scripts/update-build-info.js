@@ -10,8 +10,20 @@ try {
     // Get Last 5 Commits for Changelog
     const changelog = execSync('git log -5 --pretty=format:"%h - %s (%cr)"').toString().trim().split('\n');
 
-    // CalVer / SemVer
-    const packageJson = require('../package.json');
+    // Auto-Increment Version (Patch)
+    const packageJsonPath = '../package.json';
+    const packageJson = require(packageJsonPath);
+
+    // Parse version x.y.z
+    const parts = packageJson.version.split('.');
+    if (parts.length === 3) {
+        parts[2] = parseInt(parts[2]) + 1;
+        packageJson.version = parts.join('.');
+        // Write back to package.json
+        fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
+        console.log(`Version bumped to ${packageJson.version}`);
+    }
+
     const humanVersion = packageJson.version;
 
     const buildInfo = {
