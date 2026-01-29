@@ -1,13 +1,13 @@
 {
-  "version": "1.0.10",
-  "commit": "3b28e23",
+  "version": "1.0.11",
+  "commit": "9d72ed0",
   "branch": "master",
-  "buildDate": "1/29/2026, 4:44:05 PM",
+  "buildDate": "1/29/2026, 4:47:08 PM",
   "changelog": [
-    "3b28e23 - fix: smart capo logic for minor keys (5 minutes ago)",
-    "dddf64e - feat: enhance transposer UI (loading state, label update) (7 minutes ago)",
-    "673d1c9 - fix: build errors (api route init, transpose control syntax) (14 minutes ago)",
-    "caec38f - fix: build errors in PDFViewer (duplicate decl) and TransposeControl (syntax) (23 minutes ago)",
-    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (25 minutes ago)"
+    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (88 seconds ago)",
+    "3b28e23 - fix: smart capo logic for minor keys (8 minutes ago)",
+    "dddf64e - feat: enhance transposer UI (loading state, label update) (10 minutes ago)",
+    "673d1c9 - fix: build errors (api route init, transpose control syntax) (17 minutes ago)",
+    "caec38f - fix: build errors in PDFViewer (duplicate decl) and TransposeControl (syntax) (26 minutes ago)"
   ]
 }

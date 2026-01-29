@@ -178,7 +178,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
     return (
         <div className="flex flex-col h-full w-full relative group">
-            <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative">
+            <div ref={containerRef} className="flex-1 overflow-auto bg-zinc-900 scrollbar-hide flex justify-center relative pb-32">
                 <div className="relative">
                     <Document
                         file={source}

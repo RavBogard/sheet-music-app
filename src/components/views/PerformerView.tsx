@@ -79,7 +79,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         >
 
             {/* Main Content Area */}
-            <div className={`flex-1 w-full h-full bg-black overflow-hidden relative transition-all duration-300 ${toolbarVisible ? 'pb-16' : 'pb-0'}`}>
+            <div className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative">
                 {/* Render Viewer (Edge to Edge) */}
                 {(fileType === 'musicxml' || aiXmlContent) && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
