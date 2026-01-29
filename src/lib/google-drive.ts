@@ -28,14 +28,22 @@ export class DriveClient {
 
         // Option 2: Individual Vars (Fallback)
         if (!credentials) {
-            credentials = {
-                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+                credentials = {
+                    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+                    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+                }
             }
+        }
+
+        if (!credentials) {
+            console.error("[Auth] Missing Google Drive Credentials (JSON or EMAIL/KEY)")
         }
 
         const auth = new google.auth.GoogleAuth({
             credentials,
+            // Explicitly pass Project ID to prevent "Unable to detect Project Id" error in Vercel
+            projectId: process.env.GOOGLE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             scopes: ['https://www.googleapis.com/auth/drive'],
         })
 

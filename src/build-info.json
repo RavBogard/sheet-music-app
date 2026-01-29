@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
-  "commit": "eb0b585",
+  "commit": "baae57a",
   "branch": "master",
-  "buildDate": "1/29/2026, 3:18:00 PM",
+  "buildDate": "1/29/2026, 3:27:13 PM",
   "changelog": [
-    "eb0b585 - feat: robust offline manager, refined UI & backend automation (4 minutes ago)",
-    "c7aa876 - Refactor: Unify DriveFile type definition, fix imports, and cleanup store (13 minutes ago)",
-    "beec86d - Feat: Smart Enrichment (Phase 4) - AI Metadata Extraction & UI Integration (19 minutes ago)",
-    "5d2f480 - Feat: Complete Native Library Switch (Phase 2) - App now reads from Firestore Index (32 minutes ago)",
-    "d218f6c - Fix: Add missing onClick handler to Settings dropdown link (34 minutes ago)"
+    "baae57a - fix: resolve build errors (DriveFile import, Firestore usage, enrichFile args) (9 minutes ago)",
+    "eb0b585 - feat: robust offline manager, refined UI & backend automation (13 minutes ago)",
+    "c7aa876 - Refactor: Unify DriveFile type definition, fix imports, and cleanup store (23 minutes ago)",
+    "beec86d - Feat: Smart Enrichment (Phase 4) - AI Metadata Extraction & UI Integration (28 minutes ago)",
+    "5d2f480 - Feat: Complete Native Library Switch (Phase 2) - App now reads from Firestore Index (41 minutes ago)"
   ]
 }

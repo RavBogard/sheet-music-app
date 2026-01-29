@@ -7,6 +7,8 @@ import { enrichFile } from "@/lib/enrichment-engine"
 initAdmin()
 const db = new Firestore()
 
+export const dynamic = 'force-dynamic'
+
 // Allow longer timeout for enrichment batch
 export const maxDuration = 60
 

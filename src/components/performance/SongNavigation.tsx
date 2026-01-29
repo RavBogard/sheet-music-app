@@ -27,23 +27,23 @@ export function SongNavigation() {
     }
 
     return (
-        <div className="hidden sm:flex items-center gap-4 flex-1 justify-center max-w-[400px]">
+        <div className="flex items-center gap-2 sm:gap-6 w-full max-w-sm sm:max-w-md justify-center">
             <Button
                 variant="ghost"
                 size="icon"
                 onClick={handlePrev}
                 disabled={queueIndex <= 0}
-                className="text-white h-14 w-14 hover:bg-white/10 rounded-full"
+                className="text-zinc-400 hover:text-white hover:bg-white/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95"
             >
                 <ChevronLeft className="h-8 w-8" />
             </Button>
 
-            <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1">
-                <span className="text-lg font-bold truncate text-center w-full leading-tight">
+            <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1 px-2">
+                <span className="text-base sm:text-xl font-bold truncate text-center w-full leading-tight text-white drop-shadow-md">
                     {currentTrack?.name || "No Song Selected"}
                 </span>
-                <span className="text-xs text-zinc-500 mt-1">
-                    {playbackQueue.length > 0 ? `${queueIndex + 1} of ${playbackQueue.length}` : "Setlist Empty"}
+                <span className="text-[10px] sm:text-xs text-zinc-500 font-medium tracking-wide uppercase mt-0.5">
+                    {playbackQueue.length > 0 ? `Song ${queueIndex + 1} of ${playbackQueue.length}` : "Setlist Empty"}
                 </span>
             </div>
 
@@ -52,7 +52,7 @@ export function SongNavigation() {
                 size="icon"
                 onClick={handleNext}
                 disabled={queueIndex >= playbackQueue.length - 1}
-                className="text-white h-14 w-14 hover:bg-white/10 rounded-full"
+                className="text-white hover:bg-white/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95 bg-white/5 border border-white/5"
             >
                 <ChevronRight className="h-8 w-8" />
             </Button>

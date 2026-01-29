@@ -20,14 +20,14 @@ export function MetronomeControl() {
     }, [currentTrack, setCurrentBpm])
 
     return (
-        <div className="flex items-center gap-4">
-            <div className="flex flex-col items-center min-w-[4rem]">
-                <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">BPM</span>
+        <div className="flex items-center gap-2 sm:gap-3 px-1">
+            <div className="flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-zinc-800">
+                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
                     value={currentBpm}
                     onChange={(e) => setCurrentBpm(parseInt(e.target.value) || 0)}
-                    className="h-9 w-20 bg-transparent border-0 text-4xl font-black text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-zinc-300"
+                    className="h-full w-12 bg-transparent border-0 text-lg font-bold text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-zinc-300"
                 />
             </div>
 
@@ -35,9 +35,9 @@ export function MetronomeControl() {
             <div
                 onClick={togglePlay}
                 className={cn(
-                    "h-14 w-14 rounded-full cursor-pointer transition-all duration-75 border-4 flex items-center justify-center bg-black",
+                    "h-8 w-8 rounded-full cursor-pointer transition-all duration-75 border-2 flex items-center justify-center bg-black",
                     isPlaying
-                        ? "border-zinc-800"
+                        ? "border-zinc-700"
                         : "border-zinc-800 hover:border-zinc-600",
                 )}
                 title={isPlaying ? "Stop Metronome" : "Start Metronome"}
@@ -45,8 +45,8 @@ export function MetronomeControl() {
                 <div className={cn(
                     "rounded-full transition-all duration-75",
                     isPlaying && isBeat
-                        ? "h-10 w-10 bg-red-500 shadow-[0_0_20px_rgba(239,68,68,1)] scale-110"
-                        : "h-3 w-3 bg-zinc-800"
+                        ? "h-5 w-5 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] scale-110"
+                        : "h-2 w-2 bg-zinc-800"
                 )} />
             </div>
         </div>

@@ -6,6 +6,8 @@ import { getAuth } from "firebase-admin/auth";
 
 initAdmin();
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
     try {
         // 1. Admin Check
