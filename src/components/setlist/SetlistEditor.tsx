@@ -84,8 +84,6 @@ export function SetlistEditor({
         togglePublic,
         undo,
         redo,
-        undo,
-        redo,
         canUndo,
         canRedo,
         duplicateTrack
