@@ -23,49 +23,49 @@ export function PruneManager() {
         ghosts: GhostFile[]
     } | null>(null)
 
-    const handleScan = async () => {
+    const handleScanAndPrune = async () => {
         if (!user) return
         setLoading(true)
+        setScanData(null)
         try {
             const token = await user.getIdToken()
-            const res = await fetch('/api/admin/prune/scan', {
+
+            // 1. Scan
+            const scanRes = await fetch('/api/admin/prune/scan', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            if (!res.ok) throw new Error("Scan failed")
-            const data = await res.json()
-            setScanData(data)
+            if (!scanRes.ok) throw new Error("Scan failed")
+            const data = await scanRes.json()
+
             if (data.ghostCount === 0) {
-                toast.success("Everything is clean! No ghosts found.")
+                setScanData(data)
+                toast.success("System is clean. No ghost files found.")
             } else {
-                toast.warning(`Found ${data.ghostCount} ghost files.`)
+                // 2. Auto-Prune
+                toast.loading(`Pruning ${data.ghostCount} ghost files...`)
+                const pruneRes = await fetch('/api/admin/prune/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ fileIds: data.ghosts.map((g: any) => g.id) })
+                })
+
+                if (!pruneRes.ok) throw new Error("Prune failed")
+                const pruneData = await pruneRes.json()
+
+                // Update local state to show zero ghosts but keep counts
+                setScanData({
+                    ...data,
+                    ghosts: [], // Cleared
+                    prunedCount: pruneData.deletedCount // Custom field for UI
+                })
+                toast.dismiss()
+                toast.success(`Cleanup Complete: Removed ${pruneData.deletedCount} files.`)
             }
-        } catch (e: any) {
-            toast.error(e.message)
-        } finally {
-            setLoading(false)
-        }
-    }
 
-    const handlePrune = async () => {
-        if (!user || !scanData || scanData.ghosts.length === 0) return
-        if (!confirm(`Are you sure you want to delete ${scanData.ghosts.length} database entries? This cannot be undone.`)) return
-
-        setLoading(true)
-        try {
-            const token = await user.getIdToken()
-            const res = await fetch('/api/admin/prune/execute', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ fileIds: scanData.ghosts.map(g => g.id) })
-            })
-            if (!res.ok) throw new Error("Prune failed")
-            const data = await res.json()
-            toast.success(`Pruned ${data.deletedCount} files successfully!`)
-            setScanData(null) // Reset
         } catch (e: any) {
             toast.error(e.message)
         } finally {
@@ -86,8 +86,8 @@ export function PruneManager() {
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                    <Button onClick={handleScan} disabled={loading} variant="outline" className="border-orange-500/50 hover:bg-orange-500/10 text-orange-400">
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Scan for Ghosts"}
+                    <Button onClick={handleScanAndPrune} disabled={loading} variant="outline" className="border-orange-500/50 hover:bg-orange-500/10 text-orange-400">
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Run Consistency Check"}
                     </Button>
 
                     {scanData && (
@@ -98,36 +98,36 @@ export function PruneManager() {
                     )}
                 </div>
 
-                {scanData && scanData.ghosts.length > 0 && (
-                    <div className="bg-black/20 rounded-lg p-4 border border-red-500/20 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-red-400 font-bold flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" />
-                                {scanData.ghosts.length} Ghosts Found
-                            </h4>
-                            <Button onClick={handlePrune} disabled={loading} variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Prune {scanData.ghosts.length} Entries
-                            </Button>
-                        </div>
-                        <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
-                            {scanData.ghosts.map(g => (
-                                <div key={g.id} className="flex justify-between">
-                                    <span className="truncate max-w-[200px]">{g.name}</span>
-                                    <span className="font-mono opacity-50">{g.id}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
+                {/* Success State (Post-Prune or Clean Scan) */}
                 {scanData && scanData.ghosts.length === 0 && (
                     <div className="flex items-center gap-2 text-green-500 bg-green-500/10 p-2 rounded">
                         <CheckCircle className="h-4 w-4" />
-                        <span className="text-sm font-medium">System Clean. Database is in sync.</span>
+                        <span className="text-sm font-medium">
+                            {(scanData as any).prunedCount ?
+                                `Cleanup Success: Removed ${(scanData as any).prunedCount} ghost files.` :
+                                "System Clean. Database is in sync."
+                            }
+                        </span>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+                <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
+                    {scanData.ghosts.map(g => (
+                        <div key={g.id} className="flex justify-between">
+                            <span className="truncate max-w-[200px]">{g.name}</span>
+                            <span className="font-mono opacity-50">{g.id}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+                )}
+
+            {scanData && scanData.ghosts.length === 0 && (
+                <div className="flex items-center gap-2 text-green-500 bg-green-500/10 p-2 rounded">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">System Clean. Database is in sync.</span>
+                </div>
+            )}
+        </CardContent>
+        </Card >
     )
 }
