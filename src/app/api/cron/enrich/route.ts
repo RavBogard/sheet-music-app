@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { Firestore } from 'firebase-admin/firestore'
+import { getFirestore } from 'firebase-admin/firestore'
 import { initAdmin } from '@/lib/firebase-admin'
 import { enrichFile } from '@/lib/enrichment-engine'
 
 // Initialize Admin
 initAdmin()
-const db = new Firestore()
+const db = getFirestore()
 
 export const dynamic = 'force-dynamic'
 // Allow longer timeout for enrichment batch

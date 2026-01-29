@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Firestore } from "firebase-admin/firestore"
+import { getFirestore } from "firebase-admin/firestore"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { enrichFile } from "@/lib/enrichment-engine"
 
 initAdmin()
-const db = new Firestore()
+initAdmin()
+const db = getFirestore()
 
 export const dynamic = 'force-dynamic'
 
