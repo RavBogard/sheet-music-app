@@ -7,6 +7,8 @@ import { useSetlistStore } from "@/lib/setlist-store"
 import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 
+import { parseFileId } from "@/lib/utils"
+
 export default function PerformPage() {
     const router = useRouter()
     const params = useParams()
@@ -18,18 +20,13 @@ export default function PerformPage() {
     // Sync URL with Store
     useEffect(() => {
         if (fileId) {
-            // Determine API Endpoint based on ID type
-            const isDbFile = fileId.startsWith('db-')
-            const expectedUrl = isDbFile
-                ? `/api/library/file/${fileId}`
-                : `/api/drive/file/${fileId}`
+            const { apiUrl, defaultType } = parseFileId(fileId)
 
             // CRITICAL: Only update the store if the URL actually represents a different file
             // than what is currently loaded.
             if (!fileUrl?.includes(fileId)) {
                 console.log("URL change detected, syncing store to:", fileId)
-                // Use 'musicxml' type for DB files since they are always XML, otherwise default to PDF (SmartScoreViewer will detect content anyway)
-                setFile(expectedUrl, isDbFile ? 'musicxml' : 'pdf')
+                setFile(apiUrl, defaultType as FileType)
             }
         }
     }, [fileId, fileUrl, setFile])

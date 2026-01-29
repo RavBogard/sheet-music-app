@@ -37,3 +37,17 @@ export function levenshtein(a: string, b: string): number {
 
   return matrix[b.length][a.length]
 }
+
+export function parseFileId(contentId: string) {
+  const isDbFile = contentId.startsWith('db-')
+  const apiUrl = isDbFile
+    ? `/api/library/file/${contentId}`
+    : `/api/drive/file/${contentId}`
+
+  return {
+    id: contentId,
+    isDbFile,
+    apiUrl,
+    defaultType: isDbFile ? 'musicxml' : 'pdf'
+  }
+}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { ImageAnnotatorClient } from "@google-cloud/vision"
+import { withAuth } from "@/lib/api-middleware"
 
 export const dynamic = 'force-dynamic'
 
@@ -75,7 +76,7 @@ try {
     console.error("Failed to initialize Vision Client:", e)
 }
 
-export async function POST(request: Request) {
+const POSTHandler = async (request: Request) => {
     console.log("[Vision API] Usage requested")
     try {
         if (!client) {
@@ -148,3 +149,5 @@ export async function POST(request: Request) {
         )
     }
 }
+
+export const POST = withAuth(POSTHandler)
