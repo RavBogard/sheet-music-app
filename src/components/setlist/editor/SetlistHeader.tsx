@@ -1,4 +1,4 @@
-import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check } from "lucide-react"
+import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useChatStore } from "@/lib/chat-store"
@@ -20,6 +20,10 @@ interface SetlistHeaderProps {
     isSyncing: boolean
     isFullyOffline: boolean
     onSync: () => void
+    undo?: () => void
+    redo?: () => void
+    canUndo?: boolean
+    canRedo?: boolean
 }
 
 export function SetlistHeader({
@@ -38,12 +42,16 @@ export function SetlistHeader({
     lastSaved,
     isSyncing,
     isFullyOffline,
-    onSync
+    onSync,
+    undo,
+    redo,
+    canUndo,
+    canRedo
 }: SetlistHeaderProps) {
     const { toggle, isOpen: isChatOpen } = useChatStore()
 
     return (
-        <div className="h-20 glass flex items-center px-4 gap-4 z-10 relative">
+        <div className="h-20 glass flex items-center px-4 gap-3 z-10 relative">
             <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                 <ChevronLeft className="h-8 w-8" />
             </Button>
@@ -69,6 +77,32 @@ export function SetlistHeader({
             >
                 <Printer className="h-5 w-5" />
             </Button>
+
+            {/* Undo/Redo - Edit Mode Only */}
+            {isEditMode && (
+                <div className="flex items-center gap-1 bg-zinc-800/50 rounded-lg p-1 mr-2">
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className="h-8 w-8 hover:bg-zinc-700"
+                        title="Undo"
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className="h-8 w-8 hover:bg-zinc-700"
+                        title="Redo"
+                    >
+                        <RotateCw className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
 
             {/* Edit Mode Toggle */}
             {canEdit && (

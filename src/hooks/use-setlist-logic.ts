@@ -211,51 +211,89 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
     }, [name, tracks, isPublic, triggerAutoSave, canEdit])
 
+    // --- Undo/Redo Logic ---
+    const [past, setPast] = useState<SetlistTrack[][]>([])
+    const [future, setFuture] = useState<SetlistTrack[][]>([])
+
+    const canUndo = past.length > 0
+    const canRedo = future.length > 0
+
+    const addToHistory = useCallback((currentTracks: SetlistTrack[]) => {
+        setPast(prev => {
+            const newPast = [...prev, currentTracks]
+            // Limit history to 50 steps
+            if (newPast.length > 50) return newPast.slice(newPast.length - 50)
+            return newPast
+        })
+        setFuture([])
+    }, [])
+
+    const undo = useCallback(() => {
+        if (!canUndo) return
+
+        const previous = past[past.length - 1]
+        const newPast = past.slice(0, past.length - 1)
+
+        setPast(newPast)
+        setFuture(prev => [tracks, ...prev])
+        setTracks(previous)
+    }, [canUndo, past, tracks])
+
+    const redo = useCallback(() => {
+        if (!canRedo) return
+
+        const next = future[0]
+        const newFuture = future.slice(1)
+
+        setPast(prev => [...prev, tracks])
+        setFuture(newFuture)
+        setTracks(next)
+    }, [canRedo, future, tracks])
+
+    // --- Actions ---
+
     const moveTrack = (activeId: string, overId: string) => {
         if (!canEdit) return
-        setTracks((items) => {
-            const oldIndex = items.findIndex(i => i.id === activeId)
-            const newIndex = items.findIndex(i => i.id === overId)
-            return arrayMove(items, oldIndex, newIndex)
+
+        setTracks((currentTracks) => {
+            addToHistory(currentTracks)
+            const oldIndex = currentTracks.findIndex(i => i.id === activeId)
+            const newIndex = currentTracks.findIndex(i => i.id === overId)
+            return arrayMove(currentTracks, oldIndex, newIndex)
         })
     }
 
     const updateTrack = (id: string, data: Partial<SetlistTrack>) => {
         if (!canEdit) return
-        setTracks(tracks.map(t => t.id === id ? { ...t, ...data } : t))
+        setTracks(currentTracks => {
+            addToHistory(currentTracks)
+            return currentTracks.map(t => t.id === id ? { ...t, ...data } : t)
+        })
     }
 
     const deleteTrack = (id: string) => {
         if (!canEdit) return
-        const trackIndex = tracks.findIndex(t => t.id === id)
-        const trackToDelete = tracks[trackIndex]
 
-        if (!trackToDelete) return
+        // No need for toast undo action if we have real undo
+        // But we can keep it as a redundant quick action or remove it. 
+        // Removing toast undo to avoid conflicting state logic.
 
-        setTracks(prev => prev.filter(t => t.id !== id))
-
-        toast("Track deleted", {
-            description: trackToDelete.title,
-            action: {
-                label: "Undo",
-                onClick: () => {
-                    setTracks(current => {
-                        const newTracks = [...current]
-                        const safeIndex = Math.min(trackIndex, newTracks.length)
-                        newTracks.splice(safeIndex, 0, trackToDelete)
-                        return newTracks
-                    })
-                }
-            }
+        setTracks(prev => {
+            addToHistory(prev)
+            return prev.filter(t => t.id !== id)
         })
+        toast("Track deleted")
     }
 
     const matchFile = (trackId: string, fileId: string, fileName?: string) => {
-        setTracks(prev => prev.map(t =>
-            t.id === trackId
-                ? { ...t, fileId, fileName: fileName || t.fileName }
-                : t
-        ))
+        setTracks(prev => {
+            addToHistory(prev)
+            return prev.map(t =>
+                t.id === trackId
+                    ? { ...t, fileId, fileName: fileName || t.fileName }
+                    : t
+            )
+        })
     }
 
     const addSongsFromLibrary = (files: DriveFile[]) => {
@@ -278,7 +316,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
         })
 
-        setTracks(prev => [...prev, ...newTracks])
+        setTracks(prev => {
+            addToHistory(prev)
+            return [...prev, ...newTracks]
+        })
     }
 
     const togglePublic = async () => {
@@ -337,6 +378,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         addSongsFromLibrary,
         togglePublic,
         eventDate,
-        setEventDate
+        setEventDate,
+        undo,
+        redo,
+        canUndo,
+        canRedo
     }
 }

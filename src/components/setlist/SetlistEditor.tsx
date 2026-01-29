@@ -81,7 +81,11 @@ export function SetlistEditor({
         deleteTrack,
         matchFile,
         addSongsFromLibrary,
-        togglePublic
+        togglePublic,
+        undo,
+        redo,
+        canUndo,
+        canRedo
     } = useSetlistLogic({
         initialSetlistId,
         initialTracks,
@@ -160,6 +164,10 @@ export function SetlistEditor({
                 isSyncing={isSyncing}
                 isFullyOffline={isFullyOffline}
                 onSync={() => syncSetlist(tracks)}
+                undo={undo}
+                redo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
             />
 
             {/* Timeline View - Only show if we have tracks */}
