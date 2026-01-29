@@ -3,9 +3,9 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const id = params.id
+    const { id } = await params
 
     if (!id || !id.startsWith('db-')) {
         return NextResponse.json({ error: "Invalid ID format" }, { status: 400 })
