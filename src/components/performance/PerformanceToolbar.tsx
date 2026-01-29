@@ -10,8 +10,8 @@ import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import { Tuner } from "@/components/tools/Tuner"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
-    ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff,
-    Mic2, Play, Pause, Save
+    ZoomIn, ZoomOut, Loader2, Music2, Guitar, Eye, EyeOff,
+    Mic2, Play, Pause
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NetworkStatus } from "@/components/network-status"
@@ -50,91 +50,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setAiXmlContent
     } = useMusicStore()
 
-    const [digitizing, setDigitizing] = useState(false)
 
-    const handleDigitize = async () => {
-        if (!fileUrl) return
-
-        // If already active, toggle off (return to PDF)
-        if (aiXmlContent) {
-            setAiXmlContent(null)
-            toast.info("Returned to Original PDF")
-            return
-        }
-
-        const match = fileUrl.match(/\/file\/([a-zA-Z0-9_-]+)/)
-        const fileId = match ? match[1] : null
-
-        if (!fileId) {
-            toast.error("Could not identify file ID")
-            return
-        }
-
-        try {
-            setDigitizing(true)
-            toast.info("AI is reading the music... (this takes ~10s)")
-
-            const token = await user?.getIdToken()
-            const res = await fetch('/api/ai/omr', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ fileId })
-            })
-
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Digitization failed')
-
-            setAiXmlContent(data.xml)
-            toast.success("Digitized! Smart View Active.")
-
-        } catch (e: any) {
-            toast.error(e.message)
-        } finally {
-            setDigitizing(false)
-        }
-    }
-
-    const [saving, setSaving] = useState(false)
-
-    const handleSave = async () => {
-        if (!fileUrl || !aiXmlContent) return
-
-        const match = fileUrl.match(/\/file\/([a-zA-Z0-9_-]+)/)
-        const fileId = match ? match[1] : null
-
-        if (!fileId) return
-
-        try {
-            setSaving(true)
-            toast.info("Saving to Google Drive...")
-
-            const token = await user?.getIdToken()
-            const res = await fetch('/api/drive/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    sourceFileId: fileId,
-                    xmlContent: aiXmlContent
-                })
-            })
-
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Save failed')
-
-            toast.success(`Saved as ${data.name}!`)
-
-        } catch (e: any) {
-            toast.error(e.message)
-        } finally {
-            setSaving(false)
-        }
-    }
 
     const currentTrack = playbackQueue[queueIndex]
 
@@ -345,36 +261,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
             {/* ZONE 4: Tools (Transpose, Audio, Tuner) */}
             <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
-                {/* Admin AI Digitize Tool */}
-                {isAdmin && fileType === 'pdf' && (
-                    <Button
-                        variant={aiXmlContent ? "default" : "ghost"}
-                        size="icon"
-                        onClick={handleDigitize}
-                        disabled={digitizing}
-                        className={cn(
-                            "h-10 w-10 transition-all",
-                            aiXmlContent ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-purple-400 hover:text-purple-300 hover:bg-purple-400/10"
-                        )}
-                        title="Digitize with AI"
-                    >
-                        {digitizing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
-                    </Button>
-                )}
 
-                {/* Admin Save AI Result */}
-                {isAdmin && aiXmlContent && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="text-green-500 hover:text-green-400 hover:bg-green-400/10 h-10 w-10"
-                        title="Save to Drive (Permanently)"
-                    >
-                        {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                    </Button>
-                )}
 
                 <BackingTrackPlayer />
 

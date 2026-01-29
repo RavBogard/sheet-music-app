@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
-import { ChevronLeft, ChevronRight, FileMusic, Folder, FolderOpen, List, LayoutGrid, Search, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, FileMusic, Folder, FolderOpen, List, LayoutGrid, Search, Loader2, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
+import { useAuth } from "@/lib/auth-context"
+import { toast } from "sonner"
 import {
     ContextMenu,
     ContextMenuContent,
@@ -108,6 +110,58 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const handleBreadcrumbClick = (index: number) => {
         setBreadcrumbs(prev => prev.slice(0, index + 1))
         setSearchQuery("")
+    }
+
+    // AI Digitize Logic
+    const { isAdmin, user } = useAuth()
+    const [digitizing, setDigitizing] = useState<string | null>(null)
+
+    const handleDigitize = async (file: DriveFile) => {
+        try {
+            setDigitizing(file.id)
+            toast.info(`Digitizing "${file.name}"... This may take ~20s`)
+
+            const token = await user?.getIdToken()
+
+            // 1. Generate XML
+            const omrRes = await fetch('/api/ai/omr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ fileId: file.id })
+            })
+
+            const omrData = await omrRes.json()
+            if (!omrRes.ok) throw new Error(omrData.error || "Digitization failed")
+
+            // 2. Save XML
+            toast.info("Saving MusicXML...")
+            const saveRes = await fetch('/api/drive/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    sourceFileId: file.id,
+                    xmlContent: omrData.xml
+                })
+            })
+
+            if (!saveRes.ok) throw new Error("Failed to save XML")
+
+            toast.success("Saved! The MusicXML file is now in this folder.")
+
+            // Refresh library
+            fetchFiles({ force: true, folderId: currentFolderId, query: searchQuery })
+
+        } catch (e: any) {
+            toast.error(e.message)
+        } finally {
+            setDigitizing(null)
+        }
     }
 
     // Infinite Scroll Observer
@@ -237,10 +291,32 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                         <ContextMenuItem onClick={() => handleItemClick(item)}>
                                             {isFolder ? "Open Folder" : "Select / View"}
                                         </ContextMenuItem>
+
                                         {!isFolder && (
-                                            <ContextMenuItem disabled>
-                                                Add to Setlist (Coming Soon)
-                                            </ContextMenuItem>
+                                            <>
+                                                <ContextMenuItem disabled>
+                                                    Add to Setlist (Coming Soon)
+                                                </ContextMenuItem>
+
+                                                {/* Admin Only: AI Digitize */}
+                                                {isAdmin && item.mimeType.includes("pdf") && (
+                                                    <ContextMenuItem
+                                                        onClick={() => handleDigitize(item)}
+                                                        disabled={digitizing === item.id}
+                                                        className="text-purple-400 focus:text-purple-300 focus:bg-purple-900/50"
+                                                    >
+                                                        {digitizing === item.id ? (
+                                                            <span className="flex items-center gap-2">
+                                                                <Loader2 className="h-4 w-4 animate-spin" /> Digitizing...
+                                                            </span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-2">
+                                                                <Wand2 className="h-4 w-4" /> Digitize (AI)
+                                                            </span>
+                                                        )}
+                                                    </ContextMenuItem>
+                                                )}
+                                            </>
                                         )}
                                     </ContextMenuContent>
                                 </ContextMenu>
