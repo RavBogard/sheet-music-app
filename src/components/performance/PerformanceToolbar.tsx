@@ -11,7 +11,7 @@ import { Tuner } from "@/components/tools/Tuner"
 import {
     ChevronLeft, ChevronRight, Home, ListMusic,
     ZoomIn, ZoomOut, Wand2, Loader2, Music2, Guitar, Eye, EyeOff,
-    Mic2, Play, Pause
+    Mic2, Play, Pause, Save
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NetworkStatus } from "@/components/network-status"
@@ -94,6 +94,45 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             toast.error(e.message)
         } finally {
             setDigitizing(false)
+        }
+    }
+
+    const [saving, setSaving] = useState(false)
+
+    const handleSave = async () => {
+        if (!fileUrl || !aiXmlContent) return
+
+        const match = fileUrl.match(/\/file\/([a-zA-Z0-9_-]+)/)
+        const fileId = match ? match[1] : null
+
+        if (!fileId) return
+
+        try {
+            setSaving(true)
+            toast.info("Saving to Google Drive...")
+
+            const token = await user?.getIdToken()
+            const res = await fetch('/api/drive/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    sourceFileId: fileId,
+                    xmlContent: aiXmlContent
+                })
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Save failed')
+
+            toast.success(`Saved as ${data.name}!`)
+
+        } catch (e: any) {
+            toast.error(e.message)
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -320,6 +359,20 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         title="Digitize with AI"
                     >
                         {digitizing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                    </Button>
+                )}
+
+                {/* Admin Save AI Result */}
+                {isAdmin && aiXmlContent && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="text-green-500 hover:text-green-400 hover:bg-green-400/10 h-10 w-10"
+                        title="Save to Drive (Permanently)"
+                    >
+                        {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
                     </Button>
                 )}
 
