@@ -145,13 +145,42 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
     return { chordBlocks: finalChordBlocks, detectedKey }
 }
 
+// Relative Major -> Minor map
+const RELATIVE_KEYS: { [key: string]: string } = {
+    'C': 'Am', 'C#': 'A#m', 'Db': 'Bbm',
+    'D': 'Bm', 'D#': 'Cm', 'Eb': 'Cm',
+    'E': 'C#m',
+    'F': 'Dm', 'F#': 'D#m', 'Gb': 'Ebm',
+    'G': 'Em', 'G#': 'Fm', 'Ab': 'Fm',
+    'A': 'F#m', 'A#': 'Gm', 'Bb': 'Gm',
+    'B': 'G#m'
+}
+
 export function calculateCapo(originalKey: string, targetShape: string) {
     // Returns { fret, transposition }
-    // e.g. Orig: F, Target: D -> F - D = 3 semitones. Capo 3. Transposition -3 (visual).
-    // e.g. Orig: C, Target: G -> C - G = -7 -> +5 semitones. Capo 5. Transposition -5.
+
+    // 0. Check for Relative Key Equivalence
+    // If user says Orig: C, Target: Am -> Treat as 0 shift because they share the key signature.
+    // This fixes the issue where the detector guesses 'C' for an 'Am' song, 
+    // and the user selects 'Am', causing a weird transposition.
+
+    // Normalize input to standard format just in case (e.g. ensure 'Am' is proper case)
+    // But assuming strict matching from our button list:
+
+    const isRelative =
+        RELATIVE_KEYS[originalKey] === targetShape ||
+        RELATIVE_KEYS[targetShape] === originalKey ||
+        // Check fuzzy reverse (Am -> C)
+        Object.entries(RELATIVE_KEYS).some(([major, minor]) =>
+            (major === originalKey && minor === targetShape) ||
+            (minor === originalKey && major === targetShape)
+        )
+
+    if (isRelative) {
+        return { fret: 0, transposition: 0 }
+    }
 
     // 1. Extract Roots (Strip 'm', 'maj', etc.)
-    // We only care about the root distance. e.g. Am -> Em is same distance as A -> E.
     const extractRoot = (k: string) => {
         const match = k.match(/^([A-G](?:#|b)?)/)
         return match ? match[1] : ''
@@ -168,7 +197,6 @@ export function calculateCapo(originalKey: string, targetShape: string) {
     let diff = origIndex - targetIndex
     if (diff < 0) diff += 12
 
-    // Capo shouldn't really go above 11 (or even 7-9 realistically, but math is math)
     return {
         fret: diff,
         transposition: -diff

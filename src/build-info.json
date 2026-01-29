@@ -1,13 +1,13 @@
 {
-  "version": "1.0.9",
-  "commit": "dddf64e",
+  "version": "1.0.10",
+  "commit": "3b28e23",
   "branch": "master",
-  "buildDate": "1/29/2026, 4:38:39 PM",
+  "buildDate": "1/29/2026, 4:44:05 PM",
   "changelog": [
-    "dddf64e - feat: enhance transposer UI (loading state, label update) (84 seconds ago)",
-    "673d1c9 - fix: build errors (api route init, transpose control syntax) (9 minutes ago)",
-    "caec38f - fix: build errors in PDFViewer (duplicate decl) and TransposeControl (syntax) (18 minutes ago)",
-    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (20 minutes ago)",
-    "9dca110 - feat: smart capo transposition (shape selector) and UI resize fixes (21 minutes ago)"
+    "3b28e23 - fix: smart capo logic for minor keys (5 minutes ago)",
+    "dddf64e - feat: enhance transposer UI (loading state, label update) (7 minutes ago)",
+    "673d1c9 - fix: build errors (api route init, transpose control syntax) (14 minutes ago)",
+    "caec38f - fix: build errors in PDFViewer (duplicate decl) and TransposeControl (syntax) (23 minutes ago)",
+    "e8d7c95 - refactor: performance toolbar UI refinements (larger buttons, tuner position, show/hide chords) (25 minutes ago)"
   ]
 }
