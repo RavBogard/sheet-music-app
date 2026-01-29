@@ -84,8 +84,15 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposition(0)
     }
 
-    // Auto-hide Logic
+    // Auto-hide Logic (Desktop Mouse / General Interaction)
     const [visible, setVisible] = useState(true)
+
+    // Allow parent to toggle visibility (Mobile Tap)
+    useEffect(() => {
+        const handleToggle = (e: CustomEvent) => setVisible(prev => !prev)
+        window.addEventListener('toggle-toolbar', handleToggle as EventListener)
+        return () => window.removeEventListener('toggle-toolbar', handleToggle as EventListener)
+    }, [])
 
     useEffect(() => {
         let timeout: NodeJS.Timeout
@@ -94,22 +101,23 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             setVisible(true)
             clearTimeout(timeout)
             timeout = setTimeout(() => {
-                // Hide after 3s of inactivity
+                // Hide after 3s of inactivity (only if not hovering?)
+                // Actually, let's keep it simple: Mouse interaction wakes it.
+                // Mobile tap (custom event) toggles it.
                 setVisible(false)
             }, 3000)
         }
 
+        // Only use mousemove for desktop "wake"
         window.addEventListener('mousemove', resetTimer)
-        window.addEventListener('touchstart', resetTimer)
-        window.addEventListener('click', resetTimer)
+        // Removed 'touchstart' directly here to avoid scroll-trigger
+        // Removed 'click' here to avoid conflict with manual toggle logic
 
         resetTimer()
 
         return () => {
             clearTimeout(timeout)
             window.removeEventListener('mousemove', resetTimer)
-            window.removeEventListener('touchstart', resetTimer)
-            window.removeEventListener('click', resetTimer)
         }
     }, [])
 
@@ -250,8 +258,8 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 {/* Tuner */}
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white h-10 w-10" title="Tuner">
-                            <Guitar className="h-5 w-5" />
+                        <Button variant="ghost" className="text-zinc-400 hover:text-white px-3 font-bold uppercase text-xs tracking-wider" title="Tuner">
+                            Tuner
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
@@ -271,7 +279,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                             className="bg-zinc-800 text-zinc-200 hover:bg-zinc-700 h-10 px-3"
                         >
                             <Music2 className="h-4 w-4 mr-2" />
-                            {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Key")}
+                            {capo.active ? `Capo ${capo.fret}` : (transposition !== 0 ? (transposition > 0 ? `+${transposition}` : transposition) : "Transpose")}
                         </Button>
                     </PopoverTrigger>
                     {/* Popover Content (Same as before, simplified for this rewrite) */}

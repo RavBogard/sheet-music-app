@@ -131,6 +131,39 @@ export function Tuner() {
         rafRef.current = requestAnimationFrame(updatePitch)
     }
 
+    // Strobe Animation Logic
+    const strobeRef = useRef<HTMLDivElement>(null)
+    const phaseRef = useRef(0)
+
+    useEffect(() => {
+        if (!active) return
+
+        let animFrame: number
+
+        const animate = () => {
+            // Speed depends on how far off we are (cents)
+            // If perfect (cents ~ 0), speed is 0.
+            // If flat (cents < 0), move left.
+            // If sharp (cents > 0), move right.
+            // Scale factor: 0.5?
+            const speed = cents * 0.15
+
+            phaseRef.current += speed
+
+            // Wrap phase to keep numbers small (0-100 pattern width)
+            if (phaseRef.current > 50) phaseRef.current -= 50
+            if (phaseRef.current < -50) phaseRef.current += 50
+
+            if (strobeRef.current) {
+                strobeRef.current.style.transform = `translateX(${phaseRef.current}px)`
+            }
+            animFrame = requestAnimationFrame(animate)
+        }
+        animFrame = requestAnimationFrame(animate)
+
+        return () => cancelAnimationFrame(animFrame)
+    }, [active, cents])
+
     useEffect(() => {
         return () => {
             stopTuner()
@@ -140,30 +173,48 @@ export function Tuner() {
     return (
         <div className="flex flex-col items-center gap-4 p-4 w-64">
             <div className="flex items-center justify-between w-full border-b border-zinc-800 pb-2">
-                <span className="font-bold text-sm">Chromatic Tuner</span>
+                <span className="font-bold text-sm">Strobe Tuner</span>
                 {active && <Activity className="h-4 w-4 text-green-500 animate-pulse" />}
             </div>
 
-            <div className="flex flex-col items-center justify-center h-32 w-full bg-zinc-900 rounded-xl border border-zinc-800 relative overflow-hidden">
-                {/* Visual Gauge */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-zinc-700 left-1/2 z-0" /> {/* Center line */}
+            {/* Strobe Disc / Window */}
+            <div className="w-full h-32 bg-zinc-950 rounded-xl border border-zinc-800 relative overflow-hidden flex items-center justify-center">
 
-                {/* Moving Needle */}
-                {active && note !== "-" && (
-                    <div
-                        className={`absolute top-2 bottom-2 w-1 rounded-full z-10 transition-all duration-100 ease-out ${Math.abs(cents) < 10 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 'bg-red-500'}`}
-                        style={{ left: `calc(50% + ${cents}px)` }} // Simple pixel offset for now
-                    />
-                )}
+                {/* The Moving Strobe Pattern */}
+                <div
+                    ref={strobeRef}
+                    className={`absolute inset-0 flex items-center justify-center ${active ? 'opacity-100' : 'opacity-20'}`}
+                    style={{
+                        width: '200%', // Extra wide for sliding
+                        left: '-50%',
+                        // Checkered or Striped Pattern
+                        backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(34,197,94,0.2) 20px, rgba(34,197,94,0.2) 40px)'
+                    }}
+                >
+                    {/* Overlay gradients for "tube" look? */}
+                </div>
 
-                <div className="z-20 text-center">
-                    <div className={`text-5xl font-black ${Math.abs(cents) < 10 && active ? 'text-green-400' : 'text-white'}`}>
+                {/* Center Target Indicator */}
+                <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                    <div className="w-1 h-full bg-white/20" />
+                </div>
+
+                <div className="z-20 text-center relative">
+                    {/* Note Name */}
+                    <div className={`text-6xl font-black transition-colors duration-200 ${active && note !== "-"
+                            ? (Math.abs(cents) < 5 ? 'text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]' : 'text-white')
+                            : 'text-zinc-700'
+                        }`}>
                         {note}
                     </div>
+
+                    {/* Cents / Hz */}
                     {active && note !== "-" && (
-                        <div className="text-xs text-zinc-500 mt-1 font-mono">
+                        <div className="text-xs text-zinc-500 mt-2 font-mono bg-black/50 px-2 py-1 rounded">
                             {frequency} Hz
-                            <span className="ml-2">({cents > 0 ? '+' : ''}{cents}c)</span>
+                            <span className={`ml-2 ${Math.abs(cents) < 5 ? 'text-green-400' : (cents > 0 ? 'text-blue-400' : 'text-orange-400')}`}>
+                                {cents > 0 ? '+' : ''}{cents}c
+                            </span>
                         </div>
                     )}
                 </div>
@@ -179,7 +230,7 @@ export function Tuner() {
             </Button>
 
             <p className="text-[10px] text-zinc-500 text-center">
-                Microphone access required. optimized for Guitar/Voice.
+                Strobe moves LEFT if Flat, RIGHT if Sharp. <br /> Stop movement to tune.
             </p>
         </div>
     )

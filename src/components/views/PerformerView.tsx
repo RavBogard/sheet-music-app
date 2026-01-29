@@ -38,12 +38,18 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         } else if (x > width * 0.75) {
             // Tap Right: Scroll Down (Next Page)
             container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
+        } else {
+            // Tap Center: Toggle Toolbar
+            window.dispatchEvent(new CustomEvent('toggle-toolbar'))
         }
     }
 
-    const router = useRouter() // Ensure this is imported from next/navigation
+    const router = useRouter()
 
-    const bind = useDrag(({ swipe: [swipeX] }) => {
+    const bind = useDrag(({ swipe: [swipeX], tap }) => {
+        // If it's a tap, ignore here (handled by onClick)
+        if (tap) return
+
         if (swipeX === -1) {
             const next = nextSong()
             if (next) router.push(`/perform/${next.fileId}`)
@@ -56,8 +62,8 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         filterTaps: true,
         swipe: {
             duration: 500,
-            distance: 50, // Increased slightly to avoid accidental triggers while panning
-            velocity: 0.3
+            distance: 40,
+            velocity: 0.2
         }
     })
 
@@ -65,7 +71,8 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         <div
             {...bind()}
             onClick={handleTap}
-            // Allow native touch actions for zoom (pinch) but we still capture swipes via useDrag
+            // Allow native touch actions for vertical scroll, but capture horizontal via useDrag
+            style={{ touchAction: 'pan-y' }}
             className="h-screen flex flex-col bg-black text-white relative"
         >
 
