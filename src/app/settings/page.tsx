@@ -39,7 +39,7 @@ export default function SettingsPage() {
             {user && (
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-2">
                     <button
-                        onClick={() => window.location.href = '/admin/users'}
+                        onClick={() => window.location.href = '/admin'}
                         className="w-full flex items-center gap-3 p-4 hover:bg-zinc-800/50 rounded-xl transition-colors text-red-400 group"
                     >
                         <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
