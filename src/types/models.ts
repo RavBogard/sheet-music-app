@@ -5,6 +5,13 @@ export interface DriveFile {
     parents?: string[]
     webContentLink?: string
     thumbnailLink?: string
+    metadata?: {
+        key?: string
+        bpm?: number
+        timeSignature?: string
+        topics?: string[]
+        enrichedAt?: string
+    }
 }
 
 export interface SetlistTrack {

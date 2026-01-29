@@ -1,13 +1,6 @@
 import { create } from 'zustand'
 import { auth } from "@/lib/firebase"
-
-export interface DriveFile {
-    id: string
-    name: string
-    mimeType: string
-    parents?: string[]
-    webContentLink?: string
-}
+import { DriveFile } from "@/types/models"
 
 interface LibraryState {
     driveFiles: DriveFile[]

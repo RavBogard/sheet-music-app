@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
-  "commit": "6760389",
+  "commit": "beec86d",
   "branch": "master",
-  "buildDate": "1/29/2026, 11:11:26 AM",
+  "buildDate": "1/29/2026, 3:03:30 PM",
   "changelog": [
-    "6760389 - Mobile UX: Fix Tap/Swipe, Update Labels, Add Strobe Tuner (2 minutes ago)",
-    "0365e04 - Fix: Remove page transition animation to prevent flash (6 minutes ago)",
-    "3ed51ac - UX Improvements: Visual Metronome, Setlist Events, Light Mode & Privacy (11 minutes ago)",
-    "e46514a - feat: Redesign Performance Toolbar with Metronome, BPM, Key, and Scroll Fix (27 minutes ago)",
-    "1664b9c - feat: Implement Setlist Undo, Public Access, Tap Tempo, and Theme improvements (36 minutes ago)"
+    "beec86d - Feat: Smart Enrichment (Phase 4) - AI Metadata Extraction & UI Integration (5 minutes ago)",
+    "5d2f480 - Feat: Complete Native Library Switch (Phase 2) - App now reads from Firestore Index (17 minutes ago)",
+    "d218f6c - Fix: Add missing onClick handler to Settings dropdown link (20 minutes ago)",
+    "2116e00 - Feat: Native Library Sync Phase 1 (Indexer, API, Admin Dashboard) (25 minutes ago)",
+    "c093d13 - Refactor: Remove legacy Digitize (MusicXML) feature; Fix PDF loading race condition (2 hours ago)"
   ]
 }
