@@ -243,4 +243,5 @@ export function SetlistEditor({
             )}
         </div>
     )
+}
 
