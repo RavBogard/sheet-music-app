@@ -89,23 +89,8 @@ export function TrackItem({
         }
     }
 
-    // --- Long Press Logic ---
-    const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null)
-
-    const handleTouchStart = () => {
-        if (!onEditDetails) return
-        const timer = setTimeout(() => {
-            onEditDetails(track)
-        }, 600) // 800ms long press
-        setPressTimer(timer)
-    }
-
-    const handleTouchEnd = () => {
-        if (pressTimer) {
-            clearTimeout(pressTimer)
-            setPressTimer(null)
-        }
-    }
+    // --- Long Press Logic --
+    // REMOVED: Native Context Menu handles long press now.
 
     const handleTitleClick = () => {
         if (hasFile && track.fileId && onPlay) {
@@ -175,32 +160,16 @@ export function TrackItem({
                 <div
                     ref={setNodeRef}
                     style={style}
-                    className={`glass-card rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 group transition-colors hover:bg-zinc-900/40 ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-zinc-800" : ""}`}
-                    onContextMenu={(e) => {
-                        // Native context menu is fine, relying on dnd-kit context logic
-                    }}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    onMouseDown={handleTouchStart} // Also support mouse long press for desktop if desired
-                    onMouseUp={handleTouchEnd}
-                    onMouseLeave={handleTouchEnd}
+                    className={`glass-card rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 group transition-colors hover:bg-zinc-900/40 relative ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-zinc-800" : ""}`}
+                    onClick={() => !isEditMode && handleTitleClick()}
                 >
                     {isEditMode && (
-                        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-zinc-600 p-2 -ml-2 rounded hover:bg-zinc-800">
+                        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-zinc-600 p-2 -ml-2 rounded hover:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
                             <GripVertical className="h-5 w-5" />
                         </div>
                     )}
 
-                    {/* Metronome Indicator (View Mode) */}
-                    {!isEditMode && track.bpm && (
-                        <div
-                            className={`h-8 w-8 flex items-center justify-center rounded-full cursor-pointer transition-colors ${isBlinking ? 'bg-zinc-800' : 'hover:bg-zinc-800'}`}
-                            onClick={toggleMetronome}
-                            title={`BPM: ${track.bpm}`}
-                        >
-                            <div className={`h-3 w-3 rounded-full transition-all duration-75 ${blinkState ? 'bg-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-zinc-600'}`} />
-                        </div>
-                    )}
+
 
                     <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
@@ -224,11 +193,11 @@ export function TrackItem({
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
                                     className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${hasFile ? 'text-blue-400' : ''}`}
                                     placeholder="Song title"
+                                    onClick={(e) => e.stopPropagation()}
                                 />
                             ) : (
                                 <span
                                     className={`text-lg font-medium truncate cursor-pointer ${hasFile ? 'text-blue-100 hover:text-blue-300' : ''}`}
-                                    onClick={track.bpm ? undefined : handleTitleClick} // If metronome exists, let that handle clicks? No, metronome is separate.
                                 >
                                     {track.title}
                                 </span>
@@ -239,7 +208,7 @@ export function TrackItem({
                         <div className="flex items-center gap-3 text-sm text-zinc-400 min-h-[1.25rem]">
                             {isEditMode ? (
                                 // Edit Mode: Quick Inputs
-                                <div className="flex gap-2 w-full max-w-sm">
+                                <div className="flex gap-2 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
                                     <Input
                                         value={track.key || ""}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
@@ -293,7 +262,7 @@ export function TrackItem({
 
                     {/* Actions (Edit Mode Only) */}
                     {isEditMode && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             {!track.audioFileId && (
                                 <AudioFilePicker
                                     currentFileId={track.audioFileId}
@@ -313,6 +282,17 @@ export function TrackItem({
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
+                        </div>
+                    )}
+
+                    {/* Metronome Indicator (View Mode) - Moved to Far Right */}
+                    {!isEditMode && track.bpm && (
+                        <div
+                            className={`h-8 w-8 flex items-center justify-center rounded-full cursor-pointer transition-colors shrink-0 ml-2 ${isBlinking ? 'bg-zinc-800' : 'hover:bg-zinc-800'}`}
+                            onClick={toggleMetronome}
+                            title={`BPM: ${track.bpm}`}
+                        >
+                            <div className={`h-3 w-3 rounded-full transition-all duration-75 ${blinkState ? 'bg-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-zinc-600'}`} />
                         </div>
                     )}
                 </div>
@@ -339,11 +319,6 @@ export function TrackItem({
                         <ContextMenuItem onClick={() => onMatchFile(track.id)}>
                             <Search className="h-4 w-4 mr-2" />
                             {hasFile ? "Change File" : "Link File"}
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem onClick={() => onDelete(track.id)} className="text-red-500 focus:text-red-500">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove from Setlist
                         </ContextMenuItem>
                     </>
                 )}

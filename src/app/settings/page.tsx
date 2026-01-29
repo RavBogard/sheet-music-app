@@ -11,7 +11,12 @@ export default function SettingsPage() {
 
     return (
         <div className="flex flex-col min-h-screen p-6 pb-24 gap-6 max-w-lg mx-auto w-full">
-            <h1 className="text-3xl font-bold">Settings</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Settings</h1>
+                <Button variant="ghost" className="md:hidden" onClick={() => window.history.back()}>
+                    Done
+                </Button>
+            </div>
 
             {/* Profile Section */}
             {user && (

@@ -47,7 +47,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
     const currentTrack = playbackQueue[queueIndex]
 
     // Metronome Integration
-    const { isPlaying: isMetronomeOn, togglePlay: toggleMetronome, currentBpm, setCurrentBpm } = useMetronome(currentTrack?.bpm || 100)
+    const { isPlaying: isMetronomeOn, togglePlay: toggleMetronome, currentBpm, setCurrentBpm, isBeat } = useMetronome(currentTrack?.bpm || 100)
 
     // Sync metronome BPM when track changes
     useEffect(() => {
@@ -160,40 +160,48 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             </div>
 
             {/* ZONE 2: Performance Info (Key & BPM) */}
-            <div className="flex items-center gap-4 bg-zinc-900/50 rounded-xl px-3 py-1 border border-white/5">
-                {/* Key Display */}
-                <div className="flex flex-col items-center min-w-[3.5rem]">
-                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Key</span>
-                    <span className="text-2xl font-black text-white leading-none">
+            <div className="flex items-center gap-6 bg-zinc-900/50 rounded-xl px-6 py-2 border border-white/5 shadow-2xl backdrop-blur-sm">
+                {/* Key Display - PROMINENT */}
+                <div className="flex flex-col items-center min-w-[4rem]">
+                    <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">Key</span>
+                    <span className="text-4xl font-black text-white leading-none">
                         {currentTrack?.key || "-"}
                     </span>
                 </div>
 
-                <div className="w-px h-8 bg-zinc-800" />
+                <div className="w-px h-12 bg-zinc-800" />
 
-                {/* Metronome Control */}
-                <div className="flex items-center gap-2">
-                    <div className="flex flex-col items-center min-w-[3.5rem]">
-                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">BPM</span>
+                {/* Metronome Control - VISUAL ONLY */}
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-center min-w-[4rem]">
+                        <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">BPM</span>
                         <Input
                             type="number"
                             value={currentBpm}
                             onChange={(e) => setCurrentBpm(parseInt(e.target.value) || 0)}
-                            className="h-7 w-16 bg-transparent border-0 text-2xl font-black text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="h-9 w-20 bg-transparent border-0 text-4xl font-black text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-zinc-300"
                         />
                     </div>
 
-                    <Button
-                        variant={isMetronomeOn ? "default" : "outline"}
-                        size="icon"
+                    {/* Blinking Light Button */}
+                    <div
                         onClick={toggleMetronome}
                         className={cn(
-                            "h-10 w-10 rounded-full transition-all",
-                            isMetronomeOn ? "bg-cyan-500 hover:bg-cyan-400 animate-pulse" : "border-zinc-700 text-zinc-400 hover:text-white"
+                            "h-14 w-14 rounded-full cursor-pointer transition-all duration-75 border-4 flex items-center justify-center bg-black",
+                            isMetronomeOn
+                                ? "border-zinc-800"
+                                : "border-zinc-800 hover:border-zinc-600",
                         )}
+                        title={isMetronomeOn ? "Stop Metronome" : "Start Metronome"}
                     >
-                        {isMetronomeOn ? <Pause className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
-                    </Button>
+                        {/* The Actual Light - Matches Setlist Style */}
+                        <div className={cn(
+                            "rounded-full transition-all duration-75",
+                            isMetronomeOn && isBeat
+                                ? "h-10 w-10 bg-red-500 shadow-[0_0_20px_rgba(239,68,68,1)] scale-110"
+                                : "h-3 w-3 bg-zinc-800"
+                        )} />
+                    </div>
                 </div>
             </div>
 
@@ -267,26 +275,59 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         </Button>
                     </PopoverTrigger>
                     {/* Popover Content (Same as before, simplified for this rewrite) */}
-                    <PopoverContent className="w-80 p-4 bg-zinc-900 border-zinc-700 text-white mb-2" align="end" sideOffset={10}>
-                        <div className="space-y-4">
-                            <h3 className="font-bold text-lg border-b border-zinc-800 pb-2 mb-4">Transposition</h3>
-
-                            {/* Simple Manual Shift */}
-                            <div className="flex items-center justify-center gap-4 bg-zinc-800 rounded-lg p-2">
-                                <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition - 1)}>-</Button>
-                                <span className="font-mono text-xl font-bold w-8 text-center">{transposition}</span>
-                                <Button variant="ghost" size="icon" onClick={() => setTransposition(transposition + 1)}>+</Button>
-                            </div>
-
-                            {/* Reset Button */}
+                    <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800 text-white overflow-hidden shadow-2xl" align="end" sideOffset={10}>
+                        <div className="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+                            <h3 className="font-bold text-sm uppercase tracking-wider text-zinc-400">Transposition</h3>
                             <Button
-                                variant="destructive"
+                                variant="ghost"
                                 size="sm"
-                                className="w-full"
+                                className="h-6 text-xs text-red-400 hover:text-red-300 hover:bg-red-400/10"
                                 onClick={() => { setTransposition(0); clearCapo(); }}
                             >
-                                Reset All
+                                Reset
                             </Button>
+                        </div>
+
+                        <div className="p-4 space-y-6">
+                            {/* Visual Feedback of Change */}
+                            <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800 text-center">
+                                <div className="text-sm text-zinc-500 mb-1">Transformation</div>
+                                <div className="flex items-center justify-center gap-3 text-lg font-bold">
+                                    <span className="text-zinc-400">{currentTrack?.key || "?"}</span>
+                                    <ChevronRight className="h-4 w-4 text-zinc-600" />
+                                    <span className="text-cyan-400">
+                                        {/* Simple calculation logic for display would be ideal here but for now just showing delta */}
+                                        {transposition > 0 ? `+${transposition}` : transposition} Semitones
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Pitch Shift Controls */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-zinc-500 uppercase">Pitch Shift (Semitones)</label>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="h-10 flex-1 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white"
+                                        onClick={() => setTransposition(transposition - 1)}
+                                    >
+                                        -1
+                                    </Button>
+                                    <div className="w-12 text-center font-mono text-xl font-bold">
+                                        {transposition > 0 ? "+" : ""}{transposition}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="h-10 flex-1 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white"
+                                        onClick={() => setTransposition(transposition + 1)}
+                                    >
+                                        +1
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Capo Controls (if needed) - kept simpler for now as user asked for clarity */}
+
                         </div>
                     </PopoverContent>
                 </Popover>

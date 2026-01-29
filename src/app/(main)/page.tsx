@@ -73,7 +73,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-                        Ready to Play?
+                        Sheet Music Manager
                     </h2>
                     {/* Sync Status / Offline Indicator could go here */}
                 </div>
