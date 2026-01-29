@@ -147,7 +147,10 @@ export function TrackItem({
                 })
             })
 
-            if (!saveRes.ok) throw new Error("Failed to save XML")
+            if (!saveRes.ok) {
+                const saveError = await saveRes.json()
+                throw new Error(saveError.error || "Failed to save XML")
+            }
 
             toast.success("Saved! You may need to re-link to the new XML file if you prefer it.")
             // Note: We don't automatically swap the file on the track to the XML one here, usually user wants to keep PDF.
@@ -229,7 +232,13 @@ export function TrackItem({
                 <div
                     ref={setNodeRef}
                     style={style}
-                    className={`glass-card rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 group transition-colors hover:bg-zinc-900/40 relative ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-zinc-800" : ""}`}
+                    className={`glass-card rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 group transition-colors relative 
+                        ${digitizing
+                            ? "bg-purple-900/20 border-purple-500/50 cursor-wait"
+                            : "hover:bg-zinc-900/40"
+                        } 
+                        ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-zinc-800" : ""}
+                    `}
                     onClick={() => !isEditMode && handleTitleClick()}
                 >
                     {isEditMode && (
@@ -242,17 +251,23 @@ export function TrackItem({
 
                     <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                            {/* Play Button - Only if file attached */}
-                            {hasFile && onPlay && (
-                                <button
-                                    className="h-8 w-8 flex items-center justify-center rounded-full text-green-400 hover:text-green-300 hover:bg-green-400/10 shrink-0"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleTitleClick()
-                                    }}
-                                >
-                                    <Play className="h-4 w-4" />
-                                </button>
+                            {/* Play Button or Loading Spinner */}
+                            {digitizing ? (
+                                <div className="h-8 w-8 flex items-center justify-center shrink-0">
+                                    <Loader2 className="h-4 w-4 text-purple-400 animate-spin" />
+                                </div>
+                            ) : (
+                                hasFile && onPlay && (
+                                    <button
+                                        className="h-8 w-8 flex items-center justify-center rounded-full text-green-400 hover:text-green-300 hover:bg-green-400/10 shrink-0"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleTitleClick()
+                                        }}
+                                    >
+                                        <Play className="h-4 w-4" />
+                                    </button>
+                                )
                             )}
 
                             {/* Title - Input in Edit Mode, Text in View Mode */}
@@ -266,9 +281,14 @@ export function TrackItem({
                                 />
                             ) : (
                                 <span
-                                    className={`text-lg font-medium truncate cursor-pointer ${hasFile ? 'text-blue-100 hover:text-blue-300' : ''}`}
+                                    className={`text-lg font-medium truncate cursor-pointer flex items-center gap-2 ${hasFile ? 'text-blue-100 hover:text-blue-300' : ''}`}
                                 >
                                     {track.title}
+                                    {digitizing && (
+                                        <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full animate-pulse font-normal">
+                                            Digitizing...
+                                        </span>
+                                    )}
                                 </span>
                             )}
                         </div>

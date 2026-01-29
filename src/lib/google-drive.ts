@@ -206,7 +206,8 @@ export class DriveClient {
             const res = await this.drive.files.create({
                 requestBody: fileMetadata,
                 media: media,
-                fields: 'id, name, webContentLink'
+                fields: 'id, name, webContentLink',
+                supportsAllDrives: true
             })
 
             console.log(`[Drive] Created file: ${res.data.id}`)

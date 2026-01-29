@@ -164,7 +164,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                 })
             })
 
-            if (!saveRes.ok) throw new Error("Failed to save XML")
+            if (!saveRes.ok) {
+                const saveError = await saveRes.json()
+                throw new Error(saveError.error || "Failed to save XML")
+            }
 
             toast.success("Saved! The MusicXML file is now in this folder.")
 
