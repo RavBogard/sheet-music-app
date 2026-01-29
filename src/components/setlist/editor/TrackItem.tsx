@@ -145,7 +145,7 @@ export function TrackItem({
                     sourceFileId: track.fileId,
                     xmlContent: omrData.xml,
                     title: track.title,
-                    originalName: track.fileName
+                    originalName: track.fileName || track.title
                 })
             })
 

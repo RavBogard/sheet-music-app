@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
         const docRef = await db.collection("digitized_charts").add({
             title,
-            originalName,
+            originalName: originalName || "Unknown",
             sourceFileId,
             xmlContent,
             createdAt: new Date().toISOString(),
