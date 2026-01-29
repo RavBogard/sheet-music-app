@@ -1,9 +1,8 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { geminiFlash, geminiProVision } from "@/lib/gemini";
-import { google } from "googleapis";
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
+import { DriveClient } from "@/lib/google-drive";
 
 // Ensure Firebase Admin is initialized
 initAdmin();
@@ -18,41 +17,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         const token = authHeader.split("Bearer ")[1];
-        const decodedToken = await getAuth().verifyIdToken(token);
+        await getAuth().verifyIdToken(token);
 
-        // Check Custom Claim or DB lookup? 
-        // For speed, let's assume if they have 'admin' claim OR check logic if needed. 
-        // Actually, let's just trust the decodedToken valid + role check if claims exist. 
-        // If claims aren't set up yet, fallback to hardcoded email check or similar?
-        // User said: "build this as an option available to admin user".
-        // Let's assume the frontend only sends this if user is Admin, but backend should verify.
-        // If custom claims aren't fully rigid yet, we might skip strict role check HERE for MVP 
-        // but strictly rely on the frontend passing a valid token. 
-        // Ideally: if (decodedToken.role !== 'admin') throw ...
-
-        // 2. Body Parsing (File ID or URL)
+        // 2. Body Parsing
         const { fileId, mimeType } = await req.json();
         if (!fileId) return NextResponse.json({ error: "Missing fileId" }, { status: 400 });
 
-        // 3. Fetch File from Drive
-        // We need the file binary to send to Gemini.
-        // We can reuse the `drive` logic or just fetch it via the googleapis here.
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: process.env.FIREBASE_CLIENT_EMAIL,
-                private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-            },
-            scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-        });
+        // 3. Fetch File from Drive (Use centralized Client)
+        const driveClient = new DriveClient();
+        const fileData = await driveClient.getFile(fileId);
 
-        const drive = google.drive({ version: "v3", auth });
-        const response = await drive.files.get(
-            { fileId: fileId, alt: "media" },
-            { responseType: "arraybuffer" }
-        );
-
-        const pdfBuffer = Buffer.from(response.data as ArrayBuffer);
+        // Convert to Base64 (getFile returns ArrayBuffer)
+        const pdfBuffer = Buffer.from(fileData as ArrayBuffer);
         const base64Data = pdfBuffer.toString("base64");
+
+
 
         // 4. Prompt Gemini
         // We'll use Flash for speed, or Pro Vision for better OCR. "Sheet Music" is complex.
