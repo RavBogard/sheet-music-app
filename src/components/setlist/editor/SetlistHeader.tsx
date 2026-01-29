@@ -9,6 +9,8 @@ interface SetlistHeaderProps {
     onBack: () => void
     onPrint: () => void
     canEdit: boolean
+    isEditMode: boolean
+    onToggleEditMode: () => void
     isPublic: boolean
     onTogglePublic: () => void
     isLeader: boolean
@@ -26,6 +28,8 @@ export function SetlistHeader({
     onBack,
     onPrint,
     canEdit,
+    isEditMode,
+    onToggleEditMode,
     isPublic,
     onTogglePublic,
     isLeader,
@@ -44,7 +48,7 @@ export function SetlistHeader({
                 <ChevronLeft className="h-8 w-8" />
             </Button>
 
-            {canEdit ? (
+            {isEditMode ? (
                 <Input
                     value={name}
                     onChange={(e) => onNameChange(e.target.value)}
@@ -60,47 +64,57 @@ export function SetlistHeader({
                 size="icon"
                 variant="ghost"
                 onClick={onPrint}
-                className="h-10 w-10"
+                className="h-10 w-10 hidden sm:flex"
                 title="Print setlist"
             >
                 <Printer className="h-5 w-5" />
             </Button>
 
-            {/* Public/Private toggle (clickable for owner or leader) */}
-            {canEdit && setlistId ? (
+            {/* Edit Mode Toggle */}
+            {canEdit && (
+                <Button
+                    variant={isEditMode ? "default" : "secondary"}
+                    onClick={onToggleEditMode}
+                    className={`min-w-[80px] ${isEditMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-zinc-800 text-zinc-300'}`}
+                >
+                    {isEditMode ? "Done" : "Edit"}
+                </Button>
+            )}
+
+            {/* AI Toggle */}
+            <Button
+                size="icon"
+                variant="ghost"
+                onClick={toggle}
+                className={`h-10 w-10 ${isChatOpen ? 'text-blue-400 bg-blue-400/10' : 'text-zinc-400'}`}
+                title="AI Assistant"
+            >
+                <Sparkles className="h-5 w-5" />
+            </Button>
+
+            {/* Public/Private - Only show in Edit Mode or if Leader */}
+            {(isEditMode && setlistId) || (isLeader && !isEditMode && setlistId) ? (
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={onTogglePublic}
-                    className={`gap-2 rounded-full transition-colors ${isPublic ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={!isPublic && !isLeader ? "Only Leaders can make setlists public" : "Click to toggle visibility"}
+                    className={`gap-2 rounded-full transition-colors hidden sm:flex ${isPublic ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={!isPublic && !isLeader}
                 >
                     {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    {isPublic ? 'Public' : 'Personal'}
+                    <span className="hidden lg:inline">{isPublic ? 'Public' : 'Personal'}</span>
                 </Button>
-            ) : (
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-                    }`}>
-                    {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    {isPublic ? 'Public' : 'Personal'}
-                </div>
-            )}
-
-            {!canEdit && (
-                <div className="text-sm text-zinc-500">View Only</div>
-            )}
+            ) : null}
 
 
-
-            {/* Sync Button */}
-            {canEdit && (
+            {/* Sync Button - Only in Edit Mode */}
+            {isEditMode && (
                 <Button
                     size="sm"
                     variant={isFullyOffline ? "default" : "secondary"}
                     onClick={onSync}
                     disabled={isSyncing || isFullyOffline}
-                    className={`gap-2 ${isFullyOffline ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    className={`gap-2 hidden sm:flex ${isFullyOffline ? 'bg-green-600 hover:bg-green-700' : ''}`}
                 >
                     {isSyncing ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
@@ -109,23 +123,15 @@ export function SetlistHeader({
                     ) : (
                         <Download className="h-4 w-4" />
                     )}
-                    {isSyncing ? "Syncing..." : isFullyOffline ? "Offline Ready" : "Download All"}
+                    <span className="hidden lg:inline">{isSyncing ? "Syncing..." : isFullyOffline ? "Offline Ready" : "Download"}</span>
                 </Button>
             )}
 
-            {canEdit && (
+            {/* Save Status - Only in Edit Mode */}
+            {isEditMode && (
                 <>
-                    {/* Desktop: Full Text */}
                     <div className="hidden md:block text-sm text-zinc-500 whitespace-nowrap">
-                        {saving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ""}
-                    </div>
-                    {/* Mobile: Simple Dot Indicator */}
-                    <div className="md:hidden">
-                        {saving ? (
-                            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" title="Saving..." />
-                        ) : lastSaved ? (
-                            <div className="h-2 w-2 rounded-full bg-green-500/50" title="Saved" />
-                        ) : null}
+                        {saving ? "Saving..." : lastSaved ? `Saved` : ""}
                     </div>
                 </>
             )}

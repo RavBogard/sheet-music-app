@@ -132,18 +132,19 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         setTracks(newTracks)
     }, [canEdit, tracks])
 
+    // Edit Mode State
+    const [isEditMode, setIsEditMode] = useState(false)
+
     // Sync Chat Context & Auto-Open
     useEffect(() => {
-        if (canEdit && tracks.length >= 0) {
+        if (canEdit && isEditMode && tracks.length >= 0) {
             // Auto-open on mount if editing AND on desktop (md breakpoint)
             if (window.matchMedia('(min-width: 768px)').matches) {
                 open()
             }
         }
-        return () => {
-            close()
-        }
-    }, [canEdit, open, close])
+        // Don't auto-close when leaving edit mode, let user decide
+    }, [canEdit, isEditMode, open])
 
     useEffect(() => {
         setContextData({
@@ -315,6 +316,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     return {
         canEdit,
+        isEditMode,
+        toggleEditMode: () => setIsEditMode(prev => !prev),
         isLeader,
         setlistId,
         name,

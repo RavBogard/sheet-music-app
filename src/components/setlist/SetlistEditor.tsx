@@ -29,6 +29,7 @@ import { SetlistTimeline } from "./SetlistTimeline"
 import { NamePrompt } from "./modals/NamePrompt"
 import { AddSongsModal } from "./modals/AddSongsModal"
 import { MatchFileModal } from "./modals/MatchFileModal"
+import { TrackDetailsModal } from "./modals/TrackDetailsModal"
 import { Plus } from "lucide-react"
 
 interface SetlistEditorProps {
@@ -59,6 +60,8 @@ export function SetlistEditor({
     // Custom Hook handles all complex logic
     const {
         canEdit,
+        isEditMode,
+        toggleEditMode,
         isLeader,
         setlistId,
         name,
@@ -95,6 +98,9 @@ export function SetlistEditor({
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
+
+    // Explicit Track Details Edit Modal state
+    const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
 
     // Dnd Sensors
     const sensors = useSensors(
@@ -133,6 +139,7 @@ export function SetlistEditor({
                     setIsPublic(newIsPublic)
                     setEventDate(newDate)
                     setShowNamePrompt(false)
+                    // Auto-enter edit mode if creating new? Maybe not forcing it is better.
                 }}
             />
 
@@ -142,6 +149,8 @@ export function SetlistEditor({
                 onBack={onBack}
                 onPrint={() => setShowPrintModal(true)}
                 canEdit={canEdit}
+                isEditMode={isEditMode}
+                onToggleEditMode={toggleEditMode}
                 isPublic={isPublic}
                 onTogglePublic={togglePublic}
                 isLeader={isLeader}
@@ -153,18 +162,20 @@ export function SetlistEditor({
                 onSync={() => syncSetlist(tracks)}
             />
 
-            {/* Timeline View */}
-            <SetlistTimeline tracks={tracks} onPlay={(fid) => onPlayTrack?.(fid, "song")} />
+            {/* Timeline View - Only show if we have tracks */}
+            {tracks.length > 0 && (
+                <SetlistTimeline tracks={tracks} onPlay={(fid) => onPlayTrack?.(fid, "song")} />
+            )}
 
             {/* Track List */}
-            <ScrollArea className="flex-1 p-6">
+            <ScrollArea className="flex-1 p-4 sm:p-6">
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext items={tracks} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-3 max-w-4xl mx-auto">
+                        <div className="space-y-3 max-w-4xl mx-auto pb-20">
                             {tracks.map((track) => (
                                 <TrackItem
                                     key={track.id}
@@ -173,15 +184,17 @@ export function SetlistEditor({
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
                                     onPlay={onPlayTrack}
-                                    readOnly={!canEdit}
+                                    readOnly={!canEdit} // Still needed for non-editors
+                                    isEditMode={canEdit && isEditMode} // Separate visual edit mode
+                                    onEditDetails={canEdit ? setEditingTrack : undefined}
                                 />
                             ))}
 
-                            {/* Add Songs Button */}
-                            {canEdit && (
+                            {/* Add Songs Button - Only in Edit Mode */}
+                            {canEdit && isEditMode && (
                                 <button
                                     onClick={() => setShowAddSongs(true)}
-                                    className="w-full p-4 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-500 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-2"
+                                    className="w-full p-4 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-500 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
                                 >
                                     <Plus className="h-5 w-5" />
                                     Add Songs from Library
@@ -207,6 +220,19 @@ export function SetlistEditor({
                 }}
             />
 
+            <TrackDetailsModal
+                isOpen={!!editingTrack && canEdit}
+                onClose={() => setEditingTrack(null)}
+                track={editingTrack}
+                onUpdate={updateTrack}
+                onDelete={deleteTrack}
+                onMatchFile={(tid) => {
+                    // Changing file from detail modal triggers match modal
+                    setEditingTrack(null)
+                    setMatchingTrackId(tid)
+                }}
+            />
+
             {/* Print Modal */}
             {showPrintModal && (
                 <PrintModal
@@ -217,4 +243,4 @@ export function SetlistEditor({
             )}
         </div>
     )
-}
+

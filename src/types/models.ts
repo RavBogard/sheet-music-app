@@ -18,6 +18,8 @@ export interface SetlistTrack {
     notes?: string
     type?: 'header' | 'song'
     duration?: string
+    bpm?: number
+    leadMusician?: string
 }
 
 export interface Setlist {
