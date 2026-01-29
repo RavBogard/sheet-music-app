@@ -66,6 +66,10 @@ export interface MusicState {
     // Capo Actions
     setCapoState: (state: Partial<MusicState['capo']>) => void
 
+    // AI OMR Content
+    aiXmlContent: string | null
+    setAiXmlContent: (xml: string | null) => void
+
     reset: () => void
 }
 
@@ -76,6 +80,7 @@ export const useMusicStore = create<MusicState>()(
             fileUrl: null,
             transposition: 0,
             zoom: 1,
+            aiXmlContent: null, // Init
 
             playbackQueue: [],
             queueIndex: -1,
@@ -105,10 +110,12 @@ export const useMusicStore = create<MusicState>()(
                 fileType: type,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
+                aiXmlContent: null // Clear AI content
             }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
+            setAiXmlContent: (xml: string | null) => set({ aiXmlContent: xml }),
 
             setTransposerState: (newState: Partial<MusicState['aiTransposer']>) => set((state) => ({
                 aiTransposer: { ...state.aiTransposer, ...newState }
@@ -140,7 +147,8 @@ export const useMusicStore = create<MusicState>()(
                             url: item.audioFileId ? `/api/drive/file/${item.audioFileId}` : null,
                             isPlaying: false
                         },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
+                        aiXmlContent: null
                     })
                 }
             },
@@ -162,7 +170,8 @@ export const useMusicStore = create<MusicState>()(
                             url: nextItem.audioFileId ? `/api/drive/file/${nextItem.audioFileId}` : null,
                             isPlaying: false
                         },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
+                        aiXmlContent: null
                     })
                     return nextItem
                 }
@@ -186,14 +195,15 @@ export const useMusicStore = create<MusicState>()(
                             url: prevItem.audioFileId ? `/api/drive/file/${prevItem.audioFileId}` : null,
                             isPlaying: false
                         },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
+                        aiXmlContent: null
                     })
                     return prevItem
                 }
                 return null
             },
 
-            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1, capo: { active: false, targetShape: '', fret: 0 } }),
+            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1, capo: { active: false, targetShape: '', fret: 0 }, aiXmlContent: null }),
         }),
         {
             name: 'music-storage',
@@ -206,6 +216,7 @@ export const useMusicStore = create<MusicState>()(
                 fileType: state.fileType,
                 audio: state.audio,
                 capo: state.capo
+                // Do NOT persist aiXmlContent (it's ephemeral)
             }),
         }
     )

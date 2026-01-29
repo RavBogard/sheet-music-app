@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
+import { useAuth } from "@/lib/auth-context"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import { Tuner } from "@/components/tools/Tuner"
@@ -28,7 +30,9 @@ const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
+    const { isAdmin, user } = useAuth()
     const {
+        fileUrl,
         fileType,
         playbackQueue,
         queueIndex,
@@ -42,7 +46,56 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         setTransposerState,
         capo,
         setCapoState,
+        aiXmlContent,
+        setAiXmlContent
     } = useMusicStore()
+
+    const [digitizing, setDigitizing] = useState(false)
+
+    const handleDigitize = async () => {
+        if (!fileUrl) return
+
+        // If already active, toggle off (return to PDF)
+        if (aiXmlContent) {
+            setAiXmlContent(null)
+            toast.info("Returned to Original PDF")
+            return
+        }
+
+        const match = fileUrl.match(/\/file\/([a-zA-Z0-9_-]+)/)
+        const fileId = match ? match[1] : null
+
+        if (!fileId) {
+            toast.error("Could not identify file ID")
+            return
+        }
+
+        try {
+            setDigitizing(true)
+            toast.info("AI is reading the music... (this takes ~10s)")
+
+            const token = await user?.getIdToken()
+            const res = await fetch('/api/ai/omr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ fileId })
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Digitization failed')
+
+            setAiXmlContent(data.xml)
+            toast.success("Digitized! Smart View Active.")
+
+        } catch (e: any) {
+            toast.error(e.message)
+        } finally {
+            setDigitizing(false)
+        }
+    }
 
     const currentTrack = playbackQueue[queueIndex]
 
@@ -253,6 +306,23 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
             {/* ZONE 4: Tools (Transpose, Audio, Tuner) */}
             <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
+                {/* Admin AI Digitize Tool */}
+                {isAdmin && fileType === 'pdf' && (
+                    <Button
+                        variant={aiXmlContent ? "default" : "ghost"}
+                        size="icon"
+                        onClick={handleDigitize}
+                        disabled={digitizing}
+                        className={cn(
+                            "h-10 w-10 transition-all",
+                            aiXmlContent ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-purple-400 hover:text-purple-300 hover:bg-purple-400/10"
+                        )}
+                        title="Digitize with AI"
+                    >
+                        {digitizing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                    </Button>
+                )}
+
                 <BackingTrackPlayer />
 
                 {/* Tuner */}

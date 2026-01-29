@@ -51,37 +51,42 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
         }
     }, [url])
 
-    const { transposition, zoom } = useMusicStore()
+    const { transposition, zoom, aiXmlContent } = useMusicStore()
 
     // Initialize OSMD
     useEffect(() => {
         if (!containerRef.current) return
 
-        const osmd = new OpenSheetMusicDisplay(containerRef.current, {
-            autoResize: true,
-            backend: 'svg',
-            drawingParameters: 'compacttight', // optimizes for screen
-            drawTitle: true,
-        })
-        osmdRef.current = osmd
-
-        // Cleanup
-        return () => {
-            osmdRef.current = null
-            if (containerRef.current) containerRef.current.innerHTML = ''
-        }
+        // Wait to init?
+        // OSMD needs container.
     }, [])
 
-    // Load File
+    // Logic to handle source vs content
     useEffect(() => {
         const loadScore = async () => {
-            if (!osmdRef.current || !sourceUrl) return
+            if (!osmdRef.current) {
+                // Try init if not yet (sometimes ref logic is racing)
+                if (containerRef.current) {
+                    osmdRef.current = new OpenSheetMusicDisplay(containerRef.current, {
+                        autoResize: true,
+                        backend: 'svg',
+                        drawingParameters: 'compacttight',
+                        drawTitle: true,
+                    })
+                } else {
+                    return
+                }
+            }
+
+            // PRIORITY: AI Content > Source URL
+            const contentToLoad = aiXmlContent || sourceUrl
+            if (!contentToLoad) return
+
+            console.log("OSMD Loading:", aiXmlContent ? "AI Content (xml string)" : "Source URL")
 
             try {
                 setLoading(true)
-                await osmdRef.current.load(sourceUrl)
-                osmdRef.current.render()
-
+                await osmdRef.current.load(contentToLoad)
                 osmdRef.current.render()
                 setLoading(false)
             } catch (err) {
@@ -92,7 +97,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
         }
 
         loadScore()
-    }, [sourceUrl])
+    }, [sourceUrl, aiXmlContent]) // Re-run if either changes
 
     // Handle Transposition & Zoom
     useEffect(() => {

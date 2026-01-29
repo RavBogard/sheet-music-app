@@ -8,6 +8,7 @@ export const env = createEnv({
         FIREBASE_PRIVATE_KEY: z.string().optional(),
         GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
         GOOGLE_PRIVATE_KEY: z.string().optional(),
+        GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().optional(),
@@ -28,6 +29,7 @@ export const env = createEnv({
         FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
         GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
         GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+        GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
         NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
