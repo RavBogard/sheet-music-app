@@ -180,5 +180,6 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             })}
         </div>
     )
+}
 
 
