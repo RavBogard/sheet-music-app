@@ -24,14 +24,7 @@ export interface MusicState {
     playbackQueue: QueueItem[]
     queueIndex: number // -1 if not playing from queue
 
-    // AI Transposer State (Hoisted from PDFViewer)
-    aiTransposer: {
-        isVisible: boolean
-        status: 'idle' | 'scanning' | 'ready' | 'error'
-        detectedKey: string
-        isEditing: boolean
-        corrections: import("@/types/models").OMRCorrection[]
-    }
+
 
     // Audio State
     audio: {
@@ -58,11 +51,7 @@ export interface MusicState {
     nextSong: () => QueueItem | null
     prevSong: () => QueueItem | null
 
-    // Transposer Actions
-    setTransposerState: (state: Partial<MusicState['aiTransposer']>) => void
-    addCorrection: (correction: import("@/types/models").OMRCorrection) => void
-    removeCorrection: (id: string) => void
-    resetTransposer: () => void
+
 
     // Audio Actions
     setAudioState: (state: Partial<MusicState['audio']>) => void
@@ -116,7 +105,6 @@ export const useMusicStore = create<MusicState>()(
                 fileType: type,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] },
                 aiXmlContent: null // Clear AI content
             }),
             setTransposition: (t: number) => set({ transposition: t }),
@@ -144,25 +132,6 @@ export const useMusicStore = create<MusicState>()(
 
             setAiXmlContent: (xml: string | null) => set({ aiXmlContent: xml }),
 
-            setTransposerState: (state) => set((prev) => ({
-                aiTransposer: { ...prev.aiTransposer, ...state }
-            })),
-            addCorrection: (c) => set((prev) => ({
-                aiTransposer: {
-                    ...prev.aiTransposer,
-                    corrections: [...prev.aiTransposer.corrections, c]
-                }
-            })),
-            removeCorrection: (id) => set((prev) => ({
-                aiTransposer: {
-                    ...prev.aiTransposer,
-                    corrections: prev.aiTransposer.corrections.filter(x => x.id !== id)
-                }
-            })),
-            resetTransposer: () => set({
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] }
-            }),
-
             setAudioState: (newState: Partial<MusicState['audio']>) => set((state) => ({
                 audio: { ...state.audio, ...newState }
             })),
@@ -179,7 +148,6 @@ export const useMusicStore = create<MusicState>()(
                 aiXmlContent: null,
                 playbackQueue: [],
                 queueIndex: -1,
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] },
                 audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
             })
         }),

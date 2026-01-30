@@ -10,7 +10,7 @@ import { Home, ChevronLeft, ChevronRight } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 import { MetronomeControl } from "./MetronomeControl"
-import { TransposeControl } from "./TransposeControl"
+
 import { SongNavigation } from "./SongNavigation"
 import { cn } from "@/lib/utils"
 
@@ -95,7 +95,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <BackingTrackPlayer />
 
                 <div className="flex items-center gap-2">
-                    <TransposeControl />
+                    {/* TransposeControl Removed */}
                 </div>
             </div>
         </div>

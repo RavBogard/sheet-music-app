@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react"
 import { Page } from "react-pdf"
-import { TransposerOverlay } from "./TransposerOverlay"
+
 import { useMusicStore } from "@/lib/store"
 
 interface PDFPageWrapperProps {
@@ -13,7 +13,8 @@ interface PDFPageWrapperProps {
 
 export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrapperProps) {
     const pageRef = useRef<HTMLDivElement>(null)
-    const { aiTransposer, setTransposerState } = useMusicStore()
+    // const { aiTransposer, setTransposerState } = useMusicStore() // Removed
+
     const [rendered, setRendered] = useState(false)
 
     // Trigger scan if global state requests it and we haven't scanned
@@ -42,12 +43,7 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
                 It will return null if !isVisible internally or we can short-circuit here.
                 Better to let it handle logic. 
              */}
-            <TransposerOverlay
-                parentRef={pageRef as React.RefObject<HTMLDivElement>}
-                pageNumber={pageNumber}
-                transposition={transposition}
-                startScanning={rendered}
-            />
+
         </div>
     )
 }
