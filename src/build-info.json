@@ -1,13 +1,13 @@
 {
-  "version": "1.0.14",
-  "commit": "c2b75a5",
+  "version": "1.0.17",
+  "commit": "a75f082",
   "branch": "master",
-  "buildDate": "1/29/2026, 5:00:07 PM",
+  "buildDate": "1/29/2026, 5:04:15 PM",
   "changelog": [
-    "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (11 minutes ago)",
-    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (14 minutes ago)",
-    "3b28e23 - fix: smart capo logic for minor keys (21 minutes ago)",
-    "dddf64e - feat: enhance transposer UI (loading state, label update) (23 minutes ago)",
-    "673d1c9 - fix: build errors (api route init, transpose control syntax) (30 minutes ago)"
+    "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 minutes ago)",
+    "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (15 minutes ago)",
+    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (19 minutes ago)",
+    "3b28e23 - fix: smart capo logic for minor keys (25 minutes ago)",
+    "dddf64e - feat: enhance transposer UI (loading state, label update) (27 minutes ago)"
   ]
 }

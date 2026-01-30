@@ -26,43 +26,40 @@ interface SongChartsLibraryProps {
 
 export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryProps) {
     const {
-        driveFiles,
+        displayedFiles,
         loading,
-        fetchFiles,
-        nextPageToken,
+        loadLibrary,
+        setFilter,
         initialized,
         error,
         reset
     } = useLibraryStore()
 
     const [searchQuery, setSearchQuery] = useState("")
-    const [viewMode, setViewMode] = useState<'alphabetical' | 'folders'>('folders')
 
     // Breadcrumbs State: [{id: null, name: 'Home'}, {id: '123', name: 'Folder'}]
-    // We use null for Root
     const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string }[]>([
         { id: null, name: 'Home' }
     ])
 
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
-    // Debounce Search
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
     // Initial Load & Navigation Effect
     useEffect(() => {
-        // Fetch files for current folder / query
-        // This runs when folder changes or query changes
-        fetchFiles({
-            folderId: currentFolderId,
-            query: searchQuery,
-            force: true // Always force a refresh on navigation
-        })
-    }, [currentFolderId, searchQuery, fetchFiles])
+        // 1. Ensure Library is Loaded (Once)
+        loadLibrary()
+    }, [loadLibrary])
+
+    // 2. Apply Filter when UI state changes
+    useEffect(() => {
+        setFilter(currentFolderId, searchQuery)
+    }, [currentFolderId, searchQuery, setFilter])
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
+            // Optional: Don't reset if we want to keep cache? 
+            // Better to reset for freshness if they leave the page.
             reset()
         }
     }, [reset])
@@ -70,27 +67,30 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value
         setSearchQuery(val)
-        // Note: Effect above triggers fetch. 
-        // Ideally we'd debounce the set state or the effect. 
-        // For now, standard React update. Infinite scroll handles "load more".
+        // Fuzzy Search is fast enough to run on every keystroke for <5000 items
     }
 
+    // Memoize the separation for rendering
     const { folders, files } = useMemo(() => {
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
 
-        driveFiles.forEach(f => {
+        displayedFiles.forEach(f => {
             if (f.mimeType.includes('folder')) {
                 folders.push(f)
-            } else if (
-                (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
-                !f.mimeType.startsWith('audio/')
-            ) {
-                files.push(f)
+            } else {
+                // Ensure we only show supported files, though API should have filtered them?
+                // The API currently returns whatever is in the index.
+                if (
+                    (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
+                    !f.mimeType.startsWith('audio/')
+                ) {
+                    files.push(f)
+                }
             }
         })
         return { folders, files }
-    }, [driveFiles])
+    }, [displayedFiles])
 
     const getCleanName = (name: string) => {
         return name
@@ -172,7 +172,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             toast.success("Saved! The MusicXML file is now in this folder.")
 
             // Refresh library
-            fetchFiles({ force: true, folderId: currentFolderId, query: searchQuery })
+            loadLibrary(true)
 
         } catch (e: any) {
             console.error("Digitize Error:", e)
@@ -181,24 +181,6 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             setDigitizing(null)
         }
     }
-
-    // Infinite Scroll Observer
-    const observerTarget = useRef<HTMLDivElement>(null)
-    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-        const [target] = entries
-        if (target.isIntersecting && nextPageToken && !loading) {
-            fetchFiles({ loadMore: true })
-        }
-    }, [nextPageToken, loading, fetchFiles])
-
-    useEffect(() => {
-        const element = observerTarget.current
-        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
-        if (element) observer.observe(element)
-        return () => {
-            if (element) observer.unobserve(element)
-        }
-    }, [handleObserver])
 
 
     const combinedItems = [...folders, ...files]
@@ -265,7 +247,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         <ErrorState
                             title="Library Error"
                             description={error || "Failed to load files"}
-                            onRetry={() => fetchFiles({ force: true, folderId: currentFolderId, query: searchQuery })}
+                            onRetry={() => loadLibrary(true)}
                         />
                     </div>
                 ) : (
@@ -368,15 +350,8 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                             )
                         })}
 
-                        {/* Infinite Scroll Loader */}
-                        <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
-                            {loading && nextPageToken && (
-                                <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Loading more...
-                                </div>
-                            )}
-                        </div>
+                        {/* End of results spacer */}
+                        <div className="h-20" />
                     </div>
                 )}
             </ScrollArea>

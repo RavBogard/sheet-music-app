@@ -9,11 +9,11 @@ import { AudioLibrary } from "@/components/audio/AudioLibrary"
 export default function AudioPage() {
     const router = useRouter()
     const { user, signIn, isMember } = useAuth()
-    const { driveFiles, fetchFiles } = useLibraryStore()
+    const { allFiles, loadLibrary } = useLibraryStore()
 
     useEffect(() => {
-        if (user) fetchFiles()
-    }, [fetchFiles, user])
+        if (user) loadLibrary()
+    }, [loadLibrary, user])
 
     if (!user) {
         return (
@@ -44,7 +44,7 @@ export default function AudioPage() {
 
     return (
         <AudioLibrary
-            driveFiles={driveFiles}
+            driveFiles={allFiles}
             onBack={() => router.back()}
         />
     )
