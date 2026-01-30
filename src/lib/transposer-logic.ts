@@ -1,15 +1,9 @@
 // Regex for strictly valid chords
 // Matches: Bb, F#m, G/B, Cmaj7, Ddim, E+, Am7, Sus4, Asus
+// NOW INCLUDES: Single Uppercase Letters (A, B, C...) by default via the structure.
+// NOTE: "m" suffix is allowed. "min" is allowed.
+// "o" is NOT allowed. "t" is NOT allowed.
 const CHORD_REGEX = /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|\+)?(?:7|9|11|13)?(?:sus(?:2|4)?)?(?:\/[A-G](?:#|b)?)?$/
-
-// Common English words that look like chords but shouldn't be treated as such unless surrounded by other chords
-// "A" and "Am" are REMOVED from here because they are common chords and we want to count them for density.
-// We will filter "a" (lowercase) and specific words.
-const FALSE_POSITIVES = new Set([
-    "a", "an", "An", "as", "As", "at", "At", "be", "Be", "by", "By", "do", "Do", "go", "Go", "he", "He",
-    "hi", "Hi", "if", "If", "in", "In", "is", "Is", "it", "It", "me", "Me", "my", "My", "no", "No",
-    "of", "Of", "on", "On", "or", "Or", "ox", "Ox", "so", "So", "to", "To", "up", "Up", "us", "Us", "we", "We"
-])
 
 // Nashville Number System Map
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -66,7 +60,7 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
     // 1. Group blocks into lines
     const lines: { y: number, blocks: typeof blocks }[] = []
 
-    // INCREASED Tolerance (was 10, now 20) to capture "bouncy" handwritten fonts in single rows
+    // Y_TOLERANCE: 20px (Handles "bouncy" handwritten fonts)
     const Y_TOLERANCE = 20
 
     const sortedBlocks = [...blocks].sort((a, b) => a.poly[0].y - b.poly[0].y)
@@ -88,18 +82,16 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         // 1a. Sort blocks x-wise
         line.blocks.sort((a, b) => a.poly[0].x - b.poly[0].x)
 
-        // 1b. MERGE PASS
+        // 1b. MERGE PASS (Stitches "F" + "#m" -> "F#m")
         const mergedBlocks: typeof blocks = []
         if (line.blocks.length > 0) {
             let curr = line.blocks[0]
             for (let i = 1; i < line.blocks.length; i++) {
                 const next = line.blocks[i]
 
-                // Gap Check (in pixels)
                 const trueGap = next.poly[0].x - curr.poly[1].x
                 const isClose = trueGap < 15
 
-                // Merge Heuristics:
                 const suffixLooksLikeModifier = /^[#bmsM791/d]/.test(next.text)
 
                 if (isClose && suffixLooksLikeModifier) {
@@ -122,83 +114,60 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         }
 
         const lineBlocks = mergedBlocks
-        const totalTokens = lineBlocks.length
 
-        let possibleChords = 0
-        let strictChords = 0
+        // 2. DISCRIMINATION LOGIC
+        // We judge the LINE, not just density.
 
-        lineBlocks.forEach(b => {
-            // CRITICAL FIX: Trim whitespace! OCR often returns "E " or " B".
-            const txt = b.text.replace(/[,\.]/g, '').trim()
-
-            // Check if it matches regex AND is not in explicit exclude list
-            if (CHORD_REGEX.test(txt) && !FALSE_POSITIVES.has(txt)) {
-                possibleChords++
-
-                // STRICT CHORD DEFINITION
-                // 1. Contains music chars (#, b, 7, etc.)
-                // 2. OR is a single uppercase letter B-G
-                const isMusicComplex = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
-                const isSingleLetterNote = ['B', 'C', 'D', 'E', 'F', 'G'].includes(txt)
-
-                if (isMusicComplex || isSingleLetterNote) {
-                    strictChords++
-                }
-            }
-        })
-
-        const density = possibleChords / totalTokens
-
-        // HEURISTIC:
-        // Accept if density > 40%
-        // OR if we have Strict Chords and at least some density (15%)
-        const isChordLine = (density > 0.4) || (strictChords > 0 && density > 0.15)
+        let validChordTokens = 0
+        let noiseTokens = 0
+        const chordBuffer: typeof blocks = []
 
         lineBlocks.forEach(b => {
-            // Trim here too!
+            // Trim whitespace!
             const txt = b.text.replace(/[,\.]/g, '').trim()
+            if (!txt) return // Skip empty
 
+            // Regex Check
             if (CHORD_REGEX.test(txt)) {
-
-                const isExplicitFalse = FALSE_POSITIVES.has(txt)
-                // Re-calc strictness for individual block decision
-                const isMusicComplex = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
-                const isSingleLetterNote = ['B', 'C', 'D', 'E', 'F', 'G'].includes(txt)
-                const isStrict = isMusicComplex || isSingleLetterNote
-
-                let keep = false
-
-                // 1. If line is recognized as chords, keep ALL chords (unless explicit false positive)
-                if (isChordLine && !isExplicitFalse) {
-                    keep = true
-                }
-
-                // 2. Strict Rescue (Keep "G#m" or "B" even in lyric lines)
-                if (isStrict && !isExplicitFalse) {
-                    keep = true
-                }
-
-                // 3. Single Letter Rescue (Specific for "A")
-                // If the line implies musical context (strict chords exist), we trust "A"
-                if (txt === 'A' && strictChords > 0 && !isExplicitFalse) {
-                    keep = true
-                }
-
-                if (keep) {
-                    finalChordBlocks.push(b)
-
-                    // Key Detection Voting
-                    const match = txt.match(/^([A-G](?:#|b)?)/)
-                    if (match) {
-                        const root = match[1]
-                        keyVotes[root] = (keyVotes[root] || 0) + 1
-                    }
+                validChordTokens++
+                chordBuffer.push(b)
+            } else {
+                // It's NOT a chord string.
+                // Is it "Ignorable" (e.g. Numbers, Bars)?
+                // Matches digits, |, -, brackets, colon
+                if (/^[\d:\|\-\(\)]+$/.test(txt)) {
+                    // Ignorable. Don't count as noise.
+                } else {
+                    // It is NOISE (Lyrics, Header text, etc.)
+                    // e.g. "Modeh", "ani", "Verse", "Chorus"
+                    noiseTokens++
                 }
             }
         })
+
+        // DECISION:
+        // A line is accepted if it has MORE Valid Chords than Noise.
+        // This allows "A" (valid) to be accepted if alone.
+        // This rejects "A boy" (1 valid, 1 noise) -> 50% not > 50%.
+        // This accepts "E B D B" (4 valid, 0 noise).
+
+        if (validChordTokens > noiseTokens) {
+            // ACCEPT LINE
+            chordBuffer.forEach(b => {
+                finalChordBlocks.push(b)
+
+                // Key Vote
+                const txt = b.text.replace(/[,\.]/g, '').trim()
+                const match = txt.match(/^([A-G](?:#|b)?)/)
+                if (match) {
+                    const root = match[1]
+                    keyVotes[root] = (keyVotes[root] || 0) + 1
+                }
+            })
+        }
     })
 
-    // ... (Key Detection remains)
+    // 3. Simple Key Detection
     const sortedKeys = Object.entries(keyVotes).sort((a, b) => b[1] - a[1])
     const detectedKey = sortedKeys.length > 0 ? sortedKeys[0][0] : 'C'
 
@@ -220,17 +189,9 @@ export function calculateCapo(originalKey: string, targetShape: string) {
     // Returns { fret, transposition }
 
     // 0. Check for Relative Key Equivalence
-    // If user says Orig: C, Target: Am -> Treat as 0 shift because they share the key signature.
-    // This fixes the issue where the detector guesses 'C' for an 'Am' song, 
-    // and the user selects 'Am', causing a weird transposition.
-
-    // Normalize input to standard format just in case (e.g. ensure 'Am' is proper case)
-    // But assuming strict matching from our button list:
-
     const isRelative =
         RELATIVE_KEYS[originalKey] === targetShape ||
         RELATIVE_KEYS[targetShape] === originalKey ||
-        // Check fuzzy reverse (Am -> C)
         Object.entries(RELATIVE_KEYS).some(([major, minor]) =>
             (major === originalKey && minor === targetShape) ||
             (minor === originalKey && major === targetShape)

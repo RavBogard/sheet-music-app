@@ -1,13 +1,13 @@
 {
-  "version": "1.0.48",
-  "commit": "e6058b8",
+  "version": "1.0.49",
+  "commit": "943b5f1",
   "branch": "master",
-  "buildDate": "1/29/2026, 8:35:50 PM",
+  "buildDate": "1/29/2026, 8:43:59 PM",
   "changelog": [
-    "e6058b8 - fix: logic tune, B-G single letters now count as strict chords to rescue low density lines (4 minutes ago)",
-    "0ba83e0 - fix: restore missing chords (E, A, #m) via token merging and relaxed heuristics (10 minutes ago)",
-    "a85e8c7 - feat: improve transposer ui (scanning state) and chord detection logic (19 minutes ago)",
-    "aeea7dd - fix: resolve library store refactor type errors (40 minutes ago)",
-    "ed175b5 - feat: implement instant client-side search (fuse.js) (2 hours ago)"
+    "943b5f1 - fix: critical logic fix - trim whitespace on tokens and increase line tolerance to 20px (7 minutes ago)",
+    "e6058b8 - fix: logic tune, B-G single letters now count as strict chords to rescue low density lines (12 minutes ago)",
+    "0ba83e0 - fix: restore missing chords (E, A, #m) via token merging and relaxed heuristics (18 minutes ago)",
+    "a85e8c7 - feat: improve transposer ui (scanning state) and chord detection logic (27 minutes ago)",
+    "aeea7dd - fix: resolve library store refactor type errors (49 minutes ago)"
   ]
 }
