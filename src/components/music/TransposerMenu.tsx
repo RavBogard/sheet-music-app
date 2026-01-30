@@ -52,17 +52,42 @@ export function TransposerMenu() {
                 {isScanning && <Loader2 className="h-4 w-4 animate-spin text-purple-500" />}
             </div>
 
-            {/* Smart Transposer Toggle */}
-            <div className="flex items-center justify-between">
+            {/* Smart Transposer Activation */}
+            <div className="space-y-2">
                 <div className="space-y-0.5">
                     <Label className="text-base text-zinc-200">Smart Transposer</Label>
-                    <p className="text-xs text-zinc-500">Scan & overlay chords</p>
+                    <p className="text-xs text-zinc-500">
+                        Automatically detects and overlays chords.
+                    </p>
                 </div>
-                <Switch
-                    checked={aiState.isEnabled}
-                    onCheckedChange={setAiEnabled}
-                    className="data-[state=checked]:bg-purple-600"
-                />
+
+                <Button
+                    className={cn(
+                        "w-full transition-all",
+                        aiState.isEnabled
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                    )}
+                    onClick={() => setAiEnabled(!aiState.isEnabled)}
+                    disabled={isScanning}
+                >
+                    {isScanning ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Scanning...
+                        </>
+                    ) : aiState.isEnabled ? (
+                        <>
+                            <Sparkles className="mr-2 h-4 w-4 fill-white" />
+                            Active (Click to Stop)
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Activate
+                        </>
+                    )}
+                </Button>
             </div>
 
             {/* Capo / Transpose Controls */}
