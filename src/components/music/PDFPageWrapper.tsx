@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { Page } from "react-pdf"
 import { TransposerOverlay } from "./TransposerOverlay"
 import { useMusicStore } from "@/lib/store"
@@ -14,6 +14,7 @@ interface PDFPageWrapperProps {
 export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrapperProps) {
     const pageRef = useRef<HTMLDivElement>(null)
     const { aiTransposer, setTransposerState } = useMusicStore()
+    const [rendered, setRendered] = useState(false)
 
     // Trigger scan if global state requests it and we haven't scanned
     // But TransposerOverlay handles that internally via "enabled" state usually.
@@ -33,6 +34,7 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
                 loading={<div className="h-[800px] w-full bg-white/5 animate-pulse" />}
+                onRenderSuccess={() => setRendered(true)}
             />
 
             {/* 
@@ -44,6 +46,7 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
                 parentRef={pageRef as React.RefObject<HTMLDivElement>}
                 pageNumber={pageNumber}
                 transposition={transposition}
+                startScanning={rendered}
             />
         </div>
     )

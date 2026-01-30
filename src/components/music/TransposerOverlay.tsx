@@ -14,9 +14,10 @@ interface TransposerOverlayProps {
     parentRef: React.RefObject<HTMLDivElement>
     pageNumber: number
     transposition: number // Global transposition state
+    startScanning?: boolean
 }
 
-export function TransposerOverlay({ parentRef, pageNumber, transposition }: TransposerOverlayProps) {
+export function TransposerOverlay({ parentRef, pageNumber, transposition, startScanning = true }: TransposerOverlayProps) {
     const {
         playbackQueue,
         queueIndex,
@@ -39,20 +40,49 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition }: Tran
     const [pendingText, setPendingText] = useState("")
 
     // On mount or when available, try to find the canvas size
-    useEffect(() => {
-        if (!parentRef.current) return
+    const updateCanvasSize = () => {
+        if (!parentRef.current) return false
         const canvas = parentRef.current.querySelector('canvas')
         if (canvas) {
             setCanvasSize({ w: canvas.width, h: canvas.height })
+            return true
         }
-    }, [parentRef, status]) // Re-check when status changes
+        return false
+    }
+
+    // Effect: Update size when editing starts
+    useEffect(() => {
+        if (isEditing) {
+            // Try immediately, then retry for safety
+            if (!updateCanvasSize()) {
+                const t = setTimeout(updateCanvasSize, 500)
+                return () => clearTimeout(t)
+            }
+        }
+    }, [isEditing])
+
+    // Effect: Auto-Scan when activated AND page rendered
+    useEffect(() => {
+        if (aiTransposer.isVisible && aiTransposer.status === 'idle' && startScanning) {
+            // Wait a tick for layout?
+            const t = setTimeout(() => scanPage(), 100)
+            return () => clearTimeout(t)
+        }
+    }, [aiTransposer.isVisible, aiTransposer.status, startScanning])
 
     const scanPage = async () => {
         if (!parentRef.current) return
 
-        const canvas = parentRef.current.querySelector('canvas')
+        // Retry loop to find canvas (React-PDF renders async)
+        let canvas: HTMLCanvasElement | null = null
+        for (let i = 0; i < 10; i++) {
+            canvas = parentRef.current.querySelector('canvas')
+            if (canvas) break
+            await new Promise(r => setTimeout(r, 200))
+        }
+
         if (!canvas) {
-            console.error("No canvas found for OCR")
+            console.error("No canvas found for OCR after retries")
             setTransposerState({ status: 'error' })
             return
         }

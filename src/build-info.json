@@ -1,13 +1,13 @@
 {
-  "version": "1.0.55",
-  "commit": "c8c22df",
+  "version": "1.0.56",
+  "commit": "77c1a35",
   "branch": "master",
-  "buildDate": "1/29/2026, 9:26:22 PM",
+  "buildDate": "1/29/2026, 9:32:23 PM",
   "changelog": [
-    "c8c22df - fix: move Edit Chords button to Transpose Control panel for better visibility (4 minutes ago)",
-    "d45a7d5 - feat: implemented Transposer Edit Mode (manual chord fixes saved to DB) (9 minutes ago)",
-    "cd078a5 - fix: revert to radical simplicity (regex-only detection) to restore missing chords (23 minutes ago)",
-    "7120416 - feat: complete rewrite of transposer logic -> 'Chord Confidence Engine' with spatial clustering (28 minutes ago)",
-    "2221b80 - fix: simplified 'strict regex' chord detection - ignores lyric noise completely (34 minutes ago)"
+    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (5 minutes ago)",
+    "c8c22df - fix: move Edit Chords button to Transpose Control panel for better visibility (10 minutes ago)",
+    "d45a7d5 - feat: implemented Transposer Edit Mode (manual chord fixes saved to DB) (15 minutes ago)",
+    "cd078a5 - fix: revert to radical simplicity (regex-only detection) to restore missing chords (29 minutes ago)",
+    "7120416 - feat: complete rewrite of transposer logic -> 'Chord Confidence Engine' with spatial clustering (34 minutes ago)"
   ]
 }
