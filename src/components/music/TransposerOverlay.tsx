@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/lib/auth-context"
 import { useState, useEffect, useRef } from "react"
 import { Loader2, Wand2, Pencil, Save, X, Trash2, Check, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ interface TransposerOverlayProps {
 }
 
 export function TransposerOverlay({ parentRef, pageNumber, transposition, startScanning = true }: TransposerOverlayProps) {
+    const { user } = useAuth() // Get Auth Context
     const {
         playbackQueue,
         queueIndex,
@@ -93,10 +95,14 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
         setTransposerState({ status: 'scanning', isVisible: true })
 
         try {
+            const token = user ? await user.getIdToken() : null
             const imageBase64 = canvas.toDataURL('image/jpeg', 0.8)
             const res = await fetch('/api/vision/ocr', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ imageBase64 })
             })
 
