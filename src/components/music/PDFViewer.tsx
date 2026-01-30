@@ -3,13 +3,12 @@
 import { toast } from "sonner"
 
 import { useState, useRef, useEffect } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
+import { Document, pdfjs } from 'react-pdf'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useMusicStore } from '@/lib/store'
 import { getOfflineFile } from '@/lib/offline-store'
-import { identifyChords, transposeChord } from '@/lib/transposer-logic'
-import { TransposerLayer } from './TransposerLayer'
+import { PDFPageWrapper } from './PDFPageWrapper'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -106,75 +105,8 @@ export function PDFViewer({ url }: PDFViewerProps) {
         setNumPages(numPages)
     }
 
-    // 3. Transposer / OCR Logic
-    const { zoom, transposition, aiTransposer, setTransposerState } = useMusicStore()
-    const [rawPageData, setRawPageData] = useState<Record<number, { text: string, x: number, y: number, w: number, h: number, refWidth: number, refHeight: number }[]>>({})
-
-    const scanPages = async () => {
-        if (!containerRef.current) return
-        try {
-            setTransposerState({ status: 'scanning' })
-
-            // Retry mechanism for canvas
-            let canvas: HTMLCanvasElement | null = null
-            for (let i = 0; i < 10; i++) {
-                canvas = containerRef.current.querySelector('.react-pdf__Page__canvas') as HTMLCanvasElement
-                if (!canvas) canvas = containerRef.current.querySelector('canvas')
-                if (canvas) break
-                await new Promise(r => setTimeout(r, 200))
-            }
-
-            if (!canvas) throw new Error("No canvas found")
-
-            // Get File ID
-            const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
-            const fileId = fileIdMatch ? fileIdMatch[1] : null
-
-            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8)
-
-            // Get Token for OCR API
-            const token = user ? await user.getIdToken() : null
-
-            const res = await fetch('/api/vision/ocr', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify({ imageBase64, fileId, pageNumber: 1 })
-            })
-
-            if (!res.ok) throw new Error("OCR Failed")
-            const data = await res.json()
-
-            const { chordBlocks, detectedKey } = identifyChords(data.blocks)
-            const chords = chordBlocks.map(b => ({
-                text: b.text,
-                x: b.poly[0].x,
-                y: b.poly[0].y,
-                w: b.poly[2].x - b.poly[0].x,
-                h: b.poly[2].y - b.poly[0].y,
-                refWidth: canvas!.width,
-                refHeight: canvas!.height
-            }))
-
-            setRawPageData(prev => ({ ...prev, 1: chords }))
-            setTransposerState({ status: 'ready', detectedKey })
-
-        } catch (e: any) {
-            console.error(e)
-            setTransposerState({ status: 'error' })
-            toast.error(`Scan Failed: ${e.message}`)
-        }
-    }
-
-    // Effect: Watch for global activation (Fix for "Menu opening triggers scan..." hanging)
-    useEffect(() => {
-        if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
-            console.log("Transposer activated, triggering scan...")
-            scanPages()
-        }
-    }, [aiTransposer.isVisible, aiTransposer.status])
+    // 3. Transposer State (Just for zoom/transposition read)
+    const { zoom, transposition } = useMusicStore()
 
     return (
         <div className="flex flex-col h-full w-full relative group">
@@ -196,40 +128,14 @@ export function PDFViewer({ url }: PDFViewerProps) {
                         }
                         className="flex flex-col items-center min-h-screen"
                     >
-                        {Array.from(new Array(numPages), (_, index) => {
-                            const pageNum = index + 1
-                            const pageChords = (rawPageData[pageNum] || []).map(c => ({
-                                x: c.x, y: c.y, width: c.w, height: c.h,
-                                original: c.text,
-                                transposed: transposeChord(c.text, transposition)
-                            }))
-
-                            return (
-                                <div key={`page_${pageNum}`} className="mb-2 shadow-2xl bg-white relative group/page">
-                                    <Page
-                                        pageNumber={pageNum}
-                                        width={width * zoom}
-                                        renderTextLayer={false}
-                                        renderAnnotationLayer={false}
-                                        onRenderSuccess={() => {
-                                            if (aiTransposer.isVisible && aiTransposer.status === 'idle') {
-                                                scanPages()
-                                            }
-                                        }}
-                                        loading={<div className="h-[800px] w-full bg-white/5 animate-pulse" />}
-                                    />
-                                    {pageChords.length > 0 && (
-                                        <TransposerLayer
-                                            width={width * zoom}
-                                            height={0}
-                                            scale={(width * zoom) / (rawPageData[pageNum]?.[0]?.refWidth || 1)}
-                                            chords={pageChords}
-                                            visible={aiTransposer.isVisible}
-                                        />
-                                    )}
-                                </div>
-                            )
-                        })}
+                        {Array.from(new Array(numPages), (_, index) => (
+                            <PDFPageWrapper
+                                key={`page_${index + 1}`}
+                                pageNumber={index + 1}
+                                width={width * zoom}
+                                transposition={transposition}
+                            />
+                        ))}
                     </Document>
                 </div>
             </div>
