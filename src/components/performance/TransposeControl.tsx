@@ -155,29 +155,43 @@ export function TransposeControl() {
                     )}
 
                     {/* AI Chords Toggle */}
-                    <div className="pt-4 mt-4 border-t border-zinc-800 flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-zinc-500 uppercase">
-                                {aiTransposer.status === 'scanning' ? (
-                                    <span className="text-orange-400 animate-pulse">AI Transposer Scanning...</span>
-                                ) : (
-                                    "Show Transposed Chords"
-                                )}
-                            </span>
-                            {aiTransposer.status === 'error' && (
-                                <span className="text-[10px] font-bold text-red-400 mt-0.5">
-                                    Scan Failed
+                    <div className="pt-4 mt-4 border-t border-zinc-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-zinc-500 uppercase">
+                                    {aiTransposer.status === 'scanning' ? (
+                                        <span className="text-orange-400 animate-pulse">Scanning...</span>
+                                    ) : (
+                                        "Show Transposed Chords"
+                                    )}
                                 </span>
-                            )}
+                                {aiTransposer.status === 'error' && (
+                                    <span className="text-[10px] font-bold text-red-400 mt-0.5">
+                                        Scan Failed
+                                    </span>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${aiTransposer.isVisible ? 'bg-green-500' : 'bg-zinc-700'}`}
+                                disabled={aiTransposer.status === 'scanning'}
+                            >
+                                <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${aiTransposer.isVisible ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
                         </div>
 
-                        <button
-                            onClick={() => setTransposerState({ isVisible: !aiTransposer.isVisible })}
-                            className={`w-10 h-6 rounded-full transition-colors relative ${aiTransposer.isVisible ? 'bg-green-500' : 'bg-zinc-700'}`}
-                            disabled={aiTransposer.status === 'scanning'}
-                        >
-                            <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${aiTransposer.isVisible ? 'translate-x-4' : 'translate-x-0'}`} />
-                        </button>
+                        {/* Edit Mode Button (Only if visible) */}
+                        {aiTransposer.isVisible && (aiTransposer.status === 'ready' || aiTransposer.status === 'idle') && (
+                            <Button
+                                size="sm"
+                                variant={aiTransposer.isEditing ? "default" : "secondary"}
+                                className={`w-full h-8 text-xs font-bold ${aiTransposer.isEditing ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"}`}
+                                onClick={() => setTransposerState({ isEditing: !aiTransposer.isEditing })}
+                            >
+                                {aiTransposer.isEditing ? "Done Editing" : "Edit Chords (Beta)"}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </PopoverContent>

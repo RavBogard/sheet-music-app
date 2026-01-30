@@ -1,13 +1,13 @@
 {
-  "version": "1.0.53",
-  "commit": "cd078a5",
+  "version": "1.0.54",
+  "commit": "d45a7d5",
   "branch": "master",
-  "buildDate": "1/29/2026, 9:15:43 PM",
+  "buildDate": "1/29/2026, 9:21:19 PM",
   "changelog": [
-    "cd078a5 - fix: revert to radical simplicity (regex-only detection) to restore missing chords (12 minutes ago)",
-    "7120416 - feat: complete rewrite of transposer logic -> 'Chord Confidence Engine' with spatial clustering (17 minutes ago)",
-    "2221b80 - fix: simplified 'strict regex' chord detection - ignores lyric noise completely (23 minutes ago)",
-    "0951d78 - fix: complete transposer logic rewrite - noise discrimination strategy (31 minutes ago)",
-    "943b5f1 - fix: critical logic fix - trim whitespace on tokens and increase line tolerance to 20px (39 minutes ago)"
+    "d45a7d5 - feat: implemented Transposer Edit Mode (manual chord fixes saved to DB) (4 minutes ago)",
+    "cd078a5 - fix: revert to radical simplicity (regex-only detection) to restore missing chords (18 minutes ago)",
+    "7120416 - feat: complete rewrite of transposer logic -> 'Chord Confidence Engine' with spatial clustering (23 minutes ago)",
+    "2221b80 - fix: simplified 'strict regex' chord detection - ignores lyric noise completely (29 minutes ago)",
+    "0951d78 - fix: complete transposer logic rewrite - noise discrimination strategy (36 minutes ago)"
   ]
 }
