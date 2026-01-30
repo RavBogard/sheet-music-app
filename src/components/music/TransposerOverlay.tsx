@@ -241,91 +241,12 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
 
     const renderedChords = getRenderedChords()
 
-    if (status === 'idle' && !aiTransposer.isVisible) {
-        // Button to start
-        return (
-            <div className="absolute top-2 right-2 z-10">
-                <Button
-                    size="sm"
-                    variant="secondary"
-                    className="gap-2 bg-white/90 text-black hover:bg-white shadow-lg backdrop-blur"
-                    onClick={() => scanPage()}
-                >
-                    <Wand2 className="h-4 w-4 text-purple-600" />
-                    Transpose (Beta)
-                </Button>
-            </div>
-        )
-    }
-
+    // Overlay UI (Just the layer)
     return (
         <div
             className={`absolute inset-0 z-10 overflow-hidden ${isEditing ? 'cursor-crosshair bg-black/5 pointer-events-auto' : 'pointer-events-none'}`}
             onClick={handleCanvasClick}
         >
-            {/* Status Bar */}
-            <div className="absolute top-2 right-2 pointer-events-auto flex items-center gap-2">
-                {status === 'scanning' && (
-                    <div className="bg-black/80 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2 backdrop-blur">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Scanning...
-                    </div>
-                )}
-
-                {(status === 'ready' || status === 'error') && (
-                    <div className="bg-white/90 text-black p-1 rounded-lg shadow-xl flex items-center gap-2 backdrop-blur">
-                        {!isEditing ? (
-                            <>
-                                <div className="px-2 text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
-                                    {detectedKey} <span className="text-zinc-400">→</span> {transposeChord(detectedKey, transposition)}
-                                </div>
-                                <div className="h-4 w-px bg-zinc-200" />
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-xs text-zinc-600 hover:text-purple-600"
-                                    onClick={() => setTransposerState({ isEditing: true })}
-                                >
-                                    <Pencil className="h-3 w-3 mr-1" />
-                                    Edit
-                                </Button>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6 rounded-full hover:bg-zinc-100"
-                                    onClick={() => setTransposerState({ isVisible: false })}
-                                >
-                                    <X className="h-3 w-3" />
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <div className="px-2 text-xs font-bold text-orange-600 uppercase tracking-wider animate-pulse">
-                                    Editing Mode
-                                </div>
-                                <div className="h-4 w-px bg-zinc-200" />
-                                <Button
-                                    size="sm"
-                                    className="h-7 px-2 bg-purple-600 hover:bg-purple-700 text-white"
-                                    onClick={handleSaveCorrections}
-                                >
-                                    <Save className="h-3 w-3 mr-1" />
-                                    Save
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-xs"
-                                    onClick={() => setTransposerState({ isEditing: false })}
-                                >
-                                    Cancel
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                )}
-            </div>
-
             {/* Input Popover */}
             {pendingChord && (
                 <div
@@ -383,7 +304,7 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
 
             {/* Explainer Toast for Edit Mode */}
             {isEditing && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm pointer-events-none backdrop-blur">
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm pointer-events-none backdrop-blur animate-in fade-in slide-in-from-bottom-2">
                     Click empty space to <b>Add</b> • Click chord to <b>Remove</b>
                 </div>
             )}
