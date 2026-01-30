@@ -1,6 +1,6 @@
 {
   "name": "sheet-music-app",
-  "version": "1.0.47",
+  "version": "1.0.48",
   "private": true,
   "scripts": {
     "dev": "node scripts/update-build-info.js && next dev",

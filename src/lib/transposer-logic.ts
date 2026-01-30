@@ -66,8 +66,8 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
     // 1. Group blocks into lines
     const lines: { y: number, blocks: typeof blocks }[] = []
 
-    // REDUCED Tolerance for tighter line grouping
-    const Y_TOLERANCE = 10
+    // INCREASED Tolerance (was 10, now 20) to capture "bouncy" handwritten fonts in single rows
+    const Y_TOLERANCE = 20
 
     const sortedBlocks = [...blocks].sort((a, b) => a.poly[0].y - b.poly[0].y)
 
@@ -94,6 +94,8 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
             let curr = line.blocks[0]
             for (let i = 1; i < line.blocks.length; i++) {
                 const next = line.blocks[i]
+
+                // Gap Check (in pixels)
                 const trueGap = next.poly[0].x - curr.poly[1].x
                 const isClose = trueGap < 15
 
@@ -126,14 +128,16 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         let strictChords = 0
 
         lineBlocks.forEach(b => {
-            const txt = b.text.replace(/[,\.]/g, '')
+            // CRITICAL FIX: Trim whitespace! OCR often returns "E " or " B".
+            const txt = b.text.replace(/[,\.]/g, '').trim()
+
             // Check if it matches regex AND is not in explicit exclude list
             if (CHORD_REGEX.test(txt) && !FALSE_POSITIVES.has(txt)) {
                 possibleChords++
 
-                // STRICT CHORD DEFINITION (UPDATED)
+                // STRICT CHORD DEFINITION
                 // 1. Contains music chars (#, b, 7, etc.)
-                // 2. OR is a single uppercase letter B-G (Excluded A which is a word)
+                // 2. OR is a single uppercase letter B-G
                 const isMusicComplex = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
                 const isSingleLetterNote = ['B', 'C', 'D', 'E', 'F', 'G'].includes(txt)
 
@@ -151,7 +155,8 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         const isChordLine = (density > 0.4) || (strictChords > 0 && density > 0.15)
 
         lineBlocks.forEach(b => {
-            const txt = b.text.replace(/[,\.]/g, '')
+            // Trim here too!
+            const txt = b.text.replace(/[,\.]/g, '').trim()
 
             if (CHORD_REGEX.test(txt)) {
 
