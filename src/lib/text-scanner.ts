@@ -21,7 +21,8 @@ export interface ScannedChord {
 
 // Strict Chord Regex
 // Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, etc.
-const CHORD_REGEX = /^[A-G][b#]?(m|min|maj|dim|aug|sus|add|M|5|6|7|9|11|13)*(\/[A-G][b#]?)?$/;
+// Also matches Unicode Sharp (♯) and Flat (♭)
+const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(m|min|maj|dim|aug|sus|add|M|5|6|7|9|11|13)*(\/[A-G][b#\u266F\u266D]?)?$/;
 
 const EXCLUDED_WORDS = new Set(["I", "A", "Am"]);
 
