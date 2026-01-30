@@ -1,13 +1,13 @@
 {
-  "version": "1.0.46",
-  "commit": "a85e8c7",
+  "version": "1.0.47",
+  "commit": "0ba83e0",
   "branch": "master",
-  "buildDate": "1/29/2026, 8:22:37 PM",
+  "buildDate": "1/29/2026, 8:30:36 PM",
   "changelog": [
-    "a85e8c7 - feat: improve transposer ui (scanning state) and chord detection logic (6 minutes ago)",
-    "aeea7dd - fix: resolve library store refactor type errors (27 minutes ago)",
+    "0ba83e0 - fix: restore missing chords (E, A, #m) via token merging and relaxed heuristics (5 minutes ago)",
+    "a85e8c7 - feat: improve transposer ui (scanning state) and chord detection logic (14 minutes ago)",
+    "aeea7dd - fix: resolve library store refactor type errors (35 minutes ago)",
     "ed175b5 - feat: implement instant client-side search (fuse.js) (2 hours ago)",
-    "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 hours ago)",
-    "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (4 hours ago)"
+    "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 hours ago)"
   ]
 }

@@ -88,26 +88,16 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         // 1a. Sort blocks x-wise
         line.blocks.sort((a, b) => a.poly[0].x - b.poly[0].x)
 
-        // 1b. MERGE PASS (Fixes "F" + "#m")
+        // 1b. MERGE PASS
         const mergedBlocks: typeof blocks = []
         if (line.blocks.length > 0) {
             let curr = line.blocks[0]
             for (let i = 1; i < line.blocks.length; i++) {
                 const next = line.blocks[i]
-
-                // Gap Check (in pixels). 
-                // Typical font size might be 20px, so a gap of > 20px means separate words.
-                // Split parts are usually < 5-10px apart.
-                const gap = next.poly[0].x - (curr.poly[1].x) // top-right of curr vs top-left of next (poly[1] is TR, poly[0] is TL... wait. poly order is TL, TR, BR, BL)
-                // Actually google vision poly is TL, TR, BR, BL. 
-                // So curr.poly[1].x is TR.x
-                // next.poly[0].x is TL.x
                 const trueGap = next.poly[0].x - curr.poly[1].x
-
                 const isClose = trueGap < 15
 
                 // Merge Heuristics:
-                // 1. Next block starts with a modifier (#, b, m, /, 7, s...)
                 const suffixLooksLikeModifier = /^[#bmsM791/d]/.test(next.text)
 
                 if (isClose && suffixLooksLikeModifier) {
@@ -115,10 +105,10 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
                     curr = {
                         text: curr.text + next.text,
                         poly: [
-                            curr.poly[0], // TL (Left from curr)
-                            next.poly[1], // TR (Right from next)
-                            next.poly[2], // BR (Bottom Right from next)
-                            curr.poly[3]  // BL (Bottom Left from curr)
+                            curr.poly[0], // TL
+                            next.poly[1], // TR
+                            next.poly[2], // BR
+                            curr.poly[3]  // BL
                         ]
                     }
                 } else {
@@ -138,11 +128,16 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         lineBlocks.forEach(b => {
             const txt = b.text.replace(/[,\.]/g, '')
             // Check if it matches regex AND is not in explicit exclude list
-            // "A" is NOT in FALSE_POSITIVES now, so it counts as a possible chord!
             if (CHORD_REGEX.test(txt) && !FALSE_POSITIVES.has(txt)) {
                 possibleChords++
-                // "Strict" means definitely music notation
-                if (txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)) {
+
+                // STRICT CHORD DEFINITION (UPDATED)
+                // 1. Contains music chars (#, b, 7, etc.)
+                // 2. OR is a single uppercase letter B-G (Excluded A which is a word)
+                const isMusicComplex = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
+                const isSingleLetterNote = ['B', 'C', 'D', 'E', 'F', 'G'].includes(txt)
+
+                if (isMusicComplex || isSingleLetterNote) {
                     strictChords++
                 }
             }
@@ -152,7 +147,7 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
 
         // HEURISTIC:
         // Accept if density > 40%
-        // OR if we have Strict Chords (e.g. F#m) and at least some density
+        // OR if we have Strict Chords and at least some density (15%)
         const isChordLine = (density > 0.4) || (strictChords > 0 && density > 0.15)
 
         lineBlocks.forEach(b => {
@@ -161,25 +156,26 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
             if (CHORD_REGEX.test(txt)) {
 
                 const isExplicitFalse = FALSE_POSITIVES.has(txt)
-                const isStrict = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
+                // Re-calc strictness for individual block decision
+                const isMusicComplex = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
+                const isSingleLetterNote = ['B', 'C', 'D', 'E', 'F', 'G'].includes(txt)
+                const isStrict = isMusicComplex || isSingleLetterNote
 
                 let keep = false
 
                 // 1. If line is recognized as chords, keep ALL chords (unless explicit false positive)
-                // Since we removed "A" and "Am" from FALSE_POSITIVES, they will be kept here!
                 if (isChordLine && !isExplicitFalse) {
                     keep = true
                 }
 
-                // 2. Strict Rescue (Keep "G#m" even in lyric lines)
+                // 2. Strict Rescue (Keep "G#m" or "B" even in lyric lines)
                 if (isStrict && !isExplicitFalse) {
                     keep = true
                 }
 
-                // 3. Single Letter Rescue (for "E", "D"...)
-                // If the line has ANY strict chords, assume the single letters are also chords.
-                // This helps in mixed contexts (e.g. "Intro:   C    G    D")
-                if (['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(txt) && strictChords > 0 && !isExplicitFalse) {
+                // 3. Single Letter Rescue (Specific for "A")
+                // If the line implies musical context (strict chords exist), we trust "A"
+                if (txt === 'A' && strictChords > 0 && !isExplicitFalse) {
                     keep = true
                 }
 
