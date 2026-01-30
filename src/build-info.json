@@ -1,13 +1,13 @@
 {
-  "version": "1.0.57",
-  "commit": "11b8bfb",
+  "version": "1.0.58",
+  "commit": "8f418c9",
   "branch": "master",
-  "buildDate": "1/29/2026, 9:39:55 PM",
+  "buildDate": "1/29/2026, 9:44:33 PM",
   "changelog": [
-    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (7 minutes ago)",
-    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (13 minutes ago)",
-    "c8c22df - fix: move Edit Chords button to Transpose Control panel for better visibility (18 minutes ago)",
-    "d45a7d5 - feat: implemented Transposer Edit Mode (manual chord fixes saved to DB) (23 minutes ago)",
-    "cd078a5 - fix: revert to radical simplicity (regex-only detection) to restore missing chords (36 minutes ago)"
+    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (4 minutes ago)",
+    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (11 minutes ago)",
+    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (18 minutes ago)",
+    "c8c22df - fix: move Edit Chords button to Transpose Control panel for better visibility (23 minutes ago)",
+    "d45a7d5 - feat: implemented Transposer Edit Mode (manual chord fixes saved to DB) (27 minutes ago)"
   ]
 }

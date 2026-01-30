@@ -100,17 +100,34 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
                 body: JSON.stringify({ imageBase64 })
             })
 
-            if (!res.ok) throw new Error("OCR Failed")
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.details || errData.error || `HTTP ${res.status}`)
+            }
             const data = await res.json()
-            const { chordBlocks, detectedKey } = identifyChords(data.blocks)
 
-            setBlocks(chordBlocks)
+            const { chordBlocks, detectedKey } = identifyChords(data.blocks)
+            // Restore file-saved corrections as well if we have them
+            // Actually, we should probably fetch them or rely on them being passed in if we want persistence.
+            // For now, let's just get the chords.
+
+            const chords = chordBlocks.map(b => ({
+                text: b.text,
+                poly: b.poly,
+                type: 'detected' as const,
+                id: `detected-${b.poly[0].x}-${b.poly[0].y}`
+            }))
+
+            setBlocks(chords)
             setDetectedKey(detectedKey)
             setTransposerState({ status: 'ready', detectedKey })
 
-        } catch (e) {
-            console.error("Transposer Scan Error:", e)
+            // If we have corrections in the store, they will automatically apply via getRenderedChords
+
+        } catch (e: any) {
+            console.error("Scan Error:", e)
             setTransposerState({ status: 'error' })
+            toast.error(`Scan Failed: ${e.message}`)
         }
     }
 
