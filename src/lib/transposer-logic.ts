@@ -1,8 +1,5 @@
 // Regex for strictly valid chords
 // Matches: Bb, F#m, G/B, Cmaj7, Ddim, E+, Am7, Sus4, Asus
-// NOW INCLUDES: Single Uppercase Letters (A, B, C...) by default via the structure.
-// NOTE: "m" suffix is allowed. "min" is allowed.
-// "o" is NOT allowed. "t" is NOT allowed.
 const CHORD_REGEX = /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|\+)?(?:7|9|11|13)?(?:sus(?:2|4)?)?(?:\/[A-G](?:#|b)?)?$/
 
 // Nashville Number System Map
@@ -60,8 +57,9 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
     // 1. Group blocks into lines
     const lines: { y: number, blocks: typeof blocks }[] = []
 
-    // Y_TOLERANCE: 20px (Handles "bouncy" handwritten fonts)
-    const Y_TOLERANCE = 20
+    // TIGHT TOLERANCE: 10px
+    // We prefer splitting rows over merging them incorrectly.
+    const Y_TOLERANCE = 10
 
     const sortedBlocks = [...blocks].sort((a, b) => a.poly[0].y - b.poly[0].y)
 
@@ -115,45 +113,39 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
 
         const lineBlocks = mergedBlocks
 
-        // 2. DISCRIMINATION LOGIC
-        // We judge the LINE, not just density.
+        // 2. TOKEN EVALUATION STRATEGY
+        // We do NOT judge the "Row". We judge the tokens.
 
-        let validChordTokens = 0
-        let noiseTokens = 0
-        const chordBuffer: typeof blocks = []
+        const potentials: typeof blocks = []
+        let hasStrongChord = false // Any chord that is NOT "A" (ambiguous)
 
         lineBlocks.forEach(b => {
             // Trim whitespace!
             const txt = b.text.replace(/[,\.]/g, '').trim()
-            if (!txt) return // Skip empty
+            if (!txt) return
 
-            // Regex Check
             if (CHORD_REGEX.test(txt)) {
-                validChordTokens++
-                chordBuffer.push(b)
-            } else {
-                // It's NOT a chord string.
-                // Is it "Ignorable" (e.g. Numbers, Bars)?
-                // Matches digits, |, -, brackets, colon
-                if (/^[\d:\|\-\(\)]+$/.test(txt)) {
-                    // Ignorable. Don't count as noise.
-                } else {
-                    // It is NOISE (Lyrics, Header text, etc.)
-                    // e.g. "Modeh", "ani", "Verse", "Chorus"
-                    noiseTokens++
+                potentials.push(b)
+
+                // "A" is the only ambiguous Weak Chord (article)
+                // "Am", "A7", "A/C#" are Strong.
+                // "B", "C", "D"... are Strong (rarely words in lyrics).
+                if (txt !== "A") {
+                    hasStrongChord = true
                 }
             }
         })
 
-        // DECISION:
-        // A line is accepted if it has MORE Valid Chords than Noise.
-        // This allows "A" (valid) to be accepted if alone.
-        // This rejects "A boy" (1 valid, 1 noise) -> 50% not > 50%.
-        // This accepts "E B D B" (4 valid, 0 noise).
+        // 3. DECISION
+        // If we have a Strong Chord, we trust the context and accept ALL chords (including "A").
+        // If we ONLY have "A"s (hasStrongChord == false), we are suspicious.
+        // ex: "A boy" -> hasStrong=false. Reject "A".
+        // ex: "A" (single token line) -> Accept?
 
-        if (validChordTokens > noiseTokens) {
-            // ACCEPT LINE
-            chordBuffer.forEach(b => {
+        const isPureA = potentials.length === lineBlocks.length && potentials.length > 0
+
+        if (hasStrongChord || isPureA) {
+            potentials.forEach(b => {
                 finalChordBlocks.push(b)
 
                 // Key Vote
