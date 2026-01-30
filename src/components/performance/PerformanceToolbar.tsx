@@ -96,7 +96,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <BackingTrackPlayer />
 
                 <div className="flex items-center gap-2">
-                    {/* TransposeControl Removed */}
+                    <TransposerControls />
                 </div>
             </div>
         </div>
