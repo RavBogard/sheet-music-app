@@ -57,13 +57,46 @@ export function calculateCapo(originalKey: string, targetShape: string): { fret:
 
     return {
         fret: diff,
-        transposition: -diff // To sound like Original using Shape, we effectively transpose DOWN visually by 'diff' semitones?
-        // Wait. 
-        // If I play G-shape with Capo 5, I am sounding C. 
-        // Visual (Shape) = G. Sound (Key) = C. 
-        // Diff = Sound(0) - Visual(7) = -7 => 5. Capo 5.
-        // Transposition is the interval shift the READER logic needs to do. (Writer wrote C, we want to see G).
-        // C to G is -5 semitones (or +7).
-        // So transposition = -fret. 
+        transposition: -diff
     };
+}
+
+export function estimateKey(chords: string[]): string | null {
+    if (!chords || chords.length === 0) return null;
+
+    // Normalize and clean chords
+    const roots = chords.map(c => {
+        const match = c.match(/^([A-G][b#]?)/);
+        return match ? match[1] : null;
+    }).filter(c => c !== null) as string[];
+
+    if (roots.length === 0) return null;
+
+    // Weighting Logic
+    const scores: Record<string, number> = {};
+
+    roots.forEach((root, i) => {
+        const isFirst = i === 0;
+        const isLast = i === roots.length - 1;
+
+        // Base score
+        scores[root] = (scores[root] || 0) + 1;
+
+        // Bonus for First/Last (Strong indicators of Key)
+        if (isFirst) scores[root] += 5;
+        if (isLast) scores[root] += 5;
+    });
+
+    // Find Max
+    let bestKey = null;
+    let maxScore = -1;
+
+    for (const [key, score] of Object.entries(scores)) {
+        if (score > maxScore) {
+            maxScore = score;
+            bestKey = key;
+        }
+    }
+
+    return bestKey;
 }
