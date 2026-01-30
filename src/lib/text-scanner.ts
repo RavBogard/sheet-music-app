@@ -21,24 +21,9 @@ export interface ScannedChord {
 
 // Strict Chord Regex
 // Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, etc.
-// Excludes: "Verse", "Chorus", "The", "And"
 const CHORD_REGEX = /^[A-G][b#]?(m|min|maj|dim|aug|sus|add|M|5|6|7|9|11|13)*(\/[A-G][b#]?)?$/;
 
-// We can also check for short length to avoid false positives like "Add" (though 'add' is usually lowercase in lyrics, chords are Title Case)
-// But "A" is a word and a chord. 
-// Context helps: Chords are usually properly capitalized. "a" is word, "A" is chord.
-// "I" is a word. "I" is not a chord (Use Roman Numerals? No, strictly letters).
-const EXCLUDED_WORDS = new Set(["I", "A", "Am"]); // "Am" is tricky. "I am". "Am" chord.
-// Actually "Am" is a very common chord.
-// "A" is a very common chord and word.
-// In lyrics, "A" is usually followed by a word. In chords, it's isolated or followed by spaces.
-// PDF Text Layer usually isolates words into spans. 
-
-// Heuristic:
-// If it matches CHORD_REGEX and...
-// 1. Is capitalized? (Regex enforces [A-G])
-// 2. "A" is the only dangerous one.
-// Let's accept all for now and trust the user can ignore/edit (eventually).
+const EXCLUDED_WORDS = new Set(["I", "A", "Am"]);
 
 export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const textLayer = pageElement.querySelector('.react-pdf__Page__textContent');
@@ -48,39 +33,88 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     }
 
     const chords: ScannedChord[] = [];
-    const spans = textLayer.querySelectorAll('span');
+    const spans = Array.from(textLayer.querySelectorAll('span'));
 
     // Bounds of the container for % calcs
     const pageRect = pageElement.getBoundingClientRect();
 
-    spans.forEach((span) => {
-        const text = span.textContent?.trim();
-        if (!text) return;
+    // 1. Map to objects with coordinates
+    const items = spans.map(span => {
+        const rect = span.getBoundingClientRect();
+        return {
+            text: span.textContent || "",
+            rect,
+            // Relative coordinates for logic
+            y: rect.top,
+            x: rect.left,
+            r: rect.right,
+            b: rect.bottom,
+            w: rect.width,
+            h: rect.height,
+            span
+        };
+    }).filter(i => i.text.trim().length > 0);
 
-        // Split by space? Sometimes multiple chords are in one span "G  C"
-        // But usually react-pdf splits them if kerning is large.
-        // Let's handle single tokens for now.
-        const tokens = text.split(/\s+/);
+    // 2. Sort by Y (Line) then X (Position)
+    // Tolerance for "Same Line": 5px
+    items.sort((a, b) => {
+        if (Math.abs(a.y - b.y) < 5) {
+            return a.x - b.x;
+        }
+        return a.y - b.y;
+    });
 
-        // If span has multiple tokens, we can't easily get X for each sub-token without advanced measurement.
-        // For accurate replacement, we only accept spans that ARE chords.
-        // Or we assume the span is JUST the chord.
+    // 3. Merge adjacent items
+    const merged: typeof items = [];
 
-        if (tokens.length === 1 && CHORD_REGEX.test(text)) {
-            // It's a single chord!
-            const rect = span.getBoundingClientRect();
+    if (items.length > 0) {
+        let current = items[0];
 
-            // Calculate relative %
-            const x = ((rect.left - pageRect.left) / pageRect.width) * 100;
-            const y = ((rect.top - pageRect.top) / pageRect.height) * 100;
-            const w = (rect.width / pageRect.width) * 100;
-            const h = (rect.height / pageRect.height) * 100;
+        for (let i = 1; i < items.length; i++) {
+            const next = items[i];
+
+            // Check if on same line (vertical overlap or close Y)
+            const sameLine = Math.abs(current.y - next.y) < (current.h / 2); // robust line check
+
+            // Check spacing (horizontal gap)
+            // If gap is small, it's likely one word/chord split by kerning
+            const gap = next.x - current.r;
+            const isClose = gap < (current.h * 0.5); // Gap smaller than half font height?
+
+            if (sameLine && isClose) {
+                // Merge
+                current.text += next.text;
+                current.r = next.r; // Extend right
+                current.w = current.r - current.x;
+                current.h = Math.max(current.h, next.h); // Max height
+                current.b = Math.max(current.b, next.b);
+                // Keep current.y and current.x as origin
+            } else {
+                // Push current and start new
+                merged.push(current);
+                current = next;
+            }
+        }
+        merged.push(current);
+    }
+
+    // 4. Filter for Chords
+    merged.forEach(item => {
+        const text = item.text.trim();
+
+        // Exclude common short words that match regex (I, A) - "A" is valid but risky.
+        if (CHORD_REGEX.test(text) && !EXCLUDED_WORDS.has(text)) {
+            // Calculate relative % using the merged screen coordinates
+            const x = ((item.x - pageRect.left) / pageRect.width) * 100;
+            const y = ((item.y - pageRect.top) / pageRect.height) * 100;
+            const w = (item.w / pageRect.width) * 100;
+            const h = (item.h / pageRect.height) * 100;
 
             chords.push({
                 id: crypto.randomUUID(),
                 text: text,
                 x, y, w, h,
-                pxHeight: rect.height
+                pxHeight: item.h
             });
         }
     });

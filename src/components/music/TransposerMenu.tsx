@@ -6,6 +6,8 @@ import { Sparkles, ChevronUp, ChevronDown, Loader2, Edit3, X } from "lucide-reac
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { calculateCapo, estimateKey } from "@/lib/music-math"
+import { toast } from "sonner"
 
 export function TransposerMenu() {
     const {
@@ -16,6 +18,31 @@ export function TransposerMenu() {
     } = useMusicStore()
 
     const isScanning = aiState.scanningPages.length > 0;
+
+    const handleSmartCapo = (targetShape: string) => {
+        // Gather all detected chords
+        const allChords = Object.values(aiState.pageData).flatMap(p => p.chords.map((c: any) => c.originalText));
+
+        if (allChords.length === 0) {
+            toast.error("No chords detected yet. Please scan the chart first.");
+            return;
+        }
+
+        const estimatedKey = estimateKey(allChords);
+        if (!estimatedKey) {
+            toast.error("Could not detect key.");
+            return;
+        }
+
+        const result = calculateCapo(estimatedKey, targetShape);
+        if (!result) {
+            toast.error("Could not calculate capo.");
+            return;
+        }
+
+        setTransposition(result.transposition);
+        toast.success(`Original Key: ${estimatedKey}. Use Capo ${result.fret} to play as ${targetShape}.`);
+    };
 
     return (
         <div className="flex flex-col gap-4 p-4 min-w-[280px]">
@@ -72,6 +99,24 @@ export function TransposerMenu() {
                         >
                             <ChevronUp className="h-4 w-4" />
                         </Button>
+                    </div>
+                </div>
+
+                {/* Smart Capo (Play As...) */}
+                <div className="space-y-2">
+                    <Label className="text-zinc-200 text-xs uppercase tracking-wider font-bold">Smart Capo (Play as...)</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                        {['G', 'C', 'D', 'A', 'E', 'Am', 'Em', 'Dm'].map(shape => (
+                            <Button
+                                key={shape}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSmartCapo(shape)}
+                                className="h-8 text-xs border-zinc-700 bg-zinc-950 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                            >
+                                {shape}
+                            </Button>
+                        ))}
                     </div>
                 </div>
 
