@@ -101,19 +101,41 @@ export async function scanForChordStrips(
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = width;
         tempCanvas.height = block.h + 20; // Add padding
-        const ctx = tempCanvas.getContext('2d');
+        let ctx = tempCanvas.getContext('2d'); // Get context initially
         if (ctx) {
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, width, block.h + 20);
             // Draw original image slice
-            ctx.drawImage(canvas, 0, block.y - 10, width, block.h + 20, 0, 0, width, block.h + 20);
+            // Optimization: Resize if huge?
+            // If the strip is > 100px high, scale it down. Chords are rarely > 50px high.
+            // A huge canvas (Retina) might make strips 200px.
 
-            chordStrips.push({
-                id: crypto.randomUUID(),
-                y: block.y - 10,
-                height: block.h + 20,
-                image: tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1] // base64 body
-            });
+            let drawWidth = width;
+            let drawHeight = block.h + 20; // Original Height
+            let targetHeight = drawHeight;
+            let targetWidth = width;
+
+            if (targetHeight > 60) {
+                const scale = 60 / targetHeight;
+                targetHeight = 60;
+                targetWidth = width * scale;
+            }
+
+            tempCanvas.width = targetWidth;
+            tempCanvas.height = targetHeight;
+
+            ctx = tempCanvas.getContext('2d'); // Re-get ctx after resizing canvas
+            if (ctx) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
+                // Draw scanned slice, scaling if needed
+                ctx.drawImage(canvas, 0, block.y - 10, width, block.h + 20, 0, 0, targetWidth, targetHeight);
+
+                chordStrips.push({
+                    id: crypto.randomUUID(),
+                    y: block.y - 10,
+                    height: block.h + 20, // Store ORIGINAL height for mapping back
+                    image: tempCanvas.toDataURL('image/jpeg', 0.6).split(',')[1] // Lower quality slightly
+                });
+            }
         }
     }
 

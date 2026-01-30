@@ -91,21 +91,22 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 for (const chord of stripResult.chords) {
                     // stripResult.chords: { text: "Am", x: 15 } // x is 0-100? Prompt asked for "horizontal position (0-100%)"
 
-                    // Y Calculation
-                    // Strip Y is in pixels. Canvas Height is in pixels.
-                    // Y % = (originalStrip.y / canvas.height) * 100
-                    const yPct = (originalStrip.y / canvas.height) * 100
+                    // Y Calculation (Center of strip)
+                    // (originalStrip.y + height/2) / canvas.height
+                    const msgHeight = originalStrip.height
+                    const centerY = originalStrip.y + (msgHeight / 2)
+                    const yPct = (centerY / canvas.height) * 100
 
-                    // X Calculation
-                    // chord.x is already percentage 0-100 from prompt?
-                    // We prompt: "approximate horizontal position (0-100%)"
-                    // Let's assume it returns a number 0-100.
+                    // Height % (for scaling font?)
+                    const hPct = (msgHeight / canvas.height) * 100
 
                     chords.push({
                         text: chord.text,
                         originalText: chord.text,
                         x: chord.x,
-                        y: yPct
+                        y: yPct,
+                        h: hPct,
+                        pxHeight: msgHeight // Store raw pixel height for font calc if needed
                     })
                 }
             }
@@ -134,21 +135,50 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
-
-                // Diff style?
                 const isChanged = transposed !== chord.originalText
+
+                // Dynamic styling
+                // We want the font size to be roughly 80% of the strip height
+                // But we need to convert pixel height to relative unit or just use a standard 'large' size?
+                // The chord.h is a percentage of page height.
+                // Let's use `container` query or just `vh`? No, page wrapper defines context. `height: 100%`.
+                // We can use style={{ fontSize: `${chord.h * 0.8}%` }}? No, font-size % is relative to parent font-size.
+                // We can use Viewport units? No.
+                // We can use a heuristic. If strip is 50px on a 1000px canvas, that's 5%.
+                // Let's try explicit height style on the box and flex center.
 
                 return (
                     <div
                         key={i}
-                        className="absolute transform -translate-y-1/2 px-1 rounded bg-white/90 text-black font-bold font-mono text-sm sm:text-base border border-blue-200/50 shadow-sm"
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center bg-white shadow-sm border border-zinc-200 z-20"
                         style={{
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
-                            color: isChanged ? '#d946ef' : 'black', // Fuchsia if transposed
+                            height: `${chord.h}%`, // Match strip height
+                            minWidth: `${chord.h * 1.5}%`, // roughly square+ aspect aspect
+                            padding: '0 0.2em',
+
+                            // Heuristic for font size: 80% of the box height
+                            // Since we can't easily do `80% of height` in CSS font-size:
+                            // We can use container query units `cqh` if we had a container?
+                            // Or just a massive font scaled down? 
+                            // Let's just hardcode a generous size for now or assume standard strip ~40px.
+                            fontSize: 'clamp(12px, 2.5cqw, 30px)', // Fallback
+                            containerType: 'size', // Does not apply to self...
+
                         }}
                     >
-                        {transposed}
+                        {/* Inner text wrapper to scale? */}
+                        <span
+                            style={{
+                                fontSize: `${chord.pxHeight * 0.8}px`, // Use the raw pixel height we captured!
+                                lineHeight: 1,
+                                fontWeight: 'bold',
+                                color: isChanged ? '#d946ef' : 'black'
+                            }}
+                        >
+                            {transposed}
+                        </span>
                     </div>
                 )
             })}
