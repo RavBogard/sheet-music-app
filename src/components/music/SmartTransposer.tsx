@@ -150,40 +150,35 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 return (
                     <div
                         key={i}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center bg-white shadow-sm border border-zinc-200 z-20"
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-auto"
                         style={{
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
                             height: `${chord.h}%`, // Match strip height
-                            minWidth: `${chord.h * 1.5}%`, // roughly square+ aspect aspect
+                            minWidth: `${chord.h * 2.0}%`, // slightly wider
                             padding: '0 0.2em',
 
-                            // Heuristic for font size: 80% of the box height
-                            // Since we can't easily do `80% of height` in CSS font-size:
-                            // We can use container query units `cqh` if we had a container?
-                            // Or just a massive font scaled down? 
-                            // Let's just hardcode a generous size for now or assume standard strip ~40px.
-                            fontSize: 'clamp(12px, 2.5cqw, 30px)', // Fallback
-                            containerType: 'size', // Does not apply to self...
+                            // Visual Tweaks
+                            backgroundColor: 'white', // Opaque
+                            border: '1px solid #e2e8f0', // Slight border
+                            borderRadius: '4px',
+                            zIndex: 50, // Higher than before
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 
+                            // Font
+                            color: isChanged ? '#9333ea' : '#0ea5e9', // Purple if transposed, Blue if original (to show it's "Smart")
+                            // Use pure pixel size for accuracy, maybe scale up slightly
+                            fontSize: `${chord.pxHeight * 0.9}px`,
+                            lineHeight: 1,
+                            fontWeight: '800', // Extra bold
+                            fontFamily: 'monospace' // Or system-ui but mono is safer for alignment?
                         }}
                     >
-                        {/* Inner text wrapper to scale? */}
-                        <span
-                            style={{
-                                fontSize: `${chord.pxHeight * 0.8}px`, // Use the raw pixel height we captured!
-                                lineHeight: 1,
-                                fontWeight: 'bold',
-                                color: isChanged ? '#d946ef' : 'black'
-                            }}
-                        >
-                            {transposed}
-                        </span>
+                        {transposed}
                     </div>
                 )
             })}
         </div>
     )
-}
 
 
