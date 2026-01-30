@@ -1,13 +1,13 @@
 {
-  "version": "1.0.51",
-  "commit": "2221b80",
+  "version": "1.0.52",
+  "commit": "7120416",
   "branch": "master",
-  "buildDate": "1/29/2026, 8:57:42 PM",
+  "buildDate": "1/29/2026, 9:02:35 PM",
   "changelog": [
-    "2221b80 - fix: simplified 'strict regex' chord detection - ignores lyric noise completely (5 minutes ago)",
-    "0951d78 - fix: complete transposer logic rewrite - noise discrimination strategy (13 minutes ago)",
-    "943b5f1 - fix: critical logic fix - trim whitespace on tokens and increase line tolerance to 20px (21 minutes ago)",
-    "e6058b8 - fix: logic tune, B-G single letters now count as strict chords to rescue low density lines (26 minutes ago)",
-    "0ba83e0 - fix: restore missing chords (E, A, #m) via token merging and relaxed heuristics (32 minutes ago)"
+    "7120416 - feat: complete rewrite of transposer logic -> 'Chord Confidence Engine' with spatial clustering (4 minutes ago)",
+    "2221b80 - fix: simplified 'strict regex' chord detection - ignores lyric noise completely (10 minutes ago)",
+    "0951d78 - fix: complete transposer logic rewrite - noise discrimination strategy (18 minutes ago)",
+    "943b5f1 - fix: critical logic fix - trim whitespace on tokens and increase line tolerance to 20px (26 minutes ago)",
+    "e6058b8 - fix: logic tune, B-G single letters now count as strict chords to rescue low density lines (31 minutes ago)"
   ]
 }
