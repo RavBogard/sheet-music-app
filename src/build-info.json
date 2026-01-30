@@ -1,13 +1,13 @@
 {
-  "version": "1.0.60",
-  "commit": "711f679",
+  "version": "1.0.61",
+  "commit": "8e15c25",
   "branch": "master",
-  "buildDate": "1/29/2026, 9:55:42 PM",
+  "buildDate": "1/29/2026, 10:02:44 PM",
   "changelog": [
-    "711f679 - fix: add missing authentication token to OCR API request (7 minutes ago)",
-    "b17cdd4 - fix: improve error logging for OCR scan failures (11 minutes ago)",
-    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (15 minutes ago)",
-    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (23 minutes ago)",
-    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (29 minutes ago)"
+    "8e15c25 - fix: refactor transposer to use percentage-based coordinates for responsive alignment (6 minutes ago)",
+    "711f679 - fix: add missing authentication token to OCR API request (14 minutes ago)",
+    "b17cdd4 - fix: improve error logging for OCR scan failures (18 minutes ago)",
+    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (22 minutes ago)",
+    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (30 minutes ago)"
   ]
 }
