@@ -26,7 +26,7 @@ export function DesktopHeader() {
     const pathname = usePathname()
     const router = useRouter()
     const { user, profile, isMember, isAdmin, signIn, signOut } = useAuth()
-    const { driveFiles, loading, fetchFiles } = useLibraryStore()
+    const { allFiles, loading, loadLibrary } = useLibraryStore()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
 
@@ -45,7 +45,7 @@ export function DesktopHeader() {
 
     // Handle Search Filter
     const searchResults = searchQuery.length > 1
-        ? driveFiles.filter(f =>
+        ? allFiles.filter(f =>
             f.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
             f.mimeType !== 'application/vnd.google-apps.folder'
         ).slice(0, 8)
@@ -65,7 +65,7 @@ export function DesktopHeader() {
     // Initial Sync (Only when user is ready)
     useEffect(() => {
         if (user) {
-            fetchFiles()
+            loadLibrary()
         }
     }, [user])
 
@@ -218,7 +218,7 @@ export function DesktopHeader() {
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => fetchFiles({ force: true })}
+                                            onClick={() => loadLibrary(true)}
                                             disabled={loading}
                                             className="h-8 text-[11px] border-zinc-800"
                                         >

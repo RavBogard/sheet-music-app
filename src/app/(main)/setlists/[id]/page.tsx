@@ -16,7 +16,7 @@ export default function SetlistEditorPage() {
     const id = params?.id as string
     const isPublic = searchParams?.get('public') === 'true'
 
-    const { driveFiles, fetchFiles } = useLibraryStore()
+    const { allFiles, loadLibrary } = useLibraryStore()
     const { items: pendingItems, clear: clearPending } = useSetlistStore()
     const { setQueue } = useMusicStore()
     const { user } = useAuth()
@@ -28,9 +28,9 @@ export default function SetlistEditorPage() {
 
     useEffect(() => {
         if (user) {
-            fetchFiles()
+            loadLibrary()
         }
-    }, [fetchFiles, user])
+    }, [loadLibrary, user])
 
     // Fetch existing setlist if ID is present
     useEffect(() => {
@@ -81,7 +81,7 @@ export default function SetlistEditorPage() {
     const tracks = isNew ? pendingItems : (existingSetlist?.tracks || [])
     const name = isNew ? "" : existingSetlist?.name
 
-    const activeFiles = user ? driveFiles : guestFiles
+    const activeFiles = user ? allFiles : guestFiles
 
     return (
         <SetlistEditor

@@ -1,13 +1,13 @@
 {
-  "version": "1.0.17",
-  "commit": "a75f082",
+  "version": "1.0.27",
+  "commit": "ed175b5",
   "branch": "master",
-  "buildDate": "1/29/2026, 5:04:15 PM",
+  "buildDate": "1/29/2026, 7:54:47 PM",
   "changelog": [
-    "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 minutes ago)",
-    "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (15 minutes ago)",
-    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (19 minutes ago)",
-    "3b28e23 - fix: smart capo logic for minor keys (25 minutes ago)",
-    "dddf64e - feat: enhance transposer UI (loading state, label update) (27 minutes ago)"
+    "ed175b5 - feat: implement instant client-side search (fuse.js) (2 hours ago)",
+    "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 hours ago)",
+    "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (3 hours ago)",
+    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (3 hours ago)",
+    "3b28e23 - fix: smart capo logic for minor keys (3 hours ago)"
   ]
 }

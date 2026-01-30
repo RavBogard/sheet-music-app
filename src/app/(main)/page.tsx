@@ -13,7 +13,7 @@ import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar
 export default function DashboardPage() {
     const router = useRouter()
     const { user, signIn } = useAuth()
-    const { driveFiles, loading, fetchFiles } = useLibraryStore()
+    const { allFiles, loading, loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
 
 
@@ -60,9 +60,8 @@ export default function DashboardPage() {
     }, [setlistService, user])
 
     useEffect(() => {
-        fetchFiles()
-
-    }, [fetchFiles])
+        loadLibrary()
+    }, [loadLibrary])
 
     const tonightSetlist = upcomingSetlists[0]
 
@@ -160,7 +159,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-2">
                     <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">Recently Added</h3>
                     <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl divide-y divide-zinc-800/50">
-                        {driveFiles.slice(0, 3).map(file => (
+                        {allFiles.slice(0, 3).map(file => (
                             <div
                                 key={file.id}
                                 onClick={() => router.push(`/perform/${file.id}`)}

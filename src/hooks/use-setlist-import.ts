@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner' // Added import
 
 export function useSetlistImport() {
-    const { driveFiles } = useLibraryStore()
+    const { allFiles } = useLibraryStore()
     const { addItem, clear: clearSetlist } = useSetlistStore()
     const [importing, setImporting] = useState(false)
     const router = useRouter()
@@ -37,7 +37,7 @@ export function useSetlistImport() {
                 let bestMatch: DriveFile | undefined = undefined
                 let bestScore = 0
 
-                for (const df of driveFiles) {
+                for (const df of allFiles) {
                     if (df.mimeType.includes('folder') || df.mimeType.includes('spreadsheet')) continue
                     const rawFileName = df.name.toLowerCase().replace(/\.(pdf|musicxml|xml|mxl|xlsx)/, '')
                     const cleanFileName = rawFileName.replace(/[^a-z0-9]/g, ' ').trim()

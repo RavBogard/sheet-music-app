@@ -11,13 +11,9 @@ import { useSetlistImport } from "@/hooks/use-setlist-import"
 export default function LibraryPage() {
     const router = useRouter()
     const { user, signIn, isMember } = useAuth()
-    const { driveFiles, loading, fetchFiles } = useLibraryStore()
+    const { loading } = useLibraryStore()
     const { setFile } = useMusicStore()
     const { importSetlistFromExcel } = useSetlistImport()
-
-    useEffect(() => {
-        if (user) fetchFiles()
-    }, [fetchFiles, user])
 
     if (!loading && !user) {
         return (

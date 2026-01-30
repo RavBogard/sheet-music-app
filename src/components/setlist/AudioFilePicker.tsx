@@ -15,11 +15,11 @@ interface AudioFilePickerProps {
 }
 
 export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFilePickerProps) {
-    const { driveFiles, loading } = useLibraryStore()
+    const { allFiles, loading } = useLibraryStore()
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState("")
 
-    const audioFiles = driveFiles.filter(f =>
+    const audioFiles = allFiles.filter(f =>
         f.mimeType.startsWith('audio/') || f.name.endsWith('.mp3') || f.name.endsWith('.wav')
     )
 

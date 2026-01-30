@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Check, ChevronLeft, Music, Folder, Loader2 } from "lucide-react"
@@ -27,10 +27,10 @@ export function MatchFileModal({
     onMatch
 }: MatchFileModalProps) {
     const {
-        driveFiles,
+        displayedFiles,
         loading,
-        fetchFiles,
-        nextPageToken
+        loadLibrary,
+        setFilter
     } = useLibraryStore()
 
     const [searchQuery, setSearchQuery] = useState("")
@@ -44,13 +44,15 @@ export function MatchFileModal({
     // Fetch on mount/change
     useEffect(() => {
         if (isOpen) {
-            fetchFiles({
-                folderId: currentFolderId,
-                query: searchQuery,
-                force: true
-            })
+            loadLibrary()
         }
-    }, [isOpen, currentFolderId, searchQuery, fetchFiles])
+    }, [isOpen, loadLibrary])
+
+    useEffect(() => {
+        if (isOpen) {
+            setFilter(currentFolderId, searchQuery)
+        }
+    }, [isOpen, currentFolderId, searchQuery, setFilter])
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value)
@@ -60,7 +62,7 @@ export function MatchFileModal({
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
 
-        driveFiles.forEach(f => {
+        displayedFiles.forEach(f => {
             if (f.mimeType.includes('folder')) {
                 folders.push(f)
             } else if (
@@ -71,7 +73,7 @@ export function MatchFileModal({
             }
         })
         return { folders, files }
-    }, [driveFiles])
+    }, [displayedFiles])
 
     const combinedItems = [...folders, ...files]
 
@@ -89,23 +91,7 @@ export function MatchFileModal({
         setSearchQuery("")
     }
 
-    // Infinite Scroll Observer
-    const observerTarget = useRef<HTMLDivElement>(null)
-    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-        const [target] = entries
-        if (target.isIntersecting && nextPageToken && !loading) {
-            fetchFiles({ loadMore: true })
-        }
-    }, [nextPageToken, loading, fetchFiles])
 
-    useEffect(() => {
-        const element = observerTarget.current
-        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
-        if (element) observer.observe(element)
-        return () => {
-            if (element) observer.unobserve(element)
-        }
-    }, [handleObserver, driveFiles])
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -179,15 +165,7 @@ export function MatchFileModal({
                                     </button>
                                 )
                             })}
-                            {/* Infinite Scroll Loader */}
-                            <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
-                                {loading && nextPageToken && (
-                                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Loading more...
-                                    </div>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 </div>

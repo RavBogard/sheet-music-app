@@ -1,7 +1,7 @@
 "use client"
 
 import { MIME_TYPES } from "@/lib/constants"
-import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Check, ChevronLeft, Music, Plus, Folder, Search, Loader2 } from "lucide-react"
@@ -28,10 +28,10 @@ export function AddSongsModal({
     onAdd
 }: AddSongsModalProps) {
     const {
-        driveFiles,
+        displayedFiles,
         loading,
-        fetchFiles,
-        nextPageToken,
+        loadLibrary,
+        setFilter,
         reset
     } = useLibraryStore()
 
@@ -47,13 +47,15 @@ export function AddSongsModal({
     // Fetch on mount/change
     useEffect(() => {
         if (isOpen) {
-            fetchFiles({
-                folderId: currentFolderId,
-                query: searchQuery,
-                force: true
-            })
+            loadLibrary()
         }
-    }, [isOpen, currentFolderId, searchQuery, fetchFiles])
+    }, [isOpen, loadLibrary])
+
+    useEffect(() => {
+        if (isOpen) {
+            setFilter(currentFolderId, searchQuery)
+        }
+    }, [isOpen, currentFolderId, searchQuery, setFilter])
 
     // Cleanup when modal closes (reset library store so main view isn't affected? 
     // Actually, we probably want to leave it alone or reset it. 
@@ -69,7 +71,7 @@ export function AddSongsModal({
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
 
-        driveFiles.forEach(f => {
+        displayedFiles.forEach(f => {
             if (f.mimeType.includes('folder')) {
                 folders.push(f)
             } else if (
@@ -80,7 +82,7 @@ export function AddSongsModal({
             }
         })
         return { folders, files }
-    }, [driveFiles])
+    }, [displayedFiles])
 
     const combinedItems = [...folders, ...files]
 
@@ -121,23 +123,7 @@ export function AddSongsModal({
         setSearchQuery("")
     }
 
-    // Infinite Scroll Observer
-    const observerTarget = useRef<HTMLDivElement>(null)
-    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-        const [target] = entries
-        if (target.isIntersecting && nextPageToken && !loading) {
-            fetchFiles({ loadMore: true })
-        }
-    }, [nextPageToken, loading, fetchFiles])
 
-    useEffect(() => {
-        const element = observerTarget.current
-        const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 })
-        if (element) observer.observe(element)
-        return () => {
-            if (element) observer.unobserve(element)
-        }
-    }, [handleObserver, driveFiles]) // Re-attach when list changes
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -228,15 +214,7 @@ export function AddSongsModal({
                                     </button>
                                 )
                             })}
-                            {/* Infinite Scroll Loader */}
-                            <div ref={observerTarget} className="h-10 flex items-center justify-center w-full">
-                                {loading && nextPageToken && (
-                                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Loading more...
-                                    </div>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 </div>

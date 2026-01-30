@@ -9,13 +9,13 @@ import { useSetlistImport } from "@/hooks/use-setlist-import"
 
 export default function SetlistsPage() {
     const router = useRouter()
-    const { driveFiles, fetchFiles } = useLibraryStore()
+    const { allFiles, loadLibrary } = useLibraryStore()
     const { importSetlistFromExcel } = useSetlistImport()
     const [showImportModal, setShowImportModal] = useState(false)
 
     useEffect(() => {
-        fetchFiles()
-    }, [fetchFiles])
+        loadLibrary()
+    }, [loadLibrary])
 
     return (
         <>
@@ -27,7 +27,7 @@ export default function SetlistsPage() {
             />
             {showImportModal && (
                 <ImportModal
-                    driveFiles={driveFiles}
+                    driveFiles={allFiles}
                     onClose={() => setShowImportModal(false)}
                     onImport={(tracks, suggestedName) => {
                         setShowImportModal(false)
