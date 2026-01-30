@@ -1,13 +1,13 @@
 {
-  "version": "1.0.59",
-  "commit": "b17cdd4",
+  "version": "1.0.60",
+  "commit": "711f679",
   "branch": "master",
-  "buildDate": "1/29/2026, 9:48:19 PM",
+  "buildDate": "1/29/2026, 9:55:42 PM",
   "changelog": [
-    "b17cdd4 - fix: improve error logging for OCR scan failures (3 minutes ago)",
-    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (8 minutes ago)",
-    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (15 minutes ago)",
-    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (21 minutes ago)",
-    "c8c22df - fix: move Edit Chords button to Transpose Control panel for better visibility (26 minutes ago)"
+    "711f679 - fix: add missing authentication token to OCR API request (7 minutes ago)",
+    "b17cdd4 - fix: improve error logging for OCR scan failures (11 minutes ago)",
+    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (15 minutes ago)",
+    "11b8bfb - fix: ensure TransposerOverlay waits for PDF render before scanning and handling interactions (23 minutes ago)",
+    "77c1a35 - fix: enable interactive Edit Mode by mounting TransposerOverlay (29 minutes ago)"
   ]
 }

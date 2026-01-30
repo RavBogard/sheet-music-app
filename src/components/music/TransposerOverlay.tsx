@@ -140,9 +140,6 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
     const handleSaveCorrections = async () => {
         if (!fileId) return
         try {
-            // Filter corrections for effectively current page if we tracked pages?
-            // Currently assuming single-page or global corrections.
-            // But store corrections are global. We'll save the whole array.
             await transposerService.saveCorrections(fileId, corrections)
             toast.success("Corrections saved!")
             setTransposerState({ isEditing: false })
@@ -153,17 +150,18 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isEditing) return
-        if (!canvasSize.w) return
 
-        // If we clicked a chord box, event propagation stopped there.
-        // So this is a click on empty space -> Add Chord.
-
+        // Use the displayed size of the overlay itself for calculations
         const rect = e.currentTarget.getBoundingClientRect()
-        const x = e.nativeEvent.offsetX
-        const y = e.nativeEvent.offsetY
+        if (rect.width === 0 || rect.height === 0) return
+
+        // Calculate % position relative to the OVERLAY size, not the underlying canvas
+        // This ensures visual accuracy regardless of PDF scaling
+        const xPct = ((e.nativeEvent.clientX - rect.left) / rect.width) * 100
+        const yPct = ((e.nativeEvent.clientY - rect.top) / rect.height) * 100
 
         // Open input at this position
-        setPendingChord({ x, y })
+        setPendingChord({ x: xPct, y: yPct })
         setPendingText("")
     }
 
@@ -173,14 +171,14 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
             return
         }
 
-        // Add Correction
+        // Add Correction (Locations are now already in %)
         addCorrection({
             id: crypto.randomUUID(),
             type: 'add',
-            x: (pendingChord.x / canvasSize.w) * 100, // Store as %
-            y: (pendingChord.y / canvasSize.h) * 100,
+            x: pendingChord.x,
+            y: pendingChord.y,
             text: pendingText.trim(),
-            pageIndex: pageNumber - 1 // 0-indexed
+            pageIndex: pageNumber - 1
         })
         setPendingChord(null)
     }
@@ -190,21 +188,29 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
         if (!isEditing) return
 
         if (type === 'added') {
-            // Remove the manual addition
-            removeCorrection(identifier) // identifier is ID
+            removeCorrection(identifier)
         } else {
             // Suppress the detected block
-            // We create a REMOVE correction nearby
-            const block = identifier // block object
-            const x = block.poly[0].x
-            const y = block.poly[0].y
+            // identifier is { text, poly } but we can't trust poly pixels if we are using %.
+            // Ideally we'd pass the block index or ID. 
+            // For now, let's rely on the coordinate matching we did in render.
+            // Wait, we passed { text, poly } in the JSX. 
+            // We need to suppress based on what we see.
+            // Let's use the coordinates from the *rendered* item if possible, or re-calculate.
+
+            // Actually, identifier.poly is raw pixels from the OCR block.
+            // We need to convert THAT to % to create the suppression.
+
+            const block = identifier
+            const bx = (block.poly[0].x / canvasSize.w) * 100
+            const by = (block.poly[0].y / canvasSize.h) * 100
 
             addCorrection({
                 id: crypto.randomUUID(),
                 type: 'remove',
-                x: (x / canvasSize.w) * 100,
-                y: (y / canvasSize.h) * 100,
-                text: block.text, // original text just in case
+                x: bx,
+                y: by,
+                text: block.text,
                 pageIndex: pageNumber - 1
             })
         }
@@ -216,43 +222,42 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
 
         const finalChords: { x: number, y: number, w: number, h: number, text: string, type: 'detected' | 'added', id?: string }[] = []
 
-        // 1. Process Detected Blocks
+        // 1. Process Detected Blocks (Normalize to %)
         blocks.forEach((block, i) => {
-            const bx = block.poly[0].x
-            const by = block.poly[0].y
+            // Block.poly is in raw canvas pixels. Convert to %
+            const bx = (block.poly[0].x / canvasSize.w) * 100
+            const by = (block.poly[0].y / canvasSize.h) * 100
+            const bw = ((block.poly[2].x - block.poly[0].x) / canvasSize.w) * 100
+            const bh = ((block.poly[2].y - block.poly[0].y) / canvasSize.h) * 100
 
             // Check if suppressed
             const isSuppressed = corrections.some(c =>
                 c.type === 'remove' &&
                 c.pageIndex === (pageNumber - 1) &&
-                // Check distance (tolerance 2% of width?)
-                Math.abs(c.x - (bx / canvasSize.w * 100)) < 2 &&
-                Math.abs(c.y - (by / canvasSize.h * 100)) < 2
+                // Check distance (tolerance 2%)
+                Math.abs(c.x - bx) < 3 && // Increased tolerance slightly
+                Math.abs(c.y - by) < 3
             )
 
             if (!isSuppressed) {
                 finalChords.push({
                     x: bx,
                     y: by,
-                    w: block.poly[2].x - block.poly[0].x,
-                    h: block.poly[2].y - block.poly[0].y,
+                    w: bw,
+                    h: bh,
                     text: transposeChord(block.text, transposition),
                     type: 'detected'
                 })
             }
         })
 
-        // 2. Process Added Corrections
+        // 2. Process Added Corrections (Already in %)
         corrections.filter(c => c.type === 'add' && c.pageIndex === (pageNumber - 1)).forEach(c => {
-            // Convert % back to pixels
-            const px = (c.x / 100) * canvasSize.w
-            const py = (c.y / 100) * canvasSize.h
-
             finalChords.push({
-                x: px,
-                y: py,
-                w: 40, // default size for manual
-                h: 20,
+                x: c.x,
+                y: c.y,
+                w: 6, // approx 6% width
+                h: 3, // approx 3% height
                 text: transposeChord(c.text, transposition),
                 type: 'added',
                 id: c.id
@@ -273,8 +278,8 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
             {/* Input Popover */}
             {pendingChord && (
                 <div
-                    className="absolute bg-white shadow-xl rounded p-1 flex gap-1 z-50 pointer-events-auto"
-                    style={{ left: pendingChord.x, top: pendingChord.y }}
+                    className="absolute bg-white shadow-xl rounded p-1 flex gap-1 z-50 pointer-events-auto transform -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${pendingChord.x}%`, top: `${pendingChord.y}%` }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <Input
@@ -299,26 +304,28 @@ export function TransposerOverlay({ parentRef, pageNumber, transposition, startS
                     key={i}
                     className={`absolute flex items-center justify-center 
                                ${isEditing ? 'cursor-pointer hover:bg-red-50 hover:border-red-400 border border-transparent' : 'bg-white pointer-events-none'}
-                               transition-colors
+                               transition-colors group/chord
                     `}
                     style={{
-                        left: chord.x,
-                        top: chord.y,
-                        width: chord.w + 4,
-                        height: chord.h + 2,
-                        padding: '2px', // Whiteout padding
+                        left: `${chord.x}%`,
+                        top: `${chord.y}%`,
+                        width: `${chord.w}%`,
+                        height: `${chord.h}%`,
+                        minWidth: '24px', // Safe minimums
+                        minHeight: '16px',
+                        padding: '1px',
                         backgroundColor: isEditing ? 'rgba(255,255,255,0.7)' : 'white'
                     }}
-                    onClick={(e) => handleRemoveChord(e, chord.type, chord.type === 'added' ? chord.id : { text: chord.text, poly: [{ x: chord.x, y: chord.y }] })}
+                    onClick={(e) => handleRemoveChord(e, chord.type, chord.type === 'added' ? chord.id : { text: chord.text, poly: [{ x: chord.x, y: chord.y }] })} // We pass % coords for remove logic matching
                 >
                     <span
-                        className="font-bold text-blue-600 leading-none whitespace-nowrap"
-                        style={{ fontSize: chord.h * 0.9 }}
+                        className="font-bold text-blue-600 leading-none whitespace-nowrap select-none"
+                        style={{ fontSize: 'min(1.5vh, 1.5vw)' }} // Responsive font size
                     >
                         {chord.text}
                     </span>
                     {isEditing && (
-                        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow">
+                        <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow opacity-0 group-hover/chord:opacity-100 transition-opacity">
                             <X className="h-2 w-2" />
                         </div>
                     )}
