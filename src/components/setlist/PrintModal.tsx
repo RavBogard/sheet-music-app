@@ -26,14 +26,10 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
     const [error, setError] = useState<string | null>(null)
 
     // Get linked PDF files for tracks based on cached fileName
-    // We assume if a file is linked, it's printable if it looks like a PDF or MusicXML, 
-    // but the print endpoint might mainly support PDFs. 
-    // The previous logic checked mimeType 'pdf' OR name ending in '.pdf'.
-    const linkedPdfTracks = tracks.filter(t => {
-        if (!t.fileId) return false
-        const name = t.fileName?.toLowerCase() || ""
-        return name.endsWith('.pdf')
-    })
+    // We assume if a file is linked, it's printable.
+    // We trust the presence of fileId rather than enforcing .pdf extension
+    // to handle Drive files or downloads lacking the extension in metadata.
+    const linkedPdfTracks = tracks.filter(t => !!t.fileId)
 
     const handleGenerate = async (mode: 'download' | 'print') => {
         setGenerating(true)

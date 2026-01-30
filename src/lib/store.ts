@@ -20,6 +20,17 @@ export interface MusicState {
     transposition: number // 0 = original key, +1 = semitone up
     zoom: number // 1 = 100%
 
+    // AI Transposer State (New Approach)
+    aiState: {
+        isEnabled: boolean
+        scanningPages: number[] // List of page indexes currently scanning
+        pageData: Record<number, {
+            strips: any[] // Store debug info if needed
+            chords: { text: string, x: number, y: number, originalText: string }[]
+        }>
+        error: string | null
+    }
+
     // Playback Queue (For Setlist Mode)
     playbackQueue: QueueItem[]
     queueIndex: number // -1 if not playing from queue
@@ -45,6 +56,12 @@ export interface MusicState {
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
+
+    // AI Actions
+    setAiEnabled: (enabled: boolean) => void
+    setPageScanning: (pageIndex: number, isScanning: boolean) => void
+    setPageData: (pageIndex: number, data: any) => void
+    setAiError: (error: string | null) => void
 
     // Queue Actions
     setQueue: (items: QueueItem[], startIndex?: number) => void
@@ -78,12 +95,11 @@ export const useMusicStore = create<MusicState>()(
             playbackQueue: [],
             queueIndex: -1,
 
-            aiTransposer: {
-                isVisible: false,
-                status: 'idle',
-                detectedKey: '',
-                isEditing: false,
-                corrections: []
+            aiState: {
+                isEnabled: false,
+                scanningPages: [],
+                pageData: {},
+                error: null
             },
 
             capo: {
@@ -105,6 +121,7 @@ export const useMusicStore = create<MusicState>()(
                 fileType: type,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
+                aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null // Clear AI content
             }),
             setTransposition: (t: number) => set({ transposition: t }),
@@ -131,6 +148,26 @@ export const useMusicStore = create<MusicState>()(
             },
 
             setAiXmlContent: (xml: string | null) => set({ aiXmlContent: xml }),
+
+            setAiEnabled: (enabled) => set(prev => ({
+                aiState: { ...prev.aiState, isEnabled: enabled }
+            })),
+            setPageScanning: (pageIndex, isScanning) => set(prev => {
+                const current = prev.aiState.scanningPages.filter(p => p !== pageIndex);
+                if (isScanning) current.push(pageIndex);
+                return {
+                    aiState: { ...prev.aiState, scanningPages: current }
+                };
+            }),
+            setPageData: (pageIndex, data) => set(prev => ({
+                aiState: {
+                    ...prev.aiState,
+                    pageData: { ...prev.aiState.pageData, [pageIndex]: data }
+                }
+            })),
+            setAiError: (error) => set(prev => ({
+                aiState: { ...prev.aiState, error }
+            })),
 
             setAudioState: (newState: Partial<MusicState['audio']>) => set((state) => ({
                 audio: { ...state.audio, ...newState }

@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react"
 import { Page } from "react-pdf"
 
 import { useMusicStore } from "@/lib/store"
+import { SmartTransposer } from "./SmartTransposer"
 
 interface PDFPageWrapperProps {
     pageNumber: number
@@ -40,9 +41,12 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
 
             {/* 
                 We always mount the overlay so it can react to store changes (Scanning/Edit Mode)
-                It will return null if !isVisible internally or we can short-circuit here.
-                Better to let it handle logic. 
-             */}
+            */}
+            <SmartTransposer
+                pageRef={pageRef}
+                pageNumber={pageNumber}
+                isRendered={rendered}
+            />
 
         </div>
     )
