@@ -1,12 +1,9 @@
 // Regex for strictly valid chords
-// Excludes single "I" or "A" which are common lyrics
-// Matches: Bb, F#m, G/B, Cmaj7, Ddim, E+, Am7, Sus4
-// We enforce that single letters must be followed by something OR be in a context where they look like chords (handled by logic)
-// But to be safe, we'll allow single letters A-G, but filter them out later if they appear to be lyrics.
-const CHORD_REGEX = /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|\+)?(?:7|9|11|13)?(?:sus[24])?(?:\/[A-G](?:#|b)?)?$/
+// Matches: Bb, F#m, G/B, Cmaj7, Ddim, E+, Am7, Sus4, Asus
+const CHORD_REGEX = /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|\+)?(?:7|9|11|13)?(?:sus(?:2|4)?)?(?:\/[A-G](?:#|b)?)?$/
 
 // Common English words that look like chords but shouldn't be treated as such unless surrounded by other chords
-const FALSE_POSITIVES = new Set(["I", "A", "a", "Am", "To", "Be", "Is", "In", "On", "At", "No", "So", "Do", "Go", "Up", "Or", "If", "As", "By", "My", "We", "He", "Us"])
+const FALSE_POSITIVES = new Set(["A", "a", "Am", "an", "An", "as", "As", "at", "At", "be", "Be", "by", "By", "do", "Do", "go", "Go", "he", "He", "hi", "Hi", "if", "If", "in", "In", "is", "Is", "it", "It", "me", "Me", "my", "My", "no", "No", "of", "Of", "on", "On", "or", "Or", "ox", "Ox", "so", "So", "to", "To", "up", "Up", "us", "Us", "we", "We"])
 
 // Nashville Number System Map
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -62,7 +59,7 @@ export function transposeChord(chord: string, semitones: number): string {
 export function identifyChords(blocks: { text: string, poly: any }[]) {
     // 1. Group blocks into lines based on Y coordinate (with tolerance)
     const lines: { y: number, blocks: typeof blocks }[] = []
-    const Y_TOLERANCE = 15 // pixels
+    const Y_TOLERANCE = 8 // Reduced from 15 to prevent merging chords with lyrics
 
     // Sort blocks by Y first
     const sortedBlocks = [...blocks].sort((a, b) => a.poly[0].y - b.poly[0].y)
@@ -87,14 +84,15 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         const totalTokens = lineBlocks.length
 
         let possibleChords = 0
-        let strictChords = 0 // Chords that definitely aren't words (e.g. G7, F#m, Asus)
+        let strictChords = 0
 
         lineBlocks.forEach(b => {
             const txt = b.text.replace(/[,\.]/g, '') // remove punctuation
-            if (CHORD_REGEX.test(txt)) {
+            if (CHORD_REGEX.test(txt) && !FALSE_POSITIVES.has(txt)) {
                 possibleChords++
-                // Check if it's a strict chord (has #, b, 7, m, sus, or slash)
-                if (txt.match(/[#b7msu\/]/) && txt !== 'I') {
+                // Check if it's a "Strict Chord" (has #, b, 7, m, sus, or slash)
+                // These are almost certainly chords and not words
+                if (txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)) {
                     strictChords++
                 }
             }
@@ -103,28 +101,43 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
         const density = possibleChords / totalTokens
 
         // HEURISTIC: A line is a "Chord Line" if:
-        // A) Density is high (> 50% are potential chords)
-        // B) Contains at least one "Strict Chord" (definitely not a word) AND density > 20%
-        // C) It's a sparse line (few tokens) and they are all valid notes (e.g. "G   C   D")
+        // A) Density is high (> 40% are potential chords)
+        // B) Contains "Strict Chords" which justify the line even if sparse
+        const isChordLine = (density > 0.4) || (strictChords > 0)
 
-        const isChordLine = (density > 0.5) || (strictChords > 0 && density > 0.2)
+        lineBlocks.forEach(b => {
+            const txt = b.text.replace(/[,\.]/g, '')
 
-        if (isChordLine) {
-            // Processing this line as chords
-            lineBlocks.forEach(b => {
-                const txt = b.text.replace(/[,\.]/g, '')
-                // Even in a chord line, ignore obvious non-chords (e.g. "Chorus:", "Intro")
-                // But include "I" or "A" if the line is determined to be chords
-                if (CHORD_REGEX.test(txt)) {
-                    // Filter out words that happen to be chord names if they appear in a mixed context?
-                    // No, if the whole line is chords, assume they are chords.
-                    // EXCEPT: standard exclusion list if density is borderline
-                    if (density < 0.8 && FALSE_POSITIVES.has(txt) && txt !== 'A') {
-                        // "I" might be a chord in a chord line? unlikely. "I" is not a chord. "A" is.
-                        if (txt === 'I') return
-                        // "A" is valid.
-                    }
+            // Check matching
+            if (CHORD_REGEX.test(txt)) {
 
+                const isFalsePositive = FALSE_POSITIVES.has(txt)
+                const isStrict = txt.match(/[#b75913\+]|sus|maj|min|dim|aug|\//)
+
+                let keep = false
+
+                // Scenario 1: It's a high density chord line -> Keep everything that matches regex (except strict false positives)
+                if (isChordLine && !isFalsePositive) {
+                    keep = true
+                }
+
+                // Scenario 2: It's a "Strict Chord" (unambiguous) -> Keep it ALWAYS, even if line density is low
+                // This rescues chords like "G#m" or "C#m" mixed into a lyric line by accident
+                if (isStrict) {
+                    keep = true
+                }
+
+                // Scenario 3: Single letters [B-G] are rarely words (unlike A). 
+                // If we found ANY strict chords in this line, we might trust the single letters too?
+                // Or just trust them? "E" is often missed.
+                // Let's trust Single Letters B-G if the line has ANY chord-like qualities (density > 0.1 ?)
+                // "I went to E" -> E is East?
+                // "Modeh Ani... E" -> E is chord.
+                if (['B', 'C', 'D', 'E', 'F', 'G'].includes(txt) && (density > 0.1 || strictChords > 0)) {
+                    keep = true
+                }
+
+                if (keep) {
                     finalChordBlocks.push(b)
 
                     // Key Detection Voting
@@ -134,8 +147,8 @@ export function identifyChords(blocks: { text: string, poly: any }[]) {
                         keyVotes[root] = (keyVotes[root] || 0) + 1
                     }
                 }
-            })
-        }
+            }
+        })
     })
 
     // 3. Simple Key Detection

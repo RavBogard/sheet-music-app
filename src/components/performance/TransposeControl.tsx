@@ -157,12 +157,13 @@ export function TransposeControl() {
                     {/* AI Chords Toggle */}
                     <div className="pt-4 mt-4 border-t border-zinc-800 flex items-center justify-between">
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-zinc-500 uppercase">Show Transposed Chords</span>
-                            {aiTransposer.status === 'scanning' && (
-                                <span className="text-[10px] font-bold text-orange-400 animate-pulse mt-0.5 flex items-center gap-1">
-                                    Scanning...
-                                </span>
-                            )}
+                            <span className="text-xs font-bold text-zinc-500 uppercase">
+                                {aiTransposer.status === 'scanning' ? (
+                                    <span className="text-orange-400 animate-pulse">AI Transposer Scanning...</span>
+                                ) : (
+                                    "Show Transposed Chords"
+                                )}
+                            </span>
                             {aiTransposer.status === 'error' && (
                                 <span className="text-[10px] font-bold text-red-400 mt-0.5">
                                     Scan Failed

@@ -37,9 +37,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     tracks,
                     trackCount: tracks.length,
                     isPublic,
-                    ownerId: userId,
                     ownerName: userName || "Anonymous",
-                    ...additionalData // Atomic merge
+                    ...JSON.parse(JSON.stringify(additionalData)) // Sanitize undefined
                 });
                 return docRef.id;
             } catch (e) {
@@ -94,7 +93,11 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Update a setlist
         async updateSetlist(id: string, isPublic: boolean, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
-            await updateDoc(docRef, data);
+            // Sanitize data -> remove undefined, or convert to null? Firestore prefers DELETEField for removal, or just ignore.
+            // But if we want to CLEAR a field, we send null.
+            // Typically we want to convert undefined to null to avoid crashes.
+            const cleanData = JSON.parse(JSON.stringify(data));
+            await updateDoc(docRef, cleanData);
         },
 
         // Delete a setlist

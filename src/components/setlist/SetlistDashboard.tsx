@@ -29,11 +29,10 @@ import {
 interface SetlistDashboardProps {
     onBack: () => void
     onSelect: (setlist: Setlist) => void
-    onImport: () => void
     onCreateNew: () => void
 }
 
-export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: SetlistDashboardProps) {
+export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
     const { user, loading: authLoading, signIn, signOut } = useAuth()
     const { downloadSetlist, isDownloading } = useOfflineManager() // Import Hook
 
@@ -245,15 +244,6 @@ export function SetlistDashboard({ onBack, onSelect, onImport, onCreateNew }: Se
 
                 {user && (
                     <div className="flex items-center gap-2">
-                        <Button
-                            onClick={onImport}
-                            variant="outline"
-                            size="sm"
-                            className="hidden sm:flex gap-2 border-zinc-800 hover:bg-zinc-800"
-                        >
-                            <FileText className="h-4 w-4" />
-                            Import Excel
-                        </Button>
                         <Button
                             onClick={onCreateNew}
                             className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6"

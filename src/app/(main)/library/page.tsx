@@ -6,14 +6,13 @@ import { useAuth } from "@/lib/auth-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore, FileType } from "@/lib/store"
 import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
-import { useSetlistImport } from "@/hooks/use-setlist-import"
+
 
 export default function LibraryPage() {
     const router = useRouter()
     const { user, signIn, isMember } = useAuth()
     const { loading } = useLibraryStore()
     const { setFile } = useMusicStore()
-    const { importSetlistFromExcel } = useSetlistImport()
 
     if (!loading && !user) {
         return (
@@ -44,13 +43,6 @@ export default function LibraryPage() {
 
     const handleSelectFile = (file: any) => {
         const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
-        const isExcel = file.mimeType.includes('spreadsheet') || file.name.endsWith('.xlsx')
-
-        if (isExcel) {
-            importSetlistFromExcel(file)
-            return
-        }
-
         const type: FileType = isXml ? 'musicxml' : 'pdf'
 
         // Update Store

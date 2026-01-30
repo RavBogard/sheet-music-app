@@ -1,13 +1,13 @@
 {
-  "version": "1.0.27",
-  "commit": "ed175b5",
+  "version": "1.0.43",
+  "commit": "aeea7dd",
   "branch": "master",
-  "buildDate": "1/29/2026, 7:54:47 PM",
+  "buildDate": "1/29/2026, 8:15:27 PM",
   "changelog": [
+    "aeea7dd - fix: resolve library store refactor type errors (20 minutes ago)",
     "ed175b5 - feat: implement instant client-side search (fuse.js) (2 hours ago)",
     "a75f082 - chore: codebase cleanup (secure OCR, remove legacy routes, unify file ID parsing) (3 hours ago)",
     "c2b75a5 - fix: layout black strip (removed wrapper padding, added scroll padding) (3 hours ago)",
-    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (3 hours ago)",
-    "3b28e23 - fix: smart capo logic for minor keys (3 hours ago)"
+    "9d72ed0 - fix: smart capo relative key equivalence (C <-> Am) (4 hours ago)"
   ]
 }
