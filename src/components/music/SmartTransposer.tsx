@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react"
 import { useMusicStore } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"
+import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
 
 interface SmartTransposerProps {
@@ -41,22 +42,53 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             setPageScanning(pageNumber, true)
             setLocalError(null)
 
-            // 1. Find Canvas
+            const pageEl = pageRef.current;
+
+            // 1. Try Text Layer Scan (Vector PDF) - FAST & PRECISE
+            // We need to wait for text layer to render? `isRendered` passed prop handles canvas, 
+            // but text layer might lag slightly.
+            // Let's assume if isRendered is true, text layer is likely there or coming.
+            // We can retry? Or just run.
+
+            const textChords = scanTextLayer(pageEl);
+
+            if (textChords.length > 0) {
+                console.log("Text Layer Matches Found:", textChords.length);
+                // Map to same format as API
+                const mappedChords = textChords.map(c => ({
+                    text: c.text,
+                    originalText: c.text,
+                    x: c.x,
+                    y: c.y,
+                    h: c.h,
+                    pxHeight: c.pxHeight
+                }));
+
+                // No strips needed for text layer mode
+                setPageData(pageNumber, { chords: mappedChords, strips: [] })
+                setPageScanning(pageNumber, false)
+                return;
+            }
+
+            // 2. Fallback: Image Scan (Raster PDF)
+            console.log("No text layer chords found. Falling back to Image Scan...");
+
+            // Find Canvas
             const canvas = pageRef.current.querySelector('canvas')
             if (!canvas) {
                 throw new Error("Canvas not found")
             }
 
-            // 2. Client-side Line Scanning
+            // Client-side Line Scanning
             const scanResult = await scanForChordStrips(canvas, canvas.getContext('2d')!)
 
             if (scanResult.strips.length === 0) {
-                // No chords found logic? Or just empty result.
+                // No chords found in image either
                 setPageData(pageNumber, { chords: [], strips: [] })
                 return
             }
 
-            // 3. API Call
+            // API Call
             const token = await user?.getIdToken()
             const res = await fetch('/api/ai/transposer', {
                 method: 'POST',
@@ -73,15 +105,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
             const json = await res.json()
 
-            // 4. Map Results
-            // Result is [{ id, chords: [{ text, x }] }]
-            // We need to map strip Y + chord relative X to page coordinates
-            // Strips are in raw pixels relative to canvas.
-
-            // We need to normalize to PERCENTAGE so it scales if resizing
-            // Note: Canvas pixel size might differ from CSS size (Retina)
-            // But line-scanner uses canvas.width/height directly.
-
+            // Map Results
             const chords = [];
 
             for (const stripResult of json.results) {
@@ -89,15 +113,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 if (!originalStrip) continue;
 
                 for (const chord of stripResult.chords) {
-                    // stripResult.chords: { text: "Am", x: 15 } // x is 0-100? Prompt asked for "horizontal position (0-100%)"
-
-                    // Y Calculation (Center of strip)
-                    // (originalStrip.y + height/2) / canvas.height
                     const msgHeight = originalStrip.height
                     const centerY = originalStrip.y + (msgHeight / 2)
                     const yPct = (centerY / canvas.height) * 100
-
-                    // Height % (for scaling font?)
                     const hPct = (msgHeight / canvas.height) * 100
 
                     chords.push({
@@ -106,7 +124,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                         x: chord.x,
                         y: yPct,
                         h: hPct,
-                        pxHeight: msgHeight // Store raw pixel height for font calc if needed
+                        pxHeight: msgHeight
                     })
                 }
             }

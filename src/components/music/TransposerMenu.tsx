@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sparkles, ChevronUp, ChevronDown, Loader2, Edit3, X } from "lucide-react" // Edit3, X might be needed later
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 
 export function TransposerMenu() {
     const {
@@ -27,7 +28,7 @@ export function TransposerMenu() {
             {/* Smart Transposer Toggle */}
             <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                    <Label className="text-base text-zinc-200">Smart Layer</Label>
+                    <Label className="text-base text-zinc-200">Smart Transposer</Label>
                     <p className="text-xs text-zinc-500">Scan & overlay chords</p>
                 </div>
                 <Switch
@@ -37,38 +38,64 @@ export function TransposerMenu() {
                 />
             </div>
 
-            {/* Manual Controls (Virtual Capo) */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <Label className="text-zinc-200">Key Shift</Label>
-                    <span className="font-mono text-zinc-400 text-xs">
-                        {transposition > 0 ? `+${transposition}` : transposition} semitones
-                    </span>
-                </div>
+            {/* Capo / Transpose Controls */}
+            <div className="space-y-4 pt-2">
 
-                <div className="flex items-center justify-between bg-zinc-900 rounded-lg p-1 border border-zinc-800">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setTransposition(transposition - 1)}
-                        className="h-8 w-12 hover:bg-zinc-800"
-                    >
-                        <ChevronDown className="h-4 w-4" />
-                    </Button>
-
-                    <div className="font-bold text-lg text-white w-full text-center">
-                        {transposition === 0 ? "Original" : (transposition > 0 ? `+${transposition}` : transposition)}
+                {/* Manual Transpose */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-zinc-200">Key Shift</Label>
+                        <span className="font-mono text-zinc-400 text-xs">
+                            {transposition > 0 ? `+${transposition}` : transposition} semitones
+                        </span>
                     </div>
 
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setTransposition(transposition + 1)}
-                        className="h-8 w-12 hover:bg-zinc-800"
-                    >
-                        <ChevronUp className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-between bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setTransposition(transposition - 1)}
+                            className="h-8 w-12 hover:bg-zinc-800"
+                        >
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+
+                        <div className="font-bold text-lg text-white w-full text-center">
+                            {transposition === 0 ? "Original" : (transposition > 0 ? `+${transposition}` : transposition)}
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setTransposition(transposition + 1)}
+                            className="h-8 w-12 hover:bg-zinc-800"
+                        >
+                            <ChevronUp className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
+
+                {/* Quick Capo (Just sets transposition to negative) */}
+                <div className="space-y-2">
+                    <Label className="text-zinc-200 text-xs uppercase tracking-wider font-bold">Quick Capo</Label>
+                    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+                        {[0, 1, 2, 3, 4, 5].map(fret => (
+                            <Button
+                                key={fret}
+                                variant={transposition === -fret ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setTransposition(-fret)}
+                                className={cn(
+                                    "h-8 w-8 min-w-[2rem] p-0 text-xs border-zinc-700 bg-zinc-950",
+                                    transposition === -fret ? "bg-purple-600 border-purple-600 text-white" : "text-zinc-400"
+                                )}
+                            >
+                                {fret === 0 ? "None" : fret}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+
             </div>
 
             {/* Info / Status */}

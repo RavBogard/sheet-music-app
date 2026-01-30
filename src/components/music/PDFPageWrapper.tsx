@@ -33,10 +33,11 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
             <Page
                 pageNumber={pageNumber}
                 width={width}
-                renderTextLayer={false}
+                renderTextLayer={true} // Enable text layer for scraping
                 renderAnnotationLayer={false}
                 loading={<div className="h-[800px] w-full bg-white/5 animate-pulse" />}
                 onRenderSuccess={() => setRendered(true)}
+                className="pdf-page" // Helper class for scoping
             />
 
             {/* 
