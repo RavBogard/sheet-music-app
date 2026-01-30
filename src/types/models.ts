@@ -1,3 +1,13 @@
+// corrections for AI Transposer
+export interface OMRCorrection {
+    id: string
+    type: 'add' | 'remove'
+    x: number // Percentage (0-100) of container width
+    y: number // Percentage (0-100) of container height
+    text: string // e.g. "Am7"
+    pageIndex: number // 0-indexed
+}
+
 export interface DriveFile {
     id: string
     name: string
@@ -11,6 +21,7 @@ export interface DriveFile {
         timeSignature?: string
         topics?: string[]
         enrichedAt?: string
+        omrCorrections?: OMRCorrection[]
     }
 }
 

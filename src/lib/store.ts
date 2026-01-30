@@ -29,6 +29,8 @@ export interface MusicState {
         isVisible: boolean
         status: 'idle' | 'scanning' | 'ready' | 'error'
         detectedKey: string
+        isEditing: boolean
+        corrections: import("@/types/models").OMRCorrection[]
     }
 
     // Audio State
@@ -58,6 +60,8 @@ export interface MusicState {
 
     // Transposer Actions
     setTransposerState: (state: Partial<MusicState['aiTransposer']>) => void
+    addCorrection: (correction: import("@/types/models").OMRCorrection) => void
+    removeCorrection: (id: string) => void
     resetTransposer: () => void
 
     // Audio Actions
@@ -88,7 +92,9 @@ export const useMusicStore = create<MusicState>()(
             aiTransposer: {
                 isVisible: false,
                 status: 'idle',
-                detectedKey: ''
+                detectedKey: '',
+                isEditing: false,
+                corrections: []
             },
 
             capo: {
@@ -105,24 +111,56 @@ export const useMusicStore = create<MusicState>()(
                 isLooping: false
             },
 
-            setFile: (url: string, type: FileType) => set({
+            setFile: (url, type) => set({
                 fileUrl: url,
                 fileType: type,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] },
                 aiXmlContent: null // Clear AI content
             }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
+
+            setQueue: (items, startIndex = 0) => set({ playbackQueue: items, queueIndex: startIndex }),
+            nextSong: () => {
+                const { playbackQueue, queueIndex } = get()
+                if (queueIndex < playbackQueue.length - 1) {
+                    const nextIndex = queueIndex + 1
+                    set({ queueIndex: nextIndex })
+                    return playbackQueue[nextIndex]
+                }
+                return null
+            },
+            prevSong: () => {
+                const { playbackQueue, queueIndex } = get()
+                if (queueIndex > 0) {
+                    const prevIndex = queueIndex - 1
+                    set({ queueIndex: prevIndex })
+                    return playbackQueue[prevIndex]
+                }
+                return null
+            },
+
             setAiXmlContent: (xml: string | null) => set({ aiXmlContent: xml }),
 
-            setTransposerState: (newState: Partial<MusicState['aiTransposer']>) => set((state) => ({
-                aiTransposer: { ...state.aiTransposer, ...newState }
+            setTransposerState: (state) => set((prev) => ({
+                aiTransposer: { ...prev.aiTransposer, ...state }
             })),
-
+            addCorrection: (c) => set((prev) => ({
+                aiTransposer: {
+                    ...prev.aiTransposer,
+                    corrections: [...prev.aiTransposer.corrections, c]
+                }
+            })),
+            removeCorrection: (id) => set((prev) => ({
+                aiTransposer: {
+                    ...prev.aiTransposer,
+                    corrections: prev.aiTransposer.corrections.filter(x => x.id !== id)
+                }
+            })),
             resetTransposer: () => set({
-                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' }
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] }
             }),
 
             setAudioState: (newState: Partial<MusicState['audio']>) => set((state) => ({
@@ -133,91 +171,24 @@ export const useMusicStore = create<MusicState>()(
                 capo: { ...state.capo, ...newState }
             })),
 
-            setQueue: (items: QueueItem[], startIndex = 0) => {
-                set({ playbackQueue: items, queueIndex: startIndex, capo: { active: false, targetShape: '', fret: 0 } })
-                const item = items[startIndex]
-                if (item) {
-                    set({
-                        fileUrl: `/api/drive/file/${item.fileId}`,
-                        fileType: item.type,
-                        transposition: item.transposition || 0,
-                        audio: {
-                            ...get().audio,
-                            fileId: item.audioFileId || null,
-                            url: item.audioFileId ? `/api/drive/file/${item.audioFileId}` : null,
-                            isPlaying: false
-                        },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
-                        aiXmlContent: null
-                    })
-                }
-            },
-
-            nextSong: () => {
-                const { playbackQueue, queueIndex } = get()
-                if (queueIndex < playbackQueue.length - 1) {
-                    const nextIndex = queueIndex + 1
-                    const nextItem = playbackQueue[nextIndex]
-                    set({
-                        queueIndex: nextIndex,
-                        fileUrl: `/api/drive/file/${nextItem.fileId}`,
-                        fileType: nextItem.type,
-                        transposition: nextItem.transposition || 0,
-                        capo: { active: false, targetShape: '', fret: 0 },
-                        audio: {
-                            ...get().audio,
-                            fileId: nextItem.audioFileId || null,
-                            url: nextItem.audioFileId ? `/api/drive/file/${nextItem.audioFileId}` : null,
-                            isPlaying: false
-                        },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
-                        aiXmlContent: null
-                    })
-                    return nextItem
-                }
-                return null
-            },
-
-            prevSong: () => {
-                const { playbackQueue, queueIndex } = get()
-                if (queueIndex > 0) {
-                    const prevIndex = queueIndex - 1
-                    const prevItem = playbackQueue[prevIndex]
-                    set({
-                        queueIndex: prevIndex,
-                        fileUrl: `/api/drive/file/${prevItem.fileId}`,
-                        fileType: prevItem.type,
-                        transposition: prevItem.transposition || 0,
-                        capo: { active: false, targetShape: '', fret: 0 },
-                        audio: {
-                            ...get().audio,
-                            fileId: prevItem.audioFileId || null,
-                            url: prevItem.audioFileId ? `/api/drive/file/${prevItem.audioFileId}` : null,
-                            isPlaying: false
-                        },
-                        aiTransposer: { isVisible: false, status: 'idle', detectedKey: '' },
-                        aiXmlContent: null
-                    })
-                    return prevItem
-                }
-                return null
-            },
-
-            reset: () => set({ transposition: 0, zoom: 1, playbackQueue: [], queueIndex: -1, capo: { active: false, targetShape: '', fret: 0 }, aiXmlContent: null }),
+            reset: () => set({
+                fileType: null,
+                fileUrl: null,
+                transposition: 0,
+                zoom: 1,
+                aiXmlContent: null,
+                playbackQueue: [],
+                queueIndex: -1,
+                aiTransposer: { isVisible: false, status: 'idle', detectedKey: '', isEditing: false, corrections: [] },
+                audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
+            })
         }),
         {
             name: 'music-storage',
             partialize: (state) => ({
-                playbackQueue: state.playbackQueue,
-                queueIndex: state.queueIndex,
-                transposition: state.transposition,
                 zoom: state.zoom,
-                fileUrl: state.fileUrl,
-                fileType: state.fileType,
-                audio: state.audio,
-                capo: state.capo
-                // Do NOT persist aiXmlContent (it's ephemeral)
-            }),
+                audio: { ...state.audio, isPlaying: false }, // Don't persist playing state
+            })
         }
     )
 )
