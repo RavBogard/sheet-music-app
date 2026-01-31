@@ -28,6 +28,11 @@ interface ChatState {
     // Callbacks
     onApplyEdits?: (edits: any[]) => void
     registerOnApplyEdits: (fn?: (edits: any[]) => void) => void
+
+    // External Trigger
+    pendingPrompt: string | null
+    setPendingPrompt: (text: string) => void
+    clearPendingPrompt: () => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -45,5 +50,9 @@ export const useChatStore = create<ChatState>((set) => ({
     setContextData: (data) => set({ contextData: data }),
 
     onApplyEdits: undefined,
-    registerOnApplyEdits: (fn) => set({ onApplyEdits: fn })
+    registerOnApplyEdits: (fn) => set({ onApplyEdits: fn }),
+
+    pendingPrompt: null,
+    setPendingPrompt: (text) => set({ pendingPrompt: text }),
+    clearPendingPrompt: () => set({ pendingPrompt: null })
 }))

@@ -21,6 +21,8 @@ const scrollRef = useRef<HTMLDivElement>(null)
 const inputRef = useRef<HTMLInputElement>(null)
 const router = useRouter() // For navigation commands
 
+const { pendingPrompt, clearPendingPrompt } = useChatStore()
+
 // Initialize Services
 const setlistService = useMemo(() => createSetlistService(user ? user.uid : null, user?.displayName), [user])
 
@@ -31,17 +33,25 @@ useEffect(() => {
     }
 }, [messages, loading])
 
-// Focus input
+// Focus input and handle Pending Prompt
 useEffect(() => {
-    if (isOpen && inputRef.current) {
-        inputRef.current.focus()
+    if (isOpen) {
+        if (inputRef.current) {
+            inputRef.current.focus()
+        }
+        if (pendingPrompt) {
+            setInput(pendingPrompt)
+            clearPendingPrompt()
+            setTimeout(() => handleSend(pendingPrompt), 100)
+        }
     }
-}, [isOpen])
+}, [isOpen, pendingPrompt])
 
-const handleSend = async () => {
-    if (!input.trim() || loading) return
+const handleSend = async (overrideInput?: string) => {
+    const textToSend = overrideInput || input
+    if (!textToSend.trim() || loading) return
 
-    const userMsg = { role: 'user' as const, content: input }
+    const userMsg = { role: 'user' as const, content: textToSend }
     addMessage(userMsg)
     setInput("")
     setLoading(true)
@@ -105,14 +115,11 @@ const handleCommands = async (commands: any[]) => {
                         cmd.payload.isPublic || false
                     )
                     toast.success(`Created setlist: ${cmd.payload.name}`)
-                    // Optional: Navigate to it?
                     break;
 
                 case 'PUBLISH_SETLIST':
                     // "Publish" to internal calendar = set eventDate
                     if (cmd.payload.setlistId === 'current') {
-                        // Can't do this easily unless we know current ID context. 
-                        // For now, assume bot sends ID or we error.
                         toast.error("Bot tried to update unknown setlist")
                     } else {
                         await setlistService.updateSetlist(cmd.payload.setlistId, false, {
@@ -128,7 +135,6 @@ const handleCommands = async (commands: any[]) => {
                     if (!token) throw new Error("Unauthorized")
 
                     // We use the existing /api/admin/set-role endpoint
-                    // Payload: { uid, role }
                     await fetch('/api/admin/set-role', {
                         method: 'POST',
                         headers: {
@@ -137,7 +143,7 @@ const handleCommands = async (commands: any[]) => {
                         },
                         body: JSON.stringify({
                             uid: cmd.payload.userId,
-                            role: cmd.payload.targetRole || 'member' // 'set_role' action
+                            role: cmd.payload.targetRole || 'member'
                         })
                     })
                     toast.success(`Admin action applied`)
@@ -226,7 +232,7 @@ return (
                     disabled={loading}
                 />
                 <Button
-                    onClick={handleSend}
+                    onClick={() => handleSend()}
                     disabled={!input.trim() || loading}
                     className="bg-blue-600 hover:bg-blue-500"
                 >

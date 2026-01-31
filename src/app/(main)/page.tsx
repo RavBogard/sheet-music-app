@@ -10,6 +10,7 @@ import { useMusicStore } from "@/lib/store"
 
 import { Button } from "@/components/ui/button"
 import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar as CalendarIcon } from "lucide-react"
+import { DashboardChatPrompt } from "@/components/dashboard/DashboardChatPrompt"
 
 export default function DashboardPage() {
     const router = useRouter()
@@ -155,28 +156,10 @@ export default function DashboardPage() {
                 </button>
             </div>
 
-            {/* 3. Recent / Secondary Actions */}
+            {/* 3. Helper / Chat Prompt */}
             {user && (
                 <div className="flex flex-col gap-2">
-                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2">Recently Added</h3>
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl divide-y divide-zinc-800/50">
-                        {allFiles.slice(0, 3).map(file => (
-                            <div
-                                key={file.id}
-                                onClick={() => router.push(`/perform/${file.id}`)}
-                                className="p-4 flex items-center gap-4 hover:bg-white/5 cursor-pointer transition-colors first:rounded-t-2xl last:rounded-b-2xl"
-                            >
-                                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
-                                    <Music2 className="w-5 h-5 text-zinc-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium truncate">{file.name.replace(/\.[^/.]+$/, "")}</h4>
-                                    <p className="text-xs text-zinc-500">Added recently</p>
-                                </div>
-                                <PlayCircle className="w-5 h-5 text-zinc-600" />
-                            </div>
-                        ))}
-                    </div>
+                    <DashboardChatPrompt />
                 </div>
             )}
 
