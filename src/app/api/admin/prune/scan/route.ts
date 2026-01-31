@@ -7,6 +7,9 @@ export const maxDuration = 60
 
 export async function POST(req: Request) {
     try {
+        // Initialize Admin SDK first
+        initAdmin()
+
         // 1. Verify Admin
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
         console.log(`[Prune] Found ${driveIdSet.size} active files in Drive`)
 
         // 3. Fetch Local State (Firestore)
-        initAdmin()
+        // initAdmin() called at top
         const db = getFirestore()
         const snapshot = await db.collection('library_index').get()
 
