@@ -70,14 +70,14 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             )}
         >
             {/* --- MOBILE/TABLET TOP ROW: Tools --- */}
-            <div className="lg:hidden w-full h-1/2 flex items-center justify-center gap-3 sm:gap-6 border-b border-zinc-900 bg-zinc-900/30 px-4">
+            <div className="lg:hidden w-full h-1/2 flex items-center justify-evenly gap-2 sm:gap-4 border-b border-zinc-900 bg-zinc-900/30 px-2 sm:px-6">
 
                 {/* Tuner */}
                 <Popover>
                     <PopoverTrigger asChild>
-                        <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-2">
+                        <button className="h-9 px-3 sm:px-4 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-2 min-w-[80px] sm:min-w-[100px] justify-center">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-500/50" />
-                            Tune
+                            <span>Tune</span>
                         </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="center" side="top">
@@ -100,7 +100,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     <PopoverTrigger asChild>
                         <button
                             className={cn(
-                                "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2",
+                                "h-9 px-3 sm:px-4 rounded-lg border text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 min-w-[100px] sm:min-w-[140px] justify-center",
                                 aiState.isEnabled
                                     ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                                     : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
@@ -112,7 +112,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                                 <Sparkles className="h-3.5 w-3.5" />
                             )}
                             <span>
-                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Key")}
+                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Transpose")}
                             </span>
                         </button>
                     </PopoverTrigger>

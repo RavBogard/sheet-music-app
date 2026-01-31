@@ -150,12 +150,16 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                 className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative touch-pan-y"
             >
                 {/* Render Viewer (Edge to Edge) */}
-                {(fileType === 'musicxml' || aiXmlContent) && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
+                {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
 
                 {!fileUrl && (
-                    <div className="flex w-full h-full items-center justify-center text-zinc-500">
-                        No Song Selected
+                    <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
+                        <p className="text-xl font-semibold">No Chart Available</p>
+                        <p className="text-sm">This track doesn't have a linked file.</p>
+                        <button onClick={onHome} className="mt-4 px-6 py-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
+                            Go Home
+                        </button>
                     </div>
                 )}
             </div>
