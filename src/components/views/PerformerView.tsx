@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDrag } from '@use-gesture/react'
 import { useMusicStore } from '@/lib/store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
@@ -19,67 +19,136 @@ interface PerformerViewProps {
 }
 
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
-    const { nextSong, prevSong, aiXmlContent } = useMusicStore()
+    const { nextSong, prevSong, aiXmlContent, zoom } = useMusicStore()
     const [toolbarVisible, setToolbarVisible] = useState(true)
+    const router = useRouter()
+
+    // Ref for the content container to apply rubberbanding transform
+    const viewRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const handleToggle = () => setToolbarVisible(prev => !prev)
         window.addEventListener('toggle-toolbar', handleToggle)
-        return () => window.removeEventListener('toggle-toolbar', handleToggle)
+        // Prevent default touch actions (history nav, etc.)
+        document.body.style.touchAction = 'pan-y'
+        return () => {
+            window.removeEventListener('toggle-toolbar', handleToggle)
+            document.body.style.touchAction = 'auto'
+        }
     }, [])
 
-    const router = useRouter()
+    const bind = useDrag(({ active, movement: [mx, my], velocity: [vx, vy], tap, cancel, event, last }) => {
+        // 1. Zoom Guard: If zoomed in significantly, disable swipe nav to allow panning
+        // We use a small tolerance (1.1) to allow for "fit width" variations which might be slightly > 1
+        if (zoom > 1.1) return
 
-    const bind = useDrag(({ swipe: [swipeX], tap, down, movement: [mx, my], event }) => {
-        // Handle Tap (Reliable)
+        // 2. Tap Handling (Toggle Toolbar)
         if (tap) {
             const e = event as any
+            const target = e.target as HTMLElement
+            // Ignore taps on toolbar or interactive elements
+            if (target.closest('.performance-toolbar') || target.closest('button')) return
+
+            // Simple center tap toggle? Or keep the side-zones?
+            // User feedback suggests simple toggle is often preferred, but let's keep the side-zones logic if they liked it.
+            // Actually, "Inconsistent" suggests simple might be better. 
+            // Let's stick to the previous side-zone logic but clean it up.
+
             const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
             const width = window.innerWidth
 
-            // Check if click was on toolbar
-            const target = e.target as HTMLElement
-            if (target.closest('.performance-toolbar')) return
-
-            const container = document.querySelector('.react-pdf__Document')?.parentElement
-            if (!container) return
-
             if (x < width * 0.25) {
-                container.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
+                // Scroll Up / Prev Page (internal PDF logic handles this mostly, but if we want manual scroll:)
+                const container = document.querySelector('.react-pdf__Document')?.parentElement
+                if (container) container.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
             } else if (x > width * 0.75) {
-                container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
+                // Scroll Down / Next Page
+                const container = document.querySelector('.react-pdf__Document')?.parentElement
+                if (container) container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
             } else {
                 setToolbarVisible(v => !v)
             }
             return
         }
 
-        // Handle Swipe
-        if (swipeX === -1) {
-            const next = nextSong()
-            if (next) router.push(`/perform/${next.fileId}`)
-        } else if (swipeX === 1) {
-            const prev = prevSong()
-            if (prev) router.push(`/perform/${prev.fileId}`)
+        // 3. Swipe / Drag Logic
+        if (active) {
+            // Visual Feedback (Rubberbanding)
+            // Only move if gesture is mostly horizontal
+            if (Math.abs(mx) > Math.abs(my)) {
+                if (viewRef.current) {
+                    // Resistance curve? For now, linear 1:1 is most "native" feeling for pages
+                    viewRef.current.style.transform = `translateX(${mx}px)`
+                    viewRef.current.style.transition = 'none'
+                }
+            }
+        } else if (last) {
+            // Drag End - Determine Action
+            const width = window.innerWidth
+            const isHorizontal = Math.abs(mx) > Math.abs(my)
+            const isFlick = vx > 0.5 && Math.abs(mx) > 50 // Fast flick
+            const isBigDrag = Math.abs(mx) > width * 0.25 // Dragged > 25% of screen
+
+            if (isHorizontal && (isFlick || isBigDrag)) {
+                // Trigger Navigation
+                if (mx < 0) {
+                    // Swiped Left -> Next Song
+                    const next = nextSong()
+                    if (next) {
+                        // Animate out completely? Or just router push? 
+                        // Router push is safer, React will unmount.
+                        if (viewRef.current) {
+                            viewRef.current.style.transform = `translateX(-100%)`
+                            viewRef.current.style.transition = 'transform 0.2s ease-out'
+                        }
+                        setTimeout(() => router.push(`/perform/${next.fileId}`), 200)
+                    } else {
+                        // End of list bounce
+                        snapBack()
+                    }
+                } else {
+                    // Swiped Right -> Prev Song
+                    const prev = prevSong()
+                    if (prev) {
+                        if (viewRef.current) {
+                            viewRef.current.style.transform = `translateX(100%)`
+                            viewRef.current.style.transition = 'transform 0.2s ease-out'
+                        }
+                        setTimeout(() => router.push(`/perform/${prev.fileId}`), 200)
+                    } else {
+                        snapBack()
+                    }
+                }
+            } else {
+                // Cancel / Snap Back
+                snapBack()
+            }
         }
     }, {
-        axis: 'x',
         filterTaps: true,
-        swipe: {
-            duration: 800,
-            distance: 50,
-            velocity: 0.2
-        }
+        rubberband: true, // Use gesture's internal rubberband calc for bounds if needed, but we do manual
+        axis: undefined, // IMPORTANT: Unlocked axis to allow diagonal thumb movement
     })
+
+    const snapBack = () => {
+        if (viewRef.current) {
+            viewRef.current.style.transform = 'translateX(0px)'
+            viewRef.current.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        }
+    }
 
     return (
         <div
             {...bind()}
-            className="h-[100dvh] flex flex-col bg-black text-white relative"
+            className="h-[100dvh] flex flex-col bg-black text-white relative touch-action-pan-y" // CSS Class for touch-action
+            style={{ touchAction: 'pan-y' }} // Inline style to be absolutely sure
         >
 
-            {/* Main Content Area */}
-            <div className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative">
+            {/* Main Content Area - Ref for sliding */}
+            <div
+                ref={viewRef}
+                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative touch-pan-y"
+            >
                 {/* Render Viewer (Edge to Edge) */}
                 {(fileType === 'musicxml' || aiXmlContent) && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
