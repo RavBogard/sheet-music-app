@@ -14,7 +14,10 @@ import { DashboardChatPrompt } from "@/components/dashboard/DashboardChatPrompt"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, signIn } = useAuth()
+    const router = useRouter()
+    const { user, signIn, isLeader } = useAuth()
+    const { allFiles, loading, loadLibrary } = useLibraryStore()
+    const { fileUrl } = useMusicStore()
     const { allFiles, loading, loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
 
@@ -156,8 +159,8 @@ export default function DashboardPage() {
                 </button>
             </div>
 
-            {/* 3. Helper / Chat Prompt */}
-            {user && (
+            {/* 3. Helper / Chat Prompt (Leaders Only) */}
+            {isLeader && (
                 <div className="flex flex-col gap-2">
                     <DashboardChatPrompt />
                 </div>
