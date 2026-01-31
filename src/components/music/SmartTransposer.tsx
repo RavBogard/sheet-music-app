@@ -168,23 +168,23 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
                             transform: 'translate(-50%, -50%)',
 
-                            // Size - much larger to cover original text
-                            height: `${Math.max(chord.h * 2.5, 3)}%`,   // At least 3% of page height
-                            minWidth: `${Math.max(chord.h * 5, 5)}%`,   // At least 5% of page width
-                            padding: '0.4em 0.8em',
+                            // Compact sizing - just big enough to cover the chord
+                            height: `${Math.max(chord.h * 1.4, 2)}%`,    // Reduced from 2.5/3
+                            minWidth: 'auto',                             // Remove forced min-width
+                            padding: '0.2em 0.4em',                       // Reduced padding
 
-                            // Appearance
+                            // Clean appearance - NO border, NO shadow
                             backgroundColor: 'white',
-                            border: '2px solid #d1d5db',                 // Thicker border
-                            borderRadius: '4px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',    // Stronger shadow
+                            border: 'none',                               // Removed border
+                            borderRadius: '2px',
+                            boxShadow: 'none',                            // Removed shadow
 
                             // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${Math.max(fontSize * 1.2, 16)}px`,  // Minimum 16px
+                            fontSize: `${Math.max(fontSize, 14)}px`,     // Simplified, removed 1.2x multiplier
                             fontWeight: 700,
                             fontFamily: 'ui-monospace, monospace',
-                            lineHeight: 1,
+                            lineHeight: 1.2,
                             whiteSpace: 'nowrap',
 
                             zIndex: 100,

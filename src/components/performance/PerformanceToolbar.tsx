@@ -94,50 +94,48 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             </div>
 
             {/* ZONE 3: Tools (Right) */}
-            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static shrink-0">
+            <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static shrink-0">
+
+                {/* Transposer - moved to be more visible */}
+                <Popover open={menuOpen} onOpenChange={(open) => {
+                    setMenuOpen(open)
+                    if (open && !aiState.isEnabled) {
+                        // Auto-activate when opening menu
+                        setAiEnabled(true)
+                    }
+                }}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={aiState.isEnabled ? "default" : "ghost"}
+                            className={cn(
+                                "h-10 px-3 rounded-lg transition-all font-semibold text-sm",
+                                aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                            )}
+                        >
+                            {aiState.scanningPages.length > 0 ? (
+                                <>
+                                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                    Scanning
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="mr-1.5 h-4 w-4" />
+                                    Transposer
+                                </>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                        <TransposerMenu />
+                    </PopoverContent>
+                </Popover>
+
                 {/* Hidden on very small screens? or adapt? */}
                 <div className="hidden sm:flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
                     <MetronomeControl />
                 </div>
 
                 <BackingTrackPlayer />
-
-                <div className="flex items-center gap-2">
-                    {/* Transposer Menu Popover */}
-                    <Popover open={menuOpen} onOpenChange={(open) => {
-                        setMenuOpen(open)
-                        if (open && !aiState.isEnabled) {
-                            // Auto-activate when opening menu
-                            setAiEnabled(true)
-                        }
-                    }}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={aiState.isEnabled ? "default" : "ghost"}
-                                size="icon"
-                                className={cn(
-                                    "h-12 px-3 rounded-xl transition-all font-bold shrink-0",
-                                    aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-500 hover:text-white hover:bg-zinc-800"
-                                )}
-                            >
-                                {aiState.scanningPages.length > 0 ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Scanning...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        Transposer
-                                    </>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                            <TransposerMenu />
-                        </PopoverContent>
-                    </Popover>
-                </div>
             </div>
         </div>
     )

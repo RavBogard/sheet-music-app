@@ -37,7 +37,19 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const spans = Array.from(textLayer.querySelectorAll('span'));
 
     // Bounds of the container for % calcs
-    const pageRect = pageElement.getBoundingClientRect();
+    // Bounds of the container for % calcs
+    // Use textLayer bounds instead of pageElement for more accurate measurement
+    const textLayerRect = textLayer.getBoundingClientRect();
+    const pageRect = {
+        left: Math.min(pageElement.getBoundingClientRect().left, textLayerRect.left),
+        right: Math.max(pageElement.getBoundingClientRect().right, textLayerRect.right),
+        top: Math.min(pageElement.getBoundingClientRect().top, textLayerRect.top),
+        bottom: Math.max(pageElement.getBoundingClientRect().bottom, textLayerRect.bottom),
+        width: 0,
+        height: 0
+    };
+    pageRect.width = pageRect.right - pageRect.left;
+    pageRect.height = pageRect.bottom - pageRect.top;
 
     // Debug Text Scanner
     console.log('[TextScanner] Page rect:', {
@@ -70,6 +82,16 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     console.log('[TextScanner] Items after filtering empty:', items.length);
     if (items.length > 0) {
         console.log('[TextScanner] Rightmost item x:', Math.max(...items.map(i => i.x)));
+
+        // Log items near right edge
+        const rightEdgeItems = items.filter(i => {
+            const xPct = ((i.x - pageRect.left) / pageRect.width) * 100;
+            return xPct > 80;
+        });
+        console.log('[TextScanner] Items with x > 80%:', rightEdgeItems.map(i => ({
+            text: i.text,
+            xPct: (((i.x - pageRect.left) / pageRect.width) * 100).toFixed(1)
+        })));
     }
 
     // 2. Sort by Y (Line) then X (Position)
@@ -133,10 +155,14 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Using standard regex and exclusion list only.
 
             // Calculate relative % using the merged screen coordinates
-            const x = ((item.x - pageRect.left) / pageRect.width) * 100;
-            const y = ((item.y - pageRect.top) / pageRect.height) * 100;
+            let x = ((item.x - pageRect.left) / pageRect.width) * 100;
+            let y = ((item.y - pageRect.top) / pageRect.height) * 100;
             const w = (item.w / pageRect.width) * 100;
             const h = (item.h / pageRect.height) * 100;
+
+            // Clamp x to valid range (items near edge might calculate slightly > 100)
+            x = Math.min(Math.max(x, 0), 99);
+            y = Math.min(Math.max(y, 0), 99);
 
             chords.push({
                 id: crypto.randomUUID(),
