@@ -84,18 +84,23 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
 export function calculateCapo(originalKey: string, targetShape: string): { fret: number, transposition: number } | null {
     if (!originalKey || !targetShape) return null;
 
-    let kIndex = SHARP_SCALE.indexOf(originalKey);
-    if (kIndex === -1) kIndex = FLAT_SCALE.indexOf(originalKey);
+    let originalIndex = SHARP_SCALE.indexOf(originalKey);
+    if (originalIndex === -1) originalIndex = FLAT_SCALE.indexOf(originalKey);
 
-    let sIndex = SHARP_SCALE.indexOf(targetShape);
-    if (sIndex === -1) sIndex = FLAT_SCALE.indexOf(targetShape);
+    let targetIndex = SHARP_SCALE.indexOf(targetShape);
+    if (targetIndex === -1) targetIndex = FLAT_SCALE.indexOf(targetShape);
 
-    if (kIndex === -1 || sIndex === -1) return null;
+    if (originalIndex === -1 || targetIndex === -1) return null;
 
-    let diff = kIndex - sIndex;
-    if (diff < 0) diff += 12;
+    // Capo fret = how many semitones to raise target to reach original
+    // E.g., E (4) with D shapes (2): capo = 4 - 2 = 2
+    let capoFret = originalIndex - targetIndex;
+    if (capoFret < 0) capoFret += 12;
 
-    return { fret: diff, transposition: -diff };
+    return {
+        fret: capoFret,
+        transposition: -capoFret  // Negative because we're lowering the written chords
+    };
 }
 
 export function estimateKey(chords: string[]): string | null {
@@ -113,9 +118,18 @@ export function estimateKey(chords: string[]): string | null {
     roots.forEach((root, i) => {
         const isFirst = i === 0;
         const isLast = i === roots.length - 1;
+
+        // Base score for each occurrence
         scores[root] = (scores[root] || 0) + 1;
-        if (isFirst) scores[root] += 5;
-        if (isLast) scores[root] += 5;
+
+        // FIRST chord is very strong indicator - songs start on tonic
+        if (isFirst) scores[root] += 10;  // Increased from 5
+
+        // Last chord is moderate indicator
+        if (isLast) scores[root] += 3;    // Decreased from 5
+
+        // Second chord often returns to tonic
+        if (i === 1) scores[root] += 2;
     });
 
     let bestKey = null;

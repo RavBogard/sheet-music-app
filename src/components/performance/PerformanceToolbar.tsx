@@ -104,20 +104,34 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
                 <div className="flex items-center gap-2">
                     {/* Transposer Menu Popover */}
-                    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                    <Popover open={menuOpen} onOpenChange={(open) => {
+                        setMenuOpen(open)
+                        if (open && !aiState.isEnabled) {
+                            // Auto-activate when opening menu
+                            // We need to access setAiEnabled from store, but we only have aiState here.
+                            // Need to add setAiEnabled to destructuring at top of component.
+                            useMusicStore.getState().setAiEnabled(true)
+                        }
+                    }}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant={aiState.isEnabled ? "default" : "ghost"}
                                 size="icon"
                                 className={cn(
-                                    "h-12 w-12 rounded-xl transition-all",
+                                    "h-12 px-4 rounded-xl transition-all font-bold",
                                     aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-500 hover:text-white hover:bg-zinc-800"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
-                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Scanning...
+                                    </>
                                 ) : (
-                                    <Sparkles className="h-6 w-6" />
+                                    <>
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        Transposer
+                                    </>
                                 )}
                             </Button>
                         </PopoverTrigger>

@@ -145,26 +145,7 @@ export function TransposerMenu() {
                     </div>
                 </div>
 
-                {/* Quick Capo (Just sets transposition to negative) */}
-                <div className="space-y-2">
-                    <Label className="text-zinc-200 text-xs uppercase tracking-wider font-bold">Quick Capo</Label>
-                    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
-                        {[0, 1, 2, 3, 4, 5].map(fret => (
-                            <Button
-                                key={fret}
-                                variant={transposition === -fret ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setTransposition(-fret)}
-                                className={cn(
-                                    "h-8 w-8 min-w-[2rem] p-0 text-xs border-zinc-700 bg-zinc-950",
-                                    transposition === -fret ? "bg-purple-600 border-purple-600 text-white" : "text-zinc-400"
-                                )}
-                            >
-                                {fret === 0 ? "None" : fret}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
+
 
             </div>
 

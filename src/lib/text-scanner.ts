@@ -80,7 +80,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
-            const isClose = gap < (current.h * 0.5); // Gap smaller than half font height?
+            // Gap smaller than full font height? (Increased from 0.5 for F#m7 case)
+            const isClose = gap < (current.h * 1.0);
 
             if (sameLine && isClose) {
                 // Merge
@@ -138,6 +139,10 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             });
         }
     });
+
+    // Debug logging for text scanner
+    console.log('[TextScanner] Total chords found:', chords.length);
+    console.log('[TextScanner] Chord positions:', chords.map(c => ({ text: c.text, x: c.x.toFixed(1), y: c.y.toFixed(1) })));
 
     return chords;
 }

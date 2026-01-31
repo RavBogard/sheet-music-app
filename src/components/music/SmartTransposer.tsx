@@ -153,7 +153,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
-                const isChanged = transposed !== chord.originalText
+                const isChanged = transposition !== 0
                 const fontSize = Math.max(chord.pxHeight * 0.7, 14)
 
                 // Debug logging
@@ -168,14 +168,14 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
                             transform: 'translate(-50%, -50%)',
 
-                            height: `${chord.h * 1.3}%`,
-                            minWidth: `${chord.h * 3}%`,
-                            padding: '0 0.5em',
+                            height: `${chord.h * 1.5}%`,
+                            minWidth: `${chord.h * 4}%`,
+                            padding: '0 0.7em',
 
                             backgroundColor: 'white',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '3px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
 
                             color: isChanged ? '#7c3aed' : '#0284c7',
                             fontSize: `${fontSize}px`,
