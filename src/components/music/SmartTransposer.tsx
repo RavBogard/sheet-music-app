@@ -168,25 +168,25 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                         key={i}
                         className="absolute"
                         style={{
-                            // Position at LEFT EDGE of detected chord, vertically centered
+                            // Position at LEFT EDGE, vertically centered
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
-                            transform: 'translateY(-50%)',  // Only center vertically, NOT horizontally
+                            transform: 'translateY(-40%)',  // Shift up slightly to cover superscripts
 
-                            // Fixed padding, no dynamic width
-                            padding: '6px 12px',
+                            // GENEROUS padding to fully cover original chord
+                            padding: '8px 14px',
 
-                            // Clean appearance
+                            // Solid white background - fully opaque
                             backgroundColor: 'white',
                             border: 'none',
-                            borderRadius: '3px',
-                            boxShadow: 'none',
+                            borderRadius: '4px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',  // Subtle shadow helps visibility
 
-                            // Typography
+                            // LARGER font to match or exceed original
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: '22px',        // Increased from 18px
+                            fontSize: '24px',
                             fontWeight: 700,
-                            fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
                             lineHeight: 1,
                             whiteSpace: 'nowrap',
 

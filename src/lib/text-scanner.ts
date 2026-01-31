@@ -142,7 +142,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     }
 
     // Post-process: Aggressively combine chord parts that are on the same line
-    // This handles cases where G, #, m are all separate spans
+    // This handles cases where G, #, m, 7 are all separate spans
+    // NOTE: The "7" is often a superscript with different Y position!
     const finalItems: typeof merged = [];
 
     for (let i = 0; i < merged.length; i++) {
@@ -157,37 +158,49 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Keep consuming adjacent items that look like chord parts
             while (j < merged.length) {
                 const next = merged[j];
-
-                // Must be on same line (within full height)
-                if (Math.abs(current.y - next.y) > current.h) break;
-
-                // Must be close horizontally (within 1x height gap)
-                const gap = next.x - lastItem.r;
-                if (gap > current.h) break;
-
                 const nextText = next.text.trim();
 
-                // Valid chord continuations: #, b, m, M, maj, min, dim, aug, sus, add, 7, 9, 11, 13, 6, 5, 2, 4
-                if (/^[#b♯♭]$/.test(nextText) ||
-                    /^(m|M|maj|min|dim|aug|sus|add|7|9|11|13|6|5|2|4)+$/.test(nextText) ||
-                    /^m7$/.test(nextText) ||
-                    /^maj7$/.test(nextText)) {
+                // Check if this looks like a chord continuation
+                const isSharpOrFlat = /^[#b♯♭]$/.test(nextText);
+                const isQuality = /^(m|M|maj|min|dim|aug|sus|add)+$/.test(nextText);
+                const isNumber = /^[0-9]+$/.test(nextText);  // 7, 9, 11, 13, etc.
+                const isCombo = /^(m7|maj7|min7|dim7|add9|sus4|sus2)$/.test(nextText);
 
-                    chordText += nextText;
-                    lastItem = next;
-                    j++;
-                } else {
-                    break;
+                if (!isSharpOrFlat && !isQuality && !isNumber && !isCombo) {
+                    break;  // Not a chord part
                 }
+
+                // Y tolerance: VERY permissive for numbers (superscripts), normal for others
+                // Compare against LAST consumed item, not original root
+                const yTolerance = isNumber ? (lastItem.h * 2) : (lastItem.h * 1.2);
+                if (Math.abs(lastItem.y - next.y) > yTolerance) {
+                    break;  // Too far vertically
+                }
+
+                // X tolerance: must be close horizontally
+                const gap = next.x - lastItem.r;
+                const maxGap = isNumber ? (lastItem.h * 1.5) : (lastItem.h * 1.0);  // More permissive for superscripts
+                if (gap > maxGap || gap < -lastItem.w) {  // Allow slight overlap
+                    break;  // Too far horizontally
+                }
+
+                // Consume this item
+                chordText += nextText;
+                lastItem = next;
+                j++;
             }
 
-            // Create combined item
-            finalItems.push({
+            // Create combined item with expanded bounds to cover all parts
+            const combinedItem = {
                 ...current,
                 text: chordText,
                 r: lastItem.r,
                 w: lastItem.r - current.x,
-            });
+                // Expand height to cover superscripts
+                y: Math.min(current.y, lastItem.y),
+                h: Math.max(current.b, lastItem.b) - Math.min(current.y, lastItem.y),
+            };
+            finalItems.push(combinedItem);
 
             // Skip the items we consumed
             i = j - 1;
@@ -260,7 +273,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
 
     // Debug logging for text scanner
     console.log('[TextScanner] Total chords found:', chords.length);
-    console.log('[TextScanner] Chord positions:', chords.map(c => ({ text: c.text, x: c.x.toFixed(1), y: c.y.toFixed(1) })));
+    // console.log('[TextScanner] Chord positions:', chords.map(c => ({ text: c.text, x: c.x.toFixed(1), y: c.y.toFixed(1) })));
 
     return chords;
 }
