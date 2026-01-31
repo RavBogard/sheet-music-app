@@ -155,42 +155,39 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
                 const isChanged = transposition !== 0
-                const fontSize = Math.max(chord.pxHeight * 1.0, 18)
 
-                // Calculate center position with bounds clamping
-                const centerX = Math.min(chord.x + (chord.w / 2), 98);
-                const centerY = chord.y + (chord.h / 2);
+                // Use a consistent font size based on a reasonable estimate
+                // Don't rely on pxHeight which may be corrupted by merge logic
+                const fontSize = 18;  // Fixed size that works well
 
                 // Debug logging
-                console.log(`[Transposer] "${chord.originalText}" -> "${transposed}" (semitones: ${transposition}, changed: ${isChanged})`)
+                console.log(`[Transposer] "${chord.originalText}" x=${chord.x.toFixed(1)} w=${chord.w?.toFixed(1)} -> "${transposed}"`)
 
                 return (
                     <div
                         key={i}
-                        className="absolute flex items-center justify-center"
+                        className="absolute"
                         style={{
-                            // Position at CENTER of detected chord (clamped)
-                            left: `${centerX}%`,
-                            top: `${centerY}%`,
-                            transform: 'translate(-50%, -50%)',
+                            // Position at LEFT EDGE of detected chord, vertically centered
+                            left: `${chord.x}%`,
+                            top: `${chord.y}%`,
+                            transform: 'translateY(-50%)',  // Only center vertically, NOT horizontally
 
-                            // Sizing - ensure full coverage
-                            height: `${Math.max(chord.h * 1.8, 2.5)}%`,
-                            minWidth: `${Math.max(chord.w * 1.5, 2.5)}%`,
-                            padding: '0.25em 0.5em',
+                            // Fixed padding, no dynamic width
+                            padding: '4px 8px',
 
-                            // Clean white background
+                            // Clean appearance
                             backgroundColor: 'white',
                             border: 'none',
-                            borderRadius: '2px',
+                            borderRadius: '3px',
                             boxShadow: 'none',
 
                             // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${Math.max(fontSize, 18)}px`,
+                            fontSize: `${fontSize}px`,
                             fontWeight: 700,
-                            fontFamily: 'ui-monospace, monospace',
-                            lineHeight: 1.2,
+                            fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                            lineHeight: 1,
                             whiteSpace: 'nowrap',
 
                             zIndex: 100,

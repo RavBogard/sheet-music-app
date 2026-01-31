@@ -113,13 +113,13 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             const next = items[i];
 
             // Check if on same line (vertical overlap or close Y)
-            const sameLine = Math.abs(current.y - next.y) < current.h; // robust line check (full height tolerance)
+            const sameLine = Math.abs(current.y - next.y) < (current.h * 0.3); // robust line check (conservative)
 
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
             // Gap smaller than full font height? (Increased to 0.8 to catch F#m7, Cmaj7, etc.)
-            const isClose = gap < (current.h * 0.8);
+            const isClose = gap >= 0 && gap < (current.h * 0.2);
 
             if (sameLine && isClose) {
                 // Merge
@@ -138,8 +138,39 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         merged.push(current);
     }
 
-    console.log('[TextScanner] Items after merging:', merged.length);
+    // Post-process: Look for chord roots followed by extensions that weren't merged
+    const finalItems: typeof items = [];
     if (merged.length > 0) {
+        for (let i = 0; i < merged.length; i++) {
+            const current = merged[i];
+            const next = merged[i + 1];
+
+            // Check if current is a chord root (A-G with optional #/b)
+            // and next is an extension (m, m7, maj7, etc.) on same line
+            if (next &&
+                /^[A-G][#b]?$/.test(current.text.trim()) &&
+                /^(m|M|maj|min|dim|aug|sus|add|7|9|11|13|6|5|2|4)+$/.test(next.text.trim()) &&
+                Math.abs(current.y - next.y) < current.h) {
+
+                // Combine them
+                const combined = {
+                    ...current,
+                    text: current.text + next.text,
+                    r: next.r,
+                    w: next.r - current.x,
+                };
+                finalItems.push(combined);
+                i++; // Skip the next item since we consumed it
+            } else {
+                finalItems.push(current);
+            }
+        }
+    }
+
+    const itemsToFilter = finalItems;
+
+    console.log('[TextScanner] Items after merging:', itemsToFilter.length);
+    if (itemsToFilter.length > 0) {
         // Log a sample to avoid flooding console, or all if debugging
         console.log('[TextScanner] Merged items sample:', merged.slice(0, 10).map(m => ({ text: m.text.substring(0, 10), x: m.x.toFixed(0) })));
         console.log('[TextScanner] Merged text samples:', merged.filter(m => m.text.length > 2).slice(0, 20).map(m => m.text));
@@ -162,7 +193,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     }
 
     // 4. Filter for Chords
-    merged.forEach(item => {
+    itemsToFilter.forEach(item => {
         const text = item.text.trim();
 
         // Check if it matches chord regex and isn't excluded
@@ -181,6 +212,13 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Clamp x to valid range (items near edge might calculate slightly > 100)
             x = Math.min(Math.max(x, 0), 99);
             y = Math.min(Math.max(y, 0), 99);
+
+            // Sanity check: chord width should be reasonable (< 15% of page)
+            // If width is huge, the merge corrupted this item
+            if (w > 15) {
+                console.warn(`[TextScanner] Skipping chord with abnormal width: ${cleanText} w=${w.toFixed(1)}%`);
+                return; // Skip this item
+            }
 
             chords.push({
                 id: crypto.randomUUID(),
