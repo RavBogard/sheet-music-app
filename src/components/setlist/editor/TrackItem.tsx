@@ -195,6 +195,25 @@ export function TrackItem({
     const handleTitleClick = () => {
         if (hasFile && track.fileId && onPlay) {
             onPlay(track.fileId, fileName)
+        } else {
+            // No file linked
+            if (!readOnly) {
+                // Editor: Open Match File Modal
+                toast.dismiss()
+                toast("Missing Chart", {
+                    description: "Select a file to link to this track.",
+                    action: {
+                        label: "Link File",
+                        onClick: () => onMatchFile(track.id)
+                    }
+                })
+                onMatchFile(track.id)
+            } else {
+                // Viewer: Friendly Message
+                toast("No chart assigned", {
+                    description: "This track doesn't have a file linked yet."
+                })
+            }
         }
     }
 

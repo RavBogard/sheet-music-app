@@ -80,8 +80,8 @@ export function SetlistDrawer() {
                     <TriggerIcon className="h-5 w-5 lg:h-6 lg:w-6" />
                 </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80vh] bg-zinc-950 border-t border-zinc-800 p-0 flex flex-col">
-                <SheetHeader className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+            <SheetContent side="bottom" className="h-[80vh] bg-zinc-950 border-t border-zinc-800 p-0 flex flex-col sm:max-w-4xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x">
+                <SheetHeader className="p-4 border-b border-zinc-800 bg-zinc-900/50 sm:rounded-t-2xl">
                     <SheetTitle className="flex items-center gap-2 text-white">
                         <TriggerIcon className="h-5 w-5 text-blue-500" />
                         {showPublicPicker ? "Join a Setlist" : "Current Setlist"}

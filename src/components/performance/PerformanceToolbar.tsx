@@ -11,7 +11,6 @@ import { TransposerMenu } from "../music/TransposerMenu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 import { MetronomeControl } from "./MetronomeControl"
-
 import { SongNavigation } from "./SongNavigation"
 import { cn } from "@/lib/utils"
 
@@ -149,23 +148,11 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             <div className="hidden lg:flex w-full h-full items-center justify-between px-6 relative">
 
                 {/* LEFT ZONE: System & Navigation */}
-                <div className="flex items-center gap-4 z-10">
-                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
+                <div className="flex items-center gap-4 z-10 w-1/4">
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-11 w-11 hover:bg-zinc-800 rounded-xl transition-all hover:scale-105" title="Home">
                         <Home className="h-6 w-6" />
                     </Button>
                     <SetlistDrawer />
-
-                    {/* Tuner */}
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
-                                <span className="font-bold text-xs">TUNE</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="start" side="top">
-                            <Tuner />
-                        </PopoverContent>
-                    </Popover>
                 </div>
 
                 {/* CENTER ZONE: Song Navigation */}
@@ -175,11 +162,26 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </div>
                 </div>
 
-                {/* RIGHT ZONE: Tools */}
-                <div className="flex items-center gap-4 z-10">
+                {/* RIGHT ZONE: Tools (Tuner, Metronome, Transposer, Tracks) */}
+                <div className="flex items-center justify-end gap-3 z-10 w-1/4">
 
-                    {/* Metronome Control - Custom Styled */}
-                    <div className="flex items-center gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
+                    {/* Tuner */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 group-hover:bg-green-400 transition-colors" />
+                                TUNE
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="center" side="top">
+                            <Tuner />
+                        </PopoverContent>
+                    </Popover>
+
+                    <div className="w-px h-8 bg-zinc-800/50" />
+
+                    {/* Metronome Control - Pill Scale */}
+                    <div className="flex items-center">
                         <MetronomeControl />
                     </div>
 
@@ -191,30 +193,31 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         }
                     }}>
                         <PopoverTrigger asChild>
-                            <Button
-                                variant={aiState.isEnabled ? "default" : "ghost"}
+                            <button
                                 className={cn(
-                                    "h-10 px-3 rounded-lg transition-all font-semibold text-sm",
-                                    aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                                    "h-10 px-4 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 min-w-[100px] justify-center",
+                                    aiState.isEnabled
+                                        ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:bg-purple-500"
+                                        : "bg-zinc-900/50 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-white/10"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
                                     <>
-                                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                                        Scan
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        <span>SCANNING</span>
                                     </>
                                 ) : capoFret !== null && capoFret > 0 ? (
                                     <>
-                                        <Sparkles className="mr-1.5 h-4 w-4" />
-                                        Capo {capoFret}
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        <span>CAPO {capoFret}</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Sparkles className="mr-1.5 h-4 w-4" />
-                                        Transpose
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        <span>KEY / CAPO</span>
                                     </>
                                 )}
-                            </Button>
+                            </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
                             <TransposerMenu />
