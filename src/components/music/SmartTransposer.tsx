@@ -154,42 +154,34 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
                 const isChanged = transposed !== chord.originalText
-
-                // Dynamic styling
-                // We want the font size to be roughly 80% of the strip height
-                // But we need to convert pixel height to relative unit or just use a standard 'large' size?
-                // The chord.h is a percentage of page height.
-                // Let's use `container` query or just `vh`? No, page wrapper defines context. `height: 100%`.
-                // We can use style={{ fontSize: `${chord.h * 0.8}%` }}? No, font-size % is relative to parent font-size.
-                // We can use Viewport units? No.
-                // We can use a heuristic. If strip is 50px on a 1000px canvas, that's 5%.
-                // Let's try explicit height style on the box and flex center.
+                const fontSize = Math.max(chord.pxHeight * 0.7, 14)
 
                 return (
                     <div
                         key={i}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-auto"
+                        className="absolute flex items-center justify-center"
                         style={{
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
-                            height: `${chord.h}%`, // Match strip height
-                            minWidth: `${chord.h * 2.0}%`, // slightly wider
-                            padding: '0 0.2em',
+                            transform: 'translate(-50%, -50%)',
 
-                            // Visual Tweaks
-                            backgroundColor: 'white', // Opaque
-                            border: '1px solid #e2e8f0', // Slight border
-                            borderRadius: '4px',
-                            zIndex: 50, // Higher than before
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            height: `${chord.h}%`,
+                            minWidth: `${chord.h * 2}%`,
+                            padding: '0 0.3em',
 
-                            // Font
-                            color: isChanged ? '#9333ea' : '#0ea5e9', // Purple if transposed, Blue if original (to show it's "Smart")
-                            // Use pure pixel size for accuracy, maybe scale up slightly
-                            fontSize: `${chord.pxHeight * 0.9}px`,
+                            backgroundColor: 'rgba(255, 255, 255, 0.97)',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '3px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+
+                            color: isChanged ? '#7c3aed' : '#0284c7',
+                            fontSize: `${fontSize}px`,
+                            fontWeight: 700,
+                            fontFamily: 'ui-monospace, monospace',
                             lineHeight: 1,
-                            fontWeight: '800', // Extra bold
-                            fontFamily: 'monospace' // Or system-ui but mono is safer for alignment?
+                            whiteSpace: 'nowrap',
+
+                            zIndex: 100,
                         }}
                     >
                         {transposed}

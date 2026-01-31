@@ -1,13 +1,13 @@
 {
-  "version": "1.0.64",
-  "commit": "acf38e3",
+  "version": "1.0.65",
+  "commit": "1d81a87",
   "branch": "master",
-  "buildDate": "1/30/2026, 8:14:05 AM",
+  "buildDate": "1/30/2026, 5:53:45 PM",
   "changelog": [
-    "acf38e3 - feat: implement drag-to-scan region OCR and fix font sizing (10 hours ago)",
-    "8e15c25 - fix: refactor transposer to use percentage-based coordinates for responsive alignment (10 hours ago)",
-    "711f679 - fix: add missing authentication token to OCR API request (10 hours ago)",
-    "b17cdd4 - fix: improve error logging for OCR scan failures (10 hours ago)",
-    "8f418c9 - fix: remove duplicate UI elements from TransposerOverlay, leaving only interactive layer (11 hours ago)"
+    "1d81a87 - fix: prioritize first chord for key detection & improve transposer button UX (8 hours ago)",
+    "e4adf1d - fix: nuclear option for chord merging (spatial clustering) (8 hours ago)",
+    "80a5447 - fix: merge split text spans in PDF & add smart capo logic (9 hours ago)",
+    "5f57ca2 - feat: smart capo - auto key detection & shape selection (9 hours ago)",
+    "224b87f - feat: pivot to text-layer transposer + add quick capo (9 hours ago)"
   ]
 }
