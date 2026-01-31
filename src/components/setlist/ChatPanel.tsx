@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useChatStore } from "@/lib/chat-store"
 import { useAuth } from "@/lib/auth-context"
+import { useLibraryStore } from "@/lib/library-store"
+import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 import { createSetlistService } from "@/lib/setlist-firebase"
@@ -128,6 +130,63 @@ export function ChatPanel() {
                             })
                             toast.success(`Scheduled for ${cmd.payload.date}`)
                         }
+                        break;
+
+                    case 'ADD_TO_SETLIST':
+                        if (contextData.currentSetlist) {
+                            const pathParts = window.location.pathname.split('/')
+                            const potentialId = pathParts[pathParts.length - 1]
+
+                            if (potentialId && potentialId !== 'new') {
+                                // Minimal Track Object
+                                const newTrack = {
+                                    id: crypto.randomUUID(),
+                                    type: 'song',
+                                    title: cmd.payload.fileName,
+                                    fileId: cmd.payload.fileId
+                                }
+
+                                // Append to current tracks and Update
+                                const newTracks = [...contextData.currentSetlist, newTrack]
+                                await setlistService.updateSetlist(potentialId, false, { tracks: newTracks })
+                                toast.success(`Added ${cmd.payload.fileName}`)
+
+                                // If we had a mechanism to refresh contextData immediately, do it here.
+                                // For now, the Firestore listener in SetlistEditor will pick it up, 
+                                // and update the ChatStore contextData shortly.
+                            } else {
+                                toast.error("Open a setlist first")
+                            }
+                        }
+                        break;
+
+                    case 'REMOVE_FROM_SETLIST':
+                        const pathPartsRemote = window.location.pathname.split('/')
+                        const setlistId = pathPartsRemote[pathPartsRemote.length - 1]
+                        if (setlistId && contextData.currentSetlist) {
+                            // Find track by index
+                            const index = cmd.payload.index
+                            const track = contextData.currentSetlist[index]
+                            if (track) {
+                                const newTracks = [...contextData.currentSetlist]
+                                newTracks.splice(index, 1)
+                                await setlistService.updateSetlist(setlistId, false, { tracks: newTracks })
+                                toast.success("Removed track")
+                            } else {
+                                toast.error("Could not find track at that index")
+                            }
+                        }
+                        break;
+
+                    case 'TRANSPOSE_CHART':
+                        // Direct access to MusicStore
+                        useMusicStore.getState().setTransposition(cmd.payload.steps)
+                        toast.success(`Transposed ${cmd.payload.steps > 0 ? '+' : ''}${cmd.payload.steps}`)
+                        break;
+
+                    case 'SEARCH_LIBRARY':
+                        useLibraryStore.getState().setFilter(null, cmd.payload.query)
+                        router.push('/library')
                         break;
 
                     case 'ADMIN_ACTION':

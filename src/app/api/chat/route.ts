@@ -24,7 +24,11 @@ You must return a JSON object with this structure:
   "message": "Your text response to the user...",
   "commands": [
     { "type": "CREATE_SETLIST", "payload": { "name": "Shabbat 1", "isPublic": false, "tracks": [] } },
+    { "type": "ADD_TO_SETLIST", "payload": { "fileId": "123", "fileName": "Adon Olam" } },
+    { "type": "REMOVE_FROM_SETLIST", "payload": { "index": 0 } },
     { "type": "PUBLISH_SETLIST", "payload": { "setlistId": "id", "date": "2024-02-09" } },
+    { "type": "TRANSPOSE_CHART", "payload": { "steps": 2 } },
+    { "type": "SEARCH_LIBRARY", "payload": { "query": "Shabbat" } },
     { "type": "ADMIN_ACTION", "payload": { "action": "set_role", "userId": "uid", "targetRole": "admin" } },
     { "type": "NAVIGATE", "payload": { "path": "/library" } },
     { "type": "OPEN_CHART", "payload": { "fileId": "123" } } // Use NAVIGATE to /perform/[id] usually
@@ -36,6 +40,10 @@ You must return a JSON object with this structure:
 - Only use ADMIN_ACTION if the user is authorized (you will see 'User Role: admin' in context).
 - If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
 - If asked to "Create a setlist", issue a CREATE_SETLIST command.
+- If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST.
+- If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.
+- If asked to "Transpose up 2 steps", issue TRANSPOSE_CHART.
+- If asked "Search for...", issue SEARCH_LIBRARY.
 - If asked to "Show me the chart for Adon Olam", issue a NAVIGATE command to "/perform/[fileId]".
 `
 
