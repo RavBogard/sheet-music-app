@@ -22,7 +22,7 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
-    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled } = useMusicStore()
+    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
 
     // Auto-hide Logic
@@ -60,82 +60,99 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         <div
             className={cn(
                 "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 transform",
-                "h-24 sm:h-20 bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0", // Increased height for mobile touch targets
-                "flex flex-col sm:flex-row items-center justify-between px-2 sm:px-6",
+                "h-32 sm:h-20 bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0", // Increased height for mobile 2-row layout
+                "flex flex-col sm:flex-row items-center justify-between", // Column on mobile, Row on desktop
                 visible || menuOpen || aiState.scanningPages.length > 0 ? "translate-y-0" : "translate-y-full"
             )}
         >
-            {/* ZONE 1: System (Left) */}
-            <div className="flex-1 flex items-center justify-start gap-4 w-full sm:w-auto absolute top-2 left-2 sm:static sm:top-auto sm:left-auto">
-                <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
-                    <Home className="h-6 w-6" />
-                </Button>
-                <SetlistDrawer />
-
-                {/* Tuner (Moved to Left) */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
-                            <span className="font-bold text-xs">TUNE</span>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="start" side="top">
-                        <Tuner />
-                    </PopoverContent>
-                </Popover>
+            {/* --- MOBILE TOP ROW: Navigation --- */}
+            <div className="sm:hidden w-full h-1/2 flex items-center justify-center border-b border-zinc-900 bg-zinc-950/50">
+                <SongNavigation />
             </div>
 
-            {/* ZONE 2: Playback (Center) */}
-            <div className="w-full sm:w-auto flex-2 flex justify-center mt-12 sm:mt-0 absolute left-0 right-0 top-0 sm:static pointer-events-none sm:pointer-events-auto">
-                {/* Pointer events workaround to let clicks pass through to layer below if needed, but buttons need pointer-events-auto */}
-                <div className="pointer-events-auto w-full flex justify-center transform sm:translate-y-0 translate-y-2">
-                    <SongNavigation />
+            {/* --- MAIN BAR (Mobile Bottom Row / Desktop Full Bar) --- */}
+            <div className="w-full h-1/2 sm:h-full flex items-center justify-between px-3 sm:px-6 relative">
+
+                {/* LEFT ZONE: System & Navigation */}
+                <div className="flex items-center gap-2 sm:gap-4 z-10">
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-10 w-10 sm:h-12 sm:w-12 hover:bg-zinc-800 rounded-xl">
+                        <Home className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </Button>
+                    <SetlistDrawer />
+
+                    {/* Tuner */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-10 w-10 sm:h-12 sm:w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
+                                <span className="font-bold text-[10px] sm:text-xs">TUNE</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="start" side="top">
+                            <Tuner />
+                        </PopoverContent>
+                    </Popover>
                 </div>
-            </div>
 
-            {/* ZONE 3: Tools (Right) */}
-            <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static shrink-0">
+                {/* CENTER ZONE (Desktop): Song Navigation */}
+                <div className="hidden sm:flex absolute left-0 right-0 justify-center pointer-events-none">
+                    <div className="pointer-events-auto">
+                        <SongNavigation />
+                    </div>
+                </div>
 
-                {/* Transposer - moved to be more visible */}
-                <Popover open={menuOpen} onOpenChange={(open) => {
-                    setMenuOpen(open)
-                    if (open && !aiState.isEnabled) {
-                        // Auto-activate when opening menu
-                        setAiEnabled(true)
-                    }
-                }}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant={aiState.isEnabled ? "default" : "ghost"}
-                            className={cn(
-                                "h-10 px-3 rounded-lg transition-all font-semibold text-sm",
-                                aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                            )}
-                        >
-                            {aiState.scanningPages.length > 0 ? (
-                                <>
-                                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                                    Scanning
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="mr-1.5 h-4 w-4" />
-                                    Transposer
-                                </>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                        <TransposerMenu />
-                    </PopoverContent>
-                </Popover>
-
-                {/* Hidden on very small screens? or adapt? */}
-                <div className="hidden sm:flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
+                {/* CENTER ZONE (Mobile): Visual Metronome */}
+                <div className="sm:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2">
                     <MetronomeControl />
                 </div>
 
-                <BackingTrackPlayer />
+                {/* RIGHT ZONE: Tools */}
+                <div className="flex items-center gap-2 sm:gap-4 z-10">
+
+                    {/* Metronome Control (Desktop) - Swapped to Left of Transposer */}
+                    <div className="hidden sm:flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
+                        <MetronomeControl />
+                    </div>
+
+                    {/* Transposer */}
+                    <Popover open={menuOpen} onOpenChange={(open) => {
+                        setMenuOpen(open)
+                        if (open && !aiState.isEnabled) {
+                            setAiEnabled(true)
+                        }
+                    }}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={aiState.isEnabled ? "default" : "ghost"}
+                                className={cn(
+                                    "h-9 sm:h-10 px-3 rounded-lg transition-all font-semibold text-xs sm:text-sm",
+                                    aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                                )}
+                            >
+                                {aiState.scanningPages.length > 0 ? (
+                                    <>
+                                        <Loader2 className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                        Scan
+                                    </>
+                                ) : capoFret !== null && capoFret > 0 ? (
+                                    <>
+                                        <Sparkles className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+                                        Capo {capoFret}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+                                        Transpose
+                                    </>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                            <TransposerMenu />
+                        </PopoverContent>
+                    </Popover>
+
+                    <BackingTrackPlayer />
+                </div>
             </div>
         </div>
     )

@@ -56,8 +56,20 @@ export function SetlistDrawer() {
                                         {index + 1}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-bold truncate text-lg">
-                                            {track.name}
+                                        <div className="flex items-center gap-2">
+                                            <div className="font-bold truncate text-lg">
+                                                {track.name}
+                                            </div>
+                                            {track.key && (
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
+                                                    isCurrent
+                                                        ? "bg-white/20 border-white/30 text-white"
+                                                        : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                                                )}>
+                                                    {track.key}
+                                                </span>
+                                            )}
                                         </div>
                                         {track.type && (
                                             <div className="text-xs opacity-70 uppercase tracking-wider">

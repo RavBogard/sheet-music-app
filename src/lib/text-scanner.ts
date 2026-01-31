@@ -113,13 +113,13 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             const next = items[i];
 
             // Check if on same line (vertical overlap or close Y)
-            const sameLine = Math.abs(current.y - next.y) < (current.h / 2); // robust line check
+            const sameLine = Math.abs(current.y - next.y) < current.h; // robust line check (full height tolerance)
 
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
-            // Gap smaller than full font height? (Increased to 0.6 to catch F#m7, Cmaj7, etc.)
-            const isClose = gap < (current.h * 0.6);
+            // Gap smaller than full font height? (Increased to 0.8 to catch F#m7, Cmaj7, etc.)
+            const isClose = gap < (current.h * 0.8);
 
             if (sameLine && isClose) {
                 // Merge

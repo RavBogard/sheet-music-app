@@ -21,7 +21,7 @@ export function MetronomeControl() {
 
     return (
         <div className="flex items-center gap-2 sm:gap-3 px-1">
-            <div className="flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-zinc-800">
+            <div className="hidden sm:flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-zinc-800">
                 <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"

@@ -84,22 +84,30 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
 export function calculateCapo(originalKey: string, targetShape: string): { fret: number, transposition: number } | null {
     if (!originalKey || !targetShape) return null;
 
-    let originalIndex = SHARP_SCALE.indexOf(originalKey);
-    if (originalIndex === -1) originalIndex = FLAT_SCALE.indexOf(originalKey);
+    // Extract just the root note from keys (handles "Am" -> "A", "F#m" -> "F#", etc.)
+    const extractRoot = (key: string): string => {
+        const match = key.match(/^([A-G][#b]?)/);
+        return match ? match[1] : key;
+    };
 
-    let targetIndex = SHARP_SCALE.indexOf(targetShape);
-    if (targetIndex === -1) targetIndex = FLAT_SCALE.indexOf(targetShape);
+    const originalRoot = extractRoot(originalKey);
+    const targetRoot = extractRoot(targetShape);
+
+    let originalIndex = SHARP_SCALE.indexOf(originalRoot);
+    if (originalIndex === -1) originalIndex = FLAT_SCALE.indexOf(originalRoot);
+
+    let targetIndex = SHARP_SCALE.indexOf(targetRoot);
+    if (targetIndex === -1) targetIndex = FLAT_SCALE.indexOf(targetRoot);
 
     if (originalIndex === -1 || targetIndex === -1) return null;
 
     // Capo fret = how many semitones to raise target to reach original
-    // E.g., E (4) with D shapes (2): capo = 4 - 2 = 2
     let capoFret = originalIndex - targetIndex;
     if (capoFret < 0) capoFret += 12;
 
     return {
         fret: capoFret,
-        transposition: -capoFret  // Negative because we're lowering the written chords
+        transposition: -capoFret
     };
 }
 

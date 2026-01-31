@@ -155,7 +155,11 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
                 const isChanged = transposition !== 0
-                const fontSize = Math.max(chord.pxHeight * 0.7, 14)
+                const fontSize = Math.max(chord.pxHeight * 1.0, 18)
+
+                // Calculate center position with bounds clamping
+                const centerX = Math.min(chord.x + (chord.w / 2), 98);
+                const centerY = chord.y + (chord.h / 2);
 
                 // Debug logging
                 console.log(`[Transposer] "${chord.originalText}" -> "${transposed}" (semitones: ${transposition}, changed: ${isChanged})`)
@@ -165,9 +169,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                         key={i}
                         className="absolute flex items-center justify-center"
                         style={{
-                            // Position at CENTER of detected chord
-                            left: `${chord.x + (chord.w / 2)}%`,
-                            top: `${chord.y + (chord.h / 2)}%`,
+                            // Position at CENTER of detected chord (clamped)
+                            left: `${centerX}%`,
+                            top: `${centerY}%`,
                             transform: 'translate(-50%, -50%)',
 
                             // Sizing - ensure full coverage
@@ -183,7 +187,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
                             // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${Math.max(fontSize, 14)}px`,
+                            fontSize: `${Math.max(fontSize, 18)}px`,
                             fontWeight: 700,
                             fontFamily: 'ui-monospace, monospace',
                             lineHeight: 1.2,

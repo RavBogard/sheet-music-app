@@ -53,6 +53,9 @@ export interface MusicState {
         fret: number // e.g. 3
     }
 
+    capoFret: number | null
+    setCapoFret: (fret: number | null) => void
+
     setFile: (url: string, type: FileType) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
@@ -107,6 +110,7 @@ export const useMusicStore = create<MusicState>()(
                 targetShape: '',
                 fret: 0
             },
+            capoFret: null,
 
             audio: {
                 fileId: null,
@@ -121,6 +125,7 @@ export const useMusicStore = create<MusicState>()(
                 fileType: type,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
+                capoFret: null,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null // Clear AI content
             }),
@@ -176,6 +181,8 @@ export const useMusicStore = create<MusicState>()(
             setCapoState: (newState: Partial<MusicState['capo']>) => set((state) => ({
                 capo: { ...state.capo, ...newState }
             })),
+
+            setCapoFret: (fret) => set({ capoFret: fret }),
 
             reset: () => set({
                 fileType: null,

@@ -14,7 +14,8 @@ export function TransposerMenu() {
         transposition,
         setTransposition,
         aiState,
-        setAiEnabled
+        setAiEnabled,
+        setCapoFret
     } = useMusicStore()
 
     const isScanning = aiState.scanningPages.length > 0;
@@ -41,6 +42,7 @@ export function TransposerMenu() {
         }
 
         setTransposition(result.transposition);
+        setCapoFret(result.fret);
         toast.success(`Original Key: ${estimatedKey}. Use Capo ${result.fret} to play as ${targetShape}.`);
     };
 
@@ -106,7 +108,10 @@ export function TransposerMenu() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setTransposition(transposition - 1)}
+                            onClick={() => {
+                                setTransposition(transposition - 1);
+                                setCapoFret(null);
+                            }}
                             className="h-8 w-12 hover:bg-zinc-800"
                         >
                             <ChevronDown className="h-4 w-4" />
@@ -119,7 +124,10 @@ export function TransposerMenu() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setTransposition(transposition + 1)}
+                            onClick={() => {
+                                setTransposition(transposition + 1);
+                                setCapoFret(null);
+                            }}
                             className="h-8 w-12 hover:bg-zinc-800"
                         >
                             <ChevronUp className="h-4 w-4" />
