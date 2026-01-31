@@ -22,7 +22,7 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
-    const { playbackQueue, queueIndex, nextSong, prevSong, aiState } = useMusicStore()
+    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
 
     // Auto-hide Logic
@@ -94,7 +94,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             </div>
 
             {/* ZONE 3: Tools (Right) */}
-            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static">
+            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-4 w-full sm:w-auto absolute right-2 top-2 sm:static shrink-0">
                 {/* Hidden on very small screens? or adapt? */}
                 <div className="hidden sm:flex items-center gap-1 sm:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
                     <MetronomeControl />
@@ -108,9 +108,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         setMenuOpen(open)
                         if (open && !aiState.isEnabled) {
                             // Auto-activate when opening menu
-                            // We need to access setAiEnabled from store, but we only have aiState here.
-                            // Need to add setAiEnabled to destructuring at top of component.
-                            useMusicStore.getState().setAiEnabled(true)
+                            setAiEnabled(true)
                         }
                     }}>
                         <PopoverTrigger asChild>
@@ -118,7 +116,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                                 variant={aiState.isEnabled ? "default" : "ghost"}
                                 size="icon"
                                 className={cn(
-                                    "h-12 px-4 rounded-xl transition-all font-bold",
+                                    "h-12 px-3 rounded-xl transition-all font-bold shrink-0",
                                     aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-500 hover:text-white hover:bg-zinc-800"
                                 )}
                             >

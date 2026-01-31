@@ -168,17 +168,20 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
                             transform: 'translate(-50%, -50%)',
 
-                            height: `${chord.h * 1.5}%`,
-                            minWidth: `${chord.h * 4}%`,
-                            padding: '0 0.7em',
+                            // Size - much larger to cover original text
+                            height: `${Math.max(chord.h * 2.5, 3)}%`,   // At least 3% of page height
+                            minWidth: `${Math.max(chord.h * 5, 5)}%`,   // At least 5% of page width
+                            padding: '0.4em 0.8em',
 
+                            // Appearance
                             backgroundColor: 'white',
-                            border: '1px solid #d1d5db',
+                            border: '2px solid #d1d5db',                 // Thicker border
                             borderRadius: '4px',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',    // Stronger shadow
 
+                            // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${fontSize}px`,
+                            fontSize: `${Math.max(fontSize * 1.2, 16)}px`,  // Minimum 16px
                             fontWeight: 700,
                             fontFamily: 'ui-monospace, monospace',
                             lineHeight: 1,

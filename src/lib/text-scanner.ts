@@ -39,6 +39,17 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     // Bounds of the container for % calcs
     const pageRect = pageElement.getBoundingClientRect();
 
+    // Debug Text Scanner
+    console.log('[TextScanner] Page rect:', {
+        left: pageRect.left,
+        right: pageRect.right,
+        width: pageRect.width,
+        top: pageRect.top,
+        bottom: pageRect.bottom,
+        height: pageRect.height
+    });
+    console.log('[TextScanner] Total spans found:', spans.length);
+
     // 1. Map to objects with coordinates
     const items = spans.map(span => {
         const rect = span.getBoundingClientRect();
@@ -55,6 +66,11 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             span
         };
     }).filter(i => i.text.trim().length > 0);
+
+    console.log('[TextScanner] Items after filtering empty:', items.length);
+    if (items.length > 0) {
+        console.log('[TextScanner] Rightmost item x:', Math.max(...items.map(i => i.x)));
+    }
 
     // 2. Sort by Y (Line) then X (Position)
     // Tolerance for "Same Line": 5px
@@ -80,8 +96,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
-            // Gap smaller than full font height? (Increased from 0.5 for F#m7 case)
-            const isClose = gap < (current.h * 1.0);
+            // Gap smaller than full font height? (Reduced to 0.3 to prevent merging with distant text)
+            const isClose = gap < (current.h * 0.3);
 
             if (sameLine && isClose) {
                 // Merge
@@ -100,6 +116,12 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         merged.push(current);
     }
 
+    console.log('[TextScanner] Items after merging:', merged.length);
+    if (merged.length > 0) {
+        // Log a sample to avoid flooding console, or all if debugging
+        console.log('[TextScanner] Merged items sample:', merged.slice(0, 10).map(m => ({ text: m.text.substring(0, 10), x: m.x.toFixed(0) })));
+    }
+
     // 4. Filter for Chords
     merged.forEach(item => {
         const text = item.text.trim();
@@ -107,23 +129,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         // Check if it matches chord regex and isn't excluded
         if (CHORD_REGEX.test(text) && !EXCLUDED_WORDS.has(text)) {
 
-            // Special check for "A" - is it an article?
-            // Heuristic: If "A" appears on the same line as other long non-chord words, it's likely an article.
-            if (text === "A") {
-                const lineNeighbors = merged.filter(other =>
-                    other !== item &&
-                    Math.abs(other.y - item.y) < (item.h / 2) // Close Y
-                );
-
-                // If neighbors contain regular words (not chords, len > 3), assume it's a lyric line
-                const hasLyricNeighbors = lineNeighbors.some(n =>
-                    !CHORD_REGEX.test(n.text.trim()) && n.text.trim().length > 3
-                );
-
-                if (hasLyricNeighbors) {
-                    return; // Skip this "A", it's likely an article
-                }
-            }
+            // Special check for "A" - removed as it was too aggressive
+            // Using standard regex and exclusion list only.
 
             // Calculate relative % using the merged screen coordinates
             const x = ((item.x - pageRect.left) / pageRect.width) * 100;
