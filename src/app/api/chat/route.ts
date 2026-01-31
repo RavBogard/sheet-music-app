@@ -1,37 +1,42 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 
-// System prompt for the Music Director AI
+// New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
 You are an expert Jewish Music Director and Service Leader (Shaliach Tzibur) for a Reform Jewish congregation.
-Your goal is to help the user design beautiful, flowing prayer setlists.
-
-You have access to:
-1. The user's "Current Setlist" (a list of songs/tracks).
-2. A "Library" of available sheet music files (provided as a list of filenames).
+You are now an AGENT capable of executing actions in the application.
 
 Your capabilities:
-- You can answer questions about Jewish liturgy (e.g., "What comes after the Barchu?").
-- You can suggest songs from the Library that fit specific liturgical moments.
-- You can Edit the setlist directly.
+1. **Setlist Management**: Create, Edit, and Organize setlists.
+2. **Calendar**: Schedule setlists by setting their date.
+3. **Administration** (Admin Only): Manage users (approve/promote).
+4. **Navigation**: Open specific charts or views.
 
-When the user asks to change the setlist, you must return a JSON object describing the changes.
-If the user just asks a question, return a text response.
+You have access to:
+1. The user's "Current Setlist".
+2. A "Library" of available sheet music.
+3. (If Admin) A list of "Users" in the system.
 
-Output Format:
+**Output Format**:
 You must return a JSON object with this structure:
 {
   "message": "Your text response to the user...",
-  "edits": [
-    { "action": "add", "title": "Song Title", "fileId": "drive-id-if-found", "position": "end" or index },
-    { "action": "remove", "index": 2 },
-    { "action": "reorder", "fromIndex": 3, "toIndex": 1 }
-  ]
+  "commands": [
+    { "type": "CREATE_SETLIST", "payload": { "name": "Shabbat 1", "isPublic": false, "tracks": [] } },
+    { "type": "PUBLISH_SETLIST", "payload": { "setlistId": "id", "date": "2024-02-09" } },
+    { "type": "ADMIN_ACTION", "payload": { "action": "set_role", "userId": "uid", "targetRole": "admin" } },
+    { "type": "NAVIGATE", "payload": { "path": "/library" } },
+    { "type": "OPEN_CHART", "payload": { "fileId": "123" } } // Use NAVIGATE to /perform/[id] usually
+  ],
+  "edits": [] // Legacy: Keep empty unless simple reordering is requested on *current* setlist
 }
 
-Rules for "edits":
-- If adding a song, try to find a matching "fileId" from the provided Library list. If you can't find a file, leave "fileId" null.
-- "title" should be cleaned up (remove .pdf extension).
+**Rules**:
+- Only use ADMIN_ACTION if the user is authorized (you will see 'User Role: admin' in context).
+- If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
+- If asked to "Create a setlist", issue a CREATE_SETLIST command.
+- If asked to "Show me the chart for Adon Olam", issue a NAVIGATE command to "/perform/[fileId]".
 `
 
 export async function POST(request: Request) {
@@ -39,15 +44,43 @@ export async function POST(request: Request) {
     const { messages, currentSetlist, libraryFiles } = await request.json()
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
+    // 1. Authenticate & Check Admin Status
+    const authHeader = request.headers.get("Authorization")
+    let isAdmin = false
+    let userContext = ""
+
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        initAdmin()
+        const token = authHeader.split("Bearer ")[1]
+        const decoded = await getAuth().verifyIdToken(token)
+
+        // Check Admin Role
+        if (decoded.role === 'admin' || decoded.uid === '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3') {
+          isAdmin = true
+
+          // Fetch User List for Context
+          // Limit to 50 recent users to save tokens
+          const usersSnap = await getFirestore().collection('users').limit(50).get()
+          const users = usersSnap.docs.map(d => {
+            const data = d.data()
+            return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]`
+          }).join('\n')
+
+          userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
+        }
+      } catch (e) {
+        console.warn("Auth verification failed in chat:", e)
+      }
+    }
+
     if (!apiKey) {
       return NextResponse.json({ error: "Missing API Key" }, { status: 500 })
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    // User requested "Gemini 3 Flash Preview" (gemini-3-flash-preview)
-    // Note: If this fails, it might be restricted access.
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash-exp",
       generationConfig: { responseMimeType: "application/json" }
     })
 
@@ -58,6 +91,8 @@ export async function POST(request: Request) {
     const prompt = `
 ${SYSTEM_PROMPT}
 
+CURRENT USER ROLE: ${isAdmin ? 'ADMIN' : 'MEMBER'}
+
 CONTEXT:
 --- LIBRARY FILES (Top 500) ---
 ${libraryContext}
@@ -66,6 +101,7 @@ ${libraryContext}
 --- CURRENT SETLIST ---
 ${setlistContext}
 -----------------------
+${userContext}
 
 USER MESSAGE:
 ${messages[messages.length - 1].content}
@@ -78,7 +114,6 @@ ${messages[messages.length - 1].content}
 
   } catch (error: any) {
     console.error("Chat API Error:", error)
-    // Return actual error message for debugging purposes
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal Server Error" },
       { status: 500 }

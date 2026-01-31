@@ -37,6 +37,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     tracks,
                     trackCount: tracks.length,
                     isPublic,
+                    ownerId: userId,
                     ownerName: userName || "Anonymous",
                     ...JSON.parse(JSON.stringify(additionalData)) // Sanitize undefined
                 });
