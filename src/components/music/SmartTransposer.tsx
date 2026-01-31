@@ -174,7 +174,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             transform: 'translateY(-50%)',  // Only center vertically, NOT horizontally
 
                             // Fixed padding, no dynamic width
-                            padding: '4px 8px',
+                            padding: '6px 12px',
 
                             // Clean appearance
                             backgroundColor: 'white',
@@ -184,7 +184,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
                             // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${fontSize}px`,
+                            fontSize: '22px',        // Increased from 18px
                             fontWeight: 700,
                             fontFamily: 'ui-monospace, SFMono-Regular, monospace',
                             lineHeight: 1,

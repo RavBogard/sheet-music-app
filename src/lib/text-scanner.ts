@@ -118,8 +118,11 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
-            // Gap smaller than full font height? (Increased to 0.8 to catch F#m7, Cmaj7, etc.)
-            const isClose = gap >= 0 && gap < (current.h * 0.2);
+
+            // Smarter gap check: stricter for words, looser for single chars (like #, m, 7)
+            const isSingleChar = current.text.trim().length === 1 || next.text.trim().length === 1;
+            const maxGap = isSingleChar ? (current.h * 0.5) : (current.h * 0.2);
+            const isClose = gap >= 0 && gap < maxGap;
 
             if (sameLine && isClose) {
                 // Merge
@@ -138,32 +141,58 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         merged.push(current);
     }
 
-    // Post-process: Look for chord roots followed by extensions that weren't merged
-    const finalItems: typeof items = [];
-    if (merged.length > 0) {
-        for (let i = 0; i < merged.length; i++) {
-            const current = merged[i];
-            const next = merged[i + 1];
+    // Post-process: Aggressively combine chord parts that are on the same line
+    // This handles cases where G, #, m are all separate spans
+    const finalItems: typeof merged = [];
 
-            // Check if current is a chord root (A-G with optional #/b)
-            // and next is an extension (m, m7, maj7, etc.) on same line
-            if (next &&
-                /^[A-G][#b]?$/.test(current.text.trim()) &&
-                /^(m|M|maj|min|dim|aug|sus|add|7|9|11|13|6|5|2|4)+$/.test(next.text.trim()) &&
-                Math.abs(current.y - next.y) < current.h) {
+    for (let i = 0; i < merged.length; i++) {
+        let current = merged[i];
 
-                // Combine them
-                const combined = {
-                    ...current,
-                    text: current.text + next.text,
-                    r: next.r,
-                    w: next.r - current.x,
-                };
-                finalItems.push(combined);
-                i++; // Skip the next item since we consumed it
-            } else {
-                finalItems.push(current);
+        // If current starts with a chord root letter (A-G), try to build a complete chord
+        if (/^[A-G]$/.test(current.text.trim())) {
+            let chordText = current.text.trim();
+            let lastItem = current;
+            let j = i + 1;
+
+            // Keep consuming adjacent items that look like chord parts
+            while (j < merged.length) {
+                const next = merged[j];
+
+                // Must be on same line (within full height)
+                if (Math.abs(current.y - next.y) > current.h) break;
+
+                // Must be close horizontally (within 1x height gap)
+                const gap = next.x - lastItem.r;
+                if (gap > current.h) break;
+
+                const nextText = next.text.trim();
+
+                // Valid chord continuations: #, b, m, M, maj, min, dim, aug, sus, add, 7, 9, 11, 13, 6, 5, 2, 4
+                if (/^[#b♯♭]$/.test(nextText) ||
+                    /^(m|M|maj|min|dim|aug|sus|add|7|9|11|13|6|5|2|4)+$/.test(nextText) ||
+                    /^m7$/.test(nextText) ||
+                    /^maj7$/.test(nextText)) {
+
+                    chordText += nextText;
+                    lastItem = next;
+                    j++;
+                } else {
+                    break;
+                }
             }
+
+            // Create combined item
+            finalItems.push({
+                ...current,
+                text: chordText,
+                r: lastItem.r,
+                w: lastItem.r - current.x,
+            });
+
+            // Skip the items we consumed
+            i = j - 1;
+        } else {
+            finalItems.push(current);
         }
     }
 
