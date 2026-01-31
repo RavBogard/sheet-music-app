@@ -60,6 +60,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     originalText: c.text,
                     x: c.x,
                     y: c.y,
+                    w: c.w,
                     h: c.h,
                     pxHeight: c.pxHeight
                 }));
