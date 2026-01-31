@@ -35,10 +35,10 @@ export function MetronomeControl() {
             <div
                 onClick={togglePlay}
                 className={cn(
-                    "h-8 w-8 rounded-full cursor-pointer transition-all duration-75 border-2 flex items-center justify-center bg-black",
+                    "h-9 w-9 rounded-full cursor-pointer transition-all duration-75 border flex items-center justify-center bg-black/50 shadow-sm",
                     isPlaying
-                        ? "border-zinc-700"
-                        : "border-zinc-800 hover:border-zinc-600",
+                        ? "border-red-500/50"
+                        : "border-white/10 hover:border-white/30 hover:bg-white/5",
                 )}
                 title={isPlaying ? "Stop Metronome" : "Start Metronome"}
             >

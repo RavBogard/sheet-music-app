@@ -41,8 +41,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             setVisible(true)
             clearTimeout(timeout)
             // Don't auto-hide if menu is open or scanning
+            // User requested 10 seconds timeout
             if (!menuOpen && aiState.scanningPages.length === 0) {
-                timeout = setTimeout(() => setVisible(false), 3000)
+                timeout = setTimeout(() => setVisible(false), 10000)
             }
         }
 
@@ -50,9 +51,13 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         resetTimer()
 
         window.addEventListener('mousemove', resetTimer)
+        window.addEventListener('click', resetTimer)
+        window.addEventListener('touchstart', resetTimer)
         return () => {
             clearTimeout(timeout)
             window.removeEventListener('mousemove', resetTimer)
+            window.removeEventListener('click', resetTimer)
+            window.removeEventListener('touchstart', resetTimer)
         }
     }, [menuOpen, aiState.scanningPages.length])
 
@@ -66,23 +71,25 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             )}
         >
             {/* --- MOBILE/TABLET TOP ROW: Tools --- */}
-            <div className="lg:hidden w-full h-1/2 flex items-center justify-center gap-2 sm:gap-4 border-b border-zinc-900 bg-zinc-900/30 px-4">
-                <SetlistDrawer />
+            <div className="lg:hidden w-full h-1/2 flex items-center justify-center gap-3 sm:gap-6 border-b border-zinc-900 bg-zinc-900/30 px-4">
 
                 {/* Tuner */}
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-10 w-10 hover:bg-zinc-800 rounded-xl" title="Tuner">
-                            <span className="font-bold text-[10px]">TUNE</span>
-                        </Button>
+                        <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500/50" />
+                            Tune
+                        </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="center" side="top">
                         <Tuner />
                     </PopoverContent>
                 </Popover>
 
-                {/* Mobile Metronome (Icon Only/Small) */}
-                <MetronomeControl />
+                {/* Mobile Metronome */}
+                <div className="flex items-center">
+                    <MetronomeControl />
+                </div>
 
                 {/* Transposer */}
                 <Popover open={menuOpen} onOpenChange={(open) => {
@@ -92,24 +99,23 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     }
                 }}>
                     <PopoverTrigger asChild>
-                        <Button
-                            variant={aiState.isEnabled ? "default" : "ghost"}
+                        <button
                             className={cn(
-                                "h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-lg transition-all font-semibold text-xs sm:text-sm p-0 sm:min-w-0",
-                                aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                                "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2",
+                                aiState.isEnabled
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                                    : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
                             )}
                         >
                             {aiState.scanningPages.length > 0 ? (
-                                <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
-                            ) : capoFret !== null && capoFret > 0 ? (
-                                <Sparkles className="h-4 w-4 sm:mr-1.5" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                                <Sparkles className="h-4 w-4 sm:mr-1.5" />
+                                <Sparkles className="h-3.5 w-3.5" />
                             )}
-                            <span className="hidden sm:inline">
-                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Transpose")}
+                            <span>
+                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Key")}
                             </span>
-                        </Button>
+                        </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
                         <TransposerMenu />
@@ -127,8 +133,14 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </Button>
                 </div>
 
-                <div className="w-full flex justify-center">
-                    <SongNavigation />
+                <div className="w-full flex justify-center pointer-events-none">
+                    <div className="pointer-events-auto">
+                        <SongNavigation />
+                    </div>
+                </div>
+
+                <div className="absolute right-2 z-10">
+                    <SetlistDrawer />
                 </div>
             </div>
 
@@ -166,7 +178,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 {/* RIGHT ZONE: Tools */}
                 <div className="flex items-center gap-4 z-10">
 
-                    {/* Metronome Control */}
+                    {/* Metronome Control - Custom Styled */}
                     <div className="flex items-center gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
                         <MetronomeControl />
                     </div>

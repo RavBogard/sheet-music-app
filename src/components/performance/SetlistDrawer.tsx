@@ -1,93 +1,189 @@
 "use client"
 
 import { useMusicStore } from "@/lib/store"
+import { useAuth } from "@/lib/auth-context"
+import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { ListMusic, PlayCircle, Music2 } from "lucide-react"
+import { ListMusic, PlayCircle, Music2, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 export function SetlistDrawer() {
     const router = useRouter()
-    const { playbackQueue, queueIndex } = useMusicStore()
+    const { playbackQueue, queueIndex, setQueue } = useMusicStore()
+    const { user } = useAuth()
     const [open, setOpen] = useState(false)
+    const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
+    const [loading, setLoading] = useState(false)
 
-    if (playbackQueue.length === 0) return null
+    // Calculate if we should show the empty state (Public Setlists)
+    const showPublicPicker = playbackQueue.length === 0
+
+    useEffect(() => {
+        if (open && showPublicPicker) {
+            setLoading(true)
+            const service = createSetlistService(user?.uid || null, user?.displayName || null)
+            const unsubscribe = service.subscribeToPublicSetlists(
+                (data) => {
+                    setPublicSetlists(data)
+                    setLoading(false)
+                },
+                (err) => {
+                    console.error("Failed to load public setlists", err)
+                    setLoading(false)
+                }
+            )
+            return () => unsubscribe()
+        }
+    }, [open, showPublicPicker, user])
+
+    const handleSelectSetlist = (setlist: Setlist) => {
+        if (!setlist.tracks || setlist.tracks.length === 0) return
+
+        const queue = setlist.tracks
+            .filter(t => t.fileId)
+            .map(t => ({
+                name: t.title,
+                fileId: t.fileId!,
+                type: (t.fileId?.startsWith('db-') || t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl'))
+                    ? 'musicxml'
+                    : t.fileId?.endsWith('.chordpro') ? 'chordpro' : 'pdf',
+                audioFileId: t.audioFileId,
+                bpm: t.bpm,
+                key: t.key
+            } as any))
+
+        if (queue.length > 0) {
+            setQueue(queue, 0)
+            router.push(`/perform/${queue[0].fileId}`)
+            setOpen(false)
+        }
+    }
+
+    // Determine Trigger Icon based on state
+    const TriggerIcon = showPublicPicker ? Globe : ListMusic
+    const triggerLabel = showPublicPicker ? "Connect" : "Setlist"
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
-                    <ListMusic className="h-6 w-6" />
-                </Button>
+                <button
+                    className={cn(
+                        "h-10 w-10 lg:h-12 lg:w-12 flex items-center justify-center rounded-xl transition-all",
+                        "hover:bg-zinc-800 text-zinc-500 hover:text-white"
+                    )}
+                    title={triggerLabel}
+                >
+                    <TriggerIcon className="h-5 w-5 lg:h-6 lg:w-6" />
+                </button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[80vh] bg-zinc-950 border-t border-zinc-800 p-0 flex flex-col">
-                <SheetHeader className="p-4 border-b border-zinc-800">
-                    <SheetTitle className="flex items-center gap-2">
-                        <ListMusic className="h-5 w-5 text-blue-500" />
-                        Current Setlist
+                <SheetHeader className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+                    <SheetTitle className="flex items-center gap-2 text-white">
+                        <TriggerIcon className="h-5 w-5 text-blue-500" />
+                        {showPublicPicker ? "Join a Setlist" : "Current Setlist"}
                     </SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1 h-full">
-                    <div className="flex flex-col p-2 gap-1">
-                        {playbackQueue.map((track, index) => {
-                            const isCurrent = index === queueIndex
-                            return (
+                <ScrollArea className="flex-1 h-full bg-zinc-950">
+                    {showPublicPicker ? (
+                        <div className="p-4 grid gap-3">
+                            {loading && <div className="text-zinc-500 text-center py-10">Loading active setlists...</div>}
+
+                            {!loading && publicSetlists.length === 0 && (
+                                <div className="text-zinc-500 text-center py-10 flex flex-col items-center gap-2">
+                                    <Globe className="h-8 w-8 opacity-50" />
+                                    <p>No public setlists active right now.</p>
+                                </div>
+                            )}
+
+                            {publicSetlists.map(setlist => (
                                 <button
-                                    key={`${track.fileId}-${index}`}
-                                    onClick={() => {
-                                        router.push(`/perform/${track.fileId}`)
-                                        setOpen(false)
-                                    }}
-                                    className={cn(
-                                        "flex items-center gap-4 p-4 rounded-xl transition-all text-left",
-                                        isCurrent
-                                            ? "bg-blue-600 text-white shadow-lg"
-                                            : "hover:bg-zinc-900 text-zinc-400 hover:text-white"
-                                    )}
+                                    key={setlist.id}
+                                    onClick={() => handleSelectSetlist(setlist)}
+                                    className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 text-left transition-all group flex items-start gap-4"
                                 >
-                                    <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                                        isCurrent ? "bg-white/20 text-white" : "bg-zinc-800 text-zinc-500"
-                                    )}>
-                                        {index + 1}
+                                    <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                                        <PlayCircle className="h-6 w-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <div className="font-bold truncate text-lg">
-                                                {track.name}
-                                            </div>
-                                            {track.key && (
-                                                <span className={cn(
-                                                    "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
-                                                    isCurrent
-                                                        ? "bg-white/20 border-white/30 text-white"
-                                                        : "bg-zinc-800 border-zinc-700 text-zinc-400"
-                                                )}>
-                                                    {track.key}
-                                                </span>
-                                            )}
+                                        <h3 className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors truncate">
+                                            {setlist.name}
+                                        </h3>
+                                        <div className="text-sm text-zinc-500 flex items-center gap-2 mt-1">
+                                            <span>{setlist.trackCount || 0} songs</span>
+                                            {setlist.ownerName && <span>• {setlist.ownerName}</span>}
                                         </div>
-                                        {track.type && (
-                                            <div className="text-xs opacity-70 uppercase tracking-wider">
-                                                {track.type}
+                                        {setlist.eventDate && (
+                                            <div className="text-xs text-blue-400 mt-2 font-medium bg-blue-500/10 px-2 py-1 rounded w-fit">
+                                                {new Date(setlist.eventDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                                             </div>
                                         )}
                                     </div>
-                                    {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600" />}
                                 </button>
-                            )
-                        })}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col p-2 gap-1">
+                            {playbackQueue.map((track, index) => {
+                                const isCurrent = index === queueIndex
+                                return (
+                                    <button
+                                        key={`${track.fileId}-${index}`}
+                                        onClick={() => {
+                                            router.push(`/perform/${track.fileId}`)
+                                            setOpen(false)
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-4 p-4 rounded-xl transition-all text-left",
+                                            isCurrent
+                                                ? "bg-blue-600 text-white shadow-lg"
+                                                : "hover:bg-zinc-900 text-zinc-400 hover:text-white"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                                            isCurrent ? "bg-white/20 text-white" : "bg-zinc-800 text-zinc-500"
+                                        )}>
+                                            {index + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <div className="font-bold truncate text-lg">
+                                                    {track.name}
+                                                </div>
+                                                {track.key && (
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
+                                                        isCurrent
+                                                            ? "bg-white/20 border-white/30 text-white"
+                                                            : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                                                    )}>
+                                                        {track.key}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {track.type && (
+                                                <div className="text-xs opacity-70 uppercase tracking-wider">
+                                                    {track.type}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600" />}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
                 </ScrollArea>
 
                 <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
                     <Button
                         variant="outline"
-                        className="w-full h-12 text-lg font-bold border-zinc-700"
+                        className="w-full h-12 text-lg font-bold border-zinc-700 hover:bg-zinc-800 text-zinc-300"
                         onClick={() => setOpen(false)}
                     >
                         Close
