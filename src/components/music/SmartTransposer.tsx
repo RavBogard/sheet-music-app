@@ -164,24 +164,25 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                         key={i}
                         className="absolute flex items-center justify-center"
                         style={{
-                            left: `${chord.x}%`,
-                            top: `${chord.y}%`,
+                            // Position at CENTER of detected chord
+                            left: `${chord.x + (chord.w / 2)}%`,
+                            top: `${chord.y + (chord.h / 2)}%`,
                             transform: 'translate(-50%, -50%)',
 
-                            // Compact sizing - just big enough to cover the chord
-                            height: `${Math.max(chord.h * 1.4, 2)}%`,    // Reduced from 2.5/3
-                            minWidth: 'auto',                             // Remove forced min-width
-                            padding: '0.2em 0.4em',                       // Reduced padding
+                            // Sizing - ensure full coverage
+                            height: `${Math.max(chord.h * 1.8, 2.5)}%`,
+                            minWidth: `${Math.max(chord.w * 1.5, 2.5)}%`,
+                            padding: '0.25em 0.5em',
 
-                            // Clean appearance - NO border, NO shadow
+                            // Clean white background
                             backgroundColor: 'white',
-                            border: 'none',                               // Removed border
+                            border: 'none',
                             borderRadius: '2px',
-                            boxShadow: 'none',                            // Removed shadow
+                            boxShadow: 'none',
 
                             // Typography
                             color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: `${Math.max(fontSize, 14)}px`,     // Simplified, removed 1.2x multiplier
+                            fontSize: `${Math.max(fontSize, 14)}px`,
                             fontWeight: 700,
                             fontFamily: 'ui-monospace, monospace',
                             lineHeight: 1.2,

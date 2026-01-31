@@ -118,8 +118,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Check spacing (horizontal gap)
             // If gap is small, it's likely one word/chord split by kerning
             const gap = next.x - current.r;
-            // Gap smaller than full font height? (Reduced to 0.3 to prevent merging with distant text)
-            const isClose = gap < (current.h * 0.3);
+            // Gap smaller than full font height? (Increased to 0.6 to catch F#m7, Cmaj7, etc.)
+            const isClose = gap < (current.h * 0.6);
 
             if (sameLine && isClose) {
                 // Merge
@@ -142,6 +142,23 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     if (merged.length > 0) {
         // Log a sample to avoid flooding console, or all if debugging
         console.log('[TextScanner] Merged items sample:', merged.slice(0, 10).map(m => ({ text: m.text.substring(0, 10), x: m.x.toFixed(0) })));
+        console.log('[TextScanner] Merged text samples:', merged.filter(m => m.text.length > 2).slice(0, 20).map(m => m.text));
+
+        // Log potential chords that were NOT captured
+        const missedChords = merged.filter(item => {
+            const text = item.text.trim();
+            const xPct = ((item.x - pageRect.left) / pageRect.width) * 100;
+            // Check if it LOOKS like a chord but wasn't captured
+            const looksLikeChord = /^[A-G]/.test(text) && text.length <= 6;
+            const wasNotCaptured = !CHORD_REGEX.test(text.replace(/[^\w#b♯♭\/]/g, ''));
+            return looksLikeChord && wasNotCaptured && xPct > 70;
+        });
+        if (missedChords.length > 0) {
+            console.log('[TextScanner] Potential missed chords:', missedChords.map(m => ({
+                text: m.text,
+                xPct: (((m.x - pageRect.left) / pageRect.width) * 100).toFixed(1)
+            })));
+        }
     }
 
     // 4. Filter for Chords
@@ -149,7 +166,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         const text = item.text.trim();
 
         // Check if it matches chord regex and isn't excluded
-        if (CHORD_REGEX.test(text) && !EXCLUDED_WORDS.has(text)) {
+        const cleanText = text.replace(/[^\w#b♯♭\/]/g, '');  // Remove any stray characters
+        if (CHORD_REGEX.test(cleanText) && !EXCLUDED_WORDS.has(cleanText)) {
 
             // Special check for "A" - removed as it was too aggressive
             // Using standard regex and exclusion list only.
@@ -166,7 +184,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
 
             chords.push({
                 id: crypto.randomUUID(),
-                text: text,
+                text: cleanText,  // Use cleaned text
                 x, y, w, h,
                 pxHeight: item.h
             });
