@@ -14,10 +14,7 @@ import { DashboardChatPrompt } from "@/components/dashboard/DashboardChatPrompt"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const router = useRouter()
     const { user, signIn, isLeader } = useAuth()
-    const { allFiles, loading, loadLibrary } = useLibraryStore()
-    const { fileUrl } = useMusicStore()
     const { allFiles, loading, loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
 
