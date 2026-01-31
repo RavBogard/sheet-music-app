@@ -60,31 +60,94 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
         <div
             className={cn(
                 "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 transform",
-                "h-32 lg:h-20 bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0", // Increased height for mobile/tablet 2-row layout
-                "flex flex-col lg:flex-row items-center justify-between", // Column on mobile/tablet, Row on desktop
+                "h-32 lg:h-20 bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0",
+                "flex flex-col lg:flex-row items-center justify-between",
                 visible || menuOpen || aiState.scanningPages.length > 0 ? "translate-y-0" : "translate-y-full"
             )}
         >
-            {/* --- MOBILE/TABLET TOP ROW: Navigation --- */}
-            <div className="lg:hidden w-full h-1/2 flex items-center justify-center border-b border-zinc-900 bg-zinc-950/50">
-                <SongNavigation />
+            {/* --- MOBILE/TABLET TOP ROW: Tools --- */}
+            <div className="lg:hidden w-full h-1/2 flex items-center justify-center gap-2 sm:gap-4 border-b border-zinc-900 bg-zinc-900/30 px-4">
+                <SetlistDrawer />
+
+                {/* Tuner */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-10 w-10 hover:bg-zinc-800 rounded-xl" title="Tuner">
+                            <span className="font-bold text-[10px]">TUNE</span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="center" side="top">
+                        <Tuner />
+                    </PopoverContent>
+                </Popover>
+
+                {/* Mobile Metronome (Icon Only/Small) */}
+                <MetronomeControl />
+
+                {/* Transposer */}
+                <Popover open={menuOpen} onOpenChange={(open) => {
+                    setMenuOpen(open)
+                    if (open && !aiState.isEnabled) {
+                        setAiEnabled(true)
+                    }
+                }}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={aiState.isEnabled ? "default" : "ghost"}
+                            className={cn(
+                                "h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-lg transition-all font-semibold text-xs sm:text-sm p-0 sm:min-w-0",
+                                aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                            )}
+                        >
+                            {aiState.scanningPages.length > 0 ? (
+                                <Loader2 className="h-4 w-4 animate-spin sm:mr-1.5" />
+                            ) : capoFret !== null && capoFret > 0 ? (
+                                <Sparkles className="h-4 w-4 sm:mr-1.5" />
+                            ) : (
+                                <Sparkles className="h-4 w-4 sm:mr-1.5" />
+                            )}
+                            <span className="hidden sm:inline">
+                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Transpose")}
+                            </span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                        <TransposerMenu />
+                    </PopoverContent>
+                </Popover>
+
+                <BackingTrackPlayer />
             </div>
 
-            {/* --- MAIN BAR (Mobile/Tablet Bottom Row / Desktop Full Bar) --- */}
-            <div className="w-full h-1/2 lg:h-full flex items-center justify-between px-3 lg:px-6 relative">
+            {/* --- MOBILE/TABLET BOTTOM ROW: Navigation --- */}
+            <div className="lg:hidden w-full h-1/2 flex items-center justify-between px-2 relative">
+                <div className="absolute left-2 z-10">
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-10 w-10 hover:bg-zinc-800 rounded-xl">
+                        <Home className="h-5 w-5" />
+                    </Button>
+                </div>
+
+                <div className="w-full flex justify-center">
+                    <SongNavigation />
+                </div>
+            </div>
+
+
+            {/* --- DESKTOP VIEW (Hidden on Mobile) --- */}
+            <div className="hidden lg:flex w-full h-full items-center justify-between px-6 relative">
 
                 {/* LEFT ZONE: System & Navigation */}
-                <div className="flex items-center gap-2 lg:gap-4 z-10">
-                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-10 w-10 lg:h-12 lg:w-12 hover:bg-zinc-800 rounded-xl">
-                        <Home className="h-5 w-5 lg:h-6 lg:w-6" />
+                <div className="flex items-center gap-4 z-10">
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl">
+                        <Home className="h-6 w-6" />
                     </Button>
                     <SetlistDrawer />
 
                     {/* Tuner */}
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-10 w-10 lg:h-12 lg:w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
-                                <span className="font-bold text-[10px] lg:text-xs">TUNE</span>
+                            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl" title="Tuner">
+                                <span className="font-bold text-xs">TUNE</span>
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="start" side="top">
@@ -93,23 +156,18 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </Popover>
                 </div>
 
-                {/* CENTER ZONE (Desktop): Song Navigation */}
-                <div className="hidden lg:flex absolute left-0 right-0 justify-center pointer-events-none">
+                {/* CENTER ZONE: Song Navigation */}
+                <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
                     <div className="pointer-events-auto">
                         <SongNavigation />
                     </div>
                 </div>
 
-                {/* CENTER ZONE (Mobile/Tablet): Visual Metronome */}
-                <div className="lg:hidden flex items-center justify-center absolute left-1/2 -translate-x-1/2">
-                    <MetronomeControl />
-                </div>
-
                 {/* RIGHT ZONE: Tools */}
-                <div className="flex items-center gap-2 lg:gap-4 z-10">
+                <div className="flex items-center gap-4 z-10">
 
-                    {/* Metronome Control (Desktop) - Swapped to Left of Transposer */}
-                    <div className="hidden lg:flex items-center gap-1 lg:gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
+                    {/* Metronome Control */}
+                    <div className="flex items-center gap-2 bg-zinc-900/50 rounded-full p-1 border border-white/5">
                         <MetronomeControl />
                     </div>
 
@@ -124,23 +182,23 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                             <Button
                                 variant={aiState.isEnabled ? "default" : "ghost"}
                                 className={cn(
-                                    "h-9 sm:h-10 px-3 rounded-lg transition-all font-semibold text-xs sm:text-sm",
+                                    "h-10 px-3 rounded-lg transition-all font-semibold text-sm",
                                     aiState.isEnabled ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
                                     <>
-                                        <Loader2 className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                                         Scan
                                     </>
                                 ) : capoFret !== null && capoFret > 0 ? (
                                     <>
-                                        <Sparkles className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+                                        <Sparkles className="mr-1.5 h-4 w-4" />
                                         Capo {capoFret}
                                     </>
                                 ) : (
                                     <>
-                                        <Sparkles className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+                                        <Sparkles className="mr-1.5 h-4 w-4" />
                                         Transpose
                                     </>
                                 )}
