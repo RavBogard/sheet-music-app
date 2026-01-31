@@ -156,6 +156,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const isChanged = transposed !== chord.originalText
                 const fontSize = Math.max(chord.pxHeight * 0.7, 14)
 
+                // Debug logging
+                console.log(`[Transposer] "${chord.originalText}" -> "${transposed}" (semitones: ${transposition}, changed: ${isChanged})`)
+
                 return (
                     <div
                         key={i}
@@ -165,14 +168,14 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
                             transform: 'translate(-50%, -50%)',
 
-                            height: `${chord.h}%`,
-                            minWidth: `${chord.h * 2}%`,
-                            padding: '0 0.3em',
+                            height: `${chord.h * 1.3}%`,
+                            minWidth: `${chord.h * 3}%`,
+                            padding: '0 0.5em',
 
-                            backgroundColor: 'rgba(255, 255, 255, 0.97)',
+                            backgroundColor: 'white',
                             border: '1px solid #e2e8f0',
                             borderRadius: '3px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
 
                             color: isChanged ? '#7c3aed' : '#0284c7',
                             fontSize: `${fontSize}px`,

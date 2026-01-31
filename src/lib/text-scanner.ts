@@ -22,9 +22,9 @@ export interface ScannedChord {
 // Strict Chord Regex
 // Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, etc.
 // Also matches Unicode Sharp (♯) and Flat (♭)
-const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(m|min|maj|dim|aug|sus|add|M|5|6|7|9|11|13)*(\/[A-G][b#\u266F\u266D]?)?$/;
+const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(m|min|maj|dim|aug|sus|add|M|7|9|11|13|6|5|2|4)*(\/[A-G][b#\u266F\u266D]?)?$/;
 
-const EXCLUDED_WORDS = new Set(["I", "A", "Am"]);
+const EXCLUDED_WORDS = new Set(["I", "II", "III", "IV", "V", "VI", "VII"]);
 
 export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const textLayer = pageElement.querySelector('.react-pdf__Page__textContent');
@@ -103,8 +103,27 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     merged.forEach(item => {
         const text = item.text.trim();
 
-        // Exclude common short words that match regex (I, A) - "A" is valid but risky.
+        // Check if it matches chord regex and isn't excluded
         if (CHORD_REGEX.test(text) && !EXCLUDED_WORDS.has(text)) {
+
+            // Special check for "A" - is it an article?
+            // Heuristic: If "A" appears on the same line as other long non-chord words, it's likely an article.
+            if (text === "A") {
+                const lineNeighbors = merged.filter(other =>
+                    other !== item &&
+                    Math.abs(other.y - item.y) < (item.h / 2) // Close Y
+                );
+
+                // If neighbors contain regular words (not chords, len > 3), assume it's a lyric line
+                const hasLyricNeighbors = lineNeighbors.some(n =>
+                    !CHORD_REGEX.test(n.text.trim()) && n.text.trim().length > 3
+                );
+
+                if (hasLyricNeighbors) {
+                    return; // Skip this "A", it's likely an article
+                }
+            }
+
             // Calculate relative % using the merged screen coordinates
             const x = ((item.x - pageRect.left) / pageRect.width) * 100;
             const y = ((item.y - pageRect.top) / pageRect.height) * 100;

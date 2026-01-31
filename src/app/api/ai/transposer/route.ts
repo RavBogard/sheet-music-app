@@ -19,6 +19,10 @@ The image strips you receive are horizontal slices from music lead sheets contai
 
 ## CHORD RECOGNITION RULES
 
+IMPORTANT: Detect ALL chord symbols, even if they appear multiple times. Songs commonly alternate between 2-3 chords (e.g., A-E-A-E or D-A-Bm-G). Do not skip or deduplicate repeated chords. Each occurrence must be reported with its own x position.
+
+Also detect chord extensions like F#m7, Cmaj7, Gsus4. The # and b symbols may appear as Unicode (♯ ♭) or ASCII (# b).
+
 A valid chord symbol consists of:
 1. ROOT NOTE: Single capital letter A-G
 2. OPTIONAL ACCIDENTAL: # (sharp) or b (flat) — immediately after root
