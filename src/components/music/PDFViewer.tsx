@@ -116,7 +116,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
                         file={source}
                         onLoadSuccess={onDocumentLoadSuccess}
                         loading={
-                            <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-4 mt-20">
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
                                 <Loader2 className="animate-spin h-10 w-10" />
                                 <p>Loading Chart...</p>
                             </div>
