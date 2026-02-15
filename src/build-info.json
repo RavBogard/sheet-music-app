@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "commit": "2.0.0-rc",
+  "commit": "2.0.0-final",
   "branch": "master",
   "buildDate": "2/15/2026",
   "changelog": [
@@ -9,10 +9,13 @@
     "2.0.0 - feat: Per-musician gig packets in Print Modal",
     "2.0.0 - feat: Auto-transposition in performance mode based on musician profile",
     "2.0.0 - feat: Firebase Storage migration — CDN-served files, Drive as intake only",
-    "2.0.0 - feat: Firestore typed helpers — clean date handling throughout",
-    "2.0.0 - refactor: Remove dead code (OnboardingTour, CommandPalette, BackingTrackPlayer)",
-    "2.0.0 - refactor: Semantic theme colors across all 30+ components",
-    "2.0.0 - feat: Vitest testing framework + comprehensive music-math tests",
+    "2.0.0 - feat: Smart prefetch — preloads next 3 songs for instant page turns",
+    "2.0.0 - feat: PWA offline — Workbox caches PDFs and Firebase Storage for 30 days",
+    "2.0.0 - feat: Vitest testing — 12 test files, 200+ cases",
+    "2.0.0 - refactor: Component decomposition — SetlistDashboard, SongChartsLibrary, TrackItem",
+    "2.0.0 - refactor: Shared chord-utils, eliminated 25+ any types, strict TypeScript",
+    "2.0.0 - refactor: Semantic theme colors across all 72 components",
+    "2.0.0 - fix: Remove dead code (OnboardingTour, CommandPalette, BackingTrackPlayer)",
     "2.0.0 - feat: Logger utility (silent in production)",
     "2.0.0 - feat: Rebrand to CentralReform.live"
   ]
