@@ -10,7 +10,7 @@ import { Setlist, UserProfile, SetlistTrack } from "@/types/models"
  * Convert a Firestore Timestamp or string to a JS Date.
  * Handles all the variants stored in the database.
  */
-export function toDate(value: any): Date | null {
+export function toDate(value: string | number | Date | { seconds: number; nanoseconds: number } | { toDate: () => Date } | null | undefined): Date | null {
     if (!value) return null
     if (value instanceof Date) return value
     if (value instanceof Timestamp) return value.toDate()
@@ -25,7 +25,7 @@ export function toDate(value: any): Date | null {
  * Convert a Firestore Timestamp or string to an ISO string.
  * For consistent serialization to the client.
  */
-export function toISOString(value: any): string | null {
+export function toISOString(value: string | number | Date | { seconds: number; nanoseconds: number } | { toDate: () => Date } | null | undefined): string | null {
     const d = toDate(value)
     return d ? d.toISOString() : null
 }
@@ -34,7 +34,7 @@ export function toISOString(value: any): string | null {
  * Format a date value (Timestamp | string | Date) for display.
  * Returns a user-friendly string like "Friday, February 14".
  */
-export function formatEventDate(value: any): string | null {
+export function formatEventDate(value: string | number | Date | { seconds: number; nanoseconds: number } | { toDate: () => Date } | null | undefined): string | null {
     const d = toDate(value)
     if (!d) return null
     return d.toLocaleDateString('en-US', {
@@ -47,7 +47,7 @@ export function formatEventDate(value: any): string | null {
 /**
  * Get a relative label for an event date: "Tonight", "Tomorrow", or the formatted date.
  */
-export function getRelativeDateLabel(value: any): string | null {
+export function getRelativeDateLabel(value: string | number | Date | { seconds: number; nanoseconds: number } | { toDate: () => Date } | null | undefined): string | null {
     const d = toDate(value)
     if (!d) return null
 
