@@ -65,6 +65,6 @@ export async function POST(req: Request) {
 
     } catch (error: unknown) {
         console.error("Prune Scan Failed:", error)
-        return new NextResponse(error.message || "Internal Server Error", { status: 500 })
+        return new NextResponse((error instanceof Error ? error.message : "Unknown error") || "Internal Server Error", { status: 500 })
     }
 }
