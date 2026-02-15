@@ -44,20 +44,20 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
     const isAdmin = user.role === 'admin'
 
     return (
-        <div className="flex items-center justify-between p-4 bg-zinc-900/50 border border-white/5 rounded-xl transition-all hover:bg-zinc-900 gap-4">
+        <div className="flex items-center justify-between p-4 bg-muted border border-white/5 rounded-xl transition-all hover:bg-card gap-4">
             <div className="flex items-center gap-4 min-w-0 flex-1">
-                <Avatar className="h-10 w-10 border border-white/10 shrink-0">
+                <Avatar className="h-10 w-10 border border-border shrink-0">
                     <AvatarImage src={user.photoURL} />
                     <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-white truncate">{user.displayName}</p>
+                        <p className="font-medium text-foreground truncate">{user.displayName}</p>
                         {isAdmin && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[10px] h-5 px-1.5">Admin</Badge>}
                         {isPending && <Badge variant="destructive" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
                     </div>
-                    <p className="text-xs text-zinc-400 truncate">{user.email}</p>
-                    <p className="text-[10px] text-zinc-600 mt-1">
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
                         Joined {user.createdAt ? formatDistanceToNow(user.createdAt.toDate(), { addSuffix: true }) : "Unknown"}
                     </p>
                 </div>
@@ -69,7 +69,7 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
                     value={user.role}
                     onValueChange={handleRoleChange}
                 >
-                    <SelectTrigger className="w-28 sm:w-32 bg-zinc-950 border-white/10 h-8 text-xs">
+                    <SelectTrigger className="w-28 sm:w-32 bg-background border-border h-8 text-xs">
                         <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent>
