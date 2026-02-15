@@ -237,7 +237,7 @@ export async function POST(request: Request) {
 
                 if (needsTransposition) {
                     try {
-                        console.log(`[Print] Transposing ${track.title}: ${track.transposition > 0 ? '+' : ''}${track.transposition} semitones`)
+                        console.log(`[Print] Transposing ${track.title}: ${track.transposition! > 0 ? '+' : ''}${track.transposition} semitones`)
 
                         // Extract chords from this PDF
                         const extraction = await extractChordsFromPdf(pdfBytes)
