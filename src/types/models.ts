@@ -45,7 +45,7 @@ export interface Setlist {
     id: string
     name: string
     date: { seconds: number; nanoseconds: number } | Date | string
-    eventDate?: string | any // Timestamp | string
+    eventDate?: string | { seconds: number; nanoseconds: number }
     tracks: SetlistTrack[]
     trackCount: number
     isPublic?: boolean
@@ -83,3 +83,4 @@ export interface MusicianProfile {
     preferredCapoFret?: number // Default capo position (e.g., 7 for guitar in Am → Em shape)
     preferFlats?: boolean // Prefer flat notation (Bb) over sharps (A#)
 }
+
