@@ -38,6 +38,7 @@ export interface SetlistTrack {
     duration?: string
     bpm?: number
     leadMusician?: string
+    transposition?: number // Per-track transposition in semitones (0 = original key)
 }
 
 export interface Setlist {
@@ -67,4 +68,17 @@ export interface UserProfile {
     role: UserRole
     createdAt?: any
     lastLoginAt?: any
+}
+
+/**
+ * Musician-specific preferences for transposition, instrument, and print formatting.
+ * Stored as a subcollection or field on UserProfile.
+ * Used by the per-musician gig packet feature.
+ */
+export interface MusicianProfile {
+    instrument?: string // e.g. "Guitar", "Bass", "Piano", "Trumpet"
+    defaultTransposition?: number // Instrument transposition offset in semitones (e.g., Bb trumpet = -2)
+    preferCapo?: boolean // Whether to show capo notation instead of transposed chords
+    preferredCapoFret?: number // Default capo position (e.g., 7 for guitar in Am → Em shape)
+    preferFlats?: boolean // Prefer flat notation (Bb) over sharps (A#)
 }
