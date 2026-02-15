@@ -96,8 +96,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             if (!omrRes.ok) {
                 if (omrRes.status === 504) throw new Error("The AI took too long. The file might be too complex or large.")
                 const text = await omrRes.text()
-                try { throw new Error(JSON.parse(text).error || "Digitization failed") }
-                catch { throw new Error(`Server Error (${omrRes.status}): ${text.substring(0, 50)}...`) }
+                let errorMsg = "Digitization failed"
+                try { const json = JSON.parse(text); if (json.error) errorMsg = json.error }
+                catch { errorMsg = `Server Error (${omrRes.status}): ${text.substring(0, 50)}...` }
+                throw new Error(errorMsg)
             }
 
             const omrData = await omrRes.json()
@@ -194,3 +196,4 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         </div>
     )
 }
+
