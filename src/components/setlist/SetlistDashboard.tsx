@@ -4,27 +4,18 @@ import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
-import { ChevronLeft, Plus, FileText, Trash2, Calendar, LogIn, LogOut, User, Globe, Lock, Copy, List, Download } from "lucide-react"
+import { ChevronLeft, Plus, LogIn, Calendar } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useOfflineManager } from "@/hooks/use-offline-manager"
-
-
 import { toast } from "sonner"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
+import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
+import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
+import { SetlistToolbar } from "./SetlistToolbar"
 
 interface SetlistDashboardProps {
     onBack: () => void
@@ -33,36 +24,39 @@ interface SetlistDashboardProps {
 }
 
 export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
-    const { user, loading: authLoading, signIn, signOut } = useAuth()
-    const { downloadSetlist, isDownloading } = useOfflineManager() // Import Hook
+    const { user, signIn } = useAuth()
+    const { downloadSetlist, isDownloading } = useOfflineManager()
 
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar'>('list')
 
-    // Create service (works for guest too)
+    // Dialog state
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+    const [setlistToDelete, setSetlistToDelete] = useState<Setlist | null>(null)
+    const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
+    const [setlistToDuplicate, setSetlistToDuplicate] = useState<Setlist | null>(null)
+    const [showTransferDialog, setShowTransferDialog] = useState(false)
+    const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
+    const [transferEmail, setTransferEmail] = useState("")
+
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user])
 
-    const [error, setError] = useState<string | null>(null)
-
-    // Subscribe to personal setlists (Only if user exists)
+    // Subscribe to personal setlists
     useEffect(() => {
         if (!user || !setlistService) {
             setLoading(false)
             return
         }
-
         setLoading(true)
         setError(null)
         const unsubscribe = setlistService.subscribeToPersonalSetlists(
-            (data) => {
-                setPersonalSetlists(data)
-                setLoading(false)
-            },
+            (data) => { setPersonalSetlists(data); setLoading(false) },
             (err) => {
                 console.error("Personal setlist subscription error:", err)
                 setError("Failed to load your personal setlists. Please check your connection.")
@@ -72,19 +66,12 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         return () => unsubscribe()
     }, [setlistService, user])
 
-    // Subscribe to public setlists (Everyone)
+    // Subscribe to public setlists
     useEffect(() => {
         if (!setlistService) return
-
         const unsubscribe = setlistService.subscribeToPublicSetlists(
-            (data) => {
-                setPublicSetlists(data)
-            },
-            (err) => {
-                // Non-blocking error for public list if main personal list might still work?
-                // Or just show global error? Let's show specific error if active tab is public?
-                console.error("Public setlist subscription error:", err)
-            }
+            (data) => setPublicSetlists(data),
+            (err) => console.error("Public setlist subscription error:", err)
         )
         return () => unsubscribe()
     }, [setlistService])
@@ -94,84 +81,14 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         if (!user) setActiveTab('public')
     }, [user])
 
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-    const [setlistToDelete, setSetlistToDelete] = useState<Setlist | null>(null)
-
-    const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
-    const [setlistToDuplicate, setSetlistToDuplicate] = useState<Setlist | null>(null)
-
-    const [showTransferDialog, setShowTransferDialog] = useState(false)
-    const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
-    const [transferEmail, setTransferEmail] = useState("")
-
-    const handleDuplicateClick = (setlist: Setlist, e: React.MouseEvent) => {
-        e.stopPropagation()
-        setSetlistToDuplicate(setlist)
-        setDuplicateConfirmOpen(true)
-    }
-
-    const confirmDuplicate = async () => {
-        if (!setlistService || !user || !setlistToDuplicate) return
-
-        try {
-            await setlistService.copyToPersonal(setlistToDuplicate.id, setlistToDuplicate)
-            toast.success("Setlist duplicated successfully!")
-            setActiveTab('personal')
-        } catch (err) {
-            console.error("Duplicate failed:", err)
-            toast.error("Failed to duplicate setlist.")
-        }
-        setDuplicateConfirmOpen(false)
-        setSetlistToDuplicate(null)
-    }
-
-    const openTransferDialog = (setlist: Setlist, e: React.MouseEvent) => {
-        e.stopPropagation()
-        setSelectedSetlistForTransfer(setlist)
-        setShowTransferDialog(true)
-    }
-
-    const handleTransfer = async () => {
-        if (!selectedSetlistForTransfer || !transferEmail) return
-
-        try {
-            const token = await user?.getIdToken()
-            const res = await fetch('/api/setlist/transfer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    setlistId: selectedSetlistForTransfer.id,
-                    newOwnerEmail: transferEmail
-                })
-            })
-
-            if (!res.ok) {
-                const msg = await res.text()
-                throw new Error(msg)
-            }
-
-            toast.success("Transfer Successful!")
-            setShowTransferDialog(false)
-            setTransferEmail("")
-            setSelectedSetlistForTransfer(null)
-        } catch (err: any) {
-            toast.error(`Transfer Failed: ${err.message}`)
-        }
-    }
+    /* ─── Handlers ─── */
 
     const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (!setlistService) return
-
-        // Only owner can delete
         if (setlist.isPublic && setlist.ownerId !== user?.uid) {
             toast.error("You can only delete setlists you created")
             return
         }
-
         setSetlistToDelete(setlist)
         setDeleteConfirmOpen(true)
     }
@@ -181,50 +98,114 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         try {
             await setlistService.deleteSetlist(setlistToDelete.id, setlistToDelete.isPublic || false)
             toast.success("Setlist deleted")
-        } catch (error) {
+        } catch {
             toast.error("Failed to delete setlist")
         }
         setDeleteConfirmOpen(false)
         setSetlistToDelete(null)
     }
 
+    const handleDuplicateClick = (setlist: Setlist, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setSetlistToDuplicate(setlist)
+        setDuplicateConfirmOpen(true)
+    }
+
+    const confirmDuplicate = async () => {
+        if (!setlistService || !user || !setlistToDuplicate) return
+        try {
+            await setlistService.copyToPersonal(setlistToDuplicate.id, setlistToDuplicate)
+            toast.success("Setlist duplicated successfully!")
+            setActiveTab('personal')
+        } catch {
+            toast.error("Failed to duplicate setlist.")
+        }
+        setDuplicateConfirmOpen(false)
+        setSetlistToDuplicate(null)
+    }
+
+    const handleTransfer = async () => {
+        if (!selectedSetlistForTransfer || !transferEmail) return
+        try {
+            const token = await user?.getIdToken()
+            const res = await fetch('/api/setlist/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ setlistId: selectedSetlistForTransfer.id, newOwnerEmail: transferEmail })
+            })
+            if (!res.ok) throw new Error(await res.text())
+            toast.success("Transfer Successful!")
+            setShowTransferDialog(false)
+            setTransferEmail("")
+            setSelectedSetlistForTransfer(null)
+        } catch (err: any) {
+            toast.error(`Transfer Failed: ${err.message}`)
+        }
+    }
+
     const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
         if (!setlistService || !user) return
-
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-
-        let name = 'New Setlist'
-        // Auto-detect Shabbat Morning if it's a Saturday (Day 6)
-        if (type === 'shabbat_morning' || date.getDay() === 6) {
-            name = `Shabbat Morning ${formattedDate}`
-        }
-
+        const name = (type === 'shabbat_morning' || date.getDay() === 6)
+            ? `Shabbat Morning ${formattedDate}`
+            : 'New Setlist'
         try {
             const id = await setlistService.createSetlist(name, [], true, {
                 eventDate: date.toISOString(),
                 templateType: type || undefined
             })
-            // await setlistService.updateSetlist(id, false, { ... }) // Removed in favor of atomic create
-
-            const newSetlist: Setlist = {
-                id,
-                name,
-                tracks: [],
-                trackCount: 0,
+            onSelect({
+                id, name, tracks: [], trackCount: 0,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
-                eventDate: date.toISOString(),
-                ownerId: user.uid,
-                isPublic: false
-            }
-            onSelect(newSetlist)
-
-        } catch (e) {
-            console.error("Failed to create from calendar", e)
+                eventDate: date.toISOString(), ownerId: user.uid, isPublic: false
+            })
+        } catch {
             toast.error("Failed to create setlist")
         }
     }
 
+    const handleDownload = async (setlist: Setlist) => {
+        if (setlist.tracks && setlist.tracks.length > 0) {
+            const queueItems = setlist.tracks
+                .filter(t => t.fileId)
+                .map(t => ({ name: t.title, fileId: t.fileId!, type: 'pdf' as const, key: t.key }))
+            await downloadSetlist(queueItems)
+        } else {
+            toast.error("No tracks to download in this setlist")
+        }
+    }
+
     const displayedSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
+
+    /* ─── Derived data ─── */
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const getDate = (s: Setlist) => s.eventDate ? new Date(s.eventDate) : null
+
+    const upcoming = displayedSetlists
+        .filter(s => { const d = getDate(s); return d && d >= today })
+        .sort((a, b) => getDate(a)!.getTime() - getDate(b)!.getTime())
+
+    const pastOrNoDate = displayedSetlists
+        .filter(s => { const d = getDate(s); return !d || d < today })
+
+    const placeholders: { date: Date }[] = []
+    if (user && activeTab === 'public') {
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(today)
+            d.setDate(today.getDate() + i)
+            const exists = publicSetlists.some(s => { const sd = getDate(s); return sd && sd.toDateString() === d.toDateString() })
+            if (!exists && d.getDay() === 6) {
+                placeholders.push({ date: d })
+            }
+        }
+    }
+
+    const hasUpcoming = upcoming.length > 0 || placeholders.length > 0
+
+    /* ─── Render ─── */
 
     return (
         <div className="h-screen flex flex-col bg-background text-foreground">
@@ -234,388 +215,94 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
-                    <img
-                        src="/logo.jpg"
-                        alt="CRC"
-                        className="h-8 w-8 rounded-full border border-border object-cover"
-                    />
+                    <img src="/logo.jpg" alt="CRC" className="h-8 w-8 rounded-full border border-border object-cover" />
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
-
-                {user && (
-                    <div className="flex items-center gap-2">
-                        <Button
-                            onClick={onCreateNew}
-                            className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6"
-                        >
-                            <Plus className="h-5 w-5" />
-                            New Setlist
-                        </Button>
-                    </div>
-                )}
-                {!user && (
+                {user ? (
+                    <Button onClick={onCreateNew} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
+                        <Plus className="h-5 w-5" /> New Setlist
+                    </Button>
+                ) : (
                     <Button onClick={signIn} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-500">
-                        <LogIn className="h-4 w-4" />
-                        Sign In
+                        <LogIn className="h-4 w-4" /> Sign In
                     </Button>
                 )}
             </div>
 
             {/* Dialogs */}
-            <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Setlist?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete "{setlistToDelete?.name}"? This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Duplicate Setlist</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Create a personal copy of "{setlistToDuplicate?.name}"?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDuplicate}>Duplicate</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Transfer Dialog Overlay */}
-            {showTransferDialog && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-card border border-border p-6 rounded-xl max-w-md w-full space-y-4">
-                        <h3 className="text-xl font-bold">Transfer Ownership</h3>
-                        <p className="text-muted-foreground">
-                            Transferring <strong>{selectedSetlistForTransfer?.name}</strong> to another user.
-                            You will lose access unless they share it back with you.
-                        </p>
-                        <input
-                            type="email"
-                            placeholder="New Owner's Email"
-                            className="w-full bg-background border border-border p-3 rounded-lg text-foreground"
-                            value={transferEmail}
-                            onChange={(e) => setTransferEmail(e.target.value)}
-                        />
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button variant="ghost" onClick={() => setShowTransferDialog(false)}>Cancel</Button>
-                            <Button onClick={handleTransfer} disabled={!transferEmail}>Transfer</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteSetlistDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} setlistName={setlistToDelete?.name} onConfirm={confirmDelete} />
+            <DuplicateSetlistDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen} setlistName={setlistToDuplicate?.name} onConfirm={confirmDuplicate} />
+            <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} />
 
             {/* Tabs & View Toggle */}
-            <div className="px-6 pt-6 shrink-0 flex items-center justify-between">
-                <div className="flex bg-card p-1 rounded-xl w-fit">
-                    <Button
-                        variant={activeTab === 'public' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setActiveTab('public')}
-                        className={`transition-all ${activeTab === 'public' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
-                    >
-                        Public Library
-                    </Button>
-                    {user && (
-                        <Button
-                            variant={activeTab === 'personal' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setActiveTab('personal')}
-                            className={`transition-all ${activeTab === 'personal' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
-                        >
-                            My Personal
-                        </Button>
-                    )}
-                </div>
-
-                <div className="flex bg-card p-1 rounded-xl w-fit">
-                    <Button
-                        variant={view === 'list' ? 'secondary' : 'ghost'}
-                        size="icon"
-                        onClick={() => setView('list')}
-                        className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
-                        title="List View"
-                    >
-                        <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant={view === 'calendar' ? 'secondary' : 'ghost'}
-                        size="icon"
-                        onClick={() => setView('calendar')}
-                        className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
-                        title="Calendar View"
-                    >
-                        <Calendar className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+            <SetlistToolbar activeTab={activeTab} onTabChange={setActiveTab} view={view} onViewChange={setView} showPersonalTab={!!user} />
 
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">
-                    <CalendarView
-                        setlists={[...personalSetlists, ...publicSetlists]}
-                        onSelectSetlist={onSelect}
-                        onCreateSetlist={handleCreateFromCalendar}
-                    />
+                    <CalendarView setlists={[...personalSetlists, ...publicSetlists]} onSelectSetlist={onSelect} onCreateSetlist={handleCreateFromCalendar} />
                 </div>
             ) : (
                 <ScrollArea className="flex-1 p-6">
-                    {/* Error State */}
                     {!loading && error && (
                         <div className="max-w-md mx-auto mt-20">
-                            <ErrorState
-                                title="Unable to Load Setlists"
-                                description={error}
-                                onRetry={() => window.location.reload()}
-                            />
+                            <ErrorState title="Unable to Load Setlists" description={error} onRetry={() => window.location.reload()} />
                         </div>
                     )}
 
-                    {/* Loader */}
                     {loading && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[1, 2, 3].map(i => (
-                                <Skeleton key={i} className="h-48 rounded-xl bg-card border border-border" />
-                            ))}
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl bg-card border border-border" />)}
                         </div>
                     )}
 
                     {!loading && !error && (
                         <div className="space-y-10">
-                            {/* UPCOMING SECTION (Only if Personal or Public has content, but technically Public usually implies upcoming services) */}
-                            {/* Actually, let's show Upcoming for EVERYONE if we are in Public tab, or if we are in Personal tab show MY upcoming */}
+                            {hasUpcoming && (
+                                <section>
+                                    <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" /> Upcoming Services
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {upcoming.map(setlist => (
+                                            <UpcomingSetlistCard key={setlist.id} setlist={setlist} onClick={() => onSelect(setlist)} onDownload={handleDownload} isDownloading={isDownloading} />
+                                        ))}
+                                        {placeholders.map((p, idx) => (
+                                            <PlaceholderCard key={idx} date={p.date} onCreate={handleCreateFromCalendar} />
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
 
-                            {(() => {
-                                const today = new Date()
-                                today.setHours(0, 0, 0, 0)
-
-                                // Helper to parse setlist date
-                                const getSetlistDate = (s: Setlist) => {
-                                    if (s.eventDate) return new Date(s.eventDate)
-                                    // Fallback to creation date if no event date? No, only event dates count for "Upcoming"
-                                    return null
-                                }
-
-                                // 1. Identify Real Upcoming Setlists
-                                const upcomingReal = displayedSetlists.filter(s => {
-                                    const d = getSetlistDate(s)
-                                    return d && d >= today
-                                }).sort((a, b) => getSetlistDate(a)!.getTime() - getSetlistDate(b)!.getTime())
-
-                                // 2. Identify Past/Other Setlists
-                                const pastOrNoDate = displayedSetlists.filter(s => {
-                                    const d = getSetlistDate(s)
-                                    // If no date, show in main list. If past, show in main list.
-                                    return !d || d < today
-                                })
-
-                                // 3. Generate Placeholders (Only for Public View & Logged In Users who can edit - essentially all logged in users for now)
-                                // "Clarify that someone should grab it and create a setlist"
-                                const placeholders = []
-                                if (user && activeTab === 'public') {
-                                    // Look ahead 7 days
-                                    for (let i = 0; i < 7; i++) {
-                                        const d = new Date(today)
-                                        d.setDate(today.getDate() + i)
-
-                                        // Check if a setlist already exists for this date (in public list)
-                                        const exists = publicSetlists.some(s => {
-                                            const sd = getSetlistDate(s)
-                                            return sd && sd.toDateString() === d.toDateString()
-                                        })
-
-                                        if (!exists) {
-                                            // User requested ONLY Saturday Morning suggestions
-                                            if (d.getDay() === 6) {
-                                                placeholders.push({ date: d, isShabbat: true })
-                                            }
-                                        }
-                                    }
-                                }
-
-                                const hasUpcoming = upcomingReal.length > 0 || placeholders.length > 0
-
-                                return (
-                                    <>
-                                        {hasUpcoming && (
-                                            <section>
-                                                <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4" />
-                                                    Upcoming Services
-                                                </h2>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {/* Real Upcoming */}
-                                                    {upcomingReal.map(setlist => (
-                                                        <button
-                                                            key={setlist.id}
-                                                            onClick={() => onSelect(setlist)}
-                                                            className="bg-card hover:bg-muted border-l-4 border-l-blue-500 border-y border-r border-border rounded-r-xl p-6 text-left transition-all group relative overflow-hidden"
-                                                        >
-                                                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                                                <Calendar className="h-24 w-24 -mr-4 -mt-4 text-blue-500" />
-                                                            </div>
-
-                                                            <div className="relative z-10">
-                                                                <div className="flex justify-between items-start mb-2">
-                                                                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
-                                                                        {new Date(setlist.eventDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                                    </div>
-                                                                    {/* Offline Button */}
-                                                                    <div
-                                                                        onClick={async (e) => {
-                                                                            e.stopPropagation()
-                                                                            if (setlist.tracks && setlist.tracks.length > 0) {
-                                                                                // Map SetlistTrack to QueueItem structure for the downloader
-                                                                                const queueItems = setlist.tracks
-                                                                                    .filter(t => t.fileId) // Only download tracks with files
-                                                                                    .map(t => ({
-                                                                                        name: t.title, // Map title -> name
-                                                                                        fileId: t.fileId!, // Assert non-null after filter
-                                                                                        type: 'pdf' as const,
-                                                                                        key: t.key
-                                                                                    }))
-                                                                                await downloadSetlist(queueItems)
-                                                                            } else {
-                                                                                toast.error("No tracks to download in this setlist")
-                                                                            }
-                                                                        }}
-                                                                        className="p-2 -mr-2 -mt-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
-                                                                        title="Download for Offline"
-                                                                    >
-                                                                        <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
-                                                                    </div>
-                                                                </div>
-                                                                <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
-                                                                {setlist.ownerName && <p className="text-muted-foreground text-sm">Leader: {setlist.ownerName}</p>}
-
-                                                                <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                                                                    <span>{setlist.trackCount || 0} songs</span>
-                                                                    {setlist.isPublic && <Globe className="h-3 w-3" />}
-                                                                </div>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-
-                                                    {/* Placeholders */}
-                                                    {placeholders.map((p, idx) => (
-                                                        <button
-                                                            key={idx}
-                                                            onClick={() => handleCreateFromCalendar(p.date)}
-                                                            className="border border-dashed border-border hover:border-zinc-500 hover:bg-card rounded-xl p-6 text-left transition-all flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
-                                                        >
-                                                            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-colors">
-                                                                <Plus className="h-6 w-6" />
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <div className="font-bold text-foreground">
-                                                                    {p.date.toLocaleDateString('en-US', { weekday: 'long' })}
-                                                                </div>
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-xs font-medium text-blue-500/80 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-wider">
-                                                                Plan Service
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </section>
-                                        )}
-
-                                        {/* Main Library / Past Setlists */}
-                                        <section>
-                                            {hasUpcoming && (
-                                                <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 border-t border-border pt-8">
-                                                    Library & Past Events
-                                                </h2>
-                                            )}
-
-                                            {pastOrNoDate.length === 0 ? (
-                                                <div className="text-muted-foreground italic py-10 text-center">No other setlists found.</div>
-                                            ) : (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {pastOrNoDate.map(setlist => (
-                                                        <button
-                                                            key={setlist.id}
-                                                            onClick={() => onSelect(setlist)}
-                                                            className="bg-card hover:bg-muted border border-border rounded-xl p-6 text-left transition-all group relative"
-                                                        >
-                                                            <div className="flex items-start justify-between mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    {setlist.isPublic ? (
-                                                                        <Globe className="h-4 w-4 text-muted-foreground/60" />
-                                                                    ) : (
-                                                                        <Lock className="h-4 w-4 text-muted-foreground/60" />
-                                                                    )}
-                                                                    {/* Add Date to Name for standard items as requested "names... should have that date... added" */}
-                                                                    <div className="flex flex-col">
-                                                                        <h3 className="text-xl font-semibold truncate max-w-[200px] group-hover:text-foreground text-foreground">{setlist.name}</h3>
-                                                                        {setlist.eventDate && (
-                                                                            <span className="text-xs text-muted-foreground">
-                                                                                {new Date(setlist.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Action Buttons (Copy/Delete) */}
-                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    {user && (
-                                                                        <div
-                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-muted-foreground hover:text-foreground"
-                                                                            onClick={(e) => handleDuplicateClick(setlist, e)}
-                                                                            title="Duplicate"
-                                                                        >
-                                                                            <Copy className="h-4 w-4" />
-                                                                        </div>
-                                                                    )}
-                                                                    {(!setlist.isPublic || setlist.ownerId === user?.uid) && (
-                                                                        <div
-                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-muted-foreground hover:text-red-400"
-                                                                            onClick={(e) => handleDeleteClick(setlist, e)}
-                                                                            title="Delete"
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            {setlist.isPublic && setlist.ownerName && (
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    by {setlist.ownerName}
-                                                                </div>
-                                                            )}
-                                                            <div className="mt-2 text-muted-foreground text-sm">
-                                                                {setlist.trackCount || 0} songs
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </section>
-                                    </>
-                                )
-                            })()}
+                            <section>
+                                {hasUpcoming && (
+                                    <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 border-t border-border pt-8">
+                                        Library &amp; Past Events
+                                    </h2>
+                                )}
+                                {pastOrNoDate.length === 0 ? (
+                                    <div className="text-muted-foreground italic py-10 text-center">No other setlists found.</div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {pastOrNoDate.map(setlist => (
+                                            <SetlistCard
+                                                key={setlist.id}
+                                                setlist={setlist}
+                                                onClick={() => onSelect(setlist)}
+                                                onDuplicate={handleDuplicateClick}
+                                                onDelete={handleDeleteClick}
+                                                canDuplicate={!!user}
+                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
                         </div>
                     )}
                 </ScrollArea>
             )}
 
-            {/* Version Footer */}
-            <div className="absolute bottom-2 right-2 text-[10px] text-zinc-800 pointer-events-none select-none z-50">
+            <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/30 pointer-events-none select-none z-50">
                 v{buildInfo.version}
             </div>
         </div>
