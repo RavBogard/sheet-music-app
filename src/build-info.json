@@ -1,13 +1,19 @@
 {
-  "version": "1.0.65",
-  "commit": "1d81a87",
+  "version": "2.0.0",
+  "commit": "2.0.0-rc",
   "branch": "master",
-  "buildDate": "1/30/2026, 5:53:45 PM",
+  "buildDate": "2/15/2026",
   "changelog": [
-    "1d81a87 - fix: prioritize first chord for key detection & improve transposer button UX (8 hours ago)",
-    "e4adf1d - fix: nuclear option for chord merging (spatial clustering) (8 hours ago)",
-    "80a5447 - fix: merge split text spans in PDF & add smart capo logic (9 hours ago)",
-    "5f57ca2 - feat: smart capo - auto key detection & shape selection (9 hours ago)",
-    "224b87f - feat: pivot to text-layer transposer + add quick capo (9 hours ago)"
+    "2.0.0 - feat: Light theme default with dark mode for performance",
+    "2.0.0 - feat: Musician profiles — instrument, transposition, capo preferences",
+    "2.0.0 - feat: Per-musician gig packets in Print Modal",
+    "2.0.0 - feat: Auto-transposition in performance mode based on musician profile",
+    "2.0.0 - feat: Firebase Storage migration — CDN-served files, Drive as intake only",
+    "2.0.0 - feat: Firestore typed helpers — clean date handling throughout",
+    "2.0.0 - refactor: Remove dead code (OnboardingTour, CommandPalette, BackingTrackPlayer)",
+    "2.0.0 - refactor: Semantic theme colors across all 30+ components",
+    "2.0.0 - feat: Vitest testing framework + comprehensive music-math tests",
+    "2.0.0 - feat: Logger utility (silent in production)",
+    "2.0.0 - feat: Rebrand to CentralReform.live"
   ]
 }
