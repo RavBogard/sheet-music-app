@@ -75,10 +75,10 @@ export function TrackDetailsModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-zinc-800 text-zinc-100 shadow-2xl gap-6">
+            <DialogContent className="sm:max-w-[500px] bg-background border-border text-zinc-100 shadow-2xl gap-6">
                 <DialogHeader>
                     <DialogTitle className="text-xl">Edit Track Details</DialogTitle>
-                    <DialogDescription className="text-zinc-400">
+                    <DialogDescription className="text-muted-foreground">
                         Update song information and files.
                     </DialogDescription>
                 </DialogHeader>
@@ -86,25 +86,25 @@ export function TrackDetailsModal({
                 <div className="grid gap-5">
                     {/* Title */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="title" className="text-right text-zinc-400">Title</Label>
+                        <Label htmlFor="title" className="text-right text-muted-foreground">Title</Label>
                         <Input
                             id="title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="col-span-3 bg-zinc-900 border-zinc-700 focus-visible:ring-primary"
+                            className="col-span-3 bg-card border-border focus-visible:ring-primary"
                         />
                     </div>
 
                     {/* Lead & Key Row */}
                     <div className="grid grid-cols-4 gap-4">
-                        <Label className="text-right text-zinc-400 self-center">Info</Label>
+                        <Label className="text-right text-muted-foreground self-center">Info</Label>
                         <div className="col-span-3 flex gap-3">
                             <div className="flex-1">
                                 <Input
                                     value={leadMusician}
                                     onChange={(e) => setLeadMusician(e.target.value)}
                                     placeholder="Lead Singer"
-                                    className="bg-zinc-900 border-zinc-700"
+                                    className="bg-card border-border"
                                 />
                             </div>
                             <div className="w-24">
@@ -112,7 +112,7 @@ export function TrackDetailsModal({
                                     value={key}
                                     onChange={(e) => setKey(e.target.value)}
                                     placeholder="Key"
-                                    className="bg-zinc-900 border-zinc-700 text-center"
+                                    className="bg-card border-border text-center"
                                 />
                             </div>
                         </div>
@@ -120,26 +120,26 @@ export function TrackDetailsModal({
 
                     {/* Transpose Row */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right text-zinc-400">Transpose</Label>
+                        <Label className="text-right text-muted-foreground">Transpose</Label>
                         <div className="col-span-3 flex items-center gap-3">
-                            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 rounded-md">
+                            <div className="flex items-center gap-1 bg-card border border-border rounded-md">
                                 <Button
                                     type="button"
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9 text-zinc-400 hover:text-white"
+                                    className="h-9 w-9 text-muted-foreground hover:text-foreground"
                                     onClick={() => setTransposition(prev => Math.max(prev - 1, -11))}
                                 >
                                     <Minus className="h-4 w-4" />
                                 </Button>
-                                <span className={`w-12 text-center font-mono text-sm ${transposition !== 0 ? 'text-violet-400' : 'text-zinc-500'}`}>
+                                <span className={`w-12 text-center font-mono text-sm ${transposition !== 0 ? 'text-violet-400' : 'text-muted-foreground'}`}>
                                     {transposition > 0 ? `+${transposition}` : transposition}
                                 </span>
                                 <Button
                                     type="button"
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9 text-zinc-400 hover:text-white"
+                                    className="h-9 w-9 text-muted-foreground hover:text-foreground"
                                     onClick={() => setTransposition(prev => Math.min(prev + 1, 11))}
                                 >
                                     <Plus className="h-4 w-4" />
@@ -155,7 +155,7 @@ export function TrackDetailsModal({
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="text-xs text-zinc-500 hover:text-zinc-300 h-7 px-2"
+                                    className="text-xs text-muted-foreground hover:text-foreground h-7 px-2"
                                     onClick={() => setTransposition(0)}
                                 >
                                     Reset
@@ -166,7 +166,7 @@ export function TrackDetailsModal({
 
                     {/* BPM Row */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="bpm" className="text-right text-zinc-400">BPM</Label>
+                        <Label htmlFor="bpm" className="text-right text-muted-foreground">BPM</Label>
                         <div className="col-span-3 flex gap-3">
                             <Input
                                 id="bpm"
@@ -174,7 +174,7 @@ export function TrackDetailsModal({
                                 value={bpm}
                                 onChange={(e) => setBpm(e.target.value)}
                                 placeholder="120"
-                                className="bg-zinc-900 border-zinc-700 w-24"
+                                className="bg-card border-border w-24"
                             />
                             <TapTempoButton
                                 currentBpm={bpm ? parseInt(bpm) : undefined}
@@ -185,24 +185,24 @@ export function TrackDetailsModal({
 
                     {/* Notes */}
                     <div className="grid grid-cols-4 gap-4">
-                        <Label htmlFor="notes" className="text-right text-zinc-400 mt-2">Notes</Label>
+                        <Label htmlFor="notes" className="text-right text-muted-foreground mt-2">Notes</Label>
                         <Textarea
                             id="notes"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="col-span-3 bg-zinc-900 border-zinc-700 min-h-[80px]"
+                            className="col-span-3 bg-card border-border min-h-[80px]"
                             placeholder="Add performance notes..."
                         />
                     </div>
 
                     {/* File Management */}
                     <div className="grid grid-cols-4 items-start gap-4">
-                        <Label className="text-right text-zinc-400 mt-2">Files</Label>
+                        <Label className="text-right text-muted-foreground mt-2">Files</Label>
                         <div className="col-span-3 grid grid-cols-2 gap-3">
                             <Button
                                 size="sm"
                                 variant={track.fileId ? "secondary" : "outline"}
-                                className={`h-10 justify-start ${track.fileId ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' : 'text-zinc-400 border-zinc-800'}`}
+                                className={`h-10 justify-start ${track.fileId ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' : 'text-muted-foreground border-border'}`}
                                 onClick={() => onMatchFile(track.id)}
                             >
                                 <FileText className="h-4 w-4 mr-2" />
@@ -216,7 +216,7 @@ export function TrackDetailsModal({
                                     <Button
                                         size="sm"
                                         variant={track.audioFileId ? "secondary" : "outline"}
-                                        className={`h-10 justify-start ${track.audioFileId ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20' : 'text-zinc-400 border-zinc-800'}`}
+                                        className={`h-10 justify-start ${track.audioFileId ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20' : 'text-muted-foreground border-border'}`}
                                     >
                                         <Music className="h-4 w-4 mr-2" />
                                         {track.audioFileId ? "Change Audio" : "Link Audio"}
@@ -227,7 +227,7 @@ export function TrackDetailsModal({
                     </div>
                 </div>
 
-                <DialogFooter className="flex items-center justify-between sm:justify-between gap-4 border-t border-zinc-800 pt-4 mt-2">
+                <DialogFooter className="flex items-center justify-between sm:justify-between gap-4 border-t border-border pt-4 mt-2">
                     <Button
                         variant="ghost"
                         onClick={handleDelete}
@@ -237,10 +237,10 @@ export function TrackDetailsModal({
                         Delete Track
                     </Button>
                     <div className="flex gap-3">
-                        <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white">
+                        <Button variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
                             Cancel
                         </Button>
-                        <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white min-w-[100px]">
+                        <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-foreground min-w-[100px]">
                             Save
                         </Button>
                     </div>
