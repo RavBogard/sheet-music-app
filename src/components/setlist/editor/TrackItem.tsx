@@ -184,9 +184,9 @@ export function TrackItem({
                 toast.success("Digitized & Linked!")
             }
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Digitize Error:", e)
-            toast.error(e.message)
+            toast.error(e instanceof Error ? e.message : "Digitize failed")
         } finally {
             setDigitizing(false)
         }
