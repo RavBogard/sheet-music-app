@@ -48,12 +48,12 @@ export async function GET() {
             })
             results.masterFolderAccess = "Success"
             results.masterFolder = folderCheck.data.name
-        } catch (e: any) {
-            results.masterFolderAccess = `Failed: ${e.message}`
+        } catch (e: unknown) {
+            results.masterFolderAccess = `Failed: ${e instanceof Error ? e.message : "Unknown error"}`
         }
 
-    } catch (e: any) {
-        results.auth = `Failed: ${e.message}`
+    } catch (e: unknown) {
+        results.auth = `Failed: ${e instanceof Error ? e.message : "Unknown error"}`
     }
 
     return NextResponse.json(results, { status: 200 })
