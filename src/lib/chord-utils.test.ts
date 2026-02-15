@@ -87,6 +87,11 @@ describe('isChord (full detection)', () => {
         expect(isChord('A')).toBe(false)
     })
 
+    it('rejects D.C./D.S. fragments', () => {
+        expect(isChord('Da')).toBe(false)
+        expect(isChord('Dal')).toBe(false)
+    })
+
     it('accepts "Am" (A minor)', () => {
         expect(isChord('Am')).toBe(true)
     })
@@ -111,7 +116,7 @@ describe('isChord (full detection)', () => {
     })
 
     it('rejects section markers', () => {
-        const markers = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro', 'Coda', 'Solo']
+        const markers = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro', 'Coda', 'Solo', 'DC', 'DS', 'CODA', 'FINE']
         for (const m of markers) {
             expect(isChord(m), `Expected "${m}" to NOT be a chord`).toBe(false)
         }
