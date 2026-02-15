@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         console.log(`[Prune] Found ${snapshot.size} indexed files in Database`)
 
         // 4. Find Ghosts
-        const ghosts: any[] = []
+        const ghosts: { id: string; name: string; mimeType: string; lastSyncedAt: string }[] = []
         snapshot.forEach(doc => {
             // If the Doc ID is NOT in the Drive Set, it's a ghost
             if (!driveIdSet.has(doc.id)) {
