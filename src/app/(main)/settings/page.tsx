@@ -75,6 +75,61 @@ export default function UnifiedSettingsPage() {
         }
     }
 
+    // Storage Migration State
+    const [migrating, setMigrating] = useState(false)
+    const [migrationStats, setMigrationStats] = useState<{
+        total: number; succeeded: number; failed: number; remaining: number; skipped: number; message: string
+    } | null>(null)
+
+    const handleMigration = async () => {
+        if (!user) return
+        setMigrating(true)
+        setMigrationStats(null)
+
+        try {
+            const token = await user.getIdToken()
+            let remaining = Infinity
+            let totalSucceeded = 0
+            let totalFailed = 0
+            let lastStats: typeof migrationStats = null
+
+            // Loop until all files are migrated
+            while (remaining > 0) {
+                const res = await fetch('/api/admin/migrate-storage', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || "Migration failed")
+
+                totalSucceeded += data.succeeded || 0
+                totalFailed += data.failed || 0
+                remaining = data.remaining || 0
+
+                lastStats = {
+                    total: data.total,
+                    succeeded: totalSucceeded,
+                    failed: totalFailed,
+                    remaining,
+                    skipped: data.skipped || 0,
+                    message: data.message,
+                }
+                setMigrationStats(lastStats)
+
+                // If nothing was processed this round, we're done
+                if (data.processed === 0) break
+            }
+
+            toast.success(lastStats?.message || "Migration complete!")
+        } catch (e: unknown) {
+            console.error("Migration Failed:", e)
+            toast.error("Migration Failed: " + (e instanceof Error ? e.message : "Unknown error"))
+        } finally {
+            setMigrating(false)
+        }
+    }
+
     if (authLoading) return (
         <div className="h-screen bg-background flex items-center justify-center">
             <Loader2 className="animate-spin text-violet-500" />
@@ -217,6 +272,43 @@ export default function UnifiedSettingsPage() {
                                         <div className="grid grid-cols-2 gap-1 text-muted-foreground text-xs">
                                             <span>Scanned: {lastStats.totalScanned}</span>
                                             <span>New: {lastStats.added}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Firebase Storage Migration */}
+                            <div className="bg-card border border-border p-5 rounded-2xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-orange-500/10 rounded-xl text-orange-500">
+                                        <Database className="w-5 h-5" />
+                                    </div>
+                                    {migrating && <Loader2 className="animate-spin text-orange-500 w-4 h-4" />}
+                                </div>
+                                <h3 className="font-semibold text-foreground mb-1">Firebase Migration</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Copy files from Google Drive → Firebase Storage for fast CDN serving.
+                                </p>
+                                <Button
+                                    onClick={handleMigration}
+                                    disabled={migrating}
+                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                                >
+                                    <Repeat className={`w-4 h-4 ${migrating ? 'animate-spin' : ''}`} />
+                                    {migrating ? "Migrating..." : "Migrate Files"}
+                                </Button>
+                                {migrationStats && (
+                                    <div className="mt-3 p-3 bg-muted/50 rounded-xl text-sm space-y-1.5 border border-border">
+                                        <div className={`flex items-center gap-2 font-semibold text-xs ${migrationStats.remaining > 0 ? 'text-orange-500' : 'text-green-600 dark:text-green-400'}`}>
+                                            <CheckCircle className="w-3.5 h-3.5" />
+                                            {migrationStats.remaining > 0 ? 'In Progress...' : 'Migration Complete'}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1 text-muted-foreground text-xs">
+                                            <span>Total: {migrationStats.total}</span>
+                                            <span>Migrated: {migrationStats.succeeded}</span>
+                                            <span>Skipped: {migrationStats.skipped}</span>
+                                            <span>Remaining: {migrationStats.remaining}</span>
+                                            {migrationStats.failed > 0 && <span className="text-red-500">Failed: {migrationStats.failed}</span>}
                                         </div>
                                     </div>
                                 )}
