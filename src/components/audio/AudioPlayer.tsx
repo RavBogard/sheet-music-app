@@ -119,7 +119,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                     max={duration || 0}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="flex-1 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    className="flex-1 h-2 bg-border rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
                 <span className="text-xs text-muted-foreground w-10">{formatTime(duration)}</span>
             </div>
@@ -171,7 +171,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                         step="0.1"
                         value={isMuted ? 0 : volume}
                         onChange={handleVolumeChange}
-                        className="w-20 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        className="w-20 h-1 bg-border rounded-lg appearance-none cursor-pointer accent-blue-500"
                     />
                 </div>
             </div>
