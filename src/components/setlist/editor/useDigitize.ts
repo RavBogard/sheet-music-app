@@ -42,12 +42,14 @@ export function useDigitize({ track, onUpdate, onDuplicate }: UseDigitizeOptions
                     throw new Error("The AI took too long to respond.")
                 }
                 const text = await omrRes.text()
+                let errorMsg = "Digitization failed"
                 try {
                     const json = JSON.parse(text)
-                    throw new Error(json.error || "Digitization failed")
+                    if (json.error) errorMsg = json.error
                 } catch {
-                    throw new Error(`Server Error (${omrRes.status}): ${text.substring(0, 50)}...`)
+                    errorMsg = `Server Error (${omrRes.status}): ${text.substring(0, 50)}...`
                 }
+                throw new Error(errorMsg)
             }
 
             const omrData = await omrRes.json()
