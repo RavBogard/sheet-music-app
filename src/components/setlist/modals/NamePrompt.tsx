@@ -94,7 +94,7 @@ export function NamePrompt({
                     <div className="flex items-center gap-4 p-4 bg-muted rounded-lg border border-border/50">
                         <button
                             onClick={() => setIsPublic(false)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${!isPublic ? 'bg-blue-600 text-foreground shadow-lg shadow-blue-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-zinc-700/50'
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${!isPublic ? 'bg-blue-600 text-foreground shadow-lg shadow-blue-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                                 }`}
                         >
                             <Lock className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function NamePrompt({
                         {isLeader ? (
                             <button
                                 onClick={() => setIsPublic(true)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${isPublic ? 'bg-green-600 text-foreground shadow-lg shadow-green-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-zinc-700/50'
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${isPublic ? 'bg-green-600 text-foreground shadow-lg shadow-green-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                                     }`}
                             >
                                 <Globe className="h-4 w-4" />
