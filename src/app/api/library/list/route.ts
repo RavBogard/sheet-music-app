@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
             nextPageToken: null // Simple pagination for now
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Library List Error:", error)
         return NextResponse.json({ error: "Failed to load library" }, { status: 500 })
     }
