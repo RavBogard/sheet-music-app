@@ -78,6 +78,6 @@ export async function POST(request: Request) {
 
     } catch (error: unknown) {
         console.error("Transfer Error:", error)
-        return new NextResponse(`Error: ${error.message}`, { status: 500 })
+        return new NextResponse(`Error: ${(error instanceof Error ? error.message : "Unknown error")}`, { status: 500 })
     }
 }
