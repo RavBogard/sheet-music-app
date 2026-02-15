@@ -3,7 +3,7 @@ import { verifyIdToken } from "@/lib/firebase-admin"
 import { globalLimiter } from "@/lib/rate-limit"
 import { ZodError } from "zod"
 
-type ApiHandler = (req: Request, context: any) => Promise<NextResponse>
+type ApiHandler = (req: Request, context: { params: Record<string, string> }) => Promise<NextResponse>
 
 interface MiddlewareOptions {
     isPublic?: boolean
@@ -11,7 +11,7 @@ interface MiddlewareOptions {
 }
 
 export function withAuth(handler: ApiHandler, options: MiddlewareOptions = {}): ApiHandler {
-    return async (req: Request, context: any) => {
+    return async (req: Request, context: { params: Record<string, string> }) => {
         try {
             // 1. Rate Limiting
             if (options.rateLimit !== false) {
@@ -58,7 +58,7 @@ export function withAuth(handler: ApiHandler, options: MiddlewareOptions = {}): 
 
             if (error instanceof ZodError) {
                 return NextResponse.json(
-                    { error: "Validation Error", details: (error as any).issues || (error as any).errors },
+                    { error: "Validation Error", details: (error as { issues?: unknown; errors?: unknown }).issues || (error as { issues?: unknown; errors?: unknown }).errors },
                     { status: 400 }
                 )
             }
