@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import { Tuner } from "@/components/tools/Tuner"
 import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2 } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
@@ -142,8 +141,6 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         <TransposerMenu />
                     </PopoverContent>
                 </Popover>
-
-                <BackingTrackPlayer />
             </div>
 
             {/* --- MOBILE/TABLET BOTTOM ROW: Navigation --- */}
@@ -233,8 +230,6 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                             <TransposerMenu />
                         </PopoverContent>
                     </Popover>
-
-                    <BackingTrackPlayer />
                 </div>
             </div>
         </div>
