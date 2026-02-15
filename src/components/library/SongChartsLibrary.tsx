@@ -186,9 +186,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const combinedItems = [...folders, ...files]
 
     return (
-        <div className="h-screen flex flex-col bg-zinc-950 text-white">
+        <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
-            <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
+            <div className="h-20 border-b border-border flex items-center px-4 gap-4">
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
@@ -196,26 +196,26 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <img
                         src="/logo.jpg"
                         alt="CRC"
-                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                        className="h-8 w-8 rounded-full border border-border object-cover"
                     />
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
 
                 {/* Sort Toggle (Visual Only for now as API sorts by folder,name default) */}
-                <div className="text-sm text-zinc-500">
+                <div className="text-sm text-muted-foreground">
                     {files.length} charts
                 </div>
             </div>
 
             {/* Sub-Header: Search OR Breadcrumbs */}
-            <div className="p-4 border-b border-zinc-800 space-y-4">
+            <div className="p-4 border-b border-border space-y-4">
                 <div className="relative max-w-xl mx-auto">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-500" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                     <Input
                         value={searchQuery}
                         onChange={handleSearchChange}
                         placeholder="Search charts..."
-                        className="pl-12 h-14 text-xl rounded-full bg-zinc-900 border-zinc-700 focus:border-blue-500"
+                        className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
                     />
                 </div>
 
@@ -224,10 +224,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <div className="flex items-center gap-2 overflow-x-auto pb-2 text-sm no-scrollbar">
                         {breadcrumbs.map((crumb, i) => (
                             <div key={crumb.id || 'root'} className="flex items-center shrink-0">
-                                {i > 0 && <ChevronRight className="h-4 w-4 text-zinc-600 mx-1" />}
+                                {i > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground/60 mx-1" />}
                                 <button
                                     onClick={() => handleBreadcrumbClick(i)}
-                                    className={`flex items-center hover:text-white transition-colors ${i === breadcrumbs.length - 1 ? 'text-white font-bold' : 'text-zinc-500'}`}
+                                    className={`flex items-center hover:text-foreground transition-colors ${i === breadcrumbs.length - 1 ? 'text-foreground font-bold' : 'text-muted-foreground'}`}
                                 >
                                     {crumb.id === null && <Folder className="h-4 w-4 mr-1" />}
                                     {crumb.name}
@@ -269,10 +269,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                         <button
                                             onClick={() => handleItemClick(item)}
                                             className={`w-full text-left p-6 rounded-2xl transition-all flex items-center gap-5 group ${isFolder
-                                                ? 'bg-zinc-900 border border-zinc-800 hover:border-yellow-500/50 hover:bg-zinc-800'
+                                                ? 'bg-card border border-border hover:border-yellow-500/50 hover:bg-muted'
                                                 : digitizing === item.id
                                                     ? 'bg-purple-900/20 border border-purple-500/50 cursor-wait'
-                                                    : 'bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800'
+                                                    : 'bg-card border border-border hover:border-blue-500/50 hover:bg-muted'
                                                 }`}
                                         >
                                             {isFolder ? (
@@ -294,12 +294,12 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
 
                                                     {/* AI Tags */}
                                                     {!isFolder && item.metadata?.key && (
-                                                        <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md border border-zinc-700 font-mono">
+                                                        <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-md border border-border font-mono">
                                                             {item.metadata.key}
                                                         </span>
                                                     )}
                                                     {!isFolder && item.metadata?.bpm && (
-                                                        <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md border border-zinc-700 font-mono">
+                                                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border font-mono">
                                                             {item.metadata.bpm} bpm
                                                         </span>
                                                     )}
@@ -311,7 +311,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                                     )}
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-6 w-6 text-zinc-600 group-hover:text-white" />
+                                            <ChevronRight className="h-6 w-6 text-muted-foreground/60 group-hover:text-foreground" />
                                         </button>
                                     </ContextMenuTrigger>
                                     <ContextMenuContent>
