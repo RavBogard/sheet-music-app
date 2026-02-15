@@ -118,17 +118,17 @@ export default function DashboardPage() {
                     <img
                         src="/logo.jpg"
                         alt="CRC Music"
-                        className="w-10 h-10 rounded-full border border-zinc-700/50"
+                        className="w-10 h-10 rounded-full border border-border"
                     />
-                    <span className="text-sm font-semibold text-zinc-400 tracking-wide">
+                    <span className="text-sm font-semibold text-muted-foreground tracking-wide">
                         CentralReform.live
                     </span>
                 </div>
                 <div>
-                    <h1 className="text-2xl font-semibold text-white tracking-tight">
+                    <h1 className="text-2xl font-semibold text-foreground tracking-tight">
                         {greeting.text}
                     </h1>
-                    <p className="text-sm text-zinc-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                         {greeting.hebrewDate}
                     </p>
                 </div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-3">
                     {recentPublicSetlists.length > 0 ? (
                         <>
-                            <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
+                            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 Recent Setlists
                             </h2>
                             {recentPublicSetlists.slice(0, 3).map(s => (
@@ -172,8 +172,8 @@ export default function DashboardPage() {
                             ))}
                         </>
                     ) : (
-                        <div className="bg-zinc-900/60 rounded-2xl p-6 text-center">
-                            <p className="text-zinc-400">No setlists yet</p>
+                        <div className="bg-card rounded-2xl p-6 text-center border border-border">
+                            <p className="text-muted-foreground">No setlists yet</p>
                         </div>
                     )}
                 </div>
@@ -210,13 +210,13 @@ export default function DashboardPage() {
 
             {/* ── Guest Sign-In Invitation ── */}
             {!user && (
-                <div className="bg-zinc-900/40 rounded-2xl p-5 text-center space-y-3 border border-zinc-800/50">
-                    <p className="text-zinc-400 text-sm">
+                <div className="bg-card rounded-2xl p-5 text-center space-y-3 border border-border">
+                    <p className="text-muted-foreground text-sm">
                         Sign in to access the full library, create setlists, and use AI tools.
                     </p>
                     <Button
                         onClick={signIn}
-                        className="w-full h-11 rounded-xl font-semibold bg-white text-zinc-900 hover:bg-zinc-100"
+                        className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
                     >
                         Sign In
                     </Button>
@@ -292,19 +292,19 @@ function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: (
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-3 bg-zinc-900/60 hover:bg-zinc-900 rounded-xl px-4 py-3 transition-colors text-left group border border-zinc-800/50"
+            className="w-full flex items-center gap-3 bg-card hover:bg-accent rounded-xl px-4 py-3 transition-colors text-left group border border-border"
         >
-            <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
-                <Music2 className="w-4 h-4 text-zinc-500" />
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Music2 className="w-4 h-4 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-white truncate">{setlist.name}</div>
-                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                <div className="font-medium text-sm text-foreground truncate">{setlist.name}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
                     {dateStr && <span>{dateStr}</span>}
                     <span>{setlist.tracks?.length || 0} songs</span>
                 </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-500 transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors shrink-0" />
         </button>
     )
 }
@@ -325,12 +325,12 @@ function QuickAction({ icon: Icon, label, color, onClick }: {
     return (
         <button
             onClick={onClick}
-            className="flex flex-col items-center gap-2 py-4 px-3 bg-zinc-900/40 hover:bg-zinc-900/70 rounded-xl transition-all active:scale-95 group border border-zinc-800/40"
+            className="flex flex-col items-center gap-2 py-4 px-3 bg-card hover:bg-accent rounded-xl transition-all active:scale-95 group border border-border"
         >
             <div className={`p-2.5 rounded-lg transition-colors ${colorMap[color]}`}>
                 <Icon className="w-5 h-5" />
             </div>
-            <span className="text-xs font-semibold text-zinc-400 group-hover:text-zinc-300 transition-colors">
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                 {label}
             </span>
         </button>
@@ -360,12 +360,12 @@ function CompactAIPrompt() {
         <div className="flex flex-col gap-2.5">
             <form onSubmit={handleSubmit} className="flex gap-2">
                 <div className="relative flex-1">
-                    <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                    <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Ask Cantor AI..."
-                        className="bg-zinc-900/50 border-zinc-800/60 h-10 rounded-xl pl-9 text-sm focus-visible:ring-violet-500/30 focus-visible:border-violet-500/40 placeholder:text-zinc-600"
+                        className="bg-muted border-border h-10 rounded-xl pl-9 text-sm focus-visible:ring-violet-500/30 focus-visible:border-violet-500/40 placeholder:text-muted-foreground/60"
                     />
                 </div>
                 <Button
@@ -386,7 +386,7 @@ function CompactAIPrompt() {
                             setPendingPrompt(prompt)
                             open()
                         }}
-                        className="text-[11px] bg-zinc-900/40 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-800/40 transition-colors"
+                        className="text-[11px] bg-muted hover:bg-accent text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full border border-border transition-colors"
                     >
                         {prompt}
                     </button>
