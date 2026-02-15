@@ -39,7 +39,7 @@ export function MusicianProfileSettings() {
             instrument: instrumentKey,
             defaultTransposition: preset.transposition,
             // Set sensible defaults based on instrument
-            preferCapo: instrumentKey === 'guitar' || instrumentKey === 'ukulele',
+            preferCapo: preset.suggestCapo || false,
             preferFlats: preset.transposition !== 0, // Transposing instruments often prefer flats
         }))
         setHasChanges(true)
@@ -145,8 +145,8 @@ export function MusicianProfileSettings() {
                         </div>
                     </div>
 
-                    {/* Capo Preferences (for guitar/uke) */}
-                    {(profile.instrument === 'guitar' || profile.instrument === 'ukulele') && (
+                    {/* Capo Preferences (for instruments that use capo) */}
+                    {currentPreset?.suggestCapo && (
                         <div className="space-y-3 pt-2 border-t border-border">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-foreground">
