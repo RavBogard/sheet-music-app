@@ -293,7 +293,7 @@ export async function POST(request: Request) {
                 "Content-Disposition": `attachment; filename="${title.replace(/[^a-z0-9]/gi, "_")}.pdf"`,
             },
         })
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Print] Generation error:", error)
         return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 })
     }
