@@ -13,13 +13,6 @@
  *  5. Return structured chord positions per page
  */
 
-// Use legacy build for Node.js compatibility (no DOM required)
-// @ts-ignore — pdfjs legacy build types
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs"
-
-// Disable worker in server context
-GlobalWorkerOptions.workerSrc = ""
-
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface ExtractedChord {
@@ -42,24 +35,37 @@ export interface ExtractionResult {
     totalChords: number
 }
 
+// ─── Lazy pdfjs-dist loader ──────────────────────────────────────────
+// Dynamic import prevents Next.js from bundling pdfjs-dist into client code.
+// Only loaded when server-side extraction functions are actually called.
+
+let _pdfjsModule: any = null
+
+async function getPdfjs() {
+    if (!_pdfjsModule) {
+        // @ts-expect-error — pdfjs-dist legacy build has no TS declarations for .mjs
+        _pdfjsModule = await import("pdfjs-dist/legacy/build/pdf.mjs")
+        // Disable worker threads in server/serverless context
+        if (_pdfjsModule.GlobalWorkerOptions) {
+            _pdfjsModule.GlobalWorkerOptions.workerSrc = ""
+        }
+    }
+    return _pdfjsModule
+}
+
 // ─── Chord Detection ─────────────────────────────────────────────────
 
 // Comprehensive chord regex for worship lead sheets
-// Matches: C, Am, F#, Bb, F#m7, G/B, Dsus4, Cadd9, Cmaj7, Ebmaj9, Am7/G
-// Handles parenthetical alterations: C(add9)
 const CHORD_REGEX = /^[A-G][b#]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom)?(?:\d{0,2})?(?:(?:sus|add|no|maj|min|dim|aug|dom)\d{0,2})*(?:\/[A-G][b#]?)?$/
 
 // Words that match the regex but aren't chords
 const EXCLUDED_WORDS = new Set([
-    "A",      // Too ambiguous as a standalone letter
+    "A",       // Too ambiguous as a standalone letter
     "I", "II", "III", "IV", "V", "VI", "VII",
-    "Am",     // Keep — this IS a chord. Only bare "A" is excluded.
     "Fine", "Da", "Dal",
 ])
-// Remove "Am" from excluded — it was added by mistake in the set literal above
-EXCLUDED_WORDS.delete("Am")
 
-// Performance directions and section markers that start with A-G
+// Performance directions and section markers
 const SECTION_MARKERS = new Set([
     "Chorus", "Bridge", "Coda", "Fine", "Ending",
     "DC", "DS", "CODA", "FINE",
@@ -79,13 +85,6 @@ interface TextItem {
 /**
  * Two-pass merge algorithm for reassembling chord symbols
  * that PDF creators split across multiple text items.
- *
- * Pass 1: Merge horizontally adjacent items on the same line.
- *         Handles: "F" + "#" → "F#", "Am" + "7" → "Am7"
- *
- * Pass 2: Absorb trailing chord suffixes (especially superscript numbers)
- *         into preceding chord-like items.
- *         Handles: "F#m" + "7" (at different Y) → "F#m7"
  */
 function mergeTextItems(items: TextItem[]): TextItem[] {
     if (items.length === 0) return []
@@ -93,7 +92,7 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
     // Sort: top-to-bottom (Y descending in PDF coords), then left-to-right
     items.sort((a, b) => {
         if (Math.abs(a.y - b.y) < 5) return a.x - b.x
-        return b.y - a.y  // Higher Y = higher on page in PDF coords
+        return b.y - a.y
     })
 
     // ── Pass 1: Merge horizontally adjacent ──
@@ -103,12 +102,7 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
     for (let i = 1; i < items.length; i++) {
         const next = items[i]
         const maxH = Math.max(cur.h, next.h, 8)
-
-        // Same line: Y positions within 1.5x the font height
-        // (generous for superscripts)
         const sameLine = Math.abs(cur.y - next.y) < maxH * 1.5
-
-        // Close horizontally: small gap or slight overlap
         const gap = next.x - cur.r
         const isClose = gap >= -3 && gap < maxH * 0.6
 
@@ -119,7 +113,7 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
                 r: Math.max(cur.r, next.r),
                 w: Math.max(cur.r, next.r) - cur.x,
                 h: Math.max(cur.h, next.h),
-                y: Math.max(cur.y, next.y), // Keep highest baseline
+                y: Math.max(cur.y, next.y),
             }
         } else {
             pass1.push(cur)
@@ -129,43 +123,39 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
     pass1.push(cur)
 
     // ── Pass 2: Absorb trailing chord suffixes ──
-    // After Pass 1, we might have: "F#m" followed by "7" (superscript)
-    // or "Cmaj" followed by "9"
     const pass2: TextItem[] = []
 
     for (let i = 0; i < pass1.length; i++) {
-        let cur = { ...pass1[i] }
-        const looksLikeChordStart = /^[A-G][b#]?(?:m|M|maj|min|dim|aug|sus|add|no|alt|dom)?/.test(cur.text)
+        let item = { ...pass1[i] }
+        const looksLikeChordStart = /^[A-G][b#]?(?:m|M|maj|min|dim|aug|sus|add|no|alt|dom)?/.test(item.text)
 
         if (looksLikeChordStart) {
             while (i + 1 < pass1.length) {
                 const next = pass1[i + 1]
                 const nextText = next.text.trim()
 
-                // Is this a chord suffix?
                 const isChordSuffix =
-                    /^\d+$/.test(nextText) ||                                    // "7", "9", "11", "13"
-                    /^(sus|add|no|maj|min|dim|aug|dom)\d*$/.test(nextText) ||     // "sus4", "add9"
-                    /^\/[A-G][b#]?$/.test(nextText)                              // "/B", "/F#"
+                    /^\d+$/.test(nextText) ||
+                    /^(sus|add|no|maj|min|dim|aug|dom)\d*$/.test(nextText) ||
+                    /^\/[A-G][b#]?$/.test(nextText)
 
                 if (!isChordSuffix) break
 
-                // Must be on roughly the same line (generous for superscripts)
-                const sameLine = Math.abs(cur.y - next.y) < Math.max(cur.h, next.h, 8) * 2
-                const gap = next.x - cur.r
-                if (!sameLine || gap > cur.h * 2 || gap < -cur.w) break
+                const sameLine = Math.abs(item.y - next.y) < Math.max(item.h, next.h, 8) * 2
+                const gap = next.x - item.r
+                if (!sameLine || gap > item.h * 2 || gap < -item.w) break
 
-                cur = {
-                    ...cur,
-                    text: cur.text + nextText,
-                    r: Math.max(cur.r, next.r),
-                    w: Math.max(cur.r, next.r) - cur.x,
+                item = {
+                    ...item,
+                    text: item.text + nextText,
+                    r: Math.max(item.r, next.r),
+                    w: Math.max(item.r, next.r) - item.x,
                 }
                 i++
             }
         }
 
-        pass2.push(cur)
+        pass2.push(item)
     }
 
     return pass2
@@ -174,27 +164,16 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
 // ─── Chord Filtering ─────────────────────────────────────────────────
 
 function isChord(text: string): boolean {
-    // Clean: remove stray punctuation but preserve # b /
     const clean = text.replace(/[^\w#b\/]/g, "")
     if (!clean) return false
-
-    // Exclude known non-chords
     if (EXCLUDED_WORDS.has(clean)) return false
-
-    // Exclude section markers
     if (SECTION_MARKERS.has(clean)) return false
-
-    // Must be reasonably short (chords are rarely > 8 chars)
     if (clean.length > 10) return false
-
-    // Test against chord regex
     return CHORD_REGEX.test(clean)
 }
 
 function cleanChordText(text: string): string {
-    // Normalize unicode accidentals
     let clean = text.replace(/\u266F/g, "#").replace(/\u266D/g, "b")
-    // Remove stray chars but keep # b /
     clean = clean.replace(/[^\w#b\/]/g, "")
     return clean
 }
@@ -203,19 +182,16 @@ function cleanChordText(text: string): string {
 
 /**
  * Extract chord positions from all pages of a PDF.
- *
- * @param pdfData - PDF file as Uint8Array or ArrayBuffer
- * @returns Structured chord positions per page
  */
 export async function extractChordsFromPdf(
     pdfData: Uint8Array | ArrayBuffer
 ): Promise<ExtractionResult> {
+    const pdfjs = await getPdfjs()
     const data = pdfData instanceof ArrayBuffer ? new Uint8Array(pdfData) : pdfData
 
-    const pdfDoc = await getDocument({
+    const pdfDoc = await pdfjs.getDocument({
         data,
         useSystemFonts: true,
-        // Suppress font warnings in server context
         verbosity: 0,
     }).promise
 
@@ -227,7 +203,6 @@ export async function extractChordsFromPdf(
         const viewport = page.getViewport({ scale: 1.0 })
         const textContent = await page.getTextContent()
 
-        // Convert pdfjs text items to our format
         const items: TextItem[] = textContent.items
             .filter((item: any) => item.str && item.str.trim())
             .map((item: any) => {
@@ -235,20 +210,11 @@ export async function extractChordsFromPdf(
                 const y = item.transform[5]
                 const w = item.width || 0
                 const h = item.height || 0
-                return {
-                    text: item.str.trim(),
-                    x,
-                    y,
-                    w,
-                    h,
-                    r: x + w,
-                }
+                return { text: item.str.trim(), x, y, w, h, r: x + w }
             })
 
-        // Merge split text items
         const merged = mergeTextItems(items)
 
-        // Filter for chords
         const chords: ExtractedChord[] = merged
             .filter(item => isChord(item.text))
             .map(item => ({
@@ -273,15 +239,15 @@ export async function extractChordsFromPdf(
 
 /**
  * Extract chords from a single page of a PDF.
- * Useful when chord cache has partial coverage.
  */
 export async function extractChordsFromPage(
     pdfData: Uint8Array | ArrayBuffer,
     pageNumber: number
 ): Promise<PageChords | null> {
+    const pdfjs = await getPdfjs()
     const data = pdfData instanceof ArrayBuffer ? new Uint8Array(pdfData) : pdfData
 
-    const pdfDoc = await getDocument({
+    const pdfDoc = await pdfjs.getDocument({
         data,
         useSystemFonts: true,
         verbosity: 0,
