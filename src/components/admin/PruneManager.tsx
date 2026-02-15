@@ -21,6 +21,7 @@ export function PruneManager() {
         driveCount: number
         dbCount: number
         ghosts: GhostFile[]
+        prunedCount?: number
     } | null>(null)
 
     const handleScanAndPrune = async () => {
@@ -53,7 +54,7 @@ export function PruneManager() {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ fileIds: data.ghosts.map((g: any) => g.id) })
+                    body: JSON.stringify({ fileIds: data.ghosts.map((g: GhostFile) => g.id) })
                 })
 
                 if (!pruneRes.ok) throw new Error("Prune failed")
@@ -69,8 +70,8 @@ export function PruneManager() {
                 toast.success(`Cleanup Complete: Removed ${pruneData.deletedCount} files.`)
             }
 
-        } catch (e: any) {
-            toast.error(e.message)
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "An error occurred")
         } finally {
             setLoading(false)
         }
@@ -106,8 +107,8 @@ export function PruneManager() {
                     <div className="flex items-center gap-2 text-green-500 bg-green-500/10 p-2 rounded">
                         <CheckCircle className="h-4 w-4" />
                         <span className="text-sm font-medium">
-                            {(scanData as any).prunedCount ?
-                                `Cleanup Success: Removed ${(scanData as any).prunedCount} ghost files.` :
+                            {scanData.prunedCount ?
+                                `Cleanup Success: Removed ${scanData.prunedCount} ghost files.` :
                                 "System Clean. Database is in sync."
                             }
                         </span>
@@ -115,7 +116,7 @@ export function PruneManager() {
                 )}
 
                 {scanData && scanData.ghosts.length > 0 && (
-                    <div className="bg-black/20 rounded-lg p-4 border border-red-500/20 space-y-3">
+                    <div className="bg-muted rounded-lg p-4 border border-red-500/20 space-y-3">
                         <div className="flex items-center justify-between">
                             <h4 className="text-red-400 font-bold flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4" />
