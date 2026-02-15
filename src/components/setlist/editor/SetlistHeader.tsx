@@ -86,7 +86,7 @@ export function SetlistHeader({
                         variant="ghost"
                         onClick={undo}
                         disabled={!canUndo}
-                        className="h-8 w-8 hover:bg-zinc-700"
+                        className="h-8 w-8 hover:bg-accent"
                         title="Undo"
                     >
                         <RotateCcw className="h-4 w-4" />
@@ -96,7 +96,7 @@ export function SetlistHeader({
                         variant="ghost"
                         onClick={redo}
                         disabled={!canRedo}
-                        className="h-8 w-8 hover:bg-zinc-700"
+                        className="h-8 w-8 hover:bg-accent"
                         title="Redo"
                     >
                         <RotateCw className="h-4 w-4" />
