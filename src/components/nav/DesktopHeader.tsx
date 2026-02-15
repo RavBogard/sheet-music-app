@@ -103,7 +103,7 @@ export function DesktopHeader() {
                     <img
                         src="/logo.jpg"
                         alt="Logo"
-                        className="w-8 h-8 rounded-full border border-zinc-700 transition-transform group-hover:scale-105"
+                        className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105"
                     />
                     <span className="font-bold text-lg text-foreground font-bold">
                         CRC Music
