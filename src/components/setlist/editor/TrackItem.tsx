@@ -226,10 +226,10 @@ export function TrackItem({
                     <div
                         ref={setNodeRef}
                         style={style}
-                        className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-3 flex items-center gap-4 group mt-4 mb-2"
+                        className="bg-muted border border-border/50 rounded-lg p-3 flex items-center gap-4 group mt-4 mb-2"
                     >
                         {isEditMode && (
-                            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-zinc-500 hover:text-zinc-300 p-2 -ml-2 rounded hover:bg-zinc-700">
+                            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-2 -ml-2 rounded hover:bg-zinc-700">
                                 <GripVertical className="h-5 w-5" />
                             </div>
                         )}
@@ -239,11 +239,11 @@ export function TrackItem({
                                 <Input
                                     value={track.title}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                                    className="bg-transparent border-0 text-lg font-bold text-center text-zinc-300 placeholder:text-zinc-600 focus-visible:ring-0"
+                                    className="bg-transparent border-0 text-lg font-bold text-center text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0"
                                     placeholder="SECTION HEADER"
                                 />
                             ) : (
-                                <div className="text-lg font-bold text-center text-zinc-300 uppercase tracking-wider">
+                                <div className="text-lg font-bold text-center text-foreground uppercase tracking-wider">
                                     {track.title}
                                 </div>
                             )}
@@ -253,7 +253,7 @@ export function TrackItem({
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-zinc-600 hover:text-red-400"
+                                className="h-8 w-8 text-muted-foreground/60 hover:text-red-400"
                                 onClick={() => onDelete(track.id)}
                             >
                                 <Trash2 className="h-4 w-4" />
@@ -282,14 +282,14 @@ export function TrackItem({
                     className={`glass-card rounded-lg p-3 sm:p-4 flex items-center gap-3 sm:gap-4 group transition-colors relative 
                         ${digitizing
                             ? "bg-purple-900/20 border-purple-500/50 cursor-wait"
-                            : "hover:bg-zinc-900/40"
+                            : "hover:bg-card/40"
                         } 
-                        ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-zinc-800" : ""}
+                        ${isDragging ? "opacity-50 ring-2 ring-blue-500 scale-[1.02] z-50 bg-muted" : ""}
                     `}
                     onClick={() => !isEditMode && handleTitleClick()}
                 >
                     {isEditMode && (
-                        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-zinc-600 p-2 -ml-2 rounded hover:bg-zinc-800" onClick={(e) => e.stopPropagation()}>
+                        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 p-2 -ml-2 rounded hover:bg-muted" onClick={(e) => e.stopPropagation()}>
                             <GripVertical className="h-5 w-5" />
                         </div>
                     )}
@@ -341,27 +341,27 @@ export function TrackItem({
                         </div>
 
                         {/* Metadata Row */}
-                        <div className="flex items-center gap-3 text-sm text-zinc-400 min-h-[1.25rem]">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground min-h-[1.25rem]">
                             {isEditMode ? (
                                 // Edit Mode: Quick Inputs
                                 <div className="flex gap-2 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
                                     <Input
                                         value={track.key || ""}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
-                                        className="bg-zinc-800/50 h-7 text-xs w-14 text-center px-1"
+                                        className="bg-muted h-7 text-xs w-14 text-center px-1"
                                         placeholder="Key"
                                     />
                                     <Input
                                         value={track.bpm || ""}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { bpm: parseInt(e.target.value) || undefined })}
-                                        className="bg-zinc-800/50 h-7 text-xs w-14 text-center px-1"
+                                        className="bg-muted h-7 text-xs w-14 text-center px-1"
                                         placeholder="BPM"
                                         type="number"
                                     />
                                     <Input
                                         value={track.leadMusician || ""}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { leadMusician: e.target.value })}
-                                        className="bg-zinc-800/50 h-7 text-xs flex-1 px-2"
+                                        className="bg-muted h-7 text-xs flex-1 px-2"
                                         placeholder="Lead..."
                                     />
                                 </div>
@@ -369,17 +369,17 @@ export function TrackItem({
                                 // View Mode: Badges
                                 <>
                                     {track.key && (
-                                        <span className="bg-zinc-800 px-2 py-0.5 rounded text-xs text-zinc-300 font-mono">
+                                        <span className="bg-muted px-2 py-0.5 rounded text-xs text-foreground font-mono">
                                             {track.key}
                                         </span>
                                     )}
                                     {track.bpm && (
-                                        <span className="text-zinc-500 text-xs hidden sm:inline">
+                                        <span className="text-muted-foreground text-xs hidden sm:inline">
                                             {track.bpm} BPM
                                         </span>
                                     )}
                                     {track.leadMusician && (
-                                        <div className="flex items-center gap-1 text-zinc-500">
+                                        <div className="flex items-center gap-1 text-muted-foreground">
                                             <span className="w-1 h-1 rounded-full bg-zinc-600" />
                                             <span className="text-xs italic text-blue-400/80">
                                                 {track.leadMusician}
@@ -387,7 +387,7 @@ export function TrackItem({
                                         </div>
                                     )}
                                     {track.notes && (
-                                        <span className="truncate max-w-[200px] text-zinc-600 italic">
+                                        <span className="truncate max-w-[200px] text-muted-foreground/60 italic">
                                             {track.notes}
                                         </span>
                                     )}
@@ -404,7 +404,7 @@ export function TrackItem({
                                     currentFileId={track.audioFileId}
                                     onSelect={(fileId) => onUpdate(track.id, { audioFileId: fileId })}
                                     trigger={
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-blue-400">
+                                        <Button size="sm" variant="ghost" className="h-8 w-8 text-muted-foreground/60 hover:text-blue-400">
                                             <Music className="h-4 w-4" />
                                         </Button>
                                     }
@@ -413,7 +413,7 @@ export function TrackItem({
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-zinc-600 hover:text-red-400"
+                                className="h-8 w-8 text-muted-foreground/60 hover:text-red-400"
                                 onClick={() => onDelete(track.id)}
                             >
                                 <Trash2 className="h-4 w-4" />
@@ -424,7 +424,7 @@ export function TrackItem({
                     {/* Metronome Indicator (View Mode) - Moved to Far Right */}
                     {!isEditMode && track.bpm && (
                         <div
-                            className={`h-8 w-8 flex items-center justify-center rounded-full cursor-pointer transition-colors shrink-0 ml-2 ${isBlinking ? 'bg-zinc-800' : 'hover:bg-zinc-800'}`}
+                            className={`h-8 w-8 flex items-center justify-center rounded-full cursor-pointer transition-colors shrink-0 ml-2 ${isBlinking ? 'bg-muted' : 'hover:bg-muted'}`}
                             onClick={toggleMetronome}
                             title={`BPM: ${track.bpm}`}
                         >
