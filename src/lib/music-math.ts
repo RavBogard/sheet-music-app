@@ -107,7 +107,7 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
 
     // Handle slash chords — transpose the bass note too
     let processedSuffix = suffix;
-    const slashMatch = suffix.match(/^(.*)\\/([A-G])([#b]?)$/);
+    const slashMatch = suffix.match(/^(.*)\/([A-G])([#b]?)$/);
 
     if (slashMatch) {
         const [, qualityPart, bassRoot, bassAccidental] = slashMatch;
