@@ -3,11 +3,32 @@ import { useMusicStore } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
+import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
 
 interface SmartTransposerProps {
     pageRef: React.RefObject<HTMLDivElement | null>
     pageNumber: number
     isRendered: boolean
+}
+
+/**
+ * Extract fileId from the current context.
+ * Tries playback queue first, then falls back to parsing the fileUrl.
+ */
+function useCurrentFileId(): string | null {
+    const { playbackQueue, queueIndex, fileUrl } = useMusicStore()
+
+    // From playback queue (perform mode)
+    const queueFileId = playbackQueue[queueIndex]?.fileId
+    if (queueFileId) return queueFileId
+
+    // From URL pattern /api/drive/file/{fileId}
+    if (fileUrl) {
+        const match = fileUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+        if (match) return match[1]
+    }
+
+    return null
 }
 
 export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransposerProps) {
@@ -19,6 +40,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         transposition
     } = useMusicStore()
     const { user } = useAuth()
+    const fileId = useCurrentFileId()
 
     const [hasScanned, setHasScanned] = useState(false)
     const [localError, setLocalError] = useState<string | null>(null)
@@ -27,7 +49,6 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     const pageData = aiState.pageData[pageNumber]
 
     useEffect(() => {
-        // Trigger Scan if enabled, rendered, and no data yet
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
@@ -41,9 +62,21 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             setPageScanning(pageNumber, true)
             setLocalError(null)
 
+            // 1. Check server cache first
+            if (fileId && user) {
+                const token = await user.getIdToken()
+                const cached = await loadChordCache(fileId, pageNumber, token)
+                if (cached && cached.length > 0) {
+                    console.log(`[Transposer] Cache hit for ${fileId} page ${pageNumber}: ${cached.length} chords`)
+                    setPageData(pageNumber, { chords: cached, strips: [] })
+                    setPageScanning(pageNumber, false)
+                    return
+                }
+            }
+
             const pageEl = pageRef.current;
 
-            // 1. Try Text Layer Scan (Vector PDF) - FAST & PRECISE
+            // 2. Try Text Layer Scan (Vector PDF) - FAST & PRECISE
             const textChords = scanTextLayer(pageEl);
 
             if (textChords.length > 0) {
@@ -59,16 +92,21 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
                 setPageData(pageNumber, { chords: mappedChords, strips: [] })
                 setPageScanning(pageNumber, false)
+
+                // Save to cache (fire-and-forget)
+                if (fileId && user) {
+                    const token = await user.getIdToken()
+                    saveChordCache(fileId, pageNumber, mappedChords, 'textLayer', token)
+                }
                 return;
             }
 
-            // 2. Fallback: Image Scan via API (Raster PDF)
+            // 3. Fallback: Image Scan via API (Raster PDF)
             const canvas = pageRef.current.querySelector('canvas')
             if (!canvas) {
                 throw new Error("Canvas not found")
             }
 
-            // Client-side Line Scanning
             const { scanForChordStrips } = await import("@/lib/line-scanner")
             const scanResult = await scanForChordStrips(canvas, canvas.getContext('2d')!)
 
@@ -77,7 +115,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 return
             }
 
-            // API Call
+            // API Call to Gemini
             const token = await user?.getIdToken()
             const res = await fetch('/api/ai/transposer', {
                 method: 'POST',
@@ -120,6 +158,12 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
             setPageData(pageNumber, { chords, strips: scanResult.strips })
 
+            // Save API results to cache (fire-and-forget)
+            if (fileId && user && chords.length > 0) {
+                const apiToken = await user.getIdToken()
+                saveChordCache(fileId, pageNumber, chords, 'geminiOCR', apiToken)
+            }
+
         } catch (err: any) {
             console.error("Scan Error:", err)
             setLocalError(err.message)
@@ -149,13 +193,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 if (!isChanged) return null;
 
                 // Dynamic font size based on detected chord height
-                // The pxHeight from text scanner is the actual rendered height of the chord text
-                // We scale it slightly larger to ensure full coverage
                 const baseFontSize = chord.pxHeight
                     ? Math.max(14, Math.min(chord.pxHeight * 1.1, 32))
                     : 18;
 
-                // Use the width from scanner if available for better coverage
                 const hasWidth = chord.w && chord.w > 0;
 
                 return (
@@ -163,33 +204,23 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                         key={i}
                         className="absolute"
                         style={{
-                            // Position at detected location
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
                             transform: 'translateY(-35%)',
-
-                            // Size: use detected width if available, otherwise auto
                             ...(hasWidth ? {
                                 minWidth: `${Math.max(chord.w + 1, 3)}%`,
                             } : {}),
-
-                            // Padding to cover original
                             padding: '4px 8px',
-
-                            // Clean white overlay
                             backgroundColor: 'white',
                             borderRadius: '3px',
-                            boxShadow: '0 0 0 2px white', // Extra white bleed to cover edges
-
-                            // Typography: match lead sheet aesthetic
-                            color: '#7c3aed', // Purple for transposed chords
+                            boxShadow: '0 0 0 2px white',
+                            color: '#7c3aed',
                             fontSize: `${baseFontSize}px`,
                             fontWeight: 700,
-                            fontFamily: "'Times New Roman', 'Georgia', serif", // Lead sheets typically use serif
+                            fontFamily: "'Times New Roman', 'Georgia', serif",
                             lineHeight: 1.1,
                             whiteSpace: 'nowrap',
                             letterSpacing: '-0.02em',
-
                             zIndex: 100,
                         }}
                     >
