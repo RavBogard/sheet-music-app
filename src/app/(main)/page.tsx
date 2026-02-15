@@ -112,14 +112,26 @@ export default function DashboardPage() {
     return (
         <div className="flex flex-col p-4 md:p-6 gap-8 max-w-lg mx-auto w-full pb-28">
 
-            {/* ── Greeting ── */}
-            <div className="pt-2">
-                <h1 className="text-2xl font-semibold text-white tracking-tight">
-                    {greeting.text}
-                </h1>
-                <p className="text-sm text-zinc-500 mt-1">
-                    {greeting.hebrewDate}
-                </p>
+            {/* ── Branding + Greeting ── */}
+            <div className="pt-2 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                    <img
+                        src="/logo.jpg"
+                        alt="CRC Music"
+                        className="w-10 h-10 rounded-full border border-zinc-700/50"
+                    />
+                    <span className="text-sm font-semibold text-zinc-400 tracking-wide">
+                        CentralReform.live
+                    </span>
+                </div>
+                <div>
+                    <h1 className="text-2xl font-semibold text-white tracking-tight">
+                        {greeting.text}
+                    </h1>
+                    <p className="text-sm text-zinc-500 mt-1">
+                        {greeting.hebrewDate}
+                    </p>
+                </div>
             </div>
 
             {/* ── Hero: Next Setlist ── */}
