@@ -21,14 +21,14 @@ export function DashboardChatPrompt() {
 
     return (
         <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider px-2 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider px-2 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-400" />
                 Cantor AI
             </h3>
 
             <form
                 onSubmit={handleSubmit}
-                className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 flex flex-col gap-4 relative overflow-hidden"
+                className="bg-muted border border-border rounded-3xl p-6 flex flex-col gap-4 relative overflow-hidden"
             >
                 {/* Decorative BG */}
                 <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
@@ -37,8 +37,8 @@ export function DashboardChatPrompt() {
 
                 <div className="relative z-10 space-y-4">
                     <div className="space-y-1">
-                        <h4 className="font-bold text-lg text-white">How can I help you today?</h4>
-                        <p className="text-sm text-zinc-400">
+                        <h4 className="font-bold text-lg text-foreground">How can I help you today?</h4>
+                        <p className="text-sm text-muted-foreground">
                             Ask me to create a setlist, find a song, or schedule your next service.
                         </p>
                     </div>
@@ -48,7 +48,7 @@ export function DashboardChatPrompt() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="e.g. 'Create a setlist for this Friday'..."
-                            className="bg-zinc-950/50 border-zinc-700 h-12 rounded-xl focus-visible:ring-blue-500/50"
+                            className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-blue-500/50"
                         />
                         <Button
                             type="submit"
@@ -74,7 +74,7 @@ export function DashboardChatPrompt() {
                                     setPendingPrompt(prompt)
                                     open()
                                 }}
-                                className="text-xs bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white px-3 py-1.5 rounded-full border border-zinc-700/50 transition-colors"
+                                className="text-xs bg-muted hover:bg-zinc-700 text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-full border border-border/50 transition-colors"
                             >
                                 {prompt}
                             </button>
