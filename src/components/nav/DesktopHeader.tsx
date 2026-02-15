@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DriveFile } from "@/types/models"
 
 export function DesktopHeader() {
     const pathname = usePathname()
@@ -69,7 +70,7 @@ export function DesktopHeader() {
         }
     }, [user])
 
-    const handleSelectSong = (file: any) => {
+    const handleSelectSong = (file: DriveFile) => {
         const type = file.name.endsWith('.xml') || file.name.endsWith('.musicxml') ? 'musicxml' : 'pdf'
         setQueue([{
             name: file.name.replace(/\.[^/.]+$/, ""),
