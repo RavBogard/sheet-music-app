@@ -127,7 +127,7 @@ export function AddSongsModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl h-[80vh] flex flex-col p-6">
+            <DialogContent className="bg-card border-border text-foreground max-w-2xl h-[80vh] flex flex-col p-6">
                 <DialogHeader className="shrink-0 flex-row items-center justify-between space-y-0">
                     <DialogTitle className="text-xl font-bold">Add Songs ({selectedFiles.size} selected)</DialogTitle>
                 </DialogHeader>
@@ -135,7 +135,7 @@ export function AddSongsModal({
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
                     {/* Breadcrumbs for Navigation */}
                     {!searchQuery && (
-                        <div className="flex items-center gap-1 text-sm text-zinc-500 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
                             {breadcrumbs.map((crumb, i) => (
                                 <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
                                     {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
@@ -153,7 +153,7 @@ export function AddSongsModal({
                                     variant="outline"
                                     size="sm"
                                     onClick={addVisibleSongs}
-                                    className="ml-auto h-7 text-[10px] uppercase tracking-tighter bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white"
+                                    className="ml-auto h-7 text-[10px] uppercase tracking-tighter bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-foreground"
                                 >
                                     Add Visible
                                 </Button>
@@ -165,7 +165,7 @@ export function AddSongsModal({
                         value={searchQuery}
                         onChange={handleSearchChange}
                         placeholder="Search library..."
-                        className="mb-4 shrink-0 bg-zinc-800 border-zinc-700"
+                        className="mb-4 shrink-0 bg-muted border-border"
                         autoFocus
                     />
 
@@ -187,11 +187,11 @@ export function AddSongsModal({
                                         }}
                                         className={cn(
                                             "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isSelected ? "bg-blue-600 text-white" : isFolder ? "bg-zinc-800 hover:bg-zinc-700" : "bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800"
+                                            isSelected ? "bg-blue-600 text-foreground" : isFolder ? "bg-muted hover:bg-zinc-700" : "bg-muted border border-border hover:bg-muted"
                                         )}
                                     >
                                         {isFolder ? (
-                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-zinc-400">
+                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-muted-foreground">
                                                 <Folder className="h-5 w-5 text-yellow-500" />
                                             </div>
                                         ) : (
@@ -206,7 +206,7 @@ export function AddSongsModal({
                                             <div className="text-sm font-medium truncate">{file.name}</div>
                                             <div className={cn(
                                                 "text-[10px] uppercase tracking-wider",
-                                                isSelected ? "text-blue-100" : "text-zinc-500"
+                                                isSelected ? "text-blue-100" : "text-muted-foreground"
                                             )}>
                                                 {isFolder ? "Folder" : file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                             </div>
