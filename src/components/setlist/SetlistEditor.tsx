@@ -131,7 +131,7 @@ export function SetlistEditor({
     }
 
     return (
-        <div className="h-screen flex flex-col bg-zinc-950 text-white">
+        <div className="h-screen flex flex-col bg-background text-foreground">
             <NamePrompt
                 isOpen={showNamePrompt && canEdit}
                 onClose={() => setShowNamePrompt(false)}
@@ -204,7 +204,7 @@ export function SetlistEditor({
                             {canEdit && isEditMode && (
                                 <button
                                     onClick={() => setShowAddSongs(true)}
-                                    className="w-full p-4 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-500 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
+                                    className="w-full p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:text-foreground hover:border-zinc-500 transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
                                 >
                                     <Plus className="h-5 w-5" />
                                     Add Songs from Library
