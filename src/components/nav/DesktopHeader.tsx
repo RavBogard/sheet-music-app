@@ -188,7 +188,7 @@ export function DesktopHeader() {
                                             <button
                                                 key={file.id}
                                                 onClick={() => handleSelectSong(file)}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group"
+                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors group"
                                             >
                                                 <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
