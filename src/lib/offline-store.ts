@@ -18,7 +18,7 @@ interface OfflineDB extends DBSchema {
     };
     settings: {
         key: string;
-        value: any;
+        value: unknown;
     };
 }
 
