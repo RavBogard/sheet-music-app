@@ -23,7 +23,7 @@ export interface ScannedChord {
 // Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, Cadd9, Cmaj7, Ebmaj9, Am7/G
 // Also handles: parenthetical alterations like C(add9), unicode sharp and flat
 // Does NOT match: lyrics, Roman numerals, section markers
-const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom)?(?:\d{0,2})?(?:(?:sus|add|no|maj|min|dim|aug|dom)\d{0,2})*(?:\([^)]*\))?(?:\/[A-G][b#\u266F\u266D]?)?$/;
+const CHORD_REGEX = /^[A-G][b#]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom)?(?:\d{0,2})?(?:(?:sus|add|no|maj|min|dim|aug|dom)\d{0,2})*(?:\([^)]*\))?(?:\/[A-G][b#]?)?$/;
 
 const EXCLUDED_WORDS = new Set([
     "I", "II", "III", "IV", "V", "VI", "VII",
@@ -131,7 +131,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
                 const next = merged[j];
                 const nextText = next.text.trim();
 
-                const isSharpOrFlat = /^[#b\u266F\u266D]$/.test(nextText);
+                const isSharpOrFlat = /^[#b]$/.test(nextText);
                 const isQuality = /^(m|M|maj|min|dim|aug|sus|add|no|alt|dom)+$/.test(nextText);
                 const isNumber = /^[0-9]+$/.test(nextText);
                 const isCombo = /^(m7|m9|m11|m13|maj7|maj9|min7|dim7|add9|add11|sus4|sus2|no3|no5|dom7)$/.test(nextText);
@@ -179,7 +179,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         const text = item.text.trim();
 
         // Clean stray characters but preserve parentheses
-        const cleanText = text.replace(/[^\w#b\u266F\u266D\/()\-]/g, '');
+        const cleanText = text.replace(/[^\w#b\/()\-]/g, '');
         if (!cleanText) continue;
 
         // Skip excluded words
