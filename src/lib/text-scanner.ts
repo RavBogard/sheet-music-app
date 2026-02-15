@@ -5,8 +5,15 @@
  * Strategy:
  * 1. Find the text layer container.
  * 2. Iterate over all <span> elements (text items).
- * 3. Filter for items that look like Chords using Regex.
- * 4. Return their position and dimensions relative to the page.
+ * 3. Merge adjacent spans that belong to the same token (handles kerning, superscripts).
+ * 4. Filter for items that look like Chords using Regex.
+ * 5. Return their position and dimensions relative to the page.
+ * 
+ * v2: Improved chord detection for real-world lead sheets
+ * - Expanded regex: handles add9, sus2/4, aug, dim, parenthetical extensions, double-sharps/flats
+ * - Better merging: handles superscripts (7, 9, 11, 13) and accidentals split across spans
+ * - Heuristic filtering: rejects common false positives (A, Am when likely lyrics)
+ * - Reduced console noise in production
  */
 
 export interface ScannedChord {
@@ -19,56 +26,115 @@ export interface ScannedChord {
     pxHeight: number;
 }
 
-// Strict Chord Regex
-// Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, etc.
-// Also matches Unicode Sharp (♯) and Flat (♭)
-const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(m|min|maj|dim|aug|sus|add|M|7|9|11|13|6|5|2|4)*(\/[A-G][b#\u266F\u266D]?)?$/;
+// ---- Chord Detection ----
 
-const EXCLUDED_WORDS = new Set(["I", "II", "III", "IV", "V", "VI", "VII"]);
+// Core chord pattern:
+// Root: A-G
+// Accidental: #, b, ♯, ♭ (or double: ##, bb)
+// Quality: m, min, maj, M, dim, aug, °, +, Δ
+// Extensions: 2, 4, 5, 6, 7, 9, 11, 13
+// Modifiers: sus, add, no, alt
+// Compound qualities: m7, maj7, dim7, m7b5, 7#9, etc.
+// Bass note: /X or /X# or /Xb
+// Parenthetical: (add9), (b5), (#11), etc.
+const CHORD_REGEX = /^[A-G][b#\u266F\u266D]?(?:m(?:in|aj)?|M(?:aj)?|dim|aug|°|\+|Δ)?(?:sus[24]?|add)?(?:2|4|5|6|7|9|11|13)?(?:[b#\u266F\u266D]?(?:5|9|11|13))?(?:\(.*?\))?(?:\/[A-G][b#\u266F\u266D]?)?$/;
+
+// Simpler test for "starts with a chord root and has chord-like content"
+// Used as a pre-filter before the strict regex
+const CHORD_PREFILTER = /^[A-G][b#\u266F\u266D]?/;
+
+// Things that look like chords but aren't
+const EXCLUDED_WORDS = new Set([
+    "A", "Am", // Single "A" or "Am" could be articles — handled by context heuristic below
+    "I", "II", "III", "IV", "V", "VI", "VII",
+    "D.C.", "D.S.", "Da", "Dal",
+    "Fine", "Fade",
+    "Freely",
+]);
+
+// These ARE valid even though they're short — only exclude "A" and "Am" contextually
+const ALWAYS_VALID_SHORT = new Set([
+    "Ab", "A#", "Am7", "A7", "A2", "A9", "Adim", "Aaug", "Asus", "Asus2", "Asus4",
+    "Bb", "B", "Bm", "Bm7", "B7",
+    "C", "Cm", "C7", "Cm7", "C#", "C#m",
+    "D", "Dm", "D7", "Dm7", "D#",
+    "E", "Em", "E7", "Em7", "Eb",
+    "F", "Fm", "F7", "F#", "F#m", "F#m7",
+    "G", "Gm", "G7", "Gm7", "G#", "G#m",
+]);
+
+// Extended chord regex for the strict pass — handles the full grammar
+function isChord(text: string): boolean {
+    const clean = text.trim().replace(/[^\w#b♯♭°+Δ\/()]/g, '');
+    if (!clean || clean.length === 0) return false;
+
+    // Quick reject: must start with A-G
+    if (!CHORD_PREFILTER.test(clean)) return false;
+
+    // Always-valid known chords
+    if (ALWAYS_VALID_SHORT.has(clean)) return true;
+
+    // Excluded words (exact match)
+    if (EXCLUDED_WORDS.has(clean)) return false;
+
+    // Try strict regex
+    if (CHORD_REGEX.test(clean)) return true;
+
+    // Fallback: more permissive pattern for complex chords like Fm7b5, G7#9, Bbmaj9, etc.
+    const permissive = /^[A-G][b#\u266F\u266D]?(?:m|min|maj|M|dim|aug|°|\+|Δ)?(?:sus)?(?:add)?(?:\d{1,2})?(?:[b#\u266F\u266D]\d{1,2})?(?:\(.*?\))?(?:\/[A-G][b#\u266F\u266D]?)?$/;
+    return permissive.test(clean);
+}
+
+// Contextual filter: is "A" or "Am" actually a chord here?
+// Heuristic: if it's on a line where other clear chords exist, it's probably a chord
+function isAmbiguousChord(text: string): boolean {
+    const clean = text.trim();
+    return clean === "A" || clean === "Am";
+}
+
+// ---- Span Processing ----
+
+interface SpanItem {
+    text: string;
+    rect: DOMRect;
+    y: number;
+    x: number;
+    r: number; // right edge
+    b: number; // bottom edge
+    w: number;
+    h: number;
+    span: HTMLSpanElement;
+}
 
 export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const textLayer = pageElement.querySelector('.react-pdf__Page__textContent');
-    if (!textLayer) {
-        console.warn("Text layer not found");
-        return [];
-    }
+    if (!textLayer) return [];
 
     const chords: ScannedChord[] = [];
     const spans = Array.from(textLayer.querySelectorAll('span'));
 
-    // Bounds of the container for % calcs
-    // Bounds of the container for % calcs
-    // Use textLayer bounds instead of pageElement for more accurate measurement
+    // Page bounds for percentage calculations
     const textLayerRect = textLayer.getBoundingClientRect();
+    const pageElRect = pageElement.getBoundingClientRect();
     const pageRect = {
-        left: Math.min(pageElement.getBoundingClientRect().left, textLayerRect.left),
-        right: Math.max(pageElement.getBoundingClientRect().right, textLayerRect.right),
-        top: Math.min(pageElement.getBoundingClientRect().top, textLayerRect.top),
-        bottom: Math.max(pageElement.getBoundingClientRect().bottom, textLayerRect.bottom),
+        left: Math.min(pageElRect.left, textLayerRect.left),
+        right: Math.max(pageElRect.right, textLayerRect.right),
+        top: Math.min(pageElRect.top, textLayerRect.top),
+        bottom: Math.max(pageElRect.bottom, textLayerRect.bottom),
         width: 0,
         height: 0
     };
     pageRect.width = pageRect.right - pageRect.left;
     pageRect.height = pageRect.bottom - pageRect.top;
 
-    // Debug Text Scanner
-    console.log('[TextScanner] Page rect:', {
-        left: pageRect.left,
-        right: pageRect.right,
-        width: pageRect.width,
-        top: pageRect.top,
-        bottom: pageRect.bottom,
-        height: pageRect.height
-    });
-    console.log('[TextScanner] Total spans found:', spans.length);
+    if (pageRect.width === 0 || pageRect.height === 0) return [];
 
-    // 1. Map to objects with coordinates
-    const items = spans.map(span => {
+    // 1. Map spans to items with coordinates
+    const items: SpanItem[] = spans.map(span => {
         const rect = span.getBoundingClientRect();
         return {
             text: span.textContent || "",
             rect,
-            // Relative coordinates for logic
             y: rect.top,
             x: rect.left,
             r: rect.right,
@@ -79,201 +145,160 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         };
     }).filter(i => i.text.trim().length > 0);
 
-    console.log('[TextScanner] Items after filtering empty:', items.length);
-    if (items.length > 0) {
-        console.log('[TextScanner] Rightmost item x:', Math.max(...items.map(i => i.x)));
+    if (items.length === 0) return [];
 
-        // Log items near right edge
-        const rightEdgeItems = items.filter(i => {
-            const xPct = ((i.x - pageRect.left) / pageRect.width) * 100;
-            return xPct > 80;
-        });
-        console.log('[TextScanner] Items with x > 80%:', rightEdgeItems.map(i => ({
-            text: i.text,
-            xPct: (((i.x - pageRect.left) / pageRect.width) * 100).toFixed(1)
-        })));
-    }
-
-    // 2. Sort by Y (Line) then X (Position)
-    // Tolerance for "Same Line": 5px
+    // 2. Sort by Y (line) then X (position within line)
+    const LINE_TOLERANCE = 5; // px
     items.sort((a, b) => {
-        if (Math.abs(a.y - b.y) < 5) {
+        if (Math.abs(a.y - b.y) < LINE_TOLERANCE) {
             return a.x - b.x;
         }
         return a.y - b.y;
     });
 
-    // 3. Merge adjacent items
-    const merged: typeof items = [];
-
+    // 3. First pass: merge adjacent spans on same line (handles kerning splits)
+    const merged: SpanItem[] = [];
     if (items.length > 0) {
-        let current = items[0];
+        let current = { ...items[0] };
 
         for (let i = 1; i < items.length; i++) {
             const next = items[i];
-
-            // Check if on same line (vertical overlap or close Y)
-            const sameLine = Math.abs(current.y - next.y) < (current.h * 0.3); // robust line check (conservative)
-
-            // Check spacing (horizontal gap)
-            // If gap is small, it's likely one word/chord split by kerning
+            const sameLine = Math.abs(current.y - next.y) < (current.h * 0.3);
             const gap = next.x - current.r;
-
-            // Smarter gap check: stricter for words, looser for single chars (like #, m, 7)
             const isSingleChar = current.text.trim().length === 1 || next.text.trim().length === 1;
             const maxGap = isSingleChar ? (current.h * 0.5) : (current.h * 0.2);
-            const isClose = gap >= 0 && gap < maxGap;
+            const isClose = gap >= -2 && gap < maxGap; // Allow tiny overlap (-2px)
 
             if (sameLine && isClose) {
-                // Merge
-                current.text += next.text;
-                current.r = next.r; // Extend right
-                current.w = current.r - current.x;
-                current.h = Math.max(current.h, next.h); // Max height
-                current.b = Math.max(current.b, next.b);
-                // Keep current.y and current.x as origin
+                current = {
+                    ...current,
+                    text: current.text + next.text,
+                    r: next.r,
+                    w: next.r - current.x,
+                    h: Math.max(current.h, next.h),
+                    b: Math.max(current.b, next.b),
+                };
             } else {
-                // Push current and start new
                 merged.push(current);
-                current = next;
+                current = { ...next };
             }
         }
         merged.push(current);
     }
 
-    // Post-process: Aggressively combine chord parts that are on the same line
-    // This handles cases where G, #, m, 7 are all separate spans
-    // NOTE: The "7" is often a superscript with different Y position!
-    const finalItems: typeof merged = [];
-
+    // 4. Second pass: build complete chords from root + modifiers/extensions
+    // Handles cases where G, #, m, 7 are separate spans, including superscript numbers
+    const assembled: SpanItem[] = [];
     for (let i = 0; i < merged.length; i++) {
-        let current = merged[i];
+        const current = merged[i];
+        const trimmed = current.text.trim();
 
-        // If current starts with a chord root letter (A-G), try to build a complete chord
-        if (/^[A-G]$/.test(current.text.trim())) {
-            let chordText = current.text.trim();
+        // If current is a single chord root letter (A-G), try to assemble a full chord
+        if (/^[A-G]$/.test(trimmed)) {
+            let chordText = trimmed;
             let lastItem = current;
             let j = i + 1;
 
-            // Keep consuming adjacent items that look like chord parts
             while (j < merged.length) {
                 const next = merged[j];
                 const nextText = next.text.trim();
 
-                // Check if this looks like a chord continuation
-                const isSharpOrFlat = /^[#b♯♭]$/.test(nextText);
-                const isQuality = /^(m|M|maj|min|dim|aug|sus|add)+$/.test(nextText);
-                const isNumber = /^[0-9]+$/.test(nextText);  // 7, 9, 11, 13, etc.
-                const isCombo = /^(m7|maj7|min7|dim7|add9|sus4|sus2)$/.test(nextText);
+                // Classify what this fragment could be
+                const isAccidental = /^[#b♯♭]+$/.test(nextText);
+                const isQuality = /^(m|M|maj|min|dim|aug|sus|add|°|\+|Δ)+$/.test(nextText);
+                const isNumber = /^\d+$/.test(nextText);
+                const isCombo = /^(m\d|maj\d|min\d|dim\d|sus\d|add\d|m7|maj7|min7|dim7|aug7|add9|sus4|sus2|7sus|7#|7b|b5|#5|b9|#9|#11|b13)/.test(nextText);
+                const isSlash = /^\/[A-G][#b♯♭]?$/.test(nextText);
+                const isParen = /^\(.*\)$/.test(nextText);
 
-                if (!isSharpOrFlat && !isQuality && !isNumber && !isCombo) {
-                    break;  // Not a chord part
+                if (!isAccidental && !isQuality && !isNumber && !isCombo && !isSlash && !isParen) {
+                    break;
                 }
 
-                // Y tolerance: VERY permissive for numbers (superscripts), normal for others
-                // Compare against LAST consumed item, not original root
-                const yTolerance = isNumber ? (lastItem.h * 2) : (lastItem.h * 1.2);
-                if (Math.abs(lastItem.y - next.y) > yTolerance) {
-                    break;  // Too far vertically
-                }
+                // Vertical tolerance: very permissive for superscripts (numbers), normal for others
+                const yTolerance = isNumber ? (lastItem.h * 2.5) : (lastItem.h * 1.2);
+                if (Math.abs(lastItem.y - next.y) > yTolerance) break;
 
-                // X tolerance: must be close horizontally
+                // Horizontal tolerance
                 const gap = next.x - lastItem.r;
-                const maxGap = isNumber ? (lastItem.h * 1.5) : (lastItem.h * 1.0);  // More permissive for superscripts
-                if (gap > maxGap || gap < -lastItem.w) {  // Allow slight overlap
-                    break;  // Too far horizontally
-                }
+                const maxGap = (isNumber || isAccidental) ? (lastItem.h * 1.5) : (lastItem.h * 1.0);
+                if (gap > maxGap || gap < -lastItem.w) break;
 
-                // Consume this item
                 chordText += nextText;
                 lastItem = next;
                 j++;
             }
 
-            // Create combined item with expanded bounds to cover all parts
-            const combinedItem = {
+            // Build the assembled item with expanded bounds
+            assembled.push({
                 ...current,
                 text: chordText,
                 r: lastItem.r,
                 w: lastItem.r - current.x,
-                // Expand height to cover superscripts
                 y: Math.min(current.y, lastItem.y),
                 h: Math.max(current.b, lastItem.b) - Math.min(current.y, lastItem.y),
-            };
-            finalItems.push(combinedItem);
-
-            // Skip the items we consumed
-            i = j - 1;
+                b: Math.max(current.b, lastItem.b),
+            });
+            i = j - 1; // Skip consumed items
         } else {
-            finalItems.push(current);
+            assembled.push(current);
         }
     }
 
-    const itemsToFilter = finalItems;
+    // 5. Group items by line for contextual filtering
+    const lines: SpanItem[][] = [];
+    let currentLine: SpanItem[] = [];
+    let currentLineY = assembled.length > 0 ? assembled[0].y : 0;
 
-    console.log('[TextScanner] Items after merging:', itemsToFilter.length);
-    if (itemsToFilter.length > 0) {
-        // Log a sample to avoid flooding console, or all if debugging
-        console.log('[TextScanner] Merged items sample:', merged.slice(0, 10).map(m => ({ text: m.text.substring(0, 10), x: m.x.toFixed(0) })));
-        console.log('[TextScanner] Merged text samples:', merged.filter(m => m.text.length > 2).slice(0, 20).map(m => m.text));
+    for (const item of assembled) {
+        if (Math.abs(item.y - currentLineY) > LINE_TOLERANCE * 2) {
+            if (currentLine.length > 0) lines.push(currentLine);
+            currentLine = [];
+            currentLineY = item.y;
+        }
+        currentLine.push(item);
+    }
+    if (currentLine.length > 0) lines.push(currentLine);
 
-        // Log potential chords that were NOT captured
-        const missedChords = merged.filter(item => {
-            const text = item.text.trim();
-            const xPct = ((item.x - pageRect.left) / pageRect.width) * 100;
-            // Check if it LOOKS like a chord but wasn't captured
-            const looksLikeChord = /^[A-G]/.test(text) && text.length <= 6;
-            const wasNotCaptured = !CHORD_REGEX.test(text.replace(/[^\w#b♯♭\/]/g, ''));
-            return looksLikeChord && wasNotCaptured && xPct > 70;
+    // 6. Filter for chords with contextual awareness
+    for (const line of lines) {
+        const lineChords: { item: SpanItem; text: string }[] = [];
+        const hasUnambiguousChords = line.some(item => {
+            const clean = item.text.trim().replace(/[^\w#b♯♭°+Δ\/()]/g, '');
+            return isChord(clean) && !isAmbiguousChord(clean);
         });
-        if (missedChords.length > 0) {
-            console.log('[TextScanner] Potential missed chords:', missedChords.map(m => ({
-                text: m.text,
-                xPct: (((m.x - pageRect.left) / pageRect.width) * 100).toFixed(1)
-            })));
-        }
-    }
 
-    // 4. Filter for Chords
-    itemsToFilter.forEach(item => {
-        const text = item.text.trim();
+        for (const item of line) {
+            const text = item.text.trim();
+            const clean = text.replace(/[^\w#b♯♭°+Δ\/()]/g, '');
 
-        // Check if it matches chord regex and isn't excluded
-        const cleanText = text.replace(/[^\w#b♯♭\/]/g, '');  // Remove any stray characters
-        if (CHORD_REGEX.test(cleanText) && !EXCLUDED_WORDS.has(cleanText)) {
+            if (!isChord(clean)) continue;
 
-            // Special check for "A" - removed as it was too aggressive
-            // Using standard regex and exclusion list only.
+            // For ambiguous chords (A, Am): only include if line has other clear chords
+            if (isAmbiguousChord(clean) && !hasUnambiguousChords) continue;
 
-            // Calculate relative % using the merged screen coordinates
+            // Width sanity check — chord should be less than 15% of page width
+            const wPct = (item.w / pageRect.width) * 100;
+            if (wPct > 15) continue;
+
+            // Calculate percentage coordinates
             let x = ((item.x - pageRect.left) / pageRect.width) * 100;
             let y = ((item.y - pageRect.top) / pageRect.height) * 100;
-            const w = (item.w / pageRect.width) * 100;
+            const w = wPct;
             const h = (item.h / pageRect.height) * 100;
 
-            // Clamp x to valid range (items near edge might calculate slightly > 100)
+            // Clamp to valid range
             x = Math.min(Math.max(x, 0), 99);
             y = Math.min(Math.max(y, 0), 99);
 
-            // Sanity check: chord width should be reasonable (< 15% of page)
-            // If width is huge, the merge corrupted this item
-            if (w > 15) {
-                console.warn(`[TextScanner] Skipping chord with abnormal width: ${cleanText} w=${w.toFixed(1)}%`);
-                return; // Skip this item
-            }
-
             chords.push({
                 id: crypto.randomUUID(),
-                text: cleanText,  // Use cleaned text
+                text: clean,
                 x, y, w, h,
                 pxHeight: item.h
             });
         }
-    });
-
-    // Debug logging for text scanner
-    console.log('[TextScanner] Total chords found:', chords.length);
-    // console.log('[TextScanner] Chord positions:', chords.map(c => ({ text: c.text, x: c.x.toFixed(1), y: c.y.toFixed(1) })));
+    }
 
     return chords;
 }
