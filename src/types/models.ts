@@ -68,6 +68,7 @@ export interface UserProfile {
     role: UserRole
     createdAt?: any
     lastLoginAt?: any
+    musicianProfile?: MusicianProfile
 }
 
 /**
