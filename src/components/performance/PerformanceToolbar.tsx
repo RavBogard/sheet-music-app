@@ -115,9 +115,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </div>
 
                 {/* Transposer */}
-                <Popover open={menuOpen} onOpenChange={(open) => {
+                <Popover onOpenChange={(open) => {
                     setMenuOpen(open)
-                    if (open && !aiState.isEnabled) setAiEnabled(true)
+                    if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                 }}>
                     <PopoverTrigger asChild>
                         <button
@@ -208,9 +208,9 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </div>
 
                     {/* Transposer */}
-                    <Popover open={menuOpen} onOpenChange={(open) => {
+                    <Popover onOpenChange={(open) => {
                     setMenuOpen(open)
-                    if (open && !aiState.isEnabled) setAiEnabled(true)
+                    if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                 }}>
                         <PopoverTrigger asChild>
                             <button
