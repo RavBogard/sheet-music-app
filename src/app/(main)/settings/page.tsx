@@ -69,7 +69,7 @@ export default function UnifiedSettingsPage() {
 
         } catch (e: unknown) {
             console.error("Enrichment Failed:", e)
-            toast.error("Enrichment Failed: " + e instanceof Error ? e.message : "Unknown error")
+            toast.error("Enrichment Failed: " + (e instanceof Error ? e.message : "Unknown error"))
         } finally {
             setEnriching(false)
         }
