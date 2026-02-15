@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { google } from "googleapis"
 
 export async function GET() {
-    const results: any = {}
+    const results: Record<string, unknown> = {}
 
     // 1. Check Env Vars
     results.env = {
