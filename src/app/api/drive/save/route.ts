@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             name: newFile.name
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Save Error Details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
         return NextResponse.json({ error: `Save Failed: ${error.message}` }, { status: 500 });
     }
