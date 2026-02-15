@@ -6,6 +6,7 @@ import { useMusicStore, FileType } from "@/lib/store"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
+import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 
 import { parseFileId } from "@/lib/utils"
 
@@ -14,6 +15,9 @@ export default function PerformPage() {
     const params = useParams()
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
     const { fileUrl, fileType, setFile } = useMusicStore()
+
+    // Auto-apply musician profile transposition
+    useMusicianTransposition()
 
     const fileId = params?.id as string
 
@@ -25,7 +29,6 @@ export default function PerformPage() {
             // CRITICAL: Only update the store if the URL actually represents a different file
             // than what is currently loaded.
             if (!fileUrl?.includes(fileId)) {
-                console.log("URL change detected, syncing store to:", fileId)
                 setFile(apiUrl, defaultType as FileType)
             }
         }
