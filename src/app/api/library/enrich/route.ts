@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error("Enrichment API Error:", error)
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal server error" || "Failed to enrich file" },
+            { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }
         )
     }
