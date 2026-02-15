@@ -1,6 +1,6 @@
 "use client"
 
-import { useMusicStore } from "@/lib/store"
+import { useMusicStore, QueueItem } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { Button } from "@/components/ui/button"
@@ -55,7 +55,7 @@ export function SetlistDrawer() {
                 bpm: t.bpm,
                 transposition: t.transposition,
                 key: t.key
-            } as any))
+            } as QueueItem))
 
         if (queue.length > 0) {
             setQueue(queue, 0)
