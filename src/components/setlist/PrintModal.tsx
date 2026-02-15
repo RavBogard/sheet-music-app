@@ -155,9 +155,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                     }
                 }
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('Print generation failed:', e)
-            setError(e.message || 'Failed to generate PDF')
+            setError(e instanceof Error ? e.message : 'Failed to generate PDF')
         } finally {
             setGenerating(false)
         }
