@@ -227,9 +227,9 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     const displayedSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
 
     return (
-        <div className="h-screen flex flex-col bg-zinc-950 text-white">
+        <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
-            <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4 shrink-0">
+            <div className="h-20 border-b border-border flex items-center px-4 gap-4 shrink-0">
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
@@ -237,7 +237,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     <img
                         src="/logo.jpg"
                         alt="CRC"
-                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                        className="h-8 w-8 rounded-full border border-border object-cover"
                     />
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
@@ -295,16 +295,16 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             {/* Transfer Dialog Overlay */}
             {showTransferDialog && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl max-w-md w-full space-y-4">
+                    <div className="bg-card border border-border p-6 rounded-xl max-w-md w-full space-y-4">
                         <h3 className="text-xl font-bold">Transfer Ownership</h3>
-                        <p className="text-zinc-400">
+                        <p className="text-muted-foreground">
                             Transferring <strong>{selectedSetlistForTransfer?.name}</strong> to another user.
                             You will lose access unless they share it back with you.
                         </p>
                         <input
                             type="email"
                             placeholder="New Owner's Email"
-                            className="w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg text-white"
+                            className="w-full bg-background border border-border p-3 rounded-lg text-foreground"
                             value={transferEmail}
                             onChange={(e) => setTransferEmail(e.target.value)}
                         />
@@ -318,12 +318,12 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
             {/* Tabs & View Toggle */}
             <div className="px-6 pt-6 shrink-0 flex items-center justify-between">
-                <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
+                <div className="flex bg-card p-1 rounded-xl w-fit">
                     <Button
                         variant={activeTab === 'public' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => setActiveTab('public')}
-                        className={`transition-all ${activeTab === 'public' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
+                        className={`transition-all ${activeTab === 'public' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
                     >
                         Public Library
                     </Button>
@@ -332,19 +332,19 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                             variant={activeTab === 'personal' ? 'secondary' : 'ghost'}
                             size="sm"
                             onClick={() => setActiveTab('personal')}
-                            className={`transition-all ${activeTab === 'personal' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
+                            className={`transition-all ${activeTab === 'personal' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
                         >
                             My Personal
                         </Button>
                     )}
                 </div>
 
-                <div className="flex bg-zinc-900 p-1 rounded-xl w-fit">
+                <div className="flex bg-card p-1 rounded-xl w-fit">
                     <Button
                         variant={view === 'list' ? 'secondary' : 'ghost'}
                         size="icon"
                         onClick={() => setView('list')}
-                        className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
+                        className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
                         title="List View"
                     >
                         <List className="h-4 w-4" />
@@ -353,7 +353,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                         variant={view === 'calendar' ? 'secondary' : 'ghost'}
                         size="icon"
                         onClick={() => setView('calendar')}
-                        className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-transparent'}`}
+                        className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
                         title="Calendar View"
                     >
                         <Calendar className="h-4 w-4" />
@@ -386,7 +386,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     {loading && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[1, 2, 3].map(i => (
-                                <Skeleton key={i} className="h-48 rounded-xl bg-zinc-900/50 border border-zinc-800" />
+                                <Skeleton key={i} className="h-48 rounded-xl bg-card border border-border" />
                             ))}
                         </div>
                     )}
@@ -450,7 +450,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                     <>
                                         {hasUpcoming && (
                                             <section>
-                                                <h2 className="text-lg font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                                <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
                                                     <Calendar className="h-4 w-4" />
                                                     Upcoming Services
                                                 </h2>
@@ -460,7 +460,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                         <button
                                                             key={setlist.id}
                                                             onClick={() => onSelect(setlist)}
-                                                            className="bg-zinc-900/80 hover:bg-zinc-800 border-l-4 border-l-blue-500 border-y border-r border-zinc-800 rounded-r-xl p-6 text-left transition-all group relative overflow-hidden"
+                                                            className="bg-card hover:bg-muted border-l-4 border-l-blue-500 border-y border-r border-border rounded-r-xl p-6 text-left transition-all group relative overflow-hidden"
                                                         >
                                                             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                                                                 <Calendar className="h-24 w-24 -mr-4 -mt-4 text-blue-500" />
@@ -490,16 +490,16 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                                                 toast.error("No tracks to download in this setlist")
                                                                             }
                                                                         }}
-                                                                        className="p-2 -mr-2 -mt-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                                                                        className="p-2 -mr-2 -mt-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
                                                                         title="Download for Offline"
                                                                     >
-                                                                        <Download className={`h-4 w-4 text-zinc-400 hover:text-white ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
+                                                                        <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
                                                                     </div>
                                                                 </div>
-                                                                <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
-                                                                {setlist.ownerName && <p className="text-zinc-500 text-sm">Leader: {setlist.ownerName}</p>}
+                                                                <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
+                                                                {setlist.ownerName && <p className="text-muted-foreground text-sm">Leader: {setlist.ownerName}</p>}
 
-                                                                <div className="mt-4 flex items-center gap-4 text-sm text-zinc-400">
+                                                                <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
                                                                     <span>{setlist.trackCount || 0} songs</span>
                                                                     {setlist.isPublic && <Globe className="h-3 w-3" />}
                                                                 </div>
@@ -512,16 +512,16 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                         <button
                                                             key={idx}
                                                             onClick={() => handleCreateFromCalendar(p.date)}
-                                                            className="border border-dashed border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/50 rounded-xl p-6 text-left transition-all flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
+                                                            className="border border-dashed border-border hover:border-zinc-500 hover:bg-card rounded-xl p-6 text-left transition-all flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
                                                         >
-                                                            <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-colors">
+                                                            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-colors">
                                                                 <Plus className="h-6 w-6" />
                                                             </div>
                                                             <div className="text-center">
-                                                                <div className="font-bold text-zinc-300">
+                                                                <div className="font-bold text-foreground">
                                                                     {p.date.toLocaleDateString('en-US', { weekday: 'long' })}
                                                                 </div>
-                                                                <div className="text-sm text-zinc-500">
+                                                                <div className="text-sm text-muted-foreground">
                                                                     {p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                                                 </div>
                                                             </div>
@@ -537,33 +537,33 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                         {/* Main Library / Past Setlists */}
                                         <section>
                                             {hasUpcoming && (
-                                                <h2 className="text-lg font-bold text-zinc-400 uppercase tracking-wider mb-4 border-t border-zinc-800 pt-8">
+                                                <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider mb-4 border-t border-border pt-8">
                                                     Library & Past Events
                                                 </h2>
                                             )}
 
                                             {pastOrNoDate.length === 0 ? (
-                                                <div className="text-zinc-500 italic py-10 text-center">No other setlists found.</div>
+                                                <div className="text-muted-foreground italic py-10 text-center">No other setlists found.</div>
                                             ) : (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {pastOrNoDate.map(setlist => (
                                                         <button
                                                             key={setlist.id}
                                                             onClick={() => onSelect(setlist)}
-                                                            className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl p-6 text-left transition-all group relative"
+                                                            className="bg-card hover:bg-muted border border-border rounded-xl p-6 text-left transition-all group relative"
                                                         >
                                                             <div className="flex items-start justify-between mb-2">
                                                                 <div className="flex items-center gap-2">
                                                                     {setlist.isPublic ? (
-                                                                        <Globe className="h-4 w-4 text-zinc-600" />
+                                                                        <Globe className="h-4 w-4 text-muted-foreground/60" />
                                                                     ) : (
-                                                                        <Lock className="h-4 w-4 text-zinc-600" />
+                                                                        <Lock className="h-4 w-4 text-muted-foreground/60" />
                                                                     )}
                                                                     {/* Add Date to Name for standard items as requested "names... should have that date... added" */}
                                                                     <div className="flex flex-col">
-                                                                        <h3 className="text-xl font-semibold truncate max-w-[200px] group-hover:text-white text-zinc-200">{setlist.name}</h3>
+                                                                        <h3 className="text-xl font-semibold truncate max-w-[200px] group-hover:text-foreground text-foreground">{setlist.name}</h3>
                                                                         {setlist.eventDate && (
-                                                                            <span className="text-xs text-zinc-500">
+                                                                            <span className="text-xs text-muted-foreground">
                                                                                 {new Date(setlist.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
                                                                             </span>
                                                                         )}
@@ -574,7 +574,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     {user && (
                                                                         <div
-                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white"
+                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-muted-foreground hover:text-foreground"
                                                                             onClick={(e) => handleDuplicateClick(setlist, e)}
                                                                             title="Duplicate"
                                                                         >
@@ -583,7 +583,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                                     )}
                                                                     {(!setlist.isPublic || setlist.ownerId === user?.uid) && (
                                                                         <div
-                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-red-400"
+                                                                            className="p-2 hover:bg-zinc-700 rounded-md text-muted-foreground hover:text-red-400"
                                                                             onClick={(e) => handleDeleteClick(setlist, e)}
                                                                             title="Delete"
                                                                         >
@@ -594,11 +594,11 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                                             </div>
 
                                                             {setlist.isPublic && setlist.ownerName && (
-                                                                <div className="text-sm text-zinc-500">
+                                                                <div className="text-sm text-muted-foreground">
                                                                     by {setlist.ownerName}
                                                                 </div>
                                                             )}
-                                                            <div className="mt-2 text-zinc-400 text-sm">
+                                                            <div className="mt-2 text-muted-foreground text-sm">
                                                                 {setlist.trackCount || 0} songs
                                                             </div>
                                                         </button>
