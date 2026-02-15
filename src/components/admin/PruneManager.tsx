@@ -94,9 +94,9 @@ export function PruneManager() {
                     </Button>
 
                     {scanData && (
-                        <div className="text-sm text-zinc-400 flex gap-4">
-                            <span>Drive: <span className="text-white font-mono">{scanData.driveCount}</span></span>
-                            <span>DB: <span className="text-white font-mono">{scanData.dbCount}</span></span>
+                        <div className="text-sm text-muted-foreground flex gap-4">
+                            <span>Drive: <span className="text-foreground font-mono">{scanData.driveCount}</span></span>
+                            <span>DB: <span className="text-foreground font-mono">{scanData.dbCount}</span></span>
                         </div>
                     )}
                 </div>
@@ -122,7 +122,7 @@ export function PruneManager() {
                                 {scanData.ghosts.length} Ghosts Found
                             </h4>
                         </div>
-                        <div className="max-h-32 overflow-y-auto text-xs text-zinc-500 space-y-1">
+                        <div className="max-h-32 overflow-y-auto text-xs text-muted-foreground space-y-1">
                             {scanData.ghosts.map(g => (
                                 <div key={g.id} className="flex justify-between">
                                     <span className="truncate max-w-[200px]">{g.name}</span>
