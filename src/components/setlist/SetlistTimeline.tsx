@@ -22,7 +22,7 @@ export function SetlistTimeline({ tracks, onPlay }: SetlistTimelineProps) {
                         <div
                             key={i}
                             onClick={() => track.fileId && onPlay(track.fileId)}
-                            className="bg-black border border-border hover:border-zinc-600 rounded-xl p-4 w-60 shrink-0 cursor-pointer transition-colors relative group"
+                            className="bg-black border border-border hover:border-muted-foreground rounded-xl p-4 w-60 shrink-0 cursor-pointer transition-colors relative group"
                         >
                             {/* Connector Line */}
                             {i < tracks.length - 1 && (
