@@ -91,10 +91,12 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </div>
 
                 {/* Transposer */}
-                <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                <Popover open={menuOpen} onOpenChange={(open) => {
+                    setMenuOpen(open)
+                    if (open && !aiState.isEnabled) setAiEnabled(true)
+                }}>
                     <PopoverTrigger asChild>
                         <button
-                            onClick={() => { if (!aiState.isEnabled) setAiEnabled(true) }}
                             className={cn(
                                 "h-9 px-3 sm:px-4 rounded-lg border text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 min-w-[100px] sm:min-w-[140px] justify-center",
                                 aiState.isEnabled
@@ -182,10 +184,12 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </div>
 
                     {/* Transposer */}
-                    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                    <Popover open={menuOpen} onOpenChange={(open) => {
+                    setMenuOpen(open)
+                    if (open && !aiState.isEnabled) setAiEnabled(true)
+                }}>
                         <PopoverTrigger asChild>
                             <button
-                                onClick={() => { if (!aiState.isEnabled) setAiEnabled(true) }}
                                 className={cn(
                                     "h-10 px-4 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
