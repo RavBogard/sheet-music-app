@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronUp, ChevronDown, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { calculateCapo, estimateKey, transposeChord } from "@/lib/music-math"
+import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 
 // Common guitar-friendly shapes for the "Play As" grid
 const SHAPES = [
@@ -27,6 +28,9 @@ export function TransposerMenu() {
         setCapoFret,
         capoFret,
     } = useMusicStore()
+
+    // Musician profile for auto-transposition indicator
+    const { profile, isAutoTransposed, instrumentLabel } = useMusicianTransposition()
 
     // Gather all detected chords across pages
     const allChords = useMemo(() => {
@@ -81,6 +85,15 @@ export function TransposerMenu() {
 
     return (
         <div className="flex flex-col gap-3 p-4 min-w-[300px]">
+            {/* Musician Profile Indicator */}
+            {instrumentLabel && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-violet-500/10 rounded-lg border border-violet-500/20 text-xs">
+                    <span className="text-violet-400 font-semibold">{instrumentLabel}</span>
+                    {isAutoTransposed && (
+                        <span className="text-violet-400/60">• auto-transposed</span>
+                    )}
+                </div>
+            )}
 
             {/* ── Detected Key ── */}
             <div className="flex items-center justify-between">
