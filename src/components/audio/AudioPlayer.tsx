@@ -85,14 +85,14 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
 
     if (!src) {
         return (
-            <div className="bg-zinc-900 rounded-lg p-4 text-center text-zinc-500">
+            <div className="bg-card rounded-lg p-4 text-center text-muted-foreground">
                 Select an audio file to play
             </div>
         )
     }
 
     return (
-        <div className="bg-zinc-900 rounded-lg p-4">
+        <div className="bg-card rounded-lg p-4">
             <audio
                 ref={audioRef}
                 src={src}
@@ -112,7 +112,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
 
             {/* Progress Bar */}
             <div className="flex items-center gap-3 mb-4">
-                <span className="text-xs text-zinc-500 w-10">{formatTime(currentTime)}</span>
+                <span className="text-xs text-muted-foreground w-10">{formatTime(currentTime)}</span>
                 <input
                     type="range"
                     min="0"
@@ -121,7 +121,7 @@ export function AudioPlayer({ src, title, onEnded }: AudioPlayerProps) {
                     onChange={handleSeek}
                     className="flex-1 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
-                <span className="text-xs text-zinc-500 w-10">{formatTime(duration)}</span>
+                <span className="text-xs text-muted-foreground w-10">{formatTime(duration)}</span>
             </div>
 
             {/* Controls */}
