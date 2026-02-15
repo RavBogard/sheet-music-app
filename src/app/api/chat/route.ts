@@ -93,8 +93,8 @@ export async function POST(request: Request) {
     })
 
     // Construct the context
-    const libraryContext = libraryFiles.slice(0, 500).map((f: any) => `${f.name} (ID: ${f.id})`).join("\n")
-    const setlistContext = currentSetlist.map((t: any, i: number) => `${i + 1}. ${t.title}`).join("\n")
+    const libraryContext = libraryFiles.slice(0, 500).map((f: { name: string; id: string }) => `${f.name} (ID: ${f.id})`).join("\n")
+    const setlistContext = currentSetlist.map((t: { title: string }, i: number) => `${i + 1}. ${t.title}`).join("\n")
 
     const prompt = `
 ${SYSTEM_PROMPT}
