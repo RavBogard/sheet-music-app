@@ -53,22 +53,22 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
     }
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-white">
+        <div className="h-full flex flex-col bg-background text-foreground">
             {/* Header */}
-            <div className="h-20 border-b border-zinc-800 flex items-center px-4 gap-4">
+            <div className="h-20 border-b border-border flex items-center px-4 gap-4">
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <h1 className="text-2xl font-bold flex-1">{onSelectFile ? "Select Audio Track" : "Audio Files"}</h1>
-                <div className="text-sm text-zinc-500">
+                <div className="text-sm text-muted-foreground">
                     {audioFiles.length} audio files
                 </div>
             </div>
 
             {/* Search */}
-            <div className="p-4 border-b border-zinc-800">
+            <div className="p-4 border-b border-border">
                 <div className="relative max-w-xl mx-auto">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -80,7 +80,7 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
 
             {/* Audio Player (sticky at top when playing) */}
             {playingFile && (
-                <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+                <div className="p-4 border-b border-border bg-muted">
                     <div className="max-w-2xl mx-auto">
                         <AudioPlayer
                             src={audioUrl}
@@ -93,7 +93,7 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
                 {audioFiles.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                         <Music className="h-16 w-16 mb-4" />
                         <p className="text-xl">No audio files found</p>
                         <p className="text-sm mt-2">Share MP3 or audio files with the service account</p>
@@ -111,11 +111,11 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
                                     }
                                 }}
                                 className={`w-full text-left p-4 rounded-lg transition-colors flex items-center gap-4 ${playingFile?.id === file.id
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-zinc-900 hover:bg-zinc-800'
+                                    ? 'bg-blue-600 text-foreground'
+                                    : 'bg-card hover:bg-muted'
                                     }`}
                             >
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${playingFile?.id === file.id ? 'bg-white/20' : 'bg-zinc-800'
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${playingFile?.id === file.id ? 'bg-white/20' : 'bg-muted'
                                     }`}>
                                     {playingFile?.id === file.id ? (
                                         <Music className="h-5 w-5" />
@@ -127,7 +127,7 @@ export function AudioLibrary({ driveFiles, onBack, onSelectFile }: AudioLibraryP
                                     <div className="font-medium truncate">
                                         {getCleanName(file.name)}
                                     </div>
-                                    <div className="text-sm text-zinc-400 truncate">
+                                    <div className="text-sm text-muted-foreground truncate">
                                         {file.name}
                                     </div>
                                 </div>
