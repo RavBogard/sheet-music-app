@@ -103,7 +103,7 @@ export function MatchFileModal({
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
                     {/* Breadcrumbs for Navigation */}
                     {!searchQuery && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-border">
                             {breadcrumbs.map((crumb, i) => (
                                 <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
                                     {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
@@ -173,3 +173,4 @@ export function MatchFileModal({
         </Dialog>
     )
 }
+
