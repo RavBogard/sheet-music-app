@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { X, Printer, Download, Loader2, Minus, Plus, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
+import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { MusicianProfile } from "@/types/models"
 
 interface PrintModalProps {
     setlistName: string
@@ -34,6 +36,36 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
 
     // Transposition mode
     const [transposeMode, setTransposeMode] = useState<'standard' | 'transposed'>('standard')
+
+    // Musician profiles for "Print for..." feature
+    const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
+    const [selectedMusician, setSelectedMusician] = useState<string>("")
+
+    useEffect(() => {
+        const unsub = subscribeToAllMusicianProfiles(setMusicians)
+        return unsub
+    }, [])
+
+    // When a musician is selected, apply their transposition to all tracks
+    const applyMusicianProfile = (musicianUid: string) => {
+        setSelectedMusician(musicianUid)
+        const musician = musicians.find(m => m.uid === musicianUid)
+        if (!musician) {
+            // "None" selected - reset
+            setMusicianName("")
+            return
+        }
+
+        setMusicianName(musician.displayName)
+        const transposition = musician.profile.defaultTransposition || 0
+
+        if (transposition !== 0) {
+            setTransposeMode('transposed')
+            applyGlobalTranspose(transposition)
+        } else {
+            setTransposeMode('standard')
+        }
+    }
 
     // Per-track transposition overrides — initialized from setlist data
     const [trackTranspositions, setTrackTranspositions] = useState<Record<string, TrackTranspose>>(() => {
@@ -138,9 +170,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
 
     return (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="bg-zinc-900 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+                <div className="flex items-center justify-between p-4 border-b border-zinc-800 shrink-0">
                     <h2 className="text-xl font-bold">Print Setlist</h2>
                     <Button size="icon" variant="ghost" onClick={onClose}>
                         <X className="h-5 w-5" />
@@ -151,7 +183,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 <div className="overflow-y-auto flex-1 p-6 space-y-4">
                     {/* Basic Fields */}
                     <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Title</label>
+                        <label className="text-sm text-zinc-400 mb-1 block">Title</label>
                         <Input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -160,7 +192,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                     </div>
 
                     <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Date</label>
+                        <label className="text-sm text-zinc-400 mb-1 block">Date</label>
                         <Input
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
@@ -170,7 +202,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-sm text-muted-foreground mb-1 block">Musician (optional)</label>
+                            <label className="text-sm text-zinc-400 mb-1 block">Musician (optional)</label>
                             <Input
                                 value={musicianName}
                                 onChange={(e) => setMusicianName(e.target.value)}
@@ -178,7 +210,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             />
                         </div>
                         <div>
-                            <label className="text-sm text-muted-foreground mb-1 block">Event (optional)</label>
+                            <label className="text-sm text-zinc-400 mb-1 block">Event (optional)</label>
                             <Input
                                 value={eventName}
                                 onChange={(e) => setEventName(e.target.value)}
@@ -193,8 +225,8 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             onClick={() => setTransposeMode('standard')}
                             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                                 transposeMode === 'standard'
-                                    ? 'bg-zinc-700 text-foreground'
-                                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                                    ? 'bg-zinc-700 text-white'
+                                    : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             Standard Print
@@ -204,7 +236,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                                 transposeMode === 'transposed'
                                     ? 'bg-violet-600/30 text-violet-300 border border-violet-500/30'
-                                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                                    : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             <Music className="h-3.5 w-3.5" />
@@ -217,26 +249,26 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                         <div className="space-y-3">
                             {/* Quick Actions */}
                             <div className="flex items-center gap-2 text-xs">
-                                <span className="text-muted-foreground">Quick:</span>
+                                <span className="text-zinc-500">Quick:</span>
                                 {[-2, -1, 1, 2, 3, 5, 7].map(s => (
                                     <button
                                         key={s}
                                         onClick={() => applyGlobalTranspose(s)}
-                                        className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-zinc-700 transition-colors"
+                                        className="px-2 py-1 rounded bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
                                     >
                                         {s > 0 ? `+${s}` : s}
                                     </button>
                                 ))}
                                 <button
                                     onClick={() => applyGlobalTranspose(0)}
-                                    className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-zinc-700 transition-colors"
+                                    className="px-2 py-1 rounded bg-zinc-800 text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors"
                                 >
                                     Reset
                                 </button>
                             </div>
 
                             {/* Per-Track List */}
-                            <div className="bg-muted rounded-lg divide-y divide-zinc-800">
+                            <div className="bg-zinc-800/50 rounded-lg divide-y divide-zinc-800">
                                 {tracks.filter(t => t.type !== 'header').map(track => {
                                     const tp = trackTranspositions[track.id]
                                     if (!tp) return null
@@ -249,7 +281,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                             {/* Song info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="text-sm truncate">{track.title}</div>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <div className="flex items-center gap-2 text-xs text-zinc-500">
                                                     {track.key && (
                                                         <span className="font-mono">
                                                             {track.key}
@@ -265,9 +297,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                             </div>
 
                                             {/* Transpose stepper */}
-                                            <div className="flex items-center gap-0.5 bg-card rounded-md shrink-0">
+                                            <div className="flex items-center gap-0.5 bg-zinc-900 rounded-md shrink-0">
                                                 <button
-                                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                                    className="h-7 w-7 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
                                                     onClick={() => updateTrackTranspose(
                                                         track.id,
                                                         'transposition',
@@ -277,12 +309,12 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                                     <Minus className="h-3 w-3" />
                                                 </button>
                                                 <span className={`w-8 text-center text-xs font-mono ${
-                                                    tp.transposition !== 0 ? 'text-violet-400' : 'text-muted-foreground/60'
+                                                    tp.transposition !== 0 ? 'text-violet-400' : 'text-zinc-600'
                                                 }`}>
                                                     {tp.transposition > 0 ? `+${tp.transposition}` : tp.transposition}
                                                 </span>
                                                 <button
-                                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                                    className="h-7 w-7 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
                                                     onClick={() => updateTrackTranspose(
                                                         track.id,
                                                         'transposition',
@@ -307,18 +339,18 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                     )}
 
                     {/* Stats */}
-                    <div className="bg-muted rounded-lg p-4 text-sm">
+                    <div className="bg-zinc-800 rounded-lg p-4 text-sm">
                         <div className="flex justify-between mb-2">
-                            <span className="text-muted-foreground">Total songs</span>
+                            <span className="text-zinc-400">Total songs</span>
                             <span className="font-medium">{tracks.length}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">PDFs to include</span>
+                            <span className="text-zinc-400">PDFs to include</span>
                             <span className="font-medium text-green-400">{linkedPdfTracks.length}</span>
                         </div>
                         {transposeMode === 'transposed' && activeTranspositions > 0 && (
                             <div className="flex justify-between mt-2">
-                                <span className="text-muted-foreground">To be transposed</span>
+                                <span className="text-zinc-400">To be transposed</span>
                                 <span className="font-medium text-violet-400">{activeTranspositions}</span>
                             </div>
                         )}
@@ -337,7 +369,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 p-4 border-t border-border shrink-0">
+                <div className="flex gap-3 p-4 border-t border-zinc-800 shrink-0">
                     <Button
                         variant="outline"
                         className="flex-1 gap-2"
