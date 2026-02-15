@@ -1,5 +1,13 @@
 import { google } from "googleapis"
 
+interface DriveFileResult {
+    id: string
+    name: string
+    mimeType: string
+    webContentLink?: string
+    parents?: string[]
+}
+
 export class DriveClient {
     private drive
 
@@ -51,7 +59,7 @@ export class DriveClient {
     }
 
     async listAllFiles(folderId?: string) {
-        let allFiles: any[] = []
+        let allFiles: DriveFileResult[] = []
 
         try {
             console.log(folderId ? `[Drive] Listing folder: ${folderId}` : `[Drive] Global Search (Shared with me)`)
@@ -71,7 +79,7 @@ export class DriveClient {
                     pageToken: nextPageToken,
                     supportsAllDrives: true,
                     includeItemsFromAllDrives: true
-                }) as any
+                }) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
 
                 if (res.data.files) {
                     allFiles.push(...res.data.files)
@@ -132,14 +140,14 @@ export class DriveClient {
                 supportsAllDrives: true,
                 includeItemsFromAllDrives: true,
                 orderBy: 'folder,name' // Folders first, then name
-            }) as any
+            }) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
 
             return {
                 files: res.data.files || [],
                 nextPageToken: res.data.nextPageToken || null
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("[Drive] Pagination Error:", error)
             throw error
         }
@@ -154,11 +162,11 @@ export class DriveClient {
                 acknowledgeAbuse: true
             }, {
                 responseType: 'arraybuffer'
-            } as any)
+            } as { responseType: 'arraybuffer' })
 
             return res.data
-        } catch (error: any) {
-            console.error(`[Drive] Error getting file ${fileId}:`, error.message)
+        } catch (error: unknown) {
+            console.error(`[Drive] Error getting file ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -171,8 +179,8 @@ export class DriveClient {
                 supportsAllDrives: true
             })
             return res.data
-        } catch (error: any) {
-            console.error(`[Drive] Error getting file metadata ${fileId}:`, error.message)
+        } catch (error: unknown) {
+            console.error(`[Drive] Error getting file metadata ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -184,11 +192,11 @@ export class DriveClient {
                 mimeType,
             }, {
                 responseType: 'arraybuffer',
-            } as any)
+            } as { responseType: 'arraybuffer' })
 
             return res.data
-        } catch (error: any) {
-            console.error(`[Drive] Error exporting doc ${fileId}:`, error.message)
+        } catch (error: unknown) {
+            console.error(`[Drive] Error exporting doc ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -202,7 +210,7 @@ export class DriveClient {
                 body: content
             }
 
-            const fileMetadata: any = {
+            const fileMetadata: { name: string; mimeType: string; parents?: string[] } = {
                 name,
                 mimeType
             }
@@ -221,9 +229,10 @@ export class DriveClient {
             console.log(`[Drive] Created file: ${res.data.id}`)
             return res.data
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(`[Drive] Create Error:`, error)
             throw error
         }
     }
 }
+
