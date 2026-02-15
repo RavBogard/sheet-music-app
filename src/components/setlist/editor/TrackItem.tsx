@@ -229,7 +229,7 @@ export function TrackItem({
                         className="bg-muted border border-border/50 rounded-lg p-3 flex items-center gap-4 group mt-4 mb-2"
                     >
                         {isEditMode && (
-                            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-2 -ml-2 rounded hover:bg-zinc-700">
+                            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-2 -ml-2 rounded hover:bg-accent">
                                 <GripVertical className="h-5 w-5" />
                             </div>
                         )}
