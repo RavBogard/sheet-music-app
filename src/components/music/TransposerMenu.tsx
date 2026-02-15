@@ -1,173 +1,225 @@
 "use client"
 
+import { useMemo } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, ChevronUp, ChevronDown, Loader2, Edit3, X } from "lucide-react" // Edit3, X might be needed later
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { ChevronUp, ChevronDown, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { calculateCapo, estimateKey } from "@/lib/music-math"
-import { toast } from "sonner"
+import { calculateCapo, estimateKey, transposeChord } from "@/lib/music-math"
+
+// Common guitar-friendly shapes for the "Play As" grid
+const SHAPES = [
+    { label: "G", minor: false },
+    { label: "C", minor: false },
+    { label: "D", minor: false },
+    { label: "A", minor: false },
+    { label: "E", minor: false },
+    { label: "Am", minor: true },
+    { label: "Em", minor: true },
+    { label: "Dm", minor: true },
+]
 
 export function TransposerMenu() {
     const {
         transposition,
         setTransposition,
         aiState,
-        setAiEnabled,
-        setCapoFret
+        setCapoFret,
+        capoFret,
     } = useMusicStore()
 
-    const isScanning = aiState.scanningPages.length > 0;
+    // Gather all detected chords across pages
+    const allChords = useMemo(() => {
+        return Object.values(aiState.pageData).flatMap(
+            p => p.chords.map((c: any) => c.originalText || c.text)
+        )
+    }, [aiState.pageData])
 
-    const handleSmartCapo = (targetShape: string) => {
-        // Gather all detected chords
-        const allChords = Object.values(aiState.pageData).flatMap(p => p.chords.map((c: any) => c.originalText));
+    // Detect key from chords
+    const detectedKey = useMemo(() => {
+        if (allChords.length === 0) return null
+        return estimateKey(allChords)
+    }, [allChords])
 
-        if (allChords.length === 0) {
-            toast.error("No chords detected yet. Please scan the chart first.");
-            return;
+    // Pre-compute capo results for all shapes
+    const capoResults = useMemo(() => {
+        if (!detectedKey) return {}
+        const results: Record<string, { fret: number; transposition: number } | null> = {}
+        for (const shape of SHAPES) {
+            results[shape.label] = calculateCapo(detectedKey, shape.label)
         }
+        return results
+    }, [detectedKey])
 
-        const estimatedKey = estimateKey(allChords);
-        if (!estimatedKey) {
-            toast.error("Could not detect key.");
-            return;
+    // Current "play as" shape (reverse-lookup from current transposition + capoFret)
+    const activeShape = useMemo(() => {
+        if (!capoFret || capoFret === 0) return null
+        for (const shape of SHAPES) {
+            const result = capoResults[shape.label]
+            if (result && result.fret === capoFret && result.transposition === transposition) {
+                return shape.label
+            }
         }
+        return null
+    }, [capoFret, transposition, capoResults])
 
-        const result = calculateCapo(estimatedKey, targetShape);
-        if (!result) {
-            toast.error("Could not calculate capo.");
-            return;
-        }
+    const handleCapoSelect = (shape: string) => {
+        const result = capoResults[shape]
+        if (!result) return
+        setTransposition(result.transposition)
+        setCapoFret(result.fret)
+    }
 
-        setTransposition(result.transposition);
-        setCapoFret(result.fret);
-        toast.success(`Original Key: ${estimatedKey}. Use Capo ${result.fret} to play as ${targetShape}.`);
-    };
+    const handleReset = () => {
+        setTransposition(0)
+        setCapoFret(null)
+    }
+
+    const isScanning = aiState.scanningPages.length > 0
+    const hasChords = allChords.length > 0
+    const isModified = transposition !== 0
 
     return (
-        <div className="flex flex-col gap-4 p-4 min-w-[280px]">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <h3 className="font-semibold text-white">Transposer Tools</h3>
-                {isScanning && <Loader2 className="h-4 w-4 animate-spin text-purple-500" />}
+        <div className="flex flex-col gap-3 p-4 min-w-[300px]">
+
+            {/* ── Detected Key ── */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                        {isScanning ? "Scanning..." : hasChords ? "Detected Key" : "Waiting for scan..."}
+                    </div>
+                    {detectedKey && (
+                        <div className="text-2xl font-bold text-white leading-tight">
+                            {detectedKey}
+                            {isModified && (
+                                <span className="text-violet-400 text-lg ml-2">
+                                    → {transposeChord(detectedKey, transposition)}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {isModified && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleReset}
+                        className="text-zinc-500 hover:text-white h-8 px-2"
+                    >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Reset
+                    </Button>
+                )}
             </div>
 
-            {/* Smart Transposer Activation */}
-            <div className="space-y-2">
-                <div className="space-y-0.5">
-                    <Label className="text-base text-zinc-200">Smart Transposer</Label>
-                    <p className="text-xs text-zinc-500">
-                        Automatically detects and overlays chords.
-                    </p>
+            {/* ── Key Shift Stepper ── */}
+            <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                        setTransposition(transposition - 1)
+                        setCapoFret(null)
+                    }}
+                    className="h-8 w-10 hover:bg-zinc-800"
+                >
+                    <ChevronDown className="h-4 w-4" />
+                </Button>
+
+                <div className="flex-1 text-center">
+                    <span className={cn(
+                        "font-bold text-base",
+                        isModified ? "text-violet-400" : "text-zinc-500"
+                    )}>
+                        {transposition === 0 ? "Original Key" : (transposition > 0 ? `+${transposition}` : `${transposition}`)}
+                    </span>
+                    {transposition !== 0 && (
+                        <span className="text-zinc-600 text-xs ml-1.5">semitones</span>
+                    )}
                 </div>
 
                 <Button
-                    className={cn(
-                        "w-full transition-all",
-                        aiState.isEnabled
-                            ? "bg-green-600 hover:bg-green-700 text-white"
-                            : "bg-purple-600 hover:bg-purple-700 text-white"
-                    )}
-                    onClick={() => setAiEnabled(!aiState.isEnabled)}
-                    disabled={isScanning}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                        setTransposition(transposition + 1)
+                        setCapoFret(null)
+                    }}
+                    className="h-8 w-10 hover:bg-zinc-800"
                 >
-                    {isScanning ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Scanning...
-                        </>
-                    ) : aiState.isEnabled ? (
-                        <>
-                            <Sparkles className="mr-2 h-4 w-4 fill-white" />
-                            Active (Click to Stop)
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Activate
-                        </>
-                    )}
+                    <ChevronUp className="h-4 w-4" />
                 </Button>
             </div>
 
-            {/* Capo / Transpose Controls */}
-            <div className="space-y-4 pt-2">
-
-                {/* Manual Transpose */}
+            {/* ── Play As (Capo Shapes) ── */}
+            {detectedKey && (
                 <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label className="text-zinc-200">Key Shift</Label>
-                        <span className="font-mono text-zinc-400 text-xs">
-                            {transposition > 0 ? `+${transposition}` : transposition} semitones
-                        </span>
+                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                        Play As (with capo)
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                        {SHAPES.map(shape => {
+                            const result = capoResults[shape.label]
+                            const isActive = activeShape === shape.label
+                            const isSameKey = result?.fret === 0
+
+                            return (
+                                <button
+                                    key={shape.label}
+                                    onClick={() => handleCapoSelect(shape.label)}
+                                    disabled={!result || isSameKey}
+                                    className={cn(
+                                        "rounded-lg px-1 py-2 text-center transition-all border",
+                                        isActive
+                                            ? "bg-violet-600/20 border-violet-500/40 text-violet-300"
+                                            : isSameKey
+                                                ? "bg-zinc-900/30 border-zinc-800/50 text-zinc-700 cursor-default"
+                                                : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white hover:border-zinc-700"
+                                    )}
+                                >
+                                    <div className="font-bold text-sm leading-tight">{shape.label}</div>
+                                    {result && !isSameKey && (
+                                        <div className={cn(
+                                            "text-[10px] leading-tight mt-0.5",
+                                            isActive ? "text-violet-400" : "text-zinc-500"
+                                        )}>
+                                            capo {result.fret}
+                                        </div>
+                                    )}
+                                    {isSameKey && (
+                                        <div className="text-[10px] leading-tight mt-0.5 text-zinc-700">
+                                            same
+                                        </div>
+                                    )}
+                                </button>
+                            )
+                        })}
                     </div>
 
-                    <div className="flex items-center justify-between bg-zinc-900 rounded-lg p-1 border border-zinc-800">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                                setTransposition(transposition - 1);
-                                setCapoFret(null);
-                            }}
-                            className="h-8 w-12 hover:bg-zinc-800"
-                        >
-                            <ChevronDown className="h-4 w-4" />
-                        </Button>
-
-                        <div className="font-bold text-lg text-white w-full text-center">
-                            {transposition === 0 ? "Original" : (transposition > 0 ? `+${transposition}` : transposition)}
+                    {/* Active capo chain display */}
+                    {activeShape && capoFret && capoFret > 0 && (
+                        <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
+                            <span className="text-violet-300 text-sm font-medium">
+                                {activeShape} shapes
+                            </span>
+                            <span className="text-zinc-500 text-sm mx-2">→</span>
+                            <span className="text-violet-400 text-sm font-bold">
+                                Capo {capoFret}
+                            </span>
+                            <span className="text-zinc-500 text-sm mx-2">→</span>
+                            <span className="text-white text-sm font-medium">
+                                sounds {detectedKey}
+                            </span>
                         </div>
-
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                                setTransposition(transposition + 1);
-                                setCapoFret(null);
-                            }}
-                            className="h-8 w-12 hover:bg-zinc-800"
-                        >
-                            <ChevronUp className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Smart Capo (Play As...) */}
-                <div className="space-y-2">
-                    <Label className="text-zinc-200 text-xs uppercase tracking-wider font-bold">Smart Capo (Play as...)</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                        {['G', 'C', 'D', 'A', 'E', 'Am', 'Em', 'Dm'].map(shape => (
-                            <Button
-                                key={shape}
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSmartCapo(shape)}
-                                className="h-8 text-xs border-zinc-700 bg-zinc-950 text-zinc-300 hover:text-white hover:bg-zinc-800"
-                            >
-                                {shape}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-
-
-            </div>
-
-            {/* Info / Status */}
-            {aiState.error && (
-                <div className="text-xs text-red-400 bg-red-950/30 p-2 rounded">
-                    Error: {aiState.error}
+                    )}
                 </div>
             )}
 
-            {aiState.isEnabled && !isScanning && (
-                <p className="text-xs text-zinc-500 text-center">
-                    Drag incorrectly detected chords to move them (Coming Soon)
-                </p>
+            {/* ── Chord Count ── */}
+            {hasChords && (
+                <div className="text-[10px] text-zinc-600 text-center">
+                    {allChords.length} chords detected across {Object.keys(aiState.pageData).length} page{Object.keys(aiState.pageData).length !== 1 ? 's' : ''}
+                </div>
             )}
         </div>
     )
