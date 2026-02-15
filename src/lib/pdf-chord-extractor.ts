@@ -13,6 +13,8 @@
  *  5. Return structured chord positions per page
  */
 
+import { isChord, cleanChordText } from './chord-utils'
+
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface ExtractedChord {
@@ -51,24 +53,6 @@ async function getPdfjs() {
     }
     return _pdfjsModule
 }
-
-// ─── Chord Detection ─────────────────────────────────────────────────
-
-// Comprehensive chord regex for worship lead sheets
-const CHORD_REGEX = /^[A-G][b#]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom)?(?:\d{0,2})?(?:(?:sus|add|no|maj|min|dim|aug|dom)\d{0,2})*(?:\/[A-G][b#]?)?$/
-
-// Words that match the regex but aren't chords
-const EXCLUDED_WORDS = new Set([
-    "A",       // Too ambiguous as a standalone letter
-    "I", "II", "III", "IV", "V", "VI", "VII",
-    "Fine", "Da", "Dal",
-])
-
-// Performance directions and section markers
-const SECTION_MARKERS = new Set([
-    "Chorus", "Bridge", "Coda", "Fine", "Ending",
-    "DC", "DS", "CODA", "FINE",
-])
 
 // ─── Text Merging ────────────────────────────────────────────────────
 
@@ -158,23 +142,6 @@ function mergeTextItems(items: TextItem[]): TextItem[] {
     }
 
     return pass2
-}
-
-// ─── Chord Filtering ─────────────────────────────────────────────────
-
-function isChord(text: string): boolean {
-    const clean = text.replace(/[^\w#b\/]/g, "")
-    if (!clean) return false
-    if (EXCLUDED_WORDS.has(clean)) return false
-    if (SECTION_MARKERS.has(clean)) return false
-    if (clean.length > 10) return false
-    return CHORD_REGEX.test(clean)
-}
-
-function cleanChordText(text: string): string {
-    let clean = text.replace(/\u266F/g, "#").replace(/\u266D/g, "b")
-    clean = clean.replace(/[^\w#b\/]/g, "")
-    return clean
 }
 
 // ─── Main Extraction ─────────────────────────────────────────────────
