@@ -80,7 +80,7 @@ export function SetlistHeader({
 
             {/* Undo/Redo - Edit Mode Only */}
             {isEditMode && (
-                <div className="flex items-center gap-1 bg-zinc-800/50 rounded-lg p-1 mr-2">
+                <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mr-2">
                     <Button
                         size="icon"
                         variant="ghost"
@@ -109,7 +109,7 @@ export function SetlistHeader({
                 <Button
                     variant={isEditMode ? "default" : "secondary"}
                     onClick={onToggleEditMode}
-                    className={`min-w-[80px] ${isEditMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-zinc-800 text-zinc-300'}`}
+                    className={`min-w-[80px] ${isEditMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-muted text-foreground'}`}
                 >
                     {isEditMode ? "Done" : "Edit"}
                 </Button>
@@ -120,7 +120,7 @@ export function SetlistHeader({
                 size="icon"
                 variant="ghost"
                 onClick={toggle}
-                className={`h-10 w-10 ${isChatOpen ? 'text-blue-400 bg-blue-400/10' : 'text-zinc-400'}`}
+                className={`h-10 w-10 ${isChatOpen ? 'text-blue-400 bg-blue-400/10' : 'text-muted-foreground'}`}
                 title="AI Assistant"
             >
                 <Sparkles className="h-5 w-5" />
@@ -164,7 +164,7 @@ export function SetlistHeader({
             {/* Save Status - Only in Edit Mode */}
             {isEditMode && (
                 <>
-                    <div className="hidden md:block text-sm text-zinc-500 whitespace-nowrap">
+                    <div className="hidden md:block text-sm text-muted-foreground whitespace-nowrap">
                         {saving ? "Saving..." : lastSaved ? `Saved` : ""}
                     </div>
                 </>
