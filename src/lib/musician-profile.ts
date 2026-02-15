@@ -1,5 +1,5 @@
 import { db, auth } from "./firebase"
-import { doc, updateDoc, onSnapshot } from "firebase/firestore"
+import { doc, updateDoc, onSnapshot, collection } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
 
 /**
@@ -55,4 +55,31 @@ export const INSTRUMENT_PRESETS: Record<string, { label: string; transposition: 
     'eb_bari_sax': { label: 'Eb Baritone Sax', transposition: -3, description: 'Sounds an octave + major 6th lower' },
     'f_horn': { label: 'French Horn (F)', transposition: 7, description: 'Sounds a 5th lower' },
     'other': { label: 'Other', transposition: 0, description: 'Set custom transposition' },
+}
+
+/**
+ * Subscribe to all users who have musician profiles set up.
+ * Used by the "Print for..." feature in the gig packet generator.
+ */
+export function subscribeToAllMusicianProfiles(
+    callback: (profiles: { uid: string; displayName: string; profile: MusicianProfile }[]) => void
+): () => void {
+    if (!db || Object.keys(db).length === 0) return () => { }
+
+    const q = collection(db, "users")
+    return onSnapshot(q, (snap) => {
+        const musicians = snap.docs
+            .map(d => {
+                const data = d.data()
+                return {
+                    uid: d.id,
+                    displayName: data.displayName || 'Unknown',
+                    profile: data.musicianProfile as MusicianProfile | undefined,
+                }
+            })
+            .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } => 
+                !!m.profile && !!m.profile.instrument
+            )
+        callback(musicians)
+    })
 }
