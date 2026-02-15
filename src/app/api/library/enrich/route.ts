@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, data })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Enrichment API Error:", error)
         return NextResponse.json(
-            { error: error.message || "Failed to enrich file" },
+            { error: error instanceof Error ? error.message : "Internal server error" || "Failed to enrich file" },
             { status: 500 }
         )
     }
