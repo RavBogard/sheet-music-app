@@ -170,9 +170,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
 
     return (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-            <div className="bg-zinc-900 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-zinc-800 shrink-0">
+                <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                     <h2 className="text-xl font-bold">Print Setlist</h2>
                     <Button size="icon" variant="ghost" onClick={onClose}>
                         <X className="h-5 w-5" />
@@ -225,8 +225,8 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             onClick={() => setTransposeMode('standard')}
                             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                                 transposeMode === 'standard'
-                                    ? 'bg-zinc-700 text-white'
-                                    : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
+                                    ? 'bg-accent text-foreground'
+                                    : 'bg-muted text-muted-foreground hover:text-foreground'
                             }`}
                         >
                             Standard Print
@@ -236,7 +236,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                                 transposeMode === 'transposed'
                                     ? 'bg-violet-600/30 text-violet-300 border border-violet-500/30'
-                                    : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
+                                    : 'bg-muted text-muted-foreground hover:text-foreground'
                             }`}
                         >
                             <Music className="h-3.5 w-3.5" />
@@ -254,21 +254,21 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                     <button
                                         key={s}
                                         onClick={() => applyGlobalTranspose(s)}
-                                        className="px-2 py-1 rounded bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+                                        className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                     >
                                         {s > 0 ? `+${s}` : s}
                                     </button>
                                 ))}
                                 <button
                                     onClick={() => applyGlobalTranspose(0)}
-                                    className="px-2 py-1 rounded bg-zinc-800 text-zinc-500 hover:text-white hover:bg-zinc-700 transition-colors"
+                                    className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                 >
                                     Reset
                                 </button>
                             </div>
 
                             {/* Per-Track List */}
-                            <div className="bg-zinc-800/50 rounded-lg divide-y divide-zinc-800">
+                            <div className="bg-muted/50 rounded-lg divide-y divide-border">
                                 {tracks.filter(t => t.type !== 'header').map(track => {
                                     const tp = trackTranspositions[track.id]
                                     if (!tp) return null
@@ -297,9 +297,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                             </div>
 
                                             {/* Transpose stepper */}
-                                            <div className="flex items-center gap-0.5 bg-zinc-900 rounded-md shrink-0">
+                                            <div className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
                                                 <button
-                                                    className="h-7 w-7 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                                                     onClick={() => updateTrackTranspose(
                                                         track.id,
                                                         'transposition',
@@ -314,7 +314,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                                                     {tp.transposition > 0 ? `+${tp.transposition}` : tp.transposition}
                                                 </span>
                                                 <button
-                                                    className="h-7 w-7 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                                                     onClick={() => updateTrackTranspose(
                                                         track.id,
                                                         'transposition',
@@ -339,7 +339,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                     )}
 
                     {/* Stats */}
-                    <div className="bg-zinc-800 rounded-lg p-4 text-sm">
+                    <div className="bg-muted rounded-lg p-4 text-sm">
                         <div className="flex justify-between mb-2">
                             <span className="text-zinc-400">Total songs</span>
                             <span className="font-medium">{tracks.length}</span>
@@ -369,7 +369,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 p-4 border-t border-zinc-800 shrink-0">
+                <div className="flex gap-3 p-4 border-t border-border shrink-0">
                     <Button
                         variant="outline"
                         className="flex-1 gap-2"
