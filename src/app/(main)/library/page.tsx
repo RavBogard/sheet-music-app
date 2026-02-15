@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { DriveFile } from "@/types/models"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore, FileType } from "@/lib/store"
 import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
@@ -39,7 +40,7 @@ export default function LibraryPage() {
         )
     }
 
-    const handleSelectFile = (file: any) => {
+    const handleSelectFile = (file: DriveFile) => {
         const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
         const type: FileType = isXml ? 'musicxml' : 'pdf'
         setFile(`/api/drive/file/${file.id}`, type)
