@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SetlistTrack } from "@/types/models"
-import { useState, useEffect } from "react"
-import { Trash2, FileText, Music } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Trash2, FileText, Music, Minus, Plus } from "lucide-react"
 import { AudioFilePicker } from "../AudioFilePicker"
 import { TapTempoButton } from "@/components/ui/tap-tempo-button"
+import { transposeChord, getTransposedKeyName } from "@/lib/music-math"
 
 interface TrackDetailsModalProps {
     isOpen: boolean
@@ -31,6 +32,7 @@ export function TrackDetailsModal({
     const [bpm, setBpm] = useState("")
     const [leadMusician, setLeadMusician] = useState("")
     const [notes, setNotes] = useState("")
+    const [transposition, setTransposition] = useState(0)
 
     useEffect(() => {
         if (track) {
@@ -39,8 +41,15 @@ export function TrackDetailsModal({
             setBpm(track.bpm?.toString() || "")
             setLeadMusician(track.leadMusician || "")
             setNotes(track.notes || "")
+            setTransposition(track.transposition || 0)
         }
     }, [track])
+
+    // Display the transposed key name
+    const transposedKeyDisplay = useMemo(() => {
+        if (!key || transposition === 0) return null
+        return getTransposedKeyName(key, transposition)
+    }, [key, transposition])
 
     const handleSave = () => {
         if (!track) return
@@ -50,7 +59,8 @@ export function TrackDetailsModal({
             key,
             bpm: bpm ? parseInt(bpm) : undefined,
             leadMusician,
-            notes
+            notes,
+            transposition: transposition || undefined
         })
         onClose()
     }
@@ -105,6 +115,52 @@ export function TrackDetailsModal({
                                     className="bg-zinc-900 border-zinc-700 text-center"
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Transpose Row */}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right text-zinc-400">Transpose</Label>
+                        <div className="col-span-3 flex items-center gap-3">
+                            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 rounded-md">
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-zinc-400 hover:text-white"
+                                    onClick={() => setTransposition(prev => Math.max(prev - 1, -11))}
+                                >
+                                    <Minus className="h-4 w-4" />
+                                </Button>
+                                <span className={`w-12 text-center font-mono text-sm ${transposition !== 0 ? 'text-violet-400' : 'text-zinc-500'}`}>
+                                    {transposition > 0 ? `+${transposition}` : transposition}
+                                </span>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-zinc-400 hover:text-white"
+                                    onClick={() => setTransposition(prev => Math.min(prev + 1, 11))}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {transposedKeyDisplay && (
+                                <span className="text-sm text-violet-400 font-medium">
+                                    → {transposedKeyDisplay}
+                                </span>
+                            )}
+                            {transposition !== 0 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs text-zinc-500 hover:text-zinc-300 h-7 px-2"
+                                    onClick={() => setTransposition(0)}
+                                >
+                                    Reset
+                                </Button>
+                            )}
                         </div>
                     </div>
 
