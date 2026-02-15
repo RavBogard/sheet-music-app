@@ -1,5 +1,12 @@
 "use client"
 
+// Safari AudioContext compatibility
+declare global {
+    interface Window {
+        webkitAudioContext?: typeof AudioContext
+    }
+}
+
 import { toast } from "sonner"
 
 import { useEffect, useRef, useState } from "react"
@@ -73,7 +80,7 @@ export function Tuner() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
             // Create Context
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)()
             audioContextRef.current = audioContext
 
             // Create Analyser
@@ -210,7 +217,7 @@ export function Tuner() {
 
                     {/* Cents / Hz */}
                     {active && note !== "-" && (
-                        <div className="text-xs text-muted-foreground mt-2 font-mono bg-black/50 px-2 py-1 rounded">
+                        <div className="text-xs text-muted-foreground mt-2 font-mono bg-muted px-2 py-1 rounded">
                             {frequency} Hz
                             <span className={`ml-2 ${Math.abs(cents) < 5 ? 'text-green-400' : (cents > 0 ? 'text-blue-400' : 'text-orange-400')}`}>
                                 {cents > 0 ? '+' : ''}{cents}c
@@ -235,3 +242,4 @@ export function Tuner() {
         </div>
     )
 }
+
