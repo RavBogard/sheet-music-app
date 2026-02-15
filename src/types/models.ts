@@ -44,7 +44,7 @@ export interface SetlistTrack {
 export interface Setlist {
     id: string
     name: string
-    date: any // Timestamp | Date - TODO: Standardization to Date or number in future
+    date: { seconds: number; nanoseconds: number } | Date | string
     eventDate?: string | any // Timestamp | string
     tracks: SetlistTrack[]
     trackCount: number
@@ -66,8 +66,8 @@ export interface UserProfile {
     photoURL?: string
     viewedWelcomeModal?: boolean
     role: UserRole
-    createdAt?: any
-    lastLoginAt?: any
+    createdAt?: { seconds: number; nanoseconds: number } | Date | string
+    lastLoginAt?: { seconds: number; nanoseconds: number } | Date | string
     musicianProfile?: MusicianProfile
 }
 
