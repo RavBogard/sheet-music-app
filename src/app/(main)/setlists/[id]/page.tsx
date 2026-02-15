@@ -72,7 +72,7 @@ export default function SetlistEditorPage() {
         }
     }, [user, existingSetlist])
 
-    if (loading) return <div className="h-screen flex items-center justify-center text-white">Loading...</div>
+    if (loading) return <div className="h-screen flex items-center justify-center text-foreground">Loading...</div>
 
     const isNew = id === 'new'
 
