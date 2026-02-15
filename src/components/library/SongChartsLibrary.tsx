@@ -116,9 +116,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
 
             toast.success("Saved! The MusicXML file is now in this folder.")
             loadLibrary(true)
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Digitize Error:", e)
-            toast.error(e.message)
+            toast.error(e instanceof Error ? e.message : "Digitize failed")
         } finally {
             setDigitizing(null)
         }
