@@ -44,7 +44,7 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
     const isAdmin = user.role === 'admin'
 
     return (
-        <div className="flex items-center justify-between p-4 bg-muted border border-white/5 rounded-xl transition-all hover:bg-card gap-4">
+        <div className="flex items-center justify-between p-4 bg-muted border border-border rounded-xl transition-all hover:bg-card gap-4">
             <div className="flex items-center gap-4 min-w-0 flex-1">
                 <Avatar className="h-10 w-10 border border-border shrink-0">
                     <AvatarImage src={user.photoURL} />
@@ -83,3 +83,4 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
         </div>
     )
 }
+
