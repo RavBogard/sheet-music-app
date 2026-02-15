@@ -25,8 +25,8 @@ export interface MusicState {
         isEnabled: boolean
         scanningPages: number[] // List of page indexes currently scanning
         pageData: Record<number, {
-            strips: any[] // Store debug info if needed
-            chords: { text: string, x: number, y: number, originalText: string }[]
+            strips: { id: string; y: number; height: number; image?: string }[]
+            chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number }[]
         }>
         error: string | null
     }
@@ -63,7 +63,10 @@ export interface MusicState {
     // AI Actions
     setAiEnabled: (enabled: boolean) => void
     setPageScanning: (pageIndex: number, isScanning: boolean) => void
-    setPageData: (pageIndex: number, data: any) => void
+    setPageData: (pageIndex: number, data: {
+        strips: { id: string; y: number; height: number; image?: string }[]
+        chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number }[]
+    }) => void
     setAiError: (error: string | null) => void
 
     // Queue Actions
