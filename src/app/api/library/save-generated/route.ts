@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
             message: "Saved to Application Library"
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Save Generated Error:", error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }
 }
