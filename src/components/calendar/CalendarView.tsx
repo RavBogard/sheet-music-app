@@ -68,10 +68,10 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
                         {monthLabel}
                     </h2>
                     <div className="flex items-center bg-muted rounded-lg p-1">
-                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 hover:bg-zinc-700">
+                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 hover:bg-accent">
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 hover:bg-zinc-700">
+                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 hover:bg-accent">
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
@@ -122,7 +122,7 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
                                     <button
                                         key={setlist.id}
                                         onClick={() => onSelectSetlist(setlist)}
-                                        className="w-full text-left p-1.5 rounded-md text-xs bg-muted hover:bg-zinc-700 border border-border/50 truncate transition-colors"
+                                        className="w-full text-left p-1.5 rounded-md text-xs bg-muted hover:bg-accent border border-border/50 truncate transition-colors"
                                     >
                                         {setlist.name}
                                     </button>
