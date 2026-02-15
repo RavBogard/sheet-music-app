@@ -74,28 +74,28 @@ export function SetlistDrawer() {
                 <button
                     className={cn(
                         "h-10 w-10 lg:h-12 lg:w-12 flex items-center justify-center rounded-xl transition-all",
-                        "hover:bg-zinc-800 text-zinc-500 hover:text-white"
+                        "hover:bg-muted text-muted-foreground hover:text-foreground"
                     )}
                     title={triggerLabel}
                 >
                     <TriggerIcon className="h-5 w-5 lg:h-6 lg:w-6" />
                 </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80vh] bg-zinc-950 border-t border-zinc-800 p-0 flex flex-col sm:max-w-4xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x">
-                <SheetHeader className="p-4 border-b border-zinc-800 bg-zinc-900/50 sm:rounded-t-2xl">
-                    <SheetTitle className="flex items-center gap-2 text-white">
+            <SheetContent side="bottom" className="h-[80vh] bg-background border-t border-border p-0 flex flex-col sm:max-w-4xl sm:mx-auto sm:rounded-t-2xl sm:shadow-2xl sm:border-x">
+                <SheetHeader className="p-4 border-b border-border bg-muted sm:rounded-t-2xl">
+                    <SheetTitle className="flex items-center gap-2 text-foreground">
                         <TriggerIcon className="h-5 w-5 text-blue-500" />
                         {showPublicPicker ? "Join a Setlist" : "Current Setlist"}
                     </SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1 h-full bg-zinc-950">
+                <ScrollArea className="flex-1 h-full bg-background">
                     {showPublicPicker ? (
                         <div className="p-4 grid gap-3">
-                            {loading && <div className="text-zinc-500 text-center py-10">Loading active setlists...</div>}
+                            {loading && <div className="text-muted-foreground text-center py-10">Loading active setlists...</div>}
 
                             {!loading && publicSetlists.length === 0 && (
-                                <div className="text-zinc-500 text-center py-10 flex flex-col items-center gap-2">
+                                <div className="text-muted-foreground text-center py-10 flex flex-col items-center gap-2">
                                     <Globe className="h-8 w-8 opacity-50" />
                                     <p>No public setlists active right now.</p>
                                 </div>
@@ -105,16 +105,16 @@ export function SetlistDrawer() {
                                 <button
                                     key={setlist.id}
                                     onClick={() => handleSelectSetlist(setlist)}
-                                    className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 text-left transition-all group flex items-start gap-4"
+                                    className="bg-muted hover:bg-card border border-border hover:border-border rounded-xl p-4 text-left transition-all group flex items-start gap-4"
                                 >
                                     <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
                                         <PlayCircle className="h-6 w-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors truncate">
+                                        <h3 className="font-bold text-lg text-foreground group-hover:text-blue-300 transition-colors truncate">
                                             {setlist.name}
                                         </h3>
-                                        <div className="text-sm text-zinc-500 flex items-center gap-2 mt-1">
+                                        <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                                             <span>{setlist.trackCount || 0} songs</span>
                                             {setlist.ownerName && <span>• {setlist.ownerName}</span>}
                                         </div>
@@ -141,13 +141,13 @@ export function SetlistDrawer() {
                                         className={cn(
                                             "flex items-center gap-4 p-4 rounded-xl transition-all text-left",
                                             isCurrent
-                                                ? "bg-blue-600 text-white shadow-lg"
-                                                : "hover:bg-zinc-900 text-zinc-400 hover:text-white"
+                                                ? "bg-blue-600 text-foreground shadow-lg"
+                                                : "hover:bg-card text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         <div className={cn(
                                             "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                                            isCurrent ? "bg-white/20 text-white" : "bg-zinc-800 text-zinc-500"
+                                            isCurrent ? "bg-white/20 text-foreground" : "bg-muted text-muted-foreground"
                                         )}>
                                             {index + 1}
                                         </div>
@@ -160,8 +160,8 @@ export function SetlistDrawer() {
                                                     <span className={cn(
                                                         "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
                                                         isCurrent
-                                                            ? "bg-white/20 border-white/30 text-white"
-                                                            : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                                                            ? "bg-white/20 border-white/30 text-foreground"
+                                                            : "bg-muted border-border text-muted-foreground"
                                                     )}>
                                                         {track.key}
                                                     </span>
@@ -181,10 +181,10 @@ export function SetlistDrawer() {
                     )}
                 </ScrollArea>
 
-                <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+                <div className="p-4 border-t border-border bg-muted">
                     <Button
                         variant="outline"
-                        className="w-full h-12 text-lg font-bold border-zinc-700 hover:bg-zinc-800 text-zinc-300"
+                        className="w-full h-12 text-lg font-bold border-border hover:bg-muted text-foreground"
                         onClick={() => setOpen(false)}
                     >
                         Close
