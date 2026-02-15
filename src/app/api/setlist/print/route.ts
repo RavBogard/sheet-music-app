@@ -6,6 +6,7 @@ interface PrintTrack {
     title: string
     key: string
     notes: string
+    leadMusician?: string
     fileId?: string
 }
 
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
         const coverPage = mergedPdf.addPage([612, 792]) // Letter size
         const helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
         const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica)
+        const helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique)
 
         const { width, height } = coverPage.getSize()
 
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
         coverPage.drawText(title, {
             x: 50,
             y: height - 80,
-            size: 32,
+            size: 28,
             font: helveticaBold,
             color: rgb(0, 0, 0),
         })
@@ -50,23 +52,23 @@ export async function POST(request: Request) {
         // Date
         coverPage.drawText(date, {
             x: 50,
-            y: height - 120,
-            size: 14,
+            y: height - 110,
+            size: 13,
             font: helvetica,
             color: rgb(0.4, 0.4, 0.4),
         })
 
         // Event name (if provided)
-        let yOffset = height - 150
+        let yOffset = height - 138
         if (eventName) {
             coverPage.drawText(eventName, {
                 x: 50,
                 y: yOffset,
-                size: 14,
+                size: 13,
                 font: helvetica,
                 color: rgb(0.4, 0.4, 0.4),
             })
-            yOffset -= 25
+            yOffset -= 22
         }
 
         // Musician name (if provided)
@@ -74,49 +76,111 @@ export async function POST(request: Request) {
             coverPage.drawText(`Prepared for: ${musicianName}`, {
                 x: 50,
                 y: yOffset,
-                size: 14,
+                size: 13,
                 font: helveticaBold,
                 color: rgb(0, 0, 0),
             })
-            yOffset -= 30
+            yOffset -= 28
         }
 
         // Divider line
-        yOffset -= 15
+        yOffset -= 10
         coverPage.drawLine({
             start: { x: 50, y: yOffset },
             end: { x: width - 50, y: yOffset },
-            thickness: 1,
-            color: rgb(0.8, 0.8, 0.8),
+            thickness: 1.5,
+            color: rgb(0.2, 0.4, 0.8),
         })
-        yOffset -= 30
+        yOffset -= 25
+
+        // Column positions
+        const colNum = 50
+        const colTitle = 75
+        const colLead = 300
+        const colKey = 420
+        const colNotes = 460
 
         // Table header
-        coverPage.drawText("#", { x: 50, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        coverPage.drawText("Song", { x: 80, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        coverPage.drawText("Key", { x: 400, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-        yOffset -= 20
+        coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+
+        // Header underline
+        yOffset -= 8
+        coverPage.drawLine({
+            start: { x: 50, y: yOffset },
+            end: { x: width - 50, y: yOffset },
+            thickness: 0.5,
+            color: rgb(0.85, 0.85, 0.85),
+        })
+        yOffset -= 16
 
         // Table rows - list all songs
         tracks.forEach((track, index) => {
             if (yOffset < 50) return // Don't overflow page
 
             const num = `${index + 1}.`
-            const songTitle = track.title.length > 45 ? track.title.substring(0, 42) + "..." : track.title
-            const key = track.key || "-"
 
-            coverPage.drawText(num, { x: 50, y: yOffset, size: 11, font: helvetica, color: rgb(0, 0, 0) })
-            coverPage.drawText(songTitle, { x: 80, y: yOffset, size: 11, font: helvetica, color: rgb(0, 0, 0) })
-            coverPage.drawText(key, { x: 400, y: yOffset, size: 11, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+            // Truncate fields to fit columns
+            const maxTitleLen = 32
+            const songTitle = track.title.length > maxTitleLen
+                ? track.title.substring(0, maxTitleLen - 1) + "…"
+                : track.title
 
-            yOffset -= 18
+            const lead = track.leadMusician
+                ? (track.leadMusician.length > 16 ? track.leadMusician.substring(0, 15) + "…" : track.leadMusician)
+                : ""
+
+            const key = track.key || "—"
+
+            const maxNotesLen = 20
+            const notes = track.notes
+                ? (track.notes.length > maxNotesLen ? track.notes.substring(0, maxNotesLen - 1) + "…" : track.notes)
+                : ""
+
+            // Row number
+            coverPage.drawText(num, { x: colNum, y: yOffset, size: 11, font: helvetica, color: rgb(0.5, 0.5, 0.5) })
+
+            // Song title
+            coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 11, font: helvetica, color: rgb(0, 0, 0) })
+
+            // Lead vocalist
+            if (lead) {
+                coverPage.drawText(lead, { x: colLead, y: yOffset, size: 10, font: helveticaOblique, color: rgb(0.3, 0.3, 0.3) })
+            }
+
+            // Key (bold, blue accent)
+            coverPage.drawText(key, { x: colKey, y: yOffset, size: 11, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+
+            // Notes
+            if (notes) {
+                coverPage.drawText(notes, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.45, 0.45, 0.45) })
+            }
+
+            // Subtle row separator
+            yOffset -= 4
+            coverPage.drawLine({
+                start: { x: 50, y: yOffset },
+                end: { x: width - 50, y: yOffset },
+                thickness: 0.25,
+                color: rgb(0.92, 0.92, 0.92),
+            })
+            yOffset -= 14
         })
 
         // Footer on cover page
-        coverPage.drawText(`${tracks.length} songs • Generated by CRC Music Books`, {
+        coverPage.drawLine({
+            start: { x: 50, y: 48 },
+            end: { x: width - 50, y: 48 },
+            thickness: 0.5,
+            color: rgb(0.85, 0.85, 0.85),
+        })
+        coverPage.drawText(`${tracks.length} songs · CRC Music Books · centralreform.live`, {
             x: 50,
-            y: 30,
-            size: 10,
+            y: 32,
+            size: 9,
             font: helvetica,
             color: rgb(0.6, 0.6, 0.6),
         })
@@ -172,8 +236,7 @@ export async function POST(request: Request) {
     } catch (error: any) {
         console.error("Print generation error:", error)
         return NextResponse.json({
-            error: "Failed to generate PDF",
-            details: error.message
+            error: "Failed to generate PDF"
         }, { status: 500 })
     }
 }
