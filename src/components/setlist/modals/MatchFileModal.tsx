@@ -144,11 +144,11 @@ export function MatchFileModal({
                                         }}
                                         className={cn(
                                             "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isFolder ? "bg-muted hover:bg-zinc-700 text-foreground" : "bg-muted border border-border hover:bg-muted text-foreground"
+                                            isFolder ? "bg-muted hover:bg-accent text-foreground" : "bg-muted border border-border hover:bg-muted text-foreground"
                                         )}
                                     >
                                         {isFolder ? (
-                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-muted-foreground">
+                                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
                                                 <Folder className="h-5 w-5 text-yellow-500" />
                                             </div>
                                         ) : (
