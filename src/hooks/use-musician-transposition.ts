@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { subscribeToMusicianProfile } from "@/lib/musician-profile"
+import { subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { useMusicStore } from "@/lib/store"
 import { MusicianProfile } from "@/types/models"
 
@@ -50,20 +50,5 @@ export function useMusicianTransposition() {
 }
 
 function getInstrumentLabel(instrument: string): string {
-    const labels: Record<string, string> = {
-        'guitar': 'Guitar',
-        'bass': 'Bass',
-        'piano': 'Piano/Keys',
-        'voice': 'Voice',
-        'ukulele': 'Ukulele',
-        'bb_trumpet': 'Bb Trumpet',
-        'bb_clarinet': 'Bb Clarinet',
-        'bb_tenor_sax': 'Bb Tenor Sax',
-        'bb_soprano_sax': 'Bb Soprano Sax',
-        'eb_alto_sax': 'Eb Alto Sax',
-        'eb_bari_sax': 'Eb Baritone Sax',
-        'f_horn': 'French Horn',
-        'other': 'Custom',
-    }
-    return labels[instrument] || instrument
+    return INSTRUMENT_PRESETS[instrument]?.label || instrument
 }
