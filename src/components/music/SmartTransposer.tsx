@@ -12,6 +12,16 @@ interface SmartTransposerProps {
     isRendered: boolean
 }
 
+interface ChordOverlay {
+    text: string
+    originalText?: string
+    x: number
+    y: number
+    w?: number
+    h?: number
+    pxHeight?: number
+}
+
 /**
  * Resolve the current file's Drive ID from the store.
  * Checks the playback queue first, falls back to parsing the fileUrl.
@@ -145,7 +155,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
             const chords = []
             for (const stripResult of json.results) {
-                const originalStrip = scanResult.strips.find((s: any) => s.id === stripResult.id)
+                const originalStrip = scanResult.strips.find((s: { id: string }) => s.id === stripResult.id)
                 if (!originalStrip) continue
 
                 for (const chord of stripResult.chords) {
@@ -172,10 +182,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 saveChordCache(fileId, pageNumber, chords, 'geminiOCR', token)
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Scan Error:", err)
-            setLocalError(err.message)
-            setAiError(err.message)
+            setLocalError(err instanceof Error ? err.message : "Scan failed")
+            setAiError(err instanceof Error ? err.message : "Scan failed")
         } finally {
             setPageScanning(pageNumber, false)
         }
@@ -188,7 +198,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
     return (
         <div className="absolute inset-0 z-10 pointer-events-none">
-            {pageData.chords.map((chord: any, i: number) => {
+            {pageData.chords.map((chord: ChordOverlay, i: number) => {
                 const transposed = transposeChord(chord.originalText || chord.text, transposition)
                 const isChanged = transposition !== 0
 
