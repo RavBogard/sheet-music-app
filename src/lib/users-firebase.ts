@@ -71,7 +71,7 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
 /**
  * Subscribe to ALL users (for Admin page)
  */
-export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: any) => void) {
+export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: Error) => void) {
     // Build safety
     if (!db || Object.keys(db).length === 0) return () => { }
 
