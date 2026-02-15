@@ -7,6 +7,7 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { getContextualGreeting } from "@/lib/greeting"
+import { toDate, getRelativeDateLabel, formatEventDate } from "@/lib/firestore-helpers"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,15 +59,14 @@ export default function DashboardPage() {
         const filterUpcoming = (setlists: Setlist[]) => {
             return setlists.filter(s => {
                 if (!s.eventDate) return false
-                const d = typeof s.eventDate === 'string'
-                    ? new Date(s.eventDate)
-                    : (s.eventDate as any).toDate()
+                const d = toDate(s.eventDate)
+                if (!d) return false
                 d.setHours(0, 0, 0, 0)
                 return d >= now
             }).sort((a, b) => {
-                const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
-                const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
-                return da.getTime() - db.getTime()
+                const da = toDate(a.eventDate)
+                const db = toDate(b.eventDate)
+                return (da?.getTime() || 0) - (db?.getTime() || 0)
             })
         }
 
@@ -83,9 +83,9 @@ export default function DashboardPage() {
             const recent = setlists
                 .filter(s => s.eventDate)
                 .sort((a, b) => {
-                    const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
-                    const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
-                    return db.getTime() - da.getTime()
+                    const da = toDate(a.eventDate)
+                    const db = toDate(b.eventDate)
+                    return (db?.getTime() || 0) - (da?.getTime() || 0)
                 })
                 .slice(0, 5)
             setRecentPublicSetlists(recent)
@@ -230,26 +230,7 @@ export default function DashboardPage() {
 /* ─── Sub-Components ─── */
 
 function SetlistHeroCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
-    const eventDate = typeof setlist.eventDate === 'string'
-        ? new Date(setlist.eventDate)
-        : (setlist.eventDate as any)?.toDate?.() || new Date()
-
-    const isToday = (() => {
-        const now = new Date()
-        return eventDate.toDateString() === now.toDateString()
-    })()
-
-    const isTomorrow = (() => {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        return eventDate.toDateString() === tomorrow.toDateString()
-    })()
-
-    const dateLabel = isToday ? 'Tonight' : isTomorrow ? 'Tomorrow' : eventDate.toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-    })
+    const dateLabel = getRelativeDateLabel(setlist.eventDate) || 'Upcoming'
 
     return (
         <button
@@ -281,9 +262,7 @@ function SetlistHeroCard({ setlist, onClick }: { setlist: Setlist; onClick: () =
 
 
 function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
-    const eventDate = typeof setlist.eventDate === 'string'
-        ? new Date(setlist.eventDate)
-        : (setlist.eventDate as any)?.toDate?.() || null
+    const eventDate = toDate(setlist.eventDate)
 
     const dateStr = eventDate
         ? eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
