@@ -74,7 +74,7 @@ export function DashboardChatPrompt() {
                                     setPendingPrompt(prompt)
                                     open()
                                 }}
-                                className="text-xs bg-muted hover:bg-zinc-700 text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-full border border-border/50 transition-colors"
+                                className="text-xs bg-muted hover:bg-accent text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-full border border-border/50 transition-colors"
                             >
                                 {prompt}
                             </button>
