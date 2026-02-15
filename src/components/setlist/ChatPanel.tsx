@@ -13,6 +13,11 @@ import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 import { createSetlistService } from "@/lib/setlist-firebase"
+
+interface ChatCommand {
+    type: 'CREATE_SETLIST' | 'PUBLISH_SETLIST' | 'ADD_TO_SETLIST' | 'REMOVE_FROM_SETLIST'
+    payload: Record<string, string | number | boolean | undefined | object[]>
+}
 import { toast } from "sonner"
 
 export function ChatPanel() {
@@ -99,15 +104,15 @@ export function ChatPanel() {
                 await handleCommands(data.commands)
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error)
-            addMessage({ role: 'assistant', content: `Error: ${error.message || "I had trouble connecting."}` })
+            addMessage({ role: 'assistant', content: `Error: ${error instanceof Error ? error.message : "I had trouble connecting."}` })
         } finally {
             setLoading(false)
         }
     }
 
-    const handleCommands = async (commands: any[]) => {
+    const handleCommands = async (commands: ChatCommand[]) => {
         for (const cmd of commands) {
             try {
                 switch (cmd.type) {
