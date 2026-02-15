@@ -196,25 +196,32 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const detectedHeight = chord.pxHeight || 16
                 const fontSize = Math.max(12, Math.min(detectedHeight * 0.85, 28))
 
-                // Width to cover original text
+                // Width to cover original text — enough for whichever is wider
                 const charCount = Math.max(transposed.length, chord.originalText?.length || 0)
                 const minWidth = Math.max(charCount * (fontSize * 0.65), fontSize * 1.5)
+
+                // Padding for white background coverage
+                const padV = 2
+                const padH = 3
 
                 return (
                     <div
                         key={i}
                         className="absolute"
                         style={{
+                            // Position at the exact chord location
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
-                            transform: 'translateY(-45%)',
+
+                            // Negative margin offsets the padding so the TEXT
+                            // stays anchored at the original chord position
+                            margin: `-${padV}px 0 0 -${padH}px`,
+                            padding: `${padV}px ${padH}px`,
 
                             minWidth: `${minWidth}px`,
-                            padding: `${fontSize * 0.25}px ${fontSize * 0.35}px`,
 
                             backgroundColor: 'white',
-                            border: 'none',
-                            borderRadius: '2px',
+                            borderRadius: '1px',
 
                             color: isChanged ? '#6d28d9' : '#1e40af',
                             fontSize: `${fontSize}px`,
