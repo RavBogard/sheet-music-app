@@ -38,9 +38,9 @@ export default function UnifiedSettingsPage() {
             setLastStats(data.stats)
             toast.success("Library Sync Complete!")
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Sync Failed:", e)
-            toast.error("Sync Failed: " + e.message)
+            toast.error("Sync Failed: " + e instanceof Error ? e.message : "Unknown error")
         } finally {
             setSyncing(false)
         }
@@ -67,9 +67,9 @@ export default function UnifiedSettingsPage() {
             setEnrichStats(data.stats)
             if (data.message) toast.success(data.message)
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Enrichment Failed:", e)
-            toast.error("Enrichment Failed: " + e.message)
+            toast.error("Enrichment Failed: " + e instanceof Error ? e.message : "Unknown error")
         } finally {
             setEnriching(false)
         }
