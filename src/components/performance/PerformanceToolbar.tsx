@@ -41,7 +41,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             clearTimeout(timeout)
             // Don't auto-hide if menu is open or scanning
             // User requested 10 seconds timeout
-            if (!menuOpen && aiState.scanningPages.length === 0) {
+            if (!menuOpen && aiState.scanningPages.length === 0 && !aiState.isEnabled) {
                 timeout = setTimeout(() => setVisible(false), 10000)
             }
         }
@@ -58,7 +58,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             window.removeEventListener('click', resetTimer)
             window.removeEventListener('touchstart', resetTimer)
         }
-    }, [menuOpen, aiState.scanningPages.length])
+    }, [menuOpen, aiState.scanningPages.length, aiState.isEnabled])
 
     return (
         <div
@@ -66,7 +66,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 transform",
                 "h-32 lg:h-20 bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0",
                 "flex flex-col lg:flex-row items-center justify-between",
-                visible || menuOpen || aiState.scanningPages.length > 0 ? "translate-y-0" : "translate-y-full"
+                visible || menuOpen || aiState.isEnabled || aiState.scanningPages.length > 0 ? "translate-y-0" : "translate-y-full"
             )}
         >
             {/* --- MOBILE/TABLET TOP ROW: Tools --- */}
@@ -91,14 +91,10 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 </div>
 
                 {/* Transposer */}
-                <Popover open={menuOpen} onOpenChange={(open) => {
-                    setMenuOpen(open)
-                    if (open && !aiState.isEnabled) {
-                        setAiEnabled(true)
-                    }
-                }}>
+                <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                     <PopoverTrigger asChild>
                         <button
+                            onClick={() => { if (!aiState.isEnabled) setAiEnabled(true) }}
                             className={cn(
                                 "h-9 px-3 sm:px-4 rounded-lg border text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 min-w-[100px] sm:min-w-[140px] justify-center",
                                 aiState.isEnabled
@@ -186,14 +182,10 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </div>
 
                     {/* Transposer */}
-                    <Popover open={menuOpen} onOpenChange={(open) => {
-                        setMenuOpen(open)
-                        if (open && !aiState.isEnabled) {
-                            setAiEnabled(true)
-                        }
-                    }}>
+                    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                         <PopoverTrigger asChild>
                             <button
+                                onClick={() => { if (!aiState.isEnabled) setAiEnabled(true) }}
                                 className={cn(
                                     "h-10 px-4 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
