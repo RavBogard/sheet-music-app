@@ -18,7 +18,7 @@ import { INSTRUMENT_PRESETS } from './musician-profile'
 describe('INSTRUMENT_PRESETS', () => {
     it('contains all expected instruments', () => {
         const keys = Object.keys(INSTRUMENT_PRESETS)
-        expect(keys).toContain('guitar')
+        expect(keys).toContain('acoustic_guitar')
         expect(keys).toContain('piano')
         expect(keys).toContain('voice')
         expect(keys).toContain('bb_trumpet')
@@ -40,7 +40,7 @@ describe('INSTRUMENT_PRESETS', () => {
     })
 
     describe('concert pitch instruments', () => {
-        it.each(['guitar', 'bass', 'piano', 'voice', 'ukulele'])('%s has 0 transposition', (instrument) => {
+        it.each(['acoustic_guitar', 'electric_bass', 'piano', 'voice', 'ukulele'])('%s has 0 transposition', (instrument) => {
             expect(INSTRUMENT_PRESETS[instrument].transposition).toBe(0)
         })
     })
@@ -52,14 +52,44 @@ describe('INSTRUMENT_PRESETS', () => {
     })
 
     describe('Eb instruments', () => {
-        it.each(['eb_alto_sax', 'eb_bari_sax'])('%s has -3 transposition', (instrument) => {
-            expect(INSTRUMENT_PRESETS[instrument].transposition).toBe(-3)
+        it('Eb Alto Sax has -3 transposition', () => {
+            expect(INSTRUMENT_PRESETS['eb_alto_sax'].transposition).toBe(-3)
         })
     })
 
     describe('F instruments', () => {
         it('French Horn has +7 transposition', () => {
             expect(INSTRUMENT_PRESETS['f_horn'].transposition).toBe(7)
+        })
+    })
+
+    describe('CRC ensemble instruments', () => {
+        it.each([
+            'acoustic_guitar', 'electric_bass', 'mandolin',
+            'electric_guitar', 'classical_guitar', 'voice', 'hand_drums'
+        ])('%s is in the presets', (instrument) => {
+            expect(INSTRUMENT_PRESETS[instrument]).toBeDefined()
+        })
+
+        it.each(['violin', 'eb_alto_sax', 'bb_clarinet', 'bb_trumpet'])(
+            'occasional instrument %s is in the presets', (instrument) => {
+                expect(INSTRUMENT_PRESETS[instrument]).toBeDefined()
+            }
+        )
+    })
+
+    describe('capo suggestions', () => {
+        it('acoustic guitar suggests capo', () => {
+            expect(INSTRUMENT_PRESETS['acoustic_guitar'].suggestCapo).toBe(true)
+        })
+
+        it('electric guitar does not suggest capo', () => {
+            expect(INSTRUMENT_PRESETS['electric_guitar'].suggestCapo).toBeFalsy()
+        })
+
+        it('non-string instruments do not suggest capo', () => {
+            expect(INSTRUMENT_PRESETS['bb_trumpet'].suggestCapo).toBeFalsy()
+            expect(INSTRUMENT_PRESETS['voice'].suggestCapo).toBeFalsy()
         })
     })
 
