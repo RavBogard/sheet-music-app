@@ -15,6 +15,7 @@ import { toast } from "sonner"
 
 import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
 import { LibraryFileRow } from "./LibraryFileRow"
+import { logger } from "@/lib/logger"
 
 interface SongChartsLibraryProps {
     onBack: () => void
@@ -119,7 +120,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             toast.success("Saved! The MusicXML file is now in this folder.")
             loadLibrary(true)
         } catch (e: unknown) {
-            console.error("Digitize Error:", e)
+            logger.error("Digitize Error:", e)
             toast.error(e instanceof Error ? e.message : "Digitize failed")
         } finally {
             setDigitizing(null)
