@@ -39,7 +39,7 @@ export interface ExtractionResult {
 // Dynamic import prevents Next.js from bundling pdfjs-dist into client code.
 // Only loaded when server-side extraction functions are actually called.
 
-let _pdfjsModule: any = null
+let _pdfjsModule: typeof import('pdfjs-dist') | null = null
 
 async function getPdfjs() {
     if (!_pdfjsModule) {
@@ -228,8 +228,8 @@ export async function extractChordsFromPage(
     const textContent = await page.getTextContent()
 
     const items: TextItem[] = textContent.items
-        .filter((item: any) => item.str && item.str.trim())
-        .map((item: any) => ({
+        .filter((item: { str?: string }) => item.str && item.str.trim())
+        .map((item: { str: string; transform: number[] }) => ({
             text: item.str.trim(),
             x: item.transform[4],
             y: item.transform[5],
