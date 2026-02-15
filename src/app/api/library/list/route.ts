@@ -9,12 +9,23 @@ export async function GET(req: NextRequest) {
         const query = url.searchParams.get("q") || ""
         const limitParam = parseInt(url.searchParams.get("limit") || "50")
 
-        // 1. Auth Check (Optional: Could start open, but better protected)
-        // For now, let's verify token if we want to restrict to members
+        // 1. Auth Check — Require valid token
         const authHeader = req.headers.get("Authorization")
-        if (authHeader?.startsWith("Bearer ")) {
-            const token = authHeader.split(" ")[1]
-            await verifyIdToken(token) // Just verify, don't block heavily yet
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null
+
+        if (!token) {
+            return NextResponse.json(
+                { error: "Authentication required" },
+                { status: 401 }
+            )
+        }
+
+        const decodedToken = await verifyIdToken(token)
+        if (!decodedToken) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 403 }
+            )
         }
 
         initAdmin()
@@ -68,6 +79,6 @@ export async function GET(req: NextRequest) {
 
     } catch (error: any) {
         console.error("Library List Error:", error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: "Failed to load library" }, { status: 500 })
     }
 }
