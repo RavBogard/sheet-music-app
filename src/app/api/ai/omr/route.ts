@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error("OMR Error:", error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal server error" || "Failed to digitize music" },
+            { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }
         );
     }
