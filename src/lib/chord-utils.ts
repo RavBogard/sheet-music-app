@@ -24,6 +24,7 @@ export const EXCLUDED_WORDS = new Set([
     "A",
     "I", "II", "III", "IV", "V", "VI", "VII",
     "D.C", "D.S", "Fine", "Coda",
+    "Da", "Dal",  // D.C./D.S. fragments
 ])
 
 /**
@@ -34,6 +35,7 @@ export const SECTION_MARKERS = new Set([
     "Pre", "Post", "Interlude", "Solo", "Ending", "Coda",
     "Refrain", "Hook", "Turnaround", "Vamp",
     "V1", "V2", "V3", "V4", "Ch", "Br",
+    "DC", "DS", "CODA", "FINE",  // Uppercase variants from PDF scores
 ])
 
 /**
