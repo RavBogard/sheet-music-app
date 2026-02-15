@@ -1,11 +1,13 @@
 {
-    "name": "CRC Music Books",
+    "name": "CentralReform.live",
     "short_name": "CRC Music",
     "description": "Digital Sheet Music Library for Central Reform Congregation",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#09090b",
-    "theme_color": "#09090b",
+    "background_color": "#fafafa",
+    "theme_color": "#ffffff",
+    "orientation": "any",
+    "categories": ["music", "productivity"],
     "icons": [
         {
             "src": "/logo.jpg",
