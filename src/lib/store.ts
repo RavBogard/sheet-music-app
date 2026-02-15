@@ -132,22 +132,45 @@ export const useMusicStore = create<MusicState>()(
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
 
-            setQueue: (items, startIndex = 0) => set({ playbackQueue: items, queueIndex: startIndex }),
+            setQueue: (items, startIndex = 0) => {
+                // Apply per-track transposition from the first song
+                const firstTrack = items[startIndex]
+                const trackTransposition = firstTrack?.transposition ?? 0
+                set({
+                    playbackQueue: items,
+                    queueIndex: startIndex,
+                    transposition: trackTransposition,
+                    // Clear page data when starting a new queue
+                    aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
+                })
+            },
             nextSong: () => {
-                const { playbackQueue, queueIndex } = get()
+                const { playbackQueue, queueIndex, aiState } = get()
                 if (queueIndex < playbackQueue.length - 1) {
                     const nextIndex = queueIndex + 1
-                    set({ queueIndex: nextIndex })
-                    return playbackQueue[nextIndex]
+                    const nextTrack = playbackQueue[nextIndex]
+                    // Apply per-track transposition, clear page data for new song
+                    set({
+                        queueIndex: nextIndex,
+                        transposition: nextTrack.transposition ?? 0,
+                        aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
+                    })
+                    return nextTrack
                 }
                 return null
             },
             prevSong: () => {
-                const { playbackQueue, queueIndex } = get()
+                const { playbackQueue, queueIndex, aiState } = get()
                 if (queueIndex > 0) {
                     const prevIndex = queueIndex - 1
-                    set({ queueIndex: prevIndex })
-                    return playbackQueue[prevIndex]
+                    const prevTrack = playbackQueue[prevIndex]
+                    // Apply per-track transposition, clear page data for new song
+                    set({
+                        queueIndex: prevIndex,
+                        transposition: prevTrack.transposition ?? 0,
+                        aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
+                    })
+                    return prevTrack
                 }
                 return null
             },
