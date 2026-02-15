@@ -44,6 +44,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error("Set Role Error:", error)
-        return new NextResponse(error.message || "Internal Server Error", { status: 500 })
+        return new NextResponse("Internal Server Error", { status: 500 })
     }
 }
