@@ -38,22 +38,34 @@ export function subscribeToMusicianProfile(
 
 /**
  * Common instrument presets with their default transpositions.
- * Transposition = semitones to subtract from concert pitch to get written pitch.
- * e.g., Bb Trumpet: written C sounds as Bb, so transposition = -2
+ * Transposition = semitones to add to concert pitch to get written pitch.
+ * e.g., Bb Trumpet: written C sounds as Bb, so transposition = 2
+ *
+ * Ordered by frequency of use at CRC, then occasional instruments.
  */
-export const INSTRUMENT_PRESETS: Record<string, { label: string; transposition: number; description: string }> = {
-    'guitar': { label: 'Guitar', transposition: 0, description: 'Concert pitch' },
-    'bass': { label: 'Bass', transposition: 0, description: 'Concert pitch (octave lower)' },
-    'piano': { label: 'Piano/Keys', transposition: 0, description: 'Concert pitch' },
-    'voice': { label: 'Voice', transposition: 0, description: 'Concert pitch' },
-    'ukulele': { label: 'Ukulele', transposition: 0, description: 'Concert pitch' },
-    'bb_trumpet': { label: 'Bb Trumpet', transposition: 2, description: 'Sounds a whole step lower' },
-    'bb_clarinet': { label: 'Bb Clarinet', transposition: 2, description: 'Sounds a whole step lower' },
+export const INSTRUMENT_PRESETS: Record<string, { label: string; transposition: number; description: string; suggestCapo?: boolean }> = {
+    // ─── Core CRC Ensemble ──────────────────────────────────────
+    'acoustic_guitar': { label: 'Acoustic Guitar', transposition: 0, description: 'Concert pitch', suggestCapo: true },
+    'electric_bass': { label: 'Electric Bass', transposition: 0, description: 'Concert pitch (octave lower)' },
+    'mandolin': { label: 'Mandolin', transposition: 0, description: 'Concert pitch' },
+    'electric_guitar': { label: 'Electric Guitar', transposition: 0, description: 'Concert pitch' },
+    'classical_guitar': { label: 'Classical Guitar', transposition: 0, description: 'Concert pitch' },
+    'voice': { label: 'Voice / Vocal', transposition: 0, description: 'Concert pitch' },
+    'hand_drums': { label: 'Hand Drums / Percussion', transposition: 0, description: 'Rhythm only — no transposition' },
+
+    // ─── Occasional Instruments ─────────────────────────────────
+    'violin': { label: 'Violin', transposition: 0, description: 'Concert pitch' },
+    'eb_alto_sax': { label: 'Eb Alto Sax', transposition: -3, description: 'Sounds a major 6th lower' },
     'bb_tenor_sax': { label: 'Bb Tenor Sax', transposition: 2, description: 'Sounds a major 9th lower' },
     'bb_soprano_sax': { label: 'Bb Soprano Sax', transposition: 2, description: 'Sounds a whole step lower' },
-    'eb_alto_sax': { label: 'Eb Alto Sax', transposition: -3, description: 'Sounds a major 6th lower' },
-    'eb_bari_sax': { label: 'Eb Baritone Sax', transposition: -3, description: 'Sounds an octave + major 6th lower' },
+    'bb_clarinet': { label: 'Bb Clarinet', transposition: 2, description: 'Sounds a whole step lower' },
+    'bb_trumpet': { label: 'Bb Trumpet', transposition: 2, description: 'Sounds a whole step lower' },
     'f_horn': { label: 'French Horn (F)', transposition: 7, description: 'Sounds a 5th lower' },
+    'trombone': { label: 'Trombone', transposition: 0, description: 'Concert pitch' },
+
+    // ─── Other ──────────────────────────────────────────────────
+    'piano': { label: 'Piano / Keys', transposition: 0, description: 'Concert pitch' },
+    'ukulele': { label: 'Ukulele', transposition: 0, description: 'Concert pitch' },
     'other': { label: 'Other', transposition: 0, description: 'Set custom transposition' },
 }
 
