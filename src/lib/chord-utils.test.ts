@@ -83,8 +83,8 @@ describe('CHORD_REGEX', () => {
 })
 
 describe('isChord (full detection)', () => {
-    it('rejects standalone "A" as too ambiguous', () => {
-        expect(isChord('A')).toBe(false)
+    it('accepts standalone "A" as A major in a music chart context', () => {
+        expect(isChord('A')).toBe(true)
     })
 
     it('rejects D.C./D.S. fragments', () => {
@@ -108,10 +108,10 @@ describe('isChord (full detection)', () => {
         expect(isChord('')).toBe(false)
     })
 
-    it('cleans special characters before testing', () => {
-        // Unicode sharp and flat in PDFs
-        expect(isChord('F\u266F')).toBe(false) // ♯ gets stripped by the clean regex
-        // But standard notation works
+    it('normalizes Unicode sharp/flat before testing', () => {
+        // Unicode sharp ♯ → # (F♯ = F# = valid chord)
+        expect(isChord('F\u266F')).toBe(true)
+        // Standard notation works
         expect(isChord('F#m7')).toBe(true)
     })
 

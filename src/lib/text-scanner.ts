@@ -21,9 +21,8 @@ export interface ScannedChord {
     pxHeight: number;
 }
 
-// Words that are valid chords only when they have a quality/extension
-// Only "A" is ambiguous — other bare roots (C, D, G etc.) are valid major chords
-const AMBIGUOUS_SINGLE_LETTER = new Set(["A"]);
+// No single-letter chord roots are ambiguous in a dedicated music chart app.
+// Lowercase "a" won't match the regex (requires uppercase A-G).
 
 export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const textLayer = pageElement.querySelector('.react-pdf__Page__textContent');
@@ -81,10 +80,10 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         for (let i = 1; i < items.length; i++) {
             const next = items[i];
 
-            const sameLine = Math.abs(current.y - next.y) < (current.h * 0.3);
+            const sameLine = Math.abs(current.y - next.y) < (current.h * 0.5);
             const gap = next.x - current.r;
             const isSingleChar = current.text.trim().length === 1 || next.text.trim().length === 1;
-            const maxGap = isSingleChar ? (current.h * 0.5) : (current.h * 0.2);
+            const maxGap = isSingleChar ? (current.h * 1.0) : (current.h * 0.3);
             const isClose = gap >= 0 && gap < maxGap;
 
             if (sameLine && isClose) {
@@ -107,46 +106,48 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     // 4. Post-merge: aggressively combine chord parts on same line
     // Handles cases where G, #, m, 7 are all separate spans
     // Also handles superscript numbers (different Y)
-    const finalItems: typeof merged = [];
+    const finalItems: typeof merged = []
 
     for (let i = 0; i < merged.length; i++) {
-        let current = { ...merged[i] };
+        let current = { ...merged[i] }
 
         if (/^[A-G]$/.test(current.text.trim())) {
-            let chordText = current.text.trim();
-            let lastItem = current;
-            let j = i + 1;
+            let chordText = current.text.trim()
+            let lastItem = current
+            let j = i + 1
 
             while (j < merged.length) {
-                const next = merged[j];
-                const nextText = next.text.trim();
+                const next = merged[j]
+                const nextText = next.text.trim()
 
-                const isSharpOrFlat = /^[#b]$/.test(nextText);
-                const isQuality = /^(m|M|maj|min|dim|aug|sus|add|no|alt|dom)+$/.test(nextText);
-                const isNumber = /^[0-9]+$/.test(nextText);
-                const isCombo = /^(m7|m9|m11|m13|maj7|maj9|min7|dim7|add9|add11|sus4|sus2|no3|no5|dom7)$/.test(nextText);
-                const isParen = /^\([^)]*\)$/.test(nextText);
+                const isSharpOrFlat = /^[#b♯♭]$/.test(nextText)
+                const isQuality = /^(m|M|maj|min|dim|aug|sus|add|no|alt|dom)+$/.test(nextText)
+                const isNumber = /^[0-9]+$/.test(nextText)
+                const isCombo = /^(m7|m9|m11|m13|maj7|maj9|min7|dim7|add9|add11|sus4|sus2|no3|no5|dom7)$/.test(nextText)
+                const isParen = /^\([^)]*\)$/.test(nextText)
 
                 if (!isSharpOrFlat && !isQuality && !isNumber && !isCombo && !isParen) {
-                    break;
+                    break
                 }
 
-                // Y tolerance: generous for superscript numbers, normal for others
-                const yTolerance = isNumber ? (lastItem.h * 2) : (lastItem.h * 1.2);
+                // Y tolerance: generous for all chord parts — music fonts often
+                // render accidentals and qualities at slightly different baselines
+                const yTolerance = isNumber ? (lastItem.h * 2.5) : (lastItem.h * 1.8)
                 if (Math.abs(lastItem.y - next.y) > yTolerance) {
-                    break;
+                    break
                 }
 
-                // X tolerance
-                const gap = next.x - lastItem.r;
-                const maxGap = isNumber ? (lastItem.h * 1.5) : (lastItem.h * 1.0);
+                // X tolerance: music PDFs often have generous spacing between
+                // chord parts — allow up to 2x character height gap
+                const gap = next.x - lastItem.r
+                const maxGap = isNumber ? (lastItem.h * 2.5) : (lastItem.h * 2.0)
                 if (gap > maxGap || gap < -lastItem.w) {
-                    break;
+                    break
                 }
 
-                chordText += nextText;
-                lastItem = next;
-                j++;
+                chordText += nextText
+                lastItem = next
+                j++
             }
 
             const combinedItem = {
@@ -174,12 +175,6 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
 
         // Skip excluded words
         if (EXCLUDED_WORDS.has(cleanText)) continue;
-
-        // Skip bare root notes (A, B, C...) — too ambiguous without quality/extension
-        // Exception: allow if they appear on a line with other confirmed chords (handled by position)
-        // Skip bare "A" — too ambiguous (could be the word "a")
-        // Other bare roots like C, D, G are valid major chord symbols
-        if (AMBIGUOUS_SINGLE_LETTER.has(cleanText)) continue;
 
         // Test against chord regex
         // Also test without parentheses for patterns like C(add9)

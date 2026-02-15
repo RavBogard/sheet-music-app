@@ -17,11 +17,12 @@ export const CHORD_REGEX = /^[A-G][b#]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom
 
 /**
  * Words that match the chord regex but aren't actually chords.
- * "A" alone is too ambiguous (article vs. A major).
+ * Note: "A" is NOT excluded — in a music chart app, uppercase "A"
+ * in the text layer is virtually always A major. Lowercase "a"
+ * (the English article) won't match the chord regex anyway.
  * Roman numerals appear as section markers in lead sheets.
  */
 export const EXCLUDED_WORDS = new Set([
-    "A",
     "I", "II", "III", "IV", "V", "VI", "VII",
     "D.C", "D.S", "Fine", "Coda",
     "Da", "Dal",  // D.C./D.S. fragments
@@ -40,10 +41,13 @@ export const SECTION_MARKERS = new Set([
 
 /**
  * Tests whether a text string represents a chord symbol.
- * Cleans non-alphanumeric characters before testing.
+ * Normalizes Unicode accidentals and cleans non-chord characters before testing.
  */
 export function isChord(text: string): boolean {
-    const clean = text.replace(/[^\w#b\/]/g, "")
+    // First normalize Unicode sharp/flat to ASCII
+    let clean = text.replace(/\u266F/g, "#").replace(/\u266D/g, "b")
+    // Then strip remaining non-chord characters
+    clean = clean.replace(/[^\w#b\/]/g, "")
     if (!clean) return false
     if (EXCLUDED_WORDS.has(clean)) return false
     if (SECTION_MARKERS.has(clean)) return false

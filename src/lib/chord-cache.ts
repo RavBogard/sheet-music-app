@@ -4,6 +4,9 @@
  * and saves scan results for future use.
  */
 
+// Bump this when scanner logic changes to invalidate stale caches
+const CACHE_VERSION = 2
+
 interface CachedChord {
     text: string
     originalText: string
@@ -20,6 +23,7 @@ interface CacheResult {
         chords: CachedChord[]
         scannedAt: string
         scanMethod: 'textLayer' | 'geminiOCR'
+        cacheVersion?: number
     }
 }
 
@@ -44,7 +48,12 @@ export async function loadChordCache(
 
         const data: CacheResult = await res.json()
         if (data.cached && data.data?.chords && data.data.chords.length > 0) {
-            return data.data.chords
+            // Skip stale caches from older scanner versions
+            if (data.data.cacheVersion && data.data.cacheVersion >= CACHE_VERSION) {
+                return data.data.chords
+            }
+            // Old cache without version — ignore, will be re-scanned
+            return null
         }
 
         return null
@@ -78,7 +87,8 @@ export function saveChordCache(
             fileId,
             page: pageNumber,
             chords,
-            scanMethod
+            scanMethod,
+            cacheVersion: CACHE_VERSION
         })
     }).catch(err => {
         console.warn('[ChordCache] Save failed:', err)

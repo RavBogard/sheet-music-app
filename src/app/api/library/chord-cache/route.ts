@@ -19,6 +19,7 @@ interface PageChordData {
     chords: ChordPosition[]
     scannedAt: string
     scanMethod: 'textLayer' | 'geminiOCR'
+    cacheVersion?: number
 }
 
 /**
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
         await getAuth().verifyIdToken(token)
 
         const body = await req.json()
-        const { fileId, page, chords, scanMethod } = body
+        const { fileId, page, chords, scanMethod, cacheVersion } = body
 
         if (!fileId || page === undefined || page === null || !Array.isArray(chords)) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -118,7 +119,8 @@ export async function POST(req: NextRequest) {
                 pxHeight: c.pxHeight
             })),
             scannedAt: new Date().toISOString(),
-            scanMethod: scanMethod || 'textLayer'
+            scanMethod: scanMethod || 'textLayer',
+            cacheVersion: cacheVersion || 1
         }
 
         await db
