@@ -13,8 +13,6 @@
  *  5. Return structured chord positions per page
  */
 
-import { isChord, cleanChordText } from './chord-utils'
-
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface ExtractedChord {
@@ -53,6 +51,10 @@ async function getPdfjs() {
     }
     return _pdfjsModule
 }
+
+// ─── Chord Detection ─────────────────────────────────────────────────
+
+import { CHORD_REGEX, EXCLUDED_WORDS, SECTION_MARKERS, isChord, cleanChordText } from './chord-utils'
 
 // ─── Text Merging ────────────────────────────────────────────────────
 
