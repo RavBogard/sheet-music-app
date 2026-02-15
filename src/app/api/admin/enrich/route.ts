@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error("Admin Enrichment Error:", error)
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal server error" || "Failed to run enrichment" },
+            { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }
         )
     }
