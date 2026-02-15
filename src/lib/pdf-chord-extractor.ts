@@ -43,7 +43,6 @@ let _pdfjsModule: any = null
 
 async function getPdfjs() {
     if (!_pdfjsModule) {
-        // @ts-expect-error — pdfjs-dist legacy build has no TS declarations for .mjs
         _pdfjsModule = await import("pdfjs-dist/legacy/build/pdf.mjs")
         // Disable worker threads in server/serverless context
         if (_pdfjsModule.GlobalWorkerOptions) {
