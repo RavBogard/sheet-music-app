@@ -72,10 +72,8 @@ export async function uploadToStorage(
         }
     })
 
-    // Make publicly readable
-    await file.makePublic()
 
-    return file.publicUrl()
+    return `gs://${BUCKET_NAME}/${path}`
 }
 
 /**
@@ -89,7 +87,7 @@ export async function getStorageUrl(fileId: string, mimeType?: string): Promise<
         const file = bucket.file(path)
         const [exists] = await file.exists()
         if (!exists) return null
-        return file.publicUrl()
+        return `gs://${BUCKET_NAME}/${path}`
     } catch {
         return null
     }

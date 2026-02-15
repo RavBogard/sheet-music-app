@@ -3,9 +3,6 @@
  * 
  * Migrates files from Google Drive to Firebase Storage in batches.
  * Call repeatedly until remaining === 0.
- * 
- * Each call processes up to 20 files that aren't already in Storage.
- * Safe to call multiple times — skips files already migrated.
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -13,13 +10,12 @@ import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
 import { fileExistsInStorage, copyDriveFileToStorage } from "@/lib/firebase-storage"
 
-export const maxDuration = 300 // 5 minutes
+export const maxDuration = 300
 
-const BATCH_SIZE = 15 // files per request
+const BATCH_SIZE = 10
 
 export async function POST(req: NextRequest) {
     try {
-        // Auth
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
             return NextResponse.json({ error: "Missing token" }, { status: 401 })
@@ -33,11 +29,11 @@ export async function POST(req: NextRequest) {
         const db = getFirestore()
         const drive = new DriveClient()
 
-        // Get all library files from Firestore
+        // Get all library files
         const snapshot = await db.collection('library_index').get()
         const allFiles = snapshot.docs.map(doc => doc.data())
 
-        // Filter to migratable files (PDFs, audio, Google Docs, XML)
+        // Filter to migratable types
         const migratable = allFiles.filter(f =>
             f.mimeType === 'application/pdf' ||
             f.mimeType?.includes('audio') ||
@@ -45,49 +41,32 @@ export async function POST(req: NextRequest) {
             f.mimeType?.startsWith('application/vnd.google-apps.')
         )
 
-        // Check which ones still need migration
+        // Check actual Storage existence for a batch
         const needsMigration: typeof migratable = []
-        const alreadyDone: string[] = []
+        let alreadyInStorage = 0
 
         for (const file of migratable) {
-            // Quick check: if Firestore doc already has storageUrl, skip
-            if (file.storageUrl) {
-                alreadyDone.push(file.id)
-                continue
-            }
-            needsMigration.push(file)
-        }
-
-        // Double-check a batch against actual Storage (in case storageUrl wasn't recorded)
-        const batch = needsMigration.slice(0, BATCH_SIZE)
-        const toProcess: typeof migratable = []
-
-        for (const file of batch) {
             const exists = await fileExistsInStorage(file.id, file.mimeType)
             if (exists) {
-                // Mark in Firestore so we skip next time
-                await db.collection('library_index').doc(file.id).update({
-                    storageUrl: `already-migrated`,
-                    storageCopiedAt: new Date().toISOString(),
-                })
-                alreadyDone.push(file.id)
+                alreadyInStorage++
             } else {
-                toProcess.push(file)
+                needsMigration.push(file)
             }
         }
 
-        // Process the batch
+        const batch = needsMigration.slice(0, BATCH_SIZE)
+
         const results = {
             processed: 0,
             succeeded: 0,
             failed: 0,
-            skipped: alreadyDone.length,
-            remaining: needsMigration.length - toProcess.length,
+            alreadyInStorage,
+            remaining: needsMigration.length - batch.length,
             total: migratable.length,
             errors: [] as string[],
         }
 
-        for (const file of toProcess) {
+        for (const file of batch) {
             results.processed++
             try {
                 const storageUrl = await copyDriveFileToStorage(drive, file.id, file.mimeType)
@@ -97,23 +76,27 @@ export async function POST(req: NextRequest) {
                         storageCopiedAt: new Date().toISOString(),
                     })
                     results.succeeded++
+                    console.log(`[Migration] ✓ ${file.name}`)
                 } else {
                     results.failed++
-                    results.errors.push(`${file.name}: copy returned null`)
+                    results.errors.push(file.name)
+                    console.log(`[Migration] ✗ ${file.name}: null result`)
                 }
             } catch (err) {
                 results.failed++
-                results.errors.push(`${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`)
+                const msg = err instanceof Error ? err.message : 'Unknown'
+                results.errors.push(`${file.name}: ${msg}`)
+                console.error(`[Migration] ✗ ${file.name}:`, msg)
             }
         }
-
-        results.remaining = needsMigration.length - toProcess.length
 
         return NextResponse.json({
             success: true,
             message: results.remaining > 0
-                ? `Migrated ${results.succeeded} files. ${results.remaining} remaining — run again to continue.`
-                : `Migration complete! All ${results.total} files are in Firebase Storage.`,
+                ? `Migrated ${results.succeeded}. ${results.remaining} remaining.`
+                : results.succeeded > 0
+                    ? `Done! ${results.alreadyInStorage + results.succeeded} files in Firebase Storage.`
+                    : `All ${results.alreadyInStorage} files already in Firebase Storage.`,
             ...results,
         })
 
