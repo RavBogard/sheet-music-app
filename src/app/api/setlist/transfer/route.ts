@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         let targetUser
         try {
             targetUser = await auth.getUserByEmail(newOwnerEmail)
-        } catch (e: any) {
+        } catch (e: unknown) {
             if (e.code === 'auth/user-not-found') {
                 return new NextResponse(`User with email ${newOwnerEmail} not found. They must sign up first.`, { status: 404 })
             }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
             message: `Transferred "${setlistData?.name}" to ${targetUser.email}`
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Transfer Error:", error)
         return new NextResponse(`Error: ${error.message}`, { status: 500 })
     }
