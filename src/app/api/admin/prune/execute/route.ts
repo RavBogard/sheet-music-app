@@ -37,7 +37,7 @@ export async function POST(req: Request) {
             deletedCount: fileIds.length
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Prune Execute Failed:", error)
         return new NextResponse(error.message || "Internal Server Error", { status: 500 })
     }
