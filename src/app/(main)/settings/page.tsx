@@ -40,7 +40,7 @@ export default function UnifiedSettingsPage() {
 
         } catch (e: unknown) {
             console.error("Sync Failed:", e)
-            toast.error("Sync Failed: " + e instanceof Error ? e.message : "Unknown error")
+            toast.error("Sync Failed: " + (e instanceof Error ? e.message : "Unknown error"))
         } finally {
             setSyncing(false)
         }
