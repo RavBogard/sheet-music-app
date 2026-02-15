@@ -4,11 +4,33 @@ import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
+import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
 
 interface SmartTransposerProps {
     pageRef: React.RefObject<HTMLDivElement | null>
     pageNumber: number
     isRendered: boolean
+}
+
+/**
+ * Resolve the current file's Drive ID from the store.
+ * Checks the playback queue first, falls back to parsing the fileUrl.
+ */
+function useCurrentFileId(): string | null {
+    const { playbackQueue, queueIndex, fileUrl } = useMusicStore()
+
+    // From playback queue (setlist/perform mode)
+    if (queueIndex >= 0 && playbackQueue[queueIndex]?.fileId) {
+        return playbackQueue[queueIndex].fileId
+    }
+
+    // From file URL (library single-file view): /api/drive/file/{fileId}
+    if (fileUrl && typeof fileUrl === "string") {
+        const match = fileUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+        if (match) return match[1]
+    }
+
+    return null
 }
 
 export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransposerProps) {
@@ -20,32 +42,56 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         transposition
     } = useMusicStore()
     const { user } = useAuth()
+    const fileId = useCurrentFileId()
 
     const [hasScanned, setHasScanned] = useState(false)
     const [localError, setLocalError] = useState<string | null>(null)
 
-    // Data for this specific page
     const pageData = aiState.pageData[pageNumber]
 
     useEffect(() => {
-        // Trigger Scan if enabled, rendered, and no data yet
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
     }, [aiState.isEnabled, isRendered, pageData, hasScanned])
 
     const runScan = async () => {
-        if (!pageRef.current) return;
+        if (!pageRef.current) return
 
         try {
             setHasScanned(true)
             setPageScanning(pageNumber, true)
             setLocalError(null)
 
-            const pageEl = pageRef.current;
+            const token = await user?.getIdToken()
 
-            // 1. Try Text Layer Scan (Vector PDF) - FAST & PRECISE
-            const textChords = scanTextLayer(pageEl);
+            // ── Step 1: Check chord cache ──
+            if (fileId && token) {
+                try {
+                    const cached = await loadChordCache(fileId, pageNumber, token)
+                    if (cached && cached.length > 0) {
+                        const mappedChords = cached.map(c => ({
+                            text: c.text,
+                            originalText: c.originalText || c.text,
+                            x: c.x,
+                            y: c.y,
+                            w: c.w,
+                            h: c.h,
+                            pxHeight: c.pxHeight,
+                        }))
+                        setPageData(pageNumber, { chords: mappedChords, strips: [] })
+                        setPageScanning(pageNumber, false)
+                        return
+                    }
+                } catch {
+                    // Cache miss or error — proceed with scan
+                }
+            }
+
+            const pageEl = pageRef.current
+
+            // ── Step 2: Try Text Layer Scan (Vector PDF) ──
+            const textChords = scanTextLayer(pageEl)
 
             if (textChords.length > 0) {
                 const mappedChords = textChords.map(c => ({
@@ -56,20 +102,24 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     w: c.w,
                     h: c.h,
                     pxHeight: c.pxHeight
-                }));
+                }))
 
                 setPageData(pageNumber, { chords: mappedChords, strips: [] })
                 setPageScanning(pageNumber, false)
-                return;
+
+                // Save to cache (fire-and-forget)
+                if (fileId && token) {
+                    saveChordCache(fileId, pageNumber, mappedChords, 'textLayer', token)
+                }
+                return
             }
 
-            // 2. Fallback: Image Scan (Raster PDF)
+            // ── Step 3: Fallback — Image Scan (Raster PDF) ──
             const canvas = pageRef.current.querySelector('canvas')
             if (!canvas) {
                 throw new Error("Canvas not found")
             }
 
-            // Client-side Line Scanning
             const scanResult = await scanForChordStrips(canvas, canvas.getContext('2d')!)
 
             if (scanResult.strips.length === 0) {
@@ -77,8 +127,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 return
             }
 
-            // API Call
-            const token = await user?.getIdToken()
+            // API Call to Gemini
             const res = await fetch('/api/ai/transposer', {
                 method: 'POST',
                 headers: {
@@ -94,12 +143,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
             const json = await res.json()
 
-            // Map Results
-            const chords = [];
-
+            const chords = []
             for (const stripResult of json.results) {
-                const originalStrip = scanResult.strips.find(s => s.id === stripResult.id)
-                if (!originalStrip) continue;
+                const originalStrip = scanResult.strips.find((s: any) => s.id === stripResult.id)
+                if (!originalStrip) continue
 
                 for (const chord of stripResult.chords) {
                     const msgHeight = originalStrip.height
@@ -120,6 +167,11 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
 
             setPageData(pageNumber, { chords, strips: scanResult.strips })
 
+            // Save to cache (fire-and-forget)
+            if (fileId && token && chords.length > 0) {
+                saveChordCache(fileId, pageNumber, chords, 'geminiOCR', token)
+            }
+
         } catch (err: any) {
             console.error("Scan Error:", err)
             setLocalError(err.message)
@@ -129,24 +181,22 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         }
     }
 
-    // RENDER
+    // ── Render ──
     if (!aiState.isEnabled || !pageData) {
-        return null;
+        return null
     }
 
     return (
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: any, i: number) => {
-                const transposed = transposeChord(chord.originalText, transposition)
+                const transposed = transposeChord(chord.originalText || chord.text, transposition)
                 const isChanged = transposition !== 0
 
                 // Dynamic font sizing based on detected chord height
-                // Use pxHeight from the scan, with reasonable bounds
                 const detectedHeight = chord.pxHeight || 16
                 const fontSize = Math.max(12, Math.min(detectedHeight * 0.85, 28))
 
-                // Calculate overlay width to fully cover original text
-                // Wider for longer chord names (e.g., "F#m7/C#")
+                // Width to cover original text
                 const charCount = Math.max(transposed.length, chord.originalText?.length || 0)
                 const minWidth = Math.max(charCount * (fontSize * 0.65), fontSize * 1.5)
 
@@ -159,16 +209,13 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
                             transform: 'translateY(-45%)',
 
-                            // Sized to cover original chord
                             minWidth: `${minWidth}px`,
                             padding: `${fontSize * 0.25}px ${fontSize * 0.35}px`,
 
-                            // Clean white overlay
                             backgroundColor: 'white',
                             border: 'none',
                             borderRadius: '2px',
 
-                            // Dynamic font matching PDF scale
                             color: isChanged ? '#6d28d9' : '#1e40af',
                             fontSize: `${fontSize}px`,
                             fontWeight: 700,
