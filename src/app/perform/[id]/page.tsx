@@ -7,6 +7,7 @@ import { useSetlistStore } from "@/lib/setlist-store"
 import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
+import { prefetchUpcoming } from "@/lib/prefetch"
 
 import { parseFileId } from "@/lib/utils"
 
@@ -14,7 +15,7 @@ export default function PerformPage() {
     const router = useRouter()
     const params = useParams()
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
-    const { fileUrl, fileType, setFile } = useMusicStore()
+    const { fileUrl, fileType, setFile, playbackQueue, queueIndex } = useMusicStore()
 
     // Auto-apply musician profile transposition
     useMusicianTransposition()
@@ -41,6 +42,13 @@ export default function PerformPage() {
         }
     }, [requestWakeLock, releaseWakeLock])
 
+    // Prefetch next few songs in queue for instant page turns
+    useEffect(() => {
+        if (playbackQueue.length > 1) {
+            prefetchUpcoming(playbackQueue, queueIndex, 3)
+        }
+    }, [playbackQueue, queueIndex])
+
     return (
         <PerformerView
             fileUrl={fileUrl}
@@ -50,3 +58,4 @@ export default function PerformPage() {
         />
     )
 }
+
