@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ results: data });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[AI Transposer] Error:", error);
         return NextResponse.json(
             { error: "Failed to process chord detection" },
