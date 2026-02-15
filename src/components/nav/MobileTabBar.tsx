@@ -67,7 +67,7 @@ export function MobileTabBar() {
                             </div>
                             <span className={cn(
                                 "text-[10px] font-medium transition-colors",
-                                item.active ? "text-blue-400" : "text-zinc-500"
+                                item.active ? "text-blue-400" : "text-muted-foreground"
                             )}>
                                 {item.label}
                             </span>
