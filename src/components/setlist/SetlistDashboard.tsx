@@ -156,7 +156,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             })
             onSelect({
                 id, name, tracks: [], trackCount: 0,
-                date: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
+                date: { seconds: Date.now() / 1000, nanoseconds: 0 },
                 eventDate: date.toISOString(), ownerId: user.uid, isPublic: false
             })
         } catch {
@@ -308,3 +308,4 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         </div>
     )
 }
+
