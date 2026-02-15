@@ -290,7 +290,7 @@ function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: (
 
 
 function QuickAction({ icon: Icon, label, color, onClick }: {
-    icon: any
+    icon: React.ComponentType<{ className?: string }>
     label: string
     color: 'blue' | 'emerald' | 'violet'
     onClick: () => void
