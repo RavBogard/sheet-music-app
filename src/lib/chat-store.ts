@@ -1,8 +1,24 @@
 import { create } from 'zustand'
+import { SetlistTrack } from '@/types/models'
 
 export interface Message {
     role: 'user' | 'assistant'
     content: string
+}
+
+/** An edit action from the AI chat assistant to modify the active setlist */
+export interface ChatEditAction {
+    action: 'add' | 'remove' | 'reorder'
+    index?: number
+    fromIndex?: number
+    toIndex?: number
+    title?: string
+    fileId?: string
+}
+
+interface ChatContextData {
+    currentSetlist?: SetlistTrack[]
+    libraryFiles?: Array<{ id: string; name: string; mimeType: string }>
 }
 
 interface ChatState {
@@ -19,15 +35,12 @@ interface ChatState {
     clearMessages: () => void
 
     // Context Data (Provided by active component like SetlistEditor)
-    contextData: {
-        currentSetlist?: any[]
-        libraryFiles?: any[]
-    }
-    setContextData: (data: ChatState['contextData']) => void
+    contextData: ChatContextData
+    setContextData: (data: ChatContextData) => void
 
     // Callbacks
-    onApplyEdits?: (edits: any[]) => void
-    registerOnApplyEdits: (fn?: (edits: any[]) => void) => void
+    onApplyEdits?: (edits: ChatEditAction[]) => void
+    registerOnApplyEdits: (fn?: (edits: ChatEditAction[]) => void) => void
 
     // External Trigger
     pendingPrompt: string | null
