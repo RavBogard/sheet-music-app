@@ -43,7 +43,7 @@ export async function GET(request: Request) {
             uid: user.uid
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Bootstrap Error:", error)
         return new NextResponse(`Error: ${error.message}`, { status: 500 })
     }
