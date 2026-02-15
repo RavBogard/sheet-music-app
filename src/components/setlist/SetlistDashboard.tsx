@@ -138,8 +138,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             setShowTransferDialog(false)
             setTransferEmail("")
             setSelectedSetlistForTransfer(null)
-        } catch (err: any) {
-            toast.error(`Transfer Failed: ${err.message}`)
+        } catch (err: unknown) {
+            toast.error(`Transfer Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
         }
     }
 
