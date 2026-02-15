@@ -27,7 +27,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
     // Detected key for button display
     const detectedKey = useMemo(() => {
         const chords = Object.values(aiState.pageData).flatMap(
-            p => p.chords.map((c: any) => c.originalText || c.text)
+            p => p.chords.map((c: { originalText?: string; text: string }) => c.originalText || c.text)
         )
         if (chords.length === 0) return null
         return estimateKey(chords)
