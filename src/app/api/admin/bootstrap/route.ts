@@ -45,6 +45,6 @@ export async function GET(request: Request) {
 
     } catch (error: unknown) {
         console.error("Bootstrap Error:", error)
-        return new NextResponse(`Error: ${error.message}`, { status: 500 })
+        return new NextResponse(`Error: ${(error instanceof Error ? error.message : "Unknown error")}`, { status: 500 })
     }
 }
