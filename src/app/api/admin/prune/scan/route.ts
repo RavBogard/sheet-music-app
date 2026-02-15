@@ -63,7 +63,7 @@ export async function POST(req: Request) {
             ghosts
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Prune Scan Failed:", error)
         return new NextResponse(error.message || "Internal Server Error", { status: 500 })
     }
