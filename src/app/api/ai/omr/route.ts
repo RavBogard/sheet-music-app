@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ xml: cleanXml });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("OMR Error:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to digitize music" },
+            { error: error instanceof Error ? error.message : "Internal server error" || "Failed to digitize music" },
             { status: 500 }
         );
     }
