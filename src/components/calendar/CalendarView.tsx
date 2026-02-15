@@ -50,7 +50,7 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
         return setlists.filter(s => {
             if (!s.eventDate) return false
             // Handle Firestore Timestamp or string
-            const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as any).toDate()
+            const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as { toDate: () => Date }).toDate()
             return d.getDate() === date.getDate() &&
                 d.getMonth() === date.getMonth() &&
                 d.getFullYear() === date.getFullYear()
