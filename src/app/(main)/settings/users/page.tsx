@@ -40,7 +40,7 @@ export default function SettingsUsersPage() {
 
     if (authLoading) {
         return (
-            <div className="h-screen bg-zinc-950 flex items-center justify-center text-white">
+            <div className="h-screen bg-background flex items-center justify-center text-foreground">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
             </div>
         )
@@ -51,7 +51,7 @@ export default function SettingsUsersPage() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white p-6">
+        <div className="min-h-screen bg-background text-foreground p-6">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -60,7 +60,7 @@ export default function SettingsUsersPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => router.push("/settings")}
-                            className="rounded-full hover:bg-white/10"
+                            className="rounded-full hover:bg-accent"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
@@ -69,7 +69,7 @@ export default function SettingsUsersPage() {
                                 <ShieldAlert className="w-6 h-6 text-purple-400" />
                                 User Management
                             </h1>
-                            <p className="text-zinc-400 text-sm">Manage access and roles for all registered users.</p>
+                            <p className="text-muted-foreground text-sm">Manage access and roles for all registered users.</p>
                         </div>
                     </div>
                 </div>
