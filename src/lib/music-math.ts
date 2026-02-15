@@ -84,13 +84,13 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
     if (!trimmed) return chord;
 
     // Match root note, accidental, and everything else (quality, extensions, slash bass)
-    const match = trimmed.match(/^([A-G])([#b\u266F\u266D]?)(.*)$/);
+    const match = trimmed.match(/^([A-G])([#b]?)(.*)$/);
     if (!match) return chord;
 
     let [, root, accidental, suffix] = match;
 
     // Normalize Unicode accidentals
-    accidental = accidental.replace('\u266F', '#').replace('\u266D', 'b');
+    accidental = accidental.replace(String.fromCharCode(0x266F), '#').replace(String.fromCharCode(0x266D), 'b');
     const fullRoot = root + accidental;
 
     const index = findNoteIndex(fullRoot);
@@ -107,11 +107,11 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
 
     // Handle slash chords — transpose the bass note too
     let processedSuffix = suffix;
-    const slashMatch = suffix.match(/^(.*)\\/([A-G])([#b\u266F\u266D]?)$/);
+    const slashMatch = suffix.match(/^(.*)\\/([A-G])([#b]?)$/);
 
     if (slashMatch) {
         const [, qualityPart, bassRoot, bassAccidental] = slashMatch;
-        const normalizedBassAcc = bassAccidental.replace('\u266F', '#').replace('\u266D', 'b');
+        const normalizedBassAcc = bassAccidental.replace(String.fromCharCode(0x266F), '#').replace(String.fromCharCode(0x266D), 'b');
         const fullBass = bassRoot + normalizedBassAcc;
 
         const bassIndex = findNoteIndex(fullBass);
