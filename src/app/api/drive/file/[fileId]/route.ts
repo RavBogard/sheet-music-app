@@ -3,8 +3,7 @@ import { NextResponse } from "next/server"
 export const dynamic = 'force-dynamic'
 
 import { DriveClient } from "@/lib/google-drive"
-
-import { verifyIdToken } from "@/lib/firebase-admin"
+import { downloadFromStorage } from "@/lib/firebase-storage"
 
 export async function GET(
     request: Request,
@@ -16,12 +15,27 @@ export async function GET(
 
     try {
         const { fileId } = await params
+
+        // 1. Try Firebase Storage first (fast, CDN-cached)
+        const storageResult = await downloadFromStorage(fileId)
+        if (storageResult) {
+            return new NextResponse(storageResult.buffer, {
+                status: 200,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+                    'Content-Type': storageResult.contentType,
+                    'X-Served-From': 'firebase-storage',
+                }
+            })
+        }
+
+        // 2. Fall back to Google Drive (for un-migrated files)
         const drive = new DriveClient()
-        // Check metadata first to see if we need to export (Google Doc) or download (Binary)
         const metadata = await drive.getFileMetadata(fileId)
 
         let fileData;
-        let contentType = 'application/pdf'; // Default for our use case (rendering sheet music)
+        let contentType = 'application/pdf';
 
         if (metadata.mimeType?.startsWith('application/vnd.google-apps.')) {
             // It's a Google Doc/Sheet/Slide -> Export as PDF
@@ -37,11 +51,12 @@ export async function GET(
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Cache-Control': 'public, max-age=3600',
-                'Content-Type': contentType
+                'Content-Type': contentType,
+                'X-Served-From': 'google-drive',
             }
         })
     } catch (error) {
-        console.error("Drive File Proxy Error:", error)
+        console.error("File Proxy Error:", error)
         return new NextResponse("Internal Error", { status: 500 })
     }
 }
