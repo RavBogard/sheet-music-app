@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState } from "react"
 import { useMusicStore } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
-import { scanForChordStrips } from "@/lib/line-scanner"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
 
@@ -45,16 +44,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             const pageEl = pageRef.current;
 
             // 1. Try Text Layer Scan (Vector PDF) - FAST & PRECISE
-            // We need to wait for text layer to render? `isRendered` passed prop handles canvas, 
-            // but text layer might lag slightly.
-            // Let's assume if isRendered is true, text layer is likely there or coming.
-            // We can retry? Or just run.
-
             const textChords = scanTextLayer(pageEl);
 
             if (textChords.length > 0) {
-                console.log("Text Layer Matches Found:", textChords.length);
-                // Map to same format as API
                 const mappedChords = textChords.map(c => ({
                     text: c.text,
                     originalText: c.text,
@@ -65,26 +57,22 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     pxHeight: c.pxHeight
                 }));
 
-                // No strips needed for text layer mode
                 setPageData(pageNumber, { chords: mappedChords, strips: [] })
                 setPageScanning(pageNumber, false)
                 return;
             }
 
-            // 2. Fallback: Image Scan (Raster PDF)
-            console.log("No text layer chords found. Falling back to Image Scan...");
-
-            // Find Canvas
+            // 2. Fallback: Image Scan via API (Raster PDF)
             const canvas = pageRef.current.querySelector('canvas')
             if (!canvas) {
                 throw new Error("Canvas not found")
             }
 
             // Client-side Line Scanning
+            const { scanForChordStrips } = await import("@/lib/line-scanner")
             const scanResult = await scanForChordStrips(canvas, canvas.getContext('2d')!)
 
             if (scanResult.strips.length === 0) {
-                // No chords found in image either
                 setPageData(pageNumber, { chords: [], strips: [] })
                 return
             }
@@ -110,7 +98,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             const chords = [];
 
             for (const stripResult of json.results) {
-                const originalStrip = scanResult.strips.find(s => s.id === stripResult.id)
+                const originalStrip = scanResult.strips.find((s: any) => s.id === stripResult.id)
                 if (!originalStrip) continue;
 
                 for (const chord of stripResult.chords) {
@@ -141,12 +129,13 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         }
     }
 
-    // Helper to get token (firebase-client dependent)
-    // We can't easily import `auth` here if component is server? No "use client".
-    // We need to pass token or use hook. `useAuth` hook from context.
-
     // RENDER
     if (!aiState.isEnabled || !pageData) {
+        return null;
+    }
+
+    // Don't render overlays if no transposition is applied
+    if (transposition === 0) {
         return null;
     }
 
@@ -154,41 +143,52 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: any, i: number) => {
                 const transposed = transposeChord(chord.originalText, transposition)
-                const isChanged = transposition !== 0
+                const isChanged = transposed !== chord.originalText
 
-                // Use a consistent font size based on a reasonable estimate
-                // Don't rely on pxHeight which may be corrupted by merge logic
-                const fontSize = 18;  // Fixed size that works well
+                // Don't overlay if the chord didn't actually change
+                if (!isChanged) return null;
 
-                // Debug logging
-                console.log(`[Transposer] "${chord.originalText}" x=${chord.x.toFixed(1)} w=${chord.w?.toFixed(1)} -> "${transposed}"`)
+                // Dynamic font size based on detected chord height
+                // The pxHeight from text scanner is the actual rendered height of the chord text
+                // We scale it slightly larger to ensure full coverage
+                const baseFontSize = chord.pxHeight
+                    ? Math.max(14, Math.min(chord.pxHeight * 1.1, 32))
+                    : 18;
+
+                // Use the width from scanner if available for better coverage
+                const hasWidth = chord.w && chord.w > 0;
 
                 return (
                     <div
                         key={i}
                         className="absolute"
                         style={{
-                            // Position at LEFT EDGE, vertically centered
+                            // Position at detected location
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
-                            transform: 'translateY(-40%)',  // Shift up slightly to cover superscripts
+                            transform: 'translateY(-35%)',
 
-                            // GENEROUS padding to fully cover original chord
-                            padding: '8px 14px',
+                            // Size: use detected width if available, otherwise auto
+                            ...(hasWidth ? {
+                                minWidth: `${Math.max(chord.w + 1, 3)}%`,
+                            } : {}),
 
-                            // Solid white background - fully opaque
+                            // Padding to cover original
+                            padding: '4px 8px',
+
+                            // Clean white overlay
                             backgroundColor: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',  // Subtle shadow helps visibility
+                            borderRadius: '3px',
+                            boxShadow: '0 0 0 2px white', // Extra white bleed to cover edges
 
-                            // LARGER font to match or exceed original
-                            color: isChanged ? '#7c3aed' : '#0284c7',
-                            fontSize: '24px',
+                            // Typography: match lead sheet aesthetic
+                            color: '#7c3aed', // Purple for transposed chords
+                            fontSize: `${baseFontSize}px`,
                             fontWeight: 700,
-                            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-                            lineHeight: 1,
+                            fontFamily: "'Times New Roman', 'Georgia', serif", // Lead sheets typically use serif
+                            lineHeight: 1.1,
                             whiteSpace: 'nowrap',
+                            letterSpacing: '-0.02em',
 
                             zIndex: 100,
                         }}
@@ -200,5 +200,3 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         </div>
     )
 }
-
-
