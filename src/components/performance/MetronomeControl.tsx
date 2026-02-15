@@ -21,13 +21,13 @@ export function MetronomeControl() {
 
     return (
         <div className="flex items-center gap-2 lg:gap-3 px-1">
-            <div className="hidden lg:flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-zinc-800">
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">BPM</span>
+            <div className="hidden lg:flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-border">
+                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
                     value={currentBpm}
                     onChange={(e) => setCurrentBpm(parseInt(e.target.value) || 0)}
-                    className="h-full w-12 bg-transparent border-0 text-lg font-bold text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-zinc-300"
+                    className="h-full w-12 bg-transparent border-0 text-lg font-bold text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                 />
             </div>
 
@@ -36,10 +36,10 @@ export function MetronomeControl() {
                 onClick={togglePlay}
                 className={cn(
                     "flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg cursor-pointer transition-all border",
-                    "bg-zinc-900/80 lg:bg-black/50",
+                    "bg-card lg:bg-black/50",
                     isPlaying
                         ? "border-red-500/50"
-                        : "border-white/10 hover:border-white/30 hover:bg-zinc-800",
+                        : "border-border hover:border-white/30 hover:bg-muted",
                 )}
                 title={isPlaying ? "Stop Metronome" : "Start Metronome"}
             >
@@ -53,7 +53,7 @@ export function MetronomeControl() {
                 )} />
                 <span className={cn(
                     "text-xs font-semibold lg:hidden",
-                    isPlaying ? "text-red-400" : "text-zinc-400"
+                    isPlaying ? "text-red-400" : "text-muted-foreground"
                 )}>
                     {isPlaying ? currentBpm : "Metronome"}
                 </span>
