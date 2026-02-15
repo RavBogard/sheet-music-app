@@ -71,8 +71,8 @@ export async function GET(request: Request) {
             stats
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Cron] Enrichment Failed:", error)
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+        return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }
 }
