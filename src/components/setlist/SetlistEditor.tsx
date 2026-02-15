@@ -204,7 +204,7 @@ export function SetlistEditor({
                             {canEdit && isEditMode && (
                                 <button
                                     onClick={() => setShowAddSongs(true)}
-                                    className="w-full p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:text-foreground hover:border-zinc-500 transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
+                                    className="w-full p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
                                 >
                                     <Plus className="h-5 w-5" />
                                     Add Songs from Library
