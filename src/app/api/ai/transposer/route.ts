@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         // We will send all strips in one go to save latency/cost
         // Format: [Intro Text, "Strip ID 1:", Image1, "Strip ID 2:", Image2, ..., "Output JSON rules"]
 
-        const parts: any[] = [systemPrompt];
+        const parts: (string | { inlineData: { mimeType: string; data: string } })[] = [systemPrompt];
 
         // Interleave images
         strips.forEach(strip => {
