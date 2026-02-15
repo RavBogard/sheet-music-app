@@ -53,6 +53,7 @@ export function SetlistDrawer() {
                     : t.fileId?.endsWith('.chordpro') ? 'chordpro' : 'pdf',
                 audioFileId: t.audioFileId,
                 bpm: t.bpm,
+                transposition: t.transposition,
                 key: t.key
             } as any))
 
