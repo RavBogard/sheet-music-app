@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { prefetchUpcoming, isFilePrefetched } from './prefetch'
 import { QueueItem } from './store'
