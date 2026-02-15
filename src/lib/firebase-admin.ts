@@ -18,7 +18,8 @@ export function initAdmin() {
             return;
         }
         initializeApp({
-            credential: cert(serviceAccount)
+            credential: cert(serviceAccount),
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`,
         });
     }
 }
