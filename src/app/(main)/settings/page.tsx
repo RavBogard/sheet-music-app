@@ -4,11 +4,13 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Loader2, ShieldAlert, Users, Database, Repeat, AlertTriangle, CheckCircle, User, Moon, Sun, LogOut, Settings as SettingsIcon } from "lucide-react"
+import { ArrowLeft, Loader2, ShieldAlert, Users, Database, Repeat, CheckCircle, User, Moon, Sun, Monitor, LogOut, Settings as SettingsIcon } from "lucide-react"
 import { toast } from "sonner"
 import { SyncStats } from "@/lib/sync-engine"
 import { PruneManager } from "@/components/admin/PruneManager"
+import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { useTheme } from "next-themes"
+import buildInfo from "@/build-info.json"
 
 export default function UnifiedSettingsPage() {
     const { user, isAdmin, loading: authLoading, signOut } = useAuth()
@@ -73,172 +75,194 @@ export default function UnifiedSettingsPage() {
         }
     }
 
-    if (authLoading) return <div className="h-screen bg-zinc-950 flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
+    if (authLoading) return (
+        <div className="h-screen bg-background flex items-center justify-center">
+            <Loader2 className="animate-spin text-violet-500" />
+        </div>
+    )
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white p-6 pb-24">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-screen bg-background text-foreground p-6 pb-24">
+            <div className="max-w-3xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    {/* Back button logic: handled by Sidebar usually, but explicit back provided */}
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => router.back()}
-                        className="rounded-full hover:bg-white/10 md:hidden"
+                        className="rounded-full hover:bg-accent md:hidden"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-3">
-                            <SettingsIcon className="w-8 h-8 text-zinc-400" />
+                        <h1 className="text-2xl font-semibold flex items-center gap-3">
                             Settings
                         </h1>
-                        <p className="text-zinc-400">Manage your profile, preferences, and workspace.</p>
+                        <p className="text-muted-foreground text-sm">Profile, preferences, and workspace</p>
                     </div>
                 </div>
 
-                {/* Section: My Account (Visible to Everyone) */}
-                <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-zinc-500 uppercase text-sm tracking-wider">My Account</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Section: My Account */}
+                <section className="space-y-4">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account</h2>
 
-                        {/* Profile Card */}
-                        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex items-center gap-4">
-                            {user?.photoURL ? (
-                                <img src={user.photoURL} alt="Profile" className="w-16 h-16 rounded-full border-2 border-zinc-700" />
-                            ) : (
-                                <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-700">
-                                    <User className="w-8 h-8 text-zinc-500" />
-                                </div>
-                            )}
-                            <div>
-                                <h3 className="text-lg font-bold">{user?.displayName || "Musician"}</h3>
-                                <p className="text-zinc-500 text-sm">{user?.email}</p>
-                                <div className="mt-2 text-xs font-mono bg-zinc-800 px-2 py-1 rounded inline-block text-zinc-400">
-                                    {isAdmin ? "ADMINISTRATOR" : "MEMBER"}
-                                </div>
+                    {/* Profile Card */}
+                    <div className="bg-card border border-border p-5 rounded-2xl flex items-center gap-4">
+                        {user?.photoURL ? (
+                            <img src={user.photoURL} alt="Profile" className="w-14 h-14 rounded-full border border-border" />
+                        ) : (
+                            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border border-border">
+                                <User className="w-7 h-7 text-muted-foreground" />
                             </div>
+                        )}
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-foreground">{user?.displayName || "Musician"}</h3>
+                            <p className="text-muted-foreground text-sm">{user?.email}</p>
                         </div>
-
-                        {/* Appearance Card */}
-                        <div
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl cursor-pointer hover:bg-zinc-800/80 transition-all flex items-center justify-between"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-purple-500/10 text-purple-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                                    {theme === 'dark' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold">Appearance</h3>
-                                    <p className="text-zinc-500 text-sm">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</p>
-                                </div>
-                            </div>
+                        <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">
+                            {isAdmin ? "ADMIN" : "MEMBER"}
                         </div>
                     </div>
-                </div>
 
-                {/* Section: Admin Tools (Protected) */}
+                    {/* Appearance */}
+                    <div className="bg-card border border-border p-5 rounded-2xl">
+                        <h3 className="font-semibold text-foreground mb-3">Appearance</h3>
+                        <div className="flex gap-2">
+                            {[
+                                { value: 'light', icon: Sun, label: 'Light' },
+                                { value: 'dark', icon: Moon, label: 'Dark' },
+                                { value: 'system', icon: Monitor, label: 'System' },
+                            ].map(({ value, icon: Icon, label }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => setTheme(value)}
+                                    className={`
+                                        flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                                        ${theme === value
+                                            ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/30'
+                                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+                                        }
+                                    `}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                            Performance mode always uses dark theme for stage visibility.
+                        </p>
+                    </div>
+                </section>
+
+                {/* Section: Musician Profile */}
+                <section className="space-y-4">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Instrument</h2>
+                    <div className="bg-card border border-border p-5 rounded-2xl">
+                        <MusicianProfileSettings />
+                    </div>
+                </section>
+
+                {/* Section: Admin Tools */}
                 {isAdmin && (
-                    <div className="space-y-4 pt-8 border-t border-zinc-800">
+                    <section className="space-y-4 pt-4 border-t border-border">
                         <div className="flex items-center gap-2">
-                            <ShieldAlert className="w-5 h-5 text-purple-500" />
-                            <h2 className="text-xl font-bold text-zinc-500 uppercase text-sm tracking-wider">Admin Controls</h2>
+                            <ShieldAlert className="w-4 h-4 text-violet-500" />
+                            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin Controls</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Card 1: User Management */}
-                            <div
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* User Management */}
+                            <button
                                 onClick={() => router.push('/settings/users')}
-                                className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl cursor-pointer hover:border-purple-500/50 hover:bg-zinc-800/80 transition-all group"
+                                className="bg-card border border-border p-5 rounded-2xl text-left hover:border-violet-500/50 hover:bg-accent transition-all group"
                             >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                                        <Users className="w-6 h-6" />
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-500">
+                                        <Users className="w-5 h-5" />
                                     </div>
-                                    <ArrowLeft className="w-5 h-5 text-zinc-600 rotate-180 group-hover:text-purple-400 transition-colors" />
+                                    <ArrowLeft className="w-4 h-4 text-muted-foreground/30 rotate-180 group-hover:text-violet-500 transition-colors" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-2">User Management</h3>
-                                <p className="text-zinc-400 text-sm">Manage user roles (Admin, Leader, Member) and approve new sign-ups.</p>
-                            </div>
+                                <h3 className="font-semibold text-foreground mb-1">User Management</h3>
+                                <p className="text-muted-foreground text-sm">Manage roles and approve new sign-ups</p>
+                            </button>
 
-                            {/* Card 2: Library Sync */}
-                            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                                        <Database className="w-6 h-6" />
+                            {/* Library Sync */}
+                            <div className="bg-card border border-border p-5 rounded-2xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500">
+                                        <Database className="w-5 h-5" />
                                     </div>
-                                    {syncing && <Loader2 className="animate-spin text-blue-500" />}
+                                    {syncing && <Loader2 className="animate-spin text-blue-500 w-4 h-4" />}
                                 </div>
-                                <h3 className="text-xl font-bold mb-2">Native Library Sync</h3>
-                                <p className="text-zinc-400 text-sm mb-6">
-                                    Manually trigger a sync from Google Drive to the Application Database.
+                                <h3 className="font-semibold text-foreground mb-1">Library Sync</h3>
+                                <p className="text-muted-foreground text-sm mb-4">
+                                    Sync from Google Drive to the library
                                 </p>
 
                                 <Button
                                     onClick={handleSync}
                                     disabled={syncing}
-                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white gap-2"
+                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white gap-2 rounded-xl"
                                 >
                                     <Repeat className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                                     {syncing ? "Syncing..." : "Sync Now"}
                                 </Button>
 
                                 {lastStats && (
-                                    <div className="mt-4 p-4 bg-black/40 rounded-xl text-sm space-y-2 border border-blue-500/20">
-                                        <div className="flex items-center gap-2 text-green-400 font-bold">
-                                            <CheckCircle className="w-4 h-4" /> Sync Complete
+                                    <div className="mt-3 p-3 bg-muted/50 rounded-xl text-sm space-y-1.5 border border-border">
+                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold text-xs">
+                                            <CheckCircle className="w-3.5 h-3.5" /> Sync Complete
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 text-zinc-400">
-                                            <span>Scan: {lastStats.totalScanned}</span>
+                                        <div className="grid grid-cols-2 gap-1 text-muted-foreground text-xs">
+                                            <span>Scanned: {lastStats.totalScanned}</span>
                                             <span>New: {lastStats.added}</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Card 3: AI Enrichment */}
-                            <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400">
-                                        <Database className="w-6 h-6" />
+                            {/* AI Enrichment */}
+                            <div className="bg-card border border-border p-5 rounded-2xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-teal-500/10 rounded-xl text-teal-500">
+                                        <Database className="w-5 h-5" />
                                     </div>
-                                    {enriching && <Loader2 className="animate-spin text-teal-500" />}
+                                    {enriching && <Loader2 className="animate-spin text-teal-500 w-4 h-4" />}
                                 </div>
-                                <h3 className="text-xl font-bold mb-2">AI Enrichment</h3>
-                                <p className="text-zinc-400 text-sm mb-6">
-                                    Trigger AI analysis for files missing metadata (keys, BPM).
+                                <h3 className="font-semibold text-foreground mb-1">AI Enrichment</h3>
+                                <p className="text-muted-foreground text-sm mb-4">
+                                    Extract keys, BPM, and metadata from PDFs
                                 </p>
 
                                 <Button
                                     onClick={handleEnrich}
                                     disabled={enriching}
-                                    className="w-full bg-teal-600 hover:bg-teal-500 text-white gap-2"
+                                    className="w-full bg-teal-600 hover:bg-teal-500 text-white gap-2 rounded-xl"
                                 >
                                     <Repeat className={`w-4 h-4 ${enriching ? 'animate-spin' : ''}`} />
                                     {enriching ? "Enriching..." : "Run Enrichment"}
                                 </Button>
                             </div>
 
-                            {/* Card 4: Prune Manager (Auto-Tool) */}
+                            {/* Prune Manager */}
                             <PruneManager />
                         </div>
-                    </div>
+                    </section>
                 )}
 
                 {/* Log Out */}
-                <div className="pt-8 pb-8 flex flex-col items-center">
+                <div className="pt-6 pb-8 flex flex-col items-center gap-3">
                     <Button
                         onClick={() => signOut()}
                         variant="ghost"
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2 px-8"
+                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 gap-2 px-8 rounded-xl"
                     >
                         <LogOut className="w-4 h-4" />
                         Log Out
                     </Button>
-                    <div className="text-zinc-700 text-xs mt-4">
-                        Version 2026.01.28
+                    <div className="text-muted-foreground/40 text-xs">
+                        v{buildInfo.version} • {buildInfo.commit?.slice(0, 7)}
                     </div>
                 </div>
 
