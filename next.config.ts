@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  // Ensure we cache the routes we care about
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   workboxOptions: {
@@ -12,7 +11,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
   serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist'],
   images: {
     remotePatterns: [
@@ -22,11 +20,38 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'lh3.googleusercontent.com', // For profile pics
-      }
+        hostname: 'lh3.googleusercontent.com', // Google profile pics
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com', // Firebase Storage
+      },
+      {
+        protocol: 'https',
+        hostname: '*.firebasestorage.app', // Firebase Storage CDN
+      },
     ],
+  },
+  async headers() {
+    return [
+      {
+        // Cache PDF/audio file proxy responses aggressively
+        source: '/api/drive/file/:fileId*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400' },
+        ],
+      },
+      {
+        // Security headers for all routes
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
   },
 };
 
 export default withPWA(nextConfig);
-
