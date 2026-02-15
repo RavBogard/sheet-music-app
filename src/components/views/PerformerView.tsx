@@ -44,7 +44,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
 
         // 2. Tap Handling (Toggle Toolbar)
         if (tap) {
-            const e = event as any
+            const e = event as React.PointerEvent
             const target = e.target as HTMLElement
             // Ignore taps on toolbar or interactive elements
             if (target.closest('.performance-toolbar') || target.closest('button')) return
