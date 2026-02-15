@@ -95,7 +95,7 @@ export function MatchFileModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl h-[80vh] flex flex-col p-6">
+            <DialogContent className="bg-card border-border text-foreground max-w-2xl h-[80vh] flex flex-col p-6">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="text-xl font-bold">Link to Music File</DialogTitle>
                 </DialogHeader>
@@ -103,7 +103,7 @@ export function MatchFileModal({
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
                     {/* Breadcrumbs for Navigation */}
                     {!searchQuery && (
-                        <div className="flex items-center gap-1 text-sm text-zinc-500 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-white/5">
                             {breadcrumbs.map((crumb, i) => (
                                 <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
                                     {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
@@ -122,7 +122,7 @@ export function MatchFileModal({
                         value={searchQuery}
                         onChange={handleSearchChange}
                         placeholder="Search files..."
-                        className="mb-4 shrink-0 bg-zinc-800 border-zinc-700"
+                        className="mb-4 shrink-0 bg-muted border-border"
                         autoFocus
                     />
 
@@ -144,11 +144,11 @@ export function MatchFileModal({
                                         }}
                                         className={cn(
                                             "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isFolder ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300" : "bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800 text-white"
+                                            isFolder ? "bg-muted hover:bg-zinc-700 text-foreground" : "bg-muted border border-border hover:bg-muted text-foreground"
                                         )}
                                     >
                                         {isFolder ? (
-                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-zinc-400">
+                                            <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center text-muted-foreground">
                                                 <Folder className="h-5 w-5 text-yellow-500" />
                                             </div>
                                         ) : (
@@ -158,7 +158,7 @@ export function MatchFileModal({
                                         )}
                                         <div className="flex-1 min-w-0">
                                             <div className="text-sm font-medium truncate">{file.name}</div>
-                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
                                                 {isFolder ? "Folder" : file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                             </div>
                                         </div>
