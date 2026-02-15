@@ -31,24 +31,33 @@ export function MetronomeControl() {
                 />
             </div>
 
-            {/* Blinking Light Button */}
-            <div
+            {/* Blinking Light Button + Label */}
+            <button
                 onClick={togglePlay}
                 className={cn(
-                    "h-9 w-9 rounded-full cursor-pointer transition-all duration-75 border flex items-center justify-center bg-black/50 shadow-sm",
+                    "flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg cursor-pointer transition-all border",
+                    "bg-zinc-900/80 lg:bg-black/50",
                     isPlaying
                         ? "border-red-500/50"
-                        : "border-white/10 hover:border-white/30 hover:bg-white/5",
+                        : "border-white/10 hover:border-white/30 hover:bg-zinc-800",
                 )}
                 title={isPlaying ? "Stop Metronome" : "Start Metronome"}
             >
                 <div className={cn(
-                    "rounded-full transition-all duration-75",
+                    "rounded-full transition-all duration-75 shrink-0",
                     isPlaying && isBeat
-                        ? "h-5 w-5 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] scale-110"
-                        : "h-2 w-2 bg-zinc-800"
+                        ? "h-4 w-4 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] scale-110"
+                        : isPlaying
+                            ? "h-2.5 w-2.5 bg-red-800"
+                            : "h-2 w-2 bg-zinc-700"
                 )} />
-            </div>
+                <span className={cn(
+                    "text-xs font-semibold lg:hidden",
+                    isPlaying ? "text-red-400" : "text-zinc-400"
+                )}>
+                    {isPlaying ? currentBpm : "Metronome"}
+                </span>
+            </button>
         </div>
     )
 }
