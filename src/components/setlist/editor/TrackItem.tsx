@@ -2,8 +2,8 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2, Play, Search, Music, CheckCircle2 } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { GripVertical, Trash2, Play, Search, Music } from "lucide-react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AudioFilePicker } from "../AudioFilePicker"
@@ -15,10 +15,12 @@ import {
     ContextMenuTrigger,
     ContextMenuSeparator,
 } from "@/components/ui/context-menu"
-import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
 import { Loader2, Wand2 } from "lucide-react"
 import { isFileOffline } from "@/lib/offline-store"
+import { TrackHeaderItem } from "./TrackHeaderItem"
+import { useMetronome } from "./useMetronome"
+import { useDigitize } from "./useDigitize"
 
 interface TrackItemProps {
     track: SetlistTrack
@@ -43,9 +45,49 @@ export function TrackItem({
     onEditDetails,
     onDuplicate
 }: TrackItemProps) {
+    // --- Header tracks delegate to separate component ---
+    if (track.type === 'header') {
+        return (
+            <TrackHeaderItem
+                track={track}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                isEditMode={isEditMode}
+            />
+        )
+    }
+
+    return (
+        <SongTrackItem
+            track={track}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onMatchFile={onMatchFile}
+            onPlay={onPlay}
+            readOnly={readOnly}
+            isEditMode={isEditMode}
+            onEditDetails={onEditDetails}
+            onDuplicate={onDuplicate}
+        />
+    )
+}
+
+// ─── Song Track (main component) ─────────────────────────────────────
+
+function SongTrackItem({
+    track,
+    onUpdate,
+    onDelete,
+    onMatchFile,
+    onPlay,
+    readOnly,
+    isEditMode,
+    onEditDetails,
+    onDuplicate
+}: TrackItemProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: track.id,
-        disabled: !isEditMode // Disable DnD when not in edit mode
+        disabled: !isEditMode
     })
 
     const style = {
@@ -57,220 +99,35 @@ export function TrackItem({
     const hasFile = !!track.fileId
     const fileName = track.fileName || (hasFile ? "Linked File" : "")
 
-    // --- Offline Check ---
+    // Hooks
     const [isCached, setIsCached] = useState(false)
+    const { isBlinking, blinkState, toggle: toggleMetronome } = useMetronome(track.bpm)
+    const { isAdmin, digitizing, handleDigitize } = useDigitize({ track, onUpdate, onDuplicate })
+
     useEffect(() => {
         if (track.fileId) {
             isFileOffline(track.fileId).then(setIsCached)
         }
     }, [track.fileId])
 
-    // --- Metronome Logic ---
-    const [isBlinking, setIsBlinking] = useState(false)
-    const [blinkState, setBlinkState] = useState(false) // Toggle for animation
-    const blinkIntervalRef = useRef<NodeJS.Timeout | null>(null)
-    const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-    const toggleMetronome = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (!track.bpm) return
-
-        if (isBlinking) {
-            // Stop
-            setIsBlinking(false)
-            setBlinkState(false)
-            if (blinkIntervalRef.current) clearInterval(blinkIntervalRef.current)
-            if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current)
-        } else {
-            // Start
-            setIsBlinking(true)
-            const intervalMs = 60000 / track.bpm
-
-            setBlinkState(true) // Immediate flash
-            setTimeout(() => setBlinkState(false), 100)
-
-            blinkIntervalRef.current = setInterval(() => {
-                setBlinkState(true)
-                setTimeout(() => setBlinkState(false), 100) // Flash duration
-            }, intervalMs)
-
-            // Auto-stop after 10s
-            blinkTimeoutRef.current = setTimeout(() => {
-                setIsBlinking(false)
-                setBlinkState(false)
-                if (blinkIntervalRef.current) clearInterval(blinkIntervalRef.current)
-            }, 10000)
-        }
-    }
-
-    // --- Long Press Logic --
-    // REMOVED: Native Context Menu handles long press now.
-
-    // --- AI Digitize Logic ---
-    const { isAdmin, user } = useAuth()
-    const [digitizing, setDigitizing] = useState(false)
-
-    const handleDigitize = async () => {
-        if (!track.fileId) return
-
-        try {
-            setDigitizing(true)
-            toast.info(`Digitizing "${track.fileName}"... This may take ~5 mins`)
-
-            const token = await user?.getIdToken()
-
-            // 1. Generate XML
-            const omrRes = await fetch('/api/ai/omr', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ fileId: track.fileId })
-            })
-
-            if (!omrRes.ok) {
-                if (omrRes.status === 504) {
-                    throw new Error("The AI took too long to respond.")
-                }
-                const text = await omrRes.text()
-                try {
-                    const json = JSON.parse(text)
-                    throw new Error(json.error || "Digitization failed")
-                } catch (e) {
-                    throw new Error(`Server Error (${omrRes.status}): ${text.substring(0, 50)}...`)
-                }
-            }
-
-            const omrData = await omrRes.json()
-
-            // 2. Save XML to App Library (Firestore)
-            toast.info("Saving to Digital Library...")
-            const saveRes = await fetch('/api/library/save-generated', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    sourceFileId: track.fileId,
-                    xmlContent: omrData.xml,
-                    title: track.title,
-                    originalName: track.fileName || track.title
-                })
-            })
-
-            if (!saveRes.ok) {
-                const saveError = await saveRes.json()
-                throw new Error(saveError.error || "Failed to save XML")
-            }
-
-            const saveData = await saveRes.json()
-
-            // 3. Create NEW Track for the Digital Version (Duplicate)
-            if (onDuplicate) {
-                onDuplicate(track.id, {
-                    fileId: saveData.id,
-                    fileName: `${track.title} (Digital).musicxml`,
-                    title: `${track.title} (Digital Version)`
-                })
-                toast.success("Digitized! New digital version added to setlist.")
-            } else {
-                // Fallback (shouldn't happen with updated parent)
-                onUpdate(track.id, {
-                    fileId: saveData.id,
-                    fileName: `${track.title} (AI)`
-                })
-                toast.success("Digitized & Linked!")
-            }
-
-        } catch (e: unknown) {
-            console.error("Digitize Error:", e)
-            toast.error(e instanceof Error ? e.message : "Digitize failed")
-        } finally {
-            setDigitizing(false)
-        }
-    }
-
     const handleTitleClick = () => {
         if (hasFile && track.fileId && onPlay) {
             onPlay(track.fileId, fileName)
+        } else if (!readOnly) {
+            toast.dismiss()
+            toast("Missing Chart", {
+                description: "Select a file to link to this track.",
+                action: {
+                    label: "Link File",
+                    onClick: () => onMatchFile(track.id)
+                }
+            })
+            onMatchFile(track.id)
         } else {
-            // No file linked
-            if (!readOnly) {
-                // Editor: Open Match File Modal
-                toast.dismiss()
-                toast("Missing Chart", {
-                    description: "Select a file to link to this track.",
-                    action: {
-                        label: "Link File",
-                        onClick: () => onMatchFile(track.id)
-                    }
-                })
-                onMatchFile(track.id)
-            } else {
-                // Viewer: Friendly Message
-                toast("No chart assigned", {
-                    description: "This track doesn't have a file linked yet."
-                })
-            }
+            toast("No chart assigned", {
+                description: "This track doesn't have a file linked yet."
+            })
         }
-    }
-
-    const isHeader = track.type === 'header'
-
-    if (isHeader) {
-        return (
-            <ContextMenu>
-                <ContextMenuTrigger asChild>
-                    <div
-                        ref={setNodeRef}
-                        style={style}
-                        className="bg-muted border border-border/50 rounded-lg p-3 flex items-center gap-4 group mt-4 mb-2"
-                    >
-                        {isEditMode && (
-                            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-2 -ml-2 rounded hover:bg-accent">
-                                <GripVertical className="h-5 w-5" />
-                            </div>
-                        )}
-
-                        <div className="flex-1">
-                            {isEditMode ? (
-                                <Input
-                                    value={track.title}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                                    className="bg-transparent border-0 text-lg font-bold text-center text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0"
-                                    placeholder="SECTION HEADER"
-                                />
-                            ) : (
-                                <div className="text-lg font-bold text-center text-foreground uppercase tracking-wider">
-                                    {track.title}
-                                </div>
-                            )}
-                        </div>
-
-                        {isEditMode && (
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-muted-foreground/60 hover:text-red-400"
-                                onClick={() => onDelete(track.id)}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
-                </ContextMenuTrigger>
-                {isEditMode && (
-                    <ContextMenuContent>
-                        <ContextMenuItem onClick={() => onDelete(track.id)} className="text-red-500 focus:text-red-500">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove Header
-                        </ContextMenuItem>
-                    </ContextMenuContent>
-                )}
-            </ContextMenu>
-        )
     }
 
     return (
@@ -288,115 +145,32 @@ export function TrackItem({
                     `}
                     onClick={() => !isEditMode && handleTitleClick()}
                 >
+                    {/* Drag Handle */}
                     {isEditMode && (
                         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 p-2 -ml-2 rounded hover:bg-muted" onClick={(e) => e.stopPropagation()}>
                             <GripVertical className="h-5 w-5" />
                         </div>
                     )}
 
-
-
+                    {/* Content */}
                     <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
-                            {/* Play Button or Loading Spinner */}
-                            {digitizing ? (
-                                <div className="h-8 w-8 flex items-center justify-center shrink-0">
-                                    <Loader2 className="h-4 w-4 text-purple-400 animate-spin" />
-                                </div>
-                            ) : (
-                                hasFile && onPlay && (
-                                    <button
-                                        className="h-8 w-8 flex items-center justify-center rounded-full text-green-400 hover:text-green-300 hover:bg-green-400/10 shrink-0"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleTitleClick()
-                                        }}
-                                    >
-                                        <Play className="h-4 w-4" />
-                                    </button>
-                                )
-                            )}
-
-                            {/* Title - Input in Edit Mode, Text in View Mode */}
-                            {isEditMode ? (
-                                <Input
-                                    value={track.title}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
-                                    className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${hasFile ? 'text-blue-400' : ''}`}
-                                    placeholder="Song title"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-                                <span
-                                    className={`text-lg font-medium truncate cursor-pointer flex items-center gap-2 ${hasFile ? 'text-blue-100 hover:text-blue-300' : ''}`}
-                                >
-                                    {track.title}
-                                    {digitizing && (
-                                        <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full animate-pulse font-normal">
-                                            Digitizing...
-                                        </span>
-                                    )}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Metadata Row */}
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground min-h-[1.25rem]">
-                            {isEditMode ? (
-                                // Edit Mode: Quick Inputs
-                                <div className="flex gap-2 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-                                    <Input
-                                        value={track.key || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
-                                        className="bg-muted h-7 text-xs w-14 text-center px-1"
-                                        placeholder="Key"
-                                    />
-                                    <Input
-                                        value={track.bpm || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { bpm: parseInt(e.target.value) || undefined })}
-                                        className="bg-muted h-7 text-xs w-14 text-center px-1"
-                                        placeholder="BPM"
-                                        type="number"
-                                    />
-                                    <Input
-                                        value={track.leadMusician || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { leadMusician: e.target.value })}
-                                        className="bg-muted h-7 text-xs flex-1 px-2"
-                                        placeholder="Lead..."
-                                    />
-                                </div>
-                            ) : (
-                                // View Mode: Badges
-                                <>
-                                    {track.key && (
-                                        <span className="bg-muted px-2 py-0.5 rounded text-xs text-foreground font-mono">
-                                            {track.key}
-                                        </span>
-                                    )}
-                                    {track.bpm && (
-                                        <span className="text-muted-foreground text-xs hidden sm:inline">
-                                            {track.bpm} BPM
-                                        </span>
-                                    )}
-                                    {track.leadMusician && (
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                            <span className="w-1 h-1 rounded-full bg-zinc-600" />
-                                            <span className="text-xs italic text-blue-400/80">
-                                                {track.leadMusician}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {track.notes && (
-                                        <span className="truncate max-w-[200px] text-muted-foreground/60 italic">
-                                            {track.notes}
-                                        </span>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                        <TrackTitleRow
+                            track={track}
+                            hasFile={hasFile}
+                            digitizing={digitizing}
+                            isEditMode={isEditMode}
+                            onUpdate={onUpdate}
+                            onTitleClick={handleTitleClick}
+                            onPlay={onPlay}
+                        />
+                        <TrackMetadataRow
+                            track={track}
+                            isEditMode={isEditMode}
+                            onUpdate={onUpdate}
+                        />
                     </div>
 
-                    {/* Actions (Edit Mode Only) */}
+                    {/* Edit Actions */}
                     {isEditMode && (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             {!track.audioFileId && (
@@ -421,20 +195,20 @@ export function TrackItem({
                         </div>
                     )}
 
-                    {/* Metronome Indicator (View Mode) - Moved to Far Right */}
+                    {/* Metronome */}
                     {!isEditMode && track.bpm && (
                         <div
                             className={`h-8 w-8 flex items-center justify-center rounded-full cursor-pointer transition-colors shrink-0 ml-2 ${isBlinking ? 'bg-muted' : 'hover:bg-muted'}`}
                             onClick={toggleMetronome}
                             title={`BPM: ${track.bpm}`}
                         >
-                            <div className={`h-3 w-3 rounded-full transition-all duration-75 ${blinkState ? 'bg-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-zinc-600'}`} />
+                            <div className={`h-3 w-3 rounded-full transition-all duration-75 ${blinkState ? 'bg-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-muted-foreground/30'}`} />
                         </div>
                     )}
                 </div>
             </ContextMenuTrigger>
 
-            {/* Context Menu (Always available for authorized, but primarily for View Mode quick edit) */}
+            {/* Context Menu */}
             <ContextMenuContent>
                 {onEditDetails && (
                     <ContextMenuItem onClick={() => onEditDetails(track)}>
@@ -442,10 +216,7 @@ export function TrackItem({
                     </ContextMenuItem>
                 )}
                 {track.bpm && (
-                    <ContextMenuItem onClick={(e) => {
-                        // Trigger metronome via context menu if desired? 
-                        // Hard to bridge. Skip for now.
-                    }}>
+                    <ContextMenuItem>
                         Play Metronome ({track.bpm})
                     </ContextMenuItem>
                 )}
@@ -457,8 +228,7 @@ export function TrackItem({
                             {hasFile ? "Change File" : "Link File"}
                         </ContextMenuItem>
 
-                        {/* Admin OMR */}
-                        {isAdmin && hasFile && (track.fileName?.toLowerCase().includes('.pdf') || true) && (
+                        {isAdmin && hasFile && (
                             <ContextMenuItem
                                 onClick={handleDigitize}
                                 disabled={digitizing}
@@ -479,5 +249,121 @@ export function TrackItem({
                 )}
             </ContextMenuContent>
         </ContextMenu>
+    )
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────
+
+function TrackTitleRow({ track, hasFile, digitizing, isEditMode, onUpdate, onTitleClick, onPlay }: {
+    track: SetlistTrack
+    hasFile: boolean
+    digitizing: boolean
+    isEditMode?: boolean
+    onUpdate: (id: string, data: Partial<SetlistTrack>) => void
+    onTitleClick: () => void
+    onPlay?: (fileId: string, fileName: string) => void
+}) {
+    return (
+        <div className="flex items-center gap-2">
+            {/* Play / Loading indicator */}
+            {digitizing ? (
+                <div className="h-8 w-8 flex items-center justify-center shrink-0">
+                    <Loader2 className="h-4 w-4 text-purple-400 animate-spin" />
+                </div>
+            ) : (
+                hasFile && onPlay && (
+                    <button
+                        className="h-8 w-8 flex items-center justify-center rounded-full text-green-500 hover:text-green-400 hover:bg-green-500/10 shrink-0"
+                        onClick={(e) => { e.stopPropagation(); onTitleClick() }}
+                    >
+                        <Play className="h-4 w-4" />
+                    </button>
+                )
+            )}
+
+            {/* Title */}
+            {isEditMode ? (
+                <Input
+                    value={track.title}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { title: e.target.value })}
+                    className={`bg-transparent border-0 text-lg font-medium p-0 h-auto focus-visible:ring-0 ${hasFile ? 'text-blue-500 dark:text-blue-400' : ''}`}
+                    placeholder="Song title"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            ) : (
+                <span
+                    className={`text-lg font-medium truncate cursor-pointer flex items-center gap-2 ${hasFile ? 'text-blue-600 hover:text-blue-500 dark:text-blue-100 dark:hover:text-blue-300' : ''}`}
+                >
+                    {track.title}
+                    {digitizing && (
+                        <span className="text-xs bg-purple-500/20 text-purple-500 dark:text-purple-300 px-2 py-0.5 rounded-full animate-pulse font-normal">
+                            Digitizing...
+                        </span>
+                    )}
+                </span>
+            )}
+        </div>
+    )
+}
+
+function TrackMetadataRow({ track, isEditMode, onUpdate }: {
+    track: SetlistTrack
+    isEditMode?: boolean
+    onUpdate: (id: string, data: Partial<SetlistTrack>) => void
+}) {
+    if (isEditMode) {
+        return (
+            <div className="flex items-center gap-3 text-sm text-muted-foreground min-h-[1.25rem]">
+                <div className="flex gap-2 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+                    <Input
+                        value={track.key || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { key: e.target.value })}
+                        className="bg-muted h-7 text-xs w-14 text-center px-1"
+                        placeholder="Key"
+                    />
+                    <Input
+                        value={track.bpm || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { bpm: parseInt(e.target.value) || undefined })}
+                        className="bg-muted h-7 text-xs w-14 text-center px-1"
+                        placeholder="BPM"
+                        type="number"
+                    />
+                    <Input
+                        value={track.leadMusician || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onUpdate(track.id, { leadMusician: e.target.value })}
+                        className="bg-muted h-7 text-xs flex-1 px-2"
+                        placeholder="Lead..."
+                    />
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex items-center gap-3 text-sm text-muted-foreground min-h-[1.25rem]">
+            {track.key && (
+                <span className="bg-muted px-2 py-0.5 rounded text-xs text-foreground font-mono">
+                    {track.key}
+                </span>
+            )}
+            {track.bpm && (
+                <span className="text-muted-foreground text-xs hidden sm:inline">
+                    {track.bpm} BPM
+                </span>
+            )}
+            {track.leadMusician && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                    <span className="text-xs italic text-blue-500 dark:text-blue-400/80">
+                        {track.leadMusician}
+                    </span>
+                </div>
+            )}
+            {track.notes && (
+                <span className="truncate max-w-[200px] text-muted-foreground/60 italic">
+                    {track.notes}
+                </span>
+            )}
+        </div>
     )
 }
