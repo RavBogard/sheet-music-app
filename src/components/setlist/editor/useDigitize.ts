@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 import { useState, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
@@ -94,7 +95,7 @@ export function useDigitize({ track, onUpdate, onDuplicate }: UseDigitizeOptions
             }
 
         } catch (e: unknown) {
-            console.error("Digitize Error:", e)
+            logger.error("Digitize Error:", e)
             toast.error(e instanceof Error ? e.message : "Digitize failed")
         } finally {
             setDigitizing(false)
