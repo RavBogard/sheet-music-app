@@ -172,13 +172,13 @@ export function Tuner() {
 
     return (
         <div className="flex flex-col items-center gap-4 p-4 w-64">
-            <div className="flex items-center justify-between w-full border-b border-zinc-800 pb-2">
+            <div className="flex items-center justify-between w-full border-b border-border pb-2">
                 <span className="font-bold text-sm">Strobe Tuner</span>
                 {active && <Activity className="h-4 w-4 text-green-500 animate-pulse" />}
             </div>
 
             {/* Strobe Disc / Window */}
-            <div className="w-full h-32 bg-zinc-950 rounded-xl border border-zinc-800 relative overflow-hidden flex items-center justify-center">
+            <div className="w-full h-32 bg-background rounded-xl border border-border relative overflow-hidden flex items-center justify-center">
 
                 {/* The Moving Strobe Pattern */}
                 <div
@@ -202,15 +202,15 @@ export function Tuner() {
                 <div className="z-20 text-center relative">
                     {/* Note Name */}
                     <div className={`text-6xl font-black transition-colors duration-200 ${active && note !== "-"
-                            ? (Math.abs(cents) < 5 ? 'text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]' : 'text-white')
-                            : 'text-zinc-700'
+                            ? (Math.abs(cents) < 5 ? 'text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]' : 'text-foreground')
+                            : 'text-muted-foreground/40'
                         }`}>
                         {note}
                     </div>
 
                     {/* Cents / Hz */}
                     {active && note !== "-" && (
-                        <div className="text-xs text-zinc-500 mt-2 font-mono bg-black/50 px-2 py-1 rounded">
+                        <div className="text-xs text-muted-foreground mt-2 font-mono bg-black/50 px-2 py-1 rounded">
                             {frequency} Hz
                             <span className={`ml-2 ${Math.abs(cents) < 5 ? 'text-green-400' : (cents > 0 ? 'text-blue-400' : 'text-orange-400')}`}>
                                 {cents > 0 ? '+' : ''}{cents}c
@@ -229,7 +229,7 @@ export function Tuner() {
                 {active ? "Stop Tuner" : "Start Tuner"}
             </Button>
 
-            <p className="text-[10px] text-zinc-500 text-center">
+            <p className="text-[10px] text-muted-foreground text-center">
                 Strobe moves LEFT if Flat, RIGHT if Sharp. <br /> Stop movement to tune.
             </p>
         </div>
