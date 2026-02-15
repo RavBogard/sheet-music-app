@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         const db = getFirestore()
 
         const cacheData: PageChordData = {
-            chords: chords.map((c: any) => ({
+            chords: chords.map((c: { text: string; x: number; y: number; originalText?: string; pxHeight?: number; h?: number; w?: number }) => ({
                 text: c.text || c.originalText,
                 originalText: c.originalText || c.text,
                 x: c.x,
