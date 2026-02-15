@@ -120,7 +120,7 @@ ${messages[messages.length - 1].content}
 
     return NextResponse.json(JSON.parse(responseText))
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Chat API Error:", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal Server Error" },
