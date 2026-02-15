@@ -2,16 +2,7 @@
 
 import { ChevronRight, FileMusic, Folder, Loader2, Wand2 } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-
-interface DriveFile {
-    id: string
-    name: string
-    mimeType: string
-    metadata?: {
-        key?: string
-        bpm?: number
-    }
-}
+import { DriveFile } from "@/types/models"
 
 interface LibraryFileRowProps {
     item: DriveFile
