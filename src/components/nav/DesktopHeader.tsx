@@ -96,7 +96,7 @@ export function DesktopHeader() {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-6 bg-zinc-950/80 backdrop-blur-md border-b border-white/5">
+        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
             {/* Logo Area */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
@@ -105,7 +105,7 @@ export function DesktopHeader() {
                         alt="Logo"
                         className="w-8 h-8 rounded-full border border-zinc-700 transition-transform group-hover:scale-105"
                     />
-                    <span className="font-bold text-lg bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+                    <span className="font-bold text-lg text-foreground font-bold">
                         CRC Music
                     </span>
                 </Link>
@@ -129,8 +129,8 @@ export function DesktopHeader() {
                                     className={cn(
                                         "px-4 py-2 rounded-full text-sm font-medium transition-all",
                                         isActive
-                                            ? "bg-white/10 text-white"
-                                            : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                            ? "bg-accent text-foreground"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                     )}
                                 >
                                     {link.label}
@@ -159,7 +159,7 @@ export function DesktopHeader() {
                             onClick={toggleChat}
                             className={cn(
                                 "gap-2 rounded-full transition-colors",
-                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-accent"
                             )}
                         >
                             <Sparkles className="h-4 w-4" />
@@ -168,7 +168,7 @@ export function DesktopHeader() {
 
                         {/* Search Bar */}
                         <div className="relative group" ref={searchRef}>
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                             <Input
                                 placeholder="Search songs..."
                                 value={searchQuery}
@@ -177,12 +177,12 @@ export function DesktopHeader() {
                                     setShowResults(true)
                                 }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-64 bg-zinc-900/50 border-zinc-800 rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                className="w-64 bg-muted border-border rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
                             />
 
                             {/* Search Results Dropdown */}
                             {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full mt-2 left-0 right-0 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50">
+                                <div className="absolute top-full mt-2 left-0 right-0 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-50">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
                                             <button
@@ -190,7 +190,7 @@ export function DesktopHeader() {
                                                 onClick={() => handleSelectSong(file)}
                                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group"
                                             >
-                                                <div className="text-sm font-medium text-zinc-200 group-hover:text-white truncate">
+                                                <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
                                                 </div>
                                             </button>
@@ -200,33 +200,33 @@ export function DesktopHeader() {
                             )}
                         </div>
 
-                        <div className="w-px h-6 bg-zinc-800" />
+                        <div className="w-px h-6 bg-border" />
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white rounded-full relative">
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground rounded-full relative">
                                     <Bell className="w-5 h-5" />
                                     {loading && <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 bg-zinc-900 border-zinc-800 text-white p-4">
+                            <PopoverContent className="w-80 bg-popover border-border text-popover-foreground p-4">
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="font-bold flex items-center gap-2">
-                                            <Cloud className="h-4 w-4 text-zinc-400" /> Sync Status
+                                            <Cloud className="h-4 w-4 text-muted-foreground" /> Sync Status
                                         </h4>
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => loadLibrary(true)}
                                             disabled={loading}
-                                            className="h-8 text-[11px] border-zinc-800"
+                                            className="h-8 text-[11px] border-border"
                                         >
                                             {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                                             Force Sync
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-zinc-400">
+                                    <p className="text-xs text-muted-foreground">
                                         {loading ? "Syncing with Google Drive..." : "Library is up to date."}
                                     </p>
                                 </div>
@@ -239,29 +239,29 @@ export function DesktopHeader() {
                                     variant="ghost"
                                     size="icon"
                                     className={cn(
-                                        "text-zinc-400 hover:text-white rounded-full overflow-hidden transition-all",
+                                        "text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all",
                                         !isOnline ? "ring-2 ring-red-500" : ""
                                     )}
                                 >
                                     {user?.photoURL ? (
-                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-zinc-800" />
+                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border" />
                                     ) : (
                                         <UserCircle className="w-6 h-6" />
                                     )}
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56 bg-zinc-900 border-zinc-800 text-white" align="end">
+                            <DropdownMenuContent className="w-56 bg-popover border-border text-popover-foreground" align="end">
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || "Musician"}</p>
-                                        <p className="text-xs leading-none text-zinc-500">{user?.email}</p>
-                                        <p className="text-[10px] uppercase font-bold text-blue-400 mt-1">{profile?.role || "Pending"}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                                        <p className="text-[10px] uppercase font-bold text-blue-500 mt-1">{profile?.role || "Pending"}</p>
                                     </div>
                                 </DropdownMenuLabel>
-                                <DropdownMenuSeparator className="bg-zinc-800" />
+                                <DropdownMenuSeparator className="bg-border" />
 
                                 <DropdownMenuItem
-                                    className="hover:bg-white/5 cursor-pointer"
+                                    className="hover:bg-accent cursor-pointer"
                                     onClick={() => router.push('/settings')}
                                 >
                                     <Settings className="mr-2 h-4 w-4" />
@@ -269,7 +269,7 @@ export function DesktopHeader() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-zinc-800" />
                                 <DropdownMenuItem
-                                    className="text-red-400 hover:bg-red-400/10 cursor-pointer"
+                                    className="text-red-500 hover:bg-red-500/10 cursor-pointer"
                                     onClick={() => signOut()}
                                 >
                                     <LogOut className="mr-2 h-4 w-4" />
@@ -294,7 +294,7 @@ export function DesktopHeader() {
                         } catch (e) {
                             console.error("Sign in failed", e)
                         }
-                    }} variant="outline" className="border-zinc-700 hover:bg-zinc-800 hover:text-white">
+                    }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
                         Sign In
                     </Button>
                 )}
