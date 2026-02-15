@@ -227,9 +227,11 @@ export async function extractChordsFromPage(
     const viewport = page.getViewport({ scale: 1.0 })
     const textContent = await page.getTextContent()
 
-    const items: TextItem[] = textContent.items
-        .filter((item: { str?: string }) => item.str && item.str.trim())
-        .map((item: { str: string; transform: number[] }) => ({
+    type PdfTextItem = { str: string; transform: number[]; width?: number; height?: number }
+    const rawItems = textContent.items as PdfTextItem[]
+    const items: TextItem[] = rawItems
+        .filter((item) => item.str && item.str.trim())
+        .map((item) => ({
             text: item.str.trim(),
             x: item.transform[4],
             y: item.transform[5],

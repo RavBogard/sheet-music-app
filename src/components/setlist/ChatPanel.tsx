@@ -13,10 +13,11 @@ import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 import { createSetlistService } from "@/lib/setlist-firebase"
+import { SetlistTrack } from "@/types/models"
 
 interface ChatCommand {
-    type: 'CREATE_SETLIST' | 'PUBLISH_SETLIST' | 'ADD_TO_SETLIST' | 'REMOVE_FROM_SETLIST'
-    payload: Record<string, string | number | boolean | undefined | object[]>
+    type: 'CREATE_SETLIST' | 'PUBLISH_SETLIST' | 'ADD_TO_SETLIST' | 'REMOVE_FROM_SETLIST' | 'TRANSPOSE_CHART' | 'SEARCH_LIBRARY' | 'ADMIN_ACTION' | 'NAVIGATE'
+    payload: Record<string, unknown>
 }
 import { toast } from "sonner"
 
@@ -114,26 +115,26 @@ export function ChatPanel() {
 
     const handleCommands = async (commands: ChatCommand[]) => {
         for (const cmd of commands) {
+            const p = cmd.payload as Record<string, string | number | boolean | object[] | undefined>
             try {
                 switch (cmd.type) {
                     case 'CREATE_SETLIST':
                         const newId = await setlistService.createSetlist(
-                            cmd.payload.name,
-                            cmd.payload.tracks || [],
-                            cmd.payload.isPublic || false
+                            String(p.name),
+                            (p.tracks || []) as SetlistTrack[],
+                            !!p.isPublic
                         )
-                        toast.success(`Created setlist: ${cmd.payload.name}`)
+                        toast.success(`Created setlist: ${p.name}`)
                         break;
 
                     case 'PUBLISH_SETLIST':
-                        // "Publish" to internal calendar = set eventDate
-                        if (cmd.payload.setlistId === 'current') {
+                        if (p.setlistId === 'current') {
                             toast.error("Bot tried to update unknown setlist")
                         } else {
-                            await setlistService.updateSetlist(cmd.payload.setlistId, false, {
-                                eventDate: cmd.payload.date
+                            await setlistService.updateSetlist(String(p.setlistId), false, {
+                                eventDate: String(p.date)
                             })
-                            toast.success(`Scheduled for ${cmd.payload.date}`)
+                            toast.success(`Scheduled for ${p.date}`)
                         }
                         break;
 
@@ -143,22 +144,15 @@ export function ChatPanel() {
                             const potentialId = pathParts[pathParts.length - 1]
 
                             if (potentialId && potentialId !== 'new') {
-                                // Minimal Track Object
-                                const newTrack = {
+                                const newTrack: SetlistTrack = {
                                     id: crypto.randomUUID(),
                                     type: 'song',
-                                    title: cmd.payload.fileName,
-                                    fileId: cmd.payload.fileId
+                                    title: String(p.fileName),
+                                    fileId: String(p.fileId)
                                 }
-
-                                // Append to current tracks and Update
-                                const newTracks = [...contextData.currentSetlist, newTrack]
+                                const newTracks: SetlistTrack[] = [...contextData.currentSetlist, newTrack]
                                 await setlistService.updateSetlist(potentialId, false, { tracks: newTracks })
-                                toast.success(`Added ${cmd.payload.fileName}`)
-
-                                // If we had a mechanism to refresh contextData immediately, do it here.
-                                // For now, the Firestore listener in SetlistEditor will pick it up, 
-                                // and update the ChatStore contextData shortly.
+                                toast.success(`Added ${p.fileName}`)
                             } else {
                                 toast.error("Open a setlist first")
                             }
@@ -169,12 +163,11 @@ export function ChatPanel() {
                         const pathPartsRemote = window.location.pathname.split('/')
                         const setlistId = pathPartsRemote[pathPartsRemote.length - 1]
                         if (setlistId && contextData.currentSetlist) {
-                            // Find track by index
-                            const index = cmd.payload.index
-                            const track = contextData.currentSetlist[index]
+                            const idx = Number(p.index)
+                            const track = contextData.currentSetlist[idx]
                             if (track) {
                                 const newTracks = [...contextData.currentSetlist]
-                                newTracks.splice(index, 1)
+                                newTracks.splice(idx, 1)
                                 await setlistService.updateSetlist(setlistId, false, { tracks: newTracks })
                                 toast.success("Removed track")
                             } else {
@@ -184,22 +177,19 @@ export function ChatPanel() {
                         break;
 
                     case 'TRANSPOSE_CHART':
-                        // Direct access to MusicStore
-                        useMusicStore.getState().setTransposition(cmd.payload.steps)
-                        toast.success(`Transposed ${cmd.payload.steps > 0 ? '+' : ''}${cmd.payload.steps}`)
+                        const steps = Number(p.steps)
+                        useMusicStore.getState().setTransposition(steps)
+                        toast.success(`Transposed ${steps > 0 ? '+' : ''}${steps}`)
                         break;
 
                     case 'SEARCH_LIBRARY':
-                        useLibraryStore.getState().setFilter(null, cmd.payload.query)
+                        useLibraryStore.getState().setFilter(null, String(p.query))
                         router.push('/library')
                         break;
 
                     case 'ADMIN_ACTION':
-                        // Call Admin API
                         const token = user ? await user.getIdToken() : null
                         if (!token) throw new Error("Unauthorized")
-
-                        // We use the existing /api/admin/set-role endpoint
                         await fetch('/api/admin/set-role', {
                             method: 'POST',
                             headers: {
@@ -207,16 +197,16 @@ export function ChatPanel() {
                                 'Authorization': `Bearer ${token}`
                             },
                             body: JSON.stringify({
-                                uid: cmd.payload.userId,
-                                role: cmd.payload.targetRole || 'member'
+                                uid: String(p.userId),
+                                role: String(p.targetRole || 'member')
                             })
                         })
                         toast.success(`Admin action applied`)
                         break;
 
                     case 'NAVIGATE':
-                        if (cmd.payload.path) {
-                            router.push(cmd.payload.path)
+                        if (p.path) {
+                            router.push(String(p.path))
                         }
                         break;
                 }

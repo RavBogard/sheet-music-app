@@ -16,8 +16,8 @@ export function toDate(value: string | number | Date | { seconds: number; nanose
     if (value instanceof Timestamp) return value.toDate()
     if (typeof value === 'string') return new Date(value)
     if (typeof value === 'number') return new Date(value)
-    if (value?.toDate && typeof value.toDate === 'function') return value.toDate()
-    if (value?.seconds) return new Timestamp(value.seconds, value.nanoseconds || 0).toDate()
+    if (typeof value === 'object' && value !== null && 'toDate' in value && typeof value.toDate === 'function') return value.toDate()
+    if (typeof value === 'object' && value !== null && 'seconds' in value) return new Timestamp(value.seconds, value.nanoseconds || 0).toDate()
     return null
 }
 

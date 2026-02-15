@@ -1,4 +1,5 @@
 "use client"
+import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
@@ -182,7 +183,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const getDate = (s: Setlist) => s.eventDate ? new Date(s.eventDate) : null
+    const getDate = (s: Setlist) => s.eventDate ? toDateHelper(s.eventDate) : null
 
     const upcoming = displayedSetlists
         .filter(s => { const d = getDate(s); return d && d >= today })

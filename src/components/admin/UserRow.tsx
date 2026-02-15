@@ -1,6 +1,7 @@
 "use client"
 
 import { UserProfile, UserRole, updateUserRole } from "@/lib/users-firebase"
+import { toDate } from "@/lib/firestore-helpers"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -58,7 +59,7 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        Joined {user.createdAt ? formatDistanceToNow(user.createdAt.toDate(), { addSuffix: true }) : "Unknown"}
+                        Joined {user.createdAt ? formatDistanceToNow(toDate(user.createdAt) || new Date(), { addSuffix: true }) : "Unknown"}
                     </p>
                 </div>
             </div>

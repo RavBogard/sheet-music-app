@@ -1,4 +1,5 @@
 "use client"
+import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
@@ -25,7 +26,7 @@ export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloadin
             <div className="relative z-10">
                 <div className="flex justify-between items-start mb-2">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
-                        {new Date(setlist.eventDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                     <div
                         onClick={(e) => {
@@ -78,7 +79,7 @@ export function SetlistCard({ setlist, onClick, onDuplicate, onDelete, canDelete
                         <h3 className="text-xl font-semibold truncate max-w-[200px] text-foreground">{setlist.name}</h3>
                         {setlist.eventDate && (
                             <span className="text-xs text-muted-foreground">
-                                {new Date(setlist.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
+                                {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
                             </span>
                         )}
                     </div>

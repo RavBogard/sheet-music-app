@@ -166,7 +166,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                     name,
                     tracks,
                     trackCount: tracks.length,
-                    eventDate: eventDate ? eventDate.toISOString() : null
+                    eventDate: eventDate ? eventDate.toISOString() : undefined
                 }
 
                 if (setlistId) {

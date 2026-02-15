@@ -15,9 +15,9 @@ const firebaseConfig = {
 };
 
 // Singleton pattern to prevent multiple initializations in dev hot-reloads
-let app: FirebaseApp | Record<string, never>;
-let db: Firestore | Record<string, never>;
-let auth: Auth | Record<string, never>;
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
 let googleProvider: GoogleAuthProvider;
 
 try {
@@ -28,7 +28,7 @@ try {
     } else {
         // Prevent crash during build if env vars are missing
         console.warn("Firebase API Key missing. Using mock app.");
-        app = {};
+        app = {} as unknown as FirebaseApp;
     }
 
     if (firebaseConfig.apiKey) {
@@ -36,16 +36,16 @@ try {
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
     } else {
-        db = {}
-        auth = {}
+        db = {} as unknown as Firestore
+        auth = {} as unknown as Auth
         googleProvider = new GoogleAuthProvider()
     }
 
 } catch (e) {
     console.error("Firebase Initialization Failed", e);
-    app = {};
-    db = {};
-    auth = {};
+    app = {} as unknown as FirebaseApp;
+    db = {} as unknown as Firestore;
+    auth = {} as unknown as Auth;
     googleProvider = new GoogleAuthProvider();
 }
 

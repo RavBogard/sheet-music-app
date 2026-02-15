@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
 
         const cacheData: PageChordData = {
             chords: chords.map((c: { text: string; x: number; y: number; originalText?: string; pxHeight?: number; h?: number; w?: number }) => ({
-                text: c.text || c.originalText,
+                text: c.text || c.originalText || '',
                 originalText: c.originalText || c.text,
                 x: c.x,
                 y: c.y,

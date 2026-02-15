@@ -1,3 +1,6 @@
+/** Firestore Timestamp — may come as raw object or with toDate() method */
+export type FirestoreDate = string | Date | { seconds: number; nanoseconds: number; toDate?: () => Date }
+
 // corrections for AI Transposer
 export interface OMRCorrection {
     id: string
@@ -44,8 +47,8 @@ export interface SetlistTrack {
 export interface Setlist {
     id: string
     name: string
-    date: { seconds: number; nanoseconds: number } | Date | string
-    eventDate?: string | { seconds: number; nanoseconds: number }
+    date: FirestoreDate
+    eventDate?: FirestoreDate
     tracks: SetlistTrack[]
     trackCount: number
     isPublic?: boolean
@@ -66,8 +69,8 @@ export interface UserProfile {
     photoURL?: string
     viewedWelcomeModal?: boolean
     role: UserRole
-    createdAt?: { seconds: number; nanoseconds: number } | Date | string
-    lastLoginAt?: { seconds: number; nanoseconds: number } | Date | string
+    createdAt?: FirestoreDate
+    lastLoginAt?: FirestoreDate
     musicianProfile?: MusicianProfile
 }
 

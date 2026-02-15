@@ -3,6 +3,7 @@
 import { useMusicStore, QueueItem } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
+import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -120,7 +121,7 @@ export function SetlistDrawer() {
                                         </div>
                                         {setlist.eventDate && (
                                             <div className="text-xs text-blue-400 mt-2 font-medium bg-blue-500/10 px-2 py-1 rounded w-fit">
-                                                {new Date(setlist.eventDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                {toDateHelper(setlist.eventDate)?.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                                             </div>
                                         )}
                                     </div>

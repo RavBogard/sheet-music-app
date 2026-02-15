@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         try {
             targetUser = await auth.getUserByEmail(newOwnerEmail)
         } catch (e: unknown) {
-            if (e.code === 'auth/user-not-found') {
+            if (e instanceof Error && 'code' in e && (e as { code: string }).code === 'auth/user-not-found') {
                 return new NextResponse(`User with email ${newOwnerEmail} not found. They must sign up first.`, { status: 404 })
             }
             throw e

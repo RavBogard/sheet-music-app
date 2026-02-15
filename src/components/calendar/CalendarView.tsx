@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
+import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -50,7 +51,8 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
         return setlists.filter(s => {
             if (!s.eventDate) return false
             // Handle Firestore Timestamp or string
-            const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as { toDate: () => Date }).toDate()
+            const d = toDateHelper(s.eventDate)
+            if (!d) return false
             return d.getDate() === date.getDate() &&
                 d.getMonth() === date.getMonth() &&
                 d.getFullYear() === date.getFullYear()

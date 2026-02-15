@@ -5,6 +5,7 @@ interface DriveFileResult {
     name: string
     mimeType: string
     webContentLink?: string
+    webViewLink?: string
     parents?: string[]
 }
 
