@@ -35,7 +35,7 @@ export function TransposerMenu() {
     // Gather all detected chords across pages
     const allChords = useMemo(() => {
         return Object.values(aiState.pageData).flatMap(
-            p => p.chords.map((c: any) => c.originalText || c.text)
+            p => p.chords.map((c: { originalText?: string; text: string }) => c.originalText || c.text)
         )
     }, [aiState.pageData])
 
