@@ -159,7 +159,7 @@ export function DesktopHeader() {
                             onClick={toggleChat}
                             className={cn(
                                 "gap-2 rounded-full transition-colors",
-                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-zinc-400 hover:text-white hover:bg-accent"
+                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                             )}
                         >
                             <Sparkles className="h-4 w-4" />
@@ -267,7 +267,7 @@ export function DesktopHeader() {
                                     <Settings className="mr-2 h-4 w-4" />
                                     <span>Settings</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-zinc-800" />
+                                <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem
                                     className="text-red-500 hover:bg-red-500/10 cursor-pointer"
                                     onClick={() => signOut()}
