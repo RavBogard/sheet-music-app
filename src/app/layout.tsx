@@ -5,8 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
-import { CommandPalette } from "@/components/layout/CommandPalette"
-import { OnboardingTour } from "@/components/layout/OnboardingTour"
 
 
 
@@ -21,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CRC Music Books",
+  title: "CentralReform.live",
   description: "Digital Sheet Music Library for Central Reform Congregation",
   icons: {
     icon: "/logo.jpg",
@@ -52,8 +50,6 @@ export default function RootLayout({
         >
           <ErrorBoundary>
             <ClientProviders>
-              <OnboardingTour />
-              <CommandPalette />
               {children}
             </ClientProviders>
             <Toaster richColors position="top-center" theme="dark" />
