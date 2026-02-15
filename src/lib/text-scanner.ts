@@ -9,6 +9,8 @@
  * 4. Return their position and dimensions relative to the page.
  */
 
+import { CHORD_REGEX, EXCLUDED_WORDS } from './chord-utils'
+
 export interface ScannedChord {
     id: string;
     text: string;
@@ -18,18 +20,6 @@ export interface ScannedChord {
     h: number; // percentage
     pxHeight: number;
 }
-
-// Chord Regex — comprehensive for worship lead sheets
-// Matches: A, Am, A#, Bb, F#m7, G/B, Dsus4, Cadd9, Cmaj7, Ebmaj9, Am7/G
-// Also handles: parenthetical alterations like C(add9), unicode sharp and flat
-// Does NOT match: lyrics, Roman numerals, section markers
-const CHORD_REGEX = /^[A-G][b#]?(?:m|min|maj|dim|aug|sus|add|M|no|alt|dom)?(?:\d{0,2})?(?:(?:sus|add|no|maj|min|dim|aug|dom)\d{0,2})*(?:\([^)]*\))?(?:\/[A-G][b#]?)?$/;
-
-const EXCLUDED_WORDS = new Set([
-    "I", "II", "III", "IV", "V", "VI", "VII",
-    "A", // Too ambiguous as a standalone letter — only match "Am", "A7", etc.
-    "D.C", "D.S", "Fine", "Coda",
-]);
 
 // Words that are valid chords only when they have a quality/extension
 // Only "A" is ambiguous — other bare roots (C, D, G etc.) are valid major chords
