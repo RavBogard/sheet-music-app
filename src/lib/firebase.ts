@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
 
@@ -15,10 +15,10 @@ const firebaseConfig = {
 };
 
 // Singleton pattern to prevent multiple initializations in dev hot-reloads
-let app: any;
-let db: any;
-let auth: any;
-let googleProvider: any;
+let app: FirebaseApp | Record<string, never>;
+let db: Firestore | Record<string, never>;
+let auth: Auth | Record<string, never>;
+let googleProvider: GoogleAuthProvider;
 
 try {
     if (getApps().length > 0) {
