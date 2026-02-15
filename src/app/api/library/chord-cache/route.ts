@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
                 pages
             })
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Chord Cache GET] Error:", error)
         return NextResponse.json({ error: "Failed to load chord cache" }, { status: 500 })
     }
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
             .set(cacheData, { merge: true })
 
         return NextResponse.json({ success: true, chordsCount: cacheData.chords.length })
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Chord Cache POST] Error:", error)
         return NextResponse.json({ error: "Failed to save chord cache" }, { status: 500 })
     }
@@ -169,7 +169,7 @@ export async function DELETE(req: NextRequest) {
         await batch.commit()
 
         return NextResponse.json({ success: true, pagesDeleted: snapshot.size })
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Chord Cache DELETE] Error:", error)
         return NextResponse.json({ error: "Failed to clear chord cache" }, { status: 500 })
     }
