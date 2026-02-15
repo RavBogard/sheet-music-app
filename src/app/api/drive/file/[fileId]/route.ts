@@ -19,7 +19,7 @@ export async function GET(
         // 1. Try Firebase Storage first (fast, CDN-cached)
         const storageResult = await downloadFromStorage(fileId)
         if (storageResult) {
-            return new NextResponse(storageResult.buffer, {
+            return new NextResponse(new Uint8Array(storageResult.buffer), {
                 status: 200,
                 headers: {
                     'Access-Control-Allow-Origin': '*',
@@ -46,7 +46,7 @@ export async function GET(
             contentType = metadata.mimeType || 'application/octet-stream'
         }
 
-        return new NextResponse(Buffer.from(fileData as any), {
+        return new NextResponse(new Uint8Array(fileData as ArrayBuffer), {
             status: 200,
             headers: {
                 'Access-Control-Allow-Origin': '*',

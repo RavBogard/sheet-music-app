@@ -285,7 +285,7 @@ export async function POST(request: Request) {
 
         // 4. Generate final PDF
         const finalPdfBytes = await mergedPdf.save()
-        const pdfBuffer = Buffer.from(finalPdfBytes)
+        const pdfBuffer = new Uint8Array(finalPdfBytes)
 
         return new NextResponse(pdfBuffer, {
             headers: {
