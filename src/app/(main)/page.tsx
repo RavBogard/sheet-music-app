@@ -6,59 +6,100 @@ import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
-
+import { getContextualGreeting } from "@/lib/greeting"
 
 import { Button } from "@/components/ui/button"
-import { Music2, Loader2, FileMusic, ListMusic, Headphones, PlayCircle, Calendar as CalendarIcon } from "lucide-react"
-import { DashboardChatPrompt } from "@/components/dashboard/DashboardChatPrompt"
+import { Input } from "@/components/ui/input"
+import {
+    Loader2,
+    FileMusic,
+    ListMusic,
+    PlayCircle,
+    CalendarDays,
+    Plus,
+    Send,
+    Sparkles,
+    ArrowRight,
+    Music2,
+    ChevronRight,
+} from "lucide-react"
+import { useChatStore } from "@/lib/chat-store"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, signIn, isLeader } = useAuth()
-    const { allFiles, loading, loadLibrary } = useLibraryStore()
+    const { user, signIn, isMember, isLeader } = useAuth()
+    const { loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
 
-
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
+    const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
+
+    // Greeting
+    const greeting = useMemo(() => {
+        const firstName = user?.displayName?.split(' ')[0] || null
+        return getContextualGreeting(firstName)
+    }, [user?.displayName])
 
     // Setlist Service
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user])
 
-    // Fetch Setlists & Filter
+    // Fetch upcoming setlists (personal or public)
     useEffect(() => {
         if (!setlistService) return
 
-        let unsubscribe: () => void
+        let unsubPersonal: (() => void) | null = null
+        let unsubPublic: (() => void) | null = null
 
-        const handleSetlists = (setlists: Setlist[]) => {
-            const now = new Date()
-            now.setHours(0, 0, 0, 0)
+        const now = new Date()
+        now.setHours(0, 0, 0, 0)
 
-            const upcoming = setlists.filter(s => {
+        const filterUpcoming = (setlists: Setlist[]) => {
+            return setlists.filter(s => {
                 if (!s.eventDate) return false
-                const d = typeof s.eventDate === 'string' ? new Date(s.eventDate) : (s.eventDate as any).toDate()
-                // Reset time for comparison
+                const d = typeof s.eventDate === 'string'
+                    ? new Date(s.eventDate)
+                    : (s.eventDate as any).toDate()
                 d.setHours(0, 0, 0, 0)
                 return d >= now
             }).sort((a, b) => {
                 const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
                 const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
                 return da.getTime() - db.getTime()
-            }).slice(0, 3) // Take next 3 events
-
-            setUpcomingSetlists(upcoming)
+            })
         }
 
         if (user) {
-            unsubscribe = setlistService.subscribeToPersonalSetlists(handleSetlists)
-        } else {
-            // Guest: Subscribe to PUBLIC setlists
-            unsubscribe = setlistService.subscribeToPublicSetlists(handleSetlists)
+            unsubPersonal = setlistService.subscribeToPersonalSetlists((setlists) => {
+                setUpcomingSetlists(filterUpcoming(setlists).slice(0, 3))
+            })
         }
 
-        return () => unsubscribe()
+        // Always subscribe to public setlists (for fallback + guests)
+        unsubPublic = setlistService.subscribeToPublicSetlists((setlists) => {
+            const upcoming = filterUpcoming(setlists)
+            // For the "recent public" section, show all public with dates (upcoming first, then recent)
+            const recent = setlists
+                .filter(s => s.eventDate)
+                .sort((a, b) => {
+                    const da = typeof a.eventDate === 'string' ? new Date(a.eventDate) : (a.eventDate as any).toDate()
+                    const db = typeof b.eventDate === 'string' ? new Date(b.eventDate) : (b.eventDate as any).toDate()
+                    return db.getTime() - da.getTime()
+                })
+                .slice(0, 5)
+            setRecentPublicSetlists(recent)
+
+            // For guests, use public upcoming setlists
+            if (!user) {
+                setUpcomingSetlists(upcoming.slice(0, 3))
+            }
+        })
+
+        return () => {
+            unsubPersonal?.()
+            unsubPublic?.()
+        }
     }, [setlistService, user])
 
     useEffect(() => {
@@ -66,113 +107,279 @@ export default function DashboardPage() {
     }, [loadLibrary])
 
     const tonightSetlist = upcomingSetlists[0]
+    const additionalUpcoming = upcomingSetlists.slice(1)
 
     return (
-        <div id="tour-welcome" className="flex flex-col p-4 md:p-6 gap-6 max-w-lg mx-auto w-full pb-24">
+        <div className="flex flex-col p-4 md:p-6 gap-8 max-w-lg mx-auto w-full pb-28">
 
-            {/* 1. Hero Card: Tonight's Setlist */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-                        Sheet Music Manager
-                    </h2>
-                    {/* Sync Status / Offline Indicator could go here */}
+            {/* ── Greeting ── */}
+            <div className="pt-2">
+                <h1 className="text-2xl font-semibold text-white tracking-tight">
+                    {greeting.text}
+                </h1>
+                <p className="text-sm text-zinc-500 mt-1">
+                    {greeting.hebrewDate}
+                </p>
+            </div>
+
+            {/* ── Hero: Next Setlist ── */}
+            {tonightSetlist ? (
+                <div className="flex flex-col gap-3">
+                    <SetlistHeroCard
+                        setlist={tonightSetlist}
+                        onClick={() => router.push(`/setlists/${tonightSetlist.id}${tonightSetlist.isPublic && !user ? '?public=true' : ''}`)}
+                    />
+
+                    {/* Additional upcoming */}
+                    {additionalUpcoming.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            {additionalUpcoming.map(s => (
+                                <SetlistCompactCard
+                                    key={s.id}
+                                    setlist={s}
+                                    onClick={() => router.push(`/setlists/${s.id}${s.isPublic && !user ? '?public=true' : ''}`)}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
-
-                {tonightSetlist ? (
-                    <div
-                        onClick={() => router.push(`/setlists/${tonightSetlist.id}`)}
-                        className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-purple-700 rounded-3xl p-6 shadow-2xl active:scale-[0.98] transition-all cursor-pointer group border border-white/10"
-                    >
-                        {/* Background Deco */}
-                        <div className="absolute -right-10 -bottom-10 opacity-20">
-                            <Music2 className="w-48 h-48 rotate-12" />
+            ) : (
+                /* No upcoming → show recent public setlists */
+                <div className="flex flex-col gap-3">
+                    {recentPublicSetlists.length > 0 ? (
+                        <>
+                            <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
+                                Recent Setlists
+                            </h2>
+                            {recentPublicSetlists.slice(0, 3).map(s => (
+                                <SetlistCompactCard
+                                    key={s.id}
+                                    setlist={s}
+                                    onClick={() => router.push(`/setlists/${s.id}${s.isPublic ? '?public=true' : ''}`)}
+                                />
+                            ))}
+                        </>
+                    ) : (
+                        <div className="bg-zinc-900/60 rounded-2xl p-6 text-center">
+                            <p className="text-zinc-400">No setlists yet</p>
                         </div>
-
-                        <div className="relative z-10 flex flex-col items-start gap-4">
-                            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-2">
-                                UPCOMING
-                            </div>
-
-                            <h3 className="text-3xl font-black text-white leading-tight max-w-[80%]">
-                                {tonightSetlist.name}
-                            </h3>
-
-                            <div className="flex items-center gap-4 text-blue-100 font-medium">
-                                <span className="flex items-center gap-1.5">
-                                    <CalendarIcon className="w-4 h-4" />
-                                    {new Date(tonightSetlist.eventDate as string).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                    <ListMusic className="w-4 h-4" />
-                                    {tonightSetlist.tracks?.length || 0} Songs
-                                </span>
-                            </div>
-
-                            <Button className="mt-4 w-full bg-white text-blue-600 hover:bg-blue-50 font-bold text-lg h-12 rounded-xl shadow-lg">
-                                <PlayCircle className="w-5 h-5 mr-2 fill-current" />
-                                Open Setlist
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 text-center flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
-                            <CalendarIcon className="w-8 h-8 text-zinc-500" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold">No Upcoming Gigs</h3>
-                            <p className="text-zinc-400">Time to practice or create a new setlist!</p>
-                        </div>
-                        <Button variant="outline" onClick={() => router.push('/setlists')} className="rounded-full">
-                            Browse All Setlists
-                        </Button>
-                    </div>
-                )}
-            </div>
-
-            {/* 2. Quick Links: Big & Chunky */}
-            <div className="grid grid-cols-2 gap-4">
-                <button
-                    id="tour-library-tab"
-                    onClick={() => router.push('/library')}
-                    className="bg-zinc-800/50 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 text-center group aspect-square"
-                >
-                    <div className="bg-blue-500/20 p-4 rounded-2xl group-hover:bg-blue-500/30 transition-colors">
-                        <FileMusic className="h-10 w-10 text-blue-400" />
-                    </div>
-                    <span className="text-lg font-bold">Library</span>
-                </button>
-
-                <button
-                    id="tour-setlists-tab"
-                    onClick={() => router.push('/setlists')}
-                    className="bg-zinc-800/50 hover:bg-zinc-800 border-2 border-zinc-800 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 text-center group aspect-square"
-                >
-                    <div className="bg-green-500/20 p-4 rounded-2xl group-hover:bg-green-500/30 transition-colors">
-                        <ListMusic className="h-10 w-10 text-green-400" />
-                    </div>
-                    <span className="text-lg font-bold">Setlists</span>
-                </button>
-            </div>
-
-            {/* 3. Helper / Chat Prompt (Leaders Only) */}
-            {isLeader && (
-                <div className="flex flex-col gap-2">
-                    <DashboardChatPrompt />
+                    )}
                 </div>
             )}
 
-            {/* Sign In Prompt for Guests */}
+            {/* ── Quick Actions ── */}
+            {(isMember || user) && (
+                <div className={`grid gap-3 ${isLeader ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    <QuickAction
+                        icon={FileMusic}
+                        label="Library"
+                        color="blue"
+                        onClick={() => router.push('/library')}
+                    />
+                    <QuickAction
+                        icon={ListMusic}
+                        label="Setlists"
+                        color="emerald"
+                        onClick={() => router.push('/setlists')}
+                    />
+                    {isLeader && (
+                        <QuickAction
+                            icon={Plus}
+                            label="New Setlist"
+                            color="violet"
+                            onClick={() => router.push('/setlists/new')}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* ── AI Prompt (compact, for members) ── */}
+            {isMember && <CompactAIPrompt />}
+
+            {/* ── Guest Sign-In Invitation ── */}
             {!user && (
-                <div className="mt-8 text-center space-y-4">
-                    <p className="text-zinc-400">Sign in to access your full library and create personal setlists.</p>
-                    <Button onClick={signIn} className="w-full h-12 rounded-xl text-lg font-bold">
+                <div className="bg-zinc-900/40 rounded-2xl p-5 text-center space-y-3 border border-zinc-800/50">
+                    <p className="text-zinc-400 text-sm">
+                        Sign in to access the full library, create setlists, and use AI tools.
+                    </p>
+                    <Button
+                        onClick={signIn}
+                        className="w-full h-11 rounded-xl font-semibold bg-white text-zinc-900 hover:bg-zinc-100"
+                    >
                         Sign In
                     </Button>
                 </div>
             )}
+        </div>
+    )
+}
 
+
+/* ─── Sub-Components ─── */
+
+function SetlistHeroCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
+    const eventDate = typeof setlist.eventDate === 'string'
+        ? new Date(setlist.eventDate)
+        : (setlist.eventDate as any)?.toDate?.() || new Date()
+
+    const isToday = (() => {
+        const now = new Date()
+        return eventDate.toDateString() === now.toDateString()
+    })()
+
+    const isTomorrow = (() => {
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        return eventDate.toDateString() === tomorrow.toDateString()
+    })()
+
+    const dateLabel = isToday ? 'Tonight' : isTomorrow ? 'Tomorrow' : eventDate.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    })
+
+    return (
+        <button
+            onClick={onClick}
+            className="w-full text-left bg-gradient-to-br from-indigo-600/90 to-violet-600/90 rounded-2xl p-5 shadow-lg active:scale-[0.98] transition-all group border border-white/10"
+        >
+            <div className="flex items-start justify-between mb-3">
+                <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold text-white">
+                    <CalendarDays className="w-3 h-3" />
+                    {dateLabel}
+                </span>
+                <span className="text-white/60 text-xs font-medium">
+                    {setlist.tracks?.length || 0} songs
+                </span>
+            </div>
+
+            <h3 className="text-xl font-bold text-white leading-snug mb-4">
+                {setlist.name}
+            </h3>
+
+            <div className="flex items-center gap-2 text-white/90 text-sm font-medium group-hover:text-white transition-colors">
+                <PlayCircle className="w-4 h-4" />
+                Open Setlist
+                <ArrowRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+        </button>
+    )
+}
+
+
+function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
+    const eventDate = typeof setlist.eventDate === 'string'
+        ? new Date(setlist.eventDate)
+        : (setlist.eventDate as any)?.toDate?.() || null
+
+    const dateStr = eventDate
+        ? eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+        : ''
+
+    return (
+        <button
+            onClick={onClick}
+            className="w-full flex items-center gap-3 bg-zinc-900/60 hover:bg-zinc-900 rounded-xl px-4 py-3 transition-colors text-left group border border-zinc-800/50"
+        >
+            <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                <Music2 className="w-4 h-4 text-zinc-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm text-white truncate">{setlist.name}</div>
+                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                    {dateStr && <span>{dateStr}</span>}
+                    <span>{setlist.tracks?.length || 0} songs</span>
+                </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-500 transition-colors shrink-0" />
+        </button>
+    )
+}
+
+
+function QuickAction({ icon: Icon, label, color, onClick }: {
+    icon: any
+    label: string
+    color: 'blue' | 'emerald' | 'violet'
+    onClick: () => void
+}) {
+    const colorMap = {
+        blue: 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/15',
+        emerald: 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/15',
+        violet: 'bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/15',
+    }
+
+    return (
+        <button
+            onClick={onClick}
+            className="flex flex-col items-center gap-2 py-4 px-3 bg-zinc-900/40 hover:bg-zinc-900/70 rounded-xl transition-all active:scale-95 group border border-zinc-800/40"
+        >
+            <div className={`p-2.5 rounded-lg transition-colors ${colorMap[color]}`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-semibold text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                {label}
+            </span>
+        </button>
+    )
+}
+
+
+function CompactAIPrompt() {
+    const { open, setPendingPrompt } = useChatStore()
+    const [input, setInput] = useState("")
+
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault()
+        if (!input.trim()) return
+        setPendingPrompt(input)
+        open()
+        setInput("")
+    }
+
+    const quickPrompts = [
+        "Create Shabbat Setlist",
+        "Find a Song",
+        "Schedule Friday",
+    ]
+
+    return (
+        <div className="flex flex-col gap-2.5">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+                <div className="relative flex-1">
+                    <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                    <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Ask Cantor AI..."
+                        className="bg-zinc-900/50 border-zinc-800/60 h-10 rounded-xl pl-9 text-sm focus-visible:ring-violet-500/30 focus-visible:border-violet-500/40 placeholder:text-zinc-600"
+                    />
+                </div>
+                <Button
+                    type="submit"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl bg-violet-600 hover:bg-violet-500 shrink-0"
+                    disabled={!input.trim()}
+                >
+                    <Send className="w-4 h-4" />
+                </Button>
+            </form>
+            <div className="flex flex-wrap gap-1.5">
+                {quickPrompts.map((prompt) => (
+                    <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => {
+                            setPendingPrompt(prompt)
+                            open()
+                        }}
+                        className="text-[11px] bg-zinc-900/40 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-800/40 transition-colors"
+                    >
+                        {prompt}
+                    </button>
+                ))}
+            </div>
         </div>
     )
 }
