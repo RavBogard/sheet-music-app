@@ -36,7 +36,7 @@ export function DesktopHeader() {
     const searchRef = useRef<HTMLDivElement>(null)
 
     const navLinks = [
-        { label: "Dashboard", href: "/" },
+        { label: "Home", href: "/" },
         { label: "Public Setlists", href: "/setlists", public: true },
         // Restricted Links (Require Member Role)
         { label: "Library", href: "/library", restricted: true },
