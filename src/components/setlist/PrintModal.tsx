@@ -48,6 +48,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                         title: t.title,
                         key: t.key || '',
                         notes: t.notes || '',
+                        leadMusician: t.leadMusician || '',
                         fileId: t.fileId
                     }))
                 })
