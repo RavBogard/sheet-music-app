@@ -2,19 +2,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOfflineSync } from "@/hooks/use-offline-sync"
-import { useChatStore } from "@/lib/chat-store"
+import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
 import { toast } from "sonner"
-
-interface EditAction {
-    action: 'add' | 'remove' | 'reorder'
-    index?: number
-    fromIndex?: number
-    toIndex?: number
-    title?: string
-    fileId?: string
-}
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -84,7 +75,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     // Chat State (Global)
     const { open, close, setContextData, registerOnApplyEdits } = useChatStore()
 
-    const handleApplyEdits = useCallback((edits: EditAction[]) => {
+    const handleApplyEdits = useCallback((edits: ChatEditAction[]) => {
         if (!canEdit) {
             toast.error("You must be in edit mode (or own this setlist) to apply changes.")
             return
