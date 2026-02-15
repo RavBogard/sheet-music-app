@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { BackingTrackPlayer } from "@/components/audio/BackingTrackPlayer"
 import { Tuner } from "@/components/tools/Tuner"
 import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2 } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
+import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 import { MetronomeControl } from "./MetronomeControl"
@@ -21,8 +22,31 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
-    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret } = useMusicStore()
+    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
+
+    // Detected key for button display
+    const detectedKey = useMemo(() => {
+        const chords = Object.values(aiState.pageData).flatMap(
+            p => p.chords.map((c: any) => c.originalText || c.text)
+        )
+        if (chords.length === 0) return null
+        return estimateKey(chords)
+    }, [aiState.pageData])
+
+    // Button label logic
+    const buttonLabel = useMemo(() => {
+        if (aiState.scanningPages.length > 0) return "Scan"
+        if (capoFret !== null && capoFret > 0 && detectedKey) {
+            return `Capo ${capoFret}`
+        }
+        if (transposition !== 0 && detectedKey) {
+            const transposed = transposeChord(detectedKey, transposition)
+            return `${detectedKey} → ${transposed}`
+        }
+        if (detectedKey) return detectedKey
+        return "Transpose"
+    }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
     // Auto-hide Logic
     const [visible, setVisible] = useState(true)
@@ -110,7 +134,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                                 <Sparkles className="h-3.5 w-3.5" />
                             )}
                             <span>
-                                {aiState.scanningPages.length > 0 ? "Scan" : (capoFret !== null && capoFret > 0 ? `Capo ${capoFret}` : "Transpose")}
+                                {buttonLabel}
                             </span>
                         </button>
                     </PopoverTrigger>
@@ -198,21 +222,11 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
-                                    <>
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        <span>SCANNING</span>
-                                    </>
-                                ) : capoFret !== null && capoFret > 0 ? (
-                                    <>
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        <span>CAPO {capoFret}</span>
-                                    </>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
-                                    <>
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        <span>KEY / CAPO</span>
-                                    </>
+                                    <Sparkles className="h-3.5 w-3.5" />
                                 )}
+                                <span>{buttonLabel.toUpperCase()}</span>
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
