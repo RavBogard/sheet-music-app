@@ -52,8 +52,8 @@ export function MusicianProfileSettings() {
             await saveMusicianProfile(profile)
             setHasChanges(false)
             toast.success("Profile saved")
-        } catch (err: any) {
-            toast.error("Failed to save: " + err.message)
+        } catch (err: unknown) {
+            toast.error("Failed to save: " + (err instanceof Error ? err.message : "Unknown error"))
         } finally {
             setSaving(false)
         }
