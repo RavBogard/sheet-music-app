@@ -44,7 +44,7 @@ export default function RootLayout({
         <div className="bg-noise" />
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
@@ -52,7 +52,7 @@ export default function RootLayout({
             <ClientProviders>
               {children}
             </ClientProviders>
-            <Toaster richColors position="top-center" theme="dark" />
+            <Toaster richColors position="top-center" theme="system" />
           </ErrorBoundary>
         </ThemeProvider>
       </body>
