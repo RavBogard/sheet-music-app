@@ -76,9 +76,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Apply initial filter (null folder, empty query)
             get().setFilter(null, "")
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err)
-            set({ error: err.message || "Failed to fetch files" })
+            set({ error: err instanceof Error ? err.message : "Unknown error" || "Failed to fetch files" })
         } finally {
             set({ loading: false })
         }
