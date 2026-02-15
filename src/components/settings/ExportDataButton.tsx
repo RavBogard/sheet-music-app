@@ -55,9 +55,9 @@ export function ExportDataButton() {
 
             toast.success(`Exported ${setlists.length} setlists`, { id: toastId })
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e)
-            toast.error("Export failed", { description: e.message, id: toastId })
+            toast.error("Export failed", { description: e instanceof Error ? e.message : "Unknown error", id: toastId })
         } finally {
             setExporting(false)
         }
