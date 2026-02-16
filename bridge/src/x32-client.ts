@@ -384,4 +384,66 @@ export class X32Client extends EventEmitter {
     isConnected(): boolean {
         return this.connected
     }
+
+    /**
+     * Discover an X32 on the local network by broadcasting /xinfo to the
+     * subnet broadcast address on port 10023. Returns the IP + model name
+     * of the first X32 that responds, or null on timeout.
+     */
+    static async discover(timeoutMs = 5000, port = 10023): Promise<{ address: string; name: string; model: string; firmware: string } | null> {
+        return new Promise((resolve) => {
+            const sock = dgram.createSocket({ type: "udp4", reuseAddr: true })
+            let found = false
+
+            const timer = setTimeout(() => {
+                if (!found) {
+                    sock.close()
+                    resolve(null)
+                }
+            }, timeoutMs)
+
+            sock.on("message", (buf, rinfo) => {
+                const msg = parseOSCMessage(buf)
+                if (msg && msg.address === "/xinfo" && !found) {
+                    found = true
+                    clearTimeout(timer)
+                    const result = {
+                        address: rinfo.address,
+                        name: (msg.args[1]?.value as string) || "X32",
+                        model: (msg.args[2]?.value as string) || "unknown",
+                        firmware: (msg.args[3]?.value as string) || "unknown",
+                    }
+                    sock.close()
+                    resolve(result)
+                }
+            })
+
+            sock.bind(0, () => {
+                sock.setBroadcast(true)
+                const xinfoMsg = buildOSCMessage("/xinfo", [])
+                // Broadcast to 255.255.255.255 — works on most LAN configs
+                sock.send(xinfoMsg, 0, xinfoMsg.length, port, "255.255.255.255")
+                // Also try common subnet broadcasts
+                try {
+                    const os = require("os")
+                    const ifaces = os.networkInterfaces()
+                    for (const name of Object.keys(ifaces)) {
+                        for (const iface of ifaces[name]) {
+                            if (iface.family === "IPv4" && !iface.internal) {
+                                // Calculate broadcast: IP | ~netmask
+                                const ipParts = iface.address.split(".").map(Number)
+                                const maskParts = iface.netmask.split(".").map(Number)
+                                const broadcast = ipParts.map((p: number, i: number) => p | (~maskParts[i] & 255)).join(".")
+                                if (broadcast !== "255.255.255.255") {
+                                    sock.send(xinfoMsg, 0, xinfoMsg.length, port, broadcast)
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                    // Fallback: global broadcast already sent
+                }
+            })
+        })
+    }
 }

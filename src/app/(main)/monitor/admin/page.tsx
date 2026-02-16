@@ -9,7 +9,7 @@ import { MusicianProfile } from "@/types/models"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Save, Radio, Users, Settings2, RefreshCw } from "lucide-react"
+import { Loader2, Save, Radio, Users, Settings2, RefreshCw, Radar } from "lucide-react"
 
 const DEFAULT_CONFIG: MonitorConfig = {
     bridgeUrl: "ws://192.168.1.50:9000",
@@ -37,6 +37,37 @@ export default function MonitorAdminPage() {
     const [monitorBusesStr, setMonitorBusesStr] = useState("")
     const [busAssignments, setBusAssignments] = useState<Record<string, BusAssignment | null>>({})
     const [authorizedUsers, setAuthorizedUsers] = useState<string[]>([])
+    const [scanning, setScanning] = useState(false)
+    const [scanResult, setScanResult] = useState<string | null>(null)
+
+    // Scan for X32 on the network via the bridge's HTTP API
+    const handleScan = useCallback(async () => {
+        if (!bridgeUrl) {
+            setScanResult("Set the bridge URL first")
+            return
+        }
+        setScanning(true)
+        setScanResult(null)
+        try {
+            // Derive HTTP API URL from WebSocket URL (same host, port + 1)
+            const wsUrl = new URL(bridgeUrl)
+            const httpPort = parseInt(wsUrl.port) + 1
+            const httpUrl = `http://${wsUrl.hostname}:${httpPort}/scan`
+
+            const res = await fetch(httpUrl, { signal: AbortSignal.timeout(8000) })
+            const data = await res.json()
+            if (data.found) {
+                setX32Address(data.address)
+                setScanResult(`Found ${data.name} (${data.model}) at ${data.address}`)
+            } else {
+                setScanResult("No X32 found on the network")
+            }
+        } catch {
+            setScanResult("Could not reach bridge server — is it running?")
+        } finally {
+            setScanning(false)
+        }
+    }, [bridgeUrl])
 
     // Load config
     useEffect(() => {
@@ -172,11 +203,28 @@ export default function MonitorAdminPage() {
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="text-sm text-muted-foreground mb-1 block">X32 IP Address</label>
-                        <Input
-                            value={x32Address}
-                            onChange={e => setX32Address(e.target.value)}
-                            placeholder="192.168.1.100"
-                        />
+                        <div className="flex gap-2">
+                            <Input
+                                value={x32Address}
+                                onChange={e => setX32Address(e.target.value)}
+                                placeholder="192.168.1.100"
+                                className="flex-1"
+                            />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleScan}
+                                disabled={scanning}
+                                title="Scan network for X32"
+                            >
+                                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        {scanResult && (
+                            <p className={`text-xs mt-1 ${scanResult.includes("Found") ? "text-green-500" : "text-yellow-500"}`}>
+                                {scanResult}
+                            </p>
+                        )}
                     </div>
                     <div>
                         <label className="text-sm text-muted-foreground mb-1 block">X32 OSC Port</label>

@@ -119,4 +119,14 @@ export class ConfigManager {
     getAdmin(): typeof admin {
         return admin
     }
+
+    /** Update the X32 address in Firestore (called after auto-discovery) */
+    async updateX32Address(address: string): Promise<void> {
+        try {
+            await this.db.collection("config").doc("monitor").update({ x32Address: address })
+            this.config.x32Address = address
+        } catch (err) {
+            console.error("[Config] Failed to update X32 address:", err)
+        }
+    }
 }

@@ -35,10 +35,31 @@ async function main() {
     const config = new ConfigManager()
     const monitorConfig = await config.loadConfig()
 
-    // 2. Connect to X32
+    // 2. Discover or use configured X32 address
+    let x32Address = monitorConfig.x32Address
+    let x32Port = monitorConfig.x32Port
+
+    console.log("[X32] Scanning network for X32 mixer...")
+    const discovered = await X32Client.discover(5000, x32Port)
+
+    if (discovered) {
+        console.log(`[X32] ✓ Found ${discovered.name} (${discovered.model}) at ${discovered.address}`)
+        console.log(`[X32]   Firmware: ${discovered.firmware}`)
+        x32Address = discovered.address
+
+        // Update Firestore config if address changed
+        if (discovered.address !== monitorConfig.x32Address) {
+            console.log(`[X32]   Updating saved address: ${monitorConfig.x32Address} → ${discovered.address}`)
+            await config.updateX32Address(discovered.address)
+        }
+    } else {
+        console.log(`[X32] ✗ No X32 found via broadcast — falling back to configured address: ${x32Address}`)
+    }
+
+    // 3. Connect to X32
     const x32 = new X32Client({
-        address: monitorConfig.x32Address,
-        port: monitorConfig.x32Port,
+        address: x32Address,
+        port: x32Port,
     })
 
     try {
@@ -46,23 +67,23 @@ async function main() {
     } catch (err) {
         console.error("\n❌ Could not connect to X32!")
         console.error("   Check that:")
-        console.error(`   • The X32 is powered on and at ${monitorConfig.x32Address}`)
-        console.error(`   • Port ${monitorConfig.x32Port} is accessible (default: 10023)`)
+        console.error(`   • The X32 is powered on and at ${x32Address}`)
+        console.error(`   • Port ${x32Port} is accessible (default: 10023)`)
         console.error(`   • This PC is on the same network as the X32`)
         console.error()
         console.error("   The bridge will start anyway and retry when iPads connect.")
         console.error("   Update the X32 IP in the CentralReform admin panel.\n")
     }
 
-    // 3. Sync full mixer state
+    // 4. Sync full mixer state
     if (x32.isConnected()) {
         await x32.syncFullState(monitorConfig.monitorBuses)
     }
 
-    // 4. Start WebSocket server
+    // 5. Start WebSocket server
     const ws = new BridgeWSServer(WS_PORT, x32, config)
 
-    // 5. Watch for config changes
+    // 6. Watch for config changes
     config.startWatching()
 
     // Re-sync when monitor buses change
@@ -73,7 +94,51 @@ async function main() {
         }
     })
 
-    // 6. Status logging
+    // 6. Start HTTP API (for admin panel scan + status)
+    const http = require("http")
+    const HTTP_PORT = parseInt(process.env.HTTP_PORT || "9001")
+    const httpServer = http.createServer(async (req: { method: string; url: string }, res: { writeHead: (code: number, headers: Record<string, string>) => void; end: (body: string) => void }) => {
+        // CORS for admin panel
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Content-Type": "application/json",
+        })
+
+        if (req.method === "OPTIONS") {
+            res.end("")
+            return
+        }
+
+        if (req.url === "/scan") {
+            console.log("[HTTP] Scan requested from admin panel")
+            const result = await X32Client.discover(5000)
+            if (result) {
+                console.log(`[HTTP] Found: ${result.name} at ${result.address}`)
+                res.end(JSON.stringify({ found: true, ...result }))
+            } else {
+                res.end(JSON.stringify({ found: false }))
+            }
+            return
+        }
+
+        if (req.url === "/status") {
+            res.end(JSON.stringify({
+                x32Connected: x32.isConnected(),
+                x32Address,
+                connectedClients: ws.getConnectedCount(),
+                monitorBuses: monitorConfig.monitorBuses,
+            }))
+            return
+        }
+
+        res.end(JSON.stringify({ error: "Not found" }))
+    })
+    httpServer.listen(HTTP_PORT, () => {
+        console.log(`[HTTP] API on port ${HTTP_PORT} (scan: http://0.0.0.0:${HTTP_PORT}/scan)`)
+    })
+
+    // 7. Status logging
     setInterval(() => {
         const connected = ws.getConnectedCount()
         if (connected > 0) {
@@ -87,6 +152,7 @@ async function main() {
         config.stopWatching()
         x32.disconnect()
         ws.close()
+        httpServer.close()
         process.exit(0)
     }
     process.on("SIGINT", shutdown)
@@ -95,7 +161,8 @@ async function main() {
     console.log()
     console.log(`[Bridge] Ready!`)
     console.log(`  WebSocket: ws://0.0.0.0:${WS_PORT}`)
-    console.log(`  X32:       ${monitorConfig.x32Address}:${monitorConfig.x32Port}`)
+    console.log(`  HTTP API:  http://0.0.0.0:${HTTP_PORT}`)
+    console.log(`  X32:       ${x32Address}:${x32Port}`)
     console.log(`  Buses:     ${monitorConfig.monitorBuses.join(", ")}`)
     console.log()
 }
