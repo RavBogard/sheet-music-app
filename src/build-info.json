@@ -1,22 +1,23 @@
 {
   "version": "2.0.0",
-  "commit": "2.0.0-final",
+  "commit": "d6f561a",
   "branch": "master",
-  "buildDate": "2/15/2026",
+  "buildDate": "2/16/2026",
   "changelog": [
+    "2.0.0 - feat: Sticky per-song transposition — remembers your preferred key for each chart",
+    "2.0.0 - feat: Firebase Storage migration — CDN-served files replace Google Drive proxy",
     "2.0.0 - feat: Light theme default with dark mode for performance",
     "2.0.0 - feat: Musician profiles — instrument, transposition, capo preferences",
-    "2.0.0 - feat: Per-musician gig packets in Print Modal",
     "2.0.0 - feat: Auto-transposition in performance mode based on musician profile",
-    "2.0.0 - feat: Firebase Storage migration — CDN-served files, Drive as intake only",
-    "2.0.0 - feat: Smart prefetch — preloads next 3 songs for instant page turns",
-    "2.0.0 - feat: PWA offline — Workbox caches PDFs and Firebase Storage for 30 days",
-    "2.0.0 - feat: Vitest testing — 12 test files, 200+ cases",
-    "2.0.0 - refactor: Component decomposition — SetlistDashboard, SongChartsLibrary, TrackItem",
-    "2.0.0 - refactor: Shared chord-utils, eliminated 25+ any types, strict TypeScript",
-    "2.0.0 - refactor: Semantic theme colors across all 72 components",
-    "2.0.0 - fix: Remove dead code (OnboardingTour, CommandPalette, BackingTrackPlayer)",
+    "2.0.0 - feat: CRC ensemble instrument presets (acoustic guitar, bass, mandolin, etc.)",
+    "2.0.0 - feat: Smart prefetch — preloads next songs for instant page turns",
+    "2.0.0 - feat: Chord cache management in Settings",
+    "2.0.0 - feat: Loading skeletons for all pages",
     "2.0.0 - feat: Logger utility (silent in production)",
-    "2.0.0 - feat: Rebrand to CentralReform.live"
+    "2.0.0 - refactor: Component decomposition — SetlistDashboard, SongChartsLibrary, TrackItem",
+    "2.0.0 - refactor: Shared chord-utils, eliminated 60+ type errors, strict TypeScript",
+    "2.0.0 - refactor: Semantic theme colors across all 72 components",
+    "2.0.0 - fix: Chord transposer accuracy — single-letter chords, adjacent chord overlap",
+    "2.0.0 - fix: Vitest testing — 12 test files covering core music utilities"
   ]
 }
