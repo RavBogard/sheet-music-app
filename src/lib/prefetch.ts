@@ -56,3 +56,52 @@ export async function isFilePrefetched(fileId: string): Promise<boolean> {
         return false
     }
 }
+
+/**
+ * Pre-cache ALL files in a setlist for offline use during services.
+ * Called when a musician opens a setlist (not just enters performance mode).
+ * Fetches sequentially with small delays to avoid hammering the server.
+ * 
+ * Returns the count of newly cached files.
+ */
+export async function prefetchSetlistPDFs(
+    fileIds: string[],
+    onProgress?: (cached: number, total: number) => void
+): Promise<number> {
+    if (!fileIds.length || !('caches' in window)) return 0
+
+    const cache = await caches.open('sheet-music-pdfs')
+    const unique = [...new Set(fileIds.filter(Boolean))]
+    let newlyCached = 0
+
+    for (let i = 0; i < unique.length; i++) {
+        const fileId = unique[i]
+        const url = `/api/drive/file/${fileId}`
+
+        // Skip if already cached
+        const existing = await cache.match(url)
+        if (existing) {
+            onProgress?.(i + 1, unique.length)
+            continue
+        }
+
+        try {
+            const response = await fetch(url)
+            if (response.ok) {
+                await cache.put(url, response)
+                newlyCached++
+            }
+        } catch {
+            // Silent fail — best-effort
+        }
+
+        onProgress?.(i + 1, unique.length)
+
+        // Small delay between fetches to avoid overwhelming the connection
+        if (i < unique.length - 1) {
+            await new Promise(r => setTimeout(r, 100))
+        }
+    }
+
+    return newlyCached
+}

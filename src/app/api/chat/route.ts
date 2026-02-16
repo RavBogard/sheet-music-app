@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 
+import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
+
 // New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
 You are an expert Jewish Music Director and Service Leader (Shaliach Tzibur) for a Reform Jewish congregation.
@@ -13,11 +15,13 @@ Your capabilities:
 2. **Calendar**: Schedule setlists by setting their date.
 3. **Administration** (Admin Only): Manage users (approve/promote).
 4. **Navigation**: Open specific charts or views.
+5. **Liturgical Knowledge**: You know the Reform Jewish liturgical order and can build service-appropriate setlists.
 
 You have access to:
 1. The user's "Current Setlist".
 2. A "Library" of available sheet music.
 3. (If Admin) A list of "Users" in the system.
+4. The current Jewish calendar context (parasha, holidays, upcoming Shabbat).
 
 **Output Format**:
 You must return a JSON object with this structure:
@@ -32,15 +36,19 @@ You must return a JSON object with this structure:
     { "type": "SEARCH_LIBRARY", "payload": { "query": "Shabbat" } },
     { "type": "ADMIN_ACTION", "payload": { "action": "set_role", "userId": "uid", "targetRole": "admin" } },
     { "type": "NAVIGATE", "payload": { "path": "/library" } },
-    { "type": "OPEN_CHART", "payload": { "fileId": "123" } } // Use NAVIGATE to /perform/[id] usually
+    { "type": "OPEN_CHART", "payload": { "fileId": "123" } }
   ],
-  "edits": [] // Legacy: Keep empty unless simple reordering is requested on *current* setlist
+  "edits": []
 }
 
 **Rules**:
 - Only use ADMIN_ACTION if the user is authorized (you will see 'User Role: admin' in context).
 - If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
 - If asked to "Create a setlist", issue a CREATE_SETLIST command.
+- If asked to build a setlist for a specific service (e.g., "Build me a setlist for this Friday", "Shabbat morning setlist"), create a CREATE_SETLIST with pre-populated tracks matched from the library. Follow the standard Reform liturgical order. Include section headers as tracks with type "header".
+- When building liturgical setlists, follow this order for Friday night: Candle Lighting → Shalom Aleichem → L'cha Dodi → Bar'chu → Shema → V'ahavta → Mi Chamocha → Hashkiveinu → T'filah → Oseh Shalom → Aleinu → Kaddish → Adon Olam.
+- When building Shabbat morning setlists: Morning Blessings → Ashrei → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah → Torah Service → Aleinu → Kaddish → Adon Olam/Ein Keloheinu.
+- Search the library context to find matching files for each liturgical slot.
 - If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST.
 - If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.
 - If asked to "Transpose up 2 steps", issue TRANSPOSE_CHART.
@@ -97,6 +105,25 @@ export async function POST(request: Request) {
     const libraryContext = libraryFiles.slice(0, 500).map((f: { name: string; id: string }) => `${f.name} (ID: ${f.id})`).join("\n")
     const setlistContext = currentSetlist.map((t: { title: string }, i: number) => `${i + 1}. ${t.title}`).join("\n")
 
+    // Add liturgical calendar context
+    let liturgicalContext = ""
+    try {
+        const nextFri = getNextFriday()
+        const nextSat = getNextSaturday()
+        const friCtx = await getFullServiceContext(nextFri)
+        const satCtx = await getFullServiceContext(nextSat)
+        const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
+        liturgicalContext = `\n--- JEWISH CALENDAR CONTEXT ---
+Today: ${todayStr}
+Next Friday (${nextFri.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}): ${friCtx.holiday || 'Regular Shabbat'}${friCtx.parasha ? `, Parashat ${friCtx.parasha}` : ''}
+Next Saturday (${nextSat.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}): ${satCtx.holiday || 'Regular Shabbat'}${satCtx.parasha ? `, Parashat ${satCtx.parasha}` : ''}
+Hebrew Date: ${friCtx.hebrewDate.display}
+-------------------------------\n`
+    } catch {
+        // Liturgical context is best-effort
+    }
+
     const prompt = `
 ${SYSTEM_PROMPT}
 
@@ -110,7 +137,7 @@ ${libraryContext}
 --- CURRENT SETLIST ---
 ${setlistContext}
 -----------------------
-${userContext}
+${liturgicalContext}${userContext}
 
 USER MESSAGE:
 ${messages[messages.length - 1].content}

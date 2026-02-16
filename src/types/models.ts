@@ -55,7 +55,7 @@ export interface Setlist {
     ownerId?: string
     ownerName?: string
     isTemplate?: boolean
-    templateType?: 'shabbat_morning' | 'friday_night' | 'other'
+    templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string
     previousOwnerId?: string
 }

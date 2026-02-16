@@ -58,8 +58,15 @@ export async function GET(req: NextRequest) {
         // 4. Execute
         const snapshot = await dbQuery.get()
 
+        // Track the most recent modification across all documents
+        let maxModified = ''
+
         const files = snapshot.docs.map(doc => {
             const data = doc.data()
+            // Track latest modification for cache staleness
+            if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
+                maxModified = data.lastSyncedAt
+            }
             return {
                 id: doc.id,
                 name: data.name,
@@ -78,6 +85,7 @@ export async function GET(req: NextRequest) {
             files,
             nextCursor: hasMore ? lastDoc?.id : null,
             total: files.length,
+            lastModified: maxModified || new Date().toISOString(),
         }
 
         const response = NextResponse.json(body)

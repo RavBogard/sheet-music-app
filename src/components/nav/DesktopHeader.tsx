@@ -23,7 +23,7 @@ import { DriveFile } from "@/types/models"
 export function DesktopHeader() {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, profile, isMember, isAdmin, signIn, signOut } = useAuth()
+    const { user, profile, isMember, signIn, signOut } = useAuth()
     const { allFiles, loadLibrary } = useLibraryStore()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()

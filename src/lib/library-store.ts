@@ -3,6 +3,7 @@ import { auth } from "@/lib/firebase"
 import { DriveFile } from "@/types/models"
 import Fuse from 'fuse.js'
 import { logger } from "@/lib/logger"
+import { getCachedLibrary, setCachedLibrary } from "@/lib/library-cache"
 
 const FUSE_OPTIONS = {
     keys: ['name', 'metadata.key', 'metadata.artist', 'metadata.topics'],
@@ -18,6 +19,10 @@ interface LibraryState {
     initialized: boolean
     currentFolderId: string | null
     searchQuery: string
+    /** True while background sync is checking for updates */
+    syncing: boolean
+    /** True if data came from IndexedDB cache (not yet verified fresh) */
+    fromCache: boolean
 
     // Cached search index — rebuilt only when allFiles changes
     _fuseIndex: Fuse<DriveFile> | null
@@ -37,6 +42,17 @@ function sortFoldersFirst(files: DriveFile[]): DriveFile[] {
     })
 }
 
+function applyFiles(files: DriveFile[], fromCache: boolean) {
+    const fuseIndex = new Fuse(files, FUSE_OPTIONS)
+    return {
+        allFiles: files,
+        displayedFiles: sortFoldersFirst(files),
+        initialized: true,
+        _fuseIndex: fuseIndex,
+        fromCache,
+    }
+}
+
 export const useLibraryStore = create<LibraryState>((set, get) => ({
     allFiles: [],
     displayedFiles: [],
@@ -45,6 +61,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     initialized: false,
     currentFolderId: null,
     searchQuery: "",
+    syncing: false,
+    fromCache: false,
     _fuseIndex: null,
 
     reset: () => set({
@@ -54,13 +72,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         searchQuery: "",
         initialized: false,
         _fuseIndex: null,
+        fromCache: false,
     }),
 
     loadLibrary: async (force = false) => {
         if (get().initialized && !force && get().allFiles.length > 0) return
 
         set({ loading: true, error: null })
+
         try {
+            // ── Step 1: Try IndexedDB cache for instant load ──
+            const cached = await getCachedLibrary()
+            if (cached && cached.files.length > 0 && !force) {
+                set({
+                    ...applyFiles(cached.files, true),
+                    loading: false,
+                })
+            }
+
+            // ── Step 2: Fetch from API (background if cache hit, blocking if not) ──
+            set({ syncing: true })
+
             const user = auth.currentUser
             const headers: HeadersInit = {}
             if (user) {
@@ -73,22 +105,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             const data = await res.json()
             const files: DriveFile[] = data.files
+            const lastModified: string = data.lastModified || new Date().toISOString()
 
-            // Build Fuse index once on load — reused for all subsequent searches
-            const fuseIndex = new Fuse(files, FUSE_OPTIONS)
-
-            set({
-                allFiles: files,
-                displayedFiles: sortFoldersFirst(files),
-                initialized: true,
-                _fuseIndex: fuseIndex,
-            })
+            // ── Step 3: Compare with cache — skip update if identical ──
+            const isSame = cached?.lastModified === lastModified && cached.files.length === files.length
+            if (!isSame || force) {
+                set(applyFiles(files, false))
+                // Update IndexedDB in background
+                setCachedLibrary(files, lastModified).catch(() => {})
+            } else {
+                // Cache is current — just mark as verified
+                set({ fromCache: false })
+            }
 
         } catch (err: unknown) {
             logger.error(err)
-            set({ error: err instanceof Error ? err.message : "Failed to fetch files" })
+            // Only show error if we don't have cached data
+            if (!get().initialized) {
+                set({ error: err instanceof Error ? err.message : "Failed to fetch files" })
+            }
         } finally {
-            set({ loading: false })
+            set({ loading: false, syncing: false })
         }
     },
 
@@ -97,11 +134,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         let result: DriveFile[]
 
         if (query.trim().length > 0) {
-            // Use cached Fuse index — instant search without rebuild
             if (_fuseIndex) {
                 result = _fuseIndex.search(query).map(r => r.item)
             } else {
-                // Fallback: build index on the fly (shouldn't happen)
                 const fuse = new Fuse(allFiles, FUSE_OPTIONS)
                 result = fuse.search(query).map(r => r.item)
             }

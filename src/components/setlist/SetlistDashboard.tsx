@@ -6,7 +6,7 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-context"
-import { ChevronLeft, Plus, LogIn, Calendar } from "lucide-react"
+import { ChevronLeft, Plus, LogIn, Calendar, Sparkles } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -18,6 +18,10 @@ import { toast } from "sonner"
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { SetlistToolbar } from "./SetlistToolbar"
+import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
+import { useLibraryStore } from "@/lib/library-store"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { logger } from "@/lib/logger"
 
 interface SetlistDashboardProps {
@@ -168,6 +172,48 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         }
     }
 
+    const handleCreateFromTemplate = async (templateType: 'friday_night' | 'shabbat_morning') => {
+        if (!setlistService || !user) return
+
+        const targetDate = templateType === 'friday_night' ? getNextFriday() : getNextSaturday()
+        const template = getTemplate(templateType)
+        if (!template) return
+
+        try {
+            toast.loading('Building setlist from template...')
+
+            // Get liturgical context (parasha, holidays)
+            const context = await getFullServiceContext(targetDate)
+            context.type = templateType
+
+            // Match template slots to library files
+            const { allFiles } = useLibraryStore.getState()
+            const tracks = buildSetlistFromTemplate(template, allFiles, context)
+            const name = generateSetlistName(context)
+
+            const id = await setlistService.createSetlist(name, tracks, true, {
+                eventDate: targetDate.toISOString(),
+                templateType,
+                isTemplate: false,
+            })
+
+            toast.dismiss()
+
+            const matched = tracks.filter(t => t.fileId).length
+            const total = tracks.filter(t => t.type === 'song').length
+            toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+
+            onSelect({
+                id, name, tracks, trackCount: tracks.length,
+                date: { seconds: Date.now() / 1000, nanoseconds: 0 },
+                eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: false,
+            })
+        } catch (err: unknown) {
+            toast.dismiss()
+            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"))
+        }
+    }
+
     const handleDownload = async (setlist: Setlist) => {
         if (setlist.tracks && setlist.tracks.length > 0) {
             const queueItems = setlist.tracks
@@ -223,9 +269,30 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
                 {user ? (
-                    <Button onClick={onCreateNew} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
-                        <Plus className="h-5 w-5" /> New Setlist
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10">
+                                    <Sparkles className="h-4 w-4" /> From Template
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => handleCreateFromTemplate('friday_night')}>
+                                    <span className="font-medium">This Friday Night</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleCreateFromTemplate('shabbat_morning')}>
+                                    <span className="font-medium">This Shabbat Morning</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={onCreateNew} className="text-muted-foreground">
+                                    Blank Setlist
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button onClick={onCreateNew} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
+                            <Plus className="h-5 w-5" /> New
+                        </Button>
+                    </div>
                 ) : (
                     <Button onClick={signIn} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-500">
                         <LogIn className="h-4 w-4" /> Sign In
