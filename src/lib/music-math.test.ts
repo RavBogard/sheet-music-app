@@ -142,7 +142,7 @@ describe('transposeChord', () => {
     describe('edge cases', () => {
         it('handles empty/null input', () => {
             expect(transposeChord('', 2)).toBe('')
-            expect(transposeChord(null as any, 2)).toBe(null)
+            expect(transposeChord(null as unknown as string, 2)).toBe(null)
         })
 
         it('returns non-chord strings unchanged', () => {
@@ -233,7 +233,7 @@ describe('estimateKey', () => {
 
     it('returns null for empty input', () => {
         expect(estimateKey([])).toBeNull()
-        expect(estimateKey(null as any)).toBeNull()
+        expect(estimateKey(null as unknown as string[])).toBeNull()
     })
 
     it('handles chords with extensions', () => {

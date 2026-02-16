@@ -25,7 +25,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [width, setWidth] = useState<number>(0)
 
     // sourceUrl can be a string (online URL or blob URL) or an object (online URL + headers)
-    const [source, setSource] = useState<any>(null) // Default to null until resolved
+    const [source, setSource] = useState<string | { url: string; httpHeaders: Record<string, string> } | null>(null)
 
     // 1. Resolve Source (Offline vs Online + Auth)
     useEffect(() => {
