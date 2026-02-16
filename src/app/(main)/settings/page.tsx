@@ -382,6 +382,28 @@ export default function UnifiedSettingsPage() {
                                 </Button>
                             </div>
 
+                            {/* Chord Cache */}
+                            <div className="bg-card border border-border p-5 rounded-2xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-500">
+                                        <Database className="w-5 h-5" />
+                                    </div>
+                                </div>
+                                <h3 className="font-semibold text-foreground mb-1">Chord Cache</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Clear cached chord positions so charts rescan with the latest algorithm.
+                                </p>
+                                <Button
+                                    onClick={handleClearChordCache}
+                                    disabled={clearingChords}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    <Repeat className={`w-4 h-4 ${clearingChords ? 'animate-spin' : ''}`} />
+                                    {clearingChords ? "Clearing..." : "Clear Chord Cache"}
+                                </Button>
+                            </div>
+
                             {/* Prune Manager */}
                             <PruneManager />
                         </div>
