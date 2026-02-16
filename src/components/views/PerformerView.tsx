@@ -112,22 +112,22 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [playbackQueue, nextSong, prevSong, router, onHome, toggleBars])
 
-    // ── Swipe navigation via edge touch zones ──
+    // ── Swipe navigation — anywhere on the page ──
     const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+    const didSwipeRef = useRef(false)
 
-    const handleSwipeStart = useCallback((e: React.TouchEvent | React.PointerEvent) => {
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
-        swipeStartRef.current = { x: clientX, y: clientY, time: Date.now() }
+    const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+        const touch = e.touches[0]
+        swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+        didSwipeRef.current = false
     }, [])
 
-    const handleSwipeEnd = useCallback((e: React.TouchEvent | React.PointerEvent) => {
+    const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
         if (!swipeStartRef.current) return
-        const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX
-        const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY
+        const touch = e.changedTouches[0]
 
-        const dx = clientX - swipeStartRef.current.x
-        const dy = clientY - swipeStartRef.current.y
+        const dx = touch.clientX - swipeStartRef.current.x
+        const dy = touch.clientY - swipeStartRef.current.y
         const dt = Date.now() - swipeStartRef.current.time
         swipeStartRef.current = null
 
@@ -136,6 +136,9 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
 
         // Don't navigate if zoomed in
         if (zoom > 1.1) return
+
+        // Mark that this touch was a swipe (so tap handler ignores it)
+        didSwipeRef.current = true
 
         if (dx < 0) {
             // Swiped left → next song
@@ -160,50 +163,32 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         }
     }, [zoom, nextSong, prevSong, router])
 
-    // ── Center tap to toggle bars ──
+    // ── Tap anywhere to toggle bars ──
+    // Distinguished from swipes by checking didSwipeRef
     const handleContentTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         const target = e.target as HTMLElement
         // Ignore taps on interactive elements
         if (target.closest('button') || target.closest('.performance-toolbar') || target.closest('[role="dialog"]')) return
 
-        const clientX = 'touches' in e ? e.changedTouches?.[0]?.clientX ?? 0 : e.clientX
-        const width = window.innerWidth
-
-        // Center 60% of screen toggles bars
-        if (clientX > width * 0.2 && clientX < width * 0.8) {
-            toggleBars()
+        // If this was a swipe, don't toggle
+        if (didSwipeRef.current) {
+            didSwipeRef.current = false
+            return
         }
+
+        toggleBars()
     }, [toggleBars])
 
     return (
         <div className="h-[100dvh] flex flex-col bg-black text-white relative">
 
-            {/* Swipe overlay — transparent zones on left/right edges for reliable gesture capture */}
-            <div
-                className="fixed inset-y-0 left-0 right-0 z-30 pointer-events-none"
-                style={{ touchAction: 'pan-y' }}
-            >
-                {/* Left edge swipe zone */}
-                <div
-                    className="absolute left-0 top-0 bottom-0 w-[15%] pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={handleSwipeStart}
-                    onTouchEnd={handleSwipeEnd}
-                />
-                {/* Right edge swipe zone */}
-                <div
-                    className="absolute right-0 top-0 bottom-0 w-[15%] pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={handleSwipeStart}
-                    onTouchEnd={handleSwipeEnd}
-                />
-            </div>
-
-            {/* Main Content Area */}
+            {/* Main Content Area — swipe anywhere + tap anywhere */}
             <div
                 ref={viewRef}
                 className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative"
                 onClick={handleContentTap}
+                onTouchStart={handleSwipeStart}
+                onTouchEnd={handleSwipeEnd}
             >
                 {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
