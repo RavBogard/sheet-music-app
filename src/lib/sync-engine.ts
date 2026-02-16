@@ -9,6 +9,9 @@ export interface SyncStats {
     updated: number
     deleted: number
     errors: number
+    addedFiles?: string[]
+    updatedFiles?: string[]
+    deletedFiles?: string[]
 }
 
 export async function syncLibraryIndex(): Promise<SyncStats> {

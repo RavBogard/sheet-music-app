@@ -176,7 +176,10 @@ export default function AdminDashboard() {
     const [syncing, setSyncing] = useState(false)
     const [lastStats, setLastStats] = useState<SyncStats | null>(null)
     const [enriching, setEnriching] = useState(false)
-    const [enrichStats, setEnrichStats] = useState<{ processed?: number; enriched?: number } | null>(null)
+    const [enrichStats, setEnrichStats] = useState<{
+        processed?: number; enriched?: number; success?: number;
+        enrichedFiles?: string[]; failedFiles?: string[]
+    } | null>(null)
     const [clearingChords, setClearingChords] = useState(false)
     const [migrating, setMigrating] = useState(false)
     const [migrationStats, setMigrationStats] = useState<{
@@ -462,8 +465,32 @@ export default function AdminDashboard() {
                                 {enriching ? "Enriching..." : "Run Enrichment"}
                             </Button>
                             {enrichStats && (
-                                <div className="p-2 bg-muted/50 rounded-lg text-xs text-muted-foreground border border-border">
-                                    Processed: {enrichStats.processed} · Enriched: {enrichStats.enriched}
+                                <div className="p-2 bg-muted/50 rounded-lg text-xs text-muted-foreground border border-border space-y-1">
+                                    <div>Processed: {enrichStats.processed || enrichStats.success || 0} · Enriched: {enrichStats.enriched || enrichStats.success || 0}</div>
+                                    {enrichStats.enrichedFiles && enrichStats.enrichedFiles.length > 0 && (
+                                        <details className="text-xs">
+                                            <summary className="cursor-pointer text-violet-500 hover:text-violet-400">
+                                                What changed? ({enrichStats.enrichedFiles.length} files)
+                                            </summary>
+                                            <ul className="mt-1 space-y-0.5 pl-3 text-muted-foreground max-h-32 overflow-y-auto">
+                                                {enrichStats.enrichedFiles.map((f, i) => (
+                                                    <li key={i} className="truncate">✓ {f}</li>
+                                                ))}
+                                            </ul>
+                                        </details>
+                                    )}
+                                    {enrichStats.failedFiles && enrichStats.failedFiles.length > 0 && (
+                                        <details className="text-xs">
+                                            <summary className="cursor-pointer text-red-400">
+                                                Failed ({enrichStats.failedFiles.length})
+                                            </summary>
+                                            <ul className="mt-1 space-y-0.5 pl-3 text-red-400/80 max-h-32 overflow-y-auto">
+                                                {enrichStats.failedFiles.map((f, i) => (
+                                                    <li key={i} className="truncate">✗ {f}</li>
+                                                ))}
+                                            </ul>
+                                        </details>
+                                    )}
                                 </div>
                             )}
                         </div>

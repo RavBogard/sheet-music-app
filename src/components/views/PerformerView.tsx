@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { useDrag } from '@use-gesture/react'
+import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { FileType } from "@/lib/store"
@@ -19,7 +20,7 @@ interface PerformerViewProps {
 }
 
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
-    const { nextSong, prevSong, aiXmlContent, zoom } = useMusicStore()
+    const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
     const [toolbarVisible, setToolbarVisible] = useState(true)
     const router = useRouter()
 
@@ -155,11 +156,34 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
 
                 {!fileUrl && (
                     <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
-                        <p className="text-xl font-semibold">No Chart Available</p>
-                        <p className="text-sm">This track doesn't have a linked file.</p>
-                        <button onClick={onHome} className="mt-4 px-6 py-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
-                            Go Home
-                        </button>
+                        {/* Show loading state if we're expecting a file (queue exists), otherwise show No Chart */}
+                        {playbackQueue.length > 0 && queueIndex >= 0 ? (
+                            <>
+                                <div className="animate-pulse flex flex-col items-center gap-3">
+                                    <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
+                                    <p className="text-lg font-medium text-zinc-400">
+                                        Loading
+                                    </p>
+                                    <p className="text-sm text-zinc-500 italic">
+                                        {playbackQueue[queueIndex]?.name || ""}
+                                    </p>
+                                </div>
+                                {/* Skeleton blocks */}
+                                <div className="w-64 space-y-3 mt-4">
+                                    <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
+                                    <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
+                                    <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xl font-semibold">No Chart Available</p>
+                                <p className="text-sm">This track doesn&apos;t have a linked file.</p>
+                                <button onClick={onHome} className="mt-4 px-6 py-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
+                                    Go Home
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

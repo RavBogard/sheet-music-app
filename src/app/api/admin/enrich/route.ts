@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
             total: snapshot.size,
             success: 0,
             failed: 0,
-            skipped: 0
+            skipped: 0,
+            enrichedFiles: [] as string[],
+            failedFiles: [] as string[],
         }
 
         logger.info(`[Admin] Starting Manual Enrichment Batch: ${stats.total} files`)
@@ -64,9 +66,11 @@ export async function POST(req: NextRequest) {
             try {
                 await enrichFile(doc.id)
                 stats.success++
+                stats.enrichedFiles.push(data.name || doc.id)
             } catch (e) {
                 logger.error(`[Admin] Failed to enrich ${data.name}`, e)
                 stats.failed++
+                stats.failedFiles.push(data.name || doc.id)
             }
         }
 

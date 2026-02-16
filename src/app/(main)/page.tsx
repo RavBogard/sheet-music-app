@@ -8,7 +8,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { getContextualGreeting } from "@/lib/greeting"
 import { toDate, getRelativeDateLabel, formatEventDate } from "@/lib/firestore-helpers"
-import { EmptySetlistsIllustration } from "@/components/ui/illustrations"
+import { EmptySetlistsIllustration, PendingAccountIllustration } from "@/components/ui/illustrations"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ import { useChatStore } from "@/lib/chat-store"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, signIn, isMember, isLeader } = useAuth()
+    const { user, profile, signIn, isMember, isLeader } = useAuth()
     const { loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
 
@@ -134,6 +134,64 @@ export default function DashboardPage() {
                     </p>
                 </div>
             </div>
+
+            {/* ── Onboarding: Pending User ── */}
+            {user && profile?.role === "pending" && (
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <div className="flex flex-col items-center text-center gap-3">
+                        <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
+                        <div>
+                            <h2 className="text-lg font-semibold">Welcome to CRC Music!</h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Your account is being reviewed. An admin will approve you shortly.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                        <p>While you wait, you can:</p>
+                        <ul className="space-y-1 ml-4">
+                            <li>• Browse public setlists below</li>
+                            <li>• Set up your instrument profile</li>
+                        </ul>
+                    </div>
+                    <Button onClick={() => router.push("/settings")} variant="outline" className="w-full gap-2">
+                        <Music2 className="w-4 h-4" />
+                        Set Up My Instrument
+                    </Button>
+                </div>
+            )}
+
+            {/* ── Onboarding: First-time approved (no instrument profile) ── */}
+            {user && isMember && profile && !profile.musicianProfile?.instrument && !profile.viewedWelcomeModal && (
+                <div className="bg-card border-2 border-violet-500/30 rounded-2xl p-6 space-y-4">
+                    <div className="text-center">
+                        <span className="text-2xl">🎉</span>
+                        <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Set up your instrument to get transposed charts and personalized gig packets.
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={() => router.push("/settings")} className="flex-1 gap-2">
+                            <Music2 className="w-4 h-4" />
+                            Set Up Instrument
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="text-muted-foreground"
+                            onClick={async () => {
+                                if (user) {
+                                    const { doc, updateDoc } = await import("firebase/firestore")
+                                    const { db } = await import("@/lib/firebase")
+                                    await updateDoc(doc(db, "users", user.uid), { viewedWelcomeModal: true })
+                                }
+                            }}
+                        >
+                            Skip
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* ── Hero: Next Setlist ── */}
             {tonightSetlist ? (
