@@ -27,7 +27,7 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
     // 2. Fetch File Content
     // We need the *actual* PDF content to send to Vision AI
     const fileBuffer = await drive.getFile(fileId)
-    const base64Data = Buffer.from(fileBuffer as any).toString("base64")
+    const base64Data = Buffer.from(fileBuffer as ArrayBuffer).toString("base64")
 
     // 3. Prompt Gemini
     const prompt = `

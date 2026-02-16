@@ -63,6 +63,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 batch.set(docRef, {
                     id: file.id,
                     name: file.name,
+                    nameLower: file.name.toLowerCase(),
                     mimeType: file.mimeType,
                     webViewLink: file.webViewLink || null,
                     parents: file.parents || [],

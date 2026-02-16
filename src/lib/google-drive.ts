@@ -61,7 +61,7 @@ export class DriveClient {
     }
 
     async listAllFiles(folderId?: string) {
-        let allFiles: DriveFileResult[] = []
+        const allFiles: DriveFileResult[] = []
 
         try {
             logger.info(folderId ? `[Drive] Listing folder: ${folderId}` : `[Drive] Global Search (Shared with me)`)

@@ -1,34 +1,18 @@
-
 import { NextRequest, NextResponse } from "next/server"
 import { syncLibraryIndex } from "@/lib/sync-engine"
-import { verifyIdToken } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
-export const maxDuration = 300 // 5 minutes timeout for sync
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Auth Check (Admin Only)
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Missing token" }, { status: 401 })
-        }
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
-        const token = authHeader.split(" ")[1]
-        const decodedToken = await verifyIdToken(token)
-
-        if (!decodedToken) { // In a real app, check role === 'admin'
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-
-        // 2. Run Sync
         const stats = await syncLibraryIndex()
 
-        return NextResponse.json({
-            success: true,
-            stats
-        })
-
+        return NextResponse.json({ success: true, stats })
     } catch (error: unknown) {
         logger.error("Sync API Error:", error)
         return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })

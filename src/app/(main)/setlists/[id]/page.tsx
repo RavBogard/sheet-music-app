@@ -6,8 +6,10 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { useMusicStore, FileType } from "@/lib/store"
 import { SetlistEditor } from "@/components/setlist/SetlistEditor"
-import { createSetlistService } from "@/lib/setlist-firebase"
+import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
+import { DriveFile, SetlistTrack } from "@/types/models"
+import { toDate } from "@/lib/firestore-helpers"
 import { logger } from "@/lib/logger"
 
 export default function SetlistEditorPage() {
@@ -22,10 +24,9 @@ export default function SetlistEditorPage() {
     const { setQueue } = useMusicStore()
     const { user } = useAuth()
 
-    // State to hold the fetched setlist if editing existing
-    const [existingSetlist, setExistingSetlist] = useState<any>(null)
+    const [existingSetlist, setExistingSetlist] = useState<Setlist | null>(null)
     const [loading, setLoading] = useState(id !== 'new')
-    const [guestFiles, setGuestFiles] = useState<any[]>([])
+    const [guestFiles, setGuestFiles] = useState<DriveFile[]>([])
 
     useEffect(() => {
         if (user) {
@@ -33,11 +34,11 @@ export default function SetlistEditorPage() {
         }
     }, [loadLibrary, user])
 
-    // Fetch existing setlist if ID is present
+    // Fetch existing setlist
     useEffect(() => {
         if (id && id !== 'new') {
             const service = createSetlistService(user?.uid || null, user?.displayName || null)
-            const unsubscribe = service.subscribeToSetlist(id, isPublic, (data: any) => {
+            const unsubscribe = service.subscribeToSetlist(id, isPublic, (data: Setlist | null) => {
                 if (data) {
                     setExistingSetlist(data)
                 }
@@ -53,7 +54,7 @@ export default function SetlistEditorPage() {
     useEffect(() => {
         if (!user && existingSetlist?.tracks) {
             const fileIds = existingSetlist.tracks
-                .map((t: any) => t.fileId)
+                .map((t: SetlistTrack) => t.fileId)
                 .filter(Boolean)
 
             if (fileIds.length === 0) return
@@ -76,12 +77,16 @@ export default function SetlistEditorPage() {
     if (loading) return <div className="h-screen flex items-center justify-center text-foreground">Loading...</div>
 
     const isNew = id === 'new'
-
-    // Logic: If new, use pendingItems from store (populated by Import or empty).
-    // If existing, use existingSetlist.
-    const tracks = isNew ? pendingItems : (existingSetlist?.tracks || [])
+    // pendingItems (SetlistItem[]) and existingSetlist.tracks (SetlistTrack[]) share compatible shapes
+    const tracks = isNew
+        ? pendingItems.map(item => ({
+            id: item.id,
+            title: item.name,
+            fileId: item.fileId,
+            transposition: item.transposition,
+        })) as SetlistTrack[]
+        : (existingSetlist?.tracks || [])
     const name = isNew ? "" : existingSetlist?.name
-
     const activeFiles = user ? allFiles : guestFiles
 
     return (
@@ -91,7 +96,7 @@ export default function SetlistEditorPage() {
             initialName={name}
             initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
-            initialEventDate={existingSetlist?.eventDate}
+            initialEventDate={existingSetlist?.eventDate ? toDate(existingSetlist.eventDate) : undefined}
             onBack={() => {
                 clearPending()
                 router.back()
@@ -101,13 +106,9 @@ export default function SetlistEditorPage() {
                 router.push('/setlists')
             }}
             onPlayTrack={(fileId, fileName) => {
-                // Play Logic
-                const trackList = tracks
-
-                const queue = trackList
-                    .filter((t: any) => t.fileId)
-                    .map((t: any) => {
-                        // Determine type from fileId
+                const queue = tracks
+                    .filter((t: SetlistTrack) => t.fileId)
+                    .map((t: SetlistTrack) => {
                         const type: FileType = (t.fileId?.startsWith('db-') || t.fileId?.endsWith('.musicxml') || t.fileId?.endsWith('.xml') || t.fileId?.endsWith('.mxl'))
                             ? 'musicxml'
                             : t.fileId?.endsWith('.chordpro')
@@ -117,14 +118,14 @@ export default function SetlistEditorPage() {
                         return {
                             name: t.title,
                             fileId: t.fileId as string,
-                            type: type,
+                            type,
                             audioFileId: t.audioFileId,
                             bpm: t.bpm,
                             key: t.key
                         }
                     })
 
-                const clickedItemIndex = queue.findIndex((q: any) => q.fileId === fileId)
+                const clickedItemIndex = queue.findIndex(q => q.fileId === fileId)
                 if (clickedItemIndex !== -1) {
                     setQueue(queue, clickedItemIndex, `/setlists/${id}`, id)
                     router.push(`/perform/${fileId}`)

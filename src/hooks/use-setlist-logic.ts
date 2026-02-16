@@ -83,7 +83,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
 
         // Create a copy of current tracks to mutate
-        let newTracks = [...tracks]
+        const newTracks = [...tracks]
 
         edits.forEach(edit => {
             if (edit.action === 'add') {

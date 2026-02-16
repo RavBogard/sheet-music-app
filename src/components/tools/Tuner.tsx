@@ -19,16 +19,16 @@ const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 // Helper: Auto-correlation for pitch detection
 function autoCorrelate(buf: Float32Array, sampleRate: number) {
     // Implements the ACF2+ algorithm
-    let size = buf.length
-    let maxSamples = Math.floor(size / 2)
+    const size = buf.length
+    const maxSamples = Math.floor(size / 2)
     let bestOffset = -1
     let bestCorrelation = 0
     let rms = 0
     let foundGoodCorrelation = false
-    let correlations = new Array(maxSamples)
+    const correlations = new Array(maxSamples)
 
     for (let i = 0; i < size; i++) {
-        let val = buf[i]
+        const val = buf[i]
         rms += val * val
     }
     rms = Math.sqrt(rms / size)
@@ -53,7 +53,7 @@ function autoCorrelate(buf: Float32Array, sampleRate: number) {
         } else if (foundGoodCorrelation) {
             // short-circuit - we found a good correlation, then a bad one, so we'd just see noise from here.
             // Pad a bit and stop.
-            let shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / correlations[bestOffset]
+            const shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / correlations[bestOffset]
             return sampleRate / (bestOffset + (8 * shift))
         }
         lastCorrelation = correlation

@@ -171,14 +171,14 @@ export async function extractChordsFromPdf(
         const viewport = page.getViewport({ scale: 1.0 })
         const textContent = await page.getTextContent()
 
-        const items: TextItem[] = textContent.items
-            .filter((item: any) => item.str && item.str.trim())
-            .map((item: any) => {
-                const x = item.transform[4]
-                const y = item.transform[5]
+        const items: TextItem[] = (textContent.items as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>)
+            .filter(item => item.str && item.str.trim())
+            .map(item => {
+                const x = item.transform?.[4] ?? 0
+                const y = item.transform?.[5] ?? 0
                 const w = item.width || 0
                 const h = item.height || 0
-                return { text: item.str.trim(), x, y, w, h, r: x + w }
+                return { text: item.str!.trim(), x, y, w, h, r: x + w }
             })
 
         const merged = mergeTextItems(items)

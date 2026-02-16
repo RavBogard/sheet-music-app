@@ -11,6 +11,7 @@
 
 import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
+import { DriveClient } from './google-drive'
 import { logger } from "@/lib/logger"
 
 const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
@@ -125,7 +126,7 @@ export async function downloadFromStorage(fileId: string, mimeType?: string): Pr
  * Returns the public URL of the uploaded file.
  */
 export async function copyDriveFileToStorage(
-    driveClient: any,
+    driveClient: DriveClient,
     fileId: string,
     mimeType: string
 ): Promise<string | null> {
@@ -134,15 +135,15 @@ export async function copyDriveFileToStorage(
         let contentType = mimeType
 
         if (mimeType?.startsWith('application/vnd.google-apps.')) {
-            // Google Doc → export as PDF
-            fileData = await driveClient.exportDoc(fileId, 'application/pdf')
+            // Google Doc → export as PDF (googleapis returns ArrayBuffer due to responseType config)
+            fileData = await driveClient.exportDoc(fileId, 'application/pdf') as unknown as ArrayBuffer
             contentType = 'application/pdf'
         } else {
             // Regular file → download directly
-            fileData = await driveClient.getFile(fileId)
+            fileData = await driveClient.getFile(fileId) as unknown as ArrayBuffer
         }
 
-        const buffer = Buffer.from(fileData as any)
+        const buffer = Buffer.from(fileData)
         const url = await uploadToStorage(fileId, buffer, contentType)
         return url
     } catch (error) {

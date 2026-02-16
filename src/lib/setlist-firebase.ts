@@ -49,15 +49,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Subscribe to user's personal setlists (FILTERED)
+        // Subscribe to all setlists owned by this user
         subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
-            // Query: ownerId == userId AND isPublic == false
-            // Note: We might want valid indexes for this. For now client-side filtering can work if dataset is small,
-            // but server-side filtering is better.
-
-            // Simpler query: Just get all owned by user.
-            // Then let the UI separate them? 
-            // Or explicit query:
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("ownerId", "==", userId),
@@ -80,30 +73,26 @@ export function createSetlistService(userId: string | null, userName?: string | 
             });
         },
 
-        // Subscribe to a single setlist (ANY)
-        subscribeToSetlist(id: string, isPublic: boolean, callback: (setlist: Setlist | null) => void) {
+        // Subscribe to a single setlist by ID
+        subscribeToSetlist(id: string, _isPublic: boolean, callback: (setlist: Setlist | null) => void) {
             const docRef = doc(db, COLLECTION_PATH, id);
-            return onSnapshot(docRef, (doc) => {
-                if (doc.exists()) {
-                    callback({ id: doc.id, ...doc.data() } as Setlist);
+            return onSnapshot(docRef, (snap) => {
+                if (snap.exists()) {
+                    callback({ id: snap.id, ...snap.data() } as Setlist);
                 } else {
                     callback(null);
                 }
             });
         },
 
-        // Update a setlist
-        async updateSetlist(id: string, isPublic: boolean, data: Partial<Setlist>) {
+        // Update a setlist (sanitize undefined → null for Firestore)
+        async updateSetlist(id: string, _isPublic: boolean, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
-            // Sanitize data -> remove undefined, or convert to null? Firestore prefers DELETEField for removal, or just ignore.
-            // But if we want to CLEAR a field, we send null.
-            // Typically we want to convert undefined to null to avoid crashes.
             const cleanData = JSON.parse(JSON.stringify(data));
             await updateDoc(docRef, cleanData);
         },
 
-        // Delete a setlist
-        async deleteSetlist(id: string, isPublic: boolean) {
+        async deleteSetlist(id: string, _isPublic: boolean) {
             await deleteDoc(doc(db, COLLECTION_PATH, id));
         },
 

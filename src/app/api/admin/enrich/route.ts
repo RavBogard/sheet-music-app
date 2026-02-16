@@ -1,44 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getFirestore } from "firebase-admin/firestore"
-import { initAdmin } from "@/lib/firebase-admin"
-import { getAuth } from "firebase-admin/auth"
+import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { enrichFile } from "@/lib/enrichment-engine"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
-initAdmin()
-
-
-
 export const dynamic = 'force-dynamic'
-
-// Allow longer timeout for enrichment batch
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Verify Admin
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
+
         initAdmin()
         const db = getFirestore()
 
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        const decodedToken = await getAuth().verifyIdToken(token)
-
-        // Check custom claim or just basic check? 
-        // ideally: if (decodedToken.role !== 'admin') ... 
-        // But for now, valid token is a start, trusting implicit admin check in UI + maybe checking DB role if we were strict.
-        // Let's assume the UI guards it well, but verifying the role is safer.
-        // However, standard custom claims setup might not be fully active on all user tokens yet. 
-        // I will rely on the token verification for now, assuming only admins can access the page that calls this. 
-        // (For production, should strictly check claims).
-
-        // 2. Scan for unenriched
+        // Scan for unenriched files
         const snapshot = await db.collection('library_index')
             .where('metadata.enrichedAt', '==', null)
-            .limit(10) // Slightly higher limit for manual trigger
+            .limit(10)
             .get()
 
         if (snapshot.empty) {
@@ -74,17 +54,9 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        return NextResponse.json({
-            success: true,
-            message: "Enrichment batch complete",
-            stats
-        })
-
+        return NextResponse.json({ success: true, message: "Enrichment batch complete", stats })
     } catch (error: unknown) {
         logger.error("Admin Enrichment Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal server error" },
-            { status: 500 }
-        )
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }
 }

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         const drive = new DriveClient();
 
         // 3. Get Parent Folder of source file
-        const sourceMeta = await drive.getFileMetadata(sourceFileId) as any;
+        const sourceMeta = await drive.getFileMetadata(sourceFileId) as { id?: string; name?: string; mimeType?: string; parents?: string[] };
         const parents = sourceMeta.parents || [];
 
         // 4. Create New File

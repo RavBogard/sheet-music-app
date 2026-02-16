@@ -108,8 +108,8 @@ export async function scanForChordStrips(
             // If the strip is > 100px high, scale it down. Chords are rarely > 50px high.
             // A huge canvas (Retina) might make strips 200px.
 
-            let drawWidth = width;
-            let drawHeight = block.h + 20; // Original Height
+            const drawWidth = width;
+            const drawHeight = block.h + 20; // Original Height
             let targetHeight = drawHeight;
             let targetWidth = width;
 

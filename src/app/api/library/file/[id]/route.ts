@@ -40,8 +40,8 @@ export async function GET(
             }
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error("Fetch Generated Error:", error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal error" }, { status: 500 })
     }
 }

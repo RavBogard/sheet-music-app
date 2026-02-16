@@ -114,7 +114,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const finalItems: typeof merged = []
 
     for (let i = 0; i < merged.length; i++) {
-        let current = { ...merged[i] }
+        const current = { ...merged[i] }
 
         if (/^[A-G]$/.test(current.text.trim())) {
             let chordText = current.text.trim()
