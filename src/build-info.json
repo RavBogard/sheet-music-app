@@ -1,19 +1,20 @@
 {
-  "version": "2.1.0",
-  "commit": "385ce52",
+  "version": "2.2.0",
+  "commit": "2da37af",
   "branch": "master",
   "buildDate": "2/16/2026",
   "changelog": [
+    "2.2.0 - refactor: Complete UI/UX restructure — admin dashboard, clean settings, quick monitor",
+    "2.2.0 - feat: Audio integrated into Library with Charts/Audio tabs and inline player",
+    "2.2.0 - feat: QuickMonitorPanel in performance toolbar (slide-up mixer)",
+    "2.2.0 - feat: Pinned monitor channels persisted per-user in Firestore",
+    "2.2.0 - feat: Admin link in desktop nav + profile dropdown",
+    "2.2.0 - fix: Desktop header — removed fake bell, dead guest code, Audio link",
+    "2.2.0 - fix: Settings page stripped to personal-only (70% smaller)",
     "2.1.0 - feat: Print All Packets — batch-generate transposed gig packets for all musicians",
     "2.1.0 - feat: Library search by topic/tag (in addition to name, key, artist)",
     "2.1.0 - feat: Topic badges displayed on library file rows",
     "2.0.0 - feat: Sticky per-song transposition — your preferred key for each chart persists",
-    "2.0.0 - feat: Firebase Storage migration — CDN-served files replace Google Drive proxy",
-    "2.0.0 - feat: Light theme default with dark mode for performance",
-    "2.0.0 - feat: Musician profiles with CRC ensemble presets",
-    "2.0.0 - feat: Auto-transposition in performance mode",
-    "2.0.0 - feat: Smart prefetch, loading skeletons, chord cache management",
-    "2.0.0 - refactor: Component decomposition, 60+ type errors fixed, strict TypeScript",
-    "2.0.0 - fix: Chord transposer accuracy improvements"
+    "2.0.0 - feat: Firebase Storage migration — CDN-served files replace Google Drive proxy"
   ]
 }

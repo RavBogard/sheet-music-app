@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { ChevronLeft, FolderOpen, Search } from "lucide-react"
+import { ChevronLeft, FolderOpen, Search, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -12,10 +12,24 @@ import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
+import { AudioPlayer } from "@/components/audio/AudioPlayer"
 
 import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { logger } from "@/lib/logger"
+
+type LibraryTab = "charts" | "audio"
+
+function isAudioFile(f: DriveFile) {
+    return f.mimeType.startsWith('audio/') ||
+        /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(f.name)
+}
+
+function isChartFile(f: DriveFile) {
+    return (f.mimeType.includes('pdf') || f.mimeType.includes('xml') ||
+        f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
+        !f.mimeType.startsWith('audio/')
+}
 
 interface SongChartsLibraryProps {
     onBack: () => void
@@ -37,6 +51,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
         { id: null, name: 'Home' }
     ])
+    const [tab, setTab] = useState<LibraryTab>("charts")
+    const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
+    const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
@@ -44,21 +61,21 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     useEffect(() => { setFilter(currentFolderId, searchQuery) }, [currentFolderId, searchQuery, setFilter])
     useEffect(() => { return () => { reset() } }, [reset])
 
-    // Separate folders from files
-    const { folders, files } = useMemo(() => {
+    // Separate folders, charts, and audio
+    const { folders, files, audioFiles } = useMemo(() => {
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
+        const audioFiles: DriveFile[] = []
         displayedFiles.forEach(f => {
             if (f.mimeType.includes('folder')) {
                 folders.push(f)
-            } else if (
-                (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
-                !f.mimeType.startsWith('audio/')
-            ) {
+            } else if (isAudioFile(f)) {
+                audioFiles.push(f)
+            } else if (isChartFile(f)) {
                 files.push(f)
             }
         })
-        return { folders, files }
+        return { folders, files, audioFiles }
     }, [displayedFiles])
 
     const getCleanName = (name: string) =>
@@ -68,6 +85,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         if (item.mimeType.includes('folder')) {
             setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name }])
             setSearchQuery("")
+        } else if (isAudioFile(item)) {
+            setPlayingFile(item)
+            setAudioUrl(`/api/drive/file/${item.id}`)
         } else {
             onSelectFile(item)
         }
@@ -127,7 +147,12 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         }
     }
 
-    const combinedItems = [...folders, ...files]
+    const combinedItems = tab === "audio"
+        ? [...folders, ...audioFiles]
+        : [...folders, ...files]
+
+    const itemCount = tab === "audio" ? audioFiles.length : files.length
+    const hasAudio = audioFiles.length > 0
 
     return (
         <div className="h-screen flex flex-col bg-background text-foreground">
@@ -140,20 +165,48 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <img src="/logo.jpg" alt="CRC" className="h-8 w-8 rounded-full border border-border object-cover" />
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
-                <div className="text-sm text-muted-foreground">{files.length} charts</div>
+                <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
             </div>
 
-            {/* Search & Breadcrumbs */}
+            {/* Search & Tabs & Breadcrumbs */}
             <div className="p-4 border-b border-border space-y-4">
                 <div className="relative max-w-xl mx-auto">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search by name, key, topic..."
+                        placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
                         className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
                     />
                 </div>
+
+                {/* Tabs — only show if audio files exist */}
+                {hasAudio && (
+                    <div className="flex gap-2 max-w-xl mx-auto">
+                        <button
+                            onClick={() => setTab("charts")}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                tab === "charts"
+                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
+                                    : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
+                            }`}
+                        >
+                            Charts ({files.length})
+                        </button>
+                        <button
+                            onClick={() => setTab("audio")}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                                tab === "audio"
+                                    ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/30"
+                                    : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
+                            }`}
+                        >
+                            <Music className="w-3.5 h-3.5" />
+                            Audio ({audioFiles.length})
+                        </button>
+                    </div>
+                )}
+
                 {!searchQuery && (
                     <LibraryBreadcrumbs breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbClick} />
                 )}
@@ -172,8 +225,8 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         {combinedItems.length === 0 && !loading && (
                             <EmptyState
                                 icon={searchQuery ? Search : FolderOpen}
-                                title={searchQuery ? "No matches found" : "This folder is empty"}
-                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Try checking another folder."}
+                                title={searchQuery ? "No matches found" : tab === "audio" ? "No audio files here" : "This folder is empty"}
+                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : tab === "audio" ? "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive." : "Try checking another folder."}
                                 className="py-12"
                             />
                         )}
@@ -187,6 +240,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                 isAdmin={!!isAdmin}
                                 onDigitize={() => handleDigitize(item)}
                                 getCleanName={getCleanName}
+                                isPlaying={playingFile?.id === item.id}
                             />
                         ))}
 
@@ -194,6 +248,19 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     </div>
                 )}
             </ScrollArea>
+
+            {/* Sticky Audio Player */}
+            {playingFile && audioUrl && (
+                <div className="border-t border-border bg-card/95 backdrop-blur-sm px-4 py-3 pb-safe">
+                    <div className="max-w-2xl mx-auto">
+                        <AudioPlayer
+                            src={audioUrl}
+                            title={getCleanName(playingFile.name)}
+                            onEnded={() => { setPlayingFile(null); setAudioUrl(null) }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
