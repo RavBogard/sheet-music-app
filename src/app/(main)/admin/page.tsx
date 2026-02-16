@@ -9,6 +9,7 @@ import { subscribeToAllMusicianProfiles } from "@/lib/musician-profile"
 import { UserProfile, subscribeToAllUsers } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
+import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
 import { MusicianProfile } from "@/types/models"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
 import { SyncStats } from "@/lib/sync-engine"
@@ -71,6 +72,7 @@ export default function AdminDashboard() {
     // ══════════════════════════════════════
     const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
     const [monitorLoading, setMonitorLoading] = useState(true)
+    const [monitorConfigExists, setMonitorConfigExists] = useState(true)
     const [monitorSaving, setMonitorSaving] = useState(false)
     const [monitorSaved, setMonitorSaved] = useState(false)
     const [bridgeUrl, setBridgeUrl] = useState("")
@@ -94,6 +96,7 @@ export default function AdminDashboard() {
                 const data = configDoc.exists()
                     ? { ...DEFAULT_MONITOR_CONFIG, ...configDoc.data() as Partial<MonitorConfig> }
                     : DEFAULT_MONITOR_CONFIG
+                setMonitorConfigExists(configDoc.exists())
                 setBridgeUrl(data.bridgeUrl)
                 setX32Address(data.x32Address)
                 setX32Port(String(data.x32Port))
@@ -339,6 +342,22 @@ export default function AdminDashboard() {
 
                     {monitorLoading ? (
                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                    ) : !monitorConfigExists ? (
+                        <MonitorSetupWizard
+                            bridgeUrl={bridgeUrl}
+                            setBridgeUrl={setBridgeUrl}
+                            x32Address={x32Address}
+                            setX32Address={setX32Address}
+                            onScan={handleScan}
+                            scanning={scanning}
+                            scanResult={scanResult}
+                            monitorBusesStr={monitorBusesStr}
+                            setMonitorBusesStr={setMonitorBusesStr}
+                            musicians={musicians}
+                            authorizedUsers={authorizedUsers}
+                            toggleAuthorized={toggleAuthorized}
+                            onComplete={() => { handleMonitorSave(); setMonitorConfigExists(true) }}
+                        />
                     ) : (
                         <div className="space-y-4">
                             {/* Bridge & X32 */}

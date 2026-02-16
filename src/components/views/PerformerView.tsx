@@ -38,7 +38,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         }
     }, [])
 
-    const bind = useDrag(({ active, movement: [mx, my], velocity: [vx, vy], tap, cancel, event, last }) => {
+    const bind = useDrag(({ active, movement: [mx, my], velocity: [vx, vy], tap, cancel, event, last, initial: [, startY] }) => {
         // 1. Zoom Guard: If zoomed in significantly, disable swipe nav to allow panning
         // We use a small tolerance (1.1) to allow for "fit width" variations which might be slightly > 1
         if (zoom > 1.1) return
@@ -72,25 +72,46 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
             return
         }
 
-        // 3. Swipe / Drag Logic
+        // 3. Swipe Down from Top to Exit Performance Mode
+        const isVerticalDown = my > 0 && Math.abs(my) > Math.abs(mx) * 1.5
+        const startedFromTop = startY < window.innerHeight * 0.2
+
+        if (last && isVerticalDown && startedFromTop && my > 120 && vy > 0.3) {
+            if (viewRef.current) {
+                viewRef.current.style.transform = `translateY(100%)`
+                viewRef.current.style.transition = 'transform 0.3s ease-out'
+            }
+            const { returnPath } = useMusicStore.getState()
+            setTimeout(() => onHome(), 250)
+            return
+        }
+
+        if (active && isVerticalDown && startedFromTop) {
+            if (viewRef.current) {
+                viewRef.current.style.transform = `translateY(${Math.max(0, my * 0.5)}px)`
+                viewRef.current.style.transition = 'none'
+                viewRef.current.style.opacity = `${Math.max(0.3, 1 - my / 400)}`
+            }
+            return
+        }
+
+        // 4. Swipe / Drag Logic (horizontal)
         if (active) {
-            // Visual Feedback (Rubberbanding)
-            // Only move if gesture is mostly horizontal
             if (Math.abs(mx) > Math.abs(my)) {
                 if (viewRef.current) {
-                    // Resistance curve? For now, linear 1:1 is most "native" feeling for pages
                     viewRef.current.style.transform = `translateX(${mx}px)`
                     viewRef.current.style.transition = 'none'
+                    viewRef.current.style.opacity = '1'
                 }
             }
         } else if (last) {
             // Drag End - Determine Action
             const width = window.innerWidth
-            const isHorizontal = Math.abs(mx) > Math.abs(my)
+            const hDrag = Math.abs(mx) > Math.abs(my)
             const isFlick = vx > 0.5 && Math.abs(mx) > 50 // Fast flick
             const isBigDrag = Math.abs(mx) > width * 0.25 // Dragged > 25% of screen
 
-            if (isHorizontal && (isFlick || isBigDrag)) {
+            if (hDrag && (isFlick || isBigDrag)) {
                 // Trigger Navigation
                 if (mx < 0) {
                     // Swiped Left -> Next Song
@@ -133,8 +154,9 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
 
     const snapBack = () => {
         if (viewRef.current) {
-            viewRef.current.style.transform = 'translateX(0px)'
-            viewRef.current.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+            viewRef.current.style.transform = 'translateX(0px) translateY(0px) scale(1)'
+            viewRef.current.style.opacity = '1'
+            viewRef.current.style.transition = 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
         }
     }
 

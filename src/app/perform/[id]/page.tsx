@@ -9,18 +9,24 @@ import { useWakeLock } from "@/hooks/use-wake-lock"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 import { prefetchUpcoming } from "@/lib/prefetch"
 
+import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
+
 import { parseFileId } from "@/lib/utils"
 
 export default function PerformPage() {
     const router = useRouter()
     const params = useParams()
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
-    const { fileUrl, fileType, setFile, playbackQueue, queueIndex } = useMusicStore()
+    const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath } = useMusicStore()
+    const [showIntro, dismissIntro] = usePerformanceIntro()
 
     // Auto-apply musician profile transposition
     useMusicianTransposition()
 
     const fileId = params?.id as string
+
+    // Home navigates back to origin (setlist editor, library, or home)
+    const handleHome = () => router.push(returnPath || '/')
 
     // Sync URL with Store
     useEffect(() => {
@@ -50,12 +56,15 @@ export default function PerformPage() {
     }, [playbackQueue, queueIndex])
 
     return (
-        <PerformerView
-            fileUrl={fileUrl}
-            fileType={fileType}
-            onHome={() => router.push('/')}
-            onSetlist={() => router.push('/setlists')}
-        />
+        <>
+            {showIntro && <PerformanceIntro onDismiss={dismissIntro} />}
+            <PerformerView
+                fileUrl={fileUrl}
+                fileType={fileType}
+                onHome={handleHome}
+                onSetlist={() => router.push('/setlists')}
+            />
+        </>
     )
 }
 

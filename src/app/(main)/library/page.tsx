@@ -43,7 +43,7 @@ export default function LibraryPage() {
     const handleSelectFile = (file: DriveFile) => {
         const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
         const type: FileType = isXml ? 'musicxml' : 'pdf'
-        setFile(`/api/drive/file/${file.id}`, type)
+        setFile(`/api/drive/file/${file.id}`, type, '/library')
         router.push(`/perform/${file.id}`)
     }
 
