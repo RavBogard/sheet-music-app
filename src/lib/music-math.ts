@@ -43,6 +43,12 @@ export function keyUsesFlats(key: string | null): boolean | undefined {
 // Given a root note index and whether we came from a flat/sharp context,
 // determine if we should use flats or sharps for the result
 function shouldUseFlats(newIndex: number, originalAccidental: string, preferFlats?: boolean): boolean {
+    // Strong musical conventions that override preferFlats:
+    // Bb is ALWAYS preferred over A# as a chord root (A# essentially never used)
+    // Eb is strongly preferred over D# as a chord root
+    if (newIndex === 10) return true;  // Always Bb, never A#
+    if (newIndex === 3) return true;   // Always Eb, never D#
+
     // Explicit preference overrides (from musician profile or key context)
     if (preferFlats !== undefined) return preferFlats;
 
@@ -57,7 +63,7 @@ function shouldUseFlats(newIndex: number, originalAccidental: string, preferFlat
     if (sharpName === flatName) return false;
     if (newIndex === 6) return false; // F# preferred over Gb
 
-    // Db, Eb, Ab, Bb preferred over C#, D#, G#, A#
+    // Db, Ab preferred over C#, G#
     return true;
 }
 

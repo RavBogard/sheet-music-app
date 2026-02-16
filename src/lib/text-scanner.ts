@@ -88,10 +88,14 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             const bothChordRelevant = isChordChar(current.text) && isChordChar(next.text);
             // Don't merge two chord roots (e.g. "A" + "B" are separate chords)
             const bothAreRoots = /^[A-G]$/.test(current.text.trim()) && /^[A-G]$/.test(next.text.trim());
-            const maxGap = (isSingleChar && bothChordRelevant && !bothAreRoots) ? (current.h * 1.0) : (current.h * 0.3);
+            // Accidentals may be superscripted — use larger Y tolerance
+            const isAccidental = /^[#b♯♭]+$/.test(next.text.trim());
+            const yThreshold = isAccidental ? (current.h * 1.5) : (current.h * 0.5);
+            const sameLine2 = Math.abs(current.y - next.y) < yThreshold;
+            const maxGap = (isSingleChar && bothChordRelevant && !bothAreRoots) ? (current.h * 1.5) : (current.h * 0.3);
             const isClose = gap >= 0 && gap < maxGap;
 
-            if (sameLine && isClose && (bothChordRelevant || !isSingleChar) && !bothAreRoots) {
+            if ((sameLine || sameLine2) && isClose && (bothChordRelevant || !isSingleChar) && !bothAreRoots) {
                 current = {
                     ...current,
                     text: current.text + next.text,
@@ -125,27 +129,35 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
                 const next = merged[j]
                 const nextText = next.text.trim()
 
-                const isSharpOrFlat = /^[#b♯♭]$/.test(nextText)
+                const isSharpOrFlat = /^[#b♯♭]+$/.test(nextText)
                 const isQuality = /^(m|M|maj|min|dim|aug|sus|add|no|alt|dom)+$/.test(nextText)
                 const isNumber = /^[0-9]+$/.test(nextText)
                 const isCombo = /^(m7|m9|m11|m13|maj7|maj9|min7|dim7|add9|add11|sus4|sus2|no3|no5|dom7)$/.test(nextText)
                 const isParen = /^\([^)]*\)$/.test(nextText)
+                // Also catch accidental+quality combos like "#m", "#m7", "bm"
+                const isAccidentalCombo = /^[#b♯♭](m|M|maj|min|dim|aug|sus|add|no|alt|dom)?[0-9]*$/.test(nextText)
 
-                if (!isSharpOrFlat && !isQuality && !isNumber && !isCombo && !isParen) {
+                if (!isSharpOrFlat && !isQuality && !isNumber && !isCombo && !isParen && !isAccidentalCombo) {
                     break
                 }
 
-                // Y tolerance: generous for all chord parts — music fonts often
-                // render accidentals and qualities at slightly different baselines
-                const yTolerance = isNumber ? (lastItem.h * 2.0) : (lastItem.h * 1.2)
+                // Y tolerance: very generous for accidentals — music fonts often
+                // render sharps/flats significantly above or below the baseline.
+                // Use 2.5x height for accidentals, 2x for numbers, 1.5x for others.
+                const yTolerance = (isSharpOrFlat || isAccidentalCombo)
+                    ? (lastItem.h * 2.5)
+                    : isNumber ? (lastItem.h * 2.0) : (lastItem.h * 1.5)
                 if (Math.abs(lastItem.y - next.y) > yTolerance) {
                     break
                 }
 
                 // X tolerance: music PDFs often have generous spacing between
-                // chord parts — allow up to 2x character height gap
+                // chord parts — allow up to 2.5x character height gap for
+                // accidentals, 2x for numbers, 1.2x for others
                 const gap = next.x - lastItem.r
-                const maxGap = isNumber ? (lastItem.h * 1.5) : (lastItem.h * 0.8)
+                const maxGap = (isSharpOrFlat || isAccidentalCombo)
+                    ? (lastItem.h * 2.5)
+                    : isNumber ? (lastItem.h * 1.5) : (lastItem.h * 1.2)
                 if (gap > maxGap || gap < -lastItem.w) {
                     break
                 }

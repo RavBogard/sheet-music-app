@@ -221,9 +221,13 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const detectedHeight = chord.pxHeight || 16
                 const fontSize = Math.max(12, Math.min(detectedHeight * 0.85, 28))
 
-                // Tight padding — just enough to cover original text
+                // Extend the white background beyond the overlay text to cover
+                // any unmerged original chord fragments (e.g. "#m" that wasn't
+                // merged with the root note). Use the original chord width
+                // from the text scanner as minimum coverage.
+                const chordWidth = chord.w || 0
                 const padV = 0
-                const padH = 1
+                const padH = 2
 
                 // At transposition=0, don't overlay — original PDF text is already correct
                 if (!isChanged) return null
@@ -237,9 +241,14 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             top: `${chord.y}%`,
 
                             margin: `-${padV}px 0 0 -${padH}px`,
-                            padding: `${padV}px ${padH}px`,
+                            padding: `${padV}px ${padH + 2}px ${padV}px ${padH}px`,
 
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            // Ensure white background covers the full extent of the
+                            // original chord in the PDF, preventing bleed-through of
+                            // unmerged accidental/quality fragments
+                            minWidth: chordWidth > 0 ? `${chordWidth}%` : undefined,
+
+                            backgroundColor: 'rgba(255, 255, 255, 0.97)',
                             borderRadius: '1px',
 
                             color: '#6d28d9',

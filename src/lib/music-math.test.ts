@@ -31,7 +31,8 @@ describe('transposeChord', () => {
     describe('accidentals', () => {
         it('transposes sharp notes', () => {
             expect(transposeChord('F#', 1)).toBe('G')
-            expect(transposeChord('C#', 2)).toBe('D#') // Sharp context preserved
+            // Eb is always preferred over D# as a chord root
+            expect(transposeChord('C#', 2)).toBe('Eb')
         })
 
         it('transposes flat notes', () => {
@@ -44,7 +45,8 @@ describe('transposeChord', () => {
             expect(transposeChord('C', 1, true)).toBe('Db')
             expect(transposeChord('C', 1, false)).toBe('C#')
             expect(transposeChord('D', 1, true)).toBe('Eb')
-            expect(transposeChord('D', 1, false)).toBe('D#')
+            // Eb is always preferred over D# even with preferFlats=false
+            expect(transposeChord('D', 1, false)).toBe('Eb')
         })
 
         it('produces consistent accidentals within a key context', () => {
@@ -64,8 +66,10 @@ describe('transposeChord', () => {
         it('preserves sharp convention through transposition', () => {
             // Key of A (sharps): F#m + 2 should stay G#m, not Abm
             expect(transposeChord('F#m', 2)).toBe('G#m')
-            expect(transposeChord('C#m', 2)).toBe('D#m')
-            expect(transposeChord('G#', 2)).toBe('A#')
+            // C#m + 2 = Ebm (Eb is always preferred over D# as a chord root)
+            expect(transposeChord('C#m', 2)).toBe('Ebm')
+            // G# + 2 = Bb (Bb is always preferred over A# as a chord root)
+            expect(transposeChord('G#', 2)).toBe('Bb')
         })
 
         it('preserves flat convention through transposition', () => {
@@ -73,6 +77,29 @@ describe('transposeChord', () => {
             expect(transposeChord('Bbm', 2)).toBe('Cm')
             expect(transposeChord('Ebm', 2)).toBe('Fm')
             expect(transposeChord('Ab', 2)).toBe('Bb')
+        })
+
+        it('never produces A# or D# as chord roots', () => {
+            // These spellings are musically unacceptable as chord roots
+            // Test all possible transpositions that could land on index 10 (Bb) or 3 (Eb)
+            expect(transposeChord('B', -1)).toBe('Bb')      // not A#
+            expect(transposeChord('A', 1)).toBe('Bb')       // not A#
+            expect(transposeChord('G#', 2)).toBe('Bb')      // not A#
+            expect(transposeChord('E', -1)).toBe('Eb')      // not D#
+            expect(transposeChord('D', 1)).toBe('Eb')       // not D#
+            expect(transposeChord('C#m', 2)).toBe('Ebm')    // not D#m
+        })
+
+        it('handles Capo 2 on key of E correctly (Modeh Ani regression)', () => {
+            // Capo 2 = transposition -2: shapes sound 2 semitones lower
+            const t = -2
+            expect(transposeChord('E', t)).toBe('D')
+            expect(transposeChord('B', t)).toBe('A')
+            expect(transposeChord('A', t)).toBe('G')
+            expect(transposeChord('G#m', t)).toBe('F#m')
+            expect(transposeChord('C#m', t)).toBe('Bm')     // NOT A#m
+            expect(transposeChord('F#m7', t)).toBe('Em7')   // NOT D#m, preserves 7
+            expect(transposeChord('D', t)).toBe('C')
         })
     })
 
