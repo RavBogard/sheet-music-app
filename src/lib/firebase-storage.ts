@@ -42,9 +42,15 @@ function getStoragePath(fileId: string, mimeType?: string): string {
 export async function fileExistsInStorage(fileId: string, mimeType?: string): Promise<boolean> {
     try {
         const bucket = getBucket()
-        const file = bucket.file(getStoragePath(fileId, mimeType))
-        const [exists] = await file.exists()
-        return exists
+        const paths = mimeType
+            ? [getStoragePath(fileId, mimeType)]
+            : [getStoragePath(fileId), getStoragePath(fileId, 'pdf'), getStoragePath(fileId, 'xml'), getStoragePath(fileId, 'audio')]
+
+        for (const path of paths) {
+            const [exists] = await bucket.file(path).exists()
+            if (exists) return true
+        }
+        return false
     } catch {
         return false
     }
@@ -98,23 +104,36 @@ export async function getStorageUrl(fileId: string, mimeType?: string): Promise<
 /**
  * Download a file from Storage as a Buffer.
  * Returns null if the file doesn't exist.
+ * When mimeType is unknown, tries common extensions.
  */
 export async function downloadFromStorage(fileId: string, mimeType?: string): Promise<{ buffer: Buffer; contentType: string } | null> {
     try {
         const bucket = getBucket()
-        const path = getStoragePath(fileId, mimeType)
-        const file = bucket.file(path)
-        
-        const [exists] = await file.exists()
-        if (!exists) return null
 
-        const [buffer] = await file.download()
-        const [metadata] = await file.getMetadata()
-        
-        return {
-            buffer: Buffer.from(buffer),
-            contentType: metadata.contentType || 'application/pdf'
+        // Build list of paths to try
+        const paths = mimeType
+            ? [getStoragePath(fileId, mimeType)]
+            : [
+                getStoragePath(fileId),           // no extension
+                getStoragePath(fileId, 'pdf'),     // .pdf
+                getStoragePath(fileId, 'xml'),     // .xml
+                getStoragePath(fileId, 'audio'),   // .mp3
+            ]
+
+        for (const path of paths) {
+            const file = bucket.file(path)
+            const [exists] = await file.exists()
+            if (exists) {
+                const [buffer] = await file.download()
+                const [metadata] = await file.getMetadata()
+                return {
+                    buffer: Buffer.from(buffer),
+                    contentType: metadata.contentType || 'application/pdf'
+                }
+            }
         }
+
+        return null
     } catch {
         return null
     }
