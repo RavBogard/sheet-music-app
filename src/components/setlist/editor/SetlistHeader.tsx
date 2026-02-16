@@ -76,7 +76,7 @@ export function SetlistHeader({
 
             {/* Presence Avatars */}
             {presence.length > 0 && (
-                <div className="flex items-center -space-x-2 shrink-0" title={presence.map(p => p.displayName).join(", ")}>
+                <div className="flex items-center -space-x-2 shrink-0" aria-label={`${presence.length} ${presence.length === 1 ? 'person' : 'people'} viewing: ${presence.map(p => p.displayName).join(", ")}`} role="status">
                     {presence.slice(0, 4).map(p => (
                         <div key={p.uid} className="w-7 h-7 rounded-full bg-violet-500/20 border-2 border-background flex items-center justify-center text-[10px] font-bold text-violet-400">
                             {p.displayName.charAt(0).toUpperCase()}
@@ -96,6 +96,8 @@ export function SetlistHeader({
                     size="sm"
                     variant={liveEnabled ? "default" : "outline"}
                     onClick={onToggleLive}
+                    aria-pressed={liveEnabled}
+                    aria-label={liveEnabled ? "Disable live sync" : "Enable live sync"}
                     className={`gap-1.5 shrink-0 ${liveEnabled ? "bg-red-600 hover:bg-red-500 text-white" : ""}`}
                 >
                     <Radio className={`h-3.5 w-3.5 ${liveEnabled ? "animate-pulse" : ""}`} />

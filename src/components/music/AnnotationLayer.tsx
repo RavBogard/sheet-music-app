@@ -126,6 +126,8 @@ export function AnnotationLayer({ pageNumber, width, height }: AnnotationLayerPr
                 viewBox="0 0 1 1"
                 preserveAspectRatio="none"
                 className="absolute inset-0 w-full h-full"
+                aria-label={isAnnotating ? "Annotation drawing area" : `Chart annotations (${annotations.length})`}
+                role="img"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}

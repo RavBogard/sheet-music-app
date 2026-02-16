@@ -58,7 +58,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="text-xs text-muted-foreground/40">
-                    Central Reform Congregation · St. Louis, MO
+                    {congregation.name} · {congregation.location}
                 </p>
             </div>
         </div>

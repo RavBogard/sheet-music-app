@@ -66,6 +66,8 @@ export function LiveNotification({ setlistId }: LiveNotificationProps) {
     return (
         <button
             onClick={handleJump}
+            role="alert"
+            aria-label={`${notification.updatedByName} moved to ${notification.trackName}. Tap to jump.`}
             className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] bg-red-600/95 backdrop-blur-sm text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top duration-300"
         >
             <Radio className="w-4 h-4 animate-pulse shrink-0" />
@@ -86,8 +88,8 @@ export function LiveBadge({ setlistId }: { setlistId: string | null }) {
     if (!liveState?.enabled) return null
 
     return (
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600/20 border border-red-500/30 rounded-full">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600/20 border border-red-500/30 rounded-full" aria-label="Live sync active" role="status">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
             <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Live</span>
         </div>
     )

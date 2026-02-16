@@ -21,12 +21,14 @@ export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarPro
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[60] bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-700 safe-area-bottom">
-            <div className="flex items-center justify-center gap-1 px-3 py-2 max-w-lg mx-auto">
+            <div className="flex items-center justify-center gap-1 px-3 py-2 max-w-lg mx-auto" role="toolbar" aria-label="Annotation tools">
                 {/* Tools */}
                 {TOOLS.map(({ tool, icon: Icon, label }) => (
                     <button
                         key={tool}
                         onClick={() => setTool(tool)}
+                        aria-label={`${label} tool`}
+                        aria-pressed={activeTool === tool}
                         className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
                             activeTool === tool
                                 ? "bg-white/15 text-white"
@@ -42,10 +44,12 @@ export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarPro
                 <div className="w-px h-8 bg-zinc-700 mx-1" />
 
                 {/* Colors */}
-                {ANNOTATION_COLORS.map(({ hex }) => (
+                {ANNOTATION_COLORS.map(({ hex, label }) => (
                     <button
                         key={hex}
                         onClick={() => setColor(hex)}
+                        aria-label={`${label} color`}
+                        aria-pressed={activeColor === hex}
                         className={`w-6 h-6 rounded-full border-2 transition-transform ${
                             activeColor === hex ? "border-white scale-125" : "border-transparent"
                         }`}
@@ -60,7 +64,7 @@ export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarPro
                 <button
                     onClick={() => undoLastAnnotation(currentPage)}
                     className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10"
-                    title="Undo"
+                    aria-label="Undo last annotation"
                 >
                     <Undo2 className="w-4 h-4" />
                 </button>
@@ -71,7 +75,7 @@ export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarPro
                         }
                     }}
                     className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-white/10"
-                    title="Clear page"
+                    aria-label="Clear all annotations on page"
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
