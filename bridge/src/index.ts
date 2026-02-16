@@ -122,6 +122,18 @@ async function main() {
             return
         }
 
+        if (req.url === "/health") {
+            // Simple health check for Docker/monitoring — returns 200 if running
+            const uptime = process.uptime()
+            res.end(JSON.stringify({
+                status: "ok",
+                uptime: Math.round(uptime),
+                x32Connected: x32.isConnected(),
+                clients: ws.getConnectedCount(),
+            }))
+            return
+        }
+
         if (req.url === "/status") {
             res.end(JSON.stringify({
                 x32Connected: x32.isConnected(),

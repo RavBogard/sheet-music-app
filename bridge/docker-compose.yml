@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  bridge:
+    build: .
+    container_name: centralreform-bridge
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # WebSocket (iPad connections)
+      - "9001:9001"   # HTTP API (scan, status, health)
+    volumes:
+      # Mount your Firebase service account key
+      # Download from: Firebase Console → Project Settings → Service Accounts
+      - ./service-account-key.json:/app/service-account-key.json:ro
+    environment:
+      - WS_PORT=9000
+      - HTTP_PORT=9001
+      - FIREBASE_SA_KEY_PATH=/app/service-account-key.json
+      - NODE_ENV=production
+    # The bridge needs UDP access to the X32 on the local network.
+    # host networking gives direct LAN access for OSC discovery + communication.
+    network_mode: host
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

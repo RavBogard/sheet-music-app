@@ -2,49 +2,6 @@
 
 A lightweight Node.js server that runs on the production PC at CRC, bridging WebSocket connections from musicians' iPads to OSC commands for the Behringer X32 mixer.
 
-## Quick Setup
-
-### 1. Install
-
-```bash
-cd bridge
-npm install
-```
-
-### 2. Firebase Service Account
-
-1. Go to [Firebase Console](https://console.firebase.google.com) → Your Project → Project Settings → Service Accounts
-2. Click "Generate New Private Key"
-3. Save the JSON file as `bridge/service-account-key.json`
-
-### 3. Configure
-
-```bash
-cp .env.example .env
-# Edit .env — usually just the FIREBASE_SA_KEY_PATH
-```
-
-The X32 IP address and monitor bus configuration are managed through the CentralReform web app at `/monitor/admin`. No need to edit them here.
-
-### 4. Run
-
-```bash
-# Development (auto-restart on changes)
-npm run dev
-
-# Production
-npm run build
-npm start
-```
-
-### 5. Install as Windows Service (optional)
-
-To run the bridge automatically on PC startup:
-
-```bash
-npm run install-service
-```
-
 ## Architecture
 
 ```
@@ -55,15 +12,127 @@ iPad Browser ──WebSocket──► Bridge Server ──OSC/UDP──► X32
                               └── Syncs fader state bidirectionally
 ```
 
-## Configuration (via web app)
+## Quick Start
 
-All configuration is done through the CentralReform web app at `/monitor/admin`:
+### Prerequisites
 
-- **Bridge URL**: The WebSocket address (e.g., `ws://192.168.1.50:9000`)
-- **X32 IP**: The mixer's network address
-- **Monitor Buses**: Which buses are available as monitor sends
-- **Bus Assignments**: Which musician gets which bus
-- **Authorized Users**: Who can see the Monitor tab
+- Node.js 20+ (or Docker)
+- Firebase service account key (see below)
+- X32 mixer on the same network as this PC
+
+### 1. Get the Firebase Service Account Key
+
+1. Go to [Firebase Console](https://console.firebase.google.com) → Your Project → Project Settings → Service Accounts
+2. Click **"Generate New Private Key"**
+3. Save the JSON file as `bridge/service-account-key.json`
+
+### 2. Choose a Deployment Method
+
+---
+
+#### Option A: Docker (recommended)
+
+The simplest way to run the bridge with auto-restart and logging.
+
+```bash
+cd bridge
+
+# Place your service-account-key.json in this directory, then:
+docker compose up -d
+```
+
+That's it. The bridge starts, auto-restarts on crash or reboot, and logs are managed automatically.
+
+**Useful commands:**
+```bash
+docker compose logs -f          # Watch logs
+docker compose restart           # Restart
+docker compose down              # Stop
+docker compose up -d --build     # Rebuild after code changes
+```
+
+**Health check:**
+```bash
+curl http://localhost:9001/health
+```
+
+---
+
+#### Option B: Windows Service
+
+For running directly on Windows without Docker.
+
+```bash
+cd bridge
+npm install
+npm run build
+
+# Install as auto-start Windows service:
+npm install -g node-windows
+npm run install-service
+```
+
+**Manage the service:**
+```bash
+npm run uninstall-service        # Remove auto-start service
+```
+
+The service starts automatically on boot and restarts on crash.
+
+---
+
+#### Option C: Manual / Development
+
+```bash
+cd bridge
+npm install
+cp .env.example .env             # Edit if needed (defaults are fine)
+
+npm run dev                      # Development (auto-restart on file changes)
+
+# — or —
+
+npm run build
+npm start                        # Production
+```
+
+---
+
+## Configuration
+
+**All configuration is done through the CentralReform web app** at `/admin` → Sound System section (or the Setup Wizard for first-time config).
+
+The web app manages:
+
+| Setting | Description |
+|---------|-------------|
+| Bridge URL | WebSocket address (e.g., `ws://192.168.1.50:9000`) |
+| X32 IP | Mixer's network address (auto-discovered on bridge startup) |
+| Monitor Buses | Which buses are available as monitor sends |
+| Bus Assignments | Which musician gets which bus |
+| Authorized Users | Who can access the Monitor tab |
+
+You don't need to edit any config files on the bridge server — it reads everything from Firestore in real time.
+
+## HTTP API
+
+The bridge exposes a small HTTP API on port 9001:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check — returns `{ status: "ok", uptime, x32Connected, clients }` |
+| `GET /status` | Full status — X32 connection, address, client count, bus list |
+| `GET /scan` | Scan local network for X32 mixers (used by admin Setup Wizard) |
+
+## Ports
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 9000 | WebSocket | iPad connections |
+| 9001 | HTTP | API (health, status, scan) |
+| 10023 | UDP (outbound) | OSC commands to X32 |
+
+Make sure your firewall allows inbound connections on ports 9000 and 9001.
 
 ## Troubleshooting
 
@@ -73,3 +142,26 @@ All configuration is done through the CentralReform web app at `/monitor/admin`:
 | iPads can't connect | Check firewall allows port 9000, verify WiFi is on same subnet |
 | Fader changes not syncing | Verify `/xremote` subscription (check bridge logs) |
 | Auth failures | Regenerate service account key, check it's in the right path |
+| Docker can't reach X32 | Uses `network_mode: host` — ensure Docker has LAN access |
+| Health check failing | Check that port 9001 is not blocked |
+
+## File Structure
+
+```
+bridge/
+├── Dockerfile                 # Container image definition
+├── docker-compose.yml         # One-command deployment
+├── .dockerignore
+├── .env.example               # Environment variable template
+├── package.json
+├── tsconfig.json
+├── scripts/
+│   ├── install-service.js     # Windows service installer
+│   └── uninstall-service.js   # Windows service uninstaller
+└── src/
+    ├── index.ts               # Entry point — startup, HTTP API
+    ├── config.ts              # Firestore config manager
+    ├── ws-server.ts           # WebSocket server for iPads
+    ├── x32-client.ts          # OSC client for Behringer X32
+    └── types.ts               # TypeScript interfaces
+```

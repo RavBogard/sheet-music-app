@@ -38,6 +38,56 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         }
     }, [])
 
+    // Keyboard shortcuts for page turners and desktop use
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Skip if user is typing in an input
+            if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
+
+            switch (e.key) {
+                case 'ArrowRight':
+                case 'PageDown': {
+                    e.preventDefault()
+                    const el = viewRef.current
+                    if (el) {
+                        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20
+                        if (atBottom && playbackQueue.length > 1) {
+                            const next = nextSong()
+                            if (next) router.push(`/perform/${next.fileId}`)
+                        } else {
+                            el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'smooth' })
+                        }
+                    }
+                    break
+                }
+                case 'ArrowLeft':
+                case 'PageUp': {
+                    e.preventDefault()
+                    const el = viewRef.current
+                    if (el) {
+                        const atTop = el.scrollTop <= 20
+                        if (atTop && playbackQueue.length > 1) {
+                            const prev = prevSong()
+                            if (prev) router.push(`/perform/${prev.fileId}`)
+                        } else {
+                            el.scrollBy({ top: -el.clientHeight * 0.85, behavior: 'smooth' })
+                        }
+                    }
+                    break
+                }
+                case 'Escape':
+                    onHome()
+                    break
+                case ' ':
+                    e.preventDefault()
+                    setToolbarVisible(prev => !prev)
+                    break
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [playbackQueue, nextSong, prevSong, router, onHome])
+
     const bind = useDrag(({ active, movement: [mx, my], velocity: [vx, vy], tap, cancel, event, last, initial: [, startY] }) => {
         // 1. Zoom Guard: If zoomed in significantly, disable swipe nav to allow panning
         // We use a small tolerance (1.1) to allow for "fit width" variations which might be slightly > 1

@@ -93,6 +93,12 @@ service cloud.firestore {
       allow write: if false; // Read-only archive
     }
 
+    // CONGREGATION CONFIG (branding, feature flags)
+    match /config/congregation {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // MONITOR CONFIGURATION
     // Read: Any signed-in user (iPad checks authorization client-side + bridge verifies)
     // Write: Admins always; authorized users can update (for bus self-assignment)
