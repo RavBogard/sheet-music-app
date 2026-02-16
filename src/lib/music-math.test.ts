@@ -74,13 +74,13 @@ describe('transposeChord', () => {
 
     describe('slash chords', () => {
         it('transposes both root and bass note', () => {
-            expect(transposeChord('G/B', 2)).toBe('A/Db')
-            expect(transposeChord('C/E', 2)).toBe('D/Gb')
+            expect(transposeChord('G/B', 2)).toBe('A/C#')
+            expect(transposeChord('C/E', 2)).toBe('D/F#')
             expect(transposeChord('Am/G', 2)).toBe('Bm/A')
         })
 
         it('transposes slash chords with accidental bass', () => {
-            expect(transposeChord('D/F#', 2)).toBe('E/Ab')
+            expect(transposeChord('D/F#', 2)).toBe('E/G#')
         })
     })
 

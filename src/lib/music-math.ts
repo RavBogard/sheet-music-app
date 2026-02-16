@@ -148,7 +148,7 @@ export function calculateCapo(originalKey: string, targetShape: string): { fret:
 
     return {
         fret: capoFret,
-        transposition: -capoFret
+        transposition: -capoFret || 0
     };
 }
 

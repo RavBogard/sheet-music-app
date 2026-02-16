@@ -23,7 +23,8 @@ describe('chord-cache', () => {
                     data: {
                         chords: mockChords,
                         scannedAt: '2025-01-01',
-                        scanMethod: 'textLayer'
+                        scanMethod: 'textLayer',
+                        cacheVersion: 2
                     }
                 })
             })

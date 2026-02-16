@@ -58,6 +58,12 @@ describe('getContextualGreeting', () => {
             expect(result.text).toBe('Welcome to CRC Music')
         })
 
+        it('uses custom appName for guest greeting', () => {
+            const date = new Date('2026-03-10T14:00:00')
+            const result = getContextualGreeting(null, date, 'Temple Music')
+            expect(result.text).toBe('Welcome to Temple Music')
+        })
+
         it('says Shabbat Shalom without name for guests on Shabbat', () => {
             const date = new Date('2026-03-20T18:00:00') // Friday evening
             const result = getContextualGreeting(null, date)
