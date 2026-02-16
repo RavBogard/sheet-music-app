@@ -80,7 +80,7 @@ export function DesktopHeader() {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
+        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-md border-b border-border overflow-hidden">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
@@ -105,7 +105,7 @@ export function DesktopHeader() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 lg:gap-4 shrink-0">
                 {user ? (
                     <>
                         {!isOnline && (
@@ -136,7 +136,7 @@ export function DesktopHeader() {
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-64 bg-muted border-border rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                className="w-48 lg:w-64 bg-muted border-border rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
                             />
                             {showResults && searchResults.length > 0 && (
                                 <div className="absolute top-full mt-2 left-0 right-0 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-50">

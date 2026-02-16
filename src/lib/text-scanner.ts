@@ -182,8 +182,49 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         }
     }
 
+    // 4.5. Reverse merge: catch orphaned accidentals/qualities
+    // If an item starts with #/b followed by quality (e.g. "#m", "#m7", "b7"),
+    // and the previous item is a bare chord root, merge them backwards.
+    const cleanedItems: typeof finalItems = []
+    for (let i = 0; i < finalItems.length; i++) {
+        const item = finalItems[i]
+        const text = item.text.trim()
+
+        // Check if this item is an orphaned accidental+quality fragment
+        const isOrphanedFragment = /^[#b♯♭](m|M|maj|min|dim|aug|sus|add|no|alt|dom)?[0-9]*$/.test(text)
+            || /^[#b♯♭]$/.test(text)
+
+        if (isOrphanedFragment && cleanedItems.length > 0) {
+            const prev = cleanedItems[cleanedItems.length - 1]
+            const prevText = prev.text.trim()
+
+            // Previous item should end with a chord root letter
+            if (/[A-G]$/.test(prevText)) {
+                // Check proximity: generous tolerances for music PDFs
+                const gap = item.x - prev.r
+                const yDiff = Math.abs(prev.y - item.y)
+                const maxGap = prev.h * 3.0  // Very generous for accidentals
+                const maxYDiff = prev.h * 2.5
+
+                if (gap < maxGap && gap >= -prev.w && yDiff < maxYDiff) {
+                    // Merge into previous
+                    cleanedItems[cleanedItems.length - 1] = {
+                        ...prev,
+                        text: prevText + text,
+                        r: item.r,
+                        w: item.r - prev.x,
+                        h: Math.max(prev.h, item.h),
+                        b: Math.max(prev.b, item.b),
+                    }
+                    continue
+                }
+            }
+        }
+        cleanedItems.push(item)
+    }
+
     // 5. Filter for chords
-    for (const item of finalItems) {
+    for (const item of cleanedItems) {
         const text = item.text.trim();
 
         // Clean stray characters; strip isolated closing parens

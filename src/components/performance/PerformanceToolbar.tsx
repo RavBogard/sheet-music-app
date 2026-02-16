@@ -73,35 +73,25 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
             {/* ── MOBILE/TABLET: Two-row layout ── */}
             <div className="lg:hidden w-full">
 
-                {/* Row 1: Song Navigation — always centered */}
-                <div className="w-full h-12 flex items-center justify-center border-b border-zinc-900/50 px-2">
-                    <SongNavigation />
-                </div>
+                {/* Row 1 (top): Annotate + Tools + Transposer */}
+                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-zinc-900/50">
 
-                {/* Row 2: Tools */}
-                <div className="w-full h-11 flex items-center justify-between px-3">
+                    {/* Left: Annotate */}
+                    <Button
+                        variant="ghost" size="icon"
+                        onClick={() => setAnnotating(!isAnnotating)}
+                        className={cn("h-9 w-9 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
 
-                    {/* Left: Home + Annotate */}
-                    <div className="flex items-center gap-1.5">
-                        <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-9 w-9 hover:bg-zinc-800 rounded-xl">
-                            <Home className="h-4.5 w-4.5" />
-                        </Button>
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setAnnotating(!isAnnotating)}
-                            className={cn("h-9 w-9 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
-                        >
-                            <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-
-                    {/* Right: Tools + Transposer + Setlist */}
-                    <div className="flex items-center gap-1.5">
+                    {/* Right: Tools + Transposer */}
+                    <div className="flex items-center gap-2">
 
                         {/* Tools popover */}
                         <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                             <PopoverTrigger asChild>
-                                <button className="h-8 px-2.5 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-[11px] font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
+                                <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
                                     <Wrench className="h-3.5 w-3.5" />
                                 </button>
                             </PopoverTrigger>
@@ -131,7 +121,7 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                             <PopoverTrigger asChild>
                                 <button
                                     className={cn(
-                                        "h-8 px-3 rounded-lg border text-[11px] font-semibold transition-all flex items-center gap-1.5",
+                                        "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5",
                                         aiState.isEnabled
                                             ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                                             : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
@@ -142,14 +132,31 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                                     ) : (
                                         <Sparkles className="h-3.5 w-3.5 shrink-0" />
                                     )}
-                                    <span className="truncate max-w-[80px]">{buttonLabel}</span>
+                                    <span className="truncate max-w-[90px]">{buttonLabel}</span>
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
                                 <TransposerMenu />
                             </PopoverContent>
                         </Popover>
+                    </div>
+                </div>
 
+                {/* Row 2 (bottom): Home + Song Navigation + Setlist — big tap targets */}
+                <div className="w-full h-14 flex items-center px-2 gap-1">
+
+                    {/* Home */}
+                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl shrink-0">
+                        <Home className="h-6 w-6" />
+                    </Button>
+
+                    {/* Song Navigation — centered, fills remaining space */}
+                    <div className="flex-1 min-w-0">
+                        <SongNavigation />
+                    </div>
+
+                    {/* Setlist drawer */}
+                    <div className="shrink-0">
                         <SetlistDrawer />
                     </div>
                 </div>
