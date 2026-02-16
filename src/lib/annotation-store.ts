@@ -114,7 +114,14 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         }
     },
 
-    setAnnotating: (v) => set({ isAnnotating: v }),
+    setAnnotating: (v) => {
+        set({ isAnnotating: v })
+        // Save immediately when closing annotation mode
+        if (!v && get().uid && get().fileId) {
+            if (saveTimer) clearTimeout(saveTimer)
+            get().save()
+        }
+    },
     setTool: (tool) => set({ activeTool: tool }),
     setColor: (color) => set({ activeColor: color }),
 }))

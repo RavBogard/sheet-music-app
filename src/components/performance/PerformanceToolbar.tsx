@@ -17,7 +17,6 @@ import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAnnotationStore } from "@/lib/annotation-store"
 import { AnnotationToolbar } from "@/components/music/AnnotationToolbar"
 import { cn } from "@/lib/utils"
-import { LiveIndicator } from "./LiveIndicator"
 
 interface PerformanceToolbarProps {
     onHome: () => void
