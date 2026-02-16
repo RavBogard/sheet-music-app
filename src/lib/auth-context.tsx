@@ -5,6 +5,7 @@ import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut }
 import { auth, googleProvider } from "./firebase"
 import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
+import { logger } from "@/lib/logger"
 
 interface AuthContextType {
     user: User | null
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setLoading(false)
                     })
                 } catch (e) {
-                    console.error("Error fetching user profile", e)
+                    logger.error("Error fetching user profile", e)
                     setLoading(false)
                 }
             } else {
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             await signInWithPopup(auth, googleProvider)
         } catch (error) {
-            console.error("Sign in error:", error)
+            logger.error("Sign in error:", error)
         }
     }
 
@@ -81,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             await firebaseSignOut(auth)
         } catch (error) {
-            console.error("Sign out error:", error)
+            logger.error("Sign out error:", error)
         }
     }
 

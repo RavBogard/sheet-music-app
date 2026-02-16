@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { DriveClient } from "@/lib/google-drive"
 import { downloadFromStorage } from "@/lib/firebase-storage"
+import { logger } from "@/lib/logger"
 
 export async function GET(
     request: Request,
@@ -56,7 +57,7 @@ export async function GET(
             }
         })
     } catch (error) {
-        console.error("File Proxy Error:", error)
+        logger.error("File Proxy Error:", error)
         return new NextResponse("Internal Error", { status: 500 })
     }
 }

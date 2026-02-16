@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
             return new NextResponse("No IDs provided", { status: 400 })
         }
 
-        console.log(`[Prune] Deleting ${fileIds.length} docs...`)
+        logger.info(`[Prune] Deleting ${fileIds.length} docs...`)
 
         initAdmin()
         const db = getFirestore()
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
         })
 
     } catch (error: unknown) {
-        console.error("Prune Execute Failed:", error)
+        logger.error("Prune Execute Failed:", error)
         return new NextResponse((error instanceof Error ? error.message : "Unknown error") || "Internal Server Error", { status: 500 })
     }
 }

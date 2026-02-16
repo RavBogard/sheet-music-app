@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import buildInfo from "@/build-info.json"
+import { logger } from "@/lib/logger"
 import {
     Loader2, Users, Radio, Database, Repeat, CheckCircle, ShieldAlert,
     Radar, Save, Settings2, ShieldCheck, AlertTriangle,
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
                 setBusAssignments(data.busAssignments || {})
                 setAuthorizedUsers(data.authorizedUsers || [])
             } catch (err) {
-                console.error("Failed to load monitor config:", err)
+                logger.error("Failed to load monitor config:", err)
             } finally {
                 setMonitorLoading(false)
             }
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
             toast.success("Monitor config saved")
             setTimeout(() => setMonitorSaved(false), 2000)
         } catch (err) {
-            console.error("Failed to save:", err)
+            logger.error("Failed to save:", err)
             toast.error("Failed to save monitor config")
         } finally { setMonitorSaving(false) }
     }, [bridgeUrl, x32Address, x32Port, monitorBusesStr, busAssignments, authorizedUsers])

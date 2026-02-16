@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
     try {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: unknown) {
-        console.error("Save Generated Error:", error)
+        logger.error("Save Generated Error:", error)
         return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }
 }

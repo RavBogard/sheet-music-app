@@ -3,6 +3,7 @@ import { geminiFlash, geminiProVision } from "@/lib/gemini";
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
 import { DriveClient } from "@/lib/google-drive";
+import { logger } from "@/lib/logger"
 
 // Ensure Firebase Admin is initialized
 initAdmin();
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ xml: cleanXml });
 
     } catch (error: unknown) {
-        console.error("OMR Error:", error);
+        logger.error("OMR Error:", error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }

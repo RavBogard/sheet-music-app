@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { transferSetlistSchema } from "@/lib/validations"
 import { version } from "os"
+import { logger } from "@/lib/logger"
 
 export async function POST(request: Request) {
     try {
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
         })
 
     } catch (error: unknown) {
-        console.error("Transfer Error:", error)
+        logger.error("Transfer Error:", error)
         return new NextResponse(`Error: ${(error instanceof Error ? error.message : "Unknown error")}`, { status: 500 })
     }
 }

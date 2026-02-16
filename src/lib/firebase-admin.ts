@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { logger } from "@/lib/logger"
 
 export { getAuth, getFirestore };
 
@@ -14,7 +15,7 @@ export function initAdmin() {
     if (getApps().length === 0) {
         const { projectId, clientEmail, privateKey } = serviceAccount;
         if (!projectId || !clientEmail || !privateKey) {
-            console.warn("Firebase Admin credentials missing (Build/Dev). Skipping initialization.");
+            logger.warn("Firebase Admin credentials missing (Build/Dev). Skipping initialization.");
             return;
         }
         initializeApp({
@@ -31,7 +32,7 @@ export async function verifyIdToken(token: string) {
         const decodedToken = await getAuth().verifyIdToken(token);
         return decodedToken;
     } catch (error) {
-        console.error("Token verification failed:", error);
+        logger.error("Token verification failed:", error);
         return null;
     }
 }

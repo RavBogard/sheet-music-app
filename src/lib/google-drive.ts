@@ -1,4 +1,5 @@
 import { google } from "googleapis"
+import { logger } from "@/lib/logger"
 
 interface DriveFileResult {
     id: string
@@ -31,7 +32,7 @@ export class DriveClient {
                     private_key: json.private_key,
                 }
             } catch (e) {
-                console.error("[Auth] Failed to parse GOOGLE_CREDENTIALS_JSON", e)
+                logger.error("[Auth] Failed to parse GOOGLE_CREDENTIALS_JSON", e)
             }
         }
 
@@ -46,7 +47,7 @@ export class DriveClient {
         }
 
         if (!credentials) {
-            console.error("[Auth] Missing Google Drive Credentials (JSON or EMAIL/KEY)")
+            logger.error("[Auth] Missing Google Drive Credentials (JSON or EMAIL/KEY)")
         }
 
         const auth = new google.auth.GoogleAuth({
@@ -63,7 +64,7 @@ export class DriveClient {
         let allFiles: DriveFileResult[] = []
 
         try {
-            console.log(folderId ? `[Drive] Listing folder: ${folderId}` : `[Drive] Global Search (Shared with me)`)
+            logger.info(folderId ? `[Drive] Listing folder: ${folderId}` : `[Drive] Global Search (Shared with me)`)
 
             // If folderId is provided, search inside it. If not, search EVERYTHING (except folders)
             const q = folderId
@@ -92,7 +93,7 @@ export class DriveClient {
             if (folderId) {
                 const folders = allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
                 if (folders.length > 0) {
-                    console.log(`[Drive] Digging into ${folders.length} subfolders...`)
+                    logger.info(`[Drive] Digging into ${folders.length} subfolders...`)
                     const subFolderResults = await Promise.all(
                         folders.map(folder => this.listAllFiles(folder.id))
                     )
@@ -102,7 +103,7 @@ export class DriveClient {
 
             return allFiles
         } catch (error) {
-            console.error(`[Drive] List Error:`, error)
+            logger.error(`[Drive] List Error:`, error)
             return allFiles
         }
     }
@@ -131,7 +132,7 @@ export class DriveClient {
                 q += ` and name contains '${safeQuery}'`
             }
 
-            console.log(`[Drive] Fetching page. Token: ${!!pageToken}, Limit: ${pageSize}, Q: ${q}`)
+            logger.info(`[Drive] Fetching page. Token: ${!!pageToken}, Limit: ${pageSize}, Q: ${q}`)
 
             const res = await this.drive.files.list({
                 pageSize,
@@ -149,7 +150,7 @@ export class DriveClient {
             }
 
         } catch (error: unknown) {
-            console.error("[Drive] Pagination Error:", error)
+            logger.error("[Drive] Pagination Error:", error)
             throw error
         }
     }
@@ -167,7 +168,7 @@ export class DriveClient {
 
             return res.data
         } catch (error: unknown) {
-            console.error(`[Drive] Error getting file ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
+            logger.error(`[Drive] Error getting file ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -181,7 +182,7 @@ export class DriveClient {
             })
             return res.data
         } catch (error: unknown) {
-            console.error(`[Drive] Error getting file metadata ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
+            logger.error(`[Drive] Error getting file metadata ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -197,7 +198,7 @@ export class DriveClient {
 
             return res.data
         } catch (error: unknown) {
-            console.error(`[Drive] Error exporting doc ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
+            logger.error(`[Drive] Error exporting doc ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
         }
     }
@@ -227,11 +228,11 @@ export class DriveClient {
                 supportsAllDrives: true
             })
 
-            console.log(`[Drive] Created file: ${res.data.id}`)
+            logger.info(`[Drive] Created file: ${res.data.id}`)
             return res.data
 
         } catch (error: unknown) {
-            console.error(`[Drive] Create Error:`, error)
+            logger.error(`[Drive] Create Error:`, error)
             throw error
         }
     }

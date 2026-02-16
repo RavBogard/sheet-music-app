@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 /**
  * Client-side chord cache utilities.
  * Checks server cache before running expensive scans,
@@ -58,7 +59,7 @@ export async function loadChordCache(
 
         return null
     } catch (err) {
-        console.warn('[ChordCache] Load failed:', err)
+        logger.warn('[ChordCache] Load failed:', err)
         return null
     }
 }
@@ -91,7 +92,7 @@ export function saveChordCache(
             cacheVersion: CACHE_VERSION
         })
     }).catch(err => {
-        console.warn('[ChordCache] Save failed:', err)
+        logger.warn('[ChordCache] Save failed:', err)
     })
 }
 
@@ -112,7 +113,7 @@ export async function clearChordCache(
         )
         return res.ok
     } catch (err) {
-        console.warn('[ChordCache] Clear failed:', err)
+        logger.warn('[ChordCache] Clear failed:', err)
         return false
     }
 }

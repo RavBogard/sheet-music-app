@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { syncLibraryIndex } from "@/lib/sync-engine"
 import { verifyIdToken } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export const maxDuration = 300 // 5 minutes timeout for sync
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: unknown) {
-        console.error("Sync API Error:", error)
+        logger.error("Sync API Error:", error)
         return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }
 }

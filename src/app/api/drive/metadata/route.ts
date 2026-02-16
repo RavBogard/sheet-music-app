@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
+import { logger } from "@/lib/logger"
 
 export async function POST(request: Request) {
     try {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
                     mimeType: file.mimeType
                 }
             } catch (e) {
-                console.warn(`Failed to fetch metadata for ${id}`, e)
+                logger.warn(`Failed to fetch metadata for ${id}`, e)
                 return null
             }
         })
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ files })
     } catch (error) {
-        console.error("Metadata fetch error:", error)
+        logger.error("Metadata fetch error:", error)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }

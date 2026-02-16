@@ -6,6 +6,7 @@ import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
+import { logger } from "@/lib/logger"
 
 interface SmartTransposerProps {
     pageRef: React.RefObject<HTMLDivElement | null>
@@ -184,7 +185,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             }
 
         } catch (err: unknown) {
-            console.error("Scan Error:", err)
+            logger.error("Scan Error:", err)
             setLocalError(err instanceof Error ? err.message : "Scan failed")
             setAiError(err instanceof Error ? err.message : "Scan failed")
         } finally {

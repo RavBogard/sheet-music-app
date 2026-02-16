@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 // New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
           userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
         }
       } catch (e) {
-        console.warn("Auth verification failed in chat:", e)
+        logger.warn("Auth verification failed in chat:", e)
       }
     }
 
@@ -121,7 +122,7 @@ ${messages[messages.length - 1].content}
     return NextResponse.json(JSON.parse(responseText))
 
   } catch (error: unknown) {
-    console.error("Chat API Error:", error)
+    logger.error("Chat API Error:", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal Server Error" },
       { status: 500 }

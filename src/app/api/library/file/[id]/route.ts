@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export async function GET(
     req: NextRequest,
@@ -40,7 +41,7 @@ export async function GET(
         })
 
     } catch (error: any) {
-        console.error("Fetch Generated Error:", error)
+        logger.error("Fetch Generated Error:", error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }

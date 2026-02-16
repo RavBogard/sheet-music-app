@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { QueueItem } from "@/lib/store"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 export function useOfflineManager() {
     const [isDownloading, setIsDownloading] = useState(false)
@@ -26,9 +27,9 @@ export function useOfflineManager() {
                     // Check if already cached
                     const existing = await cache.match(url)
                     if (existing) {
-                        console.log(`[Offline] ${item.name} already cached`)
+                        logger.info(`[Offline] ${item.name} already cached`)
                     } else {
-                        console.log(`[Offline] Fetching ${item.name}...`)
+                        logger.info(`[Offline] Fetching ${item.name}...`)
                         // Fetch the actual PDF buffer
                         // Note: We need to ensure we fetch with Auth headers if this was a direct call, 
                         // but /api/drive/file checks cookies/headers. 
@@ -39,7 +40,7 @@ export function useOfflineManager() {
                         if (res.ok) {
                             await cache.put(url, res.clone())
                         } else {
-                            console.error(`Failed to fetch ${item.name}`)
+                            logger.error(`Failed to fetch ${item.name}`)
                         }
                     }
 
@@ -53,7 +54,7 @@ export function useOfflineManager() {
                     }
 
                 } catch (e) {
-                    console.error("Cache Error", e)
+                    logger.error("Cache Error", e)
                 }
 
                 completed++
@@ -63,7 +64,7 @@ export function useOfflineManager() {
             toast.success("Setlist Downloaded for Offline Use 🤘")
 
         } catch (e) {
-            console.error("Offline Manager Error", e)
+            logger.error("Offline Manager Error", e)
             toast.error("Failed to download offline")
         } finally {
             setIsDownloading(false)

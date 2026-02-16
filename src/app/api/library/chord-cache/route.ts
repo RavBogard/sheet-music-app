@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 import { initAdmin } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 initAdmin()
 
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
             })
         }
     } catch (error: unknown) {
-        console.error("[Chord Cache GET] Error:", error)
+        logger.error("[Chord Cache GET] Error:", error)
         return NextResponse.json({ error: "Failed to load chord cache" }, { status: 500 })
     }
 }
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, chordsCount: cacheData.chords.length })
     } catch (error: unknown) {
-        console.error("[Chord Cache POST] Error:", error)
+        logger.error("[Chord Cache POST] Error:", error)
         return NextResponse.json({ error: "Failed to save chord cache" }, { status: 500 })
     }
 }
@@ -172,7 +173,7 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ success: true, pagesDeleted: snapshot.size })
     } catch (error: unknown) {
-        console.error("[Chord Cache DELETE] Error:", error)
+        logger.error("[Chord Cache DELETE] Error:", error)
         return NextResponse.json({ error: "Failed to clear chord cache" }, { status: 500 })
     }
 }

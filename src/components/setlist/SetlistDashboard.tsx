@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { SetlistToolbar } from "./SetlistToolbar"
+import { logger } from "@/lib/logger"
 
 interface SetlistDashboardProps {
     onBack: () => void
@@ -59,7 +60,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         const unsubscribe = setlistService.subscribeToPersonalSetlists(
             (data) => { setPersonalSetlists(data); setLoading(false) },
             (err) => {
-                console.error("Personal setlist subscription error:", err)
+                logger.error("Personal setlist subscription error:", err)
                 setError("Failed to load your personal setlists. Please check your connection.")
                 setLoading(false)
             }
@@ -72,7 +73,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         if (!setlistService) return
         const unsubscribe = setlistService.subscribeToPublicSetlists(
             (data) => setPublicSetlists(data),
-            (err) => console.error("Public setlist subscription error:", err)
+            (err) => logger.error("Public setlist subscription error:", err)
         )
         return () => unsubscribe()
     }, [setlistService])

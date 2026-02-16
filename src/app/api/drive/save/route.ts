@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DriveClient } from "@/lib/google-drive";
 import { initAdmin } from "@/lib/firebase-admin";
 import { getAuth } from "firebase-admin/auth";
+import { logger } from "@/lib/logger"
 
 initAdmin();
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: unknown) {
-        console.error("Save Error Details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        logger.error("Save Error Details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
         return NextResponse.json({ error: `Save Failed: ${(error instanceof Error ? error.message : "Unknown error")}` }, { status: 500 });
     }
 }

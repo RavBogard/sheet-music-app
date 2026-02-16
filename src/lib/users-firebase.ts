@@ -2,6 +2,7 @@ import { db, auth } from "./firebase"
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
 import { UserProfile, UserRole } from "@/types/models"
+import { logger } from "@/lib/logger"
 
 export type { UserProfile, UserRole }
 
@@ -81,7 +82,7 @@ export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, on
         callback(users)
     }, (error) => {
         if (onError) onError(error)
-        else console.error("Snapshot error:", error)
+        else logger.error("Snapshot error:", error)
     })
 }
 

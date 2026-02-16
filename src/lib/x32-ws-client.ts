@@ -6,6 +6,7 @@
  */
 
 import { auth } from "./firebase"
+import { logger } from "@/lib/logger"
 import {
     ServerMessage,
     ClientMessage,
@@ -140,7 +141,7 @@ export class X32WSClient {
                 break
 
             case "error":
-                console.error("[Monitor WS] Error:", msg.message)
+                logger.error("[Monitor WS] Error:", msg.message)
                 this.options.onStatusChange("error", msg.message)
                 break
         }
@@ -163,7 +164,7 @@ export class X32WSClient {
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
         this.reconnectAttempts++
 
-        console.log(`[Monitor WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
+        logger.info(`[Monitor WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
 
         this.reconnectTimeout = setTimeout(() => {
             this.connect(this.url).catch(() => {

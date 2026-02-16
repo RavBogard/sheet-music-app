@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { geminiFlash } from "@/lib/gemini"; // Already configured as 'gemini-3-flash-preview'
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
+import { logger } from "@/lib/logger"
 
 initAdmin();
 
@@ -106,11 +107,11 @@ export async function POST(req: NextRequest) {
         parts.push("Begin analysis:");
 
         // 4. Call Gemini
-        console.log(`[AI Transposer] Sending ${strips.length} strips to Gemini 3 Flash Preview...`);
+        logger.info(`[AI Transposer] Sending ${strips.length} strips to Gemini 3 Flash Preview...`);
         const result = await geminiFlash.generateContent(parts);
         const responseText = result.response.text();
 
-        console.log("[AI Transposer] Raw Response:", responseText.substring(0, 100) + "...");
+        logger.info("[AI Transposer] Raw Response:", responseText.substring(0, 100) + "...");
 
         // 5. Parse JSON
         let cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ results: data });
 
     } catch (error: unknown) {
-        console.error("[AI Transposer] Error:", error);
+        logger.error("[AI Transposer] Error:", error);
         return NextResponse.json(
             { error: "Failed to process chord detection" },
             { status: 500 }

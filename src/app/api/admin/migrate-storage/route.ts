@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
 import { copyDriveFileToStorage } from "@/lib/firebase-storage"
+import { logger } from "@/lib/logger"
 
 export const maxDuration = 300
 
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
                         storageCopiedAt: new Date().toISOString(),
                     })
                     results.succeeded++
-                    console.log(`[Migration] ✓ ${file.name}`)
+                    logger.info(`[Migration] ✓ ${file.name}`)
                 } else {
                     // Mark as failed so we don't retry
                     await db.collection('library_index').doc(file.id).update({
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
                 })
                 results.failed++
                 results.errors.push(`${file.name}: ${msg}`)
-                console.error(`[Migration] ✗ ${file.name}:`, msg)
+                logger.error(`[Migration] ✗ ${file.name}:`, msg)
             }
         }
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: unknown) {
-        console.error("Storage Migration Error:", error)
+        logger.error("Storage Migration Error:", error)
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }

@@ -20,6 +20,7 @@ interface ChatCommand {
     payload: Record<string, unknown>
 }
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 export function ChatPanel() {
     const { user, isLeader } = useAuth() // Get user for auth token
@@ -106,7 +107,7 @@ export function ChatPanel() {
             }
 
         } catch (error: unknown) {
-            console.error(error)
+            logger.error(error)
             addMessage({ role: 'assistant', content: `Error: ${error instanceof Error ? error.message : "I had trouble connecting."}` })
         } finally {
             setLoading(false)
@@ -211,7 +212,7 @@ export function ChatPanel() {
                         break;
                 }
             } catch (err) {
-                console.error(`Failed command ${cmd.type}`, err)
+                logger.error(`Failed command ${cmd.type}`, err)
                 toast.error(`Failed to execute: ${cmd.type}`)
             }
         }

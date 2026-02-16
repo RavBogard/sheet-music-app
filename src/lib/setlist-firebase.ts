@@ -20,6 +20,7 @@ import { SetlistTrack } from "@/types/api"
 export type { SetlistTrack }
 
 import { Setlist } from "@/types/api"
+import { logger } from "@/lib/logger"
 export type { Setlist }
 
 // User-specific setlist service
@@ -43,7 +44,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 });
                 return docRef.id;
             } catch (e) {
-                console.error("Error creating setlist: ", e);
+                logger.error("Error creating setlist: ", e);
                 throw e;
             }
         },
@@ -73,7 +74,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     callback(setlists);
                 },
                 error: (error) => {
-                    console.error("Error subscribing to personal setlists:", error);
+                    logger.error("Error subscribing to personal setlists:", error);
                     if (onError) onError(error);
                 }
             });
@@ -125,7 +126,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     callback(setlists);
                 },
                 error: (error) => {
-                    console.error("Error subscribing to public setlists:", error)
+                    logger.error("Error subscribing to public setlists:", error)
                     if (onError) onError(error)
                 }
             });
@@ -147,7 +148,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 });
                 return docRef.id;
             } catch (e) {
-                console.error("Error copying setlist: ", e);
+                logger.error("Error copying setlist: ", e);
                 throw e;
             }
         },
@@ -162,7 +163,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 });
                 return setlistId;
             } catch (e) {
-                console.error("Error making setlist public: ", e);
+                logger.error("Error making setlist public: ", e);
                 throw e;
             }
         },
@@ -176,7 +177,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 });
                 return setlistId;
             } catch (e) {
-                console.error("Error making setlist private: ", e);
+                logger.error("Error making setlist private: ", e);
                 throw e;
             }
         }

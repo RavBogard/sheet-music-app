@@ -14,6 +14,7 @@ import {
 import { useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
+import { logger } from "@/lib/logger"
 
 interface UserRowProps {
     user: UserProfile
@@ -34,7 +35,7 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
             await updateUserRole(user.uid, newRole as UserRole)
             toast.success(`Updated ${user.displayName} to ${newRole}`)
         } catch (e) {
-            console.error(e)
+            logger.error(e)
             toast.error("Failed to update role")
         } finally {
             setLoading(false)

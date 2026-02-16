@@ -11,6 +11,7 @@ import { BusSelector } from "@/components/monitor/BusSelector"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
 import { MonitorConfig } from "@/types/monitor"
 import { Loader2, Radio } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 export default function MonitorPage() {
     const { user, loading: authLoading } = useAuth()
@@ -97,7 +98,7 @@ export default function MonitorPage() {
                 busAssignments: newAssignments,
             })
         } catch (err) {
-            console.error("Failed to self-assign bus:", err)
+            logger.error("Failed to self-assign bus:", err)
         }
     }, [user, config])
 

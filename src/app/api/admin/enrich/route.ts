@@ -3,6 +3,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { enrichFile } from "@/lib/enrichment-engine"
+import { logger } from "@/lib/logger"
 
 initAdmin()
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
             skipped: 0
         }
 
-        console.log(`[Admin] Starting Manual Enrichment Batch: ${stats.total} files`)
+        logger.info(`[Admin] Starting Manual Enrichment Batch: ${stats.total} files`)
 
         for (const doc of snapshot.docs) {
             const data = doc.data()
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
                 await enrichFile(doc.id)
                 stats.success++
             } catch (e) {
-                console.error(`[Admin] Failed to enrich ${data.name}`, e)
+                logger.error(`[Admin] Failed to enrich ${data.name}`, e)
                 stats.failed++
             }
         }
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: unknown) {
-        console.error("Admin Enrichment Error:", error)
+        logger.error("Admin Enrichment Error:", error)
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }

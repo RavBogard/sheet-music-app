@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 import { env } from "@/lib/env"
+import { logger } from "@/lib/logger"
 
 // In-memory fallback for development or if Redis is not configured
 class InMemoryRateLimiter {
@@ -62,7 +63,7 @@ const createLimiter = () => {
     }
 
     // Fallback
-    console.warn("⚠️  Upstash Redis not configured. Using in-memory rate limiting.")
+    logger.warn("⚠️  Upstash Redis not configured. Using in-memory rate limiting.")
     return new InMemoryRateLimiter(50, 60 * 1000)
 }
 

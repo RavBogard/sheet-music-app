@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { useEffect, useRef, useState } from "react"
 import { Mic, MicOff, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
@@ -58,7 +59,7 @@ function autoCorrelate(buf: Float32Array, sampleRate: number) {
         lastCorrelation = correlation
     }
     if (bestCorrelation > 0.01) {
-        // console.log("f = " + sampleRate/bestOffset + "Hz (rms: " + rms + " confidence: " + bestCorrelation + ")")
+        // logger.info("f = " + sampleRate/bestOffset + "Hz (rms: " + rms + " confidence: " + bestCorrelation + ")")
         return sampleRate / bestOffset
     }
     return -1
@@ -97,7 +98,7 @@ export function Tuner() {
             updatePitch()
 
         } catch (e) {
-            console.error("Microphone access denied or error", e)
+            logger.error("Microphone access denied or error", e)
             toast.error("Could not access microphone for tuner")
         }
     }

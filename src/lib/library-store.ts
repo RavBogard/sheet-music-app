@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { auth } from "@/lib/firebase"
 import { DriveFile } from "@/types/models"
 import Fuse from 'fuse.js'
+import { logger } from "@/lib/logger"
 
 interface LibraryState {
     allFiles: DriveFile[] // The Master List (Client Cache)
@@ -77,7 +78,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             get().setFilter(null, "")
 
         } catch (err: unknown) {
-            console.error(err)
+            logger.error(err)
             set({ error: err instanceof Error ? err.message : "Failed to fetch files" })
         } finally {
             set({ loading: false })

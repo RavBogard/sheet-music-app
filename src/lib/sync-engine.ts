@@ -1,6 +1,7 @@
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
+import { logger } from "@/lib/logger"
 
 export interface SyncStats {
     totalScanned: number
@@ -20,7 +21,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
     }
 
     try {
-        console.log("[Sync] Starting Library Sync...")
+        logger.info("[Sync] Starting Library Sync...")
 
         // 1. Initialize Services
         initAdmin()
@@ -31,7 +32,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID
         const allFiles = await drive.listAllFiles(rootFolderId)
 
-        console.log(`[Sync] Found ${allFiles.length} files in Drive.`)
+        logger.info(`[Sync] Found ${allFiles.length} files in Drive.`)
         stats.totalScanned = allFiles.length
 
         // 3. Batch Write to Firestore (index metadata)
@@ -63,11 +64,11 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             stats.updated += chunk.length
         }
 
-        console.log("[Sync] Sync Complete.", stats)
+        logger.info("[Sync] Sync Complete.", stats)
         return stats
 
     } catch (error) {
-        console.error("[Sync] Fatal Error:", error)
+        logger.error("[Sync] Fatal Error:", error)
         stats.errors++
         throw error
     }

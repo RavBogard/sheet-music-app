@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
     try {
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error: unknown) {
-        console.error("Library List Error:", error)
+        logger.error("Library List Error:", error)
         return NextResponse.json({ error: "Failed to load library" }, { status: 500 })
     }
 }

@@ -11,6 +11,7 @@ import { ListMusic, PlayCircle, Music2, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/logger"
 
 export function SetlistDrawer() {
     const router = useRouter()
@@ -33,7 +34,7 @@ export function SetlistDrawer() {
                     setLoading(false)
                 },
                 (err) => {
-                    console.error("Failed to load public setlists", err)
+                    logger.error("Failed to load public setlists", err)
                     setLoading(false)
                 }
             )

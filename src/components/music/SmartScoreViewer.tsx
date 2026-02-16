@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 
 // ... imports
 import { getOfflineFile } from '@/lib/offline-store'
+import { logger } from "@/lib/logger"
 
 interface SmartScoreViewerProps {
     url: string
@@ -34,7 +35,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
             if (fileId) {
                 const offlineFile = await getOfflineFile(fileId)
                 if (active && offlineFile) {
-                    console.log("Serving offline file for:", fileId)
+                    logger.info("Serving offline file for:", fileId)
                     objectUrl = URL.createObjectURL(offlineFile.blob)
                     setSourceUrl(objectUrl)
                 } else if (active) {
@@ -82,7 +83,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
             const contentToLoad = aiXmlContent || sourceUrl
             if (!contentToLoad) return
 
-            console.log("OSMD Loading:", aiXmlContent ? "AI Content (xml string)" : "Source URL")
+            logger.info("OSMD Loading:", aiXmlContent ? "AI Content (xml string)" : "Source URL")
 
             try {
                 setLoading(true)
@@ -90,7 +91,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                 osmdRef.current.render()
                 setLoading(false)
             } catch (err) {
-                console.error("OSMD Load Error", err)
+                logger.error("OSMD Load Error", err)
                 setError("Failed to load music XML.")
                 setLoading(false)
             }
@@ -113,7 +114,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
             osmdRef.current.updateGraphic()
             osmdRef.current.render()
         } catch (err) {
-            console.error("OSMD Update Error", err)
+            logger.error("OSMD Update Error", err)
         }
     }, [transposition, zoom])
 

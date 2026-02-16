@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from "@/lib/logger"
 
 export function useWakeLock() {
     const [isLocked, setIsLocked] = useState(false);
@@ -11,18 +12,18 @@ export function useWakeLock() {
                 const lock = await navigator.wakeLock.request('screen');
                 setWakeLock(lock);
                 setIsLocked(true);
-                console.log('Wake Lock active');
+                logger.info('Wake Lock active');
 
                 lock.addEventListener('release', () => {
-                    console.log('Wake Lock released');
+                    logger.info('Wake Lock released');
                     setIsLocked(false);
                     setWakeLock(null);
                 });
             } catch (err) {
-                console.error('Failed to acquire Wake Lock:', err);
+                logger.error('Failed to acquire Wake Lock:', err);
             }
         } else {
-            console.warn('Wake Lock API not supported');
+            logger.warn('Wake Lock API not supported');
         }
     }, []);
 
@@ -33,7 +34,7 @@ export function useWakeLock() {
                 setWakeLock(null);
                 setIsLocked(false);
             } catch (err) {
-                console.error('Failed to release Wake Lock:', err);
+                logger.error('Failed to release Wake Lock:', err);
             }
         }
     }, [wakeLock]);
@@ -42,7 +43,7 @@ export function useWakeLock() {
     useEffect(() => {
         return () => {
             if (wakeLock) {
-                wakeLock.release().catch(console.error);
+                wakeLock.release().catch(e => logger.error("Wake lock release:", e));
             }
         };
     }, [wakeLock]);

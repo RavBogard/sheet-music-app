@@ -8,6 +8,7 @@ import { useMusicStore, FileType } from "@/lib/store"
 import { SetlistEditor } from "@/components/setlist/SetlistEditor"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
+import { logger } from "@/lib/logger"
 
 export default function SetlistEditorPage() {
     const router = useRouter()
@@ -68,7 +69,7 @@ export default function SetlistEditorPage() {
                         setGuestFiles(data.files)
                     }
                 })
-                .catch(err => console.error("Failed to load guest files", err))
+                .catch(err => logger.error("Failed to load guest files", err))
         }
     }, [user, existingSetlist])
 

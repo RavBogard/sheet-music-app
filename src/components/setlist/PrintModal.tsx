@@ -8,6 +8,7 @@ import { SetlistTrack } from "@/types/models"
 import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
 import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
+import { logger } from "@/lib/logger"
 
 interface PrintModalProps {
     setlistName: string
@@ -156,7 +157,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 }
             }
         } catch (e: unknown) {
-            console.error('Print generation failed:', e)
+            logger.error('Print generation failed:', e)
             setError(e instanceof Error ? e.message : 'Failed to generate PDF')
         } finally {
             setGenerating(false)
@@ -226,7 +227,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
             URL.revokeObjectURL(url)
             onClose()
         } catch (e: unknown) {
-            console.error('Batch packet generation failed:', e)
+            logger.error('Batch packet generation failed:', e)
             setError(e instanceof Error ? e.message : 'Failed to generate packets')
         } finally {
             setGeneratingAll(false)

@@ -12,6 +12,7 @@ import { PDFPageWrapper } from './PDFPageWrapper'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import { logger } from "@/lib/logger"
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
@@ -44,7 +45,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
             if (fileId) {
                 const offlineFile = await getOfflineFile(fileId)
                 if (active && offlineFile) {
-                    console.log("Serving offline file for:", fileId)
+                    logger.info("Serving offline file for:", fileId)
                     objectUrl = URL.createObjectURL(offlineFile.blob)
                     setSource(objectUrl)
                     return
@@ -63,7 +64,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
                             }
                         })
                     } catch (e) {
-                        console.error("Failed to get token for PDF:", e)
+                        logger.error("Failed to get token for PDF:", e)
                         setSource(url) // Fallback
                     }
                 } else {

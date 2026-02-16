@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
+import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
         // Optional: strict check
         // if (decodedToken.role !== 'admin') ...
 
-        console.log("[Prune] Starting Consistency Scan...")
+        logger.info("[Prune] Starting Consistency Scan...")
 
         // 2. Fetch Source of Truth (Google Drive)
         const drive = new DriveClient()
@@ -29,14 +30,14 @@ export async function POST(req: Request) {
         const driveFiles = await drive.listAllFiles(rootFolderId)
 
         const driveIdSet = new Set(driveFiles.map(f => f.id))
-        console.log(`[Prune] Found ${driveIdSet.size} active files in Drive`)
+        logger.info(`[Prune] Found ${driveIdSet.size} active files in Drive`)
 
         // 3. Fetch Local State (Firestore)
         // initAdmin() called at top
         const db = getFirestore()
         const snapshot = await db.collection('library_index').get()
 
-        console.log(`[Prune] Found ${snapshot.size} indexed files in Database`)
+        logger.info(`[Prune] Found ${snapshot.size} indexed files in Database`)
 
         // 4. Find Ghosts
         const ghosts: { id: string; name: string; mimeType: string; lastSyncedAt: string }[] = []
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
             }
         })
 
-        console.log(`[Prune] Found ${ghosts.length} ghosts`)
+        logger.info(`[Prune] Found ${ghosts.length} ghosts`)
 
         return NextResponse.json({
             success: true,
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
         })
 
     } catch (error: unknown) {
-        console.error("Prune Scan Failed:", error)
+        logger.error("Prune Scan Failed:", error)
         return new NextResponse((error instanceof Error ? error.message : "Unknown error") || "Internal Server Error", { status: 500 })
     }
 }

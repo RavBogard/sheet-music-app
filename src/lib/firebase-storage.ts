@@ -11,6 +11,7 @@
 
 import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
+import { logger } from "@/lib/logger"
 
 const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
 
@@ -145,7 +146,7 @@ export async function copyDriveFileToStorage(
         const url = await uploadToStorage(fileId, buffer, contentType)
         return url
     } catch (error) {
-        console.error(`[Storage] Failed to copy file ${fileId}:`, error)
+        logger.error(`[Storage] Failed to copy file ${fileId}:`, error)
         return null
     }
 }

@@ -3,6 +3,7 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
+import { logger } from "@/lib/logger"
 
 const firebaseConfig = {
     apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -27,7 +28,7 @@ try {
         app = initializeApp(firebaseConfig);
     } else {
         // Prevent crash during build if env vars are missing
-        console.warn("Firebase API Key missing. Using mock app.");
+        logger.warn("Firebase API Key missing. Using mock app.");
         app = {} as unknown as FirebaseApp;
     }
 
@@ -42,7 +43,7 @@ try {
     }
 
 } catch (e) {
-    console.error("Firebase Initialization Failed", e);
+    logger.error("Firebase Initialization Failed", e);
     app = {} as unknown as FirebaseApp;
     db = {} as unknown as Firestore;
     auth = {} as unknown as Auth;

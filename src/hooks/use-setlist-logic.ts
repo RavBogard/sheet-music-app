@@ -6,6 +6,7 @@ import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -180,7 +181,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 }
                 setLastSaved(new Date())
             } catch (e) {
-                console.error("Auto-save failed:", e)
+                logger.error("Auto-save failed:", e)
                 toast.error("Failed to save changes", {
                     description: "Please check your internet connection.",
                     duration: 5000
@@ -357,7 +358,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             toast.success(`Setlist is now ${!previousState ? 'public' : 'private'}!`)
         } catch (e) {
             // Revert on error
-            console.error("Toggle visibility failed:", e)
+            logger.error("Toggle visibility failed:", e)
             setIsPublic(previousState)
             setSetlistId(previousId)
             toast.error("Failed to change visibility", {

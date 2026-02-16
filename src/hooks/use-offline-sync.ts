@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { saveOfflineFile, isFileOffline } from '@/lib/offline-store';
 import { SetlistTrack } from '@/lib/setlist-firebase';
+import { logger } from "@/lib/logger"
 
 export function useOfflineSync() {
     const [downloading, setDownloading] = useState<Record<string, boolean>>({});
@@ -34,9 +35,9 @@ export function useOfflineSync() {
 
             await saveOfflineFile(fileId, blob, fileName, mimeType);
             setOfflineStatus(prev => ({ ...prev, [fileId]: true }));
-            console.log(`Downloaded ${fileName} for offline use.`);
+            logger.info(`Downloaded ${fileName} for offline use.`);
         } catch (error) {
-            console.error(`Failed to download ${fileName}:`, error);
+            logger.error(`Failed to download ${fileName}:`, error);
         } finally {
             setDownloading(prev => ({ ...prev, [fileId]: false }));
         }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 import { DriveClient } from "@/lib/google-drive"
 import { getTransposedKeyName } from "@/lib/music-math"
+import { logger } from "@/lib/logger"
 
 interface PrintTrack {
     title: string
@@ -210,7 +211,7 @@ export async function POST(request: Request) {
                 extractChordsFromPdf = extractor.extractChordsFromPdf
                 transposePdf = renderer.transposePdf
             } catch (importErr) {
-                console.error("[Print] Failed to load transposition modules:", importErr)
+                logger.error("[Print] Failed to load transposition modules:", importErr)
                 // Fall back to no transposition
             }
         }
@@ -219,11 +220,11 @@ export async function POST(request: Request) {
             if (!track.fileId) continue
 
             try {
-                console.log(`[Print] Fetching: ${track.title} (${track.fileId})`)
+                logger.info(`[Print] Fetching: ${track.title} (${track.fileId})`)
                 const fileBuffer = await drive.getFile(track.fileId)
 
                 if (!fileBuffer || !(fileBuffer instanceof ArrayBuffer) || fileBuffer.byteLength === 0) {
-                    console.warn(`[Print] Empty file for: ${track.title}`)
+                    logger.warn(`[Print] Empty file for: ${track.title}`)
                     continue
                 }
 
@@ -237,7 +238,7 @@ export async function POST(request: Request) {
 
                 if (needsTransposition) {
                     try {
-                        console.log(`[Print] Transposing ${track.title}: ${track.transposition! > 0 ? '+' : ''}${track.transposition} semitones`)
+                        logger.info(`[Print] Transposing ${track.title}: ${track.transposition! > 0 ? '+' : ''}${track.transposition} semitones`)
 
                         // Extract chords from this PDF
                         const extraction = await extractChordsFromPdf(pdfBytes)
@@ -256,12 +257,12 @@ export async function POST(request: Request) {
 
                             pdfBytes = transposeResult.pdf
                             transposedCount++
-                            console.log(`[Print] Transposed ${transposeResult.stats.chordsTransposed} chords in ${track.title}`)
+                            logger.info(`[Print] Transposed ${transposeResult.stats.chordsTransposed} chords in ${track.title}`)
                         } else {
-                            console.warn(`[Print] No chords found in ${track.title}, using original`)
+                            logger.warn(`[Print] No chords found in ${track.title}, using original`)
                         }
                     } catch (transposeErr) {
-                        console.error(`[Print] Transposition failed for ${track.title}:`, transposeErr)
+                        logger.error(`[Print] Transposition failed for ${track.title}:`, transposeErr)
                         // Fall back to original PDF
                     }
                 }
@@ -272,16 +273,16 @@ export async function POST(request: Request) {
                     const pages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices())
                     pages.forEach(page => mergedPdf.addPage(page))
                     appendedCount++
-                    console.log(`[Print] Appended ${pages.length} pages for: ${track.title}`)
+                    logger.info(`[Print] Appended ${pages.length} pages for: ${track.title}`)
                 } catch (pdfError) {
-                    console.error(`[Print] PDF parse error for ${track.title}:`, pdfError)
+                    logger.error(`[Print] PDF parse error for ${track.title}:`, pdfError)
                 }
             } catch (fetchError) {
-                console.error(`[Print] Failed to fetch ${track.title}:`, fetchError)
+                logger.error(`[Print] Failed to fetch ${track.title}:`, fetchError)
             }
         }
 
-        console.log(`[Print] Complete: ${appendedCount} files, ${transposedCount} transposed`)
+        logger.info(`[Print] Complete: ${appendedCount} files, ${transposedCount} transposed`)
 
         // 4. Generate final PDF
         const finalPdfBytes = await mergedPdf.save()
@@ -294,7 +295,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error: unknown) {
-        console.error("[Print] Generation error:", error)
+        logger.error("[Print] Generation error:", error)
         return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 })
     }
 }

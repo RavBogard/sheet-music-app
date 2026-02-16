@@ -3,6 +3,7 @@ import { geminiFlash } from "@/lib/gemini"
 import { DriveClient } from "@/lib/google-drive"
 import { getFirestore } from "firebase-admin/firestore"
 import { initAdmin } from "@/lib/firebase-admin"
+import { logger } from "@/lib/logger"
 
 export interface EnrichedMetadata {
     key?: string
@@ -16,7 +17,7 @@ export interface EnrichedMetadata {
 }
 
 export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
-    console.log(`[Enrichment] Starting for ${fileId}...`)
+    logger.info(`[Enrichment] Starting for ${fileId}...`)
 
     // 1. Init Services
     initAdmin()
@@ -50,7 +51,7 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
     - Do not include markdown formatting.
     `
 
-    console.log(`[Enrichment] Sending to Gemini...`)
+    logger.info(`[Enrichment] Sending to Gemini...`)
     const result = await geminiFlash.generateContent([
         prompt,
         {
@@ -69,11 +70,11 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
         const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim()
         data = JSON.parse(cleanJson)
     } catch (e) {
-        console.error("Failed to parse JSON from AI:", text)
+        logger.error("Failed to parse JSON from AI:", text)
         throw new Error("AI returned invalid JSON")
     }
 
-    console.log(`[Enrichment] Extracted:`, data)
+    logger.info(`[Enrichment] Extracted:`, data)
 
     // 5. Save to Firestore
     await db.collection('library_index').doc(fileId).set({
