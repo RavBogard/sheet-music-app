@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger"
  */
 
 // Bump this when scanner logic changes to invalidate stale caches
-const CACHE_VERSION = 4
+const CACHE_VERSION = 5
 
 interface CachedChord {
     text: string

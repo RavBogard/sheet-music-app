@@ -198,32 +198,40 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
         }
     }
 
-    // 4.5. Reverse merge: catch orphaned accidentals/qualities
-    // If an item starts with #/b followed by quality (e.g. "#m", "#m7", "b7"),
-    // and the previous item is a bare chord root, merge them backwards.
+    // 4.5. Reverse merge: catch orphaned fragments that should attach to preceding chord
+    // Catches: accidentals (#m, #m7, b7), quality suffixes (m, dim, sus4),
+    // extension numbers (7, 9, 11, 13), and combos (m7, maj7, sus4)
     const cleanedItems: typeof finalItems = []
     for (let i = 0; i < finalItems.length; i++) {
         const item = finalItems[i]
         const text = item.text.trim()
 
-        // Check if this item is an orphaned accidental+quality fragment
-        const isOrphanedFragment = /^[#b♯♭](m|M|maj|min|dim|aug|sus|add|no|alt|dom)?[0-9]*$/.test(text)
+        // Check if this item is an orphaned fragment that belongs to the previous chord
+        const isOrphanedAccidental = /^[#b♯♭](m|M|maj|min|dim|aug|sus|add|no|alt|dom)?[0-9]*$/.test(text)
             || /^[#b♯♭]$/.test(text)
+        const isOrphanedNumber = /^[0-9]{1,2}$/.test(text) // "7", "9", "11", "13"
+        const isOrphanedQuality = /^(m|dim|aug|sus|add|maj|min|no|alt|dom)[0-9]*$/.test(text) // "m7", "sus4"
 
-        if (isOrphanedFragment && cleanedItems.length > 0) {
+        const isOrphaned = isOrphanedAccidental || isOrphanedNumber || isOrphanedQuality
+
+        if (isOrphaned && cleanedItems.length > 0) {
             const prev = cleanedItems[cleanedItems.length - 1]
             const prevText = prev.text.trim()
 
-            // Previous item should end with a chord root letter
-            if (/[A-G]$/.test(prevText)) {
-                // Check proximity: generous tolerances for music PDFs
+            // Previous item should look like a chord (starts with A-G, possibly with accidental/quality)
+            const prevIsChordLike = /^[A-G][#b]?(m|M|maj|min|dim|aug|sus|add|no|alt|dom)?[0-9]*/.test(prevText)
+            // For orphaned numbers, previous could also be a quality like "m" that's part of "Em"
+            const prevEndsChordLike = /[A-Gm#b0-9]$/.test(prevText) && /^[A-G]/.test(prevText)
+
+            if (prevIsChordLike || prevEndsChordLike) {
+                // Check proximity
                 const gap = item.x - prev.r
                 const yDiff = Math.abs(prev.y - item.y)
-                const maxGap = prev.h * 3.0  // Very generous for accidentals
-                const maxYDiff = prev.h * 2.5
+                // Numbers are often superscripted, so use generous Y tolerance
+                const maxGap = isOrphanedNumber ? (prev.h * 2.0) : (prev.h * 3.0)
+                const maxYDiff = isOrphanedNumber ? (prev.h * 2.5) : (prev.h * 2.5)
 
                 if (gap < maxGap && gap >= -prev.w && yDiff < maxYDiff) {
-                    // Merge into previous
                     cleanedItems[cleanedItems.length - 1] = {
                         ...prev,
                         text: prevText + text,

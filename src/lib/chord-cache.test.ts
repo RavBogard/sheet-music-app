@@ -24,7 +24,7 @@ describe('chord-cache', () => {
                         chords: mockChords,
                         scannedAt: '2025-01-01',
                         scanMethod: 'textLayer',
-                        cacheVersion: 4
+                        cacheVersion: 5
                     }
                 })
             })
