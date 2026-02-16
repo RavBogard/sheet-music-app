@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useChatStore } from "@/lib/chat-store"
+import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,6 +31,7 @@ export function DesktopHeader() {
     const { allFiles, loading, loadLibrary } = useLibraryStore()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
+    const { hasAccess: hasMonitorAccess, isAdmin: isMonitorAdmin } = useMonitorAccess()
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("")
@@ -41,6 +43,7 @@ export function DesktopHeader() {
         { label: "Public Setlists", href: "/setlists", public: true },
         // Restricted Links (Require Member Role)
         { label: "Library", href: "/library", restricted: true },
+        { label: "Monitor", href: "/monitor", monitor: true },
         { label: "Audio", href: "/audio", restricted: true },
     ]
 
@@ -117,6 +120,8 @@ export function DesktopHeader() {
                         .filter(link => {
                             if (link.public) return true
                             if (link.label === "Dashboard") return true
+                            // Monitor: only show if user has monitor access
+                            if ('monitor' in link && link.monitor) return hasMonitorAccess
                             // Restricted links: Only show if user is a Member (not just generic 'user')
                             if (link.restricted) return isMember
                             return false

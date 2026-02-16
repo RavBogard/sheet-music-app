@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Loader2, ShieldAlert, Users, Database, Repeat, CheckCircle, User, Moon, Sun, Monitor, LogOut, Settings as SettingsIcon } from "lucide-react"
+import { ArrowLeft, Loader2, ShieldAlert, Users, Database, Repeat, CheckCircle, User, Moon, Sun, Monitor, LogOut, Settings as SettingsIcon, Radio } from "lucide-react"
 import { toast } from "sonner"
 import { SyncStats } from "@/lib/sync-engine"
 import { PruneManager } from "@/components/admin/PruneManager"
@@ -285,6 +285,21 @@ export default function UnifiedSettingsPage() {
                                 </div>
                                 <h3 className="font-semibold text-foreground mb-1">User Management</h3>
                                 <p className="text-muted-foreground text-sm">Manage roles and approve new sign-ups</p>
+                            </button>
+
+                            {/* Monitor Admin */}
+                            <button
+                                onClick={() => router.push('/monitor/admin')}
+                                className="bg-card border border-border p-5 rounded-2xl text-left hover:border-blue-500/50 hover:bg-accent transition-all group"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500">
+                                        <Radio className="w-5 h-5" />
+                                    </div>
+                                    <ArrowLeft className="w-4 h-4 text-muted-foreground/30 rotate-180 group-hover:text-blue-500 transition-colors" />
+                                </div>
+                                <h3 className="font-semibold text-foreground mb-1">Monitor Mixer</h3>
+                                <p className="text-muted-foreground text-sm">Configure X32 bus assignments and access</p>
                             </button>
 
                             {/* Library Sync */}
