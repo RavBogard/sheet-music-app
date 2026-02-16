@@ -7,9 +7,6 @@ vi.mock('@upstash/ratelimit', () => ({
 vi.mock('@upstash/redis', () => ({
     Redis: vi.fn()
 }))
-vi.mock('@/lib/env', () => ({
-    env: {}
-}))
 
 // Clear process.env to force in-memory fallback
 const originalEnv = { ...process.env }
@@ -39,23 +36,23 @@ describe('rate-limit', () => {
         }
     })
 
-    it('allows up to 50 requests from same identifier', async () => {
+    it('allows up to 60 requests from same identifier (api tier)', async () => {
         const { globalLimiter } = await import('./rate-limit')
         const id = 'burst-test-user'
         let allowed = 0
-        for (let i = 0; i < 55; i++) {
+        for (let i = 0; i < 65; i++) {
             const result = await globalLimiter.check(id)
             if (result) allowed++
         }
-        // Should allow exactly 50 (the configured limit)
-        expect(allowed).toBe(50)
+        // Should allow exactly 60 (the api tier limit)
+        expect(allowed).toBe(60)
     })
 
     it('blocks requests after limit is exceeded', async () => {
         const { globalLimiter } = await import('./rate-limit')
         const id = 'limit-test-user'
         // Exhaust the limit
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 60; i++) {
             await globalLimiter.check(id)
         }
         // Next should be blocked

@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
                 name: data.name,
                 mimeType: data.mimeType,
                 parents: data.parents,
+                modifiedTime: data.modifiedTime || null,
                 webViewLink: data.webViewLink,
                 metadata: data.metadata || null
             }

@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 
 import { SetlistTrack } from "@/types/api"
+import { logSetlistChange } from "@/lib/setlist-audit"
 
 // export interface SetlistTrack { ... } // Removed local definition
 export type { SetlistTrack }
@@ -42,14 +43,13 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerName: userName || "Anonymous",
                     ...JSON.parse(JSON.stringify(additionalData)) // Sanitize undefined
                 });
+                logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length, isPublic })
                 return docRef.id;
             } catch (e) {
                 logger.error("Error creating setlist: ", e);
                 throw e;
             }
         },
-
-        // Subscribe to all setlists owned by this user
         subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
             const q = query(
                 collection(db, COLLECTION_PATH),
@@ -90,9 +90,19 @@ export function createSetlistService(userId: string | null, userName?: string | 
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = JSON.parse(JSON.stringify(data));
             await updateDoc(docRef, cleanData);
+
+            // Determine what changed for audit
+            const action = data.name !== undefined ? 'renamed'
+                : data.tracks !== undefined ? 'tracks_updated'
+                : 'tracks_updated'
+            logSetlistChange(id, action, userId || '', userName || 'Anonymous', {
+                ...(data.name !== undefined && { newName: data.name }),
+                ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
+            })
         },
 
         async deleteSetlist(id: string, _isPublic: boolean) {
+            logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
             await deleteDoc(doc(db, COLLECTION_PATH, id));
         },
 
@@ -150,6 +160,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     isPublic: true,
                     ownerName: userName || "Anonymous" // Update name in case it changed
                 });
+                logSetlistChange(setlistId, 'made_public', userId || '', userName || 'Anonymous')
                 return setlistId;
             } catch (e) {
                 logger.error("Error making setlist public: ", e);
@@ -164,6 +175,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 await updateDoc(docRef, {
                     isPublic: false
                 });
+                logSetlistChange(setlistId, 'made_private', userId || '', userName || 'Anonymous')
                 return setlistId;
             } catch (e) {
                 logger.error("Error making setlist private: ", e);

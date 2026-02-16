@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { syncLibraryIndex } from "@/lib/sync-engine"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate limit: 3 syncs/min
+        const limited = await checkRateLimit(req, 'sync')
+        if (limited) return limited
+
         const auth = await withAuth(req, 'admin')
         if (auth instanceof NextResponse) return auth
 

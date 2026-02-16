@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { withAuth } from "@/lib/api-auth"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 
@@ -31,6 +32,10 @@ const ALLOWED_TYPES: Record<string, string> = {
  */
 export async function POST(req: NextRequest) {
     try {
+        // Rate limit: 10 uploads/min
+        const limited = await checkRateLimit(req, 'upload')
+        if (limited) return limited
+
         // Auth check: leaders and admins can upload
         const auth = await withAuth(req, 'leader')
         if (auth instanceof NextResponse) return auth

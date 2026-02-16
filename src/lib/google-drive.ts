@@ -5,6 +5,7 @@ interface DriveFileResult {
     id: string
     name: string
     mimeType: string
+    modifiedTime?: string
     webContentLink?: string
     webViewLink?: string
     parents?: string[]
@@ -76,7 +77,7 @@ export class DriveClient {
             do {
                 const res = await this.drive.files.list({
                     pageSize: 100,
-                    fields: 'nextPageToken, files(id, name, mimeType, webContentLink, parents)',
+                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents)',
                     q,
                     pageToken: nextPageToken,
                     supportsAllDrives: true,
@@ -136,7 +137,7 @@ export class DriveClient {
 
             const res = await this.drive.files.list({
                 pageSize,
-                fields: 'nextPageToken, files(id, name, mimeType, webContentLink, parents)',
+                fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents)',
                 q,
                 pageToken,
                 supportsAllDrives: true,

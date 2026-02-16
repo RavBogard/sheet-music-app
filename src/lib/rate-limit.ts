@@ -1,7 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
-import { env } from "@/lib/env"
 import { logger } from "@/lib/logger"
+import { NextRequest, NextResponse } from "next/server"
 
 // In-memory fallback for development or if Redis is not configured
 class InMemoryRateLimiter {
@@ -15,6 +15,19 @@ class InMemoryRateLimiter {
         this.timestamps = new Map()
         this.maxRequests = limit
         this.interval = interval
+
+        // Periodic cleanup
+        if (typeof setInterval !== 'undefined') {
+            setInterval(() => {
+                const now = Date.now()
+                for (const [key, ts] of this.timestamps) {
+                    if (now - ts > this.interval * 3) {
+                        this.tokens.delete(key)
+                        this.timestamps.delete(key)
+                    }
+                }
+            }, 5 * 60_000)
+        }
     }
 
     async limit(key: string): Promise<{ success: boolean, limit: number, remaining: number, reset: number }> {
@@ -38,41 +51,95 @@ class InMemoryRateLimiter {
 }
 
 // Create the limiter instance
-const createLimiter = () => {
-    // Check if we have Upstash credentials
-    // Note: We access process.env directly here to avoid crash if env validation fails initially 
-    // but typically we should use `env` from t3-env. 
-    // However, since we made them optional in env.mjs, we can check them.
+type LimiterLike = { limit(key: string): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> }
 
-    // We access direct generated env if possible or check process.env
+function createLimiter(maxRequests: number, windowSec: number): LimiterLike {
     const url = process.env.UPSTASH_REDIS_REST_URL
     const token = process.env.UPSTASH_REDIS_REST_TOKEN
 
     if (url && token) {
-        const redis = new Redis({
-            url,
-            token,
-        })
-
+        const redis = new Redis({ url, token })
         return new Ratelimit({
-            redis: redis,
-            limiter: Ratelimit.slidingWindow(50, "1 m"), // 50 requests per minute
+            redis,
+            limiter: Ratelimit.slidingWindow(maxRequests, `${windowSec} s`),
             analytics: true,
-            prefix: "@upstash/ratelimit",
+            prefix: `@rl/${maxRequests}/${windowSec}`,
         })
     }
 
-    // Fallback
-    logger.warn("⚠️  Upstash Redis not configured. Using in-memory rate limiting.")
-    return new InMemoryRateLimiter(50, 60 * 1000)
+    return new InMemoryRateLimiter(maxRequests, windowSec * 1000)
 }
 
+// ── Pre-configured limiters ──
 
-const limiter = createLimiter()
+const limiters = {
+    /** General API: 60 req/min */
+    api: createLimiter(60, 60),
+    /** Upload: 10/min */
+    upload: createLimiter(10, 60),
+    /** Admin sync: 3/min */
+    sync: createLimiter(3, 60),
+    /** AI/expensive: 20/min */
+    ai: createLimiter(20, 60),
+}
 
+export type LimiterName = keyof typeof limiters
+
+/**
+ * Extract a rate limit key from the request.
+ * Uses auth token prefix (per-user) or IP (per-anon).
+ */
+function getKey(req: NextRequest): string {
+    const auth = req.headers.get('Authorization')
+    if (auth?.startsWith('Bearer ')) {
+        return `u:${auth.slice(7, 23)}` // First 16 chars of token
+    }
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || req.headers.get('x-real-ip')
+        || 'unknown'
+    return `ip:${ip}`
+}
+
+/**
+ * Check rate limit for a request. Returns null if OK, 429 response if limited.
+ * 
+ * Usage in route:
+ *   const limited = await checkRateLimit(req, 'api')
+ *   if (limited) return limited
+ */
+export async function checkRateLimit(
+    req: NextRequest,
+    tier: LimiterName = 'api'
+): Promise<NextResponse | null> {
+    try {
+        const key = `${tier}:${getKey(req)}`
+        const result = await limiters[tier].limit(key)
+
+        if (!result.success) {
+            return NextResponse.json(
+                { error: "Too many requests. Please try again later." },
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': '60',
+                        'X-RateLimit-Limit': String(result.limit),
+                        'X-RateLimit-Remaining': '0',
+                    }
+                }
+            )
+        }
+        return null
+    } catch (err) {
+        // Rate limit failure should not block requests
+        logger.warn("[RateLimit] Check failed, allowing request:", err)
+        return null
+    }
+}
+
+// Legacy export for backward compatibility
 export const globalLimiter = {
     check: async (identifier: string) => {
-        const { success } = await limiter.limit(identifier)
+        const { success } = await limiters.api.limit(identifier)
         return success
     }
 }

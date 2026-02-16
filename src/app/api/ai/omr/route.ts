@@ -3,6 +3,7 @@ import { geminiProVision } from "@/lib/gemini";
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
 import { DriveClient } from "@/lib/google-drive";
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 // Ensure Firebase Admin is initialized
@@ -12,6 +13,10 @@ export const maxDuration = 300; // Allow 5 minutes for AI processing (Vercel Pro
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate limit: 20 AI requests/min
+        const limited = await checkRateLimit(req, 'ai')
+        if (limited) return limited
+
         // 1. Admin Verification (Strict)
         const authHeader = req.headers.get("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {

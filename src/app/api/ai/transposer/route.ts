@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { geminiFlash } from "@/lib/gemini"; // Already configured as 'gemini-3-flash-preview'
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 initAdmin();
@@ -73,6 +74,10 @@ interface TransposeRequestChunk {
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate limit: 20 AI requests/min
+        const limited = await checkRateLimit(req, 'ai')
+        if (limited) return limited
+
         // 1. Auth
         const authHeader = req.headers.get("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {

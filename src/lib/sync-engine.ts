@@ -60,11 +60,29 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 const docRef = db.collection('library_index').doc(file.id)
                 const now = new Date().toISOString()
 
+                // Check if the file was modified since last sync
+                // If so, invalidate the chord cache for this file
+                if (existingIds.has(file.id) && file.modifiedTime) {
+                    const existingDoc = await docRef.get()
+                    const existingModified = existingDoc.data()?.modifiedTime
+                    if (existingModified && existingModified !== file.modifiedTime) {
+                        // File changed on Drive — purge stale chord cache
+                        const chordDocs = await docRef.collection('chordData').get()
+                        if (!chordDocs.empty) {
+                            const purgeBatch = db.batch()
+                            chordDocs.forEach(d => purgeBatch.delete(d.ref))
+                            await purgeBatch.commit()
+                            logger.info(`[Sync] 🗑️ Purged chord cache for ${file.name} (file modified)`)
+                        }
+                    }
+                }
+
                 batch.set(docRef, {
                     id: file.id,
                     name: file.name,
                     nameLower: file.name.toLowerCase(),
                     mimeType: file.mimeType,
+                    modifiedTime: file.modifiedTime || null,
                     webViewLink: file.webViewLink || null,
                     parents: file.parents || [],
                     lastSyncedAt: now,
