@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord } from "@/lib/music-math"
+import { cleanChordText } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
 
 interface SmartTransposerProps {
@@ -199,41 +200,37 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     return (
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: ChordOverlay, i: number) => {
-                const transposed = transposeChord(chord.originalText || chord.text, transposition)
+                // Clean the source text (remove parens, normalize accidentals)
+                const sourceText = cleanChordText(chord.originalText || chord.text)
+                const transposed = transposeChord(sourceText, transposition)
                 const isChanged = transposition !== 0
 
                 // Dynamic font sizing based on detected chord height
                 const detectedHeight = chord.pxHeight || 16
                 const fontSize = Math.max(12, Math.min(detectedHeight * 0.85, 28))
 
-                // Width to cover original text — enough for whichever is wider
-                const charCount = Math.max(transposed.length, chord.originalText?.length || 0)
-                const minWidth = Math.max(charCount * (fontSize * 0.65), fontSize * 1.5)
+                // Tight padding — just enough to cover original text
+                const padV = 1
+                const padH = 2
 
-                // Padding for white background coverage
-                const padV = 2
-                const padH = 3
+                // At transposition=0, don't overlay — original PDF text is already correct
+                if (!isChanged) return null
 
                 return (
                     <div
                         key={i}
                         className="absolute"
                         style={{
-                            // Position at the exact chord location
                             left: `${chord.x}%`,
                             top: `${chord.y}%`,
 
-                            // Negative margin offsets the padding so the TEXT
-                            // stays anchored at the original chord position
                             margin: `-${padV}px 0 0 -${padH}px`,
                             padding: `${padV}px ${padH}px`,
-
-                            minWidth: `${minWidth}px`,
 
                             backgroundColor: 'white',
                             borderRadius: '1px',
 
-                            color: isChanged ? '#6d28d9' : '#1e40af',
+                            color: '#6d28d9',
                             fontSize: `${fontSize}px`,
                             fontWeight: 700,
                             fontFamily: "'Times New Roman', 'Georgia', serif",

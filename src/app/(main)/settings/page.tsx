@@ -86,42 +86,64 @@ export default function UnifiedSettingsPage() {
         setMigrating(true)
         setMigrationStats(null)
 
+        let totalSucceeded = 0
+        let totalFailed = 0
+
         try {
             const token = await user.getIdToken()
             let remaining = Infinity
-            let totalSucceeded = 0
-            let totalFailed = 0
-            let lastStats: typeof migrationStats = null
+            let rounds = 0
+            const MAX_ROUNDS = 25 // safety limit
 
-            // Loop until all files are migrated
-            while (remaining > 0) {
-                const res = await fetch('/api/admin/migrate-storage', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
+            while (remaining > 0 && rounds < MAX_ROUNDS) {
+                rounds++
+                let res: Response
+                try {
+                    res = await fetch('/api/admin/migrate-storage', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                } catch {
+                    // Network error — wait and retry once
+                    await new Promise(r => setTimeout(r, 3000))
+                    try {
+                        res = await fetch('/api/admin/migrate-storage', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                    } catch {
+                        toast.error("Network error — try again")
+                        break
+                    }
+                }
 
-                const data = await res.json()
-                if (!res.ok) throw new Error(data.error || "Migration failed")
+                const data = await res!.json()
+                if (!res!.ok) {
+                    toast.error(data.error || "Migration batch failed")
+                    break
+                }
 
                 totalSucceeded += data.succeeded || 0
                 totalFailed += data.failed || 0
                 remaining = data.remaining || 0
 
-                lastStats = {
+                setMigrationStats({
                     total: data.total,
                     succeeded: totalSucceeded,
                     failed: totalFailed,
                     remaining,
                     alreadyInStorage: data.alreadyInStorage || 0,
                     message: data.message,
-                }
-                setMigrationStats(lastStats)
+                })
 
-                // If nothing was processed this round, we're done
                 if (data.processed === 0) break
             }
 
-            toast.success(lastStats?.message || "Migration complete!")
+            if (remaining <= 0) {
+                toast.success("Migration complete!")
+            } else {
+                toast.info(`Paused: ${totalSucceeded} migrated, ${remaining} remaining`)
+            }
         } catch (e: unknown) {
             console.error("Migration Failed:", e)
             toast.error("Migration Failed: " + (e instanceof Error ? e.message : "Unknown error"))

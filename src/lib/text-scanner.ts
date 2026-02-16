@@ -9,7 +9,7 @@
  * 4. Return their position and dimensions relative to the page.
  */
 
-import { CHORD_REGEX, EXCLUDED_WORDS } from './chord-utils'
+import { CHORD_REGEX, EXCLUDED_WORDS, cleanChordText } from './chord-utils'
 
 export interface ScannedChord {
     id: string;
@@ -83,10 +83,13 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             const sameLine = Math.abs(current.y - next.y) < (current.h * 0.5);
             const gap = next.x - current.r;
             const isSingleChar = current.text.trim().length === 1 || next.text.trim().length === 1;
-            const maxGap = isSingleChar ? (current.h * 1.0) : (current.h * 0.3);
+            // Only merge single chars if both are chord-relevant (letters, accidentals, numbers)
+            const isChordChar = (t: string) => /^[A-Ga-g#b♯♭0-9mMdiasugnol]+$/.test(t.trim());
+            const bothChordRelevant = isChordChar(current.text) && isChordChar(next.text);
+            const maxGap = (isSingleChar && bothChordRelevant) ? (current.h * 1.0) : (current.h * 0.3);
             const isClose = gap >= 0 && gap < maxGap;
 
-            if (sameLine && isClose) {
+            if (sameLine && isClose && (bothChordRelevant || !isSingleChar)) {
                 current = {
                     ...current,
                     text: current.text + next.text,
@@ -198,7 +201,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
 
         chords.push({
             id: crypto.randomUUID(),
-            text: withoutParens,
+            text: cleanChordText(withoutParens),
             x, y, w, h,
             pxHeight: item.h
         });
