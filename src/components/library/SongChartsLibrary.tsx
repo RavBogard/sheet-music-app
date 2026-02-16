@@ -16,6 +16,7 @@ import { useCongregation } from "@/lib/congregation-context"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 
+import { UploadDialog } from "./UploadDialog"
 import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { logger } from "@/lib/logger"
@@ -101,7 +102,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     }
 
     // AI Digitize
-    const { isAdmin, user } = useAuth()
+    const { isAdmin, isLeader, user } = useAuth()
     const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
@@ -169,6 +170,12 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
+                {(isLeader || isAdmin) && (
+                    <UploadDialog onUploadComplete={() => {
+                        // Trigger a re-fetch of the library
+                        toast.success("Reload the library to see your upload")
+                    }} />
+                )}
             </div>
 
             {/* Search & Tabs & Breadcrumbs */}

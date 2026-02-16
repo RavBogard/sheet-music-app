@@ -1,6 +1,17 @@
 import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useChatStore } from "@/lib/chat-store"
 import type { PresenceEntry } from "@/lib/setlist-live"
 
@@ -164,18 +175,43 @@ export function SetlistHeader({
                 <Sparkles className="h-5 w-5" />
             </Button>
 
-            {/* Public/Private - Only show in Edit Mode or if Leader */}
+            {/* Public/Private - Confirmation required */}
             {(isEditMode && setlistId) || (isLeader && !isEditMode && setlistId) ? (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onTogglePublic}
-                    className={`gap-2 rounded-full transition-colors hidden sm:flex ${isPublic ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={!isPublic && !isLeader}
-                >
-                    {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    <span className="hidden lg:inline">{isPublic ? 'Public' : 'Personal'}</span>
-                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`gap-2 rounded-full transition-colors hidden sm:flex ${isPublic ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'} ${!isPublic && !isLeader ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!isPublic && !isLeader}
+                        >
+                            {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                            <span className="hidden lg:inline">{isPublic ? 'Public' : 'Personal'}</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                {isPublic ? 'Make this setlist private?' : 'Make this setlist public?'}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {isPublic
+                                    ? 'This setlist is currently visible to all musicians. Making it private will remove it from everyone\'s performance view and they will no longer be able to access it.'
+                                    : 'This will make the setlist visible to all musicians in performance mode. Anyone with access can view and follow along.'
+                                }
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={onTogglePublic}
+                                className={isPublic ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}
+                            >
+                                {isPublic ? 'Yes, make private' : 'Yes, make public'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             ) : null}
 
 
