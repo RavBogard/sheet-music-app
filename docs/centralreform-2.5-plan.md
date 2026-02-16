@@ -173,21 +173,7 @@ The marquee feature: musicians control their own monitor mixes from the same iPa
 
 ---
 
-## Feature 2: Deferred 2.0 Items
-
-### 2A. Per-Musician Gig Packets
-- "Print for..." dropdown in Print Modal showing all musicians with profiles
-- Selecting a musician applies their transposition to all tracks
-- Cover page: "Gig Packet for Daniel — Acoustic Guitar (Capo 2)"
-- "Print All Packets" → zip of individual PDFs
-
-### 2B. Library Enhancements
-- Search by key, artist, topic (metadata already extracted by enrichment)
-- Visual PDF thumbnail preview
-
----
-
-## Feature 3: X32 Tuner (Deferred to 2.6)
+## Feature 2: X32 Tuner (Deferred to 2.6)
 
 With Dante Virtual Soundcard on the production PC, the bridge server could capture audio from any X32 channel and run pitch detection server-side, streaming tuning data to the iPad. Replaces the iPad mic tuner with a direct-input tuner — no room noise, works silently, more accurate.
 
@@ -268,17 +254,13 @@ match /config/monitor {
 - User authorization toggles
 - Nav integration (conditional Monitor tab)
 
-### M4: Gig Packets + Library Search (1 session)
-- Per-musician print with transposition
-- Library search by metadata
-
-### M5: Polish + Testing (1 session)
+### M4: Polish + Testing (1 session)
 - Real-world testing during rehearsal
 - Latency optimization
 - Edge cases (X32 reboot, network drop, multiple admins)
 - Version bump to 2.5
 
-**Estimated: 5 focused sessions**
+**Estimated: 4 focused sessions**
 
 ---
 
@@ -292,5 +274,4 @@ CentralReform 2.5 ships when:
 4. ☐ Bus assignments can be changed mid-service without restarting anything
 5. ☐ Bridge server survives network hiccups and auto-recovers
 6. ☐ Only authorized users see the Monitor tab
-7. ☐ A guitarist and trumpet player can each print correctly-transposed gig packets
-8. ☐ The whole system works during a real Friday night service
+7. ☐ The whole system works during a real Friday night service

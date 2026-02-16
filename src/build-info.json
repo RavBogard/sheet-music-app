@@ -1,23 +1,19 @@
 {
-  "version": "2.0.0",
-  "commit": "d6f561a",
+  "version": "2.1.0",
+  "commit": "385ce52",
   "branch": "master",
   "buildDate": "2/16/2026",
   "changelog": [
-    "2.0.0 - feat: Sticky per-song transposition — remembers your preferred key for each chart",
+    "2.1.0 - feat: Print All Packets — batch-generate transposed gig packets for all musicians",
+    "2.1.0 - feat: Library search by topic/tag (in addition to name, key, artist)",
+    "2.1.0 - feat: Topic badges displayed on library file rows",
+    "2.0.0 - feat: Sticky per-song transposition — your preferred key for each chart persists",
     "2.0.0 - feat: Firebase Storage migration — CDN-served files replace Google Drive proxy",
     "2.0.0 - feat: Light theme default with dark mode for performance",
-    "2.0.0 - feat: Musician profiles — instrument, transposition, capo preferences",
-    "2.0.0 - feat: Auto-transposition in performance mode based on musician profile",
-    "2.0.0 - feat: CRC ensemble instrument presets (acoustic guitar, bass, mandolin, etc.)",
-    "2.0.0 - feat: Smart prefetch — preloads next songs for instant page turns",
-    "2.0.0 - feat: Chord cache management in Settings",
-    "2.0.0 - feat: Loading skeletons for all pages",
-    "2.0.0 - feat: Logger utility (silent in production)",
-    "2.0.0 - refactor: Component decomposition — SetlistDashboard, SongChartsLibrary, TrackItem",
-    "2.0.0 - refactor: Shared chord-utils, eliminated 60+ type errors, strict TypeScript",
-    "2.0.0 - refactor: Semantic theme colors across all 72 components",
-    "2.0.0 - fix: Chord transposer accuracy — single-letter chords, adjacent chord overlap",
-    "2.0.0 - fix: Vitest testing — 12 test files covering core music utilities"
+    "2.0.0 - feat: Musician profiles with CRC ensemble presets",
+    "2.0.0 - feat: Auto-transposition in performance mode",
+    "2.0.0 - feat: Smart prefetch, loading skeletons, chord cache management",
+    "2.0.0 - refactor: Component decomposition, 60+ type errors fixed, strict TypeScript",
+    "2.0.0 - fix: Chord transposer accuracy improvements"
   ]
 }
