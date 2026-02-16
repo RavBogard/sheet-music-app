@@ -44,8 +44,6 @@ interface GhostFile {
 export default function AdminSections() {
     const { user, isAdmin, loading: authLoading } = useAuth()
 
-    if (!isAdmin) return null
-
     // ══════════════════════════════════════
     // PEOPLE
     // ══════════════════════════════════════

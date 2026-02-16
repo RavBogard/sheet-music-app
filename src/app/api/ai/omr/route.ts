@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { geminiFlash, geminiProVision } from "@/lib/gemini";
+import { geminiProVision } from "@/lib/gemini";
 import { getAuth } from "firebase-admin/auth";
 import { initAdmin } from "@/lib/firebase-admin";
 import { DriveClient } from "@/lib/google-drive";
@@ -31,8 +31,6 @@ export async function POST(req: NextRequest) {
         // Convert to Base64 (getFile returns ArrayBuffer)
         const pdfBuffer = Buffer.from(fileData as ArrayBuffer);
         const base64Data = pdfBuffer.toString("base64");
-
-
 
         // 4. Prompt Gemini
         // We'll use Flash for speed, or Pro Vision for better OCR. "Sheet Music" is complex.

@@ -8,7 +8,6 @@ export function useWakeLock() {
     const requestWakeLock = useCallback(async () => {
         if ('wakeLock' in navigator) {
             try {
-                // @ts-ignore - types might be missing for some environments
                 const lock = await navigator.wakeLock.request('screen');
                 setWakeLock(lock);
                 setIsLocked(true);

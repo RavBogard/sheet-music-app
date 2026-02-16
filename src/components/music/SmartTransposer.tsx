@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useMusicStore } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"

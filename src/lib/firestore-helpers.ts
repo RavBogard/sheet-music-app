@@ -3,8 +3,7 @@
  * Handles the messy Timestamp ↔ Date conversion that's scattered everywhere.
  */
 
-import { Timestamp, DocumentData, QueryDocumentSnapshot, SnapshotOptions } from "firebase/firestore"
-import { Setlist, UserProfile, SetlistTrack } from "@/types/models"
+import { Timestamp } from "firebase/firestore"
 
 /**
  * Convert a Firestore Timestamp or string to a JS Date.

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 
 export async function POST(request: Request) {

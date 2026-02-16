@@ -54,7 +54,7 @@ async function getPdfjs() {
 
 // ─── Chord Detection ─────────────────────────────────────────────────
 
-import { CHORD_REGEX, EXCLUDED_WORDS, SECTION_MARKERS, isChord, cleanChordText } from './chord-utils'
+import { isChord, cleanChordText } from './chord-utils'
 
 // ─── Text Merging ────────────────────────────────────────────────────
 

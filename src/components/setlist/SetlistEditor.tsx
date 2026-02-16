@@ -19,7 +19,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy
 } from "@dnd-kit/sortable"
-import { SetlistTrack, DriveFile } from "@/types/api"
+import { SetlistTrack } from "@/types/api"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
 import { useSetlistPresence, useLiveState } from "@/hooks/use-setlist-presence"
 import { enableLiveMode, updateLiveTrack } from "@/lib/setlist-live"

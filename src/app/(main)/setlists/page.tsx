@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLibraryStore } from "@/lib/library-store"
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
-
 
 export default function SetlistsPage() {
     const router = useRouter()

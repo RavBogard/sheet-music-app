@@ -4,7 +4,7 @@ import { MIME_TYPES } from "@/lib/constants"
 import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Check, ChevronLeft, Music, Plus, Folder, Search, Loader2 } from "lucide-react"
+import { Check, ChevronLeft, Music, Folder, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
 import {
@@ -122,8 +122,6 @@ export function AddSongsModal({
         setBreadcrumbs(prev => prev.slice(0, index + 1))
         setSearchQuery("")
     }
-
-
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

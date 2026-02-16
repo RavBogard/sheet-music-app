@@ -240,7 +240,7 @@ export function ChatPanel() {
                         <div className="text-center text-muted-foreground mt-10 space-y-2">
                             <Bot className="h-12 w-12 mx-auto opacity-20" />
                             <p>Hello! I can help you build your setlist.</p>
-                            <p className="text-sm">Try asking: <br />"Add a festive opening song"<br />"What do we have for Shabbat?"</p>
+                            <p className="text-sm">Try asking: <br />&ldquo;Add a festive opening song&rdquo;<br />&ldquo;What do we have for Shabbat?&rdquo;</p>
                         </div>
                     )}
 

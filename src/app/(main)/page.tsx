@@ -7,7 +7,7 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { getContextualGreeting } from "@/lib/greeting"
-import { toDate, getRelativeDateLabel, formatEventDate } from "@/lib/firestore-helpers"
+import { toDate, getRelativeDateLabel } from "@/lib/firestore-helpers"
 import { EmptySetlistsIllustration, PendingAccountIllustration } from "@/components/ui/illustrations"
 
 import { Button } from "@/components/ui/button"
@@ -288,7 +288,6 @@ export default function DashboardPage() {
     )
 }
 
-
 /* ─── Sub-Components ─── */
 
 function SetlistHeroCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
@@ -322,7 +321,6 @@ function SetlistHeroCard({ setlist, onClick }: { setlist: Setlist; onClick: () =
     )
 }
 
-
 function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: () => void }) {
     const eventDate = toDate(setlist.eventDate)
 
@@ -350,7 +348,6 @@ function SetlistCompactCard({ setlist, onClick }: { setlist: Setlist; onClick: (
     )
 }
 
-
 function QuickAction({ icon: Icon, label, color, onClick }: {
     icon: React.ComponentType<{ className?: string }>
     label: string
@@ -377,7 +374,6 @@ function QuickAction({ icon: Icon, label, color, onClick }: {
         </button>
     )
 }
-
 
 function CompactAIPrompt() {
     const { open, setPendingPrompt } = useChatStore()

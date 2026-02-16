@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { transferSetlistSchema } from "@/lib/validations"
-import { version } from "os"
 import { logger } from "@/lib/logger"
 
 export async function POST(request: Request) {

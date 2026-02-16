@@ -26,27 +26,27 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onToggle }: F
     const isDragging = useRef(false)
     const sliderRef = useRef<HTMLDivElement>(null)
 
-    const handlePointerDown = useCallback((e: React.PointerEvent) => {
-        isDragging.current = true
-        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-        updateFromPointer(e.clientX)
-    }, [])
-
-    const handlePointerMove = useCallback((e: React.PointerEvent) => {
-        if (!isDragging.current) return
-        updateFromPointer(e.clientX)
-    }, [])
-
-    const handlePointerUp = useCallback(() => {
-        isDragging.current = false
-    }, [])
-
     const updateFromPointer = useCallback((clientX: number) => {
         if (!sliderRef.current) return
         const rect = sliderRef.current.getBoundingClientRect()
         const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
         onChange(ratio)
     }, [onChange])
+
+    const handlePointerDown = useCallback((e: React.PointerEvent) => {
+        isDragging.current = true
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        updateFromPointer(e.clientX)
+    }, [updateFromPointer])
+
+    const handlePointerMove = useCallback((e: React.PointerEvent) => {
+        if (!isDragging.current) return
+        updateFromPointer(e.clientX)
+    }, [updateFromPointer])
+
+    const handlePointerUp = useCallback(() => {
+        isDragging.current = false
+    }, [])
 
     const percentage = Math.round(value * 100)
     const dbDisplay = floatToDb(value)

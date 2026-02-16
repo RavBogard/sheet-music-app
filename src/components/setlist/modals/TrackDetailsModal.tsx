@@ -8,7 +8,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Trash2, FileText, Music, Minus, Plus } from "lucide-react"
 import { AudioFilePicker } from "../AudioFilePicker"
 import { TapTempoButton } from "@/components/ui/tap-tempo-button"
-import { transposeChord, getTransposedKeyName } from "@/lib/music-math"
+import { getTransposedKeyName } from "@/lib/music-math"
 
 interface TrackDetailsModalProps {
     isOpen: boolean

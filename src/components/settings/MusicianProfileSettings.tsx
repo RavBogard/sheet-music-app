@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context"
 import { MusicianProfile } from "@/types/models"
 import { saveMusicianProfile, subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { Button } from "@/components/ui/button"
-import { Music, Guitar, Check, ChevronDown } from "lucide-react"
+import { Guitar, Check } from "lucide-react"
 import { toast } from "sonner"
 
 export function MusicianProfileSettings() {

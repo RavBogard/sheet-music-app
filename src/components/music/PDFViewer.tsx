@@ -1,7 +1,5 @@
 "use client"
 
-import { toast } from "sonner"
-
 import { useState, useRef, useEffect } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2 } from 'lucide-react'

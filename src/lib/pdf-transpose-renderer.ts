@@ -9,9 +9,9 @@
  * pdf-chord-extractor.ts map directly — no conversion needed.
  */
 
-import { PDFDocument, StandardFonts, rgb, PDFFont } from "pdf-lib"
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import { transposeChord } from "@/lib/music-math"
-import type { PageChords, ExtractedChord } from "@/lib/pdf-chord-extractor"
+import type { PageChords } from "@/lib/pdf-chord-extractor"
 
 // ─── Types ───────────────────────────────────────────────────────────
 

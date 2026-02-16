@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface CalendarViewProps {
@@ -93,7 +93,6 @@ export function CalendarView({ setlists, onSelectSetlist, onCreateSetlist }: Cal
             <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-card overflow-y-auto">
                 {days.map((date, i) => {
                     if (!date) return <div key={`empty-${i}`} className="bg-background/30 border-b border-r border-border" />
-
 
                     const daySetlists = getSetlistsForDate(date)
                     const isSaturday = date.getDay() === 6

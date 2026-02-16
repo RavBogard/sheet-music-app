@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useMusicStore, FileType } from "@/lib/store"
-import { useSetlistStore } from "@/lib/setlist-store"
 import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"

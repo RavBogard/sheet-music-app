@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { X, Printer, Download, Loader2, Music, Users, Package, User } from "lucide-react"
+import { X, Printer, Download, Loader2, Users, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"

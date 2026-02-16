@@ -94,10 +94,10 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
     const match = trimmed.match(/^([A-G])([#b]?)(.*)$/);
     if (!match) return chord;
 
-    let [, root, accidental, suffix] = match;
+    const [, root, rawAccidental, suffix] = match;
 
     // Normalize Unicode accidentals
-    accidental = accidental.replace(String.fromCharCode(0x266F), '#').replace(String.fromCharCode(0x266D), 'b');
+    const accidental = rawAccidental.replace(String.fromCharCode(0x266F), '#').replace(String.fromCharCode(0x266D), 'b');
     const fullRoot = root + accidental;
 
     const index = findNoteIndex(fullRoot);

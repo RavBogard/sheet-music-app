@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { initAdmin, verifyIdToken, getAuth } from "@/lib/firebase-admin"
+import { initAdmin, verifyIdToken } from "@/lib/firebase-admin"
 import { DecodedIdToken } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
 

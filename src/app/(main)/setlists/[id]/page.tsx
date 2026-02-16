@@ -45,9 +45,8 @@ export default function SetlistEditorPage() {
                 setLoading(false)
             })
             return () => unsubscribe()
-        } else {
-            setLoading(false)
         }
+        // When id === 'new', loading was initialized to false — no setState needed
     }, [id, user, isPublic])
 
     // Guest Mode: Fetch file metadata for tracks

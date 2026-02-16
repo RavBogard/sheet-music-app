@@ -214,8 +214,8 @@ export async function POST(request: Request) {
         let transposedCount = 0
 
         // Lazy-load transposition modules only if needed
-        let extractChordsFromPdf: any = null
-        let transposePdf: any = null
+        let extractChordsFromPdf: typeof import("@/lib/pdf-chord-extractor")["extractChordsFromPdf"] | null = null
+        let transposePdf: typeof import("@/lib/pdf-transpose-renderer")["transposePdf"] | null = null
         if (hasTranspositions) {
             try {
                 const extractor = await import("@/lib/pdf-chord-extractor")
@@ -253,11 +253,11 @@ export async function POST(request: Request) {
                         logger.info(`[Print] Transposing ${track.title}: ${track.transposition! > 0 ? '+' : ''}${track.transposition} semitones`)
 
                         // Extract chords from this PDF
-                        const extraction = await extractChordsFromPdf(pdfBytes)
+                        const extraction = await extractChordsFromPdf!(pdfBytes)
 
                         if (extraction.totalChords > 0) {
                             // Apply transposition
-                            const transposeResult = await transposePdf(
+                            const transposeResult = await transposePdf!(
                                 pdfBytes,
                                 extraction.pages,
                                 {
@@ -267,7 +267,7 @@ export async function POST(request: Request) {
                                 }
                             )
 
-                            pdfBytes = transposeResult.pdf
+                            pdfBytes = new Uint8Array(transposeResult.pdf)
                             transposedCount++
                             logger.info(`[Print] Transposed ${transposeResult.stats.chordsTransposed} chords in ${track.title}`)
                         } else {

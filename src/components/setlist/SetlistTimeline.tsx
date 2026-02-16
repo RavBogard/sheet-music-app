@@ -3,7 +3,6 @@
 import { SetlistTrack } from "@/lib/setlist-firebase"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Music2, ArrowRight } from "lucide-react"
 
 interface SetlistTimelineProps {
     tracks: SetlistTrack[]

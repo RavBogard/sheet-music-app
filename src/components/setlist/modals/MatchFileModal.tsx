@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Check, ChevronLeft, Music, Folder, Loader2 } from "lucide-react"
+import { ChevronLeft, Music, Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MIME_TYPES } from "@/lib/constants"
 import { DriveFile } from "@/types/models"
@@ -90,8 +89,6 @@ export function MatchFileModal({
         setBreadcrumbs(prev => prev.slice(0, index + 1))
         setSearchQuery("")
     }
-
-
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
