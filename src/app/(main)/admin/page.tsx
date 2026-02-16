@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase"
 import { subscribeToAllMusicianProfiles } from "@/lib/musician-profile"
 import { UserProfile, subscribeToAllUsers } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
+import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { MusicianProfile } from "@/types/models"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
 import { SyncStats } from "@/lib/sync-engine"
@@ -300,18 +301,16 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* ═══ PEOPLE ═══ */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-violet-500" />
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            People
-                        </h2>
-                        {pendingCount > 0 && (
-                            <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full">
-                                {pendingCount} pending
-                            </span>
-                        )}
-                    </div>
+                <CollapsibleSection
+                    icon={<Users className="w-4 h-4 text-violet-500" />}
+                    title="People"
+                    badge={pendingCount > 0 ? (
+                        <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full">
+                            {pendingCount} pending
+                        </span>
+                    ) : undefined}
+                    defaultOpen={pendingCount > 0}
+                >
 
                     {usersLoading ? (
                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -321,20 +320,19 @@ export default function AdminDashboard() {
                             {users.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No registered users yet.</p>}
                         </div>
                     )}
-                </section>
+                </CollapsibleSection>
 
                 {/* ═══ SOUND SYSTEM ═══ */}
-                <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Radio className="w-4 h-4 text-blue-500" />
-                            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sound System</h2>
-                        </div>
+                <CollapsibleSection
+                    icon={<Radio className="w-4 h-4 text-blue-500" />}
+                    title="Sound System"
+                    action={
                         <Button onClick={handleMonitorSave} disabled={monitorSaving} size="sm" className="gap-2">
                             {monitorSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : monitorSaved ? <CheckCircle className="w-3 h-3" /> : <Save className="w-3 h-3" />}
                             {monitorSaved ? "Saved!" : "Save"}
                         </Button>
-                    </div>
+                    }
+                >
 
                     {monitorLoading ? (
                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -430,14 +428,13 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
-                </section>
+                </CollapsibleSection>
 
                 {/* ═══ LIBRARY & DATA ═══ */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Database className="w-4 h-4 text-teal-500" />
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Library & Data</h2>
-                    </div>
+                <CollapsibleSection
+                    icon={<Database className="w-4 h-4 text-teal-500" />}
+                    title="Library & Data"
+                >
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Library Sync */}
@@ -530,14 +527,13 @@ export default function AdminDashboard() {
                             )}
                         </div>
                     </div>
-                </section>
+                </CollapsibleSection>
 
                 {/* ═══ SYSTEM ═══ */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Wrench className="w-4 h-4 text-muted-foreground" />
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System</h2>
-                    </div>
+                <CollapsibleSection
+                    icon={<Wrench className="w-4 h-4 text-muted-foreground" />}
+                    title="System"
+                >
 
                     <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                         <div className="flex items-center gap-3">
@@ -561,7 +557,7 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     </div>
-                </section>
+                </CollapsibleSection>
             </div>
         </div>
     )

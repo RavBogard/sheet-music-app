@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { NoResultsIllustration, EmptyFolderIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
@@ -225,6 +226,13 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         {combinedItems.length === 0 && !loading && (
                             <EmptyState
                                 icon={searchQuery ? Search : FolderOpen}
+                                illustration={
+                                    searchQuery
+                                        ? <NoResultsIllustration className="w-20 h-20 text-muted-foreground" />
+                                        : tab === "audio"
+                                            ? <EmptyAudioIllustration className="w-20 h-20 text-muted-foreground" />
+                                            : <EmptyFolderIllustration className="w-20 h-20 text-muted-foreground" />
+                                }
                                 title={searchQuery ? "No matches found" : tab === "audio" ? "No audio files here" : "This folder is empty"}
                                 description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : tab === "audio" ? "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive." : "Try checking another folder."}
                                 className="py-12"

@@ -8,6 +8,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { getContextualGreeting } from "@/lib/greeting"
 import { toDate, getRelativeDateLabel, formatEventDate } from "@/lib/firestore-helpers"
+import { EmptySetlistsIllustration } from "@/components/ui/illustrations"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -172,7 +173,8 @@ export default function DashboardPage() {
                             ))}
                         </>
                     ) : (
-                        <div className="bg-card rounded-2xl p-6 text-center border border-border">
+                        <div className="bg-card rounded-2xl p-8 text-center border border-border flex flex-col items-center gap-3">
+                            <EmptySetlistsIllustration className="w-20 h-20 text-muted-foreground" />
                             <p className="text-muted-foreground">No setlists yet</p>
                         </div>
                     )}
