@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This plan covers 30 improvements across 6 categories, organized into 5 implementation phases.
+This plan covers 31 improvements across 6 categories, organized into 5 implementation phases.
 Each phase is designed to be independently shippable and builds on the previous.
 
 **Phase A** — Cleanup & Foundation (backend hygiene, nav fixes, quick UI wins)  
@@ -413,6 +413,88 @@ In `PerformerView.tsx`, when `fileUrl` is set but content hasn't rendered yet:
 **Result:** ~7-8 visible rows on phone vs current 4. Tablet/desktop stays spacious.
 
 **Files changed:** `src/components/library/LibraryFileRow.tsx` — Responsive class adjustments.
+
+---
+
+### B5. Admin Action Changelogs [Usability #5]
+
+**Problem:** After Library Sync, the result shows "Scanned: 180 · New: 3" — but not *which* 3 files were added. After AI Enrichment, you see counts but not which songs got new metadata. Admins can't verify the right things happened.
+
+**Solution:** Return and display itemized results from admin actions.
+
+**API changes — return file names in responses:**
+
+Library Sync (`/api/library/sync`):
+```typescript
+// Currently returns: { stats: { totalScanned, added, updated, removed, ... } }
+// Change to also return:
+{
+    stats: { totalScanned: 180, added: 3, updated: 1, removed: 0, ... },
+    details: {
+        added: ["Hashkiveinu.pdf", "Mi Chamocha.pdf", "Oseh Shalom.pdf"],
+        updated: ["Shalom Rav.pdf"],
+        removed: []
+    }
+}
+```
+
+AI Enrichment (`/api/admin/enrich`):
+```typescript
+// Currently returns: { stats: { processed, enriched, skipped }, message }
+// Change to also return:
+{
+    stats: { processed: 12, enriched: 8, skipped: 4 },
+    details: {
+        enriched: [
+            { name: "Hashkiveinu.pdf", key: "Dm", bpm: 72, topics: ["Evening", "Peace"] },
+            { name: "Mi Chamocha.pdf", key: "Em", bpm: null, topics: ["Exodus", "Sea"] },
+        ],
+        skipped: ["Oseh Shalom.pdf", "Shalom Rav.pdf"]  // already had metadata
+    }
+}
+```
+
+**Admin Dashboard UI — expandable results:**
+
+After each action completes, show a collapsible details panel:
+
+```
+Library Sync                              [Sync Now]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Done — Scanned: 180 · New: 3 · Updated: 1
+
+▾ What changed:
+  + Hashkiveinu.pdf
+  + Mi Chamocha.pdf  
+  + Oseh Shalom.pdf
+  ~ Shalom Rav.pdf (updated)
+```
+
+```
+AI Enrichment                         [Run Enrichment]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Done — Processed: 12 · Enriched: 8 · Skipped: 4
+
+▾ Enriched files:
+  Hashkiveinu.pdf → Dm, 72 BPM, [Evening, Peace]
+  Mi Chamocha.pdf → Em, [Exodus, Sea]
+  ...
+```
+
+The details section is collapsed by default (click to expand). This keeps the UI clean for routine syncs but lets admins drill in when they need to verify.
+
+**Implementation:**
+
+The sync engine (`src/lib/sync-engine.ts`) already tracks which files were added/updated/removed internally — it just doesn't return the names. The change is to collect file names during processing and include them in the response.
+
+For enrichment, the API route iterates over files and calls the enrichment engine — same pattern, just collect the names and results as it goes.
+
+**Files changed:**
+- `src/lib/sync-engine.ts` — Return file names in `SyncStats.details`
+- `src/app/api/library/sync/route.ts` — Pass details through to response
+- `src/app/api/admin/enrich/route.ts` — Collect and return per-file results
+- `src/app/(main)/admin/page.tsx` — Expandable details panels for sync + enrichment results
+- `src/types/api.ts` — Add `SyncDetails` and `EnrichDetails` types
 
 ---
 
@@ -826,7 +908,8 @@ Phase B (Quality of Life)
 ├── B1. Onboarding Flow            ← Independent
 ├── B2. Song Loading State         ← Independent
 ├── B3. Selective Print            ← Independent
-└── B4. Compact Library Rows       ← Independent
+├── B4. Compact Library Rows       ← Independent
+└── B5. Admin Action Changelogs    ← Independent
 
 Phase C (Performance Mode)
 ├── C1. Perform ↔ Setlist Hand-off ← Do first (store change)
@@ -845,7 +928,7 @@ Phase E (Abstraction)
 **Suggested session order:**
 1. **Session 10:** A1 + A2 + A3 (cleanup sprint — lots of deletions, mechanical changes)
 2. **Session 11:** A4 + A5 + A6 + A7 (nav + UI polish)
-3. **Session 12:** B1 + B2 + B4 (onboarding + loading + compact rows)
+3. **Session 12:** B1 + B2 + B4 + B5 (onboarding + loading + compact rows + admin changelogs)
 4. **Session 13:** B3 + C1 + C2 (print + perform hand-off + back gesture)
 5. **Session 14:** C3 + C4 (perform intro + monitor wizard)
 6. **Session 15:** D1 (setlist collaboration — biggest single feature)
