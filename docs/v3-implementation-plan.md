@@ -160,7 +160,9 @@ Admins + Monitor:  Home | Setlists | Admin   | Monitor | Settings
 
 The key change: Library only shows for `isMember`. Admin replaces Library's "4th slot" for admins (admins access Library via desktop or /library URL). If admin has monitor too, Library moves to desktop-only.
 
-**Note:** This is the trickiest part — mobile tab bar has 5 slots max and 6 potential items. The above priority system ensures the most important items for each role are visible. Library is always accessible via URL and desktop nav for admins who need both Admin and Monitor tabs.
+**Note:** This is the trickiest part — mobile tab bar has 5 slots max and 6 potential items. The priority system ensures the most important items for each role are visible. Admin wins the tab slot over Monitor for admin users; Monitor is accessible via QuickMonitorPanel in performance toolbar + direct URL. Library is always accessible via URL and desktop nav for admins who need both Admin and Monitor tabs.
+
+**Decision:** Admin gets the tab, Monitor via QuickMonitorPanel + URL. ✅ Confirmed.
 
 **Files changed:**
 - `src/components/nav/MobileTabBar.tsx` — Conditional tab logic
@@ -378,8 +380,10 @@ In `PerformerView.tsx`, when `fileUrl` is set but content hasn't rendered yet:
 - "Standard" → single PDF, no transposition (existing behavior)
 - "Just me" → single PDF, applies current user's musician profile transposition. Most common use case — one tap for "give me my packet for tonight"
 - "Select musicians" → checkboxes, generates only checked. 1 musician = PDF, 2+ = ZIP
-- Persist last selection in localStorage for convenience (same band usually plays together)
-- "Just me" is pre-selected if user has a musician profile
+- Persist last selection in localStorage — same band usually plays together, so the previous selection is pre-checked on next visit. Checkboxes are always visible so you can adjust when the lineup changes.
+- "Just me" is pre-selected if user has a musician profile and no previous selection exists
+
+**Decision:** Remember last selection with checkboxes always visible. ✅ Confirmed.
 
 **Files changed:**
 - `src/components/setlist/PrintModal.tsx` — Rewrite print mode selector with musician checkboxes
@@ -713,10 +717,12 @@ liveState?: {
 }
 ```
 
-Leader taps a "Live" toggle in the setlist editor. When active, tapping a track writes `liveState.currentTrackIndex`. All performers subscribed to this setlist see a toast: "Karen moved to: *Mi Chamocha*" and get a "Jump to song" button.
+Leader taps a "Live" toggle in the setlist editor. When active, tapping a track writes `liveState.currentTrackIndex`. All performers subscribed to this setlist see a toast notification: "Karen moved to: *Mi Chamocha*" with a "Jump to song" button. Performers choose whether to follow — they are never auto-navigated, preserving autonomy if they've intentionally gone to a different song.
+
+**Decision:** Notification + optional jump, not auto-navigate. ✅ Confirmed.
 
 **Performer integration:**
-In perform mode, if the current setlist has `liveState` enabled, show a small "LIVE" badge in the toolbar. When `currentTrackIndex` changes remotely, show a non-blocking notification. Performer can tap to jump or ignore (they might be on a different song intentionally).
+In perform mode, if the current setlist has `liveState` enabled, show a small "LIVE" badge in the toolbar. When `currentTrackIndex` changes remotely, show a non-blocking toast with the song name and a "Jump" action button. The notification auto-dismisses after 5 seconds if not acted on.
 
 **Files changed:**
 - `src/lib/setlist-firebase.ts` — Add `updateLiveState()`, presence helpers
@@ -785,6 +791,7 @@ When user taps an "Annotate" button (pencil icon in performance toolbar), a seco
 - **Draw mode:** Touch to draw freehand SVG paths on the overlay. Uses pointer events with `pointerdown → pointermove → pointerup` to capture stroke paths.
 - **Text mode:** Tap to place a text annotation. Opens a small input popover at tap position.
 - **Highlight mode:** Draw rectangular highlight regions (semi-transparent fill).
+- **Colors:** Four quick-select options: red, blue, green, orange. ✅ Confirmed — no full picker needed.
 - **Undo:** Removes last annotation on current page.
 - **Clear Page:** Clears all annotations on current page (with confirmation).
 - **Done:** Exits annotation mode, saves to Firestore.
@@ -890,6 +897,34 @@ export const useCongregation = () => useContext(CongregationContext)
 
 **Note:** This phase does NOT implement multi-tenancy (multiple congregations in one Firestore). It makes the single-tenant app configurable. True multi-tenancy (separate Firestore databases, auth domains, Drive folders per congregation) would be a 4.0 effort requiring infrastructure changes.
 
+**Admin UI for Congregation Config:**
+
+A "Congregation" section in the Admin dashboard (or a dedicated sub-section under System):
+
+```
+Congregation Settings
+━━━━━━━━━━━━━━━━━━━━━
+Name:       [Central Reform Congregation___]
+Short Name: [CRC Music____________________]
+Location:   [St. Louis, MO________________]
+Logo URL:   [/logo.jpg____________________]  [Upload]
+Print Footer: [Generated by CRC Music Books]
+
+Features:
+  ☑ Monitor (X32 integration)
+  ☑ AI Assistant
+  ☑ Audio practice files
+  ☐ Annotations (coming soon)
+  ☐ Live Collaboration (coming soon)
+
+[Save Changes]
+```
+
+**Decision:** Editable via Admin dashboard UI. ✅ Confirmed.
+
+**Files changed (additional):**
+- `src/app/(main)/admin/page.tsx` — Add Congregation section with form fields + feature checkboxes (~100 lines)
+
 ---
 
 ## Implementation Order & Dependencies
@@ -962,14 +997,10 @@ Files modified across multiple phases (coordinate carefully):
 
 ---
 
-## Questions for Daniel (before implementation)
+## Questions for Daniel — ANSWERED
 
-1. **Nav priority (A4):** When you have both Admin and Monitor access on mobile, which is more important to have as a tab? Current thinking: Admin wins the slot, Monitor is accessible via performance toolbar QuickMonitorPanel + URL.
-
-2. **Annotation colors (D2):** Four color options (red, blue, green, orange) enough? Or do you want a custom color picker?
-
-3. **Live sync scope (D1):** Should the "Go to song" command auto-navigate performers, or just show a notification they can choose to follow? Auto-navigate is more seamless but could be disruptive if a musician intentionally went to a different song.
-
-4. **Congregation config (E1):** Should the config be editable via the Admin dashboard UI, or is Firestore console editing fine for now? UI adds ~150 lines but makes it self-service.
-
-5. **Print selection (B3):** Should the "last used musicians" persist across sessions (localStorage), or always start fresh? Persisting is convenient for a stable band but confusing when the lineup changes.
+1. **Nav priority (A4):** Admin gets the mobile tab. Monitor via QuickMonitorPanel + URL. ✅
+2. **Annotation colors (D2):** Four colors (red, blue, green, orange). No full picker. ✅
+3. **Live sync scope (D1):** Notification + optional "Jump" button. Never auto-navigate. ✅
+4. **Congregation config (E1):** Editable via Admin dashboard UI. ✅
+5. **Print selection (B3):** Remember last selection in localStorage, always show checkboxes. ✅
