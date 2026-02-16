@@ -2,8 +2,7 @@
  * POST /api/admin/migrate-storage
  * 
  * Migrates files from Google Drive to Firebase Storage in batches.
- * Uses Firestore's storageCopiedAt field to track progress —
- * only processes files that haven't been migrated yet.
+ * Uses Firestore fields to track progress — no expensive Storage checks on every call.
  * Call repeatedly until remaining === 0.
  */
 
@@ -31,35 +30,39 @@ export async function POST(req: NextRequest) {
         const db = getFirestore()
         const drive = new DriveClient()
 
-        // Count totals for progress display
-        const allDocs = await db.collection('library_index').get()
-        const allFiles = allDocs.docs.map(d => d.data())
+        // Get all library files
+        const snapshot = await db.collection('library_index').get()
+        const allFiles = snapshot.docs.map(doc => doc.data())
+
+        // Filter to migratable types
         const migratable = allFiles.filter(f =>
             f.mimeType === 'application/pdf' ||
             f.mimeType?.includes('audio') ||
             f.mimeType?.includes('xml') ||
             f.mimeType?.startsWith('application/vnd.google-apps.')
         )
-        const alreadyDone = migratable.filter(f => f.storageCopiedAt).length
 
-        // Only fetch files that HAVEN'T been migrated (no storageCopiedAt)
-        const needsMigration = migratable.filter(f => !f.storageCopiedAt)
-        const batch = needsMigration.slice(0, BATCH_SIZE)
+        // Use Firestore fields to determine status — NO Storage API calls
+        const done = migratable.filter(f => f.storageCopiedAt && !f.storageFailed)
+        const failed = migratable.filter(f => f.storageFailed)
+        const pending = migratable.filter(f => !f.storageCopiedAt && !f.storageFailed)
+
+        // Take a batch of pending files
+        const batch = pending.slice(0, BATCH_SIZE)
 
         const results = {
-            processed: 0,
+            processed: batch.length,
             succeeded: 0,
             failed: 0,
-            alreadyInStorage: alreadyDone,
-            remaining: needsMigration.length - batch.length,
+            previouslyDone: done.length,
+            previouslyFailed: failed.length,
+            remaining: pending.length - batch.length,
             total: migratable.length,
             errors: [] as string[],
         }
 
         for (const file of batch) {
-            results.processed++
             try {
-                console.log(`[Migration] Copying ${file.name} (${file.mimeType})...`)
                 const storageUrl = await copyDriveFileToStorage(drive, file.id, file.mimeType)
                 if (storageUrl) {
                     await db.collection('library_index').doc(file.id).update({
@@ -69,36 +72,37 @@ export async function POST(req: NextRequest) {
                     results.succeeded++
                     console.log(`[Migration] ✓ ${file.name}`)
                 } else {
-                    // Mark as attempted so we don't retry endlessly
+                    // Mark as failed so we don't retry
                     await db.collection('library_index').doc(file.id).update({
-                        storageCopiedAt: `failed:${new Date().toISOString()}`,
+                        storageFailed: true,
+                        storageFailedAt: new Date().toISOString(),
+                        storageError: 'Copy returned null',
                     })
                     results.failed++
                     results.errors.push(file.name)
-                    console.log(`[Migration] ✗ ${file.name}: null result`)
                 }
             } catch (err) {
-                // Mark as attempted
-                await db.collection('library_index').doc(file.id).update({
-                    storageCopiedAt: `failed:${new Date().toISOString()}`,
-                }).catch(() => {})
-                results.failed++
                 const msg = err instanceof Error ? err.message : 'Unknown'
+                await db.collection('library_index').doc(file.id).update({
+                    storageFailed: true,
+                    storageFailedAt: new Date().toISOString(),
+                    storageError: msg,
+                })
+                results.failed++
                 results.errors.push(`${file.name}: ${msg}`)
                 console.error(`[Migration] ✗ ${file.name}:`, msg)
             }
         }
 
-        // Recalculate remaining after this batch
-        results.remaining = needsMigration.length - batch.length
+        results.remaining = pending.length - batch.length
 
         return NextResponse.json({
             success: true,
             message: results.remaining > 0
                 ? `Migrated ${results.succeeded}. ${results.remaining} remaining.`
-                : results.succeeded > 0
-                    ? `Done! All files processed.`
-                    : `All ${results.alreadyInStorage} files already migrated.`,
+                : batch.length === 0
+                    ? `Complete! ${results.previouslyDone} in Storage, ${results.previouslyFailed} could not be migrated.`
+                    : `Batch done. ${results.succeeded} succeeded, ${results.failed} failed.`,
             ...results,
         })
 

@@ -210,8 +210,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const fontSize = Math.max(12, Math.min(detectedHeight * 0.85, 28))
 
                 // Tight padding — just enough to cover original text
-                const padV = 1
-                const padH = 2
+                const padV = 0
+                const padH = 1
 
                 // At transposition=0, don't overlay — original PDF text is already correct
                 if (!isChanged) return null
@@ -227,7 +227,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             margin: `-${padV}px 0 0 -${padH}px`,
                             padding: `${padV}px ${padH}px`,
 
-                            backgroundColor: 'white',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
                             borderRadius: '1px',
 
                             color: '#6d28d9',

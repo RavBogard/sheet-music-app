@@ -78,7 +78,7 @@ export default function UnifiedSettingsPage() {
     // Storage Migration State
     const [migrating, setMigrating] = useState(false)
     const [migrationStats, setMigrationStats] = useState<{
-        total: number; succeeded: number; failed: number; remaining: number; alreadyInStorage: number; message: string
+        total: number; succeeded: number; failed: number; remaining: number; previouslyDone: number; previouslyFailed: number; message: string
     } | null>(null)
 
     const handleMigration = async () => {
@@ -132,7 +132,8 @@ export default function UnifiedSettingsPage() {
                     succeeded: totalSucceeded,
                     failed: totalFailed,
                     remaining,
-                    alreadyInStorage: data.alreadyInStorage || 0,
+                    previouslyDone: data.previouslyDone || 0,
+                    previouslyFailed: data.previouslyFailed || 0,
                     message: data.message,
                 })
 
@@ -328,7 +329,7 @@ export default function UnifiedSettingsPage() {
                                         <div className="grid grid-cols-2 gap-1 text-muted-foreground text-xs">
                                             <span>Total: {migrationStats.total}</span>
                                             <span>Migrated: {migrationStats.succeeded}</span>
-                                            <span>In Storage: {migrationStats.alreadyInStorage}</span>
+                                            <span>Done: {migrationStats.previouslyDone}</span>
                                             <span>Remaining: {migrationStats.remaining}</span>
                                             {migrationStats.failed > 0 && <span className="text-red-500">Failed: {migrationStats.failed}</span>}
                                         </div>

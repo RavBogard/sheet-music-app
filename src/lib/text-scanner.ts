@@ -86,10 +86,12 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
             // Only merge single chars if both are chord-relevant (letters, accidentals, numbers)
             const isChordChar = (t: string) => /^[A-Ga-g#b♯♭0-9mMdiasugnol]+$/.test(t.trim());
             const bothChordRelevant = isChordChar(current.text) && isChordChar(next.text);
-            const maxGap = (isSingleChar && bothChordRelevant) ? (current.h * 1.0) : (current.h * 0.3);
+            // Don't merge two chord roots (e.g. "A" + "B" are separate chords)
+            const bothAreRoots = /^[A-G]$/.test(current.text.trim()) && /^[A-G]$/.test(next.text.trim());
+            const maxGap = (isSingleChar && bothChordRelevant && !bothAreRoots) ? (current.h * 1.0) : (current.h * 0.3);
             const isClose = gap >= 0 && gap < maxGap;
 
-            if (sameLine && isClose && (bothChordRelevant || !isSingleChar)) {
+            if (sameLine && isClose && (bothChordRelevant || !isSingleChar) && !bothAreRoots) {
                 current = {
                     ...current,
                     text: current.text + next.text,
@@ -135,7 +137,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
 
                 // Y tolerance: generous for all chord parts — music fonts often
                 // render accidentals and qualities at slightly different baselines
-                const yTolerance = isNumber ? (lastItem.h * 2.5) : (lastItem.h * 1.8)
+                const yTolerance = isNumber ? (lastItem.h * 2.0) : (lastItem.h * 1.2)
                 if (Math.abs(lastItem.y - next.y) > yTolerance) {
                     break
                 }
@@ -143,7 +145,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
                 // X tolerance: music PDFs often have generous spacing between
                 // chord parts — allow up to 2x character height gap
                 const gap = next.x - lastItem.r
-                const maxGap = isNumber ? (lastItem.h * 2.5) : (lastItem.h * 2.0)
+                const maxGap = isNumber ? (lastItem.h * 1.5) : (lastItem.h * 0.8)
                 if (gap > maxGap || gap < -lastItem.w) {
                     break
                 }
@@ -172,8 +174,8 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     for (const item of finalItems) {
         const text = item.text.trim();
 
-        // Clean stray characters but preserve parentheses
-        const cleanText = text.replace(/[^\w#b\/()\-]/g, '');
+        // Clean stray characters; strip isolated closing parens
+        const cleanText = text.replace(/[^\w#b\/()\-]/g, '').replace(/^\)+|\)+$/g, '');
         if (!cleanText) continue;
 
         // Skip excluded words
