@@ -28,30 +28,37 @@ const SHARP_KEYS = new Set([
     'Em', 'Bm', 'F#m', 'C#m', 'G#m',
 ]);
 
+/**
+ * Determine whether a key conventionally uses flats.
+ * Exported so SmartTransposer can derive flat preference from the target key.
+ */
+export function keyUsesFlats(key: string | null): boolean | undefined {
+    if (!key) return undefined;
+    if (FLAT_KEYS.has(key)) return true;
+    if (SHARP_KEYS.has(key)) return false;
+    // Natural keys (C, Am) — no strong preference
+    return undefined;
+}
+
 // Given a root note index and whether we came from a flat/sharp context,
 // determine if we should use flats or sharps for the result
 function shouldUseFlats(newIndex: number, originalAccidental: string, preferFlats?: boolean): boolean {
-    // Explicit preference overrides
+    // Explicit preference overrides (from musician profile or key context)
     if (preferFlats !== undefined) return preferFlats;
 
-    // If the original chord used a flat, prefer flats
+    // Preserve the convention of the source chord:
     if (originalAccidental === 'b') return true;
+    if (originalAccidental === '#') return false;
 
-    // Check what key the resulting root would naturally belong to
+    // For natural chords landing on an accidental, use music-theory convention
     const sharpName = SHARP_SCALE[newIndex];
     const flatName = FLAT_SCALE[newIndex];
 
-    // If the note is natural (same in both scales), use convention:
-    // F uses flats, everything else uses sharps by default
-    if (sharpName === flatName) {
-        return sharpName === 'F';
-    }
-
-    // For accidental notes, prefer the more common enharmonic:
-    // Db > C#, Eb > D#, Ab > G#, Bb > A# (flats are more common in popular/worship music)
-    // F# > Gb (F# is more common)
+    if (sharpName === flatName) return false;
     if (newIndex === 6) return false; // F# preferred over Gb
-    return true; // Prefer flats for Db, Eb, Ab, Bb
+
+    // Db, Eb, Ab, Bb preferred over C#, D#, G#, A#
+    return true;
 }
 
 function findNoteIndex(noteName: string): number {

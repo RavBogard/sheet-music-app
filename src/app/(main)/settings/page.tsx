@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { useTheme } from "next-themes"
 import buildInfo from "@/build-info.json"
+import AdminSections from "@/components/admin/AdminSections"
 import {
     ArrowLeft, Loader2, User, Moon, Sun, Monitor,
-    LogOut, ShieldAlert, ArrowRight,
+    LogOut, ShieldAlert,
 } from "lucide-react"
 
 export default function SettingsPage() {
@@ -33,7 +34,7 @@ export default function SettingsPage() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-semibold">Settings</h1>
-                        <p className="text-muted-foreground text-sm">Profile and preferences</p>
+                        <p className="text-muted-foreground text-sm">Profile, preferences{isAdmin ? ", and administration" : ""}</p>
                     </div>
                 </div>
 
@@ -95,22 +96,14 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
-                {/* Admin Link */}
+                {/* Admin Sections — integrated inline for admins */}
                 {isAdmin && (
-                    <section>
-                        <button
-                            onClick={() => router.push("/admin")}
-                            className="w-full bg-card border border-border p-5 rounded-2xl text-left hover:border-violet-500/50 hover:bg-accent transition-all group flex items-center gap-4"
-                        >
-                            <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-500">
-                                <ShieldAlert className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-foreground">Admin Dashboard</h3>
-                                <p className="text-muted-foreground text-sm">Users, sound system, library, and system settings</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-violet-500 transition-colors" />
-                        </button>
+                    <section className="space-y-4">
+                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                            <ShieldAlert className="w-3.5 h-3.5 text-violet-500" />
+                            Administration
+                        </h2>
+                        <AdminSections />
                     </section>
                 )}
 

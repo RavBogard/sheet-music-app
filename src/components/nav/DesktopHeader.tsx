@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert } from "lucide-react"
+import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -40,7 +40,6 @@ export function DesktopHeader() {
         { label: "Setlists", href: "/setlists", show: true },
         { label: "Library", href: "/library", show: isMember },
         { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },
-        { label: "Admin", href: "/admin", show: isAdmin },
     ]
 
     const searchResults = searchQuery.length > 1
@@ -96,8 +95,7 @@ export function DesktopHeader() {
                             <Link key={link.href} href={link.href}
                                 className={cn(
                                     "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                                    link.label === "Admin" && "text-violet-500 hover:text-violet-400"
+                                    isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                 )}>
                                 {link.label}
                             </Link>
@@ -182,11 +180,6 @@ export function DesktopHeader() {
                                 <DropdownMenuItem className="hover:bg-accent cursor-pointer" onClick={() => router.push("/settings")}>
                                     <Settings className="mr-2 h-4 w-4" /> Settings
                                 </DropdownMenuItem>
-                                {isAdmin && (
-                                    <DropdownMenuItem className="hover:bg-accent cursor-pointer" onClick={() => router.push("/admin")}>
-                                        <ShieldAlert className="mr-2 h-4 w-4 text-violet-500" /> Admin
-                                    </DropdownMenuItem>
-                                )}
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>
                                     <LogOut className="mr-2 h-4 w-4" /> Log out

@@ -2,8 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useState, useEffect, useRef } from "react"
-import { useDrag } from '@use-gesture/react'
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
@@ -21,27 +20,52 @@ interface PerformerViewProps {
 
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
-    const [toolbarVisible, setToolbarVisible] = useState(true)
+    const [barsVisible, setBarsVisible] = useState(true)
     const router = useRouter()
-
-    // Ref for the content container to apply rubberbanding transform
     const viewRef = useRef<HTMLDivElement>(null)
+    const autoHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const [menuOpen, setMenuOpen] = useState(false)
 
+    // ── Single source of truth for toolbar visibility ──
+    const showBars = useCallback(() => {
+        setBarsVisible(true)
+        // Reset auto-hide timer
+        if (autoHideRef.current) clearTimeout(autoHideRef.current)
+        autoHideRef.current = setTimeout(() => {
+            if (!menuOpen) setBarsVisible(false)
+        }, 8000)
+    }, [menuOpen])
+
+    const toggleBars = useCallback(() => {
+        setBarsVisible(prev => {
+            const next = !prev
+            if (autoHideRef.current) clearTimeout(autoHideRef.current)
+            if (next && !menuOpen) {
+                autoHideRef.current = setTimeout(() => setBarsVisible(false), 8000)
+            }
+            return next
+        })
+    }, [menuOpen])
+
+    // Keep bars visible while a menu/popover is open
     useEffect(() => {
-        const handleToggle = () => setToolbarVisible(prev => !prev)
-        window.addEventListener('toggle-toolbar', handleToggle)
-        // Prevent default touch actions (history nav, etc.)
-        document.body.style.touchAction = 'pan-y'
-        return () => {
-            window.removeEventListener('toggle-toolbar', handleToggle)
-            document.body.style.touchAction = 'auto'
+        if (menuOpen) {
+            setBarsVisible(true)
+            if (autoHideRef.current) clearTimeout(autoHideRef.current)
         }
+    }, [menuOpen])
+
+    // Initial auto-hide
+    useEffect(() => {
+        autoHideRef.current = setTimeout(() => {
+            if (!menuOpen) setBarsVisible(false)
+        }, 8000)
+        return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
     }, [])
 
-    // Keyboard shortcuts for page turners and desktop use
+    // ── Keyboard shortcuts ──
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Skip if user is typing in an input
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
 
             switch (e.key) {
@@ -80,167 +104,119 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                     break
                 case ' ':
                     e.preventDefault()
-                    setToolbarVisible(prev => !prev)
+                    toggleBars()
                     break
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [playbackQueue, nextSong, prevSong, router, onHome])
+    }, [playbackQueue, nextSong, prevSong, router, onHome, toggleBars])
 
-    const bind = useDrag(({ active, movement: [mx, my], velocity: [vx, vy], tap, cancel, event, last, initial: [, startY] }) => {
-        // 1. Zoom Guard: If zoomed in significantly, disable swipe nav to allow panning
-        // We use a small tolerance (1.1) to allow for "fit width" variations which might be slightly > 1
+    // ── Swipe navigation via edge touch zones ──
+    const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+
+    const handleSwipeStart = useCallback((e: React.TouchEvent | React.PointerEvent) => {
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+        swipeStartRef.current = { x: clientX, y: clientY, time: Date.now() }
+    }, [])
+
+    const handleSwipeEnd = useCallback((e: React.TouchEvent | React.PointerEvent) => {
+        if (!swipeStartRef.current) return
+        const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX
+        const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY
+
+        const dx = clientX - swipeStartRef.current.x
+        const dy = clientY - swipeStartRef.current.y
+        const dt = Date.now() - swipeStartRef.current.time
+        swipeStartRef.current = null
+
+        // Must be horizontal, fast enough, and far enough
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2 || dt > 800) return
+
+        // Don't navigate if zoomed in
         if (zoom > 1.1) return
 
-        // 2. Tap Handling (Toggle Toolbar)
-        if (tap) {
-            const e = event as unknown as React.PointerEvent & { changedTouches?: TouchList }
-            const target = e.target as HTMLElement
-            // Ignore taps on toolbar or interactive elements
-            if (target.closest('.performance-toolbar') || target.closest('button')) return
-
-            // Simple center tap toggle? Or keep the side-zones?
-            // User feedback suggests simple toggle is often preferred, but let's keep the side-zones logic if they liked it.
-            // Actually, "Inconsistent" suggests simple might be better. 
-            // Let's stick to the previous side-zone logic but clean it up.
-
-            const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
-            const width = window.innerWidth
-
-            if (x < width * 0.25) {
-                // Scroll Up / Prev Page (internal PDF logic handles this mostly, but if we want manual scroll:)
-                const container = document.querySelector('.react-pdf__Document')?.parentElement
-                if (container) container.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
-            } else if (x > width * 0.75) {
-                // Scroll Down / Next Page
-                const container = document.querySelector('.react-pdf__Document')?.parentElement
-                if (container) container.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
-            } else {
-                setToolbarVisible(v => !v)
-            }
-            return
-        }
-
-        // 3. Swipe Down from Top to Exit Performance Mode
-        const isVerticalDown = my > 0 && Math.abs(my) > Math.abs(mx) * 1.5
-        const startedFromTop = startY < window.innerHeight * 0.2
-
-        if (last && isVerticalDown && startedFromTop && my > 120 && vy > 0.3) {
-            if (viewRef.current) {
-                viewRef.current.style.transform = `translateY(100%)`
-                viewRef.current.style.transition = 'transform 0.3s ease-out'
-            }
-            const { returnPath } = useMusicStore.getState()
-            setTimeout(() => onHome(), 250)
-            return
-        }
-
-        if (active && isVerticalDown && startedFromTop) {
-            if (viewRef.current) {
-                viewRef.current.style.transform = `translateY(${Math.max(0, my * 0.5)}px)`
-                viewRef.current.style.transition = 'none'
-                viewRef.current.style.opacity = `${Math.max(0.3, 1 - my / 400)}`
-            }
-            return
-        }
-
-        // 4. Swipe / Drag Logic (horizontal)
-        if (active) {
-            if (Math.abs(mx) > Math.abs(my)) {
+        if (dx < 0) {
+            // Swiped left → next song
+            const next = nextSong()
+            if (next) {
                 if (viewRef.current) {
-                    viewRef.current.style.transform = `translateX(${mx}px)`
-                    viewRef.current.style.transition = 'none'
-                    viewRef.current.style.opacity = '1'
+                    viewRef.current.style.transform = 'translateX(-100%)'
+                    viewRef.current.style.transition = 'transform 0.25s ease-out'
                 }
+                setTimeout(() => router.push(`/perform/${next.fileId}`), 200)
             }
-        } else if (last) {
-            // Drag End - Determine Action
-            const width = window.innerWidth
-            const hDrag = Math.abs(mx) > Math.abs(my)
-            const isFlick = vx > 0.5 && Math.abs(mx) > 50 // Fast flick
-            const isBigDrag = Math.abs(mx) > width * 0.25 // Dragged > 25% of screen
-
-            if (hDrag && (isFlick || isBigDrag)) {
-                // Trigger Navigation
-                if (mx < 0) {
-                    // Swiped Left -> Next Song
-                    const next = nextSong()
-                    if (next) {
-                        // Animate out completely? Or just router push? 
-                        // Router push is safer, React will unmount.
-                        if (viewRef.current) {
-                            viewRef.current.style.transform = `translateX(-100%)`
-                            viewRef.current.style.transition = 'transform 0.2s ease-out'
-                        }
-                        setTimeout(() => router.push(`/perform/${next.fileId}`), 200)
-                    } else {
-                        // End of list bounce
-                        snapBack()
-                    }
-                } else {
-                    // Swiped Right -> Prev Song
-                    const prev = prevSong()
-                    if (prev) {
-                        if (viewRef.current) {
-                            viewRef.current.style.transform = `translateX(100%)`
-                            viewRef.current.style.transition = 'transform 0.2s ease-out'
-                        }
-                        setTimeout(() => router.push(`/perform/${prev.fileId}`), 200)
-                    } else {
-                        snapBack()
-                    }
+        } else {
+            // Swiped right → prev song
+            const prev = prevSong()
+            if (prev) {
+                if (viewRef.current) {
+                    viewRef.current.style.transform = 'translateX(100%)'
+                    viewRef.current.style.transition = 'transform 0.25s ease-out'
                 }
-            } else {
-                // Cancel / Snap Back
-                snapBack()
+                setTimeout(() => router.push(`/perform/${prev.fileId}`), 200)
             }
         }
-    }, {
-        filterTaps: true,
-        rubberband: true, // Use gesture's internal rubberband calc for bounds if needed, but we do manual
-        axis: undefined, // IMPORTANT: Unlocked axis to allow diagonal thumb movement
-    })
+    }, [zoom, nextSong, prevSong, router])
 
-    const snapBack = () => {
-        if (viewRef.current) {
-            viewRef.current.style.transform = 'translateX(0px) translateY(0px) scale(1)'
-            viewRef.current.style.opacity = '1'
-            viewRef.current.style.transition = 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    // ── Center tap to toggle bars ──
+    const handleContentTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        const target = e.target as HTMLElement
+        // Ignore taps on interactive elements
+        if (target.closest('button') || target.closest('.performance-toolbar') || target.closest('[role="dialog"]')) return
+
+        const clientX = 'touches' in e ? e.changedTouches?.[0]?.clientX ?? 0 : e.clientX
+        const width = window.innerWidth
+
+        // Center 60% of screen toggles bars
+        if (clientX > width * 0.2 && clientX < width * 0.8) {
+            toggleBars()
         }
-    }
+    }, [toggleBars])
 
     return (
-        <div
-            {...bind()}
-            className="h-[100dvh] flex flex-col bg-black text-white relative touch-action-pan-y" // CSS Class for touch-action
-            style={{ touchAction: 'pan-y' }} // Inline style to be absolutely sure
-        >
+        <div className="h-[100dvh] flex flex-col bg-black text-white relative">
 
-            {/* Main Content Area - Ref for sliding */}
+            {/* Swipe overlay — transparent zones on left/right edges for reliable gesture capture */}
+            <div
+                className="fixed inset-y-0 left-0 right-0 z-30 pointer-events-none"
+                style={{ touchAction: 'pan-y' }}
+            >
+                {/* Left edge swipe zone */}
+                <div
+                    className="absolute left-0 top-0 bottom-0 w-[15%] pointer-events-auto"
+                    style={{ touchAction: 'none' }}
+                    onTouchStart={handleSwipeStart}
+                    onTouchEnd={handleSwipeEnd}
+                />
+                {/* Right edge swipe zone */}
+                <div
+                    className="absolute right-0 top-0 bottom-0 w-[15%] pointer-events-auto"
+                    style={{ touchAction: 'none' }}
+                    onTouchStart={handleSwipeStart}
+                    onTouchEnd={handleSwipeEnd}
+                />
+            </div>
+
+            {/* Main Content Area */}
             <div
                 ref={viewRef}
-                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative touch-pan-y"
+                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative"
+                onClick={handleContentTap}
             >
-                {/* Render Viewer (Edge to Edge) */}
                 {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
 
                 {!fileUrl && (
                     <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
-                        {/* Show loading state if we're expecting a file (queue exists), otherwise show No Chart */}
                         {playbackQueue.length > 0 && queueIndex >= 0 ? (
                             <>
                                 <div className="animate-pulse flex flex-col items-center gap-3">
                                     <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-                                    <p className="text-lg font-medium text-zinc-400">
-                                        Loading
-                                    </p>
-                                    <p className="text-sm text-zinc-500 italic">
-                                        {playbackQueue[queueIndex]?.name || ""}
-                                    </p>
+                                    <p className="text-lg font-medium text-zinc-400">Loading</p>
+                                    <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
                                 </div>
-                                {/* Skeleton blocks */}
                                 <div className="w-64 space-y-3 mt-4">
                                     <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
                                     <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
@@ -260,11 +236,12 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                 )}
             </div>
 
-            {/* Unified Performance Toolbar */}
-            <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${toolbarVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+            {/* Performance Toolbar — single visibility source */}
+            <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${barsVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <PerformanceToolbar
                     onHome={onHome}
                     onSetlist={onSetlist}
+                    onMenuOpenChange={setMenuOpen}
                 />
             </div>
         </div>

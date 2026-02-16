@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { transposeChord, calculateCapo, estimateKey, getTransposedKeyName, normalizeChord } from './music-math'
+import { transposeChord, calculateCapo, estimateKey, getTransposedKeyName, normalizeChord, keyUsesFlats } from './music-math'
 
 describe('transposeChord', () => {
     describe('basic transposition', () => {
@@ -31,7 +31,7 @@ describe('transposeChord', () => {
     describe('accidentals', () => {
         it('transposes sharp notes', () => {
             expect(transposeChord('F#', 1)).toBe('G')
-            expect(transposeChord('C#', 2)).toBe('Eb')
+            expect(transposeChord('C#', 2)).toBe('D#') // Sharp context preserved
         })
 
         it('transposes flat notes', () => {
@@ -45,6 +45,34 @@ describe('transposeChord', () => {
             expect(transposeChord('C', 1, false)).toBe('C#')
             expect(transposeChord('D', 1, true)).toBe('Eb')
             expect(transposeChord('D', 1, false)).toBe('D#')
+        })
+
+        it('produces consistent accidentals within a key context', () => {
+            // In Bb major context (preferFlats=true): all accidentals should be flats
+            expect(transposeChord('G', 3, true)).toBe('Bb')    // not A#
+            expect(transposeChord('A', 3, true)).toBe('C')
+            expect(transposeChord('D', 3, true)).toBe('F')
+            expect(transposeChord('C', 3, true)).toBe('Eb')    // not D#
+
+            // In A major context (preferFlats=false): all accidentals should be sharps
+            expect(transposeChord('G', 2, false)).toBe('A')
+            expect(transposeChord('C', 2, false)).toBe('D')
+            expect(transposeChord('D', 2, false)).toBe('E')
+            expect(transposeChord('Bb', 2, false)).toBe('C')
+        })
+
+        it('preserves sharp convention through transposition', () => {
+            // Key of A (sharps): F#m + 2 should stay G#m, not Abm
+            expect(transposeChord('F#m', 2)).toBe('G#m')
+            expect(transposeChord('C#m', 2)).toBe('D#m')
+            expect(transposeChord('G#', 2)).toBe('A#')
+        })
+
+        it('preserves flat convention through transposition', () => {
+            // Flat chords stay flat
+            expect(transposeChord('Bbm', 2)).toBe('Cm')
+            expect(transposeChord('Ebm', 2)).toBe('Fm')
+            expect(transposeChord('Ab', 2)).toBe('Bb')
         })
     })
 
@@ -211,5 +239,31 @@ describe('getTransposedKeyName', () => {
 describe('normalizeChord', () => {
     it('trims whitespace', () => {
         expect(normalizeChord('  Am7  ')).toBe('Am7')
+    })
+})
+
+describe('keyUsesFlats', () => {
+    it('returns true for flat keys', () => {
+        expect(keyUsesFlats('F')).toBe(true)
+        expect(keyUsesFlats('Bb')).toBe(true)
+        expect(keyUsesFlats('Eb')).toBe(true)
+        expect(keyUsesFlats('Ab')).toBe(true)
+        expect(keyUsesFlats('Dm')).toBe(true)
+        expect(keyUsesFlats('Gm')).toBe(true)
+    })
+
+    it('returns false for sharp keys', () => {
+        expect(keyUsesFlats('G')).toBe(false)
+        expect(keyUsesFlats('D')).toBe(false)
+        expect(keyUsesFlats('A')).toBe(false)
+        expect(keyUsesFlats('E')).toBe(false)
+        expect(keyUsesFlats('F#')).toBe(false)
+        expect(keyUsesFlats('Bm')).toBe(false)
+    })
+
+    it('returns undefined for neutral keys', () => {
+        expect(keyUsesFlats('C')).toBeUndefined()
+        expect(keyUsesFlats('Am')).toBeUndefined()
+        expect(keyUsesFlats(null)).toBeUndefined()
     })
 })

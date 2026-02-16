@@ -3,7 +3,7 @@ import { useMusicStore } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"
 import { scanTextLayer } from "@/lib/text-scanner"
-import { transposeChord } from "@/lib/music-math"
+import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
 import { logger } from "@/lib/logger"
@@ -198,12 +198,23 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         return null
     }
 
+    // Derive flat/sharp preference from the target key
+    // Gather all chords across pages, estimate key, transpose to get target key
+    const allChords = Object.values(aiState.pageData).flatMap(
+        p => p.chords.map((c: { originalText?: string; text: string }) => c.originalText || c.text)
+    )
+    const detectedKey = allChords.length > 0 ? estimateKey(allChords) : null
+    const targetKey = detectedKey && transposition !== 0
+        ? transposeChord(detectedKey, transposition)
+        : detectedKey
+    const preferFlats = keyUsesFlats(targetKey)
+
     return (
         <div className="absolute inset-0 z-10 pointer-events-none">
             {pageData.chords.map((chord: ChordOverlay, i: number) => {
                 // Clean the source text (remove parens, normalize accidentals)
                 const sourceText = cleanChordText(chord.originalText || chord.text)
-                const transposed = transposeChord(sourceText, transposition)
+                const transposed = transposeChord(sourceText, transposition, preferFlats)
                 const isChanged = transposition !== 0
 
                 // Dynamic font sizing based on detected chord height
