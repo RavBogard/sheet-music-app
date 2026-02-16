@@ -235,32 +235,38 @@ match /config/monitor {
 
 ## Milestones
 
-### M1: Bridge Server MVP (1 session)
-- X32 OSC connection + state sync
-- WebSocket server with Firebase auth
-- Firestore config reading
-- Manual testing with X32
+### M1: Bridge Server MVP ✅ DONE
+- X32 OSC connection + state sync (x32-client.ts)
+- WebSocket server with Firebase auth (ws-server.ts)
+- Firestore config reading + live watching (config.ts)
+- Windows service installer
 
-### M2: Musician Monitor UI (1 session)
+### M2: Musician Monitor UI ✅ DONE
 - /monitor page with fader strips
 - Real-time bi-directional sync
 - Connection status + auto-reconnect
 - Self-select bus flow
+- Loading skeleton
 
-### M3: Admin UI + Bus Assignment (1 session)
+### M3: Admin UI + Bus Assignment ✅ DONE
 - /monitor/admin page
-- Bridge URL config
-- Bus assignment grid
-- User authorization toggles
-- Nav integration (conditional Monitor tab)
+- Bridge URL + X32 IP config
+- Bus assignment grid with musician dropdown
+- User authorization checkboxes
+- Nav integration (conditional Monitor tab in mobile + desktop)
+- Monitor Admin card in Settings (admin only)
+- Firestore rules for config/monitor
 
-### M4: Polish + Testing (1 session)
+### M4: Plug-in + Testing (when you're back)
+- Install bridge server on production PC
+- Run `npm install && npm run dev` in bridge/
+- Open /monitor/admin → enter X32 IP, bridge URL, bus numbers
+- Assign buses to musicians
 - Real-world testing during rehearsal
-- Latency optimization
 - Edge cases (X32 reboot, network drop, multiple admins)
 - Version bump to 2.5
 
-**Estimated: 4 focused sessions**
+**Estimated: 1 focused session to plug in and test**
 
 ---
 
