@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Tuner } from "@/components/tools/Tuner"
-import { Home, Sparkles, Loader2, Speaker, Pencil, Wrench } from "lucide-react"
+import { Home, Sparkles, Loader2, Speaker, Pencil } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -73,89 +73,79 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
             {/* ── MOBILE/TABLET: Two-row layout ── */}
             <div className="lg:hidden w-full">
 
-                {/* Row 1 (top): Annotate (left) | Metronome + Monitor + Transposer (centered-right) */}
-                <div className="w-full h-11 flex items-center px-3 border-b border-zinc-900/50">
+                {/* Row 1 (top): Annotate | Metronome | Audio | Transposer — evenly spread */}
+                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-zinc-900/50">
 
-                    {/* Left: Annotate */}
+                    {/* Annotate */}
                     <Button
                         variant="ghost" size="icon"
                         onClick={() => setAnnotating(!isAnnotating)}
-                        className={cn("h-9 w-9 rounded-xl shrink-0", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                        className={cn("h-9 w-9 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
 
-                    {/* Center/Right: Metronome + Monitor/Tuner + Transposer */}
-                    <div className="flex-1 flex items-center justify-center gap-2">
+                    {/* Metronome */}
+                    <MetronomeControl />
 
-                        {/* Metronome */}
-                        <MetronomeControl />
+                    {/* Audio (Tuner + Monitor) popover */}
+                    <Popover onOpenChange={(open) => trackPopover('tools', open)}>
+                        <PopoverTrigger asChild>
+                            <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
+                                <Speaker className="h-3.5 w-3.5" />
+                                <span>Audio</span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="center" side="top">
+                            <Tuner />
+                            <div className="border-t border-zinc-800" />
+                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                                <Speaker className="h-3 w-3" /> Monitor Mix
+                            </div>
+                            {hasMonitorAccess ? (
+                                <QuickMonitorPanel />
+                            ) : (
+                                <div className="text-xs text-zinc-600 px-1 py-2">No monitor connected</div>
+                            )}
+                        </PopoverContent>
+                    </Popover>
 
-                        {/* Monitor & Tuner popover */}
-                        <Popover onOpenChange={(open) => trackPopover('tools', open)}>
-                            <PopoverTrigger asChild>
-                                <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
-                                    <Speaker className="h-3.5 w-3.5" />
-                                    <span>Monitor</span>
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="center" side="top">
-                                {hasMonitorAccess && (
-                                    <>
-                                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
-                                            <Speaker className="h-3 w-3" /> Monitor Mix
-                                        </div>
-                                        <QuickMonitorPanel />
-                                        <div className="border-t border-zinc-800" />
-                                    </>
+                    {/* Transposer */}
+                    <Popover onOpenChange={(open) => {
+                        trackPopover('transposer', open)
+                        if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
+                    }}>
+                        <PopoverTrigger asChild>
+                            <button
+                                className={cn(
+                                    "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5",
+                                    aiState.isEnabled
+                                        ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                                        : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
                                 )}
-                                <Tuner />
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* Transposer */}
-                        <Popover onOpenChange={(open) => {
-                            trackPopover('transposer', open)
-                            if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
-                        }}>
-                            <PopoverTrigger asChild>
-                                <button
-                                    className={cn(
-                                        "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5",
-                                        aiState.isEnabled
-                                            ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
-                                            : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
-                                    )}
-                                >
-                                    {aiState.scanningPages.length > 0 ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-                                    ) : (
-                                        <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                                    )}
-                                    <span className="truncate max-w-[90px]">{buttonLabel}</span>
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                                <TransposerMenu />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                            >
+                                {aiState.scanningPages.length > 0 ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                ) : (
+                                    <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                                )}
+                                <span className="truncate max-w-[90px]">{buttonLabel}</span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                            <TransposerMenu />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 {/* Row 2 (bottom): Home + Song Navigation (centered) + Setlist */}
                 <div className="w-full h-14 flex items-center px-2">
-
-                    {/* Home — fixed width left */}
                     <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl shrink-0">
                         <Home className="h-6 w-6" />
                     </Button>
-
-                    {/* Song Navigation — centered absolutely */}
                     <div className="flex-1 flex justify-center min-w-0">
                         <SongNavigation />
                     </div>
-
-                    {/* Setlist drawer — fixed width right */}
                     <div className="shrink-0">
                         <SetlistDrawer />
                     </div>
@@ -195,23 +185,22 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                     <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
                         <PopoverTrigger asChild>
                             <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group">
-                                <Wrench className="h-3.5 w-3.5" />
-                                TOOLS
+                                <Speaker className="h-3.5 w-3.5" />
+                                AUDIO
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="end" side="top">
                             {/* Tuner */}
-                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1">Tuner</div>
                             <Tuner />
-                            {/* Mix */}
-                            {hasMonitorAccess && (
-                                <>
-                                    <div className="border-t border-zinc-800" />
-                                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
-                                        <Speaker className="h-3 w-3" /> Monitor Mix
-                                    </div>
-                                    <QuickMonitorPanel />
-                                </>
+                            {/* Monitor Mix */}
+                            <div className="border-t border-zinc-800" />
+                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                                <Speaker className="h-3 w-3" /> Monitor Mix
+                            </div>
+                            {hasMonitorAccess ? (
+                                <QuickMonitorPanel />
+                            ) : (
+                                <div className="text-xs text-zinc-600 px-1 py-2">No monitor connected</div>
                             )}
                         </PopoverContent>
                     </Popover>

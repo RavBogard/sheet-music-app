@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
+import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { FileType } from "@/lib/store"
 
@@ -20,6 +21,7 @@ interface PerformerViewProps {
 
 export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
+    const isAnnotating = useAnnotationStore(s => s.isAnnotating)
     const [barsVisible, setBarsVisible] = useState(true)
     const router = useRouter()
     const viewRef = useRef<HTMLDivElement>(null)
@@ -117,12 +119,14 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     const didSwipeRef = useRef(false)
 
     const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+        if (isAnnotating) return // Let annotation layer handle touches
         const touch = e.touches[0]
         swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
         didSwipeRef.current = false
-    }, [])
+    }, [isAnnotating])
 
     const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
+        if (isAnnotating) return
         if (!swipeStartRef.current) return
         const touch = e.changedTouches[0]
 
@@ -161,11 +165,12 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                 setTimeout(() => router.push(`/perform/${prev.fileId}`), 200)
             }
         }
-    }, [zoom, nextSong, prevSong, router])
+    }, [isAnnotating, zoom, nextSong, prevSong, router])
 
     // ── Tap anywhere to toggle bars ──
     // Distinguished from swipes by checking didSwipeRef
     const handleContentTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        if (isAnnotating) return // Let annotation layer handle taps
         const target = e.target as HTMLElement
         // Ignore taps on interactive elements
         if (target.closest('button') || target.closest('.performance-toolbar') || target.closest('[role="dialog"]')) return
@@ -177,7 +182,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
         }
 
         toggleBars()
-    }, [toggleBars])
+    }, [isAnnotating, toggleBars])
 
     return (
         <div className="h-[100dvh] flex flex-col bg-black text-white relative">
