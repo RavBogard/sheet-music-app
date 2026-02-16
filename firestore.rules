@@ -41,6 +41,11 @@ service cloud.firestore {
       match /setlists/{docId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
+
+      // Per-song transposition preferences
+      match /songPreferences/{fileId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // SETLISTS Collection (The new root collection)
