@@ -17,6 +17,7 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
     const pageRef = useRef<HTMLDivElement>(null)
     const [rendered, setRendered] = useState(false)
     const [pageHeight, setPageHeight] = useState(0)
+    const setCurrentVisiblePage = useMusicStore(s => s.setCurrentVisiblePage)
 
     // Measure page height after render
     useEffect(() => {
@@ -25,6 +26,22 @@ export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrap
             if (canvas) setPageHeight(canvas.height / (window.devicePixelRatio || 1))
         }
     }, [rendered])
+
+    // Track which page is most visible for annotation toolbar
+    useEffect(() => {
+        const el = pageRef.current
+        if (!el) return
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                    setCurrentVisiblePage(pageNumber)
+                }
+            },
+            { threshold: 0.5 }
+        )
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [pageNumber, setCurrentVisiblePage])
 
     return (
         <div ref={pageRef} className="mb-2 shadow-2xl bg-white relative group/page min-h-[100px]">

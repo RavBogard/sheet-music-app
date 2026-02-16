@@ -26,7 +26,7 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
-    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition } = useMusicStore()
+    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition, currentVisiblePage } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
     const currentTrack = playbackQueue[queueIndex]
@@ -289,7 +289,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
             {/* D2: Annotation toolbar (shown when annotating) */}
             {isAnnotating && (
                 <AnnotationToolbar
-                    currentPage={1}
+                    currentPage={currentVisiblePage}
                     onClose={() => setAnnotating(false)}
                 />
             )}

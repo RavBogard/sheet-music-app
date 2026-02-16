@@ -19,6 +19,7 @@ export interface MusicState {
     fileUrl: string | null
     transposition: number // 0 = original key, +1 = semitone up
     zoom: number // 1 = 100%
+    currentVisiblePage: number // 1-indexed, tracks which PDF page is most visible
 
     // AI Transposer State (New Approach)
     aiState: {
@@ -59,6 +60,7 @@ export interface MusicState {
     setFile: (url: string, type: FileType, returnPath?: string) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
+    setCurrentVisiblePage: (page: number) => void
 
     // AI Actions
     setAiEnabled: (enabled: boolean) => void
@@ -96,6 +98,7 @@ export const useMusicStore = create<MusicState>()(
             fileUrl: null,
             transposition: 0,
             zoom: 1,
+            currentVisiblePage: 1,
             aiXmlContent: null, // Init
 
             playbackQueue: [],
@@ -137,6 +140,7 @@ export const useMusicStore = create<MusicState>()(
             }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
+            setCurrentVisiblePage: (page: number) => set({ currentVisiblePage: page }),
 
             setQueue: (items, startIndex = 0, returnPath, setlistId) => {
                 // Apply per-track transposition from the first song
@@ -220,6 +224,7 @@ export const useMusicStore = create<MusicState>()(
                 fileUrl: null,
                 transposition: 0,
                 zoom: 1,
+                currentVisiblePage: 1,
                 aiXmlContent: null,
                 playbackQueue: [],
                 queueIndex: -1,
