@@ -3,11 +3,13 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 
 export default function LoginPage() {
     const { user, loading, signIn } = useAuth()
+    const congregation = useCongregation()
     const router = useRouter()
 
     useEffect(() => {
@@ -30,7 +32,7 @@ export default function LoginPage() {
                 <div className="flex flex-col items-center gap-4">
                     <img
                         src="/logo.jpg"
-                        alt="CRC"
+                        alt={congregation.shortName}
                         className="h-20 w-20 rounded-full border border-border object-cover shadow-sm"
                     />
                     <div>

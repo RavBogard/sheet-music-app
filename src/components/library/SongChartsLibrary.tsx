@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 
@@ -101,6 +102,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
 
     // AI Digitize
     const { isAdmin, user } = useAuth()
+    const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
     const handleDigitize = async (file: DriveFile) => {
@@ -163,7 +165,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
-                    <img src="/logo.jpg" alt="CRC" className="h-8 w-8 rounded-full border border-border object-cover" />
+                    <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-border object-cover" />
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>

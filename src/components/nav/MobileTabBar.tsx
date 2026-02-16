@@ -6,6 +6,7 @@ import { Home, Library, ListMusic, Settings, Radio, ShieldAlert } from "lucide-r
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
 
 interface NavItem {
     label: string
@@ -19,6 +20,7 @@ export function MobileTabBar() {
     const pathname = usePathname()
     const { isMember, isAdmin } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const congregation = useCongregation()
 
     // Build nav items dynamically based on role (max 5 tabs)
     // Priority: Home, Setlists always. Then role-dependent middle slots. Settings always last.
@@ -57,7 +59,7 @@ export function MobileTabBar() {
         })
     }
 
-    if (hasMonitorAccess && navItems.length < 5) {
+    if (hasMonitorAccess && congregation.features.monitor && navItems.length < 5) {
         navItems.push({
             label: "Monitor",
             href: "/monitor",

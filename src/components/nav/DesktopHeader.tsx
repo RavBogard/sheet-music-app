@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useChatStore } from "@/lib/chat-store"
@@ -27,6 +28,7 @@ export function DesktopHeader() {
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const congregation = useCongregation()
 
     // Search
     const [searchQuery, setSearchQuery] = useState("")
@@ -37,7 +39,7 @@ export function DesktopHeader() {
         { label: "Home", href: "/", show: true },
         { label: "Setlists", href: "/setlists", show: true },
         { label: "Library", href: "/library", show: isMember },
-        { label: "Monitor", href: "/monitor", show: hasMonitorAccess },
+        { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },
         { label: "Admin", href: "/admin", show: isAdmin },
     ]
 
@@ -84,7 +86,7 @@ export function DesktopHeader() {
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
                     <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105" />
-                    <span className="font-bold text-lg text-foreground">CRC Music</span>
+                    <span className="font-bold text-lg text-foreground">{congregation.shortName}</span>
                 </Link>
 
                 <nav className="flex items-center gap-1">
@@ -115,6 +117,7 @@ export function DesktopHeader() {
                         )}
 
                         {/* AI Chat */}
+                        {congregation.features.ai && (
                         <Button
                             variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
                             className={cn(
@@ -125,6 +128,7 @@ export function DesktopHeader() {
                             <Sparkles className="h-4 w-4" />
                             <span className="hidden lg:inline">AI Assistant</span>
                         </Button>
+                        )}
 
                         {/* Search */}
                         <div className="relative group" ref={searchRef}>

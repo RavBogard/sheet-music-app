@@ -26,12 +26,14 @@ import {
     ChevronRight,
 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
+import { useCongregation } from "@/lib/congregation-context"
 
 export default function DashboardPage() {
     const router = useRouter()
     const { user, profile, signIn, isMember, isLeader } = useAuth()
     const { loadLibrary } = useLibraryStore()
     const { fileUrl } = useMusicStore()
+    const congregation = useCongregation()
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
@@ -39,8 +41,8 @@ export default function DashboardPage() {
     // Greeting
     const greeting = useMemo(() => {
         const firstName = user?.displayName?.split(' ')[0] || null
-        return getContextualGreeting(firstName)
-    }, [user?.displayName])
+        return getContextualGreeting(firstName, undefined, congregation.shortName)
+    }, [user?.displayName, congregation.shortName])
 
     // Setlist Service
     const setlistService = useMemo(() => {
@@ -118,7 +120,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                     <img
                         src="/logo.jpg"
-                        alt="CRC Music"
+                        alt={congregation.shortName}
                         className="w-10 h-10 rounded-full border border-border"
                     />
                     <span className="text-sm font-semibold text-muted-foreground tracking-wide">
@@ -141,7 +143,7 @@ export default function DashboardPage() {
                     <div className="flex flex-col items-center text-center gap-3">
                         <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
                         <div>
-                            <h2 className="text-lg font-semibold">Welcome to CRC Music!</h2>
+                            <h2 className="text-lg font-semibold">Welcome to {congregation.shortName}!</h2>
                             <p className="text-sm text-muted-foreground mt-1">
                                 Your account is being reviewed. An admin will approve you shortly.
                             </p>

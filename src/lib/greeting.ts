@@ -157,7 +157,7 @@ function getTimeGreeting(date: Date): string {
  * @param name - User's display name (null for guests)
  * @param date - Override date for testing (defaults to now)
  */
-export function getContextualGreeting(name: string | null, date?: Date): Greeting {
+export function getContextualGreeting(name: string | null, date?: Date, appName?: string): Greeting {
     const now = date || new Date()
     const hDate = getHebrewDate(now)
 
@@ -183,7 +183,7 @@ export function getContextualGreeting(name: string | null, date?: Date): Greetin
     // 3. Time-of-day fallback
     const timeGreeting = getTimeGreeting(now)
     return {
-        text: name ? `${timeGreeting}, ${name}` : 'Welcome to CRC Music',
+        text: name ? `${timeGreeting}, ${name}` : `Welcome to ${appName || 'CRC Music'}`,
         hebrewDate: hDate.display,
         isSpecial: false
     }

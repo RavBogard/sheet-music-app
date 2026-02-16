@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
 import { ChevronLeft, Plus, LogIn, Calendar } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,7 @@ interface SetlistDashboardProps {
 
 export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
     const { user, signIn } = useAuth()
+    const congregation = useCongregation()
     const { downloadSetlist, isDownloading } = useOfflineManager()
 
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
@@ -217,7 +219,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
-                    <img src="/logo.jpg" alt="CRC" className="h-8 w-8 rounded-full border border-border object-cover" />
+                    <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-border object-cover" />
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
                 {user ? (
