@@ -75,6 +75,28 @@ export default function UnifiedSettingsPage() {
         }
     }
 
+    // Chord Cache State
+    const [clearingChords, setClearingChords] = useState(false)
+
+    const handleClearChordCache = async () => {
+        if (!user) return
+        setClearingChords(true)
+        try {
+            const token = await user.getIdToken()
+            const res = await fetch('/api/admin/migrate-storage/reset', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed")
+            toast.success(`Cleared ${data.cleared} cached chord scans. Charts will rescan on next view.`)
+        } catch (e: unknown) {
+            toast.error("Failed: " + (e instanceof Error ? e.message : "Unknown error"))
+        } finally {
+            setClearingChords(false)
+        }
+    }
+
     // Storage Migration State
     const [migrating, setMigrating] = useState(false)
     const [migrationStats, setMigrationStats] = useState<{
