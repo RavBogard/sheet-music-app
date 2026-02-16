@@ -35,8 +35,7 @@ export interface MusicState {
     playbackQueue: QueueItem[]
     queueIndex: number // -1 if not playing from queue
     returnPath: string | null // Where to go when exiting performance mode
-
-
+    currentSetlistId: string | null // Which setlist is currently being performed
 
     // Audio State
     audio: {
@@ -71,7 +70,7 @@ export interface MusicState {
     setAiError: (error: string | null) => void
 
     // Queue Actions
-    setQueue: (items: QueueItem[], startIndex?: number, returnPath?: string) => void
+    setQueue: (items: QueueItem[], startIndex?: number, returnPath?: string, setlistId?: string) => void
     nextSong: () => QueueItem | null
     prevSong: () => QueueItem | null
 
@@ -102,6 +101,7 @@ export const useMusicStore = create<MusicState>()(
             playbackQueue: [],
             queueIndex: -1,
             returnPath: null,
+            currentSetlistId: null,
 
             aiState: {
                 isEnabled: false,
@@ -138,7 +138,7 @@ export const useMusicStore = create<MusicState>()(
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
 
-            setQueue: (items, startIndex = 0, returnPath) => {
+            setQueue: (items, startIndex = 0, returnPath, setlistId) => {
                 // Apply per-track transposition from the first song
                 const firstTrack = items[startIndex]
                 const trackTransposition = firstTrack?.transposition ?? 0
@@ -146,6 +146,7 @@ export const useMusicStore = create<MusicState>()(
                     playbackQueue: items,
                     queueIndex: startIndex,
                     returnPath: returnPath || null,
+                    currentSetlistId: setlistId || null,
                     transposition: trackTransposition,
                     // Clear page data when starting a new queue
                     aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
@@ -223,6 +224,7 @@ export const useMusicStore = create<MusicState>()(
                 playbackQueue: [],
                 queueIndex: -1,
                 returnPath: null,
+                currentSetlistId: null,
                 audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
             })
         }),

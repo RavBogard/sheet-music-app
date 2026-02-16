@@ -10,6 +10,7 @@ import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 import { prefetchUpcoming } from "@/lib/prefetch"
 
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
+import { LiveNotification } from "@/components/performance/LiveNotification"
 
 import { parseFileId } from "@/lib/utils"
 
@@ -19,6 +20,11 @@ export default function PerformPage() {
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
     const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath } = useMusicStore()
     const [showIntro, dismissIntro] = usePerformanceIntro()
+
+    // Extract setlist ID from returnPath (e.g., "/setlists/abc123" → "abc123")
+    const originSetlistId = returnPath?.startsWith("/setlists/")
+        ? returnPath.split("/")[2] || null
+        : null
 
     // Auto-apply musician profile transposition
     useMusicianTransposition()
@@ -58,6 +64,7 @@ export default function PerformPage() {
     return (
         <>
             {showIntro && <PerformanceIntro onDismiss={dismissIntro} />}
+            <LiveNotification setlistId={originSetlistId} />
             <PerformerView
                 fileUrl={fileUrl}
                 fileType={fileType}

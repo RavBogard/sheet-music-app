@@ -42,8 +42,13 @@ service cloud.firestore {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
-      // Per-song transposition preferences
+      // Per-user per-song transposition preferences
       match /songPreferences/{fileId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // D2: Chart annotations — private per-user per-song
+      match /annotations/{fileId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
@@ -73,6 +78,13 @@ service cloud.firestore {
 
       // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
       allow delete: if isOwner(resource) || isAdmin();
+
+      // D1: Presence subcollection — users write their own presence doc
+      match /presence/{odinguid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == odinguid;
+        allow delete: if isSignedIn() && request.auth.uid == odinguid;
+      }
     }
     
     // PUBLIC SETLISTS (Legacy)

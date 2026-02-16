@@ -1,7 +1,8 @@
-import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw } from "lucide-react"
+import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useChatStore } from "@/lib/chat-store"
+import type { PresenceEntry } from "@/lib/setlist-live"
 
 interface SetlistHeaderProps {
     name: string
@@ -24,6 +25,9 @@ interface SetlistHeaderProps {
     redo?: () => void
     canUndo?: boolean
     canRedo?: boolean
+    presence?: PresenceEntry[]
+    liveEnabled?: boolean
+    onToggleLive?: () => void
 }
 
 export function SetlistHeader({
@@ -46,7 +50,10 @@ export function SetlistHeader({
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    presence = [],
+    liveEnabled,
+    onToggleLive
 }: SetlistHeaderProps) {
     const { toggle, isOpen: isChatOpen } = useChatStore()
 
@@ -65,6 +72,35 @@ export function SetlistHeader({
                 />
             ) : (
                 <h1 className="text-2xl font-bold flex-1">{name}</h1>
+            )}
+
+            {/* Presence Avatars */}
+            {presence.length > 0 && (
+                <div className="flex items-center -space-x-2 shrink-0" title={presence.map(p => p.displayName).join(", ")}>
+                    {presence.slice(0, 4).map(p => (
+                        <div key={p.uid} className="w-7 h-7 rounded-full bg-violet-500/20 border-2 border-background flex items-center justify-center text-[10px] font-bold text-violet-400">
+                            {p.displayName.charAt(0).toUpperCase()}
+                        </div>
+                    ))}
+                    {presence.length > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                            +{presence.length - 4}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Live Toggle (leaders only) */}
+            {isLeader && onToggleLive && (
+                <Button
+                    size="sm"
+                    variant={liveEnabled ? "default" : "outline"}
+                    onClick={onToggleLive}
+                    className={`gap-1.5 shrink-0 ${liveEnabled ? "bg-red-600 hover:bg-red-500 text-white" : ""}`}
+                >
+                    <Radio className={`h-3.5 w-3.5 ${liveEnabled ? "animate-pulse" : ""}`} />
+                    <span className="text-xs font-semibold">{liveEnabled ? "LIVE" : "Go Live"}</span>
+                </Button>
             )}
 
             {/* Print Button */}

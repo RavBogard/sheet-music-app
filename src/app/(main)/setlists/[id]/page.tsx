@@ -126,7 +126,7 @@ export default function SetlistEditorPage() {
 
                 const clickedItemIndex = queue.findIndex((q: any) => q.fileId === fileId)
                 if (clickedItemIndex !== -1) {
-                    setQueue(queue, clickedItemIndex, `/setlists/${id}`)
+                    setQueue(queue, clickedItemIndex, `/setlists/${id}`, id)
                     router.push(`/perform/${fileId}`)
                 }
             }}

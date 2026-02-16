@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PrintModal } from "@/components/setlist/PrintModal"
 import {
@@ -21,6 +21,9 @@ import {
 } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile } from "@/types/api"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
+import { useSetlistPresence, useLiveState } from "@/hooks/use-setlist-presence"
+import { enableLiveMode, updateLiveTrack } from "@/lib/setlist-live"
+import { useAuth } from "@/lib/auth-context"
 
 // Components
 import { TrackItem } from "./editor/TrackItem"
@@ -104,6 +107,15 @@ export function SetlistEditor({
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
 
+    // D1: Live Collaboration
+    const { user } = useAuth()
+    const presence = useSetlistPresence(setlistId || null, isEditMode ? "editing" : "viewing")
+    const liveState = useLiveState(setlistId || null)
+    const handleToggleLive = useCallback(() => {
+        if (!setlistId) return
+        enableLiveMode(setlistId, !liveState?.enabled)
+    }, [setlistId, liveState])
+
     // Explicit Track Details Edit Modal state
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
 
@@ -169,6 +181,9 @@ export function SetlistEditor({
                 redo={redo}
                 canUndo={canUndo}
                 canRedo={canRedo}
+                presence={presence}
+                liveEnabled={liveState?.enabled}
+                onToggleLive={isLeader ? handleToggleLive : undefined}
             />
 
             {/* Timeline View - Only show if we have tracks */}
