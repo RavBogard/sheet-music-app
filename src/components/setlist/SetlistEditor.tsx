@@ -116,6 +116,17 @@ export function SetlistEditor({
         enableLiveMode(setlistId, !liveState?.enabled)
     }, [setlistId, liveState])
 
+    // D1: Broadcast live track when leader plays a song in live mode
+    const handlePlayTrack = useCallback((fileId: string, fileName: string) => {
+        if (liveState?.enabled && setlistId && user) {
+            const trackIdx = tracks.findIndex(t => t.fileId === fileId)
+            if (trackIdx >= 0) {
+                updateLiveTrack(setlistId, trackIdx, user.uid, user.displayName || "Leader")
+            }
+        }
+        onPlayTrack?.(fileId, fileName)
+    }, [liveState, setlistId, user, tracks, onPlayTrack])
+
     // Explicit Track Details Edit Modal state
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
 
@@ -188,7 +199,7 @@ export function SetlistEditor({
 
             {/* Timeline View - Only show if we have tracks */}
             {tracks.length > 0 && (
-                <SetlistTimeline tracks={tracks} onPlay={(fid) => onPlayTrack?.(fid, "song")} />
+                <SetlistTimeline tracks={tracks} onPlay={(fid) => handlePlayTrack(fid, "song")} />
             )}
 
             {/* Track List */}
@@ -207,7 +218,7 @@ export function SetlistEditor({
                                     onUpdate={updateTrack}
                                     onDelete={deleteTrack}
                                     onMatchFile={setMatchingTrackId}
-                                    onPlay={onPlayTrack}
+                                    onPlay={handlePlayTrack}
                                     readOnly={!canEdit} // Still needed for non-editors
                                     isEditMode={canEdit && isEditMode} // Separate visual edit mode
                                     onEditDetails={canEdit ? setEditingTrack : undefined}

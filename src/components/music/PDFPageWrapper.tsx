@@ -5,6 +5,7 @@ import { Page } from "react-pdf"
 
 import { useMusicStore } from "@/lib/store"
 import { SmartTransposer } from "./SmartTransposer"
+import { AnnotationLayer } from "./AnnotationLayer"
 
 interface PDFPageWrapperProps {
     pageNumber: number
@@ -14,41 +15,43 @@ interface PDFPageWrapperProps {
 
 export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrapperProps) {
     const pageRef = useRef<HTMLDivElement>(null)
-    // const { aiTransposer, setTransposerState } = useMusicStore() // Removed
-
     const [rendered, setRendered] = useState(false)
+    const [pageHeight, setPageHeight] = useState(0)
 
-    // Trigger scan if global state requests it and we haven't scanned
-    // But TransposerOverlay handles that internally via "enabled" state usually.
-    // We want to control it via the store's "isVisible".
-
-    // Actually TransposerOverlay's internal "enabled" state was the issue.
-    // It checked its own local state.
-    // We should make TransposerOverlay respect the global store. 
-    // I already updated TransposerOverlay to use useMusicStore logic for rendering.
-    // So just mounting it should work.
+    // Measure page height after render
+    useEffect(() => {
+        if (rendered && pageRef.current) {
+            const canvas = pageRef.current.querySelector("canvas")
+            if (canvas) setPageHeight(canvas.height / (window.devicePixelRatio || 1))
+        }
+    }, [rendered])
 
     return (
         <div ref={pageRef} className="mb-2 shadow-2xl bg-white relative group/page min-h-[100px]">
             <Page
                 pageNumber={pageNumber}
                 width={width}
-                renderTextLayer={true} // Enable text layer for scraping
+                renderTextLayer={true}
                 renderAnnotationLayer={false}
                 loading={<div className="h-[800px] w-full bg-white/5 animate-pulse" />}
                 onRenderSuccess={() => setRendered(true)}
-                className="pdf-page" // Helper class for scoping
+                className="pdf-page"
             />
 
-            {/* 
-                We always mount the overlay so it can react to store changes (Scanning/Edit Mode)
-            */}
             <SmartTransposer
                 pageRef={pageRef}
                 pageNumber={pageNumber}
                 isRendered={rendered}
             />
 
+            {/* D2: Chart annotation overlay */}
+            {rendered && pageHeight > 0 && (
+                <AnnotationLayer
+                    pageNumber={pageNumber}
+                    width={width}
+                    height={pageHeight}
+                />
+            )}
         </div>
     )
 }

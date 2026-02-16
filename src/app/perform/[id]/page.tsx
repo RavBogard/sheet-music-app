@@ -8,6 +8,8 @@ import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 import { prefetchUpcoming } from "@/lib/prefetch"
+import { useAnnotationStore } from "@/lib/annotation-store"
+import { useAuth } from "@/lib/auth-context"
 
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
 import { LiveNotification } from "@/components/performance/LiveNotification"
@@ -29,7 +31,17 @@ export default function PerformPage() {
     // Auto-apply musician profile transposition
     useMusicianTransposition()
 
+    const { user: authUser } = useAuth()
+    const { loadAnnotations } = useAnnotationStore()
+
     const fileId = params?.id as string
+
+    // Load annotations for current file
+    useEffect(() => {
+        if (authUser?.uid && fileId) {
+            loadAnnotations(authUser.uid, fileId)
+        }
+    }, [authUser?.uid, fileId, loadAnnotations])
 
     // Home navigates back to origin (setlist editor, library, or home)
     const handleHome = () => router.push(returnPath || '/')

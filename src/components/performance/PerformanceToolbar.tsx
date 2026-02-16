@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Tuner } from "@/components/tools/Tuner"
-import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2, Speaker } from "lucide-react"
+import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2, Speaker, Pencil } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -14,7 +14,10 @@ import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useAnnotationStore } from "@/lib/annotation-store"
+import { AnnotationToolbar } from "@/components/music/AnnotationToolbar"
 import { cn } from "@/lib/utils"
+import { LiveIndicator } from "./LiveIndicator"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -25,6 +28,7 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
     const router = useRouter()
     const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const { isAnnotating, setAnnotating } = useAnnotationStore()
     const currentTrack = playbackQueue[queueIndex]
 
     // Detected key for button display
@@ -163,9 +167,17 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
 
             {/* --- MOBILE/TABLET BOTTOM ROW: Navigation --- */}
             <div className="lg:hidden w-full h-1/2 flex items-center justify-between px-2 relative">
-                <div className="absolute left-2 z-10">
+                <div className="absolute left-2 z-10 flex items-center gap-1">
                     <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-10 w-10 hover:bg-zinc-800 rounded-xl">
                         <Home className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        variant="ghost" size="icon"
+                        onClick={() => setAnnotating(!isAnnotating)}
+                        className={cn("h-10 w-10 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                        title="Annotate"
+                    >
+                        <Pencil className="h-4 w-4" />
                     </Button>
                 </div>
 
@@ -188,6 +200,14 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                 <div className="flex items-center gap-4 z-10 w-1/4">
                     <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-11 w-11 hover:bg-zinc-800 rounded-xl transition-all hover:scale-105" title="Home">
                         <Home className="h-6 w-6" />
+                    </Button>
+                    <Button
+                        variant="ghost" size="icon"
+                        onClick={() => setAnnotating(!isAnnotating)}
+                        className={cn("h-11 w-11 rounded-xl transition-all hover:scale-105", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                        title="Annotate"
+                    >
+                        <Pencil className="h-5 w-5" />
                     </Button>
                     <SetlistDrawer />
                 </div>
@@ -265,6 +285,14 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                     </Popover>
                 </div>
             </div>
+
+            {/* D2: Annotation toolbar (shown when annotating) */}
+            {isAnnotating && (
+                <AnnotationToolbar
+                    currentPage={1}
+                    onClose={() => setAnnotating(false)}
+                />
+            )}
         </div>
     )
 }
