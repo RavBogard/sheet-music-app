@@ -73,7 +73,7 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
             {/* ── MOBILE/TABLET: Two-row layout ── */}
             <div className="lg:hidden w-full">
 
-                {/* Row 1 (top): Annotate + Tools + Transposer */}
+                {/* Row 1 (top): Annotate + Metronome + Tools + Transposer */}
                 <div className="w-full h-11 flex items-center justify-between px-3 border-b border-zinc-900/50">
 
                     {/* Left: Annotate */}
@@ -85,8 +85,11 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                         <Pencil className="h-4 w-4" />
                     </Button>
 
-                    {/* Right: Tools + Transposer */}
+                    {/* Right: Metronome + Tools + Transposer */}
                     <div className="flex items-center gap-2">
+
+                        {/* Metronome */}
+                        <MetronomeControl />
 
                         {/* Tools popover */}
                         <Popover onOpenChange={(open) => trackPopover('tools', open)}>
@@ -97,9 +100,6 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="end" side="top">
                                 <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1">Tools</div>
-                                <div className="flex items-center gap-2 px-1">
-                                    <MetronomeControl />
-                                </div>
                                 <Tuner />
                                 {hasMonitorAccess && (
                                     <>
@@ -142,20 +142,20 @@ export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: Perf
                     </div>
                 </div>
 
-                {/* Row 2 (bottom): Home + Song Navigation + Setlist — big tap targets */}
-                <div className="w-full h-14 flex items-center px-2 gap-1">
+                {/* Row 2 (bottom): Home + Song Navigation (centered) + Setlist */}
+                <div className="w-full h-14 flex items-center px-2">
 
-                    {/* Home */}
+                    {/* Home — fixed width left */}
                     <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl shrink-0">
                         <Home className="h-6 w-6" />
                     </Button>
 
-                    {/* Song Navigation — centered, fills remaining space */}
-                    <div className="flex-1 min-w-0">
+                    {/* Song Navigation — centered absolutely */}
+                    <div className="flex-1 flex justify-center min-w-0">
                         <SongNavigation />
                     </div>
 
-                    {/* Setlist drawer */}
+                    {/* Setlist drawer — fixed width right */}
                     <div className="shrink-0">
                         <SetlistDrawer />
                     </div>

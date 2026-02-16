@@ -44,8 +44,13 @@ export const SECTION_MARKERS = new Set([
  * Normalizes Unicode accidentals and cleans non-chord characters before testing.
  */
 export function isChord(text: string): boolean {
-    // First normalize Unicode sharp/flat to ASCII
-    let clean = text.replace(/\u266F/g, "#").replace(/\u266D/g, "b")
+    // Normalize ALL Unicode sharp/flat variants to ASCII
+    let clean = text
+        .replace(/\u266F/g, "#")
+        .replace(/\u266D/g, "b")
+        .replace(/\u266E/g, "")
+        .replace(/\uFF03/g, "#")
+        .replace(/\uFE5F/g, "#")
     // Then strip remaining non-chord characters
     clean = clean.replace(/[^\w#b\/]/g, "")
     if (!clean) return false
@@ -60,7 +65,12 @@ export function isChord(text: string): boolean {
  * and removing non-chord characters.
  */
 export function cleanChordText(text: string): string {
-    let clean = text.replace(/\u266F/g, "#").replace(/\u266D/g, "b")
+    let clean = text
+        .replace(/\u266F/g, "#")   // ♯ MUSIC SHARP SIGN
+        .replace(/\u266D/g, "b")   // ♭ MUSIC FLAT SIGN
+        .replace(/\u266E/g, "")    // ♮ MUSIC NATURAL SIGN
+        .replace(/\uFF03/g, "#")   // ＃ FULLWIDTH NUMBER SIGN
+        .replace(/\uFE5F/g, "#")   // ﹟ SMALL NUMBER SIGN
     clean = clean.replace(/[^\w#b\/]/g, "")
     return clean
 }

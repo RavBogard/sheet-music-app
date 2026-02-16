@@ -105,7 +105,7 @@ async function getCachedChords(fileId: string): Promise<ExtractionResult | null>
             const pageNum = parseInt(doc.id.replace('page_', ''))
             if (isNaN(pageNum) || !data.chords) return
             // Skip stale caches from older scanner versions
-            if (!data.cacheVersion || data.cacheVersion < 3) return
+            if (!data.cacheVersion || data.cacheVersion < 4) return
 
             const chords: ExtractedChord[] = data.chords.map((c: Record<string, unknown>) => ({
                 text: String(c.text || c.originalText || ''),
@@ -159,7 +159,7 @@ async function cacheChords(fileId: string, result: ExtractionResult): Promise<vo
                 })),
                 scannedAt: new Date().toISOString(),
                 scanMethod: 'textLayer',
-                cacheVersion: 3,
+                cacheVersion: 4,
             }, { merge: true })
         }
 

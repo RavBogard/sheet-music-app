@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { transposeChord, calculateCapo, estimateKey, getTransposedKeyName, normalizeChord, keyUsesFlats } from './music-math'
+import { cleanChordText } from './chord-utils'
 
 describe('transposeChord', () => {
     describe('basic transposition', () => {
@@ -100,6 +101,30 @@ describe('transposeChord', () => {
             expect(transposeChord('C#m', t)).toBe('Bm')     // NOT A#m
             expect(transposeChord('F#m7', t)).toBe('Em7')   // NOT D#m, preserves 7
             expect(transposeChord('D', t)).toBe('C')
+        })
+    })
+
+    describe('Unicode accidental handling (Modeh Ani regression)', () => {
+        it('cleanChordText normalizes Unicode sharp to ASCII before transposition', () => {
+            // PDF text layers often use ♯ (U+266F) instead of # (U+0023)
+            // This was causing G♯m to be cleaned to "Gm" (sharp stripped)
+            // which then transposed incorrectly
+            expect(cleanChordText('G\u266Fm')).toBe('G#m')
+            expect(cleanChordText('C\u266Fm')).toBe('C#m')
+            expect(cleanChordText('F\u266Fm7')).toBe('F#m7')
+        })
+
+        it('full pipeline: Unicode chord → clean → transpose gives correct result', () => {
+            // Simulates the exact flow: PDF has Unicode ♯, clean it, then transpose
+            const capo2 = -2
+            expect(transposeChord(cleanChordText('G\u266Fm'), capo2)).toBe('F#m')
+            expect(transposeChord(cleanChordText('C\u266Fm'), capo2)).toBe('Bm')
+            expect(transposeChord(cleanChordText('F\u266Fm7'), capo2)).toBe('Em7')
+        })
+
+        it('handles Unicode flat symbol', () => {
+            expect(cleanChordText('B\u266Dm')).toBe('Bbm')
+            expect(transposeChord(cleanChordText('B\u266Dm'), 2)).toBe('Cm')
         })
     })
 

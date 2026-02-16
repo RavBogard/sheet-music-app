@@ -11,6 +11,20 @@
 
 import { CHORD_REGEX, EXCLUDED_WORDS, cleanChordText } from './chord-utils'
 
+/**
+ * Normalize Unicode music accidentals to ASCII equivalents.
+ * Must run BEFORE any regex filtering that expects ASCII # and b.
+ * Covers: ♯ (U+266F), ♭ (U+266D), ♮ (U+266E), fullwidth variants.
+ */
+function normalizeAccidentals(text: string): string {
+    return text
+        .replace(/\u266F/g, '#')   // ♯ MUSIC SHARP SIGN
+        .replace(/\u266D/g, 'b')   // ♭ MUSIC FLAT SIGN
+        .replace(/\u266E/g, '')    // ♮ MUSIC NATURAL SIGN (strip)
+        .replace(/\uFF03/g, '#')   // ＃ FULLWIDTH NUMBER SIGN
+        .replace(/\uFE5F/g, '#')   // ﹟ SMALL NUMBER SIGN
+}
+
 export interface ScannedChord {
     id: string;
     text: string;
@@ -50,7 +64,9 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const items = spans.map(span => {
         const rect = span.getBoundingClientRect();
         return {
-            text: span.textContent || "",
+            // Normalize Unicode accidentals (♯→#, ♭→b) immediately so all
+            // downstream regex matching works with ASCII characters only
+            text: normalizeAccidentals(span.textContent || ""),
             rect,
             y: rect.top,
             x: rect.left,
