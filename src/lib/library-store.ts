@@ -91,7 +91,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         // 1. Search (Priority)
         if (query.trim().length > 0) {
             const fuse = new Fuse(allFiles, {
-                keys: ['name', 'metadata.key', 'metadata.artist'],
+                keys: ['name', 'metadata.key', 'metadata.artist', 'metadata.topics'],
                 threshold: 0.3, // Fuzzy match sensitivity
                 distance: 100
             })

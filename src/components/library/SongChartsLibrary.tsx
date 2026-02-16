@@ -150,7 +150,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search charts..."
+                        placeholder="Search by name, key, topic..."
                         className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
                     />
                 </div>

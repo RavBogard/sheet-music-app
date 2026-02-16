@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { X, Printer, Download, Loader2, Music, Users } from "lucide-react"
+import { X, Printer, Download, Loader2, Music, Users, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
@@ -163,6 +163,77 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
         }
     }
 
+    // Batch: generate all musician packets as a zip
+    const [generatingAll, setGeneratingAll] = useState(false)
+    const [batchProgress, setBatchProgress] = useState("")
+
+    const handleGenerateAllPackets = async () => {
+        if (musicians.length === 0) return
+        setGeneratingAll(true)
+        setError(null)
+
+        try {
+            const JSZip = (await import("jszip")).default
+            const zip = new JSZip()
+            let completed = 0
+
+            for (const musician of musicians) {
+                const preset = musician.profile.instrument ? INSTRUMENT_PRESETS[musician.profile.instrument] : null
+                const label = preset?.label || musician.profile.instrument || ''
+                const name = `${musician.displayName}${label ? ` - ${label}` : ''}`
+                const transposition = musician.profile.defaultTransposition || 0
+
+                completed++
+                setBatchProgress(`${completed}/${musicians.length}: ${musician.displayName}`)
+
+                const response = await fetch('/api/setlist/print', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        date,
+                        musicianName: name,
+                        eventName: eventName || undefined,
+                        tracks: tracks.map(t => ({
+                            title: t.title,
+                            key: t.key || '',
+                            notes: t.notes || '',
+                            leadMusician: t.leadMusician || '',
+                            fileId: t.fileId,
+                            transposition,
+                            preferFlats: musician.profile.preferFlats || false,
+                            capoFret: musician.profile.preferredCapoFret || 0,
+                        }))
+                    })
+                })
+
+                if (!response.ok) continue
+
+                const blob = await response.blob()
+                const safeName = musician.displayName.replace(/[^a-z0-9]/gi, '_')
+                zip.file(`${safeName}_gig_packet.pdf`, blob)
+            }
+
+            setBatchProgress("Creating zip...")
+            const zipBlob = await zip.generateAsync({ type: 'blob' })
+            const url = URL.createObjectURL(zipBlob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_all_packets.zip`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            onClose()
+        } catch (e: unknown) {
+            console.error('Batch packet generation failed:', e)
+            setError(e instanceof Error ? e.message : 'Failed to generate packets')
+        } finally {
+            setGeneratingAll(false)
+            setBatchProgress("")
+        }
+    }
+
     return (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
@@ -319,24 +390,49 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 p-4 border-t border-border shrink-0">
-                    <Button
-                        variant="outline"
-                        className="flex-1 gap-2"
-                        onClick={() => handleGenerate('download')}
-                        disabled={generating || linkedPdfTracks.length === 0}
-                    >
-                        {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        Download PDF
-                    </Button>
-                    <Button
-                        className="flex-1 gap-2"
-                        onClick={() => handleGenerate('print')}
-                        disabled={generating || linkedPdfTracks.length === 0}
-                    >
-                        {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                        Print Now
-                    </Button>
+                <div className="p-4 border-t border-border shrink-0 space-y-3">
+                    {/* Print All Packets */}
+                    {musicians.length > 1 && (
+                        <Button
+                            variant="outline"
+                            className="w-full gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
+                            onClick={handleGenerateAllPackets}
+                            disabled={generating || generatingAll || linkedPdfTracks.length === 0}
+                        >
+                            {generatingAll ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {batchProgress || "Generating..."}
+                                </>
+                            ) : (
+                                <>
+                                    <Package className="h-4 w-4" />
+                                    Print All Packets ({musicians.length} musicians)
+                                </>
+                            )}
+                        </Button>
+                    )}
+
+                    {/* Individual actions */}
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            className="flex-1 gap-2"
+                            onClick={() => handleGenerate('download')}
+                            disabled={generating || generatingAll || linkedPdfTracks.length === 0}
+                        >
+                            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            Download PDF
+                        </Button>
+                        <Button
+                            className="flex-1 gap-2"
+                            onClick={() => handleGenerate('print')}
+                            disabled={generating || generatingAll || linkedPdfTracks.length === 0}
+                        >
+                            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                            Print Now
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

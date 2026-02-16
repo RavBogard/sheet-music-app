@@ -56,6 +56,16 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 </span>
                             )}
 
+                            {!isFolder && item.metadata?.topics && item.metadata.topics.length > 0 && (
+                                <div className="hidden sm:flex gap-1">
+                                    {item.metadata.topics.slice(0, 2).map(topic => (
+                                        <span key={topic} className="text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md">
+                                            {topic}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
                             {isDigitizing && (
                                 <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
                                     Digitizing...
