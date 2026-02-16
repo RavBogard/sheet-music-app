@@ -46,6 +46,11 @@ service cloud.firestore {
       match /songPreferences/{fileId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
+
+      // User preferences (monitor pinned channels, etc.)
+      match /preferences/{docId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // SETLISTS Collection (The new root collection)

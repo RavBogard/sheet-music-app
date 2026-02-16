@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Tuner } from "@/components/tools/Tuner"
-import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2 } from "lucide-react"
+import { Settings, Timer as MetronomeIcon, Music, Eye, EyeOff, Minus, Plus, Home, Sparkles, Loader2, Speaker } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
+import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
+import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { cn } from "@/lib/utils"
 
 interface PerformanceToolbarProps {
@@ -22,6 +24,7 @@ interface PerformanceToolbarProps {
 export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProps) {
     const router = useRouter()
     const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition } = useMusicStore()
+    const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const currentTrack = playbackQueue[queueIndex]
 
     // Detected key for button display
@@ -107,6 +110,21 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                         <Tuner />
                     </PopoverContent>
                 </Popover>
+
+                {/* Monitor Quick Access */}
+                {hasMonitorAccess && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="h-9 px-3 sm:px-4 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-2 justify-center">
+                                <Speaker className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Mix</span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="center" side="top">
+                            <QuickMonitorPanel />
+                        </PopoverContent>
+                    </Popover>
+                )}
 
                 {/* Mobile Metronome */}
                 <div className="flex items-center">
@@ -196,6 +214,21 @@ export function PerformanceToolbar({ onHome, onSetlist }: PerformanceToolbarProp
                             <Tuner />
                         </PopoverContent>
                     </Popover>
+
+                    {/* Monitor Quick Access */}
+                    {hasMonitorAccess && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group">
+                                    <Speaker className="h-3.5 w-3.5" />
+                                    MIX
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                                <QuickMonitorPanel />
+                            </PopoverContent>
+                        </Popover>
+                    )}
 
                     <div className="w-px h-8 bg-zinc-800/50" />
 

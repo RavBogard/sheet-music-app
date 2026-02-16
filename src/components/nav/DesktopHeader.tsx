@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, Bell, UserCircle, Menu, LogOut, Settings, User, Cloud, CloudOff, Loader2, UserCheck, Sparkles } from "lucide-react"
+import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -13,136 +13,94 @@ import { useMusicStore } from "@/lib/store"
 import { useChatStore } from "@/lib/chat-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DriveFile } from "@/types/models"
 
 export function DesktopHeader() {
     const pathname = usePathname()
     const router = useRouter()
     const { user, profile, isMember, isAdmin, signIn, signOut } = useAuth()
-    const { allFiles, loading, loadLibrary } = useLibraryStore()
+    const { allFiles, loadLibrary } = useLibraryStore()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
-    const { hasAccess: hasMonitorAccess, isAdmin: isMonitorAdmin } = useMonitorAccess()
+    const { hasAccess: hasMonitorAccess } = useMonitorAccess()
 
-    // Search State
+    // Search
     const [searchQuery, setSearchQuery] = useState("")
     const [showResults, setShowResults] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
 
     const navLinks = [
-        { label: "Home", href: "/" },
-        { label: "Public Setlists", href: "/setlists", public: true },
-        // Restricted Links (Require Member Role)
-        { label: "Library", href: "/library", restricted: true },
-        { label: "Monitor", href: "/monitor", monitor: true },
-        { label: "Audio", href: "/audio", restricted: true },
+        { label: "Home", href: "/", show: true },
+        { label: "Setlists", href: "/setlists", show: true },
+        { label: "Library", href: "/library", show: isMember },
+        { label: "Monitor", href: "/monitor", show: hasMonitorAccess },
+        { label: "Admin", href: "/admin", show: isAdmin },
     ]
 
-    // Handle Search Filter
     const searchResults = searchQuery.length > 1
         ? allFiles.filter(f =>
             f.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            f.mimeType !== 'application/vnd.google-apps.folder'
+            f.mimeType !== "application/vnd.google-apps.folder"
         ).slice(0, 8)
         : []
 
-    // Close results when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                setShowResults(false)
-            }
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) setShowResults(false)
         }
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
-    // Initial Sync (Only when user is ready)
     useEffect(() => {
-        if (user) {
-            loadLibrary()
-        }
-    }, [user])
+        if (user) loadLibrary()
+    }, [user, loadLibrary])
 
     const handleSelectSong = (file: DriveFile) => {
-        const type = file.name.endsWith('.xml') || file.name.endsWith('.musicxml') ? 'musicxml' : 'pdf'
-        setQueue([{
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            fileId: file.id,
-            type: type
-        }])
+        const type = file.name.endsWith(".xml") || file.name.endsWith(".musicxml") ? "musicxml" : "pdf"
+        setQueue([{ name: file.name.replace(/\.[^/.]+$/, ""), fileId: file.id, type }])
         router.push(`/perform/${file.id}`)
         setSearchQuery("")
         setShowResults(false)
     }
 
     const [isOnline, setIsOnline] = useState(true)
-
     useEffect(() => {
         setIsOnline(navigator.onLine)
-        const handleOnline = () => setIsOnline(true)
-        const handleOffline = () => setIsOnline(false)
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
-        return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
-        }
+        const on = () => setIsOnline(true)
+        const off = () => setIsOnline(false)
+        window.addEventListener("online", on)
+        window.addEventListener("offline", off)
+        return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off) }
     }, [])
 
     return (
         <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
-            {/* Logo Area */}
+            {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <img
-                        src="/logo.jpg"
-                        alt="Logo"
-                        className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105"
-                    />
-                    <span className="font-bold text-lg text-foreground font-bold">
-                        CRC Music
-                    </span>
+                    <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105" />
+                    <span className="font-bold text-lg text-foreground">CRC Music</span>
                 </Link>
 
-                {/* Main Nav */}
                 <nav className="flex items-center gap-1">
-                    {navLinks
-                        .filter(link => {
-                            if (link.public) return true
-                            if (link.label === "Dashboard") return true
-                            // Monitor: only show if user has monitor access
-                            if ('monitor' in link && link.monitor) return hasMonitorAccess
-                            // Restricted links: Only show if user is a Member (not just generic 'user')
-                            if (link.restricted) return isMember
-                            return false
-                        })
-                        .map(link => {
-                            const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
-                            return (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className={cn(
-                                        "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                        isActive
-                                            ? "bg-accent text-foreground"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                    )}
-                                >
-                                    {link.label}
-                                </Link>
-                            )
-                        })}
+                    {navLinks.filter(l => l.show).map(link => {
+                        const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href))
+                        return (
+                            <Link key={link.href} href={link.href}
+                                className={cn(
+                                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                    isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                                    link.label === "Admin" && "text-violet-500 hover:text-violet-400"
+                                )}>
+                                {link.label}
+                            </Link>
+                        )
+                    })}
                 </nav>
             </div>
 
@@ -150,19 +108,15 @@ export function DesktopHeader() {
             <div className="flex items-center gap-4">
                 {user ? (
                     <>
-                        {/* Offline Warning Banner (optional, but requested ring) */}
                         {!isOnline && (
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
-                                <CloudOff className="h-3 w-3" />
-                                Offline
+                                <CloudOff className="h-3 w-3" /> Offline
                             </div>
                         )}
 
-                        {/* AI Chat Button */}
+                        {/* AI Chat */}
                         <Button
-                            variant={isChatOpen ? "default" : "ghost"}
-                            size="sm"
-                            onClick={toggleChat}
+                            variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
                             className={cn(
                                 "gap-2 rounded-full transition-colors",
                                 isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -172,30 +126,22 @@ export function DesktopHeader() {
                             <span className="hidden lg:inline">AI Assistant</span>
                         </Button>
 
-                        {/* Search Bar */}
+                        {/* Search */}
                         <div className="relative group" ref={searchRef}>
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                             <Input
                                 placeholder="Search songs..."
                                 value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value)
-                                    setShowResults(true)
-                                }}
+                                onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
                                 className="w-64 bg-muted border-border rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
                             />
-
-                            {/* Search Results Dropdown */}
                             {showResults && searchResults.length > 0 && (
                                 <div className="absolute top-full mt-2 left-0 right-0 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-50">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
-                                            <button
-                                                key={file.id}
-                                                onClick={() => handleSelectSong(file)}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors group"
-                                            >
+                                            <button key={file.id} onClick={() => handleSelectSong(file)}
+                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors group">
                                                 <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
                                                 </div>
@@ -208,47 +154,11 @@ export function DesktopHeader() {
 
                         <div className="w-px h-6 bg-border" />
 
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground rounded-full relative">
-                                    <Bell className="w-5 h-5" />
-                                    {loading && <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 bg-popover border-border text-popover-foreground p-4">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="font-bold flex items-center gap-2">
-                                            <Cloud className="h-4 w-4 text-muted-foreground" /> Sync Status
-                                        </h4>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => loadLibrary(true)}
-                                            disabled={loading}
-                                            className="h-8 text-[11px] border-border"
-                                        >
-                                            {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                                            Force Sync
-                                        </Button>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {loading ? "Syncing with Google Drive..." : "Library is up to date."}
-                                    </p>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
+                        {/* Profile */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={cn(
-                                        "text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all",
-                                        !isOnline ? "ring-2 ring-red-500" : ""
-                                    )}
-                                >
+                                <Button variant="ghost" size="icon"
+                                    className={cn("text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all", !isOnline && "ring-2 ring-red-500")}>
                                     {user?.photoURL ? (
                                         <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border" />
                                     ) : (
@@ -265,42 +175,23 @@ export function DesktopHeader() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />
-
-                                <DropdownMenuItem
-                                    className="hover:bg-accent cursor-pointer"
-                                    onClick={() => router.push('/settings')}
-                                >
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    <span>Settings</span>
+                                <DropdownMenuItem className="hover:bg-accent cursor-pointer" onClick={() => router.push("/settings")}>
+                                    <Settings className="mr-2 h-4 w-4" /> Settings
                                 </DropdownMenuItem>
+                                {isAdmin && (
+                                    <DropdownMenuItem className="hover:bg-accent cursor-pointer" onClick={() => router.push("/admin")}>
+                                        <ShieldAlert className="mr-2 h-4 w-4 text-violet-500" /> Admin
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator className="bg-border" />
-                                <DropdownMenuItem
-                                    className="text-red-500 hover:bg-red-500/10 cursor-pointer"
-                                    onClick={() => signOut()}
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out</span>
+                                <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>
+                                    <LogOut className="mr-2 h-4 w-4" /> Log out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </>
                 ) : (
-                    /* Guest View */
-                    <Button onClick={() => user ? signOut() : document.getElementById('signin-trigger')?.click()} className="hidden">
-                        {/* We rely on the page.tsx Sign In button or handle it here? 
-                            Let's add a Sign In button here too.
-                         */}
-                        {/* Actually we don't have signIn in props? useAuth gives signIn. */}
-                    </Button>
-                )}
-                {!user && (
-                    <Button onClick={async () => {
-                        try {
-                            await signIn()
-                        } catch (e) {
-                            console.error("Sign in failed", e)
-                        }
-                    }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
+                    <Button onClick={async () => { try { await signIn() } catch {} }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
                         Sign In
                     </Button>
                 )}
