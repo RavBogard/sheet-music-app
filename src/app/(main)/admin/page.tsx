@@ -449,9 +449,22 @@ export default function AdminDashboard() {
                                 {syncing ? "Syncing..." : "Sync Now"}
                             </Button>
                             {lastStats && (
-                                <div className="p-2 bg-muted/50 rounded-lg text-xs border border-border">
+                                <div className="p-2 bg-muted/50 rounded-lg text-xs border border-border space-y-1">
                                     <span className="text-green-500 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Done</span>
-                                    <span className="text-muted-foreground">Scanned: {lastStats.totalScanned} · New: {lastStats.added}</span>
+                                    <span className="text-muted-foreground">Scanned: {lastStats.totalScanned} · New: {lastStats.added} · Updated: {lastStats.updated}</span>
+                                    {(lastStats.addedFiles?.length || lastStats.deletedFiles?.length) ? (
+                                        <details className="mt-1">
+                                            <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-[10px]">What changed?</summary>
+                                            <div className="mt-1 space-y-1 max-h-32 overflow-y-auto">
+                                                {lastStats.addedFiles?.map((f, i) => (
+                                                    <div key={`a${i}`} className="text-green-500">+ {f}</div>
+                                                ))}
+                                                {lastStats.deletedFiles?.map((f, i) => (
+                                                    <div key={`d${i}`} className="text-red-400">− {f}</div>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    ) : null}
                                 </div>
                             )}
                         </div>

@@ -34,6 +34,7 @@ export interface MusicState {
     // Playback Queue (For Setlist Mode)
     playbackQueue: QueueItem[]
     queueIndex: number // -1 if not playing from queue
+    returnPath: string | null // Where to go when exiting performance mode
 
 
 
@@ -56,7 +57,7 @@ export interface MusicState {
     capoFret: number | null
     setCapoFret: (fret: number | null) => void
 
-    setFile: (url: string, type: FileType) => void
+    setFile: (url: string, type: FileType, returnPath?: string) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
 
@@ -70,7 +71,7 @@ export interface MusicState {
     setAiError: (error: string | null) => void
 
     // Queue Actions
-    setQueue: (items: QueueItem[], startIndex?: number) => void
+    setQueue: (items: QueueItem[], startIndex?: number, returnPath?: string) => void
     nextSong: () => QueueItem | null
     prevSong: () => QueueItem | null
 
@@ -100,6 +101,7 @@ export const useMusicStore = create<MusicState>()(
 
             playbackQueue: [],
             queueIndex: -1,
+            returnPath: null,
 
             aiState: {
                 isEnabled: false,
@@ -123,9 +125,10 @@ export const useMusicStore = create<MusicState>()(
                 isLooping: false
             },
 
-            setFile: (url, type) => set({
+            setFile: (url, type, returnPath) => set({
                 fileUrl: url,
                 fileType: type,
+                returnPath: returnPath ?? get().returnPath,
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
                 capoFret: null,
@@ -135,13 +138,14 @@ export const useMusicStore = create<MusicState>()(
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
 
-            setQueue: (items, startIndex = 0) => {
+            setQueue: (items, startIndex = 0, returnPath) => {
                 // Apply per-track transposition from the first song
                 const firstTrack = items[startIndex]
                 const trackTransposition = firstTrack?.transposition ?? 0
                 set({
                     playbackQueue: items,
                     queueIndex: startIndex,
+                    returnPath: returnPath || null,
                     transposition: trackTransposition,
                     // Clear page data when starting a new queue
                     aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
@@ -218,6 +222,7 @@ export const useMusicStore = create<MusicState>()(
                 aiXmlContent: null,
                 playbackQueue: [],
                 queueIndex: -1,
+                returnPath: null,
                 audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
             })
         }),

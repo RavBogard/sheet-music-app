@@ -62,7 +62,7 @@ export function DesktopHeader() {
 
     const handleSelectSong = (file: DriveFile) => {
         const type = file.name.endsWith(".xml") || file.name.endsWith(".musicxml") ? "musicxml" : "pdf"
-        setQueue([{ name: file.name.replace(/\.[^/.]+$/, ""), fileId: file.id, type }])
+        setQueue([{ name: file.name.replace(/\.[^/.]+$/, ""), fileId: file.id, type }], 0, "/library")
         router.push(`/perform/${file.id}`)
         setSearchQuery("")
         setShowResults(false)
