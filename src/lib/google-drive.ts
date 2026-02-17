@@ -1,4 +1,5 @@
-import { google } from "googleapis"
+import { drive } from "@googleapis/drive"
+import { GoogleAuth } from "google-auth-library"
 import { logger } from "@/lib/logger"
 
 interface DriveFileResult {
@@ -51,14 +52,14 @@ export class DriveClient {
             logger.error("[Auth] Missing Google Drive Credentials (JSON or EMAIL/KEY)")
         }
 
-        const auth = new google.auth.GoogleAuth({
+        const auth = new GoogleAuth({
             credentials,
             // Explicitly pass Project ID to prevent "Unable to detect Project Id" error in Vercel
             projectId: process.env.GOOGLE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             scopes: ['https://www.googleapis.com/auth/drive'],
         })
 
-        this.drive = google.drive({ version: 'v3', auth })
+        this.drive = drive({ version: 'v3', auth })
     }
 
     async listAllFiles(folderId?: string) {
