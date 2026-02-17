@@ -154,7 +154,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate })
     useEffect(() => {
         latestRef.current = { setlistId, name, tracks, isPublic, eventDate }
-    })
+    }, [setlistId, name, tracks, isPublic, eventDate])
 
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {
