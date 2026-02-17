@@ -179,7 +179,12 @@ async function main() {
     console.log()
 }
 
-main().catch((err) => {
-    console.error("Fatal error:", err)
-    process.exit(1)
-})
+export { main }
+
+// Auto-run when executed directly (not when required by launcher)
+if (require.main === module) {
+    main().catch((err) => {
+        console.error("Fatal error:", err)
+        process.exit(1)
+    })
+}
