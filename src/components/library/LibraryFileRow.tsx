@@ -17,6 +17,7 @@ interface LibraryFileRowProps {
     selectMode?: boolean
     isSelected?: boolean
     onToggleSelect?: (id: string) => void
+    usageInfo?: { lastUsedDate: string; totalUses: number } | null
 }
 
 function isAudioMime(item: DriveFile) {
@@ -31,7 +32,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, usageInfo }: LibraryFileRowProps) {
     const isFolder = item.mimeType.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -142,6 +143,13 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 </div>
                             )}
 
+                            {/* Song Usage Badge */}
+                            {!isFolder && !isAudio && usageInfo && (
+                                <span className="hidden sm:inline text-xs text-muted-foreground" title={`Last used in: ${usageInfo.lastUsedDate}`}>
+                                    {formatUsageBadge(usageInfo.lastUsedDate, usageInfo.totalUses)}
+                                </span>
+                            )}
+
                             {isDigitizing && (
                                 <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
                                     Digitizing...
@@ -185,4 +193,16 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
             </ContextMenuContent>
         </ContextMenu>
     )
+}
+
+/** Format a compact usage badge like "Last: Jan 31 · 4×" */
+function formatUsageBadge(lastUsedDate: string, totalUses: number): string {
+    try {
+        const date = new Date(lastUsedDate)
+        const month = date.toLocaleDateString('en-US', { month: 'short' })
+        const day = date.getDate()
+        return `Last: ${month} ${day} · ${totalUses}×`
+    } catch {
+        return `${totalUses}×`
+    }
 }

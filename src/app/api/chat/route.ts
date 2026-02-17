@@ -48,8 +48,16 @@ You must return a JSON object with this structure:
 - If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
 - If asked to "Create a setlist", issue a CREATE_SETLIST command.
 - If asked to build a setlist for a specific service (e.g., "Build me a setlist for this Friday", "Shabbat morning setlist"), create a CREATE_SETLIST with pre-populated tracks matched from the library. Follow the standard Reform liturgical order. Include section headers as tracks with type "header".
-- When building liturgical setlists, follow this order for Friday night: Candle Lighting → Shalom Aleichem → L'cha Dodi → Bar'chu → Shema → V'ahavta → Mi Chamocha → Hashkiveinu → T'filah → Oseh Shalom → Aleinu → Kaddish → Adon Olam.
-- When building Shabbat morning setlists: Morning Blessings → Ashrei → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah → Torah Service → Aleinu → Kaddish → Adon Olam/Ein Keloheinu.
+- When building liturgical setlists, generate a FULL SERVICE FLOW — not just songs. Include non-song liturgical moments as tracks with these types:
+  * 'song': A musical piece linked to a chart in the library (must include fileId if found)
+  * 'header': A section divider (e.g., "Kabbalat Shabbat", "T'filah")
+  * 'reading': Torah reading, Haftarah, responsive reading (include performer + estimatedMinutes)
+  * 'prayer': Silent prayer, Mourner's Kaddish, congregational prayer (include performer + estimatedMinutes)
+  * 'transition': Musical interlude, procession, moment of silence (include estimatedMinutes)
+  * 'note': Stage direction, timing cue, reminder (include performer if applicable)
+- Non-song tracks format: { "title": "Silent Prayer", "type": "prayer", "performer": "Congregation", "estimatedMinutes": 2 }
+- When building liturgical setlists, follow this order for Friday night: Welcome → Candle Lighting → Kabbalat Shabbat header → Hinei Mah Tov → Shalom Aleichem → L'cha Dodi → Bar'chu → Shema → V'ahavta → Mi Chamocha → Hashkiveinu → T'filah header → Silent Prayer → Oseh Shalom → Torah Service header → Torah Reading → Aleinu → Mourner's Kaddish → Closing Song → Kiddush.
+- When building Shabbat morning setlists: Birchot HaShachar header → Morning Blessings → P'sukei D'zimra header → Ashrei → Nishmat → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah header → Silent Prayer → Torah Service header → Torah Processional → Torah Reading → Haftarah → Returning the Torah → Sermon → Aleinu → Mourner's Kaddish → Adon Olam/Ein Keloheinu → Kiddush.
 - Search the library context to find matching files for each liturgical slot.
 - If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST.
 - If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.

@@ -27,6 +27,16 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "songUsage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lastUsedDate",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

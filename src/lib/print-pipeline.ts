@@ -29,6 +29,11 @@ export interface PrintTrack {
     transposition?: number
     preferFlats?: boolean
     capoFret?: number
+    // Service flow fields
+    type?: string
+    performer?: string
+    estimatedMinutes?: number
+    description?: string
 }
 
 export interface PrintRequest {
@@ -287,17 +292,22 @@ async function buildCoverPage(
     req.tracks.forEach((track, index) => {
         if (yOffset < 60) return
 
+        const trackType = track.type || 'song'
+        const isServiceFlow = trackType !== 'song'
+
         const maxTitleLen = hasTranspositions ? 26 : 30
         const songTitle = track.title.length > maxTitleLen
             ? track.title.substring(0, maxTitleLen - 3) + "..." : track.title
-        const key = track.key || "-"
+        const key = isServiceFlow ? "" : (track.key || "-")
         const maxLeadLen = hasTranspositions ? 12 : 15
-        const lead = track.leadMusician || ""
+        const lead = isServiceFlow ? (track.performer || "") : (track.leadMusician || "")
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
 
-        let notesStr = track.notes || ""
-        if (track.capoFret && track.capoFret > 0) {
+        let notesStr = isServiceFlow
+            ? (track.estimatedMinutes ? `~${track.estimatedMinutes} min` : "")
+            : (track.notes || "")
+        if (!isServiceFlow && track.capoFret && track.capoFret > 0) {
             const capoNote = `Capo ${track.capoFret}`
             notesStr = notesStr ? `${capoNote} • ${notesStr}` : capoNote
         }
@@ -305,13 +315,25 @@ async function buildCoverPage(
         const notesDisplay = notesStr.length > maxNotesLen
             ? notesStr.substring(0, maxNotesLen - 3) + "..." : notesStr
 
-        const transKey = (track.transposition && track.transposition !== 0 && track.key)
+        const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && track.key)
             ? getTransposedKeyName(track.key, track.transposition) : null
 
+        // Headers render as bold centered labels (no number)
+        if (trackType === 'header') {
+            yOffset -= 4 // Extra space before header
+            coverPage.drawText(songTitle.toUpperCase(), { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            yOffset -= 18
+            return
+        }
+
+        // Use italic font for non-song service flow items
+        const titleFont = isServiceFlow ? helveticaOblique : helvetica
+        const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
+
         coverPage.drawText(`${index + 1}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: helvetica, color: rgb(0, 0, 0) })
+        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: titleFont, color: titleColor })
         if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
             coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
@@ -321,11 +343,148 @@ async function buildCoverPage(
     })
 
     // Footer
-    const footerParts = [`${req.tracks.length} songs`]
+    const songCount = req.tracks.filter(t => !t.type || t.type === 'song').length
+    const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
     if (hasTranspositions) footerParts.push("transposed")
     footerParts.push(printFooter)
     coverPage.drawText(footerParts.join(" • "), {
         x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
+    })
+}
+
+// ── Service Flow Item Renderer ──
+
+/**
+ * Render a non-song service flow item (header, reading, prayer, transition, note)
+ * as a formatted label/card in the printed PDF.
+ */
+async function renderServiceFlowItem(
+    doc: PDFDocument,
+    track: PrintTrack
+): Promise<void> {
+    const helvetica = await doc.embedFont(StandardFonts.Helvetica)
+    const helveticaBold = await doc.embedFont(StandardFonts.HelveticaBold)
+    const helveticaOblique = await doc.embedFont(StandardFonts.HelveticaOblique)
+
+    const type = track.type || 'note'
+    const pageWidth = 612 // Letter width in points
+
+    // Headers: add a subtle separator — no new page, just a small divider section
+    if (type === 'header') {
+        const page = doc.addPage([pageWidth, 100]) // Short "page" acts as a divider
+        const title = track.title.toUpperCase()
+        const titleWidth = helveticaBold.widthOfTextAtSize(title, 14)
+        page.drawText(title, {
+            x: (pageWidth - titleWidth) / 2,
+            y: 45,
+            size: 14,
+            font: helveticaBold,
+            color: rgb(0.25, 0.25, 0.25),
+        })
+        // Underline
+        page.drawLine({
+            start: { x: pageWidth * 0.2, y: 38 },
+            end: { x: pageWidth * 0.8, y: 38 },
+            thickness: 0.5,
+            color: rgb(0.7, 0.7, 0.7),
+        })
+        return
+    }
+
+    // Transition: thin separator with label — minimal height
+    if (type === 'transition') {
+        const page = doc.addPage([pageWidth, 60])
+        const label = `— ${track.title} —`
+        const labelWidth = helveticaOblique.widthOfTextAtSize(label, 10)
+        page.drawText(label, {
+            x: (pageWidth - labelWidth) / 2,
+            y: 28,
+            size: 10,
+            font: helveticaOblique,
+            color: rgb(0.5, 0.5, 0.5),
+        })
+        if (track.estimatedMinutes) {
+            const dur = `~${track.estimatedMinutes} min`
+            const durWidth = helvetica.widthOfTextAtSize(dur, 8)
+            page.drawText(dur, {
+                x: (pageWidth - durWidth) / 2,
+                y: 14,
+                size: 8,
+                font: helvetica,
+                color: rgb(0.6, 0.6, 0.6),
+            })
+        }
+        return
+    }
+
+    // Note: italic text block
+    if (type === 'note') {
+        const page = doc.addPage([pageWidth, 60])
+        const text = track.title || track.description || ''
+        if (text) {
+            const textWidth = helveticaOblique.widthOfTextAtSize(text, 10)
+            page.drawText(text, {
+                x: (pageWidth - textWidth) / 2,
+                y: 28,
+                size: 10,
+                font: helveticaOblique,
+                color: rgb(0.4, 0.4, 0.4),
+            })
+        }
+        return
+    }
+
+    // Reading / Prayer: formatted card with title, performer, duration, description
+    const cardHeight = track.description ? 120 : 80
+    const page = doc.addPage([pageWidth, cardHeight])
+
+    // Title
+    const titleWidth = helveticaBold.widthOfTextAtSize(track.title.toUpperCase(), 13)
+
+    // Draw title centered
+    page.drawText(track.title.toUpperCase(), {
+        x: (pageWidth - titleWidth) / 2,
+        y: cardHeight - 30,
+        size: 13,
+        font: helveticaBold,
+        color: rgb(0.2, 0.2, 0.2),
+    })
+
+    // Performer + Duration line
+    const metaParts: string[] = []
+    if (track.performer) metaParts.push(track.performer)
+    if (track.estimatedMinutes) metaParts.push(`~${track.estimatedMinutes} min`)
+    if (metaParts.length > 0) {
+        const metaText = metaParts.join('  •  ')
+        const metaWidth = helvetica.widthOfTextAtSize(metaText, 10)
+        page.drawText(metaText, {
+            x: (pageWidth - metaWidth) / 2,
+            y: cardHeight - 48,
+            size: 10,
+            font: helvetica,
+            color: rgb(0.5, 0.5, 0.5),
+        })
+    }
+
+    // Description
+    if (track.description) {
+        const descWidth = helveticaOblique.widthOfTextAtSize(track.description, 10)
+        page.drawText(track.description, {
+            x: (pageWidth - Math.min(descWidth, pageWidth - 100)) / 2,
+            y: cardHeight - 70,
+            size: 10,
+            font: helveticaOblique,
+            color: rgb(0.4, 0.4, 0.4),
+            maxWidth: pageWidth - 100,
+        })
+    }
+
+    // Bottom rule
+    page.drawLine({
+        start: { x: pageWidth * 0.15, y: 10 },
+        end: { x: pageWidth * 0.85, y: 10 },
+        thickness: 0.3,
+        color: rgb(0.8, 0.8, 0.8),
     })
 }
 
@@ -393,6 +552,12 @@ export async function generatePrintPdf(
     // ── Step 3: Process each track ──
     let trackIndex = 0
     for (const track of req.tracks) {
+        // Render non-song service flow items as formatted labels
+        if (!track.fileId && track.type && track.type !== 'song') {
+            await renderServiceFlowItem(mergedPdf, track)
+            continue
+        }
+
         if (!track.fileId) continue
         trackIndex++
 

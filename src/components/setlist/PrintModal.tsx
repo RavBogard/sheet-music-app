@@ -150,6 +150,11 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                         transposition: tp ? tp.transposition : transposition,
                         preferFlats: tp ? tp.preferFlats : preferFlats,
                         capoFret: tp ? tp.capoFret : capoFret,
+                        // Service flow fields
+                        type: t.type,
+                        performer: t.performer,
+                        estimatedMinutes: t.estimatedMinutes,
+                        description: t.description,
                     }
                 })
             })

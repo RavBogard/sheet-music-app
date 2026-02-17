@@ -58,22 +58,41 @@ describe('getTemplate', () => {
 
 describe('Template structure', () => {
     it('friday_night has headers and songs', () => {
-        const headers = FRIDAY_NIGHT_TEMPLATE.filter(s => s.isHeader)
-        const songs = FRIDAY_NIGHT_TEMPLATE.filter(s => !s.isHeader)
+        const headers = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'header')
+        const songs = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'song' || (!s.type && !s.isHeader))
         expect(headers.length).toBeGreaterThan(0)
         expect(songs.length).toBeGreaterThan(headers.length)
     })
 
-    it('all non-header slots have search queries', () => {
-        const songs = FRIDAY_NIGHT_TEMPLATE.filter(s => !s.isHeader)
+    it('all song slots have search queries', () => {
+        const songs = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'song' || (!s.type && !s.isHeader))
         for (const slot of songs) {
             expect(slot.queries.length, `${slot.label} has no queries`).toBeGreaterThan(0)
         }
     })
 
     it('shabbat_morning includes Torah service section', () => {
-        const torahHeader = SHABBAT_MORNING_TEMPLATE.find(s => s.label.includes('Torah') && s.isHeader)
+        const torahHeader = SHABBAT_MORNING_TEMPLATE.find(s => s.label.includes('Torah') && s.type === 'header')
         expect(torahHeader).toBeDefined()
+    })
+
+    it('friday_night includes service flow items', () => {
+        const readings = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'reading')
+        const prayers = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'prayer')
+        const transitions = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'transition')
+        expect(readings.length).toBeGreaterThan(0)
+        expect(prayers.length).toBeGreaterThan(0)
+        expect(transitions.length).toBeGreaterThan(0)
+    })
+
+    it('service flow slots have performer and estimatedMinutes', () => {
+        const flowSlots = FRIDAY_NIGHT_TEMPLATE.filter(s =>
+            s.type && ['reading', 'prayer', 'transition'].includes(s.type)
+        )
+        for (const slot of flowSlots) {
+            expect(slot.defaultPerformer, `${slot.label} has no performer`).toBeTruthy()
+            expect(slot.estimatedMinutes, `${slot.label} has no estimatedMinutes`).toBeGreaterThan(0)
+        }
     })
 })
 
@@ -88,7 +107,7 @@ describe('buildSetlistFromTemplate', () => {
     it('creates header tracks for header slots', () => {
         const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
         const headers = tracks.filter(t => t.type === 'header')
-        const templateHeaders = FRIDAY_NIGHT_TEMPLATE.filter(s => s.isHeader)
+        const templateHeaders = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'header')
         expect(headers.length).toBe(templateHeaders.length)
     })
 

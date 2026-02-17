@@ -135,5 +135,16 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false; // Server-only via admin SDK
     }
+
+    // SONG USAGE TRACKING — server writes, members read
+    match /songUsage/{fileId} {
+      allow read: if isMember();
+      allow write: if false; // Server-only via admin SDK
+
+      match /events/{eventId} {
+        allow read: if isMember();
+        allow write: if false;
+      }
+    }
   }
 }

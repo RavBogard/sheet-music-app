@@ -7,7 +7,7 @@
  * a pre-populated setlist that the music director can review and adjust.
  */
 
-import { DriveFile, SetlistTrack } from '@/types/models'
+import { DriveFile, SetlistTrack, TrackType } from '@/types/models'
 import { ServiceContext } from './liturgical-calendar'
 import Fuse from 'fuse.js'
 
@@ -16,7 +16,9 @@ import Fuse from 'fuse.js'
 export interface TemplateSlot {
     /** Liturgical name displayed in the setlist */
     label: string
-    /** Whether this is a section header (no file link) */
+    /** Track type to generate (default: 'song') */
+    type?: TrackType
+    /** @deprecated Use type: 'header' instead. Kept for backward compat. */
     isHeader?: boolean
     /** Search queries to find matching files, tried in order */
     queries: string[]
@@ -28,53 +30,65 @@ export interface TemplateSlot {
     onlyFor?: string[]
     /** If true, skip this slot if a holiday overrides it */
     skipOnHoliday?: boolean
+    /** Default performer for non-song items (e.g., "Rabbi", "Cantor", "Congregation") */
+    defaultPerformer?: string
+    /** Default estimated duration in minutes */
+    estimatedMinutes?: number
+    /** Default description text */
+    description?: string
 }
 
 // ── Template Definitions ──
 
 export const FRIDAY_NIGHT_TEMPLATE: TemplateSlot[] = [
-    { label: 'Candle Lighting', isHeader: false, queries: ['candle lighting', 'hadlakat nerot', 'candle bless'] },
-    { label: 'Welcome / Opening', isHeader: true, queries: [] },
-    { label: 'Hinei Mah Tov', queries: ['hinei mah tov', 'hine ma tov'] },
-    { label: 'Shalom Aleichem', queries: ['shalom aleichem', 'shalom alechem'] },
-    { label: 'L\'cha Dodi', queries: ['l\'cha dodi', 'lecha dodi', 'l\'chah dodi'] },
-    { label: 'Bar\'chu', queries: ['barchu', 'bar\'chu', 'barechu'] },
-    { label: 'Shema', queries: ['shema', 'sh\'ma'] },
-    { label: 'V\'ahavta', queries: ['v\'ahavta', 'vahavta', 'veahavta'] },
-    { label: 'Mi Chamocha', queries: ['mi chamocha', 'mi chamochah', 'who is like you'] },
-    { label: 'Hashkiveinu', queries: ['hashkiveinu', 'hashkivenu'] },
-    { label: 'Amidah / T\'filah', isHeader: true, queries: [] },
-    { label: 'Oseh Shalom', queries: ['oseh shalom', 'osse shalom'] },
-    { label: 'Torah Service', isHeader: true, queries: [], skipOnHoliday: false },
-    { label: 'Aleinu', queries: ['aleinu', 'alenu'] },
-    { label: 'Mourner\'s Kaddish', queries: ['mourner kaddish', 'kaddish yatom', 'kaddish'] },
-    { label: 'Closing / Adon Olam', queries: ['adon olam', 'closing hymn'] },
+    { label: 'Welcome & Announcements', type: 'note', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 3 },
+    { label: 'Candle Lighting', type: 'song', queries: ['candle lighting', 'hadlakat nerot', 'candle bless'] },
+    { label: 'Kabbalat Shabbat', type: 'header', queries: [] },
+    { label: 'Hinei Mah Tov', type: 'song', queries: ['hinei mah tov', 'hine ma tov'] },
+    { label: 'Shalom Aleichem', type: 'song', queries: ['shalom aleichem', 'shalom alechem'] },
+    { label: 'L\'cha Dodi', type: 'song', queries: ['l\'cha dodi', 'lecha dodi', 'l\'chah dodi'] },
+    { label: 'Bar\'chu', type: 'song', queries: ['barchu', 'bar\'chu', 'barechu'] },
+    { label: 'Shema', type: 'song', queries: ['shema', 'sh\'ma'] },
+    { label: 'V\'ahavta', type: 'song', queries: ['v\'ahavta', 'vahavta', 'veahavta'] },
+    { label: 'Mi Chamocha', type: 'song', queries: ['mi chamocha', 'mi chamochah', 'who is like you'] },
+    { label: 'Hashkiveinu', type: 'song', queries: ['hashkiveinu', 'hashkivenu'] },
+    { label: 'T\'filah', type: 'header', queries: [] },
+    { label: 'Silent Prayer', type: 'prayer', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 2 },
+    { label: 'Oseh Shalom', type: 'song', queries: ['oseh shalom', 'osse shalom'] },
+    { label: 'Torah Service', type: 'header', queries: [], skipOnHoliday: false },
+    { label: 'Torah Reading', type: 'reading', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 10 },
+    { label: 'Aleinu', type: 'song', queries: ['aleinu', 'alenu'] },
+    { label: 'Mourner\'s Kaddish', type: 'prayer', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 3 },
+    { label: 'Closing Song', type: 'song', queries: ['adon olam', 'closing hymn', 'ein keloheinu'] },
+    { label: 'Kiddush', type: 'transition', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 2, description: 'Blessing over wine' },
 ]
 
 export const SHABBAT_MORNING_TEMPLATE: TemplateSlot[] = [
-    { label: 'Birchot HaShachar', isHeader: true, queries: [] },
-    { label: 'Modeh Ani / Morning Blessings', queries: ['modeh ani', 'morning bless', 'nisim b\'chol'] },
-    { label: 'P\'sukei D\'zimra', isHeader: true, queries: [] },
-    { label: 'Ashrei', queries: ['ashrei', 'happy are they'] },
-    { label: 'Psalm of the Day', queries: ['psalm', 'mizmor'] },
-    { label: 'Nishmat', queries: ['nishmat', 'nishmat kol chai'] },
-    { label: 'Bar\'chu', queries: ['barchu', 'bar\'chu', 'barechu'] },
-    { label: 'Yotzeir Or', queries: ['yotzeir', 'yotzer or'] },
-    { label: 'Shema', queries: ['shema', 'sh\'ma'] },
-    { label: 'V\'ahavta', queries: ['v\'ahavta', 'vahavta', 'veahavta'] },
-    { label: 'Mi Chamocha', queries: ['mi chamocha', 'mi chamochah'] },
-    { label: 'Amidah / T\'filah', isHeader: true, queries: [] },
-    { label: 'Torah Service', isHeader: true, queries: [] },
-    { label: 'Ein Kamocha', queries: ['ein kamocha', 'en kamocha'] },
-    { label: 'Avot / Torah Processional', queries: ['torah processional', 'avot', 'ki mitzion'] },
-    { label: 'Torah Reading', isHeader: true, queries: [] },
-    { label: 'Haftarah Blessing', queries: ['haftarah', 'haftorah bless'] },
-    { label: 'Returning the Torah', queries: ['returning torah', 'eitz chaim', 'etz hayim', 'tree of life'] },
-    { label: 'Sermon', isHeader: true, queries: [] },
-    { label: 'Musaf / Additional Prayers', isHeader: true, queries: [] },
-    { label: 'Aleinu', queries: ['aleinu', 'alenu'] },
-    { label: 'Mourner\'s Kaddish', queries: ['mourner kaddish', 'kaddish yatom', 'kaddish'] },
-    { label: 'Adon Olam / Ein Keloheinu', queries: ['adon olam', 'ein keloheinu', 'ain keloheinu'] },
+    { label: 'Birchot HaShachar', type: 'header', queries: [] },
+    { label: 'Modeh Ani / Morning Blessings', type: 'song', queries: ['modeh ani', 'morning bless', 'nisim b\'chol'] },
+    { label: 'P\'sukei D\'zimra', type: 'header', queries: [] },
+    { label: 'Ashrei', type: 'song', queries: ['ashrei', 'happy are they'] },
+    { label: 'Psalm of the Day', type: 'song', queries: ['psalm', 'mizmor'] },
+    { label: 'Nishmat', type: 'song', queries: ['nishmat', 'nishmat kol chai'] },
+    { label: 'Bar\'chu', type: 'song', queries: ['barchu', 'bar\'chu', 'barechu'] },
+    { label: 'Yotzeir Or', type: 'song', queries: ['yotzeir', 'yotzer or'] },
+    { label: 'Shema', type: 'song', queries: ['shema', 'sh\'ma'] },
+    { label: 'V\'ahavta', type: 'song', queries: ['v\'ahavta', 'vahavta', 'veahavta'] },
+    { label: 'Mi Chamocha', type: 'song', queries: ['mi chamocha', 'mi chamochah'] },
+    { label: 'T\'filah', type: 'header', queries: [] },
+    { label: 'Silent Prayer', type: 'prayer', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 2 },
+    { label: 'Torah Service', type: 'header', queries: [] },
+    { label: 'Ein Kamocha', type: 'song', queries: ['ein kamocha', 'en kamocha'] },
+    { label: 'Avot / Torah Processional', type: 'song', queries: ['torah processional', 'avot', 'ki mitzion'] },
+    { label: 'Torah Reading', type: 'reading', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 15 },
+    { label: 'Haftarah Blessing', type: 'song', queries: ['haftarah', 'haftorah bless'] },
+    { label: 'Returning the Torah', type: 'song', queries: ['returning torah', 'eitz chaim', 'etz hayim', 'tree of life'] },
+    { label: 'Sermon', type: 'note', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 15 },
+    { label: 'Musaf', type: 'header', queries: [] },
+    { label: 'Aleinu', type: 'song', queries: ['aleinu', 'alenu'] },
+    { label: 'Mourner\'s Kaddish', type: 'prayer', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 3 },
+    { label: 'Adon Olam / Ein Keloheinu', type: 'song', queries: ['adon olam', 'ein keloheinu', 'ain keloheinu'] },
+    { label: 'Kiddush', type: 'transition', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 2, description: 'Blessing over wine and challah' },
 ]
 
 // ── Template Registry ──
@@ -162,10 +176,12 @@ export function buildSetlistFromTemplate(
         // Skip slots not meant for this service type
         if (slot.onlyFor && !slot.onlyFor.includes(context.type)) continue
 
-        // Section headers become header tracks
-        if (slot.isHeader) {
+        // Determine effective type: new `type` field takes precedence over legacy `isHeader`
+        const effectiveType: TrackType = slot.type || (slot.isHeader ? 'header' : 'song')
+
+        // Headers become header tracks
+        if (effectiveType === 'header') {
             let label = slot.label
-            // Annotate Torah headers with parasha
             if (slot.label.includes('Torah') && context.parasha) {
                 label = `${slot.label} — Parashat ${context.parasha}`
             }
@@ -177,7 +193,25 @@ export function buildSetlistFromTemplate(
             continue
         }
 
-        // Try to find a matching file
+        // Non-song service flow items (reading, prayer, transition, note)
+        if (effectiveType !== 'song') {
+            tracks.push({
+                id: crypto.randomUUID(),
+                title: slot.label,
+                type: effectiveType,
+                performer: slot.defaultPerformer,
+                estimatedMinutes: slot.estimatedMinutes,
+                description: slot.description || (
+                    // Auto-annotate Torah readings with parasha
+                    effectiveType === 'reading' && slot.label.includes('Torah') && context.parasha
+                        ? `Parashat ${context.parasha}`
+                        : undefined
+                ),
+            })
+            continue
+        }
+
+        // Songs — try to find a matching file
         const match = findBestMatch(slot, fuse, usedFileIds)
 
         if (match) {
