@@ -116,27 +116,40 @@ export function ChatPanel() {
     }
 
     const handleCommands = async (commands: ChatCommand[]) => {
+        let lastCreatedSetlistId: string | null = null
+
         for (const cmd of commands) {
             const p = cmd.payload as Record<string, string | number | boolean | object[] | undefined>
             try {
                 switch (cmd.type) {
                     case 'CREATE_SETLIST':
-                        const _newId = await setlistService.createSetlist(
+                        const newId = await setlistService.createSetlist(
                             String(p.name),
                             (p.tracks || []) as SetlistTrack[],
                             !!p.isPublic
                         )
+                        lastCreatedSetlistId = newId
                         toast.success(`Created setlist: ${p.name}`)
                         break;
 
                     case 'PUBLISH_SETLIST':
-                        if (p.setlistId === 'current') {
-                            toast.error("Bot tried to update unknown setlist")
-                        } else {
-                            await setlistService.updateSetlist(String(p.setlistId), false, {
-                                eventDate: String(p.date)
-                            })
-                            toast.success(`Scheduled for ${p.date}`)
+                        {
+                            // Always prefer the real Firestore ID from a preceding CREATE_SETLIST,
+                            // since the AI can't know the actual document ID
+                            const resolvedId = lastCreatedSetlistId || (
+                                p.setlistId && p.setlistId !== 'current'
+                                    ? String(p.setlistId)
+                                    : null
+                            )
+
+                            if (!resolvedId) {
+                                toast.error("No setlist to publish — create one first")
+                            } else {
+                                await setlistService.updateSetlist(resolvedId, false, {
+                                    eventDate: String(p.date)
+                                })
+                                toast.success(`Scheduled for ${p.date}`)
+                            }
                         }
                         break;
 
@@ -216,6 +229,11 @@ export function ChatPanel() {
                 logger.error(`Failed command ${cmd.type}`, err)
                 toast.error(`Failed to execute: ${cmd.type}`)
             }
+        }
+
+        // Navigate to newly created setlist after all commands finish
+        if (lastCreatedSetlistId) {
+            router.push(`/setlists/${lastCreatedSetlistId}`)
         }
     }
 
