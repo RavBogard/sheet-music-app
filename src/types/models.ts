@@ -28,6 +28,9 @@ export interface DriveFile {
     }
 }
 
+/** Track types for service flow items */
+export type TrackType = 'song' | 'header' | 'reading' | 'prayer' | 'transition' | 'note'
+
 export interface SetlistTrack {
     id: string
     title: string
@@ -37,11 +40,15 @@ export interface SetlistTrack {
     audioFileName?: string // Cached Audio File Name
     key?: string
     notes?: string
-    type?: 'header' | 'song'
-    duration?: string
+    type?: TrackType // Default: 'song' (backward compatible)
+    duration?: string // "3:30" for songs, "~5 min" for liturgical items
     bpm?: number
     leadMusician?: string
     transposition?: number // Per-track transposition in semitones (0 = original key)
+    // Service flow fields
+    description?: string // Body text for readings/prayers (responsive reading text, stage directions)
+    performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
+    estimatedMinutes?: number // Numeric duration for run sheet time calculations
 }
 
 export interface Setlist {

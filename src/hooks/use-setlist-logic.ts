@@ -335,6 +335,31 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
+    /** Add a non-song service flow item (reading, prayer, transition, note, or header) */
+    const addServiceItem = (type: SetlistTrack['type'], defaults?: Partial<SetlistTrack>) => {
+        if (!canEdit) return
+        const id = `track-${Date.now()}-${type}`
+        const defaultsByType: Record<string, Partial<SetlistTrack>> = {
+            header: { title: 'SECTION' },
+            reading: { title: 'Reading', performer: 'Rabbi', estimatedMinutes: 5 },
+            prayer: { title: 'Prayer', performer: 'Congregation', estimatedMinutes: 3 },
+            transition: { title: 'Transition', estimatedMinutes: 1 },
+            note: { title: '' },
+        }
+        const typeDefaults = defaultsByType[type || 'note'] || {}
+        const newTrack: SetlistTrack = {
+            id,
+            title: '',
+            type: type || 'note',
+            ...typeDefaults,
+            ...defaults,
+        }
+        setTracks(prev => {
+            addToHistory(prev)
+            return [...prev, newTrack]
+        })
+    }
+
     const togglePublic = async () => {
         if (!setlistService || !setlistId) return
         if (!isPublic && !isLeader) {
@@ -389,6 +414,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         deleteTrack,
         matchFile,
         addSongsFromLibrary,
+        addServiceItem,
         duplicateTrack,
         togglePublic,
         eventDate,

@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/context-menu"
 import { toast } from "sonner"
 import { Loader2, Wand2 } from "lucide-react"
-import { TrackHeaderItem } from "./TrackHeaderItem"
+import { TrackServiceItem } from "./TrackServiceItem"
+import { SERVICE_FLOW_TYPES } from "@/lib/validations"
 import { useMetronome } from "./useMetronome"
 import { useDigitize } from "./useDigitize"
 
@@ -43,10 +44,10 @@ export function TrackItem({
     onEditDetails,
     onDuplicate
 }: TrackItemProps) {
-    // --- Header tracks delegate to separate component ---
-    if (track.type === 'header') {
+    // --- Non-song tracks delegate to service flow component ---
+    if (track.type === 'header' || (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type))) {
         return (
-            <TrackHeaderItem
+            <TrackServiceItem
                 track={track}
                 onUpdate={onUpdate}
                 onDelete={onDelete}

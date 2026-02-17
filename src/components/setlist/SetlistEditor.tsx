@@ -28,12 +28,20 @@ import { useAuth } from "@/lib/auth-context"
 import { TrackItem } from "./editor/TrackItem"
 import { SetlistHeader } from "./editor/SetlistHeader"
 import { SetlistTimeline } from "./SetlistTimeline"
+import { RunSheetTimeline } from "./RunSheetTimeline"
 import { SetlistHistoryPanel } from "./SetlistHistoryPanel"
 import { NamePrompt } from "./modals/NamePrompt"
 import { AddSongsModal } from "./modals/AddSongsModal"
 import { MatchFileModal } from "./modals/MatchFileModal"
 import { TrackDetailsModal } from "./modals/TrackDetailsModal"
-import { Plus } from "lucide-react"
+import { Plus, Music, BookOpen, ArrowLeftRight, StickyNote, Minus } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 
 interface SetlistEditorProps {
     setlistId?: string
@@ -84,6 +92,7 @@ export function SetlistEditor({
         deleteTrack,
         matchFile,
         addSongsFromLibrary,
+        addServiceItem,
         togglePublic,
         undo,
         redo,
@@ -205,6 +214,13 @@ export function SetlistEditor({
                 <SetlistTimeline tracks={tracks} onPlay={(fid) => handlePlayTrack(fid, "song")} />
             )}
 
+            {/* Run Sheet Time Estimate */}
+            {tracks.length > 0 && (
+                <div className="px-4 sm:px-6">
+                    <RunSheetTimeline tracks={tracks} />
+                </div>
+            )}
+
             {/* Track List */}
             {/* History Panel */}
             {showHistory && setlistId && (
@@ -243,15 +259,41 @@ export function SetlistEditor({
                                 />
                             ))}
 
-                            {/* Add Songs Button - Only in Edit Mode */}
+                            {/* Add Item Menu - Only in Edit Mode */}
                             {canEdit && isEditMode && (
-                                <button
-                                    onClick={() => setShowAddSongs(true)}
-                                    className="w-full p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                    Add Songs from Library
-                                </button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            className="w-full p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center gap-2 animate-in fade-in zoom-in-95"
+                                        >
+                                            <Plus className="h-5 w-5" />
+                                            Add Item
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="center" className="w-56">
+                                        <DropdownMenuItem onClick={() => setShowAddSongs(true)}>
+                                            <Music className="h-4 w-4 mr-2 text-blue-500" />
+                                            Song from Library
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => addServiceItem('header')}>
+                                            <Minus className="h-4 w-4 mr-2" />
+                                            Section Header
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => addServiceItem('reading')}>
+                                            <BookOpen className="h-4 w-4 mr-2 text-amber-500" />
+                                            Reading / Prayer
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => addServiceItem('transition')}>
+                                            <ArrowLeftRight className="h-4 w-4 mr-2" />
+                                            Transition
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => addServiceItem('note')}>
+                                            <StickyNote className="h-4 w-4 mr-2" />
+                                            Note
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             )}
                         </div>
                     </SortableContext>
