@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
@@ -8,19 +9,8 @@ export const maxDuration = 60
 
 export async function POST(req: Request) {
     try {
-        // Initialize Admin SDK first
-        initAdmin()
-
-        // 1. Verify Admin
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return new NextResponse("Unauthorized", { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        const decodedToken = await getAuth().verifyIdToken(token)
-
-        // Optional: strict check
-        // if (decodedToken.role !== 'admin') ...
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
         logger.info("[Prune] Starting Consistency Scan...")
 
@@ -33,7 +23,6 @@ export async function POST(req: Request) {
         logger.info(`[Prune] Found ${driveIdSet.size} active files in Drive`)
 
         // 3. Fetch Local State (Firestore)
-        // initAdmin() called at top
         const db = getFirestore()
         const snapshot = await db.collection('library_index').get()
 

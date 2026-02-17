@@ -1,23 +1,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { DriveClient } from "@/lib/google-drive";
-import { initAdmin } from "@/lib/firebase-admin";
-import { getAuth } from "firebase-admin/auth";
+import { withAuth } from "@/lib/api-auth";
 import { logger } from "@/lib/logger"
-
-initAdmin();
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Admin Check
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const token = authHeader.split("Bearer ")[1];
-        await getAuth().verifyIdToken(token);
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         // 2. Parse Body
         const { sourceFileId, xmlContent, name } = await req.json();

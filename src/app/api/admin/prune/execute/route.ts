@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
+import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
     try {
-        // 1. Verify Admin
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return new NextResponse("Unauthorized", { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        const decodedToken = await getAuth().verifyIdToken(token)
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
         const body = await req.json()
         const { fileIds } = body

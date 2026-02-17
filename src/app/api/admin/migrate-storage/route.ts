@@ -7,9 +7,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
 import { copyDriveFileToStorage } from "@/lib/firebase-storage"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 export const maxDuration = 300
@@ -18,16 +19,9 @@ const BATCH_SIZE = 10
 
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Missing token" }, { status: 401 })
-        }
-        const decoded = await verifyIdToken(authHeader.split(" ")[1])
-        if (!decoded) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
-        initAdmin()
         const db = getFirestore()
         const drive = new DriveClient()
 

@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { getAuth, getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { transferSetlistSchema } from "@/lib/validations"
 import { logger } from "@/lib/logger"
 
 export async function POST(request: Request) {
     try {
-        const authHeader = request.headers.get("Authorization")
-        const token = authHeader?.split("Bearer ")[1]
-
-        if (!token) {
-            return new NextResponse("Unauthorized", { status: 401 })
-        }
+        const auth = await withAuth(request, 'admin')
+        if (auth instanceof NextResponse) return auth
 
         // Parse Body
         const body = await request.json()
@@ -24,16 +21,9 @@ export async function POST(request: Request) {
         }
 
         const { setlistId, newOwnerEmail } = validationResult.data
-
-        initAdmin()
-        const auth = getAuth()
         const db = getFirestore()
 
-        // 1. Verify Caller
-        const decodedToken = await auth.verifyIdToken(token)
-        const callerUid = decodedToken.uid
-
-        // 2. Get Setlist
+        // Get Setlist
         const setlistRef = db.collection('setlists').doc(setlistId)
         const setlistSnap = await setlistRef.get()
 
@@ -41,20 +31,10 @@ export async function POST(request: Request) {
             return new NextResponse("Setlist not found", { status: 404 })
         }
 
-        const setlistData = setlistSnap.data()
-
-        // 3. Verify Ownership (Only Owner or Admin can transfer)
-        const isOwner = setlistData?.ownerId === callerUid
-        const isAdmin = decodedToken.role === 'admin'
-
-        if (!isOwner && !isAdmin) {
-            return new NextResponse("Forbidden: You do not own this setlist", { status: 403 })
-        }
-
-        // 4. Find Target User
+        // Find Target User
         let targetUser
         try {
-            targetUser = await auth.getUserByEmail(newOwnerEmail)
+            targetUser = await getAuth().getUserByEmail(newOwnerEmail)
         } catch (e: unknown) {
             if (e instanceof Error && 'code' in e && (e as { code: string }).code === 'auth/user-not-found') {
                 return new NextResponse(`User with email ${newOwnerEmail} not found. They must sign up first.`, { status: 404 })
@@ -62,13 +42,15 @@ export async function POST(request: Request) {
             throw e
         }
 
-        // 5. Update Setlist
+        const setlistData = setlistSnap.data()
+
+        // Update Setlist
         await setlistRef.update({
             ownerId: targetUser.uid,
             ownerName: targetUser.displayName || targetUser.email || "Unknown User",
-            isPublic: false, // Default to private when transferring? Maybe safer.
+            isPublic: false,
             transferredAt: new Date().toISOString(),
-            previousOwnerId: callerUid
+            previousOwnerId: auth.uid
         })
 
         return NextResponse.json({
@@ -77,6 +59,7 @@ export async function POST(request: Request) {
         })
 
     } catch (error: unknown) {
+        if (error instanceof NextResponse) return error
         logger.error("Transfer Error:", error)
         return new NextResponse(`Error: ${(error instanceof Error ? error.message : "Unknown error")}`, { status: 500 })
     }

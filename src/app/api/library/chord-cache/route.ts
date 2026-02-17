@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
-import { initAdmin } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
-
-initAdmin()
 
 interface ChordPosition {
     text: string
@@ -29,12 +26,8 @@ interface PageChordData {
  */
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        await getAuth().verifyIdToken(token)
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         const fileId = req.nextUrl.searchParams.get("fileId")
         const page = req.nextUrl.searchParams.get("page")
@@ -46,7 +39,6 @@ export async function GET(req: NextRequest) {
         const db = getFirestore()
 
         if (page !== null && page !== undefined) {
-            // Get specific page
             const doc = await db
                 .collection("library_index")
                 .doc(fileId)
@@ -63,7 +55,6 @@ export async function GET(req: NextRequest) {
                 data: doc.data() as PageChordData
             })
         } else {
-            // Get all pages for this file
             const snapshot = await db
                 .collection("library_index")
                 .doc(fileId)
@@ -81,6 +72,7 @@ export async function GET(req: NextRequest) {
             })
         }
     } catch (error: unknown) {
+        if (error instanceof NextResponse) return error
         logger.error("[Chord Cache GET] Error:", error)
         return NextResponse.json({ error: "Failed to load chord cache" }, { status: 500 })
     }
@@ -89,16 +81,11 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/library/chord-cache
  * Save scanned chord positions for a file page
- * Body: { fileId, page, chords, scanMethod }
  */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        await getAuth().verifyIdToken(token)
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         const body = await req.json()
         const { fileId, page, chords, scanMethod, cacheVersion } = body
@@ -133,6 +120,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, chordsCount: cacheData.chords.length })
     } catch (error: unknown) {
+        if (error instanceof NextResponse) return error
         logger.error("[Chord Cache POST] Error:", error)
         return NextResponse.json({ error: "Failed to save chord cache" }, { status: 500 })
     }
@@ -140,16 +128,12 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/library/chord-cache?fileId=xxx
- * Clear cached chord data (e.g., when file is updated)
+ * Clear cached chord data
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-        const token = authHeader.split("Bearer ")[1]
-        const decoded = await getAuth().verifyIdToken(token)
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         const fileId = req.nextUrl.searchParams.get("fileId")
         if (!fileId) {
@@ -157,8 +141,6 @@ export async function DELETE(req: NextRequest) {
         }
 
         const db = getFirestore()
-
-        // Delete all page chord data for this file
         const snapshot = await db
             .collection("library_index")
             .doc(fileId)
@@ -173,6 +155,7 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ success: true, pagesDeleted: snapshot.size })
     } catch (error: unknown) {
+        if (error instanceof NextResponse) return error
         logger.error("[Chord Cache DELETE] Error:", error)
         return NextResponse.json({ error: "Failed to clear chord cache" }, { status: 500 })
     }

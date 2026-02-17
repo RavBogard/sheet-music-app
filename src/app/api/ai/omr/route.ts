@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiProVision } from "@/lib/gemini";
-import { getAuth } from "firebase-admin/auth";
-import { initAdmin } from "@/lib/firebase-admin";
 import { DriveClient } from "@/lib/google-drive";
+import { withAuth } from "@/lib/api-auth";
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
-
-// Ensure Firebase Admin is initialized
-initAdmin();
 
 export const maxDuration = 300; // Allow 5 minutes for AI processing (Vercel Pro)
 
@@ -17,13 +13,8 @@ export async function POST(req: NextRequest) {
         const limited = await checkRateLimit(req, 'ai')
         if (limited) return limited
 
-        // 1. Admin Verification (Strict)
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const token = authHeader.split("Bearer ")[1];
-        await getAuth().verifyIdToken(token);
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         // 2. Body Parsing
         const { fileId, mimeType } = await req.json();

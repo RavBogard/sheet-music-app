@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Missing token" }, { status: 401 })
-        }
-
-        const token = authHeader.split(" ")[1]
-        const decodedToken = await verifyIdToken(token)
-
-        if (!decodedToken) {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-        }
-
-        // Check roles (optional, but good practice)
-        // const roles = decodedToken.roles || []
-        // if (!roles.includes('admin') && !roles.includes('leader')) ...
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         const { xmlContent, title, sourceFileId, originalName } = await req.json()
 
@@ -26,7 +14,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
         }
 
-        initAdmin()
         const db = getFirestore()
 
         const docRef = await db.collection("digitized_charts").add({
@@ -35,8 +22,8 @@ export async function POST(req: NextRequest) {
             sourceFileId,
             xmlContent,
             createdAt: new Date().toISOString(),
-            createdBy: decodedToken.uid,
-            createdByName: decodedToken.name || decodedToken.email || "Unknown"
+            createdBy: auth.uid,
+            createdByName: auth.token.name || auth.email || "Unknown"
         })
 
         return NextResponse.json({
@@ -46,6 +33,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: unknown) {
+        if (error instanceof NextResponse) return error
         logger.error("Save Generated Error:", error)
         return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 })
     }

@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { initAdmin, getFirestore, verifyIdToken } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 /** POST: Reset migration markers so all files get re-migrated */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Missing token" }, { status: 401 })
-        }
-        const decoded = await verifyIdToken(authHeader.split(" ")[1])
-        if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
-        initAdmin()
         const db = getFirestore()
         const snapshot = await db.collection('library_index').get()
 
@@ -34,6 +30,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, cleared: docs.length })
     } catch (error) {
+        if (error instanceof NextResponse) return error
         logger.error("[migrate-storage/reset POST]:", error)
         return NextResponse.json({ error: "Internal Server Error", message: String(error) }, { status: 500 })
     }
@@ -42,14 +39,9 @@ export async function POST(req: NextRequest) {
 /** DELETE: Clear all chord caches so improved scanner takes effect */
 export async function DELETE(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("Authorization")
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Missing token" }, { status: 401 })
-        }
-        const decoded = await verifyIdToken(authHeader.split(" ")[1])
-        if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        const auth = await withAuth(req, 'admin')
+        if (auth instanceof NextResponse) return auth
 
-        initAdmin()
         const db = getFirestore()
 
         const libraryDocs = await db.collection('library_index').get()
@@ -72,6 +64,7 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ success: true, cleared })
     } catch (error) {
+        if (error instanceof NextResponse) return error
         logger.error("[migrate-storage/reset DELETE]:", error)
         return NextResponse.json({ error: "Internal Server Error", message: String(error) }, { status: 500 })
     }

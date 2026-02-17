@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiFlash } from "@/lib/gemini"; // Already configured as 'gemini-3-flash-preview'
-import { getAuth } from "firebase-admin/auth";
-import { initAdmin } from "@/lib/firebase-admin";
+import { withAuth } from "@/lib/api-auth";
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
-
-initAdmin();
 
 export const maxDuration = 60; // Shorter than OMR, we expect this to be fast-ish
 
@@ -79,12 +76,8 @@ export async function POST(req: NextRequest) {
         if (limited) return limited
 
         // 1. Auth
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        const token = authHeader.split("Bearer ")[1];
-        await getAuth().verifyIdToken(token);
+        const auth = await withAuth(req)
+        if (auth instanceof NextResponse) return auth
 
         // 2. Parse Body
         const { strips } = await req.json() as { strips: TransposeRequestChunk[] };

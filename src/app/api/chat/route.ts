@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
@@ -62,33 +63,24 @@ export async function POST(request: Request) {
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
     // 1. Authenticate & Check Admin Status
-    const authHeader = request.headers.get("Authorization")
     let isAdmin = false
     let userContext = ""
 
-    if (authHeader?.startsWith("Bearer ")) {
-      try {
-        initAdmin()
-        const token = authHeader.split("Bearer ")[1]
-        const decoded = await getAuth().verifyIdToken(token)
-
-        // Check Admin Role
-        if (decoded.role === 'admin' || decoded.uid === '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3') {
+    try {
+      const auth = await withAuth(request)
+      if (!(auth instanceof NextResponse)) {
+        if (auth.isAdmin) {
           isAdmin = true
-
-          // Fetch User List for Context
-          // Limit to 50 recent users to save tokens
           const usersSnap = await getFirestore().collection('users').limit(50).get()
           const users = usersSnap.docs.map(d => {
             const data = d.data()
             return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]`
           }).join('\n')
-
           userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
         }
-      } catch (e) {
-        logger.warn("Auth verification failed in chat:", e)
       }
+    } catch (e) {
+      logger.warn("Auth verification failed in chat:", e)
     }
 
     if (!apiKey) {
