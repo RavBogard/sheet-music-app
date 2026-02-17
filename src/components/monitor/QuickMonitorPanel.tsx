@@ -117,6 +117,7 @@ export function QuickMonitorPanel() {
             clientRef.current = null
             reset()
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user/config change
     }, [user, hasAccess, config?.bridgeUrl, config?.authorizedUsers, config?.bridge?.status, config?.bridge?.lastSeen])
 
     // Fader handlers

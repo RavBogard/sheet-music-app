@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { enrichFile } from "@/lib/enrichment-engine"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,9 @@ export async function POST(req: NextRequest) {
     try {
         const auth = await withAuth(req, 'admin')
         if (auth instanceof NextResponse) return auth
+
+        const limited = await checkRateLimit(req, 'ai')
+        if (limited) return limited
 
         initAdmin()
         const db = getFirestore()

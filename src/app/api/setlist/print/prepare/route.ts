@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { preExtractChords } from "@/lib/print-pipeline"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export const maxDuration = 120
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
         const auth = await withAuth(req)
         if (auth instanceof NextResponse) return auth
 
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         const { fileIds } = await req.json()
 
         if (!Array.isArray(fileIds) || fileIds.length === 0) {
@@ -23,9 +27,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Limit to 30 files per request to stay within timeout
-        const limited = fileIds.filter(Boolean).slice(0, 30)
+        const capped = fileIds.filter(Boolean).slice(0, 30)
 
-        const result = await preExtractChords(limited)
+        const result = await preExtractChords(capped)
 
         return NextResponse.json({
             success: true,

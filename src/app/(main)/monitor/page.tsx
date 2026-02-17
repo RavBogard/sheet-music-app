@@ -82,6 +82,7 @@ export default function MonitorPage() {
             wsRef.current = null
             reset()
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user change
     }, [user])
 
     // Self-assign a bus

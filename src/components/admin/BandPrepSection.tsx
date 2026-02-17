@@ -21,13 +21,7 @@ interface SetlistPrep {
     members: MemberPrep[]
 }
 
-function formatTime(seconds: number): string {
-    if (seconds < 60) return `${seconds}s`
-    const mins = Math.floor(seconds / 60)
-    if (mins < 60) return `${mins}m`
-    const hrs = Math.floor(mins / 60)
-    return `${hrs}h ${mins % 60}m`
-}
+import { formatDuration } from "@/lib/format-utils"
 
 export function BandPrepSection() {
     const { user, isLeader } = useAuth()
@@ -133,7 +127,7 @@ export function BandPrepSection() {
                                             {m.practiceSeconds > 0 && (
                                                 <span className="flex items-center gap-0.5 text-muted-foreground ml-1">
                                                     <Clock className="w-2.5 h-2.5" />
-                                                    {formatTime(m.practiceSeconds)}
+                                                    {formatDuration(m.practiceSeconds)}
                                                 </span>
                                             )}
                                         </div>

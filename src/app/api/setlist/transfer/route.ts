@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { transferSetlistSchema } from "@/lib/validations"
 import { logger } from "@/lib/logger"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const auth = await withAuth(request, 'admin')
         if (auth instanceof NextResponse) return auth
+
+        const limited = await checkRateLimit(request, 'api')
+        if (limited) return limited
 
         // Parse Body
         const body = await request.json()

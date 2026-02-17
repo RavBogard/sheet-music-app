@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { requireAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest) {
     } catch (response) {
         return response as NextResponse
     }
+
+    const limited = await checkRateLimit(req, 'api')
+    if (limited) return limited
 
     const searchTerm = req.nextUrl.searchParams.get('q')?.trim()
     if (!searchTerm || searchTerm.length < 2) {

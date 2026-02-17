@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { formatPlaybackTime } from "@/lib/format-utils"
 import {
     Play, Pause, SkipBack, Volume2, VolumeX,
     Gauge, Repeat, Timer, ChevronDown, ChevronUp,
@@ -205,7 +206,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 {/* Progress bar */}
                 <div className="flex-1 flex items-center gap-2">
                     <span className="text-[10px] text-muted-foreground tabular-nums w-8 text-right">
-                        {formatTime(currentTime)}
+                        {formatPlaybackTime(currentTime)}
                     </span>
                     <div className="relative flex-1 h-6 flex items-center group cursor-pointer"
                         onClick={(e) => {
@@ -246,7 +247,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         )}
                     </div>
                     <span className="text-[10px] text-muted-foreground tabular-nums w-8">
-                        {formatTime(duration)}
+                        {formatPlaybackTime(duration)}
                     </span>
                 </div>
 
@@ -324,7 +325,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         <div className="flex items-center gap-3">
                             <Repeat className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span className="text-xs text-muted-foreground">
-                                Loop: {formatTime(loopA)}{loopB !== null ? ` → ${formatTime(loopB)}` : ' → tap loop again for B'}
+                                Loop: {formatPlaybackTime(loopA)}{loopB !== null ? ` → ${formatPlaybackTime(loopB)}` : ' → tap loop again for B'}
                             </span>
                             <button
                                 onClick={() => { setLoopA(null); setLoopB(null) }}
@@ -339,10 +340,10 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                     <div className="flex items-center gap-3">
                         <Timer className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="text-xs text-muted-foreground">
-                            This session: {formatTime(totalPracticed.current + (practiceStart.current ? (Date.now() - practiceStart.current) / 1000 : 0))}
+                            This session: {formatPlaybackTime(totalPracticed.current + (practiceStart.current ? (Date.now() - practiceStart.current) / 1000 : 0))}
                             {cumulativeStats && cumulativeStats.seconds > 0 && (
                                 <span className="ml-2 text-muted-foreground/70">
-                                    · Total: {formatTime(cumulativeStats.seconds)} across {cumulativeStats.sessions} session{cumulativeStats.sessions !== 1 ? 's' : ''}
+                                    · Total: {formatPlaybackTime(cumulativeStats.seconds)} across {cumulativeStats.sessions} session{cumulativeStats.sessions !== 1 ? 's' : ''}
                                 </span>
                             )}
                         </span>
@@ -353,8 +354,4 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
     )
 }
 
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60)
-    const s = Math.floor(seconds % 60)
-    return `${m}:${s.toString().padStart(2, '0')}`
-}
+

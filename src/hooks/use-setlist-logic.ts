@@ -129,7 +129,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     // Sync Chat Context & Auto-Open
     useEffect(() => {
-        if (canEdit && isEditMode && tracks.length >= 0) {
+        if (canEdit && isEditMode) {
             // Auto-open on mount if editing AND on desktop (md breakpoint)
             if (window.matchMedia('(min-width: 768px)').matches) {
                 open()

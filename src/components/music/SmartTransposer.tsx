@@ -65,6 +65,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scan triggers once per page render, not on every scan-state change
     }, [aiState.isEnabled, isRendered, pageData, hasScanned])
 
     const runScan = async () => {

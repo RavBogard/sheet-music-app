@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getFirestore } from "firebase-admin/firestore"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 interface ChordPosition {
@@ -28,6 +29,9 @@ export async function GET(req: NextRequest) {
     try {
         const auth = await withAuth(req)
         if (auth instanceof NextResponse) return auth
+
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
 
         const fileId = req.nextUrl.searchParams.get("fileId")
         const page = req.nextUrl.searchParams.get("page")
@@ -86,6 +90,9 @@ export async function POST(req: NextRequest) {
     try {
         const auth = await withAuth(req)
         if (auth instanceof NextResponse) return auth
+
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
 
         const body = await req.json()
         const { fileId, page, chords, scanMethod, cacheVersion } = body

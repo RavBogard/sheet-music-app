@@ -107,6 +107,7 @@ export function useMusicianTransposition() {
         isUserAdjustingRef.current = false
         loadPref()
         return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: loads pref on file change only, not on transposition change
     }, [user, fileId, profile, trackTransposition])
 
     // Auto-save when user manually changes transposition (debounced)
