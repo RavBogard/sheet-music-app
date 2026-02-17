@@ -1,20 +1,20 @@
 {
-  "version": "2.2.0",
-  "commit": "2da37af",
+  "version": "4.1.0",
+  "commit": "d84cbc1",
   "branch": "master",
-  "buildDate": "2/16/2026",
+  "buildDate": "2/17/2026",
   "changelog": [
-    "2.2.0 - refactor: Complete UI/UX restructure — admin dashboard, clean settings, quick monitor",
-    "2.2.0 - feat: Audio integrated into Library with Charts/Audio tabs and inline player",
-    "2.2.0 - feat: QuickMonitorPanel in performance toolbar (slide-up mixer)",
-    "2.2.0 - feat: Pinned monitor channels persisted per-user in Firestore",
-    "2.2.0 - feat: Admin link in desktop nav + profile dropdown",
-    "2.2.0 - fix: Desktop header — removed fake bell, dead guest code, Audio link",
-    "2.2.0 - fix: Settings page stripped to personal-only (70% smaller)",
-    "2.1.0 - feat: Print All Packets — batch-generate transposed gig packets for all musicians",
-    "2.1.0 - feat: Library search by topic/tag (in addition to name, key, artist)",
-    "2.1.0 - feat: Topic badges displayed on library file rows",
-    "2.0.0 - feat: Sticky per-song transposition — your preferred key for each chart persists",
-    "2.0.0 - feat: Firebase Storage migration — CDN-served files replace Google Drive proxy"
+    "4.1.0 - feat: 8 bridge hardening improvements",
+    "4.1.0 - feat: bridge auto-publishes its URL to Firestore on startup",
+    "4.1.0 - feat: one-click bridge installer with setup wizard",
+    "4.1.0 - feat: backend improvements — cache invalidation, rate limiting, cron jobs, audit trail",
+    "4.1.0 - fix: Storage path resolution for uploaded files",
+    "4.1.0 - feat: file upload API + dialog, setlist visibility confirmation",
+    "4.1.0 - fix: annotation drawing, Audio popup order, toolbar spread",
+    "4.1.0 - fix: disable E2E in CI until Firebase secrets configured",
+    "4.1.0 - fix: merge orphaned 7th/extensions into chords, toolbar layout + monitor popup",
+    "4.1.0 - fix: swipe anywhere to navigate songs, tap anywhere to toggle toolbar",
+    "4.1.0 - fix: rewrite E2E smoke tests for CI without auth",
+    "4.1.0 - fix: normalize Unicode ♯/♭ before chord filtering (root cause of transposition errors)"
   ]
 }

@@ -53,12 +53,33 @@ export async function GET(req: NextRequest) {
                 continue
             }
 
+            // Skip chronic failures (3+ attempts)
+            const failCount = data.metadata?.failCount || 0
+            if (failCount >= 3) {
+                stats.skipped++
+                continue
+            }
+
             try {
                 await enrichFile(doc.id)
                 stats.success++
+                // Clear any previous failure tracking on success
+                if (failCount > 0) {
+                    await db.collection('library_index').doc(doc.id).set({
+                        metadata: { failCount: 0, lastFailure: null }
+                    }, { merge: true })
+                }
             } catch (e) {
                 logger.error(`[Cron] Failed to enrich ${data.name || doc.id}:`, e)
                 stats.failed++
+                // Track failure
+                await db.collection('library_index').doc(doc.id).set({
+                    metadata: {
+                        failCount: failCount + 1,
+                        lastFailure: new Date().toISOString(),
+                        lastError: e instanceof Error ? e.message : 'Unknown error'
+                    }
+                }, { merge: true }).catch(() => {/* fire and forget */})
             }
         }
 

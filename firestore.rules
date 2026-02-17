@@ -102,10 +102,29 @@ service cloud.firestore {
     // MONITOR CONFIGURATION
     // Read: Any signed-in user (iPad checks authorization client-side + bridge verifies)
     // Write: Admins always; authorized users can update (for bus self-assignment)
+    // Bridge heartbeat writes server-side via admin SDK (bypasses rules)
     match /config/monitor {
       allow read: if isSignedIn();
       allow write: if isAdmin()
                    || (isSignedIn() && request.auth.uid in resource.data.authorizedUsers);
+    }
+
+    // LIBRARY INDEX — server-only (admin SDK)
+    // Sync engine, enrichment cron, and upload API all write via admin SDK.
+    // No client should read/write directly.
+    match /library_index/{fileId} {
+      allow read, write: if false;
+
+      // Chord data subcollection — server-only
+      match /chordData/{page} {
+        allow read, write: if false;
+      }
+    }
+
+    // SETLIST HISTORY (audit trail) — server writes, admin reads
+    match /setlists/{setlistId}/history/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-only via admin SDK
     }
   }
 }

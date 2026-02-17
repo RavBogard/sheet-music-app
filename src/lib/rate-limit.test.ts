@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // Mock Upstash so it uses the in-memory fallback
 vi.mock('@upstash/ratelimit', () => ({
@@ -8,8 +9,13 @@ vi.mock('@upstash/redis', () => ({
     Redis: vi.fn()
 }))
 
-// Clear process.env to force in-memory fallback
 const originalEnv = { ...process.env }
+
+function mockReq(userId: string): NextRequest {
+    return new NextRequest('http://localhost:3000/api/test', {
+        headers: { 'x-forwarded-for': userId }
+    })
+}
 
 describe('rate-limit', () => {
     beforeEach(() => {
@@ -23,40 +29,38 @@ describe('rate-limit', () => {
     })
 
     it('allows requests under the limit', async () => {
-        const { globalLimiter } = await import('./rate-limit')
-        const result = await globalLimiter.check('test-user-1')
-        expect(result).toBe(true)
+        const { checkRateLimit } = await import('./rate-limit')
+        const result = await checkRateLimit(mockReq('test-user-1'), 'api')
+        expect(result).toBeNull() // null = not limited
     })
 
-    it('allows multiple requests from different identifiers', async () => {
-        const { globalLimiter } = await import('./rate-limit')
+    it('allows multiple requests from different IPs', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
         for (let i = 0; i < 10; i++) {
-            const result = await globalLimiter.check(`user-${i}`)
-            expect(result).toBe(true)
+            const result = await checkRateLimit(mockReq(`192.168.1.${i}`), 'api')
+            expect(result).toBeNull()
         }
     })
 
-    it('allows up to 60 requests from same identifier (api tier)', async () => {
-        const { globalLimiter } = await import('./rate-limit')
-        const id = 'burst-test-user'
-        let allowed = 0
-        for (let i = 0; i < 65; i++) {
-            const result = await globalLimiter.check(id)
-            if (result) allowed++
-        }
-        // Should allow exactly 60 (the api tier limit)
-        expect(allowed).toBe(60)
-    })
-
-    it('blocks requests after limit is exceeded', async () => {
-        const { globalLimiter } = await import('./rate-limit')
-        const id = 'limit-test-user'
-        // Exhaust the limit
+    it('blocks requests after api tier limit (60/min)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.99'
         for (let i = 0; i < 60; i++) {
-            await globalLimiter.check(id)
+            await checkRateLimit(mockReq(ip), 'api')
         }
-        // Next should be blocked
-        const result = await globalLimiter.check(id)
-        expect(result).toBe(false)
+        const result = await checkRateLimit(mockReq(ip), 'api')
+        expect(result).not.toBeNull()
+        expect(result?.status).toBe(429)
+    })
+
+    it('returns proper 429 response with headers', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.100'
+        for (let i = 0; i < 60; i++) {
+            await checkRateLimit(mockReq(ip), 'api')
+        }
+        const result = await checkRateLimit(mockReq(ip), 'api')
+        expect(result?.headers.get('Retry-After')).toBe('60')
+        expect(result?.headers.get('X-RateLimit-Remaining')).toBe('0')
     })
 })

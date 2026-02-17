@@ -136,10 +136,4 @@ export async function checkRateLimit(
     }
 }
 
-// Legacy export for backward compatibility
-export const globalLimiter = {
-    check: async (identifier: string) => {
-        const { success } = await limiters.api.limit(identifier)
-        return success
-    }
-}
+

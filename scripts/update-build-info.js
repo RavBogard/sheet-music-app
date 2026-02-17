@@ -1,48 +1,48 @@
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
 try {
-    // Get Git Info
     const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
     const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-    const buildDate = new Date().toLocaleString();
+    const buildDate = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
 
-    // Get Last 5 Commits for Changelog
-    const changelog = execSync('git log -5 --pretty=format:"%h - %s (%cr)"').toString().trim().split('\n');
+    // Read version from package.json (single source of truth)
+    const pkgPath = path.join(__dirname, '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const version = pkg.version;
 
-    // Auto-Increment Version (Patch)
-    const packageJsonPath = '../package.json';
-    const packageJson = require(packageJsonPath);
-
-    // Parse version x.y.z
-    const parts = packageJson.version.split('.');
-    if (parts.length === 3) {
-        parts[2] = parseInt(parts[2]) + 1;
-        packageJson.version = parts.join('.');
-        // Write back to package.json
-        fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
-        console.log(`Version bumped to ${packageJson.version}`);
-    }
-
-    const humanVersion = packageJson.version;
+    // Get recent meaningful commits for changelog
+    const log = execSync('git log --oneline --no-merges -20').toString().trim();
+    const changelog = log
+        .split('\n')
+        .filter(line => /feat:|fix:|refactor:|perf:/.test(line))
+        .map(line => {
+            const msg = line.replace(/^[a-f0-9]+ /, '');
+            return `${version} - ${msg}`;
+        })
+        .slice(0, 12);
 
     const buildInfo = {
-        version: humanVersion,
+        version,
         commit: commitHash,
-        branch: branch,
+        branch,
         buildDate,
-        changelog
+        changelog,
     };
 
-    fs.writeFileSync('./src/build-info.json', JSON.stringify(buildInfo, null, 2));
-    console.log('Build info generated:', buildInfo);
+    const outPath = path.join(__dirname, '..', 'src', 'build-info.json');
+    fs.writeFileSync(outPath, JSON.stringify(buildInfo, null, 2) + '\n');
+    console.log(`✓ build-info.json → v${version} (${commitHash})`);
 
 } catch (error) {
-    console.error('Failed to generate build info:', error);
-    // Fallback if no git (e.g. Vercel sometimes needs full history, but usually fine)
-    fs.writeFileSync('./src/build-info.json', JSON.stringify({
+    console.error('Failed to generate build info:', error.message);
+    const outPath = path.join(__dirname, '..', 'src', 'build-info.json');
+    fs.writeFileSync(outPath, JSON.stringify({
         version: 'dev',
-        buildDate: new Date().toLocaleString(),
-        changelog: ['Git info unavailable']
-    }, null, 2));
+        commit: 'unknown',
+        branch: 'unknown',
+        buildDate: new Date().toLocaleDateString(),
+        changelog: ['Build info unavailable']
+    }, null, 2) + '\n');
 }
