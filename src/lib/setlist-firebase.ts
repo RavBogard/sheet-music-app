@@ -98,7 +98,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             logSetlistChange(id, action, userId || '', userName || 'Anonymous', {
                 ...(data.name !== undefined && { newName: data.name }),
                 ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
-            })
+            }, data.tracks)
         },
 
         async deleteSetlist(id: string, _isPublic: boolean) {

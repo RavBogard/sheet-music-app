@@ -30,31 +30,50 @@ export interface AuditEntry {
     userName: string
     timestamp: ReturnType<typeof serverTimestamp>
     details?: Record<string, unknown>
+    /** Full track list snapshot at time of change (for undo) */
+    trackSnapshot?: Array<{ title: string; fileId?: string; key?: string; type?: string }>
 }
 
 /**
  * Log an audit entry for a setlist change.
  * Fire-and-forget — never blocks the main operation.
+ * 
+ * If tracks are provided, saves a lightweight snapshot for undo.
  */
 export function logSetlistChange(
     setlistId: string,
     action: AuditAction,
     userId: string,
     userName: string,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
+    tracks?: Array<{ title: string; fileId?: string; key?: string; type?: string }>
 ): void {
     if (!setlistId || !userId) return
 
     const historyRef = collection(db, 'setlists', setlistId, 'history')
 
-    addDoc(historyRef, {
+    const entry: Record<string, unknown> = {
         action,
         userId,
         userName: userName || 'Unknown',
         timestamp: serverTimestamp(),
-        ...(details && { details: JSON.parse(JSON.stringify(details)) }),
-    }).catch(err => {
-        // Never let audit failures break the app
+    }
+
+    if (details) {
+        entry.details = JSON.parse(JSON.stringify(details))
+    }
+
+    // Save lightweight track snapshot (title + fileId only, no bloat)
+    if (tracks) {
+        entry.trackSnapshot = tracks.map(t => ({
+            title: t.title,
+            ...(t.fileId && { fileId: t.fileId }),
+            ...(t.key && { key: t.key }),
+            ...(t.type && { type: t.type }),
+        }))
+    }
+
+    addDoc(historyRef, entry).catch(err => {
         logger.warn('[Audit] Failed to log setlist change:', err)
     })
 }

@@ -1,9 +1,13 @@
 {
   "version": "4.1.0",
-  "commit": "d84cbc1",
+  "commit": "e03559b",
   "branch": "master",
   "buildDate": "2/17/2026",
   "changelog": [
+    "4.1.0 - feat: Phase D — rehearsal mode",
+    "4.1.0 - feat: Phase C — practice dashboard & notifications",
+    "4.1.0 - feat: Phase B — offline done right",
+    "4.1.0 - feat: Phase A — housekeeping & hardening",
     "4.1.0 - feat: 8 bridge hardening improvements",
     "4.1.0 - feat: bridge auto-publishes its URL to Firestore on startup",
     "4.1.0 - feat: one-click bridge installer with setup wizard",
@@ -11,10 +15,6 @@
     "4.1.0 - fix: Storage path resolution for uploaded files",
     "4.1.0 - feat: file upload API + dialog, setlist visibility confirmation",
     "4.1.0 - fix: annotation drawing, Audio popup order, toolbar spread",
-    "4.1.0 - fix: disable E2E in CI until Firebase secrets configured",
-    "4.1.0 - fix: merge orphaned 7th/extensions into chords, toolbar layout + monitor popup",
-    "4.1.0 - fix: swipe anywhere to navigate songs, tap anywhere to toggle toolbar",
-    "4.1.0 - fix: rewrite E2E smoke tests for CI without auth",
-    "4.1.0 - fix: normalize Unicode ♯/♭ before chord filtering (root cause of transposition errors)"
+    "4.1.0 - fix: disable E2E in CI until Firebase secrets configured"
   ]
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { ChevronLeft, FolderOpen, Search, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { NoResultsIllustration, EmptyFolderIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
+import { useContentSearch } from "@/hooks/use-content-search"
+import { ContentSearchResults } from "@/components/library/ContentSearchResults"
 import { DriveFile } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-context"
@@ -58,6 +60,21 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
+    // Content search (searches within chord data / lyrics)
+    const contentSearch = useContentSearch()
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value)
+        // Debounce content search (only triggers for 3+ chars after 500ms)
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        if (value.length >= 3) {
+            debounceRef.current = setTimeout(() => contentSearch.search(value), 500)
+        } else {
+            contentSearch.clear()
+        }
+    }
+
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
     useEffect(() => { loadLibrary() }, [loadLibrary])
@@ -87,7 +104,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const handleItemClick = (item: DriveFile) => {
         if (item.mimeType.includes('folder')) {
             setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name }])
-            setSearchQuery("")
+            setSearchQuery(""); contentSearch.clear()
         } else if (isAudioFile(item)) {
             setPlayingFile(item)
             setAudioUrl(`/api/drive/file/${item.id}`)
@@ -98,7 +115,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
 
     const handleBreadcrumbClick = (index: number) => {
         setBreadcrumbs(prev => prev.slice(0, index + 1))
-        setSearchQuery("")
+        setSearchQuery(""); contentSearch.clear()
     }
 
     // AI Digitize
@@ -184,7 +201,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                     <Input
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
                         className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
                     />
@@ -221,6 +238,15 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <LibraryBreadcrumbs breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbClick} />
                 )}
             </div>
+
+            {/* Content Search Results (searches within chord data) */}
+            {searchQuery.length >= 3 && (
+                <ContentSearchResults
+                    results={contentSearch.results}
+                    searching={contentSearch.searching}
+                    query={contentSearch.query}
+                />
+            )}
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
