@@ -73,6 +73,40 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const isFullyOffline = totalTracksWithFiles > 0 && offlineCount === totalTracksWithFiles
     const isSyncing = Object.values(downloading).some(Boolean)
 
+    // --- Undo/Redo Logic (must be before handleApplyEdits) ---
+    const [past, setPast] = useState<SetlistTrack[][]>([])
+    const [future, setFuture] = useState<SetlistTrack[][]>([])
+
+    const canUndo = past.length > 0
+    const canRedo = future.length > 0
+
+    const addToHistory = useCallback((currentTracks: SetlistTrack[]) => {
+        setPast(prev => {
+            const newPast = [...prev, currentTracks]
+            if (newPast.length > 50) return newPast.slice(newPast.length - 50)
+            return newPast
+        })
+        setFuture([])
+    }, [])
+
+    const undo = useCallback(() => {
+        if (!canUndo) return
+        const previous = past[past.length - 1]
+        const newPast = past.slice(0, past.length - 1)
+        setPast(newPast)
+        setFuture(prev => [tracks, ...prev])
+        setTracks(previous)
+    }, [canUndo, past, tracks])
+
+    const redo = useCallback(() => {
+        if (!canRedo) return
+        const next = future[0]
+        const newFuture = future.slice(1)
+        setPast(prev => [...prev, tracks])
+        setFuture(newFuture)
+        setTracks(next)
+    }, [canRedo, future, tracks])
+
     // Chat State (Global)
     const { open, setContextData, registerOnApplyEdits } = useChatStore()
 
@@ -82,47 +116,52 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             return
         }
 
-        // Create a copy of current tracks to mutate
-        const newTracks = [...tracks]
+        // Process edits sequentially on a mutable copy
+        setTracks(prev => {
+            addToHistory(prev)
+            const newTracks = [...prev]
 
-        edits.forEach(edit => {
-            if (edit.action === 'add') {
-                const newTrack: SetlistTrack = {
-                    id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    title: edit.title || "New Song",
-                    fileId: edit.fileId || undefined,
-                    key: '',
-                    notes: ''
-                }
+            edits.forEach(edit => {
+                if (edit.action === 'add') {
+                    const newTrack: SetlistTrack = {
+                        id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        title: edit.title || "New Song",
+                        fileId: edit.fileId || undefined,
+                        type: (edit.type as SetlistTrack['type']) || 'song',
+                        performer: edit.performer,
+                        estimatedMinutes: edit.estimatedMinutes,
+                        key: '',
+                        notes: ''
+                    }
 
-                if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
-                    newTracks.splice(edit.index, 0, newTrack)
-                } else {
-                    newTracks.push(newTrack)
+                    if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
+                        newTracks.splice(edit.index, 0, newTrack)
+                    } else {
+                        newTracks.push(newTrack)
+                    }
                 }
-            }
-            // Use title matching or index for removal if ID isn't known
-            else if (edit.action === 'remove') {
-                if (typeof edit.index === 'number' && newTracks[edit.index]) {
-                    newTracks.splice(edit.index, 1)
+                else if (edit.action === 'remove') {
+                    if (typeof edit.index === 'number' && newTracks[edit.index]) {
+                        newTracks.splice(edit.index, 1)
+                    }
                 }
-            }
-            else if (edit.action === 'reorder') {
-                if (
-                    typeof edit.fromIndex === 'number' &&
-                    typeof edit.toIndex === 'number' &&
-                    newTracks[edit.fromIndex] &&
-                    edit.toIndex >= 0 &&
-                    edit.toIndex < newTracks.length + 1
-                ) {
-                    const [moved] = newTracks.splice(edit.fromIndex, 1)
-                    newTracks.splice(edit.toIndex, 0, moved)
+                else if (edit.action === 'reorder') {
+                    if (
+                        typeof edit.fromIndex === 'number' &&
+                        typeof edit.toIndex === 'number' &&
+                        newTracks[edit.fromIndex] &&
+                        edit.toIndex >= 0 &&
+                        edit.toIndex < newTracks.length + 1
+                    ) {
+                        const [moved] = newTracks.splice(edit.fromIndex, 1)
+                        newTracks.splice(edit.toIndex, 0, moved)
+                    }
                 }
-            }
+            })
+
+            return newTracks
         })
-
-        setTracks(newTracks)
-    }, [canEdit, tracks])
+    }, [canEdit, addToHistory])
 
     // Edit Mode State
     const [isEditMode, setIsEditMode] = useState(false)
@@ -208,45 +247,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
         }
     }, [name, tracks, isPublic, eventDate, performSave, canEdit])
-
-    // --- Undo/Redo Logic ---
-    const [past, setPast] = useState<SetlistTrack[][]>([])
-    const [future, setFuture] = useState<SetlistTrack[][]>([])
-
-    const canUndo = past.length > 0
-    const canRedo = future.length > 0
-
-    const addToHistory = useCallback((currentTracks: SetlistTrack[]) => {
-        setPast(prev => {
-            const newPast = [...prev, currentTracks]
-            // Limit history to 50 steps
-            if (newPast.length > 50) return newPast.slice(newPast.length - 50)
-            return newPast
-        })
-        setFuture([])
-    }, [])
-
-    const undo = useCallback(() => {
-        if (!canUndo) return
-
-        const previous = past[past.length - 1]
-        const newPast = past.slice(0, past.length - 1)
-
-        setPast(newPast)
-        setFuture(prev => [tracks, ...prev])
-        setTracks(previous)
-    }, [canUndo, past, tracks])
-
-    const redo = useCallback(() => {
-        if (!canRedo) return
-
-        const next = future[0]
-        const newFuture = future.slice(1)
-
-        setPast(prev => [...prev, tracks])
-        setFuture(newFuture)
-        setTracks(next)
-    }, [canRedo, future, tracks])
 
     // --- Actions ---
 

@@ -14,6 +14,9 @@ export interface ChatEditAction {
     toIndex?: number
     title?: string
     fileId?: string
+    type?: string
+    performer?: string
+    estimatedMinutes?: number
 }
 
 interface ChatContextData {

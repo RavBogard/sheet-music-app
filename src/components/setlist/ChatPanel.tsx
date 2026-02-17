@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { useChatStore } from "@/lib/chat-store"
+import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { useAuth } from "@/lib/auth-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
@@ -119,6 +119,12 @@ export function ChatPanel() {
     const handleCommands = async (commands: ChatCommand[]) => {
         let lastCreatedSetlistId: string | null = null
 
+        // ── Batch all setlist modifications into edits ──
+        // This ensures all changes go through local React state (via onApplyEdits)
+        // instead of writing directly to Firestore (which causes stale-read races).
+        const edits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+        let shouldClearFirst = false
+
         for (const cmd of commands) {
             const p = cmd.payload as Record<string, string | number | boolean | object[] | undefined>
             try {
@@ -135,8 +141,6 @@ export function ChatPanel() {
 
                     case 'PUBLISH_SETLIST':
                         {
-                            // Always prefer the real Firestore ID from a preceding CREATE_SETLIST,
-                            // since the AI can't know the actual document ID
                             const resolvedId = lastCreatedSetlistId || (
                                 p.setlistId && p.setlistId !== 'current'
                                     ? String(p.setlistId)
@@ -155,40 +159,24 @@ export function ChatPanel() {
                         break;
 
                     case 'ADD_TO_SETLIST':
-                        if (contextData.currentSetlist) {
-                            const pathParts = window.location.pathname.split('/')
-                            const potentialId = pathParts[pathParts.length - 1]
-
-                            if (potentialId && potentialId !== 'new') {
-                                const newTrack: SetlistTrack = {
-                                    id: crypto.randomUUID(),
-                                    type: 'song',
-                                    title: String(p.fileName),
-                                    fileId: String(p.fileId)
-                                }
-                                const newTracks: SetlistTrack[] = [...contextData.currentSetlist, newTrack]
-                                await setlistService.updateSetlist(potentialId, false, { tracks: newTracks })
-                                toast.success(`Added ${p.fileName}`)
-                            } else {
-                                toast.error("Open a setlist first")
-                            }
-                        }
+                        // Route through local state, not Firestore
+                        edits.push({
+                            action: 'add',
+                            title: String(p.fileName || p.title || 'Untitled'),
+                            fileId: p.fileId ? String(p.fileId) : undefined,
+                            type: p.type ? String(p.type) : undefined,
+                            performer: p.performer ? String(p.performer) : undefined,
+                            estimatedMinutes: p.estimatedMinutes ? Number(p.estimatedMinutes) : undefined,
+                        })
                         break;
 
                     case 'REMOVE_FROM_SETLIST':
-                        const pathPartsRemote = window.location.pathname.split('/')
-                        const setlistId = pathPartsRemote[pathPartsRemote.length - 1]
-                        if (setlistId && contextData.currentSetlist) {
+                        if (p.all === true || p.index === 'all') {
+                            // "Delete everything" — mark for clearing
+                            shouldClearFirst = true
+                        } else {
                             const idx = Number(p.index)
-                            const track = contextData.currentSetlist[idx]
-                            if (track) {
-                                const newTracks = [...contextData.currentSetlist]
-                                newTracks.splice(idx, 1)
-                                await setlistService.updateSetlist(setlistId, false, { tracks: newTracks })
-                                toast.success("Removed track")
-                            } else {
-                                toast.error("Could not find track at that index")
-                            }
+                            edits.push({ action: 'remove', index: idx })
                         }
                         break;
 
@@ -230,6 +218,42 @@ export function ChatPanel() {
                 logger.error(`Failed command ${cmd.type}`, err)
                 toast.error(`Failed to execute: ${cmd.type}`)
             }
+        }
+
+        // ── Apply batched setlist edits ──
+        if ((shouldClearFirst || edits.length > 0) && onApplyEdits) {
+            const batchedEdits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+
+            if (shouldClearFirst) {
+                // Remove all tracks by index, from last to first
+                const currentLen = contextData.currentSetlist?.length || 0
+                for (let i = currentLen - 1; i >= 0; i--) {
+                    batchedEdits.push({ action: 'remove', index: i })
+                }
+            } else {
+                // For individual removes, sort descending so indices don't shift
+                const removes = edits.filter(e => e.action === 'remove').sort((a, b) => (b.index || 0) - (a.index || 0))
+                batchedEdits.push(...removes)
+            }
+
+            // Then adds (always after removes)
+            const adds = edits.filter(e => e.action === 'add')
+            batchedEdits.push(...adds)
+
+            if (batchedEdits.length > 0) {
+                onApplyEdits(batchedEdits as ChatEditAction[])
+                const addCount = adds.length
+                const removeCount = shouldClearFirst ? (contextData.currentSetlist?.length || 0) : edits.filter(e => e.action === 'remove').length
+                if (removeCount > 0 && addCount > 0) {
+                    toast.success(`Cleared ${removeCount} tracks, added ${addCount} new`)
+                } else if (addCount > 0) {
+                    toast.success(`Added ${addCount} track${addCount !== 1 ? 's' : ''}`)
+                } else if (removeCount > 0) {
+                    toast.success(`Removed ${removeCount} track${removeCount !== 1 ? 's' : ''}`)
+                }
+            }
+        } else if (edits.length > 0 && !onApplyEdits) {
+            toast.error("Can't modify setlist — open a setlist first")
         }
 
         // Navigate to newly created setlist after all commands finish

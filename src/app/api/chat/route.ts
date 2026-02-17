@@ -34,8 +34,9 @@ You must return a JSON object with this structure:
   "message": "Your text response to the user...",
   "commands": [
     { "type": "CREATE_SETLIST", "payload": { "name": "Shabbat 1", "isPublic": false, "tracks": [] } },
-    { "type": "ADD_TO_SETLIST", "payload": { "fileId": "123", "fileName": "Adon Olam" } },
+    { "type": "ADD_TO_SETLIST", "payload": { "fileId": "123", "title": "Adon Olam" } },
     { "type": "REMOVE_FROM_SETLIST", "payload": { "index": 0 } },
+    { "type": "REMOVE_FROM_SETLIST", "payload": { "all": true } },
     { "type": "PUBLISH_SETLIST", "payload": { "setlistId": "id", "date": "2024-02-09" } },
     { "type": "TRANSPOSE_CHART", "payload": { "steps": 2 } },
     { "type": "SEARCH_LIBRARY", "payload": { "query": "Shabbat" } },
@@ -64,8 +65,11 @@ You must return a JSON object with this structure:
 - When building Shabbat morning setlists: Birchot HaShachar header → Morning Blessings → P'sukei D'zimra header → Ashrei → Nishmat → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah header → Silent Prayer → Torah Service header → Torah Processional → Torah Reading → Haftarah → Returning the Torah → Sermon → Aleinu → Mourner's Kaddish → Adon Olam/Ein Keloheinu → Kiddush.
 - Search the library context to find matching files for each liturgical slot.
 - When SONG USAGE HISTORY is available, use it to rotate repertoire: prefer songs not used recently over ones used last week. Mention rotation reasoning if asked.
-- If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST.
+- If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST with both "title" and "fileId".
+- ADD_TO_SETLIST payload uses "title" (not "fileName") for the display name. Include "fileId" if found in the library. For non-song items, include "type", "performer", "estimatedMinutes".
 - If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.
+- If asked to "Delete everything", "Clear the setlist", or "Start over", issue REMOVE_FROM_SETLIST with { "all": true }. Then add new tracks.
+- When combining "delete everything and rebuild", ALWAYS issue the REMOVE_FROM_SETLIST { "all": true } command FIRST, then ADD_TO_SETLIST commands for the new tracks.
 - If asked to "Transpose up 2 steps", issue TRANSPOSE_CHART.
 - If asked "Search for...", issue SEARCH_LIBRARY.
 - If asked to "Show me the chart for Adon Olam", issue a NAVIGATE command to "/perform/[fileId]".
