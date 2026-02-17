@@ -10,6 +10,7 @@ interface OfflineDB extends DBSchema {
             name: string;
             mimeType: string;
             updatedAt: number;
+            lastAccessedAt: number;
         };
     };
     setlists: {
@@ -23,7 +24,7 @@ interface OfflineDB extends DBSchema {
 }
 
 const DB_NAME = 'sheet-music-offline-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const initDB = async () => {
     return openDB<OfflineDB>(DB_NAME, DB_VERSION, {
@@ -49,12 +50,18 @@ export const saveOfflineFile = async (id: string, blob: Blob, name: string, mime
         name,
         mimeType,
         updatedAt: Date.now(),
+        lastAccessedAt: Date.now(),
     });
 };
 
 export const getOfflineFile = async (id: string) => {
     const db = await initDB();
-    return db.get('files', id);
+    const file = await db.get('files', id);
+    // Touch lastAccessedAt on read (fire-and-forget)
+    if (file) {
+        db.put('files', { ...file, lastAccessedAt: Date.now() }).catch(() => {});
+    }
+    return file;
 };
 
 export const deleteOfflineFile = async (id: string) => {
@@ -76,4 +83,25 @@ export const isFileOffline = async (id: string) => {
     const db = await initDB();
     const result = await db.getKey('files', id);
     return !!result;
+};
+
+/**
+ * Evict offline files not accessed in the given number of days.
+ * Returns the count of evicted files.
+ */
+export const evictStaleFiles = async (maxAgeDays = 60): Promise<number> => {
+    const db = await initDB();
+    const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+    const all = await db.getAll('files');
+    let evicted = 0;
+
+    for (const file of all) {
+        const lastAccess = file.lastAccessedAt || file.updatedAt || 0;
+        if (lastAccess < cutoff) {
+            await db.delete('files', file.id);
+            evicted++;
+        }
+    }
+
+    return evicted;
 };

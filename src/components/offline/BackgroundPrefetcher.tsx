@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore"
-import { isFileOffline, saveOfflineFile } from "@/lib/offline-store"
+import { isFileOffline, saveOfflineFile, evictStaleFiles } from "@/lib/offline-store"
 import { logger } from "@/lib/logger"
 
 /**
@@ -27,7 +27,9 @@ export function BackgroundPrefetcher() {
 
         // Delay to avoid competing with initial page load
         const timer = setTimeout(() => {
-            prefetchUpcomingSetlists().catch(() => {/* silent */})
+            prefetchUpcomingSetlists()
+                .then(() => evictStaleFiles(60)) // Evict files not accessed in 60 days
+                .catch(() => {/* silent */})
         }, 5000)
 
         return () => clearTimeout(timer)

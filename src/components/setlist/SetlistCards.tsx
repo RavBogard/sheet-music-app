@@ -1,8 +1,10 @@
 "use client"
+import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus } from "lucide-react"
+import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus, CloudOff, CheckCircle2 } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
+import { isFileOffline } from "@/lib/offline-store"
 
 /* ─── Upcoming Service Card ─── */
 
@@ -14,6 +16,16 @@ interface UpcomingCardProps {
 }
 
 export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloading }: UpcomingCardProps) {
+    const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
+
+    useEffect(() => {
+        const fileIds = (setlist.tracks || []).map(t => t.fileId).filter(Boolean) as string[]
+        if (fileIds.length === 0) { setOfflineStatus('none'); return }
+        Promise.all(fileIds.map(id => isFileOffline(id))).then(results => {
+            const cached = results.filter(Boolean).length
+            setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
+        }).catch(() => setOfflineStatus('none'))
+    }, [setlist.tracks])
     return (
         <button
             onClick={onClick}
@@ -45,6 +57,16 @@ export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloadin
                 <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{setlist.trackCount || 0} songs</span>
                     {setlist.isPublic && <Globe className="h-3 w-3" />}
+                    {offlineStatus === 'full' && (
+                        <span className="flex items-center gap-1 text-green-500 text-xs">
+                            <CheckCircle2 className="h-3 w-3" /> Offline ready
+                        </span>
+                    )}
+                    {offlineStatus === 'partial' && (
+                        <span className="flex items-center gap-1 text-amber-500 text-xs">
+                            <CloudOff className="h-3 w-3" /> Partial
+                        </span>
+                    )}
                 </div>
             </div>
         </button>

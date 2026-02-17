@@ -1,8 +1,10 @@
 "use client"
 
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
+import { isFileOffline } from "@/lib/offline-store"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -29,6 +31,12 @@ function getAudioCleanName(name: string) {
 export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying }: LibraryFileRowProps) {
     const isFolder = item.mimeType.includes('folder')
     const isAudio = isAudioMime(item)
+    const [isCached, setIsCached] = useState(false)
+
+    useEffect(() => {
+        if (isFolder || !item.id) return
+        isFileOffline(item.id).then(setIsCached).catch(() => {})
+    }, [item.id, isFolder])
 
     const displayName = isFolder
         ? item.name
@@ -93,6 +101,12 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             {!isFolder && !isAudio && item.metadata?.bpm && (
                                 <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border font-mono">
                                     {item.metadata.bpm} bpm
+                                </span>
+                            )}
+
+                            {isCached && !isFolder && (
+                                <span className="text-xs text-green-500/70" title="Available offline">
+                                    <CloudOff className="w-3 h-3" />
                                 </span>
                             )}
 
