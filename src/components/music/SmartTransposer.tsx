@@ -57,7 +57,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     const fileId = useCurrentFileId()
 
     const [hasScanned, setHasScanned] = useState(false)
-    const [localError, setLocalError] = useState<string | null>(null)
+    const [_localError, setLocalError] = useState<string | null>(null)
 
     const pageData = aiState.pageData[pageNumber]
 

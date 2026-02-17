@@ -2,10 +2,8 @@
 
 import { MobileTabBar } from "./MobileTabBar"
 import { DesktopHeader } from "./DesktopHeader"
-import { usePathname } from "next/navigation"
 
 export function AppNavigation() {
-    const pathname = usePathname()
 
     // Don't show navigation on specific routes (like login or active performance view)
     // We might want to keep it on /perform/resume but hide it on actual chart view?

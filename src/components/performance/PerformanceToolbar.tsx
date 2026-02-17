@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Tuner } from "@/components/tools/Tuner"
@@ -24,9 +23,8 @@ interface PerformanceToolbarProps {
     onMenuOpenChange?: (open: boolean) => void
 }
 
-export function PerformanceToolbar({ onHome, onSetlist, onMenuOpenChange }: PerformanceToolbarProps) {
-    const router = useRouter()
-    const { playbackQueue, queueIndex, nextSong, prevSong, aiState, setAiEnabled, capoFret, transposition, currentVisiblePage } = useMusicStore()
+export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenChange }: PerformanceToolbarProps) {
+    const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
 

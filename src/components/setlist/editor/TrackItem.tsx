@@ -3,7 +3,6 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Trash2, Play, Search, Music } from "lucide-react"
-import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AudioFilePicker } from "../AudioFilePicker"
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/context-menu"
 import { toast } from "sonner"
 import { Loader2, Wand2 } from "lucide-react"
-import { isFileOffline } from "@/lib/offline-store"
 import { TrackHeaderItem } from "./TrackHeaderItem"
 import { useMetronome } from "./useMetronome"
 import { useDigitize } from "./useDigitize"
@@ -100,15 +98,8 @@ function SongTrackItem({
     const fileName = track.fileName || (hasFile ? "Linked File" : "")
 
     // Hooks
-    const [isCached, setIsCached] = useState(false)
     const { isBlinking, blinkState, toggle: toggleMetronome } = useMetronome(track.bpm)
     const { isAdmin, digitizing, handleDigitize } = useDigitize({ track, onUpdate, onDuplicate })
-
-    useEffect(() => {
-        if (track.fileId) {
-            isFileOffline(track.fileId).then(setIsCached)
-        }
-    }, [track.fileId])
 
     const handleTitleClick = () => {
         if (hasFile && track.fileId && onPlay) {

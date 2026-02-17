@@ -30,7 +30,7 @@ export function TransposerMenu() {
     } = useMusicStore()
 
     // Musician profile for auto-transposition indicator
-    const { profile, isAutoTransposed, instrumentLabel, saving } = useMusicianTransposition()
+    const { isAutoTransposed, instrumentLabel, saving } = useMusicianTransposition()
 
     // Gather all detected chords across pages
     const allChords = useMemo(() => {

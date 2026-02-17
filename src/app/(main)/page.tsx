@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useLibraryStore } from "@/lib/library-store"
-import { useMusicStore } from "@/lib/store"
 import { getContextualGreeting } from "@/lib/greeting"
 import { toDate, getRelativeDateLabel } from "@/lib/firestore-helpers"
 import { EmptySetlistsIllustration, PendingAccountIllustration } from "@/components/ui/illustrations"
@@ -13,7 +12,6 @@ import { EmptySetlistsIllustration, PendingAccountIllustration } from "@/compone
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-    Loader2,
     FileMusic,
     ListMusic,
     PlayCircle,
@@ -33,7 +31,6 @@ export default function DashboardPage() {
     const router = useRouter()
     const { user, profile, signIn, isMember, isLeader } = useAuth()
     const { loadLibrary } = useLibraryStore()
-    const { fileUrl } = useMusicStore()
     const congregation = useCongregation()
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])

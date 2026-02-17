@@ -23,7 +23,7 @@ import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 
 export function ChatPanel() {
-    const { user, isLeader } = useAuth() // Get user for auth token
+    const { user } = useAuth() // Get user for auth token
     const { isOpen, close, messages, addMessage, contextData, onApplyEdits } = useChatStore()
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
@@ -120,7 +120,7 @@ export function ChatPanel() {
             try {
                 switch (cmd.type) {
                     case 'CREATE_SETLIST':
-                        const newId = await setlistService.createSetlist(
+                        const _newId = await setlistService.createSetlist(
                             String(p.name),
                             (p.tracks || []) as SetlistTrack[],
                             !!p.isPublic

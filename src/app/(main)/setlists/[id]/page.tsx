@@ -19,14 +19,14 @@ export default function SetlistEditorPage() {
     const id = params?.id as string
     const isPublic = searchParams?.get('public') === 'true'
 
-    const { allFiles, loadLibrary } = useLibraryStore()
+    const { loadLibrary } = useLibraryStore()
     const { items: pendingItems, clear: clearPending } = useSetlistStore()
     const { setQueue } = useMusicStore()
     const { user } = useAuth()
 
     const [existingSetlist, setExistingSetlist] = useState<Setlist | null>(null)
     const [loading, setLoading] = useState(id !== 'new')
-    const [guestFiles, setGuestFiles] = useState<DriveFile[]>([])
+    const [_guestFiles, setGuestFiles] = useState<DriveFile[]>([])
 
     useEffect(() => {
         if (user) {
@@ -86,7 +86,7 @@ export default function SetlistEditorPage() {
         })) as SetlistTrack[]
         : (existingSetlist?.tracks || [])
     const name = isNew ? "" : existingSetlist?.name
-    const activeFiles = user ? allFiles : guestFiles
+    // Files available via SetlistEditor props
 
     return (
         <SetlistEditor
@@ -100,11 +100,11 @@ export default function SetlistEditorPage() {
                 clearPending()
                 router.back()
             }}
-            onSave={(newId) => {
+            onSave={(_newId) => {
                 clearPending()
                 router.push('/setlists')
             }}
-            onPlayTrack={(fileId, fileName) => {
+            onPlayTrack={(fileId, _fileName) => {
                 const queue = tracks
                     .filter((t: SetlistTrack) => t.fileId)
                     .map((t: SetlistTrack) => {

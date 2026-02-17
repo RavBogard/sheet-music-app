@@ -27,7 +27,6 @@ export function MatchFileModal({
 }: MatchFileModalProps) {
     const {
         displayedFiles,
-        loading,
         loadLibrary,
         setFilter
     } = useLibraryStore()

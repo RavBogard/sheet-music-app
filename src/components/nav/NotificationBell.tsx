@@ -9,7 +9,7 @@ import {
     markAsRead,
     markAllAsRead,
 } from "@/lib/notification-store"
-import { Bell, Check, ListMusic, Upload, Shield, X } from "lucide-react"
+import { Bell, ListMusic, Upload, Shield } from "lucide-react"
 
 const ICON_MAP: Record<string, typeof Bell> = {
     setlist_published: ListMusic,

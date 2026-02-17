@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
@@ -8,8 +8,8 @@ import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, setD
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 import {
-    CalendarDays, ChevronRight, Eye, EyeOff,
-    CheckCircle2, Circle, Clock, AlertCircle,
+    CalendarDays, ChevronRight,
+    CheckCircle2, Circle,
 } from "lucide-react"
 
 interface SongPref {
@@ -108,7 +108,7 @@ export function YourWeekSection() {
             const tracks = (s.tracks || []).filter(t => t.fileId && t.type !== 'header')
             const total = tracks.length
             let viewed = 0
-            let stale = 0
+            const stale = 0
 
             for (const t of tracks) {
                 const pref = songPrefs[t.fileId!]
@@ -129,6 +129,9 @@ export function YourWeekSection() {
 
     if (!user || !isMember || setlists.length === 0) return null
 
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is stable within a single render
+    const now = Date.now()
+
     return (
         <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -142,10 +145,9 @@ export function YourWeekSection() {
                 const prep = prepMap[s.id!]
                 const eventDate = toDate(s.eventDate)
                 const daysUntil = eventDate
-                    ? Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                    ? Math.ceil((eventDate.getTime() - now) / (1000 * 60 * 60 * 24))
                     : null
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const updatedAt = toDate((s as any).updatedAt) || toDate(s.date)
+                const updatedAt = toDate(s.updatedAt) || toDate(s.date)
                 const isNew = lastVisitedAt && updatedAt ? updatedAt > lastVisitedAt : false
 
                 return (

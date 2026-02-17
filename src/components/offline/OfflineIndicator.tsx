@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Wifi, WifiOff, Download, Check, Loader2 } from "lucide-react"
+import { WifiOff, Download, Check, Loader2 } from "lucide-react"
 
 /**
  * Compact offline status indicator.

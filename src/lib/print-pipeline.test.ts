@@ -5,7 +5,7 @@
  * Uses mocks for external services, real logic for everything else.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // ── Unit tests for content hashing ──
 

@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Setlist } from "@/lib/setlist-firebase"
 import {
     AlertDialog,
     AlertDialogAction,

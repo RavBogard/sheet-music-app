@@ -29,7 +29,7 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     const [menuOpen, setMenuOpen] = useState(false)
 
     // ── Single source of truth for toolbar visibility ──
-    const showBars = useCallback(() => {
+    const _showBars = useCallback(() => {
         setBarsVisible(true)
         // Reset auto-hide timer
         if (autoHideRef.current) clearTimeout(autoHideRef.current)

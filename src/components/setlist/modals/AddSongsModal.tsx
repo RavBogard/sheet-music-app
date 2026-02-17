@@ -4,7 +4,7 @@ import { MIME_TYPES } from "@/lib/constants"
 import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Check, ChevronLeft, Music, Folder, Search } from "lucide-react"
+import { Check, ChevronLeft, Music, Folder } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
 import {
@@ -29,10 +29,8 @@ export function AddSongsModal({
 }: AddSongsModalProps) {
     const {
         displayedFiles,
-        loading,
         loadLibrary,
         setFilter,
-        reset
     } = useLibraryStore()
 
     const [selectedFiles, setSelectedFiles] = useState<Map<string, DriveFile>>(new Map())

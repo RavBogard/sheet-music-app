@@ -74,7 +74,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const isSyncing = Object.values(downloading).some(Boolean)
 
     // Chat State (Global)
-    const { open, close, setContextData, registerOnApplyEdits } = useChatStore()
+    const { open, setContextData, registerOnApplyEdits } = useChatStore()
 
     const handleApplyEdits = useCallback((edits: ChatEditAction[]) => {
         if (!canEdit) {

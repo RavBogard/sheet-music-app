@@ -69,7 +69,7 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
     try {
         const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim()
         data = JSON.parse(cleanJson)
-    } catch (e) {
+    } catch {
         logger.error("Failed to parse JSON from AI:", text)
         throw new Error("AI returned invalid JSON")
     }

@@ -2,7 +2,7 @@
 
 import { Pencil, Type, Highlighter, Undo2, Trash2, X } from "lucide-react"
 import { useAnnotationStore } from "@/lib/annotation-store"
-import { ANNOTATION_COLORS, type AnnotationTool, type AnnotationColor } from "@/types/annotations"
+import { ANNOTATION_COLORS, type AnnotationTool } from "@/types/annotations"
 import { Button } from "@/components/ui/button"
 
 interface AnnotationToolbarProps {

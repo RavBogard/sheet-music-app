@@ -9,8 +9,8 @@ interface TapTempoButtonProps {
     currentBpm?: number
 }
 
-export function TapTempoButton({ onBpmChange, currentBpm }: TapTempoButtonProps) {
-    const [taps, setTaps] = useState<number[]>([])
+export function TapTempoButton({ onBpmChange, currentBpm: _currentBpm }: TapTempoButtonProps) {
+    const [_taps, setTaps] = useState<number[]>([])
     const [calculatedBpm, setCalculatedBpm] = useState<number | null>(null)
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 

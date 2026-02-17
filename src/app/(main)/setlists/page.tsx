@@ -7,7 +7,7 @@ import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
 
 export default function SetlistsPage() {
     const router = useRouter()
-    const { allFiles, loadLibrary } = useLibraryStore()
+    const { loadLibrary } = useLibraryStore()
 
     useEffect(() => {
         loadLibrary()

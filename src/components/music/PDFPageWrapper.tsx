@@ -13,7 +13,7 @@ interface PDFPageWrapperProps {
     transposition: number
 }
 
-export function PDFPageWrapper({ pageNumber, width, transposition }: PDFPageWrapperProps) {
+export function PDFPageWrapper({ pageNumber, width, transposition: _transposition }: PDFPageWrapperProps) {
     const pageRef = useRef<HTMLDivElement>(null)
     const [rendered, setRendered] = useState(false)
     const [pageHeight, setPageHeight] = useState(0)

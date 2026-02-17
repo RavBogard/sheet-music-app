@@ -7,38 +7,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   aggressiveFrontEndNavCaching: true,
   workboxOptions: {
     disableDevLogs: true,
-    runtimeCaching: [
-      {
-        // Cache PDF files served from our API (most critical for offline performance)
-        urlPattern: /\/api\/(?:drive|library)\/file\/.+/i,
-        handler: 'CacheFirst',
-        options: {
-          cacheName: 'sheet-music-pdfs',
-          expiration: {
-            maxEntries: 200,
-            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-          },
-          cacheableResponse: {
-            statuses: [0, 200],
-          },
-        },
-      },
-      {
-        // Cache Firebase Storage CDN (direct PDF access)
-        urlPattern: /^https:\/\/.*\.firebasestorage\.app\/.+/i,
-        handler: 'CacheFirst',
-        options: {
-          cacheName: 'firebase-storage-files',
-          expiration: {
-            maxEntries: 200,
-            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-          },
-          cacheableResponse: {
-            statuses: [0, 200],
-          },
-        },
-      },
-    ],
+    // PDF caching handled by IndexedDB (offline-store.ts) — no runtimeCaching needed
   },
 });
 

@@ -9,6 +9,12 @@ const eslintConfig = defineConfig([
     rules: {
       // Pre-existing patterns throughout the codebase — warn, don't block CI
       "react-hooks/set-state-in-effect": "warn",
+      // Allow underscore-prefixed variables to indicate intentionally unused params
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
     },
   },
   // Override default ignores of eslint-config-next.

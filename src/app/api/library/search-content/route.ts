@@ -13,9 +13,8 @@ export const dynamic = 'force-dynamic'
  * Returns matching file IDs with the context of where the match was found.
  */
 export async function GET(req: NextRequest) {
-    let auth
     try {
-        auth = await requireAuth(req)
+        await requireAuth(req)
     } catch (response) {
         return response as NextResponse
     }

@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
@@ -57,8 +58,12 @@ You must return a JSON object with this structure:
 - If asked to "Show me the chart for Adon Olam", issue a NAVIGATE command to "/perform/[fileId]".
 `
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 20 AI requests/min
+    const limited = await checkRateLimit(request, 'ai')
+    if (limited) return limited
+
     const { messages, currentSetlist, libraryFiles } = await request.json()
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 

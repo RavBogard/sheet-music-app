@@ -9,7 +9,6 @@ import {
     query,
     orderBy,
     serverTimestamp,
-    Timestamp,
     where,
     getDoc
 } from "firebase/firestore";
@@ -170,7 +169,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Make a personal setlist public (UPDATE field)
-        async makePublic(setlistId: string, setlistData: Setlist) {
+        async makePublic(setlistId: string, _setlistData: Setlist) {
             try {
                 const docRef = doc(db, COLLECTION_PATH, setlistId);
                 await updateDoc(docRef, {
@@ -193,7 +192,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Make a public setlist private (UPDATE field)
-        async makePrivate(setlistId: string, setlistData: Setlist) {
+        async makePrivate(setlistId: string, _setlistData: Setlist) {
             try {
                 const docRef = doc(db, COLLECTION_PATH, setlistId);
                 await updateDoc(docRef, {

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: NextRequest) {
     try {
-        const auth = await requireAuth(req, 'admin')
+        await requireAuth(req, 'admin')
     } catch (response) {
         return response as NextResponse
     }

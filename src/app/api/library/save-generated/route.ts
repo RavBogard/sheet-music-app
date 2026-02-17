@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate limit: 10 uploads/min
+        const limited = await checkRateLimit(req, 'upload')
+        if (limited) return limited
+
         const auth = await withAuth(req)
         if (auth instanceof NextResponse) return auth
 

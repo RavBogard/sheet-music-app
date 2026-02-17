@@ -3,7 +3,7 @@
 import { db } from "@/lib/firebase"
 import {
     doc, collection, setDoc, deleteDoc, onSnapshot, updateDoc,
-    serverTimestamp, query, where, Timestamp
+    serverTimestamp, Timestamp
 } from "firebase/firestore"
 import { logger } from "@/lib/logger"
 

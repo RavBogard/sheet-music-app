@@ -25,7 +25,7 @@ const SPEED_OPTIONS = [0.5, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5]
  * 
  * Features: play/pause, scrub, speed control, A-B loop, practice timer.
  */
-export function RehearsalToolbar({ audioUrl, title, fileId, onPracticeTime }: RehearsalToolbarProps) {
+export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTime }: RehearsalToolbarProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const practiceStart = useRef<number | null>(null)
     const totalPracticed = useRef(0)

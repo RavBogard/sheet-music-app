@@ -80,7 +80,7 @@ export async function scanForChordStrips(
     // - Followed closely by a denser line (Lyrics)
 
     const chordStrips: ChordStrip[] = [];
-    const minGap = 5; // Max gap between Chord and Lyric to be associated
+    const _minGap = 5; // Max gap between Chord and Lyric to be associated
 
     // We look for pairs or just sparse lines?
     // Let's grab ALL lines for now, but mark them?
@@ -108,7 +108,7 @@ export async function scanForChordStrips(
             // If the strip is > 100px high, scale it down. Chords are rarely > 50px high.
             // A huge canvas (Retina) might make strips 200px.
 
-            const drawWidth = width;
+            const _drawWidth = width;
             const drawHeight = block.h + 20; // Original Height
             let targetHeight = drawHeight;
             let targetWidth = width;
