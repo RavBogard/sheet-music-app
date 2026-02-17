@@ -42,6 +42,19 @@ export default function PerformPage() {
         }
     }, [authUser?.uid, fileId, loadAnnotations])
 
+    // Track chart view for preparation progress
+    useEffect(() => {
+        if (authUser?.uid && fileId) {
+            import("firebase/firestore").then(({ doc, setDoc, serverTimestamp }) => {
+                import("@/lib/firebase").then(({ db: clientDb }) => {
+                    const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
+                    setDoc(ref, { lastViewedAt: serverTimestamp() }, { merge: true })
+                        .catch(() => {/* silent */})
+                })
+            })
+        }
+    }, [authUser?.uid, fileId])
+
     // Home navigates back to origin (setlist editor, library, or home)
     const handleHome = () => router.push(returnPath || '/')
 

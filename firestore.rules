@@ -56,6 +56,15 @@ service cloud.firestore {
       match /preferences/{docId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
+
+      // Notifications — user reads own, server writes
+      match /notifications/{notifId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow update: if isSignedIn() && request.auth.uid == userId
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow create: if isSignedIn(); // Other users/admin can create notifications
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // SETLISTS Collection (The new root collection)

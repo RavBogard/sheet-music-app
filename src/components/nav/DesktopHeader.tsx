@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { DriveFile } from "@/types/models"
+import { NotificationBell } from "@/components/nav/NotificationBell"
 
 export function DesktopHeader() {
     const pathname = usePathname()
@@ -155,6 +156,9 @@ export function DesktopHeader() {
                         </div>
 
                         <div className="w-px h-6 bg-border" />
+
+                        {/* Notifications */}
+                        <NotificationBell />
 
                         {/* Profile */}
                         <DropdownMenu>

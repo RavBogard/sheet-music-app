@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
 import { useCongregation } from "@/lib/congregation-context"
+import { YourWeekSection } from "@/components/dashboard/YourWeekSection"
 
 export default function DashboardPage() {
     const router = useRouter()
@@ -240,6 +241,9 @@ export default function DashboardPage() {
                     )}
                 </div>
             )}
+
+            {/* ── Your Week: Preparation Dashboard ── */}
+            <YourWeekSection />
 
             {/* ── Quick Actions ── */}
             {(isMember || user) && (
