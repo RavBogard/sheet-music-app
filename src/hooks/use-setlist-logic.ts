@@ -152,7 +152,9 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     // Refs to always read latest values inside the debounced save
     const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate })
-    latestRef.current = { setlistId, name, tracks, isPublic, eventDate }
+    useEffect(() => {
+        latestRef.current = { setlistId, name, tracks, isPublic, eventDate }
+    })
 
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {

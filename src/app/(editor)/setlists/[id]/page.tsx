@@ -8,9 +8,8 @@ import { useMusicStore, FileType } from "@/lib/store"
 import { SetlistEditorV2 } from "@/components/setlist/v2/SetlistEditorV2"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
-import { DriveFile, SetlistTrack } from "@/types/models"
+import { SetlistTrack } from "@/types/models"
 import { toDate } from "@/lib/firestore-helpers"
-import { logger } from "@/lib/logger"
 
 export default function SetlistEditorPage() {
     const router = useRouter()

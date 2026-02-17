@@ -16,7 +16,6 @@ import {
     Copy,
     Globe,
     Lock,
-    Calendar,
     History,
     Download,
     Check,

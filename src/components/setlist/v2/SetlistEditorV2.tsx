@@ -95,7 +95,6 @@ export function SetlistEditorV2({
         addSongsFromLibrary,
         addServiceItem,
         togglePublic,
-        undo,
         restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
