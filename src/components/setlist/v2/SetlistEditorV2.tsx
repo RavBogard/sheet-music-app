@@ -24,7 +24,6 @@ import { enableLiveMode, updateLiveTrack } from "@/lib/setlist-live"
 import { useAuth } from "@/lib/auth-context"
 import { useChatStore } from "@/lib/chat-store"
 import { SERVICE_FLOW_TYPES } from "@/lib/validations"
-import { toast } from "sonner"
 
 // V2 Components
 import { SetlistTopBar } from "./SetlistTopBar"
@@ -117,55 +116,13 @@ export function SetlistEditorV2({
     }, [setlistId, liveState])
 
     // Chat - auto-open only on new empty setlists
-    const { open: openChat, setContextData, registerOnApplyEdits } = useChatStore()
-
     useEffect(() => {
         if (!initialSetlistId && tracks.length === 0) {
-            // New empty setlist — auto-open AI on desktop
             if (window.matchMedia("(min-width: 768px)").matches) {
-                openChat()
+                useChatStore.getState().open()
             }
         }
     }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
-
-    // Keep chat context synced
-    useEffect(() => {
-        setContextData({ currentSetlist: tracks })
-    }, [tracks, setContextData])
-
-    // Apply AI edits callback
-    const handleApplyEdits = useCallback(
-        (edits: import("@/lib/chat-store").ChatEditAction[]) => {
-            if (!canEdit) {
-                toast.error("You don't have permission to edit this setlist.")
-                return
-            }
-            const newTracks = [...tracks]
-            edits.forEach((edit) => {
-                if (edit.action === "add") {
-                    newTracks.push({
-                        id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                        title: edit.title || "New Song",
-                        fileId: edit.fileId || undefined,
-                        key: "",
-                        notes: "",
-                    })
-                } else if (edit.action === "remove" && typeof edit.index === "number") {
-                    newTracks.splice(edit.index, 1)
-                } else if (edit.action === "reorder" && typeof edit.fromIndex === "number" && typeof edit.toIndex === "number") {
-                    const [moved] = newTracks.splice(edit.fromIndex, 1)
-                    newTracks.splice(edit.toIndex, 0, moved)
-                }
-            })
-            restoreTracks(newTracks)
-        },
-        [canEdit, tracks, restoreTracks]
-    )
-
-    useEffect(() => {
-        registerOnApplyEdits(handleApplyEdits)
-        return () => registerOnApplyEdits(undefined)
-    }, [handleApplyEdits, registerOnApplyEdits])
 
     // Play a track (with live broadcast)
     const handlePlayTrack = useCallback(
