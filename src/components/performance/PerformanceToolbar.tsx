@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Tuner } from "@/components/tools/Tuner"
 import { Home, Sparkles, Loader2, Speaker, Pencil } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -86,7 +85,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     {/* Metronome */}
                     <MetronomeControl />
 
-                    {/* Audio (Tuner + Monitor) popover */}
+                    {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                         <PopoverTrigger asChild>
                             <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
@@ -95,8 +94,6 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="center" side="top">
-                            <Tuner />
-                            <div className="border-t border-zinc-800" />
                             <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
                                 <Speaker className="h-3 w-3" /> Monitor Mix
                             </div>
@@ -179,7 +176,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                 {/* RIGHT: Tools + Transposer */}
                 <div className="flex items-center justify-end gap-3 z-10 w-1/4">
 
-                    {/* Tools popover: Tuner + Mix */}
+                    {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
                         <PopoverTrigger asChild>
                             <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group">
@@ -188,10 +185,6 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="end" side="top">
-                            {/* Tuner */}
-                            <Tuner />
-                            {/* Monitor Mix */}
-                            <div className="border-t border-zinc-800" />
                             <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
                                 <Speaker className="h-3 w-3" /> Monitor Mix
                             </div>
