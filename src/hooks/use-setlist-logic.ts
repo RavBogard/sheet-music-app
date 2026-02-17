@@ -150,58 +150,62 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     }, [handleApplyEdits, registerOnApplyEdits])
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    // Refs to always read latest values inside the debounced save
+    const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate })
+    latestRef.current = { setlistId, name, tracks, isPublic, eventDate }
 
-    // Auto-save with debounce
-    const triggerAutoSave = useCallback(() => {
-        if (!canEdit || !setlistService) return
+    // Stable save function that reads from refs (never stale)
+    const performSave = useCallback(async () => {
+        const { setlistId: id, name: n, tracks: t, isPublic: pub, eventDate: ed } = latestRef.current
+        if (!n || n.length === 0 || !canEdit || !setlistService) return
+
+        setSaving(true)
+        try {
+            const dataToSave = {
+                name: n,
+                tracks: t,
+                trackCount: t.length,
+                eventDate: ed ? ed.toISOString() : undefined
+            }
+
+            if (id) {
+                await setlistService.updateSetlist(id, pub, dataToSave)
+            } else {
+                const newId = await setlistService.createSetlist(n, t, pub, {
+                    eventDate: ed ? ed.toISOString() : undefined
+                })
+                setSetlistId(newId)
+                onSave?.(newId)
+            }
+            setLastSaved(new Date())
+        } catch (e) {
+            logger.error("Auto-save failed:", e)
+            const msg = e instanceof Error ? e.message : String(e)
+            const description = msg.includes("permission")
+                ? "You may not have permission to edit this setlist."
+                : msg.includes("not-found")
+                ? "This setlist may have been deleted."
+                : "Please check your internet connection and try again."
+            toast.error("Failed to save changes", { description, duration: 5000 })
+        }
+        setSaving(false)
+    }, [canEdit, setlistService, onSave])
+
+    // Trigger auto-save on changes (stable deps — only performSave identity matters)
+    useEffect(() => {
+        if (!name || !canEdit) return
 
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current)
         }
-        saveTimeoutRef.current = setTimeout(async () => {
-            if (!name || name.length === 0) return
+        saveTimeoutRef.current = setTimeout(performSave, 1000)
 
-            setSaving(true)
-            try {
-                const dataToSave = {
-                    name,
-                    tracks,
-                    trackCount: tracks.length,
-                    eventDate: eventDate ? eventDate.toISOString() : undefined
-                }
-
-                if (setlistId) {
-                    await setlistService.updateSetlist(setlistId, isPublic, dataToSave)
-                } else {
-                    const newId = await setlistService.createSetlist(name, tracks, isPublic, {
-                        eventDate: eventDate ? eventDate.toISOString() : undefined
-                    })
-                    setSetlistId(newId)
-                    onSave?.(newId)
-                }
-                setLastSaved(new Date())
-            } catch (e) {
-                logger.error("Auto-save failed:", e)
-                toast.error("Failed to save changes", {
-                    description: "Please check your internet connection.",
-                    duration: 5000
-                })
-            }
-            setSaving(false)
-        }, 1000)
-    }, [setlistId, name, tracks, isPublic, eventDate, onSave, setlistService, canEdit])
-
-    // Trigger auto-save on changes
-    useEffect(() => {
-        if (name && canEdit) {
-            triggerAutoSave()
-        }
         return () => {
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [name, tracks, isPublic, triggerAutoSave, canEdit])
+    }, [name, tracks, isPublic, eventDate, performSave, canEdit])
 
     // --- Undo/Redo Logic ---
     const [past, setPast] = useState<SetlistTrack[][]>([])

@@ -19,12 +19,14 @@ Your capabilities:
 3. **Administration** (Admin Only): Manage users (approve/promote).
 4. **Navigation**: Open specific charts or views.
 5. **Liturgical Knowledge**: You know the Reform Jewish liturgical order and can build service-appropriate setlists.
+6. **Cross-Setlist Operations**: You can see ALL existing setlists and copy songs between them.
 
 You have access to:
-1. The user's "Current Setlist".
-2. A "Library" of available sheet music.
-3. (If Admin) A list of "Users" in the system.
-4. The current Jewish calendar context (parasha, holidays, upcoming Shabbat).
+1. The user's "Current Setlist" (the one open in the editor right now).
+2. "All Setlists" — every setlist in the system with their full track listings. You can reference these by name to copy songs, compare, or build new setlists from existing ones.
+3. A "Library" of available sheet music.
+4. (If Admin) A list of "Users" in the system.
+5. The current Jewish calendar context (parasha, holidays, upcoming Shabbat).
 
 **Output Format**:
 You must return a JSON object with this structure:
@@ -48,6 +50,7 @@ You must return a JSON object with this structure:
 - Only use ADMIN_ACTION if the user is authorized (you will see 'User Role: admin' in context).
 - If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
 - If asked to "Create a setlist", issue a CREATE_SETLIST command.
+- **Cross-setlist operations**: If asked to "add everything from [setlist name]" or "copy songs from [setlist name]", look up that setlist in the ALL SETLISTS context, find matching tracks, and issue ADD_TO_SETLIST commands for each song. When referencing another setlist, match by name (case-insensitive, partial match OK).
 - If asked to build a setlist for a specific service (e.g., "Build me a setlist for this Friday", "Shabbat morning setlist"), create a CREATE_SETLIST with pre-populated tracks matched from the library. Follow the standard Reform liturgical order. Include section headers as tracks with type "header".
 - When building liturgical setlists, generate a FULL SERVICE FLOW — not just songs. Include non-song liturgical moments as tracks with these types:
   * 'song': A musical piece linked to a chart in the library (must include fileId if found)
@@ -112,6 +115,33 @@ export async function POST(request: NextRequest) {
     const libraryContext = libraryFiles.slice(0, 500).map((f: { name: string; id: string }) => `${f.name} (ID: ${f.id})`).join("\n")
     const setlistContext = currentSetlist.map((t: { title: string }, i: number) => `${i + 1}. ${t.title}`).join("\n")
 
+    // Fetch ALL setlists so the AI can reference them by name
+    let allSetlistsContext = ""
+    try {
+        const firestore = getFirestore()
+        const setlistsSnap = await firestore.collection('setlists')
+            .orderBy('date', 'desc')
+            .limit(100)
+            .get()
+
+        if (!setlistsSnap.empty) {
+            const setlistLines = setlistsSnap.docs.map(doc => {
+                const data = doc.data()
+                const trackList = (data.tracks || [])
+                    .filter((t: { type?: string }) => !t.type || t.type === 'song')
+                    .map((t: { title: string; fileId?: string }, i: number) =>
+                        `  ${i + 1}. ${t.title}${t.fileId ? ` (fileId: ${t.fileId})` : ''}`
+                    )
+                    .join('\n')
+                return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks)\n${trackList}`
+            }).join('\n\n')
+            allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
+        }
+    } catch (e) {
+        logger.warn("Failed to fetch setlists for AI context:", e)
+        // Best-effort — continue without setlist context
+    }
+
     // Add liturgical calendar context
     let liturgicalContext = ""
     try {
@@ -168,7 +198,7 @@ ${libraryContext}
 --- CURRENT SETLIST ---
 ${setlistContext}
 -----------------------
-${liturgicalContext}${usageContext}${userContext}
+${allSetlistsContext}${liturgicalContext}${usageContext}${userContext}
 
 USER MESSAGE:
 ${messages[messages.length - 1].content}

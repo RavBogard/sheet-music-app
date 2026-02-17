@@ -28,7 +28,6 @@ import { useAuth } from "@/lib/auth-context"
 // Components
 import { TrackItem } from "./editor/TrackItem"
 import { SetlistHeader } from "./editor/SetlistHeader"
-import { SetlistTimeline } from "./SetlistTimeline"
 import { RunSheetTimeline } from "./RunSheetTimeline"
 import { PublishDialog } from "./PublishDialog"
 import { SetlistHistoryPanel } from "./SetlistHistoryPanel"
@@ -214,11 +213,6 @@ export function SetlistEditor({
                 onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
                 onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
             />
-
-            {/* Timeline View - Only show if we have tracks */}
-            {tracks.length > 0 && (
-                <SetlistTimeline tracks={tracks} onPlay={(fid) => handlePlayTrack(fid, "song")} />
-            )}
 
             {/* Run Sheet Time Estimate */}
             {tracks.length > 0 && (

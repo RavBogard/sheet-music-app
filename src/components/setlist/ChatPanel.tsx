@@ -25,6 +25,7 @@ import { logger } from "@/lib/logger"
 export function ChatPanel() {
     const { user } = useAuth() // Get user for auth token
     const { isOpen, close, messages, addMessage, contextData, onApplyEdits } = useChatStore()
+    const { allFiles } = useLibraryStore()
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -80,7 +81,7 @@ export function ChatPanel() {
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
                     currentSetlist: contextData.currentSetlist || [],
-                    libraryFiles: contextData.libraryFiles?.map(f => ({ id: f.id, name: f.name })) || []
+                    libraryFiles: allFiles.map(f => ({ id: f.id, name: f.name }))
                 })
             })
 
