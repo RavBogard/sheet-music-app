@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { ChevronLeft, FolderOpen, Search, Music } from "lucide-react"
+import { ChevronLeft, FolderOpen, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -59,6 +59,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     const [tab, setTab] = useState<LibraryTab>("charts")
     const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
+
+    // Multi-select mode
+    const [selectMode, setSelectMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
     // Content search (searches within chord data / lyrics)
     const contentSearch = useContentSearch()
@@ -193,6 +197,18 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         toast.success("Reload the library to see your upload")
                     }} />
                 )}
+                <Button
+                    variant={selectMode ? "default" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => {
+                        setSelectMode(!selectMode)
+                        if (selectMode) setSelectedIds(new Set())
+                    }}
+                    title={selectMode ? "Exit select mode" : "Select files"}
+                >
+                    <CheckSquare className="h-4 w-4" />
+                </Button>
             </div>
 
             {/* Search & Tabs & Breadcrumbs */}
@@ -284,6 +300,16 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                 onDigitize={() => handleDigitize(item)}
                                 getCleanName={getCleanName}
                                 isPlaying={playingFile?.id === item.id}
+                                selectMode={selectMode}
+                                isSelected={selectedIds.has(item.id)}
+                                onToggleSelect={(id) => {
+                                    setSelectedIds(prev => {
+                                        const next = new Set(prev)
+                                        if (next.has(id)) next.delete(id)
+                                        else next.add(id)
+                                        return next
+                                    })
+                                }}
                             />
                         ))}
 
@@ -291,6 +317,55 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     </div>
                 )}
             </ScrollArea>
+
+            {/* Selection Action Bar */}
+            {selectMode && selectedIds.size > 0 && (
+                <div className="border-t border-border bg-blue-500/10 backdrop-blur-sm px-4 py-3">
+                    <div className="max-w-2xl mx-auto flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                            {selectedIds.size} file{selectedIds.size !== 1 ? 's' : ''} selected
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                    // Select all visible non-folder files
+                                    const allIds = new Set(
+                                        combinedItems
+                                            .filter(i => !i.mimeType.includes('folder'))
+                                            .map(i => i.id)
+                                    )
+                                    setSelectedIds(allIds)
+                                }}
+                            >
+                                Select All
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setSelectedIds(new Set())}
+                            >
+                                Clear
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    // Copy selected file names to clipboard for use elsewhere
+                                    const names = combinedItems
+                                        .filter(i => selectedIds.has(i.id))
+                                        .map(i => getCleanName(i.name))
+                                    navigator.clipboard.writeText(names.join('\n')).then(() => {
+                                        toast.success(`Copied ${names.length} file names`)
+                                    })
+                                }}
+                            >
+                                Copy Names
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Sticky Audio Player */}
             {playingFile && audioUrl && (

@@ -1,16 +1,21 @@
 /**
  * Error reporting utility.
- * 
- * Currently logs to console. To enable Sentry:
- *   1. npm install @sentry/nextjs
- *   2. Run npx @sentry/wizard@latest -i nextjs
- *   3. Replace captureException/captureMessage below with Sentry calls
- * 
+ *
+ * Uses Sentry when NEXT_PUBLIC_SENTRY_DSN is configured.
+ * Falls back to console logging otherwise.
+ *
  * All error reporting in the app flows through this module,
  * so switching providers requires changes only here.
  */
 
 import { logger } from '@/lib/logger'
+
+let Sentry: typeof import('@sentry/nextjs') | null = null
+
+// Dynamically import Sentry only if DSN is configured
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    import('@sentry/nextjs').then(mod => { Sentry = mod }).catch(() => {})
+}
 
 interface ErrorContext {
     /** Where the error occurred */
@@ -24,7 +29,7 @@ interface ErrorContext {
 }
 
 /**
- * Report an error. In production, this would send to Sentry/Datadog/etc.
+ * Report an error. Sends to Sentry if configured, otherwise logs to console.
  */
 export function captureException(error: unknown, context?: ErrorContext): void {
     const message = error instanceof Error ? error.message : String(error)
@@ -35,7 +40,16 @@ export function captureException(error: unknown, context?: ErrorContext): void {
         logger.error(stack)
     }
 
-    // TODO: Replace with Sentry.captureException(error, { tags: context })
+    if (Sentry) {
+        Sentry.captureException(error, {
+            tags: {
+                source: context?.source,
+                location: context?.location,
+            },
+            user: context?.userId ? { id: context.userId } : undefined,
+            extra: context?.extra,
+        })
+    }
 }
 
 /**
@@ -44,5 +58,13 @@ export function captureException(error: unknown, context?: ErrorContext): void {
 export function captureMessage(message: string, context?: ErrorContext): void {
     logger.warn(`[ErrorReport] ${context?.source || 'unknown'}${context?.location ? `:${context.location}` : ''}: ${message}`)
 
-    // TODO: Replace with Sentry.captureMessage(message, { tags: context })
+    if (Sentry) {
+        Sentry.captureMessage(message, {
+            tags: {
+                source: context?.source,
+                location: context?.location,
+            },
+            extra: context?.extra,
+        })
+    }
 }

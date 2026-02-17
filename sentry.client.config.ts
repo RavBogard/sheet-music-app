@@ -1,0 +1,17 @@
+/**
+ * Sentry client-side configuration.
+ * Activate by setting NEXT_PUBLIC_SENTRY_DSN in your environment.
+ */
+import * as Sentry from "@sentry/nextjs"
+
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+
+if (dsn) {
+    Sentry.init({
+        dsn,
+        environment: process.env.NODE_ENV,
+        tracesSampleRate: 0.1,
+        replaysSessionSampleRate: 0,
+        replaysOnErrorSampleRate: 1.0,
+    })
+}

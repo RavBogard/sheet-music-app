@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff } from "lucide-react"
+import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
 import { isFileOffline } from "@/lib/offline-store"
@@ -14,6 +14,9 @@ interface LibraryFileRowProps {
     onDigitize?: () => void
     getCleanName: (name: string) => string
     isPlaying?: boolean
+    selectMode?: boolean
+    isSelected?: boolean
+    onToggleSelect?: (id: string) => void
 }
 
 function isAudioMime(item: DriveFile) {
@@ -28,7 +31,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect }: LibraryFileRowProps) {
     const isFolder = item.mimeType.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -44,13 +47,23 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
             ? getAudioCleanName(item.name)
             : getCleanName(item.name)
 
+    const handleClick = () => {
+        if (selectMode && !isFolder && onToggleSelect) {
+            onToggleSelect(item.id)
+        } else {
+            onClick()
+        }
+    }
+
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
                 <button
-                    onClick={onClick}
+                    onClick={handleClick}
                     className={`w-full text-left p-3 sm:p-5 rounded-xl sm:rounded-2xl transition-all flex items-center gap-3 sm:gap-5 group ${
-                        isFolder
+                        isSelected
+                            ? 'bg-blue-500/10 border-2 border-blue-500/50'
+                            : isFolder
                             ? 'bg-card border border-border hover:border-yellow-500/50 hover:bg-muted'
                             : isAudio
                                 ? isPlaying
@@ -61,6 +74,15 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     : 'bg-card border border-border hover:border-blue-500/50 hover:bg-muted'
                     }`}
                 >
+                    {/* Select mode checkbox */}
+                    {selectMode && !isFolder && (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? 'bg-blue-500 border-blue-500' : 'border-muted-foreground/40'
+                        }`}>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                    )}
+
                     {isFolder ? (
                         <Folder className="h-7 w-7 sm:h-10 sm:w-10 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
                     ) : isAudio ? (
