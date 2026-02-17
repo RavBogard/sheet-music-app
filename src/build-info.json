@@ -1,9 +1,10 @@
 {
   "version": "4.1.0",
-  "commit": "e03559b",
+  "commit": "e20dbf9",
   "branch": "master",
   "buildDate": "2/17/2026",
   "changelog": [
+    "4.1.0 - feat: Phase E — admin & quality of life",
     "4.1.0 - feat: Phase D — rehearsal mode",
     "4.1.0 - feat: Phase C — practice dashboard & notifications",
     "4.1.0 - feat: Phase B — offline done right",
@@ -14,7 +15,6 @@
     "4.1.0 - feat: backend improvements — cache invalidation, rate limiting, cron jobs, audit trail",
     "4.1.0 - fix: Storage path resolution for uploaded files",
     "4.1.0 - feat: file upload API + dialog, setlist visibility confirmation",
-    "4.1.0 - fix: annotation drawing, Audio popup order, toolbar spread",
-    "4.1.0 - fix: disable E2E in CI until Firebase secrets configured"
+    "4.1.0 - fix: annotation drawing, Audio popup order, toolbar spread"
   ]
 }
