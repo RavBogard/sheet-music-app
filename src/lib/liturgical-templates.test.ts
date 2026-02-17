@@ -190,3 +190,51 @@ describe('generateSetlistName', () => {
         expect(name).toContain(' — ')
     })
 })
+
+// ── v5: Service Flow Types ──
+
+describe('v5 — service flow types in templates', () => {
+    it('Friday night template includes non-song types', () => {
+        const types = FRIDAY_NIGHT_TEMPLATE.map(s => s.type).filter(Boolean)
+        expect(types).toContain('header')
+        expect(types).toContain('reading')
+        expect(types).toContain('prayer')
+        expect(types).toContain('transition')
+        expect(types).toContain('note')
+    })
+
+    it('Shabbat morning template includes sermon as note', () => {
+        const sermon = SHABBAT_MORNING_TEMPLATE.find(s => s.label === 'Sermon')
+        expect(sermon).toBeDefined()
+        expect(sermon!.type).toBe('note')
+        expect(sermon!.defaultPerformer).toBe('Rabbi')
+        expect(sermon!.estimatedMinutes).toBe(15)
+    })
+
+    it('buildSetlistFromTemplate generates non-song tracks', () => {
+        const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
+        const readings = tracks.filter(t => t.type === 'reading')
+        const prayers = tracks.filter(t => t.type === 'prayer')
+        const transitions = tracks.filter(t => t.type === 'transition')
+        expect(readings.length).toBeGreaterThan(0)
+        expect(prayers.length).toBeGreaterThan(0)
+        expect(transitions.length).toBeGreaterThan(0)
+    })
+
+    it('non-song tracks include performer and duration', () => {
+        const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
+        const kiddush = tracks.find(t => t.title === 'Kiddush')
+        expect(kiddush).toBeDefined()
+        expect(kiddush!.type).toBe('transition')
+        expect(kiddush!.performer).toBe('Rabbi')
+        expect(kiddush!.estimatedMinutes).toBe(2)
+        expect(kiddush!.description).toBe('Blessing over wine')
+    })
+
+    it('Torah reading gets parasha annotation', () => {
+        const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
+        const reading = tracks.find(t => t.type === 'reading' && t.title.includes('Torah'))
+        expect(reading).toBeDefined()
+        expect(reading!.description).toContain('Parashat Mishpatim')
+    })
+})

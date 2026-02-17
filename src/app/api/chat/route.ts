@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
+import { getUsageSummaries } from "@/lib/song-usage"
 
 // New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
@@ -59,6 +60,7 @@ You must return a JSON object with this structure:
 - When building liturgical setlists, follow this order for Friday night: Welcome → Candle Lighting → Kabbalat Shabbat header → Hinei Mah Tov → Shalom Aleichem → L'cha Dodi → Bar'chu → Shema → V'ahavta → Mi Chamocha → Hashkiveinu → T'filah header → Silent Prayer → Oseh Shalom → Torah Service header → Torah Reading → Aleinu → Mourner's Kaddish → Closing Song → Kiddush.
 - When building Shabbat morning setlists: Birchot HaShachar header → Morning Blessings → P'sukei D'zimra header → Ashrei → Nishmat → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah header → Silent Prayer → Torah Service header → Torah Processional → Torah Reading → Haftarah → Returning the Torah → Sermon → Aleinu → Mourner's Kaddish → Adon Olam/Ein Keloheinu → Kiddush.
 - Search the library context to find matching files for each liturgical slot.
+- When SONG USAGE HISTORY is available, use it to rotate repertoire: prefer songs not used recently over ones used last week. Mention rotation reasoning if asked.
 - If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST.
 - If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.
 - If asked to "Transpose up 2 steps", issue TRANSPOSE_CHART.
@@ -129,6 +131,30 @@ Hebrew Date: ${friCtx.hebrewDate.display}
         // Liturgical context is best-effort
     }
 
+    // Song usage context — helps AI avoid repeating songs too often
+    let usageContext = ""
+    try {
+        const setlistFileIds = currentSetlist
+            .filter((t: { fileId?: string }) => t.fileId)
+            .map((t: { fileId: string }) => t.fileId)
+        if (setlistFileIds.length > 0) {
+            const summaries = await getUsageSummaries(setlistFileIds)
+            if (summaries.size > 0) {
+                const lines: string[] = []
+                for (const [fileId, summary] of summaries) {
+                    const track = currentSetlist.find((t: { fileId?: string }) => t.fileId === fileId)
+                    const dateStr = summary.lastUsedDate instanceof Date
+                        ? summary.lastUsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : 'unknown'
+                    lines.push(`${track?.title || fileId}: last used ${dateStr}, total ${summary.totalUses}×`)
+                }
+                usageContext = `\n--- SONG USAGE HISTORY ---\n${lines.join('\n')}\n--------------------------\n`
+            }
+        }
+    } catch {
+        // Usage context is best-effort
+    }
+
     const prompt = `
 ${SYSTEM_PROMPT}
 
@@ -142,7 +168,7 @@ ${libraryContext}
 --- CURRENT SETLIST ---
 ${setlistContext}
 -----------------------
-${liturgicalContext}${userContext}
+${liturgicalContext}${usageContext}${userContext}
 
 USER MESSAGE:
 ${messages[messages.length - 1].content}
