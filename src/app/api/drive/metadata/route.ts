@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
+import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        // Auth
+        const auth = await withAuth(request)
+        if (auth instanceof NextResponse) return auth
+
+        // Rate limit
+        const limited = await checkRateLimit(request, 'api')
+        if (limited) return limited
+
         const { fileIds } = await request.json()
 
         if (!Array.isArray(fileIds) || fileIds.length === 0) {

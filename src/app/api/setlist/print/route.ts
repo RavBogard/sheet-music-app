@@ -1,11 +1,21 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
+import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export const maxDuration = 120
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        // Auth
+        const auth = await withAuth(request)
+        if (auth instanceof NextResponse) return auth
+
+        // Rate limit (API tier — PDF generation is CPU-intensive)
+        const limited = await checkRateLimit(request, 'api')
+        if (limited) return limited
+
         const body: PrintRequest = await request.json()
         const { title, tracks } = body
 

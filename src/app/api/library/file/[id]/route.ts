@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Auth
+    const auth = await withAuth(req)
+    if (auth instanceof NextResponse) return auth
+
+    // Rate limit
+    const limited = await checkRateLimit(req, 'api')
+    if (limited) return limited
+
     const { id } = await params
 
     if (!id || !id.startsWith('db-')) {

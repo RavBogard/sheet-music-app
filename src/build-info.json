@@ -1,9 +1,10 @@
 {
   "version": "4.1.0",
-  "commit": "c27bbf8",
+  "commit": "4fc5240",
   "branch": "master",
   "buildDate": "2/17/2026",
   "changelog": [
+    "4.1.0 - feat: Sessions 5+6 — admin aggregates verified, Sentry server config, cron error capture",
     "4.1.0 - feat: Session 4 — offline cleanup and cache improvements",
     "4.1.0 - feat: Session 5 — admin aggregates, diff view, and one-click restore",
     "4.1.0 - feat: Session 4 — offline cleanup and consistency",
@@ -14,7 +15,6 @@
     "4.1.0 - fix: Session 1 — quick fixes for v4.1 gaps",
     "4.1.0 - refactor: decompose AdminSections into 4 focused components",
     "4.1.0 - feat: Phase E — admin & quality of life",
-    "4.1.0 - feat: Phase D — rehearsal mode",
-    "4.1.0 - feat: Phase C — practice dashboard & notifications"
+    "4.1.0 - feat: Phase D — rehearsal mode"
   ]
 }
