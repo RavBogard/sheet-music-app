@@ -2,6 +2,7 @@
 
 import { UserProfile, UserRole, updateUserRole } from "@/lib/users-firebase"
 import { toDate } from "@/lib/firestore-helpers"
+import { notifyRoleChanged } from "@/lib/notification-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -33,6 +34,7 @@ export function UserRow({ user, currentUserUid }: UserRowProps) {
         setLoading(true)
         try {
             await updateUserRole(user.uid, newRole as UserRole)
+            notifyRoleChanged(user.uid, newRole).catch(() => {})
             toast.success(`Updated ${user.displayName} to ${newRole}`)
         } catch (e) {
             logger.error(e)

@@ -16,6 +16,11 @@ import {
 
 import { SetlistTrack } from "@/types/api"
 import { logSetlistChange } from "@/lib/setlist-audit"
+import { notifySetlistPublished, notifySetlistUpdated } from "@/lib/notification-store"
+
+// Throttle track-update notifications to avoid spam on auto-save (5 min cooldown per setlist)
+const lastTrackNotify: Record<string, number> = {}
+const NOTIFY_THROTTLE_MS = 5 * 60 * 1000
 
 // export interface SetlistTrack { ... } // Removed local definition
 export type { SetlistTrack }
@@ -86,9 +91,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Update a setlist (sanitize undefined → null for Firestore)
-        async updateSetlist(id: string, _isPublic: boolean, data: Partial<Setlist>) {
+        async updateSetlist(id: string, isPublic: boolean, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = JSON.parse(JSON.stringify(data));
+            cleanData.updatedAt = serverTimestamp();
             await updateDoc(docRef, cleanData);
 
             // Determine what changed for audit
@@ -99,6 +105,17 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 ...(data.name !== undefined && { newName: data.name }),
                 ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
             }, data.tracks)
+
+            // Notify members when tracks change on a public setlist (throttled)
+            if (isPublic && data.tracks !== undefined) {
+                const now = Date.now()
+                if (!lastTrackNotify[id] || now - lastTrackNotify[id] > NOTIFY_THROTTLE_MS) {
+                    lastTrackNotify[id] = now
+                    const snap = await getDoc(docRef)
+                    const name = snap.data()?.name || 'Setlist'
+                    notifySetlistUpdated(name, id, data.tracks.length, userId || undefined).catch(() => {})
+                }
+            }
         },
 
         async deleteSetlist(id: string, _isPublic: boolean) {
@@ -158,9 +175,16 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const docRef = doc(db, COLLECTION_PATH, setlistId);
                 await updateDoc(docRef, {
                     isPublic: true,
+                    updatedAt: serverTimestamp(),
                     ownerName: userName || "Anonymous" // Update name in case it changed
                 });
                 logSetlistChange(setlistId, 'made_public', userId || '', userName || 'Anonymous')
+
+                // Fire-and-forget notification to all members
+                const snap = await getDoc(docRef)
+                const name = snap.data()?.name || 'Setlist'
+                notifySetlistPublished(name, setlistId, userId || undefined).catch(() => {})
+
                 return setlistId;
             } catch (e) {
                 logger.error("Error making setlist public: ", e);

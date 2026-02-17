@@ -3,7 +3,6 @@ import { createSetlistService } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOffline } from "@/hooks/use-offline"
 import { useChatStore, ChatEditAction } from "@/lib/chat-store"
-import { notifySetlistPublished, notifySetlistUpdated } from "@/lib/notification-store"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
 import { toast } from "sonner"
@@ -357,11 +356,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
             setSetlistId(newId)
             toast.success(`Setlist is now ${!previousState ? 'public' : 'private'}!`)
-
-            // Notify members when publishing
-            if (!previousState) {
-                notifySetlistPublished(name, newId, user?.uid).catch(() => {})
-            }
         } catch (e) {
             // Revert on error
             logger.error("Toggle visibility failed:", e)

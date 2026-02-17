@@ -49,6 +49,7 @@ export interface Setlist {
     name: string
     date: FirestoreDate
     eventDate?: FirestoreDate
+    updatedAt?: FirestoreDate
     tracks: SetlistTrack[]
     trackCount: number
     isPublic?: boolean

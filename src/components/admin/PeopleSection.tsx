@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context"
 import { UserProfile, subscribeToAllUsers, updateUserRole, UserRole } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
+import { notifyRoleChanged } from "@/lib/notification-store"
 import { toast } from "sonner"
 import { Loader2, Users } from "lucide-react"
 
@@ -47,6 +48,7 @@ export function PeopleSection() {
         for (const uid of uids) {
             try {
                 await updateUserRole(uid, role as UserRole)
+                notifyRoleChanged(uid, role).catch(() => {})
                 success++
             } catch { /* skip failures */ }
         }

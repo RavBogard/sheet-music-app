@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, Timestamp } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, setDoc, Timestamp, serverTimestamp } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 import {
@@ -32,6 +32,20 @@ export function YourWeekSection() {
     const [setlists, setSetlists] = useState<Setlist[]>([])
     const [prepMap, setPrepMap] = useState<Record<string, PrepStatus>>({})
     const [songPrefs, setSongPrefs] = useState<Record<string, SongPref>>({})
+    const [lastVisitedAt, setLastVisitedAt] = useState<Date | null>(null)
+
+    // Track last visit time — read the old value, then write the new one
+    useEffect(() => {
+        if (!user) return
+        const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
+        getDoc(prefRef).then(snap => {
+            const ts = snap.data()?.lastVisitedAt
+            if (ts?.toDate) setLastVisitedAt(ts.toDate())
+            else if (ts) setLastVisitedAt(new Date(ts))
+            // Write the new visit time
+            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => {})
+        }).catch(() => {})
+    }, [user])
 
     // Subscribe to upcoming public setlists (next 7 days)
     useEffect(() => {
@@ -130,6 +144,9 @@ export function YourWeekSection() {
                 const daysUntil = eventDate
                     ? Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                     : null
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const updatedAt = toDate((s as any).updatedAt) || toDate(s.date)
+                const isNew = lastVisitedAt && updatedAt ? updatedAt > lastVisitedAt : false
 
                 return (
                     <YourWeekCard
@@ -138,6 +155,7 @@ export function YourWeekSection() {
                         prep={prep}
                         daysUntil={daysUntil}
                         songPrefs={songPrefs}
+                        isNew={isNew}
                         onClick={() => router.push(`/setlists/${s.id}`)}
                     />
                 )
@@ -151,12 +169,14 @@ function YourWeekCard({
     prep,
     daysUntil,
     songPrefs,
+    isNew,
     onClick,
 }: {
     setlist: Setlist
     prep?: PrepStatus
     daysUntil: number | null
     songPrefs: Record<string, SongPref>
+    isNew?: boolean
     onClick: () => void
 }) {
     const [expanded, setExpanded] = useState(false)
@@ -210,8 +230,13 @@ function YourWeekCard({
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-foreground truncate">
+                    <div className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
                         {setlist.name}
+                        {isNew && (
+                            <span className="text-[9px] font-bold bg-blue-500/20 text-blue-500 px-1.5 py-0.5 rounded-full shrink-0">
+                                New
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         {dateStr && <span>{dateStr}</span>}
