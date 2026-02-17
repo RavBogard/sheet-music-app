@@ -1,9 +1,10 @@
 {
   "version": "4.1.0",
-  "commit": "f3e006f",
+  "commit": "59dee2d",
   "branch": "master",
   "buildDate": "2/17/2026",
   "changelog": [
+    "4.1.0 - refactor: Session 2 — standardize all API routes on withAuth",
     "4.1.0 - fix: Session 1 — quick fixes for v4.1 gaps",
     "4.1.0 - refactor: decompose AdminSections into 4 focused components",
     "4.1.0 - feat: Phase E — admin & quality of life",
@@ -14,7 +15,6 @@
     "4.1.0 - feat: 8 bridge hardening improvements",
     "4.1.0 - feat: bridge auto-publishes its URL to Firestore on startup",
     "4.1.0 - feat: one-click bridge installer with setup wizard",
-    "4.1.0 - feat: backend improvements — cache invalidation, rate limiting, cron jobs, audit trail",
-    "4.1.0 - fix: Storage path resolution for uploaded files"
+    "4.1.0 - feat: backend improvements — cache invalidation, rate limiting, cron jobs, audit trail"
   ]
 }

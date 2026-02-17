@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
@@ -19,7 +19,6 @@ export async function POST(req: Request) {
 
         logger.info(`[Prune] Deleting ${fileIds.length} docs...`)
 
-        initAdmin()
         const db = getFirestore()
 
         const batch = db.batch()

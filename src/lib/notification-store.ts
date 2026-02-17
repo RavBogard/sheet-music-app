@@ -126,3 +126,84 @@ export async function broadcastNotification(
         await batch.commit()
     }
 }
+
+/**
+ * Get all active member UIDs (role != 'pending' and not null).
+ */
+async function getActiveMemberUids(excludeUid?: string): Promise<string[]> {
+    const snap = await getDocs(collection(db, 'users'))
+    const uids: string[] = []
+    snap.docs.forEach(d => {
+        const role = d.data().role
+        if (role && role !== 'pending' && d.id !== excludeUid) {
+            uids.push(d.id)
+        }
+    })
+    return uids
+}
+
+/**
+ * Notify all members about a setlist event.
+ * Fire-and-forget — errors are logged but don't propagate.
+ */
+export async function notifySetlistPublished(
+    setlistName: string,
+    setlistId: string,
+    publisherUid?: string
+): Promise<void> {
+    try {
+        const uids = await getActiveMemberUids(publisherUid)
+        if (uids.length === 0) return
+        await broadcastNotification(uids, {
+            type: 'setlist_published',
+            title: 'New setlist published',
+            body: `"${setlistName}" is now available`,
+            link: `/setlist/${setlistId}`,
+            entityId: setlistId,
+        })
+    } catch (e) {
+        logger.warn('[Notifications] Failed to broadcast setlist_published:', e)
+    }
+}
+
+/**
+ * Notify all members about a setlist track update.
+ */
+export async function notifySetlistUpdated(
+    setlistName: string,
+    setlistId: string,
+    trackCount: number,
+    editorUid?: string
+): Promise<void> {
+    try {
+        const uids = await getActiveMemberUids(editorUid)
+        if (uids.length === 0) return
+        await broadcastNotification(uids, {
+            type: 'setlist_updated',
+            title: 'Setlist updated',
+            body: `"${setlistName}" was updated (${trackCount} tracks)`,
+            link: `/setlist/${setlistId}`,
+            entityId: setlistId,
+        })
+    } catch (e) {
+        logger.warn('[Notifications] Failed to broadcast setlist_updated:', e)
+    }
+}
+
+/**
+ * Notify a user that their role was changed.
+ */
+export async function notifyRoleChanged(
+    targetUid: string,
+    newRole: string
+): Promise<void> {
+    try {
+        await createNotification(targetUid, {
+            type: 'role_changed',
+            title: 'Role updated',
+            body: `Your role has been changed to ${newRole}`,
+        })
+    } catch (e) {
+        logger.warn('[Notifications] Failed to notify role change:', e)
+    }
+}
