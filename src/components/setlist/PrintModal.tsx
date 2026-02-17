@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { X, Printer, Download, Loader2 } from "lucide-react"
+import { X, Printer, Download, Loader2, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
@@ -12,6 +12,7 @@ import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
 import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
+import { toast } from "sonner"
 
 const STORAGE_KEY = "crc-print-selection"
 
@@ -35,9 +36,10 @@ interface PrintModalProps {
     setlistName: string
     tracks: SetlistTrack[]
     onClose: () => void
+    setlistId?: string
 }
 
-export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintModalProps) {
     const { user, profile } = useAuth()
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(new Date().toLocaleDateString('en-US', {
@@ -86,6 +88,9 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
         })
         return init
     })
+
+    // Email packets
+    const [sendingEmails, setSendingEmails] = useState(false)
 
     const updateTrackTranspose = (trackId: string, field: keyof TrackTranspose, value: number | boolean) => {
         setTrackTranspositions(prev => ({
@@ -164,6 +169,34 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
             throw new Error(err.error || 'Failed to generate PDF')
         }
         return response.blob()
+    }
+
+    const handleEmailPackets = async () => {
+        if (!setlistId) {
+            toast.error('Cannot email packets: setlist not saved yet')
+            return
+        }
+        setSendingEmails(true)
+        try {
+            const response = await fetch('/api/setlist/email-packets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setlistId }),
+            })
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.error || 'Failed to send emails')
+            }
+            const result = await response.json()
+            toast.success(`Packet links emailed to ${result.sent} musician${result.sent !== 1 ? 's' : ''}`)
+            if (result.failed > 0) {
+                toast.warning(`${result.failed} email${result.failed !== 1 ? 's' : ''} failed to send`)
+            }
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Failed to send packet emails')
+        } finally {
+            setSendingEmails(false)
+        }
     }
 
     const handleGenerate = async (mode: 'download' | 'print') => {
@@ -312,7 +345,7 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 border-t border-border shrink-0">
+                <div className="p-4 border-t border-border shrink-0 space-y-3">
                     <div className="flex gap-3">
                         <Button
                             variant="outline" className="flex-1 gap-2"
@@ -331,6 +364,17 @@ export function PrintModal({ setlistName, tracks, onClose }: PrintModalProps) {
                             Print
                         </Button>
                     </div>
+                    {setlistId && (
+                        <Button
+                            variant="outline"
+                            className="w-full gap-2 text-muted-foreground"
+                            onClick={handleEmailPackets}
+                            disabled={sendingEmails}
+                        >
+                            {sendingEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                            Email Packet Links to Band
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

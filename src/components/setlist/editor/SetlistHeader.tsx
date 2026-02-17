@@ -1,4 +1,4 @@
-import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio, History } from "lucide-react"
+import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio, History, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -40,6 +40,7 @@ interface SetlistHeaderProps {
     presence?: PresenceEntry[]
     liveEnabled?: boolean
     onToggleLive?: () => void
+    onPublish?: () => void
 }
 
 export function SetlistHeader({
@@ -66,7 +67,8 @@ export function SetlistHeader({
     canRedo,
     presence = [],
     liveEnabled,
-    onToggleLive
+    onToggleLive,
+    onPublish
 }: SetlistHeaderProps) {
     const { toggle, isOpen: isChatOpen } = useChatStore()
 
@@ -228,6 +230,19 @@ export function SetlistHeader({
                     </AlertDialogContent>
                 </AlertDialog>
             ) : null}
+
+            {/* Publish & Notify */}
+            {onPublish && isLeader && setlistId && (
+                <Button
+                    size="sm"
+                    variant="default"
+                    onClick={onPublish}
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white hidden sm:flex"
+                >
+                    <Bell className="h-4 w-4" />
+                    <span className="hidden lg:inline">Publish & Notify</span>
+                </Button>
+            )}
 
 
             {/* Sync Button - Only in Edit Mode */}

@@ -29,6 +29,7 @@ import { TrackItem } from "./editor/TrackItem"
 import { SetlistHeader } from "./editor/SetlistHeader"
 import { SetlistTimeline } from "./SetlistTimeline"
 import { RunSheetTimeline } from "./RunSheetTimeline"
+import { PublishDialog } from "./PublishDialog"
 import { SetlistHistoryPanel } from "./SetlistHistoryPanel"
 import { NamePrompt } from "./modals/NamePrompt"
 import { AddSongsModal } from "./modals/AddSongsModal"
@@ -117,6 +118,7 @@ export function SetlistEditor({
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
+    const [showPublishDialog, setShowPublishDialog] = useState(false)
 
     // D1: Live Collaboration
     const { user } = useAuth()
@@ -207,6 +209,7 @@ export function SetlistEditor({
                 presence={presence}
                 liveEnabled={liveState?.enabled}
                 onToggleLive={isLeader ? handleToggleLive : undefined}
+                onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
             />
 
             {/* Timeline View - Only show if we have tracks */}
@@ -333,7 +336,21 @@ export function SetlistEditor({
                 <PrintModal
                     setlistName={name}
                     tracks={tracks}
+                    setlistId={setlistId || undefined}
                     onClose={() => setShowPrintModal(false)}
+                />
+            )}
+
+            {setlistId && (
+                <PublishDialog
+                    isOpen={showPublishDialog}
+                    onClose={() => setShowPublishDialog(false)}
+                    setlistId={setlistId}
+                    setlistName={name}
+                    songCount={tracks.filter(t => !t.type || t.type === 'song').length}
+                    onPublished={() => {
+                        setIsPublic(true)
+                    }}
                 />
             )}
         </div>
