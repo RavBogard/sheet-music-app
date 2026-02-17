@@ -52,14 +52,25 @@ function getLocalIp(): string | null {
 }
 
 async function main() {
+    const version = process.env.BRIDGE_VERSION || "1.1.0"
     console.log("╔═══════════════════════════════════════════╗")
-    console.log("║  CentralReform X32 Monitor Bridge v1.0   ║")
+    console.log(`║  CentralReform X32 Monitor Bridge v${version}  ║`)
     console.log("╚═══════════════════════════════════════════╝")
     console.log()
 
     // 1. Load config from Firestore
     const config = new ConfigManager()
     const monitorConfig = await config.loadConfig()
+
+    // 1b. Check for another running bridge instance
+    const existing = await config.checkForRunningInstance()
+    if (existing.running) {
+        console.warn(`[Bridge] ⚠ Another bridge instance appears to be running!`)
+        console.warn(`         Last seen: ${existing.lastSeen?.toISOString()}`)
+        console.warn(`         IP: ${existing.localIp}`)
+        console.warn(`         Continuing anyway — this instance will take over.`)
+        console.warn()
+    }
 
     // 2. Discover or use configured X32 address
     let x32Address = monitorConfig.x32Address
@@ -110,13 +121,68 @@ async function main() {
     const ws = new BridgeWSServer(WS_PORT, x32, config)
 
     // 5b. Publish this bridge's URL to Firestore so iPads find it automatically
-    const localIp = getLocalIp()
-    if (localIp) {
-        const bridgeUrl = `ws://${localIp}:${WS_PORT}`
+    let currentIp = getLocalIp()
+    if (currentIp) {
+        const bridgeUrl = `ws://${currentIp}:${WS_PORT}`
         await config.updateBridgeUrl(bridgeUrl)
     } else {
         console.warn("[Bridge] ⚠ Could not detect local IP — iPads will use the last saved bridge URL")
     }
+
+    // 5c. X32 reconnect handling — re-sync state when mixer comes back
+    x32.on("disconnected", () => {
+        console.warn("[Bridge] X32 connection lost — fader changes will not work until reconnected")
+    })
+    x32.on("reconnected", async () => {
+        console.log("[Bridge] X32 reconnected — resyncing mixer state")
+        await x32.syncFullState(monitorConfig.monitorBuses)
+    })
+
+    // ── Heartbeat + DHCP Guard + Sleep Detection (shared 60s loop) ──
+
+    let lastTick = Date.now()
+
+    const heartbeatLoop = async () => {
+        const now = Date.now()
+        const elapsed = now - lastTick
+        lastTick = now
+
+        // Sleep/wake detection: if >90s since last tick, we probably slept
+        if (elapsed > 90_000) {
+            console.log(`[Bridge] ⏰ Wake detected (${Math.round(elapsed / 1000)}s gap) — reinitializing`)
+
+            // Re-detect IP
+            const newIp = getLocalIp()
+            if (newIp && newIp !== currentIp) {
+                currentIp = newIp
+                await config.updateBridgeUrl(`ws://${currentIp}:${WS_PORT}`)
+                console.log(`[Bridge] IP changed after wake: ${currentIp}`)
+            }
+
+            // X32 will reconnect via its own health check loop
+            // Just log the wake event
+        }
+
+        // DHCP guard: check if IP changed
+        const newIp = getLocalIp()
+        if (newIp && newIp !== currentIp) {
+            console.log(`[Bridge] 🔄 IP changed: ${currentIp} → ${newIp}`)
+            currentIp = newIp
+            await config.updateBridgeUrl(`ws://${currentIp}:${WS_PORT}`)
+        }
+
+        // Heartbeat: write status to Firestore
+        await config.writeHeartbeat({
+            x32Connected: x32.isConnected(),
+            clients: ws.getConnectedCount(),
+            localIp: currentIp,
+        })
+    }
+
+    // First heartbeat immediately
+    await heartbeatLoop()
+    // Then every 60 seconds
+    const heartbeatInterval = setInterval(heartbeatLoop, 60_000)
 
     // 6. Watch for config changes
     config.startWatching()
@@ -162,9 +228,11 @@ async function main() {
             const uptime = process.uptime()
             res.end(JSON.stringify({
                 status: "ok",
+                version: process.env.BRIDGE_VERSION || "1.1.0",
                 uptime: Math.round(uptime),
                 x32Connected: x32.isConnected(),
                 clients: ws.getConnectedCount(),
+                ip: currentIp,
             }))
             return
         }
@@ -194,8 +262,10 @@ async function main() {
     }, 30000)
 
     // Graceful shutdown
-    const shutdown = () => {
+    const shutdown = async () => {
         console.log("\n[Bridge] Shutting down...")
+        clearInterval(heartbeatInterval)
+        await config.writeOffline()
         config.stopWatching()
         x32.disconnect()
         ws.close()
@@ -207,11 +277,13 @@ async function main() {
 
     console.log()
     console.log(`[Bridge] Ready!`)
-    console.log(`  WebSocket: ws://${localIp || "0.0.0.0"}:${WS_PORT}`)
-    console.log(`  HTTP API:  http://${localIp || "0.0.0.0"}:${HTTP_PORT}`)
+    console.log(`  WebSocket: ws://${currentIp || "0.0.0.0"}:${WS_PORT}`)
+    console.log(`  HTTP API:  http://${currentIp || "0.0.0.0"}:${HTTP_PORT}`)
     console.log(`  X32:       ${x32Address}:${x32Port}`)
     console.log(`  Buses:     ${monitorConfig.monitorBuses.join(", ")}`)
-    if (localIp) {
+    console.log(`  Heartbeat: Every 60s → Firestore`)
+    console.log(`  DHCP Guard: Monitoring IP changes`)
+    if (currentIp) {
         console.log(`  Published: iPads will auto-connect via Firestore`)
     }
     console.log()

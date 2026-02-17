@@ -8,19 +8,21 @@
  * 
  * CLI flags:
  *   --setup     Force re-run the setup wizard
- *   --run       Skip setup check, just run the bridge
+ *   --run       Skip setup check, just run the bridge (used by service)
  *   --uninstall Remove the Windows service
  */
 
 import * as fs from "fs"
 import * as path from "path"
 import * as readline from "readline"
+import * as net from "net"
 import { execSync, exec } from "child_process"
 
 // Where the exe lives (or the project root in dev)
 const APP_DIR = path.dirname(process.execPath || __dirname)
 const CONFIG_FILE = path.join(APP_DIR, "bridge-config.json")
 const KEY_FILE = path.join(APP_DIR, "service-account-key.json")
+const VERSION = "1.1.0"
 
 interface BridgeConfig {
     installed: boolean
@@ -92,6 +94,106 @@ function isAdmin(): boolean {
     }
 }
 
+/**
+ * Self-elevate to admin via UAC prompt.
+ * Returns true if we re-launched elevated (caller should exit).
+ * Returns false if already admin or elevation failed.
+ */
+function selfElevate(): boolean {
+    if (isAdmin()) return false
+    if (process.platform !== "win32") return false
+
+    try {
+        const exePath = process.execPath
+        const args = process.argv.slice(1).join(" ")
+        // Use PowerShell Start-Process with -Verb RunAs for UAC prompt
+        execSync(
+            `powershell -Command "Start-Process '${exePath}' -ArgumentList '${args}' -Verb RunAs"`,
+            { stdio: "ignore" }
+        )
+        return true // We launched an elevated copy — caller should exit
+    } catch {
+        // User clicked "No" on UAC or it failed
+        return false
+    }
+}
+
+/**
+ * Check if a port is available.
+ */
+function isPortAvailable(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const server = net.createServer()
+        server.once("error", () => resolve(false))
+        server.once("listening", () => {
+            server.close(() => resolve(true))
+        })
+        server.listen(port, "0.0.0.0")
+    })
+}
+
+/**
+ * Check GitHub releases for a newer version. Notify-only, no auto-download.
+ */
+async function checkForUpdates(): Promise<void> {
+    try {
+        const https = require("https")
+        const data: string = await new Promise((resolve, reject) => {
+            const req = https.get(
+                "https://api.github.com/repos/RavBogard/sheet-music-app/releases/latest",
+                { headers: { "User-Agent": "CentralReform-Bridge" }, timeout: 5000 },
+                (res: { statusCode: number; on: (e: string, cb: (d: Buffer) => void) => void }) => {
+                    if (res.statusCode !== 200) { reject(new Error("not found")); return }
+                    let body = ""
+                    res.on("data", (d: Buffer) => body += d)
+                    res.on("end", () => resolve(body))
+                }
+            )
+            req.on("error", reject)
+            req.on("timeout", () => { req.destroy(); reject(new Error("timeout")) })
+        })
+
+        const release = JSON.parse(data)
+        const latestVersion = (release.tag_name || "").replace(/^v/, "")
+
+        if (latestVersion && latestVersion !== VERSION && compareVersions(latestVersion, VERSION) > 0) {
+            console.log()
+            console.log(`  ╔═════════════════════════════════════════════════╗`)
+            console.log(`  ║  ⬆ Update available: v${VERSION} → v${latestVersion.padEnd(30)}║`)
+            console.log(`  ║  Download: ${(release.html_url || "").slice(0, 39).padEnd(39)}║`)
+            console.log(`  ╚═════════════════════════════════════════════════╝`)
+            console.log()
+        }
+    } catch {
+        // No internet, no releases, whatever — silently skip
+    }
+}
+
+function compareVersions(a: string, b: string): number {
+    const pa = a.split(".").map(Number)
+    const pb = b.split(".").map(Number)
+    for (let i = 0; i < 3; i++) {
+        if ((pa[i] || 0) > (pb[i] || 0)) return 1
+        if ((pa[i] || 0) < (pb[i] || 0)) return -1
+    }
+    return 0
+}
+
+/**
+ * Open a URL in the default browser.
+ */
+function openBrowser(url: string): void {
+    try {
+        if (process.platform === "win32") {
+            execSync(`start "" "${url}"`, { stdio: "ignore" })
+        } else if (process.platform === "darwin") {
+            execSync(`open "${url}"`, { stdio: "ignore" })
+        } else {
+            execSync(`xdg-open "${url}"`, { stdio: "ignore" })
+        }
+    } catch { /* browser didn't open, not critical */ }
+}
+
 // ─── Setup Wizard ──────────────────────────────────────────
 
 async function runSetup(): Promise<BridgeConfig> {
@@ -115,6 +217,12 @@ async function runSetup(): Promise<BridgeConfig> {
     console.log("    3. Gear icon → Project settings → Service accounts")
     console.log("    4. Click 'Generate new private key'")
     console.log("    5. Save the file\n")
+
+    const openConsole = await ask(rl, "  Open Firebase Console in your browser? (Y/n): ")
+    if (openConsole.toLowerCase() !== "n") {
+        openBrowser("https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk")
+        console.log("  ✓ Opened in browser\n")
+    }
 
     // Check common locations
     const possiblePaths = [
@@ -210,14 +318,42 @@ async function runSetup(): Promise<BridgeConfig> {
     console.log("  STEP 2 of 4 — Network Ports\n")
     console.log(`  WebSocket port (iPads connect here):  ${config.wsPort}`)
     console.log(`  HTTP API port (health checks):        ${config.httpPort}\n`)
+
+    // Check for port conflicts
+    const wsAvailable = await isPortAvailable(config.wsPort)
+    const httpAvailable = await isPortAvailable(config.httpPort)
+
+    if (!wsAvailable || !httpAvailable) {
+        if (!wsAvailable) console.log(`  ⚠ Port ${config.wsPort} is already in use!`)
+        if (!httpAvailable) console.log(`  ⚠ Port ${config.httpPort} is already in use!`)
+        console.log("  Another program (or a previous bridge instance) may be using these ports.\n")
+    }
+
     const changePort = await ask(rl, "  Change ports? (y/N): ")
 
     if (changePort.toLowerCase() === "y") {
-        const ws = await ask(rl, `  WebSocket port [${config.wsPort}]: `)
-        if (ws && !isNaN(parseInt(ws))) config.wsPort = parseInt(ws)
+        let wsPort = config.wsPort
+        let httpPort = config.httpPort
 
-        const http = await ask(rl, `  HTTP port [${config.httpPort}]: `)
-        if (http && !isNaN(parseInt(http))) config.httpPort = parseInt(http)
+        while (true) {
+            const ws = await ask(rl, `  WebSocket port [${wsPort}]: `)
+            if (ws && !isNaN(parseInt(ws))) wsPort = parseInt(ws)
+
+            const http = await ask(rl, `  HTTP port [${httpPort}]: `)
+            if (http && !isNaN(parseInt(http))) httpPort = parseInt(http)
+
+            const wsOk = await isPortAvailable(wsPort)
+            const httpOk = await isPortAvailable(httpPort)
+
+            if (wsOk && httpOk) {
+                config.wsPort = wsPort
+                config.httpPort = httpPort
+                break
+            }
+
+            if (!wsOk) console.log(`  ⚠ Port ${wsPort} is in use. Try another.`)
+            if (!httpOk) console.log(`  ⚠ Port ${httpPort} is in use. Try another.`)
+        }
     }
 
     console.log(`\n  ✓ Ports: WebSocket=${config.wsPort}, HTTP=${config.httpPort}\n`)
@@ -425,19 +561,35 @@ async function main() {
         process.exit(0)
     }
 
+    // --run: Skip setup, just run (used by the service — never elevate)
+    if (args.includes("--run")) {
+        const config = loadConfig()
+        process.env.BRIDGE_VERSION = VERSION
+        await startBridge(config)
+        return
+    }
+
+    // Self-elevate to admin for firewall access (interactive mode only)
+    if (process.platform === "win32" && !isAdmin()) {
+        console.log("\n  This program needs Administrator access for firewall setup.")
+        console.log("  Requesting elevation...\n")
+        if (selfElevate()) {
+            // Successfully launched elevated copy — exit this one
+            process.exit(0)
+        }
+        // Elevation failed or denied — continue without admin
+        console.log("  Continuing without admin — firewall rules may need manual setup.\n")
+    }
+
+    // Check for updates (non-blocking, notify only)
+    await checkForUpdates()
+
     // --setup: Force setup wizard
     if (args.includes("--setup")) {
         const config = await runSetup()
         if (!config.serviceInstalled) {
             await startBridge(config)
         }
-        return
-    }
-
-    // --run: Skip setup, just run (used by the service)
-    if (args.includes("--run")) {
-        const config = loadConfig()
-        await startBridge(config)
         return
     }
 
@@ -465,6 +617,7 @@ async function startBridge(config: BridgeConfig) {
     process.env.WS_PORT = String(config.wsPort)
     process.env.HTTP_PORT = String(config.httpPort)
     process.env.NODE_ENV = "production"
+    process.env.BRIDGE_VERSION = VERSION
 
     // Import and run the actual bridge
     const { main: bridgeMain } = require("./index")

@@ -9,6 +9,16 @@ export interface MonitorConfig {
     monitorBuses: number[]
     busAssignments: Record<string, BusAssignment | null>
     authorizedUsers: string[]
+    bridge?: BridgeStatus
+}
+
+export interface BridgeStatus {
+    status: "online" | "offline"
+    lastSeen: unknown // Firestore Timestamp
+    x32Connected: boolean
+    clients: number
+    localIp: string | null
+    version: string
 }
 
 export interface BusAssignment {

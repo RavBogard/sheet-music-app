@@ -8,8 +8,38 @@ import { X32WSClient } from "@/lib/x32-ws-client"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { doc, onSnapshot, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { MonitorConfig } from "@/types/monitor"
-import { Loader2, Star, Wifi, WifiOff } from "lucide-react"
+import { MonitorConfig, BridgeStatus } from "@/types/monitor"
+import { Loader2, Star, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
+
+/**
+ * Check if the bridge heartbeat indicates it's online.
+ * Considers staleness: if lastSeen > 2 minutes ago, treat as offline.
+ */
+function isBridgeOnline(bridge?: BridgeStatus): boolean {
+    if (!bridge?.lastSeen) return true // No heartbeat data = legacy bridge, assume online
+    if (bridge.status === "offline") return false
+
+    // Firestore Timestamp has a toDate() method, or it's a plain date
+    let lastSeen: Date
+    try {
+        const ts = bridge.lastSeen as { toDate?: () => Date; seconds?: number }
+        if (ts.toDate) lastSeen = ts.toDate()
+        else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
+        else lastSeen = new Date(bridge.lastSeen as string)
+    } catch {
+        return true // Can't parse timestamp, don't block
+    }
+
+    const ageMs = Date.now() - lastSeen.getTime()
+    return ageMs < 120_000 // 2 minutes
+}
+
+function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
+    if (!bridge?.lastSeen) return null
+    if (!isBridgeOnline(bridge)) return "Bridge is offline"
+    if (bridge.x32Connected === false) return "Bridge online — mixer disconnected"
+    return null
+}
 
 /**
  * Compact monitor mixer panel for the performance toolbar.
@@ -62,6 +92,9 @@ export function QuickMonitorPanel() {
         if (!user || !hasAccess || !config?.bridgeUrl) return
         if (!config.authorizedUsers.includes(user.uid)) return
 
+        // Don't try to connect if bridge heartbeat says it's offline
+        if (!isBridgeOnline(config.bridge)) return
+
         // Don't reconnect if already connected
         if (clientRef.current) return
 
@@ -84,7 +117,7 @@ export function QuickMonitorPanel() {
             clientRef.current = null
             reset()
         }
-    }, [user, hasAccess, config?.bridgeUrl, config?.authorizedUsers])
+    }, [user, hasAccess, config?.bridgeUrl, config?.authorizedUsers, config?.bridge?.status, config?.bridge?.lastSeen])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {
@@ -116,6 +149,18 @@ export function QuickMonitorPanel() {
 
     // Not ready states
     if (!hasAccess || !config?.bridgeUrl) return null
+
+    // Bridge heartbeat status
+    const bridgeMessage = getBridgeStatusMessage(config.bridge)
+    if (bridgeMessage) {
+        const isMixerOnly = bridgeMessage.includes("mixer disconnected")
+        return (
+            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
+                {isMixerOnly ? <ServerOff className="w-4 h-4 text-yellow-600" /> : <ServerOff className="w-4 h-4" />}
+                <span className="text-xs">{bridgeMessage}</span>
+            </div>
+        )
+    }
 
     if (status === "connecting" || status === "authenticating") {
         return (
@@ -152,8 +197,17 @@ export function QuickMonitorPanel() {
                     <div className="text-[10px] text-zinc-500">{myBus.name} — Bus {myBusIndex}</div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <Wifi className="w-3 h-3 text-green-500" />
-                    <span className="text-[10px] text-green-500">Live</span>
+                    {config?.bridge?.x32Connected === false ? (
+                        <>
+                            <Server className="w-3 h-3 text-yellow-500" />
+                            <span className="text-[10px] text-yellow-500">No mixer</span>
+                        </>
+                    ) : (
+                        <>
+                            <Wifi className="w-3 h-3 text-green-500" />
+                            <span className="text-[10px] text-green-500">Live</span>
+                        </>
+                    )}
                 </div>
             </div>
 

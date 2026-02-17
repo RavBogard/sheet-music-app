@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, onSnapshot, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { subscribeToAllMusicianProfiles } from "@/lib/musician-profile"
 import { UserProfile, subscribeToAllUsers } from "@/lib/users-firebase"
@@ -77,6 +77,7 @@ export default function AdminSections() {
     const [authorizedUsers, setAuthorizedUsers] = useState<string[]>([])
     const [scanning, setScanning] = useState(false)
     const [scanResult, setScanResult] = useState<string | null>(null)
+    const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
 
     useEffect(() => {
         const unsub = subscribeToAllMusicianProfiles(setMusicians)
@@ -84,9 +85,8 @@ export default function AdminSections() {
     }, [])
 
     useEffect(() => {
-        async function load() {
+        const unsub = onSnapshot(doc(db, "config", "monitor"), (configDoc) => {
             try {
-                const configDoc = await getDoc(doc(db, "config", "monitor"))
                 const data = configDoc.exists()
                     ? { ...DEFAULT_MONITOR_CONFIG, ...configDoc.data() as Partial<MonitorConfig> }
                     : DEFAULT_MONITOR_CONFIG
@@ -97,13 +97,32 @@ export default function AdminSections() {
                 setMonitorBusesStr(data.monitorBuses.join(", "))
                 setBusAssignments(data.busAssignments || {})
                 setAuthorizedUsers(data.authorizedUsers || [])
+
+                // Extract bridge heartbeat status
+                const raw = configDoc.data()
+                const bridge = raw?.bridge
+                if (bridge?.lastSeen) {
+                    const ts = bridge.lastSeen
+                    let lastSeen: Date | null = null
+                    try {
+                        if (ts.toDate) lastSeen = ts.toDate()
+                        else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
+                    } catch { /* ignore */ }
+                    setBridgeStatus({
+                        status: bridge.status || "unknown",
+                        lastSeen,
+                        x32Connected: bridge.x32Connected ?? false,
+                        clients: bridge.clients ?? 0,
+                        version: bridge.version || "?",
+                    })
+                }
             } catch (err) {
                 logger.error("Failed to load monitor config:", err)
             } finally {
                 setMonitorLoading(false)
             }
-        }
-        load()
+        })
+        return unsub
     }, [])
 
     const handleScan = useCallback(async () => {
@@ -352,8 +371,37 @@ export default function AdminSections() {
                                 <div>
                                     <label className="text-sm text-muted-foreground mb-1 block">Bridge WebSocket URL</label>
                                     <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="ws://192.168.1.50:9000" />
-                                    <p className="text-xs text-muted-foreground mt-1">LAN IP of the production PC running the bridge</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Auto-detected by the bridge on startup</p>
                                 </div>
+
+                                {/* Live Bridge Status */}
+                                {bridgeStatus && (
+                                    <div className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${
+                                        bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                            ? "bg-green-500/10 border border-green-500/20"
+                                            : "bg-red-500/10 border border-red-500/20"
+                                    }`}>
+                                        <div className={`w-2 h-2 rounded-full ${
+                                            bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                                ? "bg-green-500 animate-pulse" : "bg-red-500"
+                                        }`} />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-medium">
+                                                {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                                    ? "Bridge Online" : "Bridge Offline"}
+                                            </span>
+                                            {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000 && (
+                                                <span className="text-muted-foreground ml-2">
+                                                    X32: {bridgeStatus.x32Connected ? "✓" : "✗"}
+                                                    {" · "}
+                                                    {bridgeStatus.clients} client{bridgeStatus.clients !== 1 ? "s" : ""}
+                                                    {" · "}
+                                                    v{bridgeStatus.version}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>

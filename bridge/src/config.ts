@@ -140,4 +140,68 @@ export class ConfigManager {
             console.error("[Config] Failed to update bridge URL:", err)
         }
     }
+
+    /** Write heartbeat to Firestore. Fire-and-forget with timeout. */
+    async writeHeartbeat(data: {
+        x32Connected: boolean
+        clients: number
+        localIp: string | null
+    }): Promise<void> {
+        try {
+            const update = {
+                "bridge.lastSeen": admin.firestore.FieldValue.serverTimestamp(),
+                "bridge.status": "online",
+                "bridge.x32Connected": data.x32Connected,
+                "bridge.clients": data.clients,
+                "bridge.localIp": data.localIp,
+                "bridge.version": process.env.BRIDGE_VERSION || "1.1.0",
+            }
+            // 5s timeout — never let heartbeat block the bridge
+            await Promise.race([
+                this.db.collection("config").doc("monitor").update(update),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+            ])
+        } catch (err) {
+            // Swallow — heartbeat failure should never crash the bridge
+            console.warn("[Heartbeat] Write failed:", (err as Error).message)
+        }
+    }
+
+    /** Mark bridge as offline in Firestore (graceful shutdown). */
+    async writeOffline(): Promise<void> {
+        try {
+            await Promise.race([
+                this.db.collection("config").doc("monitor").update({
+                    "bridge.status": "offline",
+                    "bridge.lastSeen": admin.firestore.FieldValue.serverTimestamp(),
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+            ])
+        } catch {
+            // Best-effort on shutdown
+        }
+    }
+
+    /** Check if another bridge instance is running (recent heartbeat). */
+    async checkForRunningInstance(): Promise<{ running: boolean; lastSeen?: Date; localIp?: string }> {
+        try {
+            const doc = await this.db.collection("config").doc("monitor").get()
+            if (!doc.exists) return { running: false }
+            const data = doc.data()
+            const bridge = data?.bridge
+            if (!bridge?.lastSeen) return { running: false }
+
+            const lastSeen = bridge.lastSeen.toDate ? bridge.lastSeen.toDate() : new Date(bridge.lastSeen)
+            const age = Date.now() - lastSeen.getTime()
+
+            // If heartbeat is < 2 minutes old and status is "online", another instance is running
+            return {
+                running: age < 120_000 && bridge.status === "online",
+                lastSeen,
+                localIp: bridge.localIp,
+            }
+        } catch {
+            return { running: false }
+        }
+    }
 }

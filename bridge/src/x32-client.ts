@@ -118,7 +118,10 @@ export class X32Client extends EventEmitter {
     private address: string
     private port: number
     private xremoteInterval: ReturnType<typeof setInterval> | null = null
+    private healthCheckInterval: ReturnType<typeof setInterval> | null = null
+    private lastMessageAt: number = 0
     private connected = false
+    private reconnecting = false
     private pendingCallbacks = new Map<string, (msg: ParsedOSCMessage) => void>()
 
     // Cached mixer state
@@ -134,6 +137,7 @@ export class X32Client extends EventEmitter {
         this.socket.on("message", (buf) => {
             const msg = parseOSCMessage(buf)
             if (!msg) return
+            this.lastMessageAt = Date.now()
             this.handleMessage(msg)
         })
 
@@ -175,7 +179,12 @@ export class X32Client extends EventEmitter {
             clearInterval(this.xremoteInterval)
             this.xremoteInterval = null
         }
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval)
+            this.healthCheckInterval = null
+        }
         this.connected = false
+        this.reconnecting = false
         this.socket.close()
         console.log("[X32] Disconnected")
     }
@@ -186,6 +195,71 @@ export class X32Client extends EventEmitter {
         this.xremoteInterval = setInterval(() => {
             this.send("/xremote")
         }, 8000)
+
+        // Health check: if no message received in 15s, X32 is gone
+        this.startHealthCheck()
+    }
+
+    private startHealthCheck(): void {
+        if (this.healthCheckInterval) clearInterval(this.healthCheckInterval)
+
+        this.healthCheckInterval = setInterval(() => {
+            if (!this.connected) return
+            const silent = Date.now() - this.lastMessageAt
+
+            // X32 sends /xremote responses every 8s. If we haven't heard
+            // anything in 20s, the mixer is unreachable.
+            if (silent > 20000) {
+                console.warn("[X32] No response in 20s — marking disconnected")
+                this.connected = false
+                this.emit("disconnected")
+                this.attemptReconnect()
+            }
+        }, 5000)
+    }
+
+    private async attemptReconnect(): Promise<void> {
+        if (this.reconnecting) return
+        this.reconnecting = true
+
+        const MAX_ATTEMPTS = 60  // Try for ~10 minutes
+        const INTERVAL = 10000   // Every 10 seconds
+
+        for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+            console.log(`[X32] Reconnect attempt ${i}/${MAX_ATTEMPTS}...`)
+
+            try {
+                // Send /xinfo and wait for response
+                const responded = await new Promise<boolean>((resolve) => {
+                    const timeout = setTimeout(() => resolve(false), 5000)
+                    const handler = (msg: ParsedOSCMessage) => {
+                        if (msg.address === "/xinfo") {
+                            clearTimeout(timeout)
+                            resolve(true)
+                        }
+                    }
+                    this.once("raw_message", handler)
+                    this.send("/xinfo")
+                })
+
+                if (responded) {
+                    this.connected = true
+                    this.lastMessageAt = Date.now()
+                    this.reconnecting = false
+                    console.log("[X32] ✓ Reconnected!")
+                    this.emit("reconnected")
+                    return
+                }
+            } catch {
+                // Ignore, will retry
+            }
+
+            // Wait before next attempt
+            await new Promise(r => setTimeout(r, INTERVAL))
+        }
+
+        this.reconnecting = false
+        console.error("[X32] ✗ Failed to reconnect after 10 minutes. Will keep trying via /xremote.")
     }
 
     private send(address: string, args: Array<{ type: "f" | "i" | "s"; value: number | string }> = []): void {
