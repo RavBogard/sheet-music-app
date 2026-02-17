@@ -11,6 +11,8 @@ export const env = createEnv({
         GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
         UPSTASH_REDIS_REST_URL: z.string().optional(),
         UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+        RESEND_API_KEY: z.string().optional(),
+        RESEND_FROM_EMAIL: z.string().email().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -41,6 +43,8 @@ export const env = createEnv({
         NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
         UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
         UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+        RESEND_API_KEY: process.env.RESEND_API_KEY,
+        RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

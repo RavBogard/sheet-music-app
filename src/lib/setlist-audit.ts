@@ -19,6 +19,7 @@ export type AuditAction =
     | 'renamed'
     | 'made_public'
     | 'made_private'
+    | 'published'
     | 'deleted'
     | 'tracks_reordered'
     | 'track_added'

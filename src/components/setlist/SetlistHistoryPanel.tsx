@@ -40,6 +40,7 @@ const actionLabels: Record<AuditAction, string> = {
     renamed: 'Renamed',
     made_public: 'Made public',
     made_private: 'Made private',
+    published: 'Published & notified',
     deleted: 'Deleted',
     tracks_reordered: 'Reordered',
     track_added: 'Track added',

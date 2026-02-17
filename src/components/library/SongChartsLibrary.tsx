@@ -176,6 +176,22 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         ? [...folders, ...audioFiles]
         : [...folders, ...files]
 
+    // Song usage data
+    const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
+    useEffect(() => {
+        const fileIds = combinedItems
+            .filter(f => !f.mimeType.includes('folder') && !isAudioFile(f))
+            .map(f => f.id)
+        if (fileIds.length === 0) return
+
+        // Fetch in batches of 100
+        const batchIds = fileIds.slice(0, 100)
+        fetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
+            .then(r => r.ok ? r.json() : {})
+            .then(data => setUsageMap(data))
+            .catch(() => {}) // Silent — usage badges are non-critical
+    }, [combinedItems.map(i => i.id).join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
     const itemCount = tab === "audio" ? audioFiles.length : files.length
     const hasAudio = audioFiles.length > 0
 
@@ -310,6 +326,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                                         return next
                                     })
                                 }}
+                                usageInfo={usageMap[item.id] ?? undefined}
                             />
                         ))}
 
