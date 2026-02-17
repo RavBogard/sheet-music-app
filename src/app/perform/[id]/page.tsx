@@ -108,6 +108,7 @@ export default function PerformPage() {
                 <RehearsalToolbar
                     audioUrl={audioUrl}
                     title={currentTrack?.name || 'Audio'}
+                    fileId={fileId}
                     onPracticeTime={(seconds) => {
                         // Track practice time in Firestore
                         if (authUser?.uid && fileId && seconds > 5) {
@@ -116,6 +117,7 @@ export default function PerformPage() {
                                     const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
                                     setDoc(ref, {
                                         practiceSeconds: increment(seconds),
+                                        practiceSessionCount: increment(1),
                                         lastPracticedAt: new Date().toISOString(),
                                     }, { merge: true }).catch(() => {})
                                 })

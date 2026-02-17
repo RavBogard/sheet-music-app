@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { SyncStats } from "@/lib/sync-engine"
@@ -28,6 +28,8 @@ export function LibraryDataSection() {
         processed?: number; enriched?: number; success?: number;
         enrichedFiles?: string[]; failedFiles?: string[]
     } | null>(null)
+    const [failedEnrichCount, setFailedEnrichCount] = useState(0)
+    const [resettingFailures, setResettingFailures] = useState(false)
     const [clearingChords, setClearingChords] = useState(false)
     const [migrating, setMigrating] = useState(false)
     const [migrationStats, setMigrationStats] = useState<{
@@ -40,6 +42,30 @@ export function LibraryDataSection() {
     } | null>(null)
 
     const getToken = async () => user ? await user.getIdToken() : ""
+
+    // Load chronic enrichment failure count
+    useEffect(() => {
+        if (!user) return
+        user.getIdToken().then(token => {
+            fetch("/api/admin/enrich/failures", { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) setFailedEnrichCount(data.count) })
+                .catch(() => {})
+        })
+    }, [user])
+
+    const handleResetFailures = async () => {
+        setResettingFailures(true)
+        try {
+            const res = await fetch("/api/admin/enrich/failures", { method: "DELETE", headers: { Authorization: `Bearer ${await getToken()}` } })
+            const data = await res.json()
+            if (res.ok) {
+                toast.success(data.message)
+                setFailedEnrichCount(0)
+            }
+        } catch { toast.error("Reset failed") }
+        finally { setResettingFailures(false) }
+    }
 
     const handleSync = async () => {
         setSyncing(true); setLastStats(null)
@@ -167,6 +193,15 @@ export function LibraryDataSection() {
                 <div className="bg-card border border-border p-5 rounded-xl space-y-3">
                     <h3 className="font-semibold text-foreground text-sm">AI Enrichment</h3>
                     <p className="text-xs text-muted-foreground">Extract keys, BPM, metadata from PDFs</p>
+                    {failedEnrichCount > 0 && (
+                        <div className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span className="text-red-400 flex-1">{failedEnrichCount} file{failedEnrichCount !== 1 ? 's' : ''} failed enrichment (skipped after 3 attempts)</span>
+                            <Button onClick={handleResetFailures} disabled={resettingFailures} variant="outline" size="sm" className="text-[10px] h-6 px-2">
+                                {resettingFailures ? "Resetting..." : "Reset & Retry"}
+                            </Button>
+                        </div>
+                    )}
                     <Button onClick={handleEnrich} disabled={enriching} className="w-full gap-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl" size="sm">
                         <Repeat className={`w-3 h-3 ${enriching ? "animate-spin" : ""}`} />
                         {enriching ? "Enriching..." : "Run Enrichment"}

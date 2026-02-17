@@ -11,6 +11,8 @@ interface RehearsalToolbarProps {
     audioUrl: string
     /** Track title for display */
     title: string
+    /** File ID for saving preferences */
+    fileId?: string
     /** Called with seconds practiced on unmount/pause */
     onPracticeTime?: (seconds: number) => void
 }
@@ -23,7 +25,7 @@ const SPEED_OPTIONS = [0.5, 0.75, 0.85, 1.0, 1.15, 1.25, 1.5]
  * 
  * Features: play/pause, scrub, speed control, A-B loop, practice timer.
  */
-export function RehearsalToolbar({ audioUrl, title, onPracticeTime }: RehearsalToolbarProps) {
+export function RehearsalToolbar({ audioUrl, title, fileId, onPracticeTime }: RehearsalToolbarProps) {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const practiceStart = useRef<number | null>(null)
     const totalPracticed = useRef(0)
@@ -40,6 +42,34 @@ export function RehearsalToolbar({ audioUrl, title, onPracticeTime }: RehearsalT
     const [loopA, setLoopA] = useState<number | null>(null)
     const [loopB, setLoopB] = useState<number | null>(null)
     const loopActive = loopA !== null && loopB !== null
+
+    // Cumulative practice stats from Firestore
+    const [cumulativeStats, setCumulativeStats] = useState<{ seconds: number; sessions: number } | null>(null)
+
+    // Load preferred speed and cumulative stats from Firestore
+    useEffect(() => {
+        if (!fileId) return
+        import("@/lib/firebase").then(({ auth, db: clientDb }) => {
+            const uid = auth.currentUser?.uid
+            if (!uid) return
+            import("firebase/firestore").then(({ doc, getDoc }) => {
+                getDoc(doc(clientDb, 'users', uid, 'songPreferences', fileId)).then(snap => {
+                    const data = snap.data()
+                    const saved = data?.preferredSpeed
+                    if (saved && SPEED_OPTIONS.includes(saved)) {
+                        setSpeed(saved)
+                        if (audioRef.current) audioRef.current.playbackRate = saved
+                    }
+                    if (data?.practiceSeconds) {
+                        setCumulativeStats({
+                            seconds: data.practiceSeconds || 0,
+                            sessions: data.practiceSessionCount || 0,
+                        })
+                    }
+                }).catch(() => {})
+            })
+        })
+    }, [fileId])
 
     // Initialize audio element
     useEffect(() => {
@@ -120,7 +150,18 @@ export function RehearsalToolbar({ audioUrl, title, onPracticeTime }: RehearsalT
             audioRef.current.playbackRate = newSpeed
         }
         setSpeed(newSpeed)
-    }, [])
+        // Persist preferred speed
+        if (fileId) {
+            import("@/lib/firebase").then(({ auth, db: clientDb }) => {
+                const uid = auth.currentUser?.uid
+                if (!uid) return
+                import("firebase/firestore").then(({ doc, setDoc }) => {
+                    const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
+                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(() => {})
+                })
+            })
+        }
+    }, [fileId])
 
     const toggleMute = useCallback(() => {
         if (audioRef.current) {
@@ -298,7 +339,12 @@ export function RehearsalToolbar({ audioUrl, title, onPracticeTime }: RehearsalT
                     <div className="flex items-center gap-3">
                         <Timer className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="text-xs text-muted-foreground">
-                            Practice time: {formatTime(totalPracticed.current + (practiceStart.current ? (Date.now() - practiceStart.current) / 1000 : 0))}
+                            This session: {formatTime(totalPracticed.current + (practiceStart.current ? (Date.now() - practiceStart.current) / 1000 : 0))}
+                            {cumulativeStats && cumulativeStats.seconds > 0 && (
+                                <span className="ml-2 text-muted-foreground/70">
+                                    · Total: {formatTime(cumulativeStats.seconds)} across {cumulativeStats.sessions} session{cumulativeStats.sessions !== 1 ? 's' : ''}
+                                </span>
+                            )}
                         </span>
                     </div>
                 </div>
