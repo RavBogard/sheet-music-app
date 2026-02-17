@@ -1,4 +1,4 @@
-import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio, History, Bell } from "lucide-react"
+import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio, History, Bell, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -41,6 +41,7 @@ interface SetlistHeaderProps {
     liveEnabled?: boolean
     onToggleLive?: () => void
     onPublish?: () => void
+    onPerform?: () => void
 }
 
 export function SetlistHeader({
@@ -68,7 +69,8 @@ export function SetlistHeader({
     presence = [],
     liveEnabled,
     onToggleLive,
-    onPublish
+    onPublish,
+    onPerform
 }: SetlistHeaderProps) {
     const { toggle, isOpen: isChatOpen } = useChatStore()
 
@@ -241,6 +243,19 @@ export function SetlistHeader({
                 >
                     <Bell className="h-4 w-4" />
                     <span className="hidden lg:inline">Publish & Notify</span>
+                </Button>
+            )}
+
+            {/* Full-screen Performance */}
+            {onPerform && setlistId && (
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onPerform}
+                    className="gap-2 text-green-400 hover:text-green-300 hidden sm:flex"
+                >
+                    <Play className="h-4 w-4" />
+                    <span className="hidden lg:inline">Perform</span>
                 </Button>
             )}
 

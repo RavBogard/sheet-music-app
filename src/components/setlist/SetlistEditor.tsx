@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PrintModal } from "@/components/setlist/PrintModal"
 import {
@@ -122,6 +123,7 @@ export function SetlistEditor({
 
     // D1: Live Collaboration
     const { user } = useAuth()
+    const router = useRouter()
     const presence = useSetlistPresence(setlistId || null, isEditMode ? "editing" : "viewing")
     const liveState = useLiveState(setlistId || null)
     const handleToggleLive = useCallback(() => {
@@ -210,6 +212,7 @@ export function SetlistEditor({
                 liveEnabled={liveState?.enabled}
                 onToggleLive={isLeader ? handleToggleLive : undefined}
                 onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
+                onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
             />
 
             {/* Timeline View - Only show if we have tracks */}

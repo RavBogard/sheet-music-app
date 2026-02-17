@@ -12,6 +12,11 @@ export interface QueueItem {
     targetKey?: string // For auto-transpose
     bpm?: number
     key?: string
+    // Service flow fields (for setlist performance mode)
+    trackType?: string // 'song' | 'header' | 'reading' | 'prayer' | 'transition' | 'note'
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
 }
 
 export interface MusicState {
