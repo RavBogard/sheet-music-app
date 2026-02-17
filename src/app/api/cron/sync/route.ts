@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { syncLibraryIndex } from "@/lib/sync-engine"
 import { logger } from "@/lib/logger"
+import { captureException } from "@/lib/error-reporting"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         })
     } catch (error: unknown) {
         logger.error("[Cron] Sync failed:", error)
+        captureException(error, { source: 'cron', location: 'sync' })
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Sync failed" },
             { status: 500 }

@@ -12,8 +12,8 @@ import { logger } from '@/lib/logger'
 
 let Sentry: typeof import('@sentry/nextjs') | null = null
 
-// Dynamically import Sentry only if DSN is configured
-if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+// Dynamically import Sentry on both client and server when DSN is configured
+if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
     import('@sentry/nextjs').then(mod => { Sentry = mod }).catch(() => {})
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { enrichFile } from "@/lib/enrichment-engine"
 import { logger } from "@/lib/logger"
+import { captureException } from "@/lib/error-reporting"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
         })
     } catch (error: unknown) {
         logger.error("[Cron] Enrichment failed:", error)
+        captureException(error, { source: 'cron', location: 'enrich' })
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Enrichment failed" },
             { status: 500 }
