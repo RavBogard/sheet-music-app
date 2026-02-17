@@ -1,6 +1,8 @@
 import { Footer } from "@/components/Footer"
 import { AppNavigation } from "@/components/nav/AppNavigation"
 import { ChatPanel } from "@/components/setlist/ChatPanel"
+import { OfflineIndicator } from "@/components/offline/OfflineIndicator"
+import { BackgroundPrefetcher } from "@/components/offline/BackgroundPrefetcher"
 
 export default function MainLayout({
     children,
@@ -22,6 +24,8 @@ export default function MainLayout({
                 <Footer />
             </div>
             <ChatPanel />
+            <OfflineIndicator />
+            <BackgroundPrefetcher />
         </div>
     )
 }

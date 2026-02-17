@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useOfflineManager } from "@/hooks/use-offline-manager"
+import { useOffline } from "@/hooks/use-offline"
 import { toast } from "sonner"
 
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
@@ -33,7 +33,7 @@ interface SetlistDashboardProps {
 export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
     const { user, signIn } = useAuth()
     const congregation = useCongregation()
-    const { downloadSetlist, isDownloading } = useOfflineManager()
+    const { downloadSetlist, isDownloading } = useOffline()
 
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
@@ -216,10 +216,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
     const handleDownload = async (setlist: Setlist) => {
         if (setlist.tracks && setlist.tracks.length > 0) {
-            const queueItems = setlist.tracks
-                .filter(t => t.fileId)
-                .map(t => ({ name: t.title, fileId: t.fileId!, type: 'pdf' as const, key: t.key }))
-            await downloadSetlist(queueItems)
+            await downloadSetlist(setlist.tracks)
         } else {
             toast.error("No tracks to download in this setlist")
         }

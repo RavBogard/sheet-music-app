@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
-import { useOfflineSync } from "@/hooks/use-offline-sync"
+import { useOffline } from "@/hooks/use-offline"
 import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
@@ -56,10 +56,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     // Offline Sync Hook
     const {
         checkOfflineStatus,
-        syncSetlist,
+        downloadSetlist: syncSetlist,
         downloading,
         offlineStatus
-    } = useOfflineSync()
+    } = useOffline()
 
     useEffect(() => {
         if (tracks.length > 0) {
