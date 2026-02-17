@@ -290,8 +290,7 @@ async function runSetup(): Promise<BridgeConfig> {
     console.log("  ✓ Setup complete!\n")
     console.log("  Next steps:")
     console.log("    1. Open the CentralReform admin panel → Sound System")
-    console.log("    2. Set the Bridge URL to this PC's IP address:")
-    console.log(`       ws://<this-pc-ip>:${config.wsPort}`)
+    console.log("    2. The Bridge URL is auto-detected — no need to enter it")
     console.log("    3. Assign monitor buses to your musicians")
     console.log("    4. Test from an iPad!\n")
 

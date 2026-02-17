@@ -19,11 +19,37 @@
 import * as dotenv from "dotenv"
 dotenv.config()
 
+import * as os from "os"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
 import { BridgeWSServer } from "./ws-server"
 
 const WS_PORT = parseInt(process.env.WS_PORT || "9000")
+
+/**
+ * Detect this machine's LAN IP address.
+ * Picks the first non-internal IPv4 address, preferring Ethernet over Wi-Fi.
+ */
+function getLocalIp(): string | null {
+    const interfaces = os.networkInterfaces()
+    const candidates: { address: string; name: string }[] = []
+
+    for (const [name, addrs] of Object.entries(interfaces)) {
+        for (const iface of addrs || []) {
+            if (iface.family === "IPv4" && !iface.internal) {
+                candidates.push({ address: iface.address, name })
+            }
+        }
+    }
+
+    if (candidates.length === 0) return null
+
+    // Prefer wired (Ethernet) over wireless
+    const wired = candidates.find(c =>
+        /ethernet|eth\d|en\d/i.test(c.name)
+    )
+    return wired?.address || candidates[0].address
+}
 
 async function main() {
     console.log("╔═══════════════════════════════════════════╗")
@@ -82,6 +108,15 @@ async function main() {
 
     // 5. Start WebSocket server
     const ws = new BridgeWSServer(WS_PORT, x32, config)
+
+    // 5b. Publish this bridge's URL to Firestore so iPads find it automatically
+    const localIp = getLocalIp()
+    if (localIp) {
+        const bridgeUrl = `ws://${localIp}:${WS_PORT}`
+        await config.updateBridgeUrl(bridgeUrl)
+    } else {
+        console.warn("[Bridge] ⚠ Could not detect local IP — iPads will use the last saved bridge URL")
+    }
 
     // 6. Watch for config changes
     config.startWatching()
@@ -172,10 +207,13 @@ async function main() {
 
     console.log()
     console.log(`[Bridge] Ready!`)
-    console.log(`  WebSocket: ws://0.0.0.0:${WS_PORT}`)
-    console.log(`  HTTP API:  http://0.0.0.0:${HTTP_PORT}`)
+    console.log(`  WebSocket: ws://${localIp || "0.0.0.0"}:${WS_PORT}`)
+    console.log(`  HTTP API:  http://${localIp || "0.0.0.0"}:${HTTP_PORT}`)
     console.log(`  X32:       ${x32Address}:${x32Port}`)
     console.log(`  Buses:     ${monitorConfig.monitorBuses.join(", ")}`)
+    if (localIp) {
+        console.log(`  Published: iPads will auto-connect via Firestore`)
+    }
     console.log()
 }
 

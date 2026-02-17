@@ -129,4 +129,15 @@ export class ConfigManager {
             console.error("[Config] Failed to update X32 address:", err)
         }
     }
+
+    /** Update the bridge URL in Firestore (called on startup with actual IP) */
+    async updateBridgeUrl(url: string): Promise<void> {
+        try {
+            await this.db.collection("config").doc("monitor").update({ bridgeUrl: url })
+            this.config.bridgeUrl = url
+            console.log(`[Config] Bridge URL published: ${url}`)
+        } catch (err) {
+            console.error("[Config] Failed to update bridge URL:", err)
+        }
+    }
 }

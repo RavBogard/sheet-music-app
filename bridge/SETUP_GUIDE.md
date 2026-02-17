@@ -43,13 +43,13 @@ The setup wizard walks you through everything:
 
 That's it. The bridge is running.
 
-### Step 3: Configure in the Web App
+### Step 3: Configure Buses in the Web App
 
 1. Open **https://your-site.vercel.app/admin** → Sound System
-2. Set the Bridge URL to: `ws://<this-pc-ip>:9000`
-   (the wizard shows you the PC's IP address at the end)
-3. Choose monitor buses, assign them to musicians, authorize who gets access
-4. Save — the bridge picks up changes instantly
+2. The Bridge URL is already filled in (the bridge published it automatically)
+3. Choose which **monitor buses** to expose (e.g., buses 1–4)
+4. **Assign buses** to musicians and **authorize** who gets access
+5. Save
 
 ### Step 4: Test
 
