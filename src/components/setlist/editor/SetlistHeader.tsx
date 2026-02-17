@@ -1,4 +1,4 @@
-import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio } from "lucide-react"
+import { ChevronLeft, Printer, Globe, Lock, Sparkles, Download, Check, RotateCcw, RotateCw, Radio, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -20,6 +20,7 @@ interface SetlistHeaderProps {
     onNameChange: (name: string) => void
     onBack: () => void
     onPrint: () => void
+    onHistory?: () => void
     canEdit: boolean
     isEditMode: boolean
     onToggleEditMode: () => void
@@ -46,6 +47,7 @@ export function SetlistHeader({
     onNameChange,
     onBack,
     onPrint,
+    onHistory,
     canEdit,
     isEditMode,
     onToggleEditMode,
@@ -126,6 +128,19 @@ export function SetlistHeader({
             >
                 <Printer className="h-5 w-5" />
             </Button>
+
+            {/* History Button - Leaders only */}
+            {isLeader && setlistId && onHistory && (
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={onHistory}
+                    className="h-10 w-10 hidden sm:flex"
+                    title="Version history"
+                >
+                    <History className="h-5 w-5" />
+                </Button>
+            )}
 
             {/* Undo/Redo - Edit Mode Only */}
             {isEditMode && (

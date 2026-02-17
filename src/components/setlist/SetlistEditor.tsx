@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth-context"
 import { TrackItem } from "./editor/TrackItem"
 import { SetlistHeader } from "./editor/SetlistHeader"
 import { SetlistTimeline } from "./SetlistTimeline"
+import { SetlistHistoryPanel } from "./SetlistHistoryPanel"
 import { NamePrompt } from "./modals/NamePrompt"
 import { AddSongsModal } from "./modals/AddSongsModal"
 import { MatchFileModal } from "./modals/MatchFileModal"
@@ -89,7 +90,8 @@ export function SetlistEditor({
         redo,
         canUndo,
         canRedo,
-        duplicateTrack
+        duplicateTrack,
+        restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
         initialTracks,
@@ -106,6 +108,7 @@ export function SetlistEditor({
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
+    const [showHistory, setShowHistory] = useState(false)
 
     // D1: Live Collaboration
     const { user } = useAuth()
@@ -176,6 +179,7 @@ export function SetlistEditor({
                 onNameChange={setName}
                 onBack={onBack}
                 onPrint={() => setShowPrintModal(true)}
+                onHistory={() => setShowHistory(!showHistory)}
                 canEdit={canEdit}
                 isEditMode={isEditMode}
                 onToggleEditMode={toggleEditMode}
@@ -203,6 +207,20 @@ export function SetlistEditor({
             )}
 
             {/* Track List */}
+            {/* History Panel */}
+            {showHistory && setlistId && (
+                <div className="px-4 sm:px-6 pt-2">
+                    <SetlistHistoryPanel
+                        setlistId={setlistId}
+                        onRestore={(newTracks) => {
+                            restoreTracks(newTracks)
+                            setShowHistory(false)
+                        }}
+                        onClose={() => setShowHistory(false)}
+                    />
+                </div>
+            )}
+
             <ScrollArea className="flex-1 p-4 sm:p-6">
                 <DndContext
                     sensors={sensors}

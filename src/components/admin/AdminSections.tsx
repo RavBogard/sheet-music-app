@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { PeopleSection } from "@/components/admin/PeopleSection"
+import { BandPrepSection } from "@/components/admin/BandPrepSection"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { SystemSection } from "@/components/admin/SystemSection"
@@ -26,6 +27,7 @@ export default function AdminSections() {
     return (
         <div className="space-y-8">
             <PeopleSection />
+            <BandPrepSection />
             <SoundSystemSection />
             <LibraryDataSection />
             <SystemSection />

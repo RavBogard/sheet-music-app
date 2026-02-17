@@ -1,9 +1,10 @@
 {
   "version": "4.1.0",
-  "commit": "85e634e",
+  "commit": "9cf213d",
   "branch": "master",
   "buildDate": "2/17/2026",
   "changelog": [
+    "4.1.0 - feat: Session 4 — offline cleanup and consistency",
     "4.1.0 - feat: Session 3 — wire notification triggers + what's new indicator",
     "4.1.0 - feat: Session 3 — wire notification triggers + what's new",
     "4.1.0 - fix: Session 2 — standardize auth on withAuth across all API routes",
@@ -14,7 +15,6 @@
     "4.1.0 - feat: Phase D — rehearsal mode",
     "4.1.0 - feat: Phase C — practice dashboard & notifications",
     "4.1.0 - feat: Phase B — offline done right",
-    "4.1.0 - feat: Phase A — housekeeping & hardening",
-    "4.1.0 - feat: 8 bridge hardening improvements"
+    "4.1.0 - feat: Phase A — housekeeping & hardening"
   ]
 }

@@ -396,6 +396,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         undo,
         redo,
         canUndo,
-        canRedo
+        canRedo,
+        /** Replace entire track list (used by history restore) */
+        restoreTracks: (newTracks: SetlistTrack[]) => setTracks(newTracks),
     }
 }
