@@ -203,7 +203,6 @@ function openBrowser(url: string): void {
  */
 async function activateSetupCode(code: string): Promise<{ success: boolean; credentials?: Record<string, unknown>; error?: string }> {
     try {
-        const https = require("https")
         const config = loadConfig()
         const appUrl = config.appUrl
 
@@ -212,9 +211,11 @@ async function activateSetupCode(code: string): Promise<{ success: boolean; cred
         }
 
         const url = `${appUrl}/api/bridge/setup-code?code=${encodeURIComponent(code)}`
+        const isHttps = url.startsWith("https://")
+        const httpModule = require(isHttps ? "https" : "http")
 
         const data: string = await new Promise((resolve, reject) => {
-            const req = https.get(url, { timeout: 10000 },
+            const req = httpModule.get(url, { timeout: 10000 },
                 (res: { statusCode: number; on: (e: string, cb: (d: Buffer) => void) => void }) => {
                     let body = ""
                     res.on("data", (d: Buffer) => body += d)
@@ -306,6 +307,7 @@ async function runSetup(): Promise<BridgeConfig> {
     ]
 
     let keyPath = ""
+    let keyValidated = false
     for (const p of possiblePaths) {
         if (fileExists(p)) {
             try {
@@ -316,6 +318,7 @@ async function runSetup(): Promise<BridgeConfig> {
                     const confirm = await ask(rl, "  Use this file? (Y/n): ")
                     if (confirm.toLowerCase() !== "n") {
                         keyPath = p
+                        keyValidated = true
                     }
                 }
             } catch { /* not valid */ }
@@ -378,6 +381,7 @@ async function runSetup(): Promise<BridgeConfig> {
                     const dest = path.join(APP_DIR, "service-account-key.json")
                     fs.writeFileSync(dest, JSON.stringify(result.credentials, null, 2))
                     keyPath = dest
+                    keyValidated = true
                     console.log(`  ✓ Credentials saved! (project: ${result.credentials.project_id})\n`)
                     break
                 } else {
@@ -392,17 +396,19 @@ async function runSetup(): Promise<BridgeConfig> {
         }
     }
 
-    // Validate the key file
-    try {
-        const keyContent = JSON.parse(fs.readFileSync(keyPath, "utf-8"))
-        if (keyContent.type !== "service_account") {
-            console.log("\n  ⚠ Warning: This doesn't look like a Firebase service account key.")
-            console.log("  Continuing anyway — the bridge will error on startup if it's wrong.\n")
-        } else {
-            console.log(`  ✓ Valid key for project: ${keyContent.project_id}\n`)
+    // Validate the key file (skip if already validated above)
+    if (!keyValidated) {
+        try {
+            const keyContent = JSON.parse(fs.readFileSync(keyPath, "utf-8"))
+            if (keyContent.type !== "service_account") {
+                console.log("\n  ⚠ Warning: This doesn't look like a Firebase service account key.")
+                console.log("  Continuing anyway — the bridge will error on startup if it's wrong.\n")
+            } else {
+                console.log(`  ✓ Valid key for project: ${keyContent.project_id}\n`)
+            }
+        } catch {
+            console.log("\n  ⚠ Couldn't read the key file. Continuing anyway.\n")
         }
-    } catch {
-        console.log("\n  ⚠ Couldn't read the key file. Continuing anyway.\n")
     }
 
     config.keyPath = keyPath

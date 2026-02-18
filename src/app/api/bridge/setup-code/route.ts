@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
+import { randomBytes } from "crypto"
 
 /**
  * Bridge Setup Code API
@@ -16,9 +17,10 @@ import { logger } from "@/lib/logger"
 
 function generateCode(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // No 0/O/1/I confusion
+    const bytes = randomBytes(6)
     let code = ""
     for (let i = 0; i < 6; i++) {
-        code += chars[Math.floor(Math.random() * chars.length)]
+        code += chars[bytes[i] % chars.length]
     }
     return code
 }
@@ -44,9 +46,11 @@ export async function POST(req: NextRequest) {
             .where("createdBy", "==", auth.uid)
             .where("used", "==", false)
             .get()
-        const batch = db.batch()
-        existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
-        if (!existing.empty) await batch.commit()
+        if (!existing.empty) {
+            const batch = db.batch()
+            existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
+            await batch.commit()
+        }
 
         // Generate a new code
         const code = generateCode()
@@ -80,22 +84,26 @@ export async function GET(req: NextRequest) {
         initAdmin()
         const db = getFirestore()
 
-        // Look up the code
-        const codeDoc = await db.collection("bridge-setup-codes").doc(code).get()
-        if (!codeDoc.exists) {
-            return NextResponse.json({ error: "Invalid code" }, { status: 404 })
-        }
+        // Atomically check and mark as used in a single transaction
+        // Prevents race condition where two requests both pass the check
+        const codeRef = db.collection("bridge-setup-codes").doc(code)
 
-        const data = codeDoc.data()!
-        if (data.used) {
-            return NextResponse.json({ error: "Code already used" }, { status: 410 })
-        }
-        if (Date.now() > data.expiresAt) {
-            return NextResponse.json({ error: "Code expired" }, { status: 410 })
-        }
+        const redeemed = await db.runTransaction(async (tx) => {
+            const snap = await tx.get(codeRef)
+            if (!snap.exists) return { error: "Invalid code", status: 404 }
 
-        // Mark as used immediately (single-use)
-        await db.collection("bridge-setup-codes").doc(code).update({ used: true, usedAt: Date.now() })
+            const data = snap.data()!
+            if (data.used) return { error: "Code already used", status: 410 }
+            if (Date.now() > data.expiresAt) return { error: "Code expired", status: 410 }
+
+            // Mark as used atomically
+            tx.update(codeRef, { used: true, usedAt: Date.now() })
+            return { success: true }
+        })
+
+        if ("error" in redeemed) {
+            return NextResponse.json({ error: redeemed.error }, { status: redeemed.status })
+        }
 
         // Build a minimal service account key from environment variables
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
