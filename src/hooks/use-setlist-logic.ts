@@ -7,6 +7,7 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist } from "@/types/models"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+import { useLibraryStore } from "@/lib/library-store"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -63,6 +64,34 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         downloading,
         offlineStatus
     } = useOffline()
+
+    // Backfill missing keys from library metadata (for tracks added before key support)
+    const { allFiles } = useLibraryStore()
+    const hasBackfilled = useRef(false)
+    useEffect(() => {
+        if (hasBackfilled.current || allFiles.length === 0 || tracks.length === 0) return
+
+        const tracksNeedingKeys = tracks.filter(t => t.fileId && !t.key)
+        if (tracksNeedingKeys.length === 0) return
+
+        const fileMap = new Map(allFiles.map(f => [f.id, f]))
+        let updated = false
+        const patched = tracks.map(t => {
+            if (t.fileId && !t.key) {
+                const file = fileMap.get(t.fileId)
+                if (file?.metadata?.key) {
+                    updated = true
+                    return { ...t, key: file.metadata.key }
+                }
+            }
+            return t
+        })
+
+        if (updated) {
+            hasBackfilled.current = true
+            setTracks(patched)
+        }
+    }, [allFiles, tracks])
 
     useEffect(() => {
         if (tracks.length > 0) {
@@ -322,7 +351,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 title: cleanName,
                 fileId: file.id,
                 fileName: file.name,
-                key: "",
+                key: file.metadata?.key || "",
                 notes: "",
                 type: 'song'
             }
