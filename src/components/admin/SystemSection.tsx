@@ -21,7 +21,7 @@ export function SystemSection() {
                         <GitCommit className="w-3 h-3 text-muted-foreground" /> Recent Changes
                     </h3>
                     <div className="space-y-1 max-h-48 overflow-y-auto">
-                        {buildInfo.changelog.map((log, i) => {
+                        {(buildInfo.changelog as string[]).map((log, i) => {
                             const parts = log.match(/^([^ ]+) - (.*)$/)
                             return (
                                 <div key={i} className="text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
