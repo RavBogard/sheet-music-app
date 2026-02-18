@@ -214,26 +214,44 @@ async function activateSetupCode(code: string): Promise<{ success: boolean; cred
         const isHttps = url.startsWith("https://")
         const httpModule = require(isHttps ? "https" : "http")
 
-        const data: string = await new Promise((resolve, reject) => {
+        const { statusCode, body }: { statusCode: number; body: string } = await new Promise((resolve, reject) => {
             const req = httpModule.get(url, { timeout: 10000 },
                 (res: { statusCode: number; on: (e: string, cb: (d: Buffer) => void) => void }) => {
-                    let body = ""
-                    res.on("data", (d: Buffer) => body += d)
-                    res.on("end", () => resolve(body))
+                    let data = ""
+                    res.on("data", (d: Buffer) => data += d)
+                    res.on("end", () => resolve({ statusCode: res.statusCode, body: data }))
                 }
             )
-            req.on("error", reject)
-            req.on("timeout", () => { req.destroy(); reject(new Error("timeout")) })
+            req.on("error", (err: Error) => {
+                // Translate common network errors to human-readable messages
+                if (err.message.includes("ENOTFOUND")) {
+                    reject(new Error(`Site not found — check the URL (${appUrl})`))
+                } else if (err.message.includes("ECONNREFUSED")) {
+                    reject(new Error("Connection refused — is the site running?"))
+                } else {
+                    reject(err)
+                }
+            })
+            req.on("timeout", () => { req.destroy(); reject(new Error("Request timed out — check your internet connection")) })
         })
 
-        const parsed = JSON.parse(data)
+        // Handle non-JSON responses (e.g. Vercel error pages, wrong URL)
+        let parsed: Record<string, unknown>
+        try {
+            parsed = JSON.parse(body)
+        } catch {
+            if (statusCode === 404) {
+                return { success: false, error: "API not found — check your site URL" }
+            }
+            return { success: false, error: `Unexpected response from server (HTTP ${statusCode})` }
+        }
 
         if (parsed.credentials) {
-            return { success: true, credentials: parsed.credentials }
+            return { success: true, credentials: parsed.credentials as Record<string, unknown> }
         }
-        return { success: false, error: parsed.error || "Unknown error" }
+        return { success: false, error: (parsed.error as string) || "Unknown error" }
     } catch (err) {
-        return { success: false, error: `Could not reach app: ${(err as Error).message}` }
+        return { success: false, error: (err as Error).message }
     }
 }
 
