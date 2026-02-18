@@ -84,7 +84,7 @@ export function SetlistDrawer() {
             )
             return () => unsubscribe()
         }
-    }, [open, showPublicPicker, user])
+    }, [open, showPublicPicker, user?.uid, user?.displayName])
 
     const handleSelectSetlist = (setlist: Setlist) => {
         if (!setlist.tracks || setlist.tracks.length === 0) return

@@ -32,7 +32,7 @@ export default function SetlistPerformPage() {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!setlistId || !user) return
+        if (!setlistId || !user?.uid) return
 
         async function loadAndRedirect() {
             try {
@@ -67,7 +67,7 @@ export default function SetlistPerformPage() {
         }
 
         loadAndRedirect()
-    }, [setlistId, user, setQueue, router])
+    }, [setlistId, user?.uid, setQueue, router])
 
     if (error) {
         return (

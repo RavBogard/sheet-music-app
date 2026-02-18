@@ -56,11 +56,11 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
-    }, [user])
+    }, [user?.uid, user?.displayName])
 
     // Subscribe to personal setlists
     useEffect(() => {
-        if (!user || !setlistService) {
+        if (!user?.uid || !setlistService) {
             setLoading(false)
             return
         }
@@ -75,7 +75,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             }
         )
         return () => unsubscribe()
-    }, [setlistService, user])
+    }, [setlistService, user?.uid])
 
     // Subscribe to public setlists
     useEffect(() => {

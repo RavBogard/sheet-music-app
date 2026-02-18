@@ -20,7 +20,7 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
-    const { user, loading } = useAuth()
+    const { loading } = useAuth()
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
 
@@ -44,10 +44,14 @@ export function PDFViewer({ url }: PDFViewerProps) {
         }
     }, [])
 
-    // 1. Resolve Source — runs ONCE per url prop change
+    // 1. Resolve Source — runs ONCE per url prop change, after auth settles
+    // CRITICAL: Do NOT depend on `user` — use auth.currentUser directly.
+    // Depending on the `user` state from useAuth() causes this effect to re-run
+    // on every auth context change (profile updates, etc.), which creates a new
+    // source object → react-pdf aborts in-progress download → AbortError flood.
     useEffect(() => {
         // Don't re-resolve if we already have a source for this URL
-        if (resolvedUrlRef.current === url && sourceType !== null) return
+        if (resolvedUrlRef.current === url) return
         // Wait for auth to settle
         if (loading) return
 
@@ -79,10 +83,13 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
             if (!active) return
 
-            // B. Online fallback
-            if (user) {
+            // B. Online fallback — use auth.currentUser directly (stable reference)
+            const { auth: firebaseAuth } = await import('@/lib/firebase')
+            const currentUser = firebaseAuth.currentUser
+
+            if (currentUser) {
                 try {
-                    const token = await user.getIdToken()
+                    const token = await currentUser.getIdToken()
                     if (active) {
                         resolvedUrlRef.current = url
                         setSourceUrl(url)
@@ -112,7 +119,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
         return () => {
             active = false
         }
-    }, [url, user, loading, sourceType])
+    }, [url, loading])
 
     // CRITICAL: Memoize the source object passed to react-pdf's <Document>.
     // Without this, every render creates a new {url, httpHeaders} object,

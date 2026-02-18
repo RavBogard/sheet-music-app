@@ -59,8 +59,8 @@ export function DesktopHeader() {
     }, [])
 
     useEffect(() => {
-        if (user) loadLibrary()
-    }, [user, loadLibrary])
+        if (user?.uid) loadLibrary()
+    }, [user?.uid, loadLibrary])
 
     const handleSelectSong = (file: DriveFile) => {
         const type = file.name.endsWith(".xml") || file.name.endsWith(".musicxml") ? "musicxml" : "pdf"

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { SetlistTrack, TrackType } from "@/types/models"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -494,6 +494,7 @@ export function TrackSheet({
                             {saved ? "Saved" : "Auto-saves"}
                         </span>
                     </div>
+                    <SheetDescription className="sr-only">Edit track details</SheetDescription>
                 </SheetHeader>
                 {content}
             </SheetContent>

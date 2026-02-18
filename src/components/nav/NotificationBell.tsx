@@ -30,9 +30,9 @@ export function NotificationBell() {
 
     // Subscribe to notifications
     useEffect(() => {
-        if (!user) return
+        if (!user?.uid) return
         return subscribeToNotifications(user.uid, setNotifications)
-    }, [user])
+    }, [user?.uid])
 
     // Close on outside click
     useEffect(() => {

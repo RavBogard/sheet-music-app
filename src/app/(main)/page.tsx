@@ -54,7 +54,7 @@ export default function DashboardPage() {
     // Setlist Service for primary upcoming/recent fetching
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
-    }, [user])
+    }, [user?.uid, user?.displayName])
 
     // Fetch upcoming setlists (personal or public)
     useEffect(() => {
@@ -80,7 +80,7 @@ export default function DashboardPage() {
             })
         }
 
-        if (user) {
+        if (user?.uid) {
             unsubPersonal = setlistService.subscribeToPersonalSetlists((setlists) => {
                 setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
             })
@@ -94,11 +94,11 @@ export default function DashboardPage() {
                 .slice(0, 5)
             setRecentPublicSetlists(recent)
 
-            if (!user) setUpcomingSetlists(upcoming.slice(0, 5))
+            if (!user?.uid) setUpcomingSetlists(upcoming.slice(0, 5))
         })
 
         return () => { unsubPersonal?.(); unsubPublic?.() }
-    }, [setlistService, user])
+    }, [setlistService, user?.uid])
 
     useEffect(() => { loadLibrary() }, [loadLibrary])
 

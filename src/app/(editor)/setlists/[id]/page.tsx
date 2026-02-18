@@ -22,25 +22,27 @@ export default function SetlistEditorPage() {
     const { items: pendingItems, clear: clearPending } = useSetlistStore()
     const { setQueue } = useMusicStore()
     const { user } = useAuth()
+    const uid = user?.uid || null
+    const displayName = user?.displayName || null
 
     const [existingSetlist, setExistingSetlist] = useState<Setlist | null>(null)
     const [loading, setLoading] = useState(id !== "new")
 
     useEffect(() => {
-        if (user) loadLibrary()
-    }, [loadLibrary, user])
+        if (uid) loadLibrary()
+    }, [loadLibrary, uid])
 
-    // Fetch existing setlist
+    // Fetch existing setlist — depend on uid (stable string), not user object
     useEffect(() => {
         if (id && id !== "new") {
-            const service = createSetlistService(user?.uid || null, user?.displayName || null)
+            const service = createSetlistService(uid, displayName)
             const unsubscribe = service.subscribeToSetlist(id, isPublic, (data: Setlist | null) => {
                 if (data) setExistingSetlist(data)
                 setLoading(false)
             })
             return () => unsubscribe()
         }
-    }, [id, user, isPublic])
+    }, [id, uid, displayName, isPublic])
 
     if (loading) {
         return (

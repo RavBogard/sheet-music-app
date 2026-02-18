@@ -23,23 +23,26 @@ export function useSetlistPresence(
     status: "editing" | "performing" | "viewing" = "viewing"
 ) {
     const { user } = useAuth()
+    const uid = user?.uid || null
+    const displayName = user?.displayName || "Anonymous"
+    const photoURL = user?.photoURL || null
     const [others, setOthers] = useState<PresenceEntry[]>([])
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     // Write presence
     const write = useCallback(() => {
-        if (!setlistId || !user) return
-        writePresence(setlistId, user.uid, {
-            uid: user.uid,
-            displayName: user.displayName || "Anonymous",
-            photoURL: user.photoURL || null,
+        if (!setlistId || !uid) return
+        writePresence(setlistId, uid, {
+            uid,
+            displayName,
+            photoURL,
             status,
             currentSongIndex: null,
         })
-    }, [setlistId, user, status])
+    }, [setlistId, uid, displayName, photoURL, status])
 
     useEffect(() => {
-        if (!setlistId || !user) return
+        if (!setlistId || !uid) return
 
         // Initial write
         write()
@@ -54,7 +57,7 @@ export function useSetlistPresence(
             setOthers(
                 entries.filter(
                     (e) =>
-                        e.uid !== user.uid &&
+                        e.uid !== uid &&
                         e.lastSeen &&
                         now - e.lastSeen.toMillis() < 120_000
                 )
@@ -64,9 +67,9 @@ export function useSetlistPresence(
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current)
             unsub()
-            removePresence(setlistId, user.uid)
+            removePresence(setlistId, uid)
         }
-    }, [setlistId, user, write])
+    }, [setlistId, uid, write])
 
     return others
 }
