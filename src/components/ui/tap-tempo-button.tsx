@@ -12,19 +12,27 @@ interface TapTempoButtonProps {
 export function TapTempoButton({ onBpmChange, currentBpm: _currentBpm }: TapTempoButtonProps) {
     const [_taps, setTaps] = useState<number[]>([])
     const [calculatedBpm, setCalculatedBpm] = useState<number | null>(null)
+    const [tapCount, setTapCount] = useState(0)
+    const [pulsing, setPulsing] = useState(false)
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const handleTap = (e: React.MouseEvent) => {
         e.preventDefault()
         const now = Date.now()
 
+        // Visual pulse
+        setPulsing(true)
+        setTimeout(() => setPulsing(false), 150)
+
         setTaps(prev => {
             // Reset if it's been a while (2s) since last tap
             if (prev.length > 0 && now - prev[prev.length - 1] > 2000) {
+                setTapCount(1)
                 return [now]
             }
 
             const newTaps = [...prev, now]
+            setTapCount(newTaps.length)
 
             // Need at least 2 taps to calculate
             if (newTaps.length >= 2) {
@@ -59,19 +67,26 @@ export function TapTempoButton({ onBpmChange, currentBpm: _currentBpm }: TapTemp
         timeoutRef.current = setTimeout(() => {
             setTaps([]) // Reset taps after inactivity
             setCalculatedBpm(null)
+            setTapCount(0)
         }, 3000)
     }
 
     return (
         <Button
             type="button"
-            variant="outline" // Changed from secondary for better contrast usually, but outline is fine
+            variant="outline"
             onClick={handleTap}
-            className={`min-w-[80px] transition-all duration-100 ${calculatedBpm ? 'border-primary text-primary bg-primary/10' : 'border-input hover:bg-accent'}`}
+            className={`min-w-[80px] transition-all duration-100 ${
+                pulsing ? 'scale-110' : 'scale-100'
+            } ${calculatedBpm ? 'border-primary text-primary bg-primary/10' : 'border-input hover:bg-accent'}`}
             title="Tap repeatedly to set tempo"
         >
             <Hand className="mr-2 h-4 w-4" />
-            {calculatedBpm ? `${calculatedBpm}` : "Tap"}
+            {calculatedBpm
+                ? `${calculatedBpm}`
+                : tapCount === 1
+                    ? "Tap..."
+                    : "Tap"}
         </Button>
     )
 }
