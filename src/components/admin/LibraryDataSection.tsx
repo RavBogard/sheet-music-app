@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { SyncStats } from "@/lib/sync-engine"
 import { Button } from "@/components/ui/button"
@@ -41,23 +42,19 @@ export function LibraryDataSection() {
         driveCount: number; dbCount: number; ghosts: GhostFile[]; prunedCount?: number
     } | null>(null)
 
-    const getToken = async () => user ? await user.getIdToken() : ""
-
     // Load chronic enrichment failure count
     useEffect(() => {
         if (!user) return
-        user.getIdToken().then(token => {
-            fetch("/api/admin/enrich/failures", { headers: { Authorization: `Bearer ${token}` } })
-                .then(r => r.ok ? r.json() : null)
-                .then(data => { if (data) setFailedEnrichCount(data.count) })
-                .catch(() => {})
-        })
+        apiFetch("/api/admin/enrich/failures")
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) setFailedEnrichCount(data.count) })
+            .catch(() => {})
     }, [user])
 
     const handleResetFailures = async () => {
         setResettingFailures(true)
         try {
-            const res = await fetch("/api/admin/enrich/failures", { method: "DELETE", headers: { Authorization: `Bearer ${await getToken()}` } })
+            const res = await apiFetch("/api/admin/enrich/failures", { method: "DELETE" })
             const data = await res.json()
             if (res.ok) {
                 toast.success(data.message)
@@ -70,7 +67,7 @@ export function LibraryDataSection() {
     const handleSync = async () => {
         setSyncing(true); setLastStats(null)
         try {
-            const res = await fetch("/api/library/sync", { method: "POST", headers: { Authorization: `Bearer ${await getToken()}` } })
+            const res = await apiFetch("/api/library/sync", { method: "POST" })
             if (!res.ok) throw new Error(await res.text())
             setLastStats((await res.json()).stats)
             toast.success("Library sync complete!")
@@ -81,7 +78,7 @@ export function LibraryDataSection() {
     const handleEnrich = async () => {
         setEnriching(true); setEnrichStats(null)
         try {
-            const res = await fetch("/api/admin/enrich", { method: "POST", headers: { Authorization: `Bearer ${await getToken()}` } })
+            const res = await apiFetch("/api/admin/enrich", { method: "POST" })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || "Failed")
             setEnrichStats(data.stats)
@@ -93,7 +90,7 @@ export function LibraryDataSection() {
     const handleClearChordCache = async () => {
         setClearingChords(true)
         try {
-            const res = await fetch("/api/admin/migrate-storage/reset", { method: "DELETE", headers: { Authorization: `Bearer ${await getToken()}` } })
+            const res = await apiFetch("/api/admin/migrate-storage/reset", { method: "DELETE" })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || "Failed")
             toast.success(`Cleared ${data.cleared} cached chord scans.`)
@@ -105,15 +102,14 @@ export function LibraryDataSection() {
         setMigrating(true); setMigrationStats(null)
         let totalSucceeded = 0, totalFailed = 0
         try {
-            const token = await getToken()
             let remaining = Infinity, rounds = 0
             while (remaining > 0 && rounds < 25) {
                 rounds++
                 let res: Response
-                try { res = await fetch("/api/admin/migrate-storage", { method: "POST", headers: { Authorization: `Bearer ${token}` } }) }
+                try { res = await apiFetch("/api/admin/migrate-storage", { method: "POST" }) }
                 catch {
                     await new Promise(r => setTimeout(r, 3000))
-                    try { res = await fetch("/api/admin/migrate-storage", { method: "POST", headers: { Authorization: `Bearer ${token}` } }) }
+                    try { res = await apiFetch("/api/admin/migrate-storage", { method: "POST" }) }
                     catch { toast.error("Network error"); break }
                 }
                 const data = await res!.json()
@@ -133,16 +129,15 @@ export function LibraryDataSection() {
     const handleScanAndPrune = async () => {
         setPruneLoading(true); setPruneScanData(null)
         try {
-            const token = await getToken()
-            const scanRes = await fetch("/api/admin/prune/scan", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+            const scanRes = await apiFetch("/api/admin/prune/scan", { method: "POST" })
             if (!scanRes.ok) throw new Error(await scanRes.text())
             const data = await scanRes.json()
             if (data.ghostCount === 0) {
                 setPruneScanData(data); toast.success("System clean.")
             } else {
                 toast.loading(`Pruning ${data.ghostCount} ghost files...`)
-                const pruneRes = await fetch("/api/admin/prune/execute", {
-                    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                const pruneRes = await apiFetch("/api/admin/prune/execute", {
+                    method: "POST",
                     body: JSON.stringify({ fileIds: data.ghosts.map((g: GhostFile) => g.id) })
                 })
                 if (!pruneRes.ok) throw new Error("Prune failed")

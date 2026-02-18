@@ -14,6 +14,7 @@ import { useContentSearch } from "@/hooks/use-content-search"
 import { ContentSearchResults } from "@/components/library/ContentSearchResults"
 import { DriveFile } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
@@ -123,7 +124,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     }
 
     // AI Digitize
-    const { isAdmin, isLeader, user } = useAuth()
+    const { isAdmin, isLeader } = useAuth()
     const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
@@ -131,11 +132,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         try {
             setDigitizing(file.id)
             toast.info(`Digitizing "${file.name}"... This may take ~20s`)
-            const token = await user?.getIdToken()
 
-            const omrRes = await fetch('/api/ai/omr', {
+            const omrRes = await apiFetch('/api/ai/omr', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ fileId: file.id })
             })
 
@@ -151,9 +150,8 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             const omrData = await omrRes.json()
             toast.info("Saving MusicXML...")
 
-            const saveRes = await fetch('/api/drive/save', {
+            const saveRes = await apiFetch('/api/drive/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ sourceFileId: file.id, xmlContent: omrData.xml })
             })
 

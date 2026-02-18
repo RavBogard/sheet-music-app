@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useMusicStore } from "@/lib/store"
-import { useAuth } from "@/lib/auth-context"
 import { scanForChordStrips } from "@/lib/line-scanner"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache } from "@/lib/chord-cache"
+import { apiFetch } from "@/lib/api-client"
 import { logger } from "@/lib/logger"
 
 interface SmartTransposerProps {
@@ -53,7 +53,6 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         setAiError,
         transposition
     } = useMusicStore()
-    const { user } = useAuth()
     const fileId = useCurrentFileId()
 
     const [hasScanned, setHasScanned] = useState(false)
@@ -76,12 +75,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             setPageScanning(pageNumber, true)
             setLocalError(null)
 
-            const token = await user?.getIdToken()
-
             // ── Step 1: Check chord cache ──
-            if (fileId && token) {
+            if (fileId) {
                 try {
-                    const cached = await loadChordCache(fileId, pageNumber, token)
+                    const cached = await loadChordCache(fileId, pageNumber)
                     if (cached && cached.length > 0) {
                         const mappedChords = cached.map(c => ({
                             text: c.text,
@@ -121,8 +118,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 setPageScanning(pageNumber, false)
 
                 // Save to cache (fire-and-forget)
-                if (fileId && token) {
-                    saveChordCache(fileId, pageNumber, mappedChords, 'textLayer', token)
+                if (fileId) {
+                    saveChordCache(fileId, pageNumber, mappedChords, 'textLayer')
                 }
                 return
             }
@@ -141,12 +138,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             }
 
             // API Call to Gemini
-            const res = await fetch('/api/ai/transposer', {
+            const res = await apiFetch('/api/ai/transposer', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({ strips: scanResult.strips })
             })
 
@@ -181,8 +174,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             setPageData(pageNumber, { chords, strips: scanResult.strips })
 
             // Save to cache (fire-and-forget)
-            if (fileId && token && chords.length > 0) {
-                saveChordCache(fileId, pageNumber, chords, 'geminiOCR', token)
+            if (fileId && chords.length > 0) {
+                saveChordCache(fileId, pageNumber, chords, 'geminiOCR')
             }
 
         } catch (err: unknown) {

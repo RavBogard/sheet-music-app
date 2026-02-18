@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -33,20 +33,14 @@ interface PublishResult {
 }
 
 export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, onPublished }: PublishDialogProps) {
-    const { user } = useAuth()
     const [publishing, setPublishing] = useState(false)
     const [result, setResult] = useState<PublishResult | null>(null)
 
     const handlePublish = async () => {
         setPublishing(true)
         try {
-            const token = user ? await user.getIdToken() : null
-            const response = await fetch('/api/setlist/publish', {
+            const response = await apiFetch('/api/setlist/publish', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                },
                 body: JSON.stringify({ setlistId }),
             })
 

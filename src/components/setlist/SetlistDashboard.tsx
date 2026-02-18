@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles } from "lucide-react"
 import { CalendarView } from "@/components/calendar/CalendarView"
@@ -137,10 +138,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     const handleTransfer = async () => {
         if (!selectedSetlistForTransfer || !transferEmail) return
         try {
-            const token = await user?.getIdToken()
-            const res = await fetch('/api/setlist/transfer', {
+            const res = await apiFetch('/api/setlist/transfer', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ setlistId: selectedSetlistForTransfer.id, newOwnerEmail: transferEmail })
             })
             if (!res.ok) throw new Error(await res.text())

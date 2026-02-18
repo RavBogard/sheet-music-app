@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Upload, FileUp, X, Loader2, CheckCircle, Music } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 
 const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl"
@@ -87,9 +88,6 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
         setUploading(true)
 
         try {
-            const token = await user.getIdToken()
-            if (!token) throw new Error("Not authenticated")
-
             const formData = new FormData()
             formData.append('file', file)
             if (title.trim()) formData.append('title', title.trim())
@@ -97,9 +95,8 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             if (bpm) formData.append('bpm', bpm)
             if (tags.trim()) formData.append('tags', tags.trim())
 
-            const res = await fetch('/api/library/upload', {
+            const res = await apiFetch('/api/library/upload', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,
             })
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { Music, CheckCircle2, Clock, Loader2 } from "lucide-react"
 
@@ -33,10 +34,7 @@ export function BandPrepSection() {
 
         const load = async () => {
             try {
-                const token = await user.getIdToken()
-                const res = await fetch('/api/admin/band-prep', {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
+                const res = await apiFetch('/api/admin/band-prep')
                 if (res.ok) {
                     const json = await res.json()
                     setData(json.setlists || [])

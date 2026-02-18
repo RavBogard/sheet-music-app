@@ -7,6 +7,20 @@ import { DriveClient } from "@/lib/google-drive"
 import { downloadFromStorage } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
 
+function getAllowedOrigin(request: NextRequest): string {
+    const origin = request.headers.get('origin') || ''
+    // Allow app domain and local dev
+    if (
+        origin.includes('centralreform.live') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.endsWith('.vercel.app')
+    ) {
+        return origin
+    }
+    return 'https://centralreform.live'
+}
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ fileId: string }> }
@@ -28,7 +42,7 @@ export async function GET(
             return new NextResponse(new Uint8Array(storageResult.buffer), {
                 status: 200,
                 headers: {
-                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Origin': getAllowedOrigin(request),
                     'Cache-Control': 'public, max-age=86400, s-maxage=604800',
                     'Content-Type': storageResult.contentType,
                     'X-Served-From': 'firebase-storage',
@@ -55,7 +69,7 @@ export async function GET(
         return new NextResponse(new Uint8Array(fileData as ArrayBuffer), {
             status: 200,
             headers: {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': getAllowedOrigin(request),
                 'Cache-Control': 'public, max-age=3600',
                 'Content-Type': contentType,
                 'X-Served-From': 'google-drive',

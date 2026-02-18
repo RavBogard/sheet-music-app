@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { apiFetch } from "@/lib/api-client"
 /**
  * Client-side chord cache utilities.
  * Checks server cache before running expensive scans,
@@ -35,14 +36,10 @@ interface CacheResult {
 export async function loadChordCache(
     fileId: string,
     pageNumber: number,
-    token: string
 ): Promise<CachedChord[] | null> {
     try {
-        const res = await fetch(
-            `/api/library/chord-cache?fileId=${encodeURIComponent(fileId)}&page=${pageNumber}`,
-            {
-                headers: { 'Authorization': `Bearer ${token}` }
-            }
+        const res = await apiFetch(
+            `/api/library/chord-cache?fileId=${encodeURIComponent(fileId)}&page=${pageNumber}`
         )
 
         if (!res.ok) return null
@@ -73,17 +70,12 @@ export function saveChordCache(
     pageNumber: number,
     chords: CachedChord[],
     scanMethod: 'textLayer' | 'geminiOCR',
-    token: string
 ): void {
     // Don't cache empty results — the page might not have loaded fully
     if (!chords || chords.length === 0) return
 
-    fetch('/api/library/chord-cache', {
+    apiFetch('/api/library/chord-cache', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
             fileId,
             page: pageNumber,
@@ -101,15 +93,11 @@ export function saveChordCache(
  */
 export async function clearChordCache(
     fileId: string,
-    token: string
 ): Promise<boolean> {
     try {
-        const res = await fetch(
+        const res = await apiFetch(
             `/api/library/chord-cache?fileId=${encodeURIComponent(fileId)}`,
-            {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            }
+            { method: 'DELETE' }
         )
         return res.ok
     } catch (err) {

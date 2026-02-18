@@ -79,22 +79,27 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         audio.crossOrigin = 'anonymous'
         audioRef.current = audio
 
-        audio.addEventListener('loadedmetadata', () => setDuration(audio.duration))
-        audio.addEventListener('timeupdate', () => {
-            setCurrentTime(audio.currentTime)
-        })
-        audio.addEventListener('ended', () => {
+        const onLoadedMetadata = () => setDuration(audio.duration)
+        const onTimeUpdate = () => setCurrentTime(audio.currentTime)
+        const onEnded = () => {
             setPlaying(false)
             if (practiceStart.current) {
                 totalPracticed.current += (Date.now() - practiceStart.current) / 1000
                 practiceStart.current = null
             }
-        })
+        }
+
+        audio.addEventListener('loadedmetadata', onLoadedMetadata)
+        audio.addEventListener('timeupdate', onTimeUpdate)
+        audio.addEventListener('ended', onEnded)
 
         audio.src = audioUrl
         audio.volume = 0.8
 
         return () => {
+            audio.removeEventListener('loadedmetadata', onLoadedMetadata)
+            audio.removeEventListener('timeupdate', onTimeUpdate)
+            audio.removeEventListener('ended', onEnded)
             audio.pause()
             audio.src = ''
             // Report practice time

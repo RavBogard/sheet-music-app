@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
@@ -69,15 +70,9 @@ export function ChatPanel() {
         setLoading(true)
 
         try {
-            // Get Token
-            const token = user ? await user.getIdToken() : null
-
-            const res = await fetch('/api/chat', {
+            // Send to AI API
+            const res = await apiFetch('/api/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
                     currentSetlist: contextData.currentSetlist || [],
@@ -194,14 +189,8 @@ export function ChatPanel() {
                         break;
 
                     case 'ADMIN_ACTION':
-                        const token = user ? await user.getIdToken() : null
-                        if (!token) throw new Error("Unauthorized")
-                        await fetch('/api/admin/set-role', {
+                        await apiFetch('/api/admin/set-role', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
                             body: JSON.stringify({
                                 uid: String(p.userId),
                                 role: String(p.targetRole || 'member')

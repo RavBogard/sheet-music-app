@@ -82,15 +82,16 @@ export async function POST(request: NextRequest) {
     const limited = await checkRateLimit(request, 'ai')
     if (limited) return limited
 
+    // 1. Authenticate first (reject before parsing body)
+    const auth = await withAuth(request)
+    if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
+
     const { messages, currentSetlist, libraryFiles, setlistName, rabbi } = await request.json()
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
-    // 1. Authenticate & Check Admin Status
+    // 2. Check Admin Status
     let isAdmin = false
     let userContext = ""
-
-    const auth = await withAuth(request)
-    if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
 
     try {
         if (auth.isAdmin) {

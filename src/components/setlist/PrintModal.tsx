@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
+import { apiFetch } from "@/lib/api-client"
 import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
 import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
@@ -139,13 +140,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
     const generateForMusician = async (
         name: string, transposition: number, preferFlats: boolean, capoFret: number,
     ): Promise<Blob> => {
-        const token = user ? await user.getIdToken() : null
-        const response = await fetch('/api/setlist/print', {
+        const response = await apiFetch('/api/setlist/print', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            },
             body: JSON.stringify({
                 title, date,
                 musicianName: name || undefined,
@@ -182,13 +178,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         }
         setSendingEmails(true)
         try {
-            const emailToken = user ? await user.getIdToken() : null
-            const response = await fetch('/api/setlist/email-packets', {
+            const response = await apiFetch('/api/setlist/email-packets', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(emailToken ? { 'Authorization': `Bearer ${emailToken}` } : {}),
-                },
                 body: JSON.stringify({ setlistId }),
             })
             if (!response.ok) {

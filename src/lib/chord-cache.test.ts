@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { loadChordCache, saveChordCache, clearChordCache } from './chord-cache'
 
-// Mock fetch globally
-const mockFetch = vi.fn()
-vi.stubGlobal('fetch', mockFetch)
+// Mock apiFetch (used internally by chord-cache)
+vi.mock('@/lib/api-client', () => ({
+    apiFetch: vi.fn(),
+}))
+
+import { apiFetch } from '@/lib/api-client'
+const mockApiFetch = vi.mocked(apiFetch)
 
 describe('chord-cache', () => {
     beforeEach(() => {
-        mockFetch.mockReset()
+        mockApiFetch.mockReset()
     })
 
     describe('loadChordCache', () => {
@@ -16,7 +20,7 @@ describe('chord-cache', () => {
                 { text: 'Am', originalText: 'Am', x: 10, y: 20 },
                 { text: 'G', originalText: 'G', x: 30, y: 20 },
             ]
-            mockFetch.mockResolvedValueOnce({
+            mockApiFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
                     cached: true,
@@ -27,113 +31,102 @@ describe('chord-cache', () => {
                         cacheVersion: 5
                     }
                 })
-            })
+            } as Response)
 
-            const result = await loadChordCache('file-123', 1, 'token-abc')
+            const result = await loadChordCache('file-123', 1)
             expect(result).toEqual(mockChords)
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/api/library/chord-cache?fileId=file-123&page=1',
-                expect.objectContaining({
-                    headers: { 'Authorization': 'Bearer token-abc' }
-                })
+            expect(mockApiFetch).toHaveBeenCalledWith(
+                '/api/library/chord-cache?fileId=file-123&page=1'
             )
         })
 
         it('returns null on cache miss', async () => {
-            mockFetch.mockResolvedValueOnce({
+            mockApiFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ cached: false })
-            })
+            } as Response)
 
-            const result = await loadChordCache('file-123', 1, 'token')
+            const result = await loadChordCache('file-123', 1)
             expect(result).toBeNull()
         })
 
         it('returns null on empty chord array', async () => {
-            mockFetch.mockResolvedValueOnce({
+            mockApiFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
                     cached: true,
                     data: { chords: [], scannedAt: '2025-01-01', scanMethod: 'textLayer' }
                 })
-            })
+            } as Response)
 
-            const result = await loadChordCache('file-123', 1, 'token')
+            const result = await loadChordCache('file-123', 1)
             expect(result).toBeNull()
         })
 
         it('returns null on HTTP error', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: false })
-            const result = await loadChordCache('file-123', 1, 'token')
+            mockApiFetch.mockResolvedValueOnce({ ok: false } as Response)
+            const result = await loadChordCache('file-123', 1)
             expect(result).toBeNull()
         })
 
         it('returns null on network error', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'))
-            const result = await loadChordCache('file-123', 1, 'token')
+            mockApiFetch.mockRejectedValueOnce(new Error('Network error'))
+            const result = await loadChordCache('file-123', 1)
             expect(result).toBeNull()
         })
     })
 
     describe('saveChordCache', () => {
         it('sends POST with chord data', () => {
-            mockFetch.mockResolvedValueOnce({ ok: true })
+            mockApiFetch.mockResolvedValueOnce({ ok: true } as Response)
 
             const chords = [
                 { text: 'C', originalText: 'C', x: 5, y: 10 }
             ]
-            saveChordCache('file-456', 2, chords, 'textLayer', 'token-xyz')
+            saveChordCache('file-456', 2, chords, 'textLayer')
 
-            expect(mockFetch).toHaveBeenCalledWith(
+            expect(mockApiFetch).toHaveBeenCalledWith(
                 '/api/library/chord-cache',
                 expect.objectContaining({
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer token-xyz'
-                    },
                 })
             )
         })
 
         it('does not send empty chord arrays', () => {
-            saveChordCache('file-456', 2, [], 'textLayer', 'token')
-            expect(mockFetch).not.toHaveBeenCalled()
+            saveChordCache('file-456', 2, [], 'textLayer')
+            expect(mockApiFetch).not.toHaveBeenCalled()
         })
 
         it('does not throw on network error (fire-and-forget)', () => {
-            mockFetch.mockRejectedValueOnce(new Error('Offline'))
-            // Should not throw
+            mockApiFetch.mockRejectedValueOnce(new Error('Offline'))
             expect(() => {
-                saveChordCache('file-456', 1, [{ text: 'G', originalText: 'G', x: 0, y: 0 }], 'geminiOCR', 'token')
+                saveChordCache('file-456', 1, [{ text: 'G', originalText: 'G', x: 0, y: 0 }], 'geminiOCR')
             }).not.toThrow()
         })
     })
 
     describe('clearChordCache', () => {
         it('sends DELETE request', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true })
+            mockApiFetch.mockResolvedValueOnce({ ok: true } as Response)
 
-            const result = await clearChordCache('file-789', 'token-abc')
+            const result = await clearChordCache('file-789')
             expect(result).toBe(true)
-            expect(mockFetch).toHaveBeenCalledWith(
+            expect(mockApiFetch).toHaveBeenCalledWith(
                 '/api/library/chord-cache?fileId=file-789',
-                expect.objectContaining({
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer token-abc' }
-                })
+                expect.objectContaining({ method: 'DELETE' })
             )
         })
 
         it('returns false on HTTP error', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: false })
-            const result = await clearChordCache('file-789', 'token')
+            mockApiFetch.mockResolvedValueOnce({ ok: false } as Response)
+            const result = await clearChordCache('file-789')
             expect(result).toBe(false)
         })
 
         it('returns false on network error', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network'))
-            const result = await clearChordCache('file-789', 'token')
+            mockApiFetch.mockRejectedValueOnce(new Error('Network'))
+            const result = await clearChordCache('file-789')
             expect(result).toBe(false)
         })
     })
