@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
+import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 import { FileType } from "@/lib/store"
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
@@ -82,7 +83,25 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                             const next = nextSong()
                             if (next) router.push(`/perform/${next.fileId}`)
                         } else {
-                            el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'smooth' })
+                            // Snap to next page boundary for instant, readable page turns
+                            const pages = el.querySelectorAll('.pdf-page, [data-page-number]')
+                            if (pages.length > 0) {
+                                let snapped = false
+                                for (const page of pages) {
+                                    const pageTop = (page as HTMLElement).offsetTop - el.offsetTop
+                                    if (pageTop > el.scrollTop + 10) {
+                                        el.scrollTo({ top: pageTop, behavior: 'instant' })
+                                        snapped = true
+                                        break
+                                    }
+                                }
+                                // Fallback: if no page boundary found, scroll by viewport
+                                if (!snapped) {
+                                    el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'instant' })
+                                }
+                            } else {
+                                el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'instant' })
+                            }
                         }
                     }
                     break
@@ -97,7 +116,25 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                             const prev = prevSong()
                             if (prev) router.push(`/perform/${prev.fileId}`)
                         } else {
-                            el.scrollBy({ top: -el.clientHeight * 0.85, behavior: 'smooth' })
+                            // Snap to previous page boundary
+                            const pages = el.querySelectorAll('.pdf-page, [data-page-number]')
+                            if (pages.length > 0) {
+                                let snapped = false
+                                const pagesArr = Array.from(pages).reverse()
+                                for (const page of pagesArr) {
+                                    const pageTop = (page as HTMLElement).offsetTop - el.offsetTop
+                                    if (pageTop < el.scrollTop - 10) {
+                                        el.scrollTo({ top: pageTop, behavior: 'instant' })
+                                        snapped = true
+                                        break
+                                    }
+                                }
+                                if (!snapped) {
+                                    el.scrollBy({ top: -el.clientHeight * 0.85, behavior: 'instant' })
+                                }
+                            } else {
+                                el.scrollBy({ top: -el.clientHeight * 0.85, behavior: 'instant' })
+                            }
                         }
                     }
                     break
@@ -187,6 +224,9 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
 
     return (
         <div className="h-[100dvh] flex flex-col bg-black text-white relative">
+
+            {/* Always-visible song position — persists even when toolbar is hidden */}
+            <PerformanceStatusStrip />
 
             {/* Main Content Area — swipe anywhere + tap anywhere */}
             <div

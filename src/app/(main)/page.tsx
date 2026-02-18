@@ -208,6 +208,7 @@ export default function DashboardPage() {
                                     setlist={tonightSetlist}
                                     prep={tonightPrep}
                                     onClick={() => navigateToSetlist(tonightSetlist)}
+                                    onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
                                 />
                             )}
 
@@ -383,10 +384,12 @@ function HeroCard({
     setlist,
     prep,
     onClick,
+    onPerform,
 }: {
     setlist: Setlist
     prep: UpcomingSetlistWithPrep | null
     onClick: () => void
+    onPerform: () => void
 }) {
     const [countdown, setCountdown] = useState<string | null>(null)
     const eventDate = toDate(setlist.eventDate)
@@ -428,7 +431,7 @@ function HeroCard({
 
     return (
         <button
-            onClick={onClick}
+            onClick={isImminent ? onPerform : onClick}
             className={cn(
                 "w-full text-left rounded-2xl p-5 shadow-lg active:scale-[0.98] transition-all group border relative overflow-hidden",
                 isImminent
@@ -486,11 +489,27 @@ function HeroCard({
             )}
 
             {/* CTA */}
-            <div className="flex items-center gap-2 text-white text-sm font-semibold group-hover:text-white transition-colors">
-                <PlayCircle className="w-5 h-5" />
-                Open Setlist
-                <ArrowRight className="w-4 h-4 ml-auto opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-            </div>
+            {isImminent ? (
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-white text-sm font-bold group-hover:text-white transition-colors">
+                        <PlayCircle className="w-5 h-5" />
+                        Perform
+                        <ArrowRight className="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onClick() }}
+                        className="ml-auto text-xs text-white/50 hover:text-white/80 underline underline-offset-2 transition-colors"
+                    >
+                        Edit setlist
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center gap-2 text-white text-sm font-semibold group-hover:text-white transition-colors">
+                    <PlayCircle className="w-5 h-5" />
+                    Open Setlist
+                    <ArrowRight className="w-4 h-4 ml-auto opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                </div>
+            )}
         </button>
     )
 }
