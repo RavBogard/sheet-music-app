@@ -23,6 +23,7 @@ import {
     Clock,
 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
+import { isFileOffline } from "@/lib/offline-store"
 import { useCongregation } from "@/lib/congregation-context"
 import { useUpcomingPrep, type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { cn } from "@/lib/utils"
@@ -392,6 +393,7 @@ function HeroCard({
     onPerform: () => void
 }) {
     const [countdown, setCountdown] = useState<string | null>(null)
+    const [offlineStatus, setOfflineStatus] = useState<{ cached: number; total: number } | null>(null)
     const eventDate = toDate(setlist.eventDate)
 
     // Live countdown when event is within 4 hours
@@ -412,6 +414,16 @@ function HeroCard({
         const iv = setInterval(update, 60_000)
         return () => clearInterval(iv)
     }, [eventDate])
+
+    // Check offline readiness for this setlist's charts
+    useEffect(() => {
+        const fileIds = (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!)
+        if (fileIds.length === 0) return
+        Promise.all(fileIds.map(id => isFileOffline(id))).then(results => {
+            const cached = results.filter(Boolean).length
+            setOfflineStatus({ cached, total: fileIds.length })
+        }).catch(() => {/* silent */})
+    }, [setlist.tracks])
 
     const urgencyLabel = prep?.urgencyLabel || (() => {
         if (!eventDate) return 'Upcoming'
@@ -489,6 +501,23 @@ function HeroCard({
             )}
 
             {/* CTA */}
+            {offlineStatus && offlineStatus.total > 0 && (
+                <div className="flex items-center gap-1.5 mb-3 text-xs font-medium">
+                    {offlineStatus.cached === offlineStatus.total ? (
+                        <span className="text-green-300/80 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            All {offlineStatus.total} charts cached
+                        </span>
+                    ) : (
+                        <span className="text-amber-300/80 flex items-center gap-1">
+                            <Circle className="w-3 h-3" />
+                            {offlineStatus.cached}/{offlineStatus.total} charts cached
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {/* Primary action */}
             {isImminent ? (
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 text-white text-sm font-bold group-hover:text-white transition-colors">
