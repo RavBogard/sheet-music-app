@@ -139,9 +139,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
     const generateForMusician = async (
         name: string, transposition: number, preferFlats: boolean, capoFret: number,
     ): Promise<Blob> => {
+        const token = user ? await user.getIdToken() : null
         const response = await fetch('/api/setlist/print', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({
                 title, date,
                 musicianName: name || undefined,
@@ -178,9 +182,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         }
         setSendingEmails(true)
         try {
+            const emailToken = user ? await user.getIdToken() : null
             const response = await fetch('/api/setlist/email-packets', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(emailToken ? { 'Authorization': `Bearer ${emailToken}` } : {}),
+                },
                 body: JSON.stringify({ setlistId }),
             })
             if (!response.ok) {
