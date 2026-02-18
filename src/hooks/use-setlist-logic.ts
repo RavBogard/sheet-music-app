@@ -199,14 +199,15 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 tracks: t,
                 trackCount: t.length,
                 eventDate: ed ? ed.toISOString() : undefined,
-                rabbi: rab || undefined,
+                rabbi: rab,
             }
 
             if (id) {
                 await setlistService.updateSetlist(id, pub, dataToSave)
             } else {
                 const newId = await setlistService.createSetlist(n, t, pub, {
-                    eventDate: ed ? ed.toISOString() : undefined
+                    eventDate: ed ? ed.toISOString() : undefined,
+                    rabbi: rab,
                 })
                 setSetlistId(newId)
                 onSave?.(newId)

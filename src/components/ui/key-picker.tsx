@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 
@@ -16,15 +16,23 @@ interface KeyPickerProps {
 export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
     const [open, setOpen] = useState(false)
 
-    // Parse current key into note + quality
+    // Parse current key into note + quality, normalizing casing
     const parseKey = (k: string) => {
         const match = k.match(/^([A-G][b#]?)(m|min|maj)?$/i)
         if (!match) return { note: "", quality: "" as "" | "m" }
-        return { note: match[1], quality: (match[2]?.startsWith("m") ? "m" : "") as "" | "m" }
+        // Normalize: uppercase first letter, preserve b/#
+        const rawNote = match[1]
+        const note = rawNote.charAt(0).toUpperCase() + rawNote.slice(1)
+        return { note, quality: (match[2]?.startsWith("m") ? "m" : "") as "" | "m" }
     }
 
     const { note: currentNote, quality: currentQuality } = parseKey(value)
     const [quality, setQuality] = useState<"" | "m">(currentQuality)
+
+    // Sync quality when value changes externally (AI, undo, live sync)
+    useEffect(() => {
+        setQuality(currentQuality)
+    }, [currentQuality])
 
     const handleSelect = (note: string) => {
         const newKey = `${note}${quality}`
