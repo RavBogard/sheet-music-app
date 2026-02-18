@@ -72,7 +72,7 @@ export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowP
                 <div
                     {...attributes}
                     {...listeners}
-                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground p-1 -ml-1"
+                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground p-1 -ml-1"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <GripVertical className="h-5 w-5" />

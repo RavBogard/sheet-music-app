@@ -41,6 +41,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar'>('list')
+    const [searchQuery, setSearchQuery] = useState("")
+    const [rabbiFilter, setRabbiFilter] = useState("")
 
     // Dialog state
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -222,7 +224,32 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         }
     }
 
-    const displayedSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
+    const allSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
+
+    // Compute available rabbis from all setlists
+    const availableRabbis = useMemo(() => {
+        const rabbis = new Set<string>()
+        ;[...personalSetlists, ...publicSetlists].forEach(s => {
+            if (s.rabbi) rabbis.add(s.rabbi)
+        })
+        return Array.from(rabbis).sort()
+    }, [personalSetlists, publicSetlists])
+
+    // Apply search and rabbi filter
+    const displayedSetlists = useMemo(() => {
+        let filtered = allSetlists
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            filtered = filtered.filter(s =>
+                s.name.toLowerCase().includes(q) ||
+                s.tracks?.some(t => t.title?.toLowerCase().includes(q))
+            )
+        }
+        if (rabbiFilter) {
+            filtered = filtered.filter(s => s.rabbi === rabbiFilter)
+        }
+        return filtered
+    }, [allSetlists, searchQuery, rabbiFilter])
 
     /* ─── Derived data ─── */
 
@@ -303,7 +330,14 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} />
 
             {/* Tabs & View Toggle */}
-            <SetlistToolbar activeTab={activeTab} onTabChange={setActiveTab} view={view} onViewChange={setView} showPersonalTab={!!user} />
+            <SetlistToolbar
+                activeTab={activeTab} onTabChange={setActiveTab}
+                view={view} onViewChange={setView}
+                showPersonalTab={!!user}
+                searchQuery={searchQuery} onSearchChange={setSearchQuery}
+                rabbiFilter={rabbiFilter} onRabbiFilterChange={setRabbiFilter}
+                availableRabbis={availableRabbis}
+            />
 
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">

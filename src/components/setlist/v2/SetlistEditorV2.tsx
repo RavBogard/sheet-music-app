@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
     DndContext,
@@ -32,6 +32,7 @@ import { SongRow } from "./SongRow"
 import { DividerRow } from "./DividerRow"
 import { FlowRow } from "./FlowRow"
 import { TrackSheet } from "./TrackSheet"
+import { SwipeToDelete } from "./SwipeToDelete"
 import { AddBar } from "./AddBar"
 
 // Shared components (kept from v1)
@@ -157,6 +158,19 @@ export function SetlistEditorV2({
     const [showPublishDialog, setShowPublishDialog] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
 
+    // Debounce empty state to prevent flash during AI batch edits
+    const [showEmpty, setShowEmpty] = useState(tracks.length === 0)
+    const emptyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    useEffect(() => {
+        if (tracks.length === 0) {
+            emptyTimerRef.current = setTimeout(() => setShowEmpty(true), 300)
+        } else {
+            clearTimeout(emptyTimerRef.current)
+            setShowEmpty(false)
+        }
+        return () => clearTimeout(emptyTimerRef.current)
+    }, [tracks.length])
+
     // ── Computed ──
 
     const estimatedMinutes = useMemo(() => {
@@ -190,20 +204,28 @@ export function SetlistEditorV2({
     // ── Track rendering ──
 
     const renderTrack = (track: SetlistTrack) => {
-        if (track.type === "header") {
-            return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
-        }
-        if (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type)) {
-            return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
-        }
+        const row = (() => {
+            if (track.type === "header") {
+                return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
+            }
+            if (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type)) {
+                return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
+            }
+            return (
+                <SongRow
+                    key={track.id}
+                    track={track}
+                    canEdit={canEdit}
+                    onTap={setEditingTrack}
+                    onPlayFile={handlePlayTrack}
+                />
+            )
+        })()
+
         return (
-            <SongRow
-                key={track.id}
-                track={track}
-                canEdit={canEdit}
-                onTap={setEditingTrack}
-                onPlayFile={handlePlayTrack}
-            />
+            <SwipeToDelete key={track.id} enabled={canEdit} onDelete={() => deleteTrack(track.id)}>
+                {row}
+            </SwipeToDelete>
         )
     }
 
@@ -288,7 +310,7 @@ export function SetlistEditorV2({
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={tracks} strategy={verticalListSortingStrategy}>
                         <div className="max-w-3xl mx-auto px-2 sm:px-4 py-4 space-y-1">
-                            {tracks.length === 0 && (
+                            {showEmpty && tracks.length === 0 && (
                                 <div className="text-center py-16 text-muted-foreground">
                                     <p className="text-lg font-medium mb-1">Empty setlist</p>
                                     <p className="text-sm">Add songs from the library or use the AI assistant to build a service.</p>
