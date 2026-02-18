@@ -28,14 +28,27 @@ function generateCode(): string {
 }
 
 /**
- * POST — Create a new QR session.
+ * POST — Create/register a new QR session.
  * Called by the iPad (not signed in). No auth required.
+ * Accepts an optional client-generated code for instant QR display.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
     try {
         initAdmin()
         const db = getFirestore()
-        const code = generateCode()
+
+        // Accept client-provided code or generate server-side
+        let code: string
+        try {
+            const body = await req.json()
+            code = typeof body.code === "string" && /^[A-Z0-9]{6}$/.test(body.code)
+                ? body.code
+                : generateCode()
+        } catch {
+            // No body or invalid JSON — generate server-side
+            code = generateCode()
+        }
+
         const now = Date.now()
 
         await db.collection(COLLECTION).doc(code).set({

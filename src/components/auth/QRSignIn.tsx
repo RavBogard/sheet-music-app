@@ -7,7 +7,9 @@
  * The phone approves the sign-in, and this component automatically
  * signs in on the current device using a Firebase custom token.
  *
- * Lifecycle: create session → show QR → poll → receive token → sign in
+ * Performance: the QR code renders instantly using a client-generated code.
+ * The server session is registered in parallel — by the time someone pulls
+ * out their phone and scans (3+ seconds), the server is ready.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react"
@@ -17,18 +19,31 @@ import { QRCodeSVG } from "qrcode.react"
 import { Smartphone, RefreshCw, Loader2 } from "lucide-react"
 import { logger } from "@/lib/logger"
 
-type QRState = "creating" | "active" | "approved" | "signing-in" | "error"
+type QRState = "active" | "registering" | "approved" | "signing-in" | "error"
 
 interface SessionData {
     code: string
     expiresAt: number
 }
 
+/** Generate a 6-char code client-side using crypto API */
+function generateClientCode(): string {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    const bytes = new Uint8Array(6)
+    crypto.getRandomValues(bytes)
+    let code = ""
+    for (let i = 0; i < 6; i++) {
+        code += chars[bytes[i] % chars.length]
+    }
+    return code
+}
+
 export function QRSignIn() {
-    const [state, setState] = useState<QRState>("creating")
+    const [state, setState] = useState<QRState>("registering")
     const [session, setSession] = useState<SessionData | null>(null)
     const [approvedName, setApprovedName] = useState<string | null>(null)
     const [timeLeft, setTimeLeft] = useState(0)
+    const [registerFailed, setRegisterFailed] = useState(false)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -39,17 +54,29 @@ export function QRSignIn() {
 
     const createSession = useCallback(async () => {
         cleanup()
-        setState("creating")
+        setRegisterFailed(false)
+
+        // Generate code and show QR immediately (no server round-trip)
+        const code = generateClientCode()
+        const expiresAt = Date.now() + 5 * 60 * 1000
+        setSession({ code, expiresAt })
+        setTimeLeft(300) // 5 minutes
+        setState("active")
+
+        // Register with server in the background
         try {
-            const res = await fetch("/api/auth/qr", { method: "POST" })
-            if (!res.ok) throw new Error("Failed to create session")
-            const data = await res.json()
-            setSession({ code: data.code, expiresAt: data.expiresAt })
-            setTimeLeft(Math.ceil((data.expiresAt - Date.now()) / 1000))
-            setState("active")
+            const res = await fetch("/api/auth/qr", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code }),
+            })
+            if (!res.ok) throw new Error("Failed to register session")
+            // Server confirmed — QR is already showing, nothing to update
         } catch (err) {
-            logger.error("[QR] Create session error:", err)
-            setState("error")
+            logger.error("[QR] Register session error:", err)
+            // QR is already visible. If someone scans before server registers,
+            // the poll will get 404 and we'll retry. Mark it so we can show a hint.
+            setRegisterFailed(true)
         }
     }, [cleanup])
 
@@ -68,7 +95,7 @@ export function QRSignIn() {
                 const res = await fetch(`/api/auth/qr?code=${session.code}`)
 
                 if (res.status === 410 || res.status === 404) {
-                    // Expired — auto-refresh
+                    // Expired or not found — auto-refresh
                     createSession()
                     return
                 }
@@ -122,15 +149,6 @@ export function QRSignIn() {
 
     // ── Render ──
 
-    if (state === "creating") {
-        return (
-            <div className="flex flex-col items-center gap-3 py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Generating QR code…</p>
-            </div>
-        )
-    }
-
     if (state === "signing-in" || state === "approved") {
         return (
             <div className="flex flex-col items-center gap-3 py-4">
@@ -160,7 +178,7 @@ export function QRSignIn() {
 
     return (
         <div className="flex flex-col items-center gap-4">
-            {/* QR Code */}
+            {/* QR Code — renders instantly from client-generated code */}
             <div className="bg-white p-3 rounded-xl shadow-sm">
                 <QRCodeSVG
                     value={qrUrl}
@@ -177,10 +195,19 @@ export function QRSignIn() {
                 <p className="text-xs">Scan with your phone to sign in</p>
             </div>
 
-            {/* Countdown */}
-            <p className="text-[10px] text-muted-foreground/60 tabular-nums">
-                Expires in {minutes}:{seconds.toString().padStart(2, "0")}
-            </p>
+            {/* Countdown + registration status */}
+            {registerFailed ? (
+                <button
+                    onClick={createSession}
+                    className="text-[10px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1"
+                >
+                    <RefreshCw className="h-2.5 w-2.5" /> Connection issue — tap to retry
+                </button>
+            ) : (
+                <p className="text-[10px] text-muted-foreground/60 tabular-nums">
+                    Expires in {minutes}:{seconds.toString().padStart(2, "0")}
+                </p>
+            )}
         </div>
     )
 }

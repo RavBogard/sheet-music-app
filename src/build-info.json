@@ -1,20 +1,18 @@
 {
-  "version": "4.1.0",
-  "commit": "bd15754",
+  "version": "4.2.0",
+  "commit": "7fea037",
   "branch": "master",
-  "buildDate": "2/17/2026",
+  "buildDate": "2/18/2026",
   "changelog": [
-    "4.1.0 - fix: CI max-warnings 80→0, auth+rate-limit 3 unprotected routes",
-    "4.1.0 - feat: Sessions 5+6 — admin aggregates verified, Sentry server config, cron error capture",
-    "4.1.0 - feat: Session 4 — offline cleanup and cache improvements",
-    "4.1.0 - feat: Session 5 — admin aggregates, diff view, and one-click restore",
-    "4.1.0 - feat: Session 4 — offline cleanup and consistency",
-    "4.1.0 - feat: Session 3 — wire notification triggers + what's new indicator",
-    "4.1.0 - feat: Session 3 — wire notification triggers + what's new",
-    "4.1.0 - fix: Session 2 — standardize auth on withAuth across all API routes",
-    "4.1.0 - refactor: Session 2 — standardize all API routes on withAuth",
-    "4.1.0 - fix: Session 1 — quick fixes for v4.1 gaps",
-    "4.1.0 - refactor: decompose AdminSections into 4 focused components",
-    "4.1.0 - feat: Phase E — admin & quality of life"
+    "4.2.0 - fix: human-readable error messages in bridge setup code activation",
+    "4.2.0 - fix: harden setup code flow — transaction, crypto, http support, index",
+    "4.2.0 - feat: setup code flow eliminates Firebase Console from bridge install",
+    "4.2.0 - perf: parallel X32 sync, instant iPad reconnect, remove dead dep",
+    "4.2.0 - perf: eliminate perform redirect hop + unblock offline PDF cache from auth",
+    "4.2.0 - fix: also copy PDF worker in build script (Vercel cached install safety)",
+    "4.2.0 - perf: self-host PDF.js worker for faster chart rendering",
+    "4.2.0 - refactor: extract dashboard sub-components from page.tsx",
+    "4.2.0 - feat: QR code sign-in for shared iPads",
+    "4.2.0 - fix: SystemSection changelog type inference for production build"
   ]
 }
