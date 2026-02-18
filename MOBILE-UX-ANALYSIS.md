@@ -1,378 +1,709 @@
-# Mobile-First Usability Analysis
+# Usability Analysis: Tablet Performance + Phone Planning
 
 **App:** CentralReform.live — Congregational Music Platform  
 **Date:** February 18, 2026  
-**Scope:** Every user-facing flow traced on mobile (375px viewport, iPhone-class device)
+**Analyst context:** Full codebase review of 252 source files, every user-facing component and route traced  
+**Device assumptions:**  
+- **Tablet on a music stand** = primary performance device (iPad, 768–1366px)  
+- **Phone in hand** = planning, editing, and preparation (375–430px)  
 
 ---
 
-## Methodology
+## How I Audited This
 
-I walked every user journey on mobile: cold launch → dashboard → setlist browsing → setlist editing → chart performance → library search → monitor control → settings. For each, I examined touch targets, navigation depth, gesture conflicts, information density, and real-world musician scenarios (stage lighting, time pressure, one-handed use).
+I traced every user journey end-to-end across both device contexts:
+
+**Tablet journeys:** Cold launch at the gig → tonight's setlist → performing → page turns → song navigation → mid-service jump → transpose on stage → annotate during rehearsal → monitor mix adjustment → offline fallback at a venue with no WiFi.
+
+**Phone journeys:** Building a setlist on the couch → browsing the library → configuring keys and leads → reviewing prep status before Shabbat → checking what's coming up this week → setting up a musician profile.
+
+For each, I examined: tap counts to primary action, gesture reliability, information visibility without interaction, real-world environmental factors (stage lighting, hands on instruments, time pressure), and how the app compares to professional music stand apps (forScore, OnSong, BandHelper).
 
 ---
 
-## Recommendation 1: Surface "Perform" as a Primary Action, Not an Overflow Item
+## Recommendation 1: One-Tap Gig Launch
+
+### Context: Tablet at the music stand, 2 minutes before downbeat
 
 **The Problem**
 
-The single most important action in this app — performing a setlist during a live service — is buried behind a three-dot overflow menu. A musician opens the setlist editor, taps `⋮`, scans a 12-item dropdown, and finds "Perform" as the first item.
+The single most important moment in this app's life cycle — a musician opens it on their tablet at the music stand as the service is about to begin — requires three taps and a menu scan to reach the first chart.
 
-On mobile during a service, this is the equivalent of hiding the "Play" button inside a settings menu.
+Current flow:
+1. Open app → Dashboard with hero card showing tonight's setlist
+2. Tap hero card → Opens the **setlist editor** (not performance mode)
+3. Tap the `⋮` overflow menu → Scan a 12-item dropdown
+4. Tap "Perform" → Finally see the first chart
 
-The flow today: Dashboard → Tap setlist card → Opens *editor* → Tap `⋮` → Tap "Perform" = **3 taps, 1 cognitive scan** to reach the primary use case.
+The hero card navigates to the editor because `navigateToSetlist()` always pushes to `/setlists/${id}`. There is no direct path from the dashboard to performance mode. The "Perform" action is the first item in an overflow menu, but it shares visual weight with "Print Gig Packets," "Publish & Notify," "Duplicate Setlist," "Select Items," "Assign Rabbi," "Make Public," "Version History," "Download for Offline," "AI Assistant," "Go Live," and "Delete Setlist."
 
-Worse: the Dashboard hero card ("Tonight's Setlist") navigates to the *editor*, not performance mode. A musician opening the app 2 minutes before downbeat wants to be performing in one tap.
+A senior musician arriving late to a gig, placing their iPad on the stand, and tapping the one obvious thing — the hero card — lands in an editing interface. Every Friday night.
 
 **The Recommendation**
 
-Add a prominent, always-visible "Perform" FAB or sticky button to the setlist editor. It should be visually dominant — larger than any other element, always accessible without scrolling or menu diving.
+When a setlist's event is imminent (within 4 hours — the same window the hero card already uses for its live countdown), **change the hero card's primary action to launch performance mode**. Show a secondary "Edit" link for leaders who need it.
 
-On the Dashboard hero card, add a direct "Perform" action alongside the current tap-to-edit behavior. Consider making "Perform" the primary tap and "Edit" the secondary action.
+Concretely, the hero card should render a large, unmistakable "GO" or "▶ Perform" button that calls `router.push(`/perform/setlist/${id}`)` (or the queue-based equivalent per Recommendation 2). The current tap-anywhere-to-edit behavior moves to a smaller "Edit setlist" text link below the title.
 
-**Implementation Scope**
+For non-imminent setlists (more than 4 hours out), the current behavior is fine — editing is the appropriate action when you're planning days ahead.
 
-- Add a floating action button to `SetlistEditorV2` (outside `AddBar`, visually prominent, perhaps bottom-right corner)
-- Split the hero card tap target: left side opens editor, right side or explicit button enters perform mode
-- When there's an imminent setlist (within 2 hours), consider making the entire hero card tap go to perform mode with an "Edit" link as secondary
+**Implementation**
 
-**Impact:** Eliminates the most critical friction point in the app. Every user, every service, every week.
+```
+// In HeroCard component, ~line 400 of page.tsx
+const isImminent = eventDate && (eventDate.getTime() - Date.now()) < 4 * 60 * 60 * 1000
+
+// Primary action changes based on imminence
+const handlePrimary = isImminent 
+  ? () => launchPerformMode(setlist)
+  : () => navigateToSetlist(setlist)
+```
+
+Add `launchPerformMode` that builds the playback queue from the setlist's tracks and navigates to `/perform/[firstTrack.fileId]` with the queue set. This is the same thing the overflow menu's "Perform" does today — just surfaced directly.
+
+On the hero card itself, when imminent:
+- The card's main tap area → perform mode
+- A small "Edit" link in the footer → editor (for leaders)
+- Visual treatment: the "▶" icon or a "PERFORM" label makes the action unmistakable
+
+**Effort:** Low — routing logic exists, just needs to be surfaced.  
+**Impact:** Eliminates friction at the most critical moment. Every musician, every service.
 
 ---
 
-## Recommendation 2: Unify the Two Divergent Performance Experiences
+## Recommendation 2: Unify the Two Performance Experiences
+
+### Context: Tablet + phone — anyone who performs
 
 **The Problem**
 
-There are two completely different performance UIs that users can land in depending on how they enter:
+There are two completely different performance implementations that musicians can land in depending on how they enter:
 
-1. **`/perform/[id]`** (queue-based): PerformerView + PerformanceToolbar at the bottom. Auto-hiding toolbar on 8s timer. Horizontal swipe navigation (60px threshold + velocity check). Tap-to-toggle bars. Full transpose/annotate/metronome/monitor toolkit.
+**Experience A** (`/perform/[id]`, queue-based):
+- PerformerView + PerformanceToolbar (bottom, auto-hiding, two rows on tablet-portrait)
+- Horizontal swipe between songs (60px + velocity + angle checks)
+- Keyboard/foot pedal support: PageDown scrolls 85%, then advances song at bottom
+- Full toolkit: transpose, annotate, metronome, monitor mix, setlist drawer
+- Wake lock active
+- Live notifications from leader
+- Prefetches next 3 songs in queue
 
-2. **`/perform/setlist/[id]`** (index-based): Fixed nav bar at the *top*. Swipe navigation (50px threshold, no velocity check). No transpose controls. No annotation. No metronome. No monitor access. ServiceFlowCard for non-song items. Loads from Firestore directly rather than queue.
+**Experience B** (`/perform/setlist/[id]`, index-based):
+- Fixed nav bar at the **top** of the screen
+- Different swipe handling (50px threshold, no velocity check)
+- Keyboard: ArrowRight/Space = next **track** (not page scroll). No PageDown/PageUp handling
+- No transpose, no annotation, no metronome, no monitor, no prefetch
+- ServiceFlowCard rendering for non-song items
+- Loads directly from Firestore (no queue abstraction)
+- Wake lock active
 
-A musician who enters via the setlist editor's overflow menu → "Perform" gets experience #1 (queue-based). A musician who enters via `SetlistDrawer` in an empty perform view gets experience #1. But the setlist-specific URL `/perform/setlist/[id]` gives a stripped-down experience #2.
+The same setlist, entered two different ways, gives dramatically different capabilities. Experience B — which is what you get from the overflow menu's "Perform" button — is the stripped-down one. A professional musician who enters via that path has no access to transpose, annotation, or foot pedal page scrolling.
 
-This means the same setlist, accessed two different ways, provides dramatically different capabilities.
+Critically for tablet: **Experience B doesn't handle PageDown/PageUp at all**, meaning Bluetooth foot pedals (AirTurn, PageFlip, iRig BlueTurn) won't work for page turns within a chart. The foot pedal only advances to the next track. For a multi-page chart on a tablet, this is a showstopper.
 
 **The Recommendation**
 
-Eliminate `/perform/setlist/[id]` as a separate implementation. Instead, have it build the queue and redirect to the standard queue-based performance view. The queue-based flow already handles ServiceFlowCard rendering (non-song items show as interstitial cards between charts). If it doesn't fully yet, extend it.
+Eliminate `/perform/setlist/[id]` as a separate implementation. Convert it to a thin loader:
 
-One performance experience. One set of gestures. One toolbar. Always.
+1. Fetch the setlist from Firestore
+2. Build a `QueueItem[]` array (the `trackType` field on `QueueItem` already exists and supports 'song', 'header', 'reading', 'prayer', 'transition', 'note')
+3. Call `setQueue(queue, 0, `/setlists/${setlistId}`)` (same as SetlistDrawer already does)
+4. Navigate to `/perform/${queue[0].fileId}`
 
-**Implementation Scope**
+Experience A's queue-based PerformerView then needs one extension: when the current queue item has a `trackType` that isn't `'song'`, render `ServiceFlowCard` instead of PDFViewer/SmartScoreViewer. The component already exists in `src/components/performance/ServiceFlowCard.tsx` — it just needs to be called from PerformerView.
 
-- Convert `perform/setlist/[id]/page.tsx` to a "loader" that fetches the setlist, builds the queue, calls `setQueue()`, and redirects to `/perform/[firstTrack.fileId]`
-- Ensure `PerformerView` handles `trackType !== 'song'` items by rendering `ServiceFlowCard` inline (it may already via the queue's `trackType` field)
-- Remove the duplicate swipe/keyboard handlers
-- Remove the duplicate nav bar
+One performance experience. One set of gestures. One toolbar. One foot pedal behavior. Always.
 
-**Impact:** Eliminates user confusion, halves the performance-mode code surface, ensures all musicians always have access to transpose/annotate/metronome regardless of entry path.
+**Implementation**
+
+Convert `src/app/perform/setlist/[id]/page.tsx` from a 200-line performance view into a ~40-line redirect:
+
+```tsx
+export default function SetlistPerformPage() {
+  const { id } = useParams()
+  const router = useRouter()
+  const { user } = useAuth()
+  const { setQueue } = useMusicStore()
+
+  useEffect(() => {
+    async function load() {
+      const snap = await getDoc(doc(db, 'setlists', id))
+      const tracks = snap.data()?.tracks || []
+      const queue = tracks.filter(t => t.fileId).map(toQueueItem)
+      if (queue.length > 0) {
+        setQueue(queue, 0, `/setlists/${id}`)
+        router.replace(`/perform/${queue[0].fileId}`)
+      }
+    }
+    if (user) load()
+  }, [id, user])
+
+  return <LoadingSpinner />
+}
+```
+
+Then add a conditional in PerformerView's render (~line 195):
+
+```tsx
+{currentItem?.trackType && currentItem.trackType !== 'song' ? (
+  <ServiceFlowCard item={currentItem} index={queueIndex} total={playbackQueue.length} />
+) : (
+  <>
+    {fileType === 'musicxml' && <SmartScoreViewer ... />}
+    {fileType === 'pdf' && <PDFViewer ... />}
+  </>
+)}
+```
+
+**Effort:** Medium — mostly deletion and a small extension to PerformerView.  
+**Impact:** Fixes foot pedal support, gives all musicians full tools regardless of entry path, halves the performance code surface area. A Meta engineer would flag the duplication immediately.
 
 ---
 
-## Recommendation 3: Fix iPhone Safe Area and Touch Target Compliance
+## Recommendation 3: Instant Page Turns for Foot Pedals
+
+### Context: Tablet on music stand with Bluetooth foot pedal
 
 **The Problem**
 
-The PerformanceToolbar — the most-used mobile surface in the app — has two critical accessibility failures:
+Professional musicians use Bluetooth foot pedals (AirTurn PED, PageFlip Firefly, iRig BlueTurn) that send keyboard events — typically PageDown/PageUp or arrow keys. The app handles these correctly in PerformerView... almost.
 
-**No safe-area-inset-bottom.** On any iPhone X or later (which is the vast majority of iPhones in use), the home indicator overlaps the bottom row of the toolbar. The Home button (bottom-left) and Setlist Drawer button (bottom-right) are partially obscured by the system gesture zone. The MobileTabBar correctly uses `pb-safe`, but the PerformanceToolbar does not. Neither does the AddBar in the setlist editor, nor the AnnotationToolbar (which uses `safe-area-bottom` as a class but it's not defined in the CSS — only `pb-safe` is).
+The scroll behavior is `{ behavior: 'smooth' }`, which produces an animated scroll over ~300-500ms. During that animation, the chart is in motion and unreadable. For a musician sight-reading on stage, that half-second of unreadable chart is the difference between hitting the next phrase and losing their place.
 
-**Undersized touch targets in the toolbar's top row.** The Annotate, Audio, and Transpose buttons are all `h-9` (36px tall). Apple's HIG specifies 44pt minimum; Google Material specifies 48dp. These are the buttons musicians tap during live performance — often while playing an instrument with one hand, under stage lighting, with adrenaline-reduced fine motor control.
+Professional music stand apps (forScore, OnSong) use instant page snapping — the new content appears immediately with no animation. Some offer a brief crossfade, but the content is never in motion.
 
-Specific measurements:
-- Annotate button: 36×36px ❌
-- Audio/Monitor button: 36px tall ❌
-- Transpose button: 36px tall ❌
-- Home button: 48×48px ✅
-- Prev/Next song: 48×48px ✅
-- Setlist drawer: 40×40px ⚠️ (borderline)
-- SongRow drag handle (GripVertical): ~20×20px effective area ❌❌
+Additionally, the scroll distance is `clientHeight * 0.85` (85% of viewport). This "overlap scroll" is reasonable for continuous reading, but on a tablet where one PDF page roughly fills the screen, it creates a confusing half-state: you see the bottom 15% of the current page and the top 85% of the next. Music charts should snap to page boundaries when pages are discrete (as they almost always are).
 
 **The Recommendation**
 
-Add `pb-safe` to PerformanceToolbar, AddBar, AnnotationToolbar, and any other fixed-bottom element. Increase all toolbar touch targets to minimum 44px in both dimensions. For the performance toolbar specifically, consider making the top row's buttons at least `h-11 w-11` (44px) or `h-12` for pill-shaped buttons.
+Add page-boundary-aware instant scrolling for keyboard/pedal events:
 
-For drag handles in SongRow, increase the grab zone to at least 44×44px (the icon can stay small, but wrap it in a larger touchable div).
+1. **Detect page boundaries** from the PDF renderer. PDFPageWrapper already renders each page as a separate `<div>` with the CSS class `.pdf-page`. Calculate the scroll positions where each page starts by reading `offsetTop`.
+2. **Snap to the nearest page** on foot pedal press (PageDown/PageUp). Instead of scrolling 85%, calculate the next page boundary and scroll there instantly.
+3. **Use `behavior: 'instant'`** instead of `'smooth'` for pedal-triggered page turns. Keep smooth scrolling for manual touch/swipe.
+4. **Keep the "advance to next song" behavior** when the user is at the last page and presses the pedal. This already works correctly.
 
-**Implementation Scope**
+Optionally, offer a "half-page turn" mode (common in forScore) where each pedal press scrolls exactly 50% of viewport — this lets musicians see the bottom of the current system and the top of the next, which is how experienced sight-readers prefer to work through dense charts.
 
-- Add `pb-safe` class to PerformanceToolbar's outermost `<div>`
-- Add `pb-safe` to AddBar, AnnotationToolbar, BatchActionBar
-- Define `safe-area-bottom` utility in globals.css (currently only `pb-safe` exists)
-- Increase h-9 → h-11 on all top-row performance toolbar buttons
-- Increase SongRow drag handle padding from `p-1` to `p-2.5` minimum
-- Audit all interactive elements in performance context for 44px minimum
+**Implementation**
 
-**Impact:** Prevents misclicks during live performance. Fixes the app on every modern iPhone. Low effort, high impact — this is borderline a bug fix.
+In PerformerView's keyboard handler (~line 78):
+
+```tsx
+case 'PageDown': {
+  e.preventDefault()
+  const el = viewRef.current
+  if (!el) break
+  
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20
+  if (atBottom && playbackQueue.length > 1) {
+    const next = nextSong()
+    if (next) router.push(`/perform/${next.fileId}`)
+  } else {
+    // Snap to next page boundary
+    const pages = el.querySelectorAll('.pdf-page')
+    const currentScroll = el.scrollTop
+    for (const page of pages) {
+      const pageTop = (page as HTMLElement).offsetTop
+      if (pageTop > currentScroll + 10) {
+        el.scrollTo({ top: pageTop, behavior: 'instant' })
+        break
+      }
+    }
+  }
+  break
+}
+```
+
+The `.pdf-page` class is already on every rendered page from react-pdf's `Page` component. This gives page-boundary snapping with zero new dependencies.
+
+**Effort:** Low — ~20 lines of code changed in one file.  
+**Impact:** Critical for any musician using a foot pedal. This is table-stakes for a professional music stand app. The Brothers Lazaroff would notice this immediately — it's the difference between feeling like a PDF viewer and feeling like a music stand.
 
 ---
 
-## Recommendation 4: Replace Tap-to-Toggle Toolbar with Edge Gesture or Persistent Mini-Bar
+## Recommendation 4: Always-Visible Song Context on Tablet
+
+### Context: Tablet on music stand, mid-performance
 
 **The Problem**
 
-In PerformerView, the toolbar auto-hides after 8 seconds and the only way to recall it is tapping anywhere on the chart. This creates three conflicts:
+When the performance toolbar auto-hides (after 8 seconds of no interaction), the tablet shows a full-screen chart with zero context: no song name, no position in the setlist, no key indicator, nothing. The musician sees a PDF on a dark background.
 
-1. **Tap ambiguity.** Tapping to stop a scroll momentum is a natural mobile gesture. But it also toggles the toolbar. Musicians scroll through a multi-page chart and accidentally show/hide the toolbar constantly.
+This is actually the *right* design for maximizing chart readability — you don't want chrome eating into the chart area on a music stand. The auto-hide behavior is correct and should stay. But two pieces of information are essential at a glance:
 
-2. **Swipe ambiguity.** Horizontal swipe navigates to the next/previous song. But if the chart is zoomed in, horizontal swiping is also how you pan. The code has a `zoom > 1.1` guard, but the threshold is fragile — a slight pinch-zoom puts you in a state where swipe navigation is disabled but there's no indication why.
+1. **What song am I on?** — When the rabbi says "let's skip ahead to the closing," the musician needs to instantly know where they are in the setlist to calculate how far to jump.
+2. **What key am I playing in?** — If the chart is transposed, the musician needs ongoing confirmation that they're seeing the right key.
 
-3. **Hidden controls.** When the toolbar is hidden, there's zero visual indication of what song you're on, where you are in the setlist, or how to navigate. A musician who glances down at their phone mid-song sees only a PDF with no chrome. If they need to quickly jump ahead (rabbi skipped a reading), they have to: tap → wait for animation → process the UI → tap setlist drawer → find the song. Under time pressure, this is too many steps.
+Currently, getting either answer requires: tap to reveal toolbar → read the song navigation center display → process. The tap itself can accidentally trigger a scroll or swipe.
 
 **The Recommendation**
 
-Keep the full toolbar hideable, but add a persistent "mini-bar" that never hides. This mini-bar shows: the current song name/number (e.g., "3/12 · Shalom Rav"), a small "next" arrow, and a subtle tap target to expand the full toolbar. It should be ~32px tall, semi-transparent, and positioned at the bottom edge above the safe area.
+Add a minimal, non-interactive "status strip" that persists even when the toolbar is hidden. This is *not* a mini-toolbar with buttons — it's pure information, designed to be read in a <1 second glance without any interaction.
 
-This gives musicians always-visible context ("where am I?") and one-tap access to the next song without recalling the full toolbar.
+Position: top-right corner of the screen, overlaying the chart.  
+Content: `"3/12 · Shalom Rav"` and if transposed, `"in G"`.  
+Styling: Semi-transparent dark pill (`bg-black/30 backdrop-blur-sm`), small text (`text-xs`), high contrast white text. No tap handlers. No buttons. Just information.
 
-For the swipe conflict: add a horizontal swipe indicator animation on first use (a brief "swipe left for next song" ghost), and when zoom > 1.0, show a small lock icon indicating swipe navigation is disabled.
+On a tablet in portrait (~820px wide), this takes up maybe 200px × 24px in the corner — negligible impact on chart readability. It's the equivalent of the song number written in pencil at the top of a paper chart.
 
-**Implementation Scope**
+**Implementation**
 
-- New `MiniBar` component: song name, position counter, next button, expand button
-- Modify PerformerView to render MiniBar always, full toolbar on toggle
-- Mini-bar should be ~32px tall, `bg-black/40 backdrop-blur`, positioned `bottom-safe`
-- Tapping the mini-bar expands the full toolbar
-- Next button on mini-bar advances song directly (most common performance-mode action)
-- Add first-use swipe tutorial overlay (show once, persist via localStorage)
+New component `PerformanceStatusStrip` (~30 lines):
 
-**Impact:** Solves the "where am I?" problem that every musician experiences. Reduces cognitive load during performance. Keeps the clean full-screen chart view while always providing escape hatches.
+```tsx
+function PerformanceStatusStrip() {
+  const { playbackQueue, queueIndex, transposition } = useMusicStore()
+  const current = playbackQueue[queueIndex]
+  if (!current || playbackQueue.length <= 1) return null
+
+  return (
+    <div className="fixed top-3 right-3 z-40 pointer-events-none
+      bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 
+      flex items-center gap-2 text-white/70 text-xs font-medium">
+      <span>{queueIndex + 1}/{playbackQueue.length}</span>
+      <span className="truncate max-w-[180px]">{current.name}</span>
+      {current.key && transposition !== 0 && (
+        <span className="text-violet-300">in {current.key}</span>
+      )}
+    </div>
+  )
+}
+```
+
+Rendered in PerformerView, always visible, independent of toolbar state. `pointer-events-none` ensures it never interferes with tap/swipe gestures on the chart.
+
+**Effort:** Very low — a single new component, ~30 lines.  
+**Impact:** Solves the "where am I?" problem without sacrificing any chart area. This is how professional musicians think about their music stand — they always know what number they're on.
 
 ---
 
-## Recommendation 5: Add Smart Filters to the Library
+## Recommendation 5: Wake Lock Recovery
+
+### Context: Tablet on music stand, during a 90-minute service
 
 **The Problem**
 
-The library has 400+ songs with rich metadata (key, BPM, topics, last-used date, usage count, offline status) but the only discovery mechanism is a text search box. On mobile, a musician looking for "an upbeat song in D we haven't played in a while" has to scroll through the entire list, visually scanning key badges and mentally recalling usage history.
+The wake lock implementation has a gap. The `useWakeLock` hook acquires a `WakeLockSentinel` on mount, but the visibility change handler (line 53) has a placeholder comment and doesn't re-acquire:
 
-The content search (searching within chord data/lyrics) is a nice touch, but it triggers only after 3+ characters and 500ms debounce — fine for deep searches, but doesn't help with the much more common "browse by attribute" use case.
+```typescript
+if (document.visibilityState === 'visible' && !wakeLock) {
+    // Optionally re-acquire if it was supposed to be locked
+    // For now, we leave it manual or controlled by the component
+}
+```
+
+When the Wake Lock API releases the sentinel (which happens when the tab/app loses focus — e.g., iOS interrupts with a notification, the musician briefly checks a text, or a phone call comes in and is dismissed), returning to the app leaves the screen unprotected. The tablet can go dark mid-service.
+
+This is not theoretical. During a 90-minute Shabbat morning service, iOS will almost certainly trigger at least one interruption (Bluetooth notification, low battery alert, an incoming call dismissed). Each one silently kills the wake lock and it never comes back.
 
 **The Recommendation**
 
-Add a horizontal filter chip bar below the search input. Tapping a chip opens a compact picker:
+Implement automatic wake lock recovery:
 
-- **Key:** Grid of 12 keys (C, C#/Db, D, ... B) with major/minor toggle. Single or multi-select.
-- **Topic/Tag:** Scrollable chips from existing `metadata.topics` across the library (healing, gratitude, Shabbat, High Holidays, etc.)
-- **Recency:** "Played recently" / "Not played in 30+ days" / "Never played" — using the `usageMap` data that already loads.
-- **Offline:** "Available offline" filter — using the `isFileOffline` check that already runs per-row.
+```typescript
+useEffect(() => {
+    const handleVisibilityChange = async () => {
+        if (document.visibilityState === 'visible') {
+            try {
+                const lock = await navigator.wakeLock.request('screen')
+                setWakeLock(lock)
+                setIsLocked(true)
+                lock.addEventListener('release', () => {
+                    setIsLocked(false)
+                    setWakeLock(null)
+                })
+            } catch (err) {
+                // Low battery or other system restriction — expected, don't error
+            }
+        }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+}, []) // No dependency on wakeLock — always try to re-acquire
+```
 
-Active filters show as filled chips with an × to remove. Filters combine with AND logic.
-
-**Implementation Scope**
-
-- New `LibraryFilters` component rendered between search input and breadcrumbs in `SongChartsLibrary`
-- Filter state managed in `useLibraryStore` or local state
-- Key filter: simple grid of 12 buttons (tonal, not alphabetical — circle of fifths layout for musicians)
-- Topic filter: derive available topics from `allFiles.flatMap(f => f.metadata?.topics || [])`, deduplicate, show as selectable chips
-- Recency filter: uses existing `usageMap` data; add "Never used" by checking absence from map
-- Apply filters to `displayedFiles` before rendering (client-side filtering, no API changes)
-- Persist active filters in session storage so they survive navigation to a chart and back
-
-**Impact:** Transforms the library from a flat list into a queryable database. Directly supports the real-world workflow of "what should we play this week?" — which is the creative act at the heart of setlist building.
+**Effort:** Very low — 10 lines of code in `use-wake-lock.ts`.  
+**Impact:** Prevents the "my screen went dark during the Torah service" scenario. This is a reliability fix, not a feature — but reliability *is* the feature for a performance tool.
 
 ---
 
-## Recommendation 6: Redesign the In-Performance Setlist Drawer for Quick Navigation
+## Recommendation 6: Redesign the Setlist Drawer for Performance Navigation
+
+### Context: Tablet on music stand, rabbi skips ahead
 
 **The Problem**
 
-During performance, the SetlistDrawer is the only way to jump to a non-adjacent song. It opens as a bottom sheet covering 80% of the viewport. Issues:
+Mid-service, the rabbi decides to skip a reading and go straight to the closing songs. The musician needs to jump from song 5 to song 12. Current flow:
 
-1. **No search or section headers.** A 15-song setlist with 10 flow items (readings, prayers, transitions) renders as a flat 25-item list. The musician has to scroll and scan to find "Oseh Shalom" among all the items.
+1. Tap the screen to reveal the toolbar (might accidentally scroll the chart)
+2. Find and tap the setlist drawer icon (bottom-right, 40×40px)
+3. Wait for the 80vh bottom sheet animation
+4. Scroll through a flat, unsectioned list of 15-25 items (songs + readings + prayers all mixed together)
+5. Find "Oseh Shalom" among them
+6. Tap to navigate
+7. Sheet animates closed
 
-2. **No visual differentiation of song types.** Songs, readings, and prayers all render identically — just a number, a title, and optionally a key badge. The section headers from the setlist editor aren't represented.
-
-3. **Full-height bottom sheet.** Opening and closing is a heavy animation. For the common action of "peek at what's next in 2 songs," it's overkill.
-
-4. **Close button at the bottom.** After tapping a song to navigate, the sheet closes. But if you want to close without navigating, you have to scroll past all items to reach the "Close" button — or know to swipe down (which isn't indicated).
+That's a lot of interaction for a time-critical moment. Worse, the setlist drawer renders every item identically — numbered circles with titles. The section headers from the setlist editor (OPENING, TORAH SERVICE, CLOSING) aren't carried through to the performance drawer. So the musician can't use spatial memory ("the closing songs are in the third group") — they have to read every title.
 
 **The Recommendation**
 
-Redesign the drawer with performance context in mind:
+Redesign the performance-mode setlist drawer with three improvements:
 
-- **Show section groupings.** Use the `header` track types as section dividers within the drawer. "OPENING" → songs → "TORAH SERVICE" → songs → "CLOSING" gives immediate spatial context.
-- **Highlight current + show peek.** Current song highlighted, but also show the next 2 items as a "peek" view without opening the full drawer. A small "up next" indicator above the mini-bar (from Recommendation 4) could show the next item's title.
-- **Add quick search.** A small search field at the top of the drawer for jumping by name. Auto-focuses on open.
-- **Half-height default.** Open to 50% height by default (showing ~6 items centered on current position). Swipe up to expand to full list if needed.
-- **Swipe-to-close or tap-outside-to-close.** Remove the explicit "Close" button that takes up space at the bottom.
+**A. Section grouping.** Render `header`-type tracks as visual section dividers in the drawer, not as tappable items. This gives instant spatial structure: OPENING → 3 songs → TORAH SERVICE → 2 songs + readings → CLOSING → 4 songs. The section headers are already in the queue's `trackType` field — they just need to be rendered differently.
 
-**Implementation Scope**
+**B. Smart initial scroll position.** Auto-scroll to center the current song when the drawer opens. Currently it opens scrolled to the top regardless of position. A musician 12 songs into a 15-song setlist shouldn't have to scroll to find themselves.
 
-- Refactor SetlistDrawer to use a custom bottom sheet with snap points (50% and 85%)
-- Group tracks by preceding `header` type items as section labels
-- Auto-scroll to current item on open with `scrollIntoView({ block: 'center' })`
-- Add `<Input>` at sheet top with local filtering of `playbackQueue`
-- Remove the explicit Close button; use sheet's native drag-to-dismiss
-- Add "up next" peek to mini-bar (from Rec 4)
+**C. Quick jump by section.** At the top of the drawer, show section chips (one per header): tapping "CLOSING" instantly scrolls to that section. For a musician who knows "I need to jump to the closing," this is one tap instead of a visual scan through the whole list.
 
-**Impact:** Turns the setlist drawer from a dumb list into a performance-grade navigation tool. Significantly reduces time-to-target for mid-service jumps.
+**Implementation**
+
+In `SetlistDrawer.tsx`, when rendering the queue in non-public-picker mode:
+
+```tsx
+// Group tracks by preceding header
+const sections = useMemo(() => {
+  const result: { label: string | null; tracks: { track: QueueItem; index: number }[] }[] = []
+  let current: typeof result[0] = { label: null, tracks: [] }
+  
+  playbackQueue.forEach((track, index) => {
+    if (track.trackType === 'header') {
+      if (current.tracks.length > 0) result.push(current)
+      current = { label: track.name, tracks: [] }
+    } else {
+      current.tracks.push({ track, index })
+    }
+  })
+  if (current.tracks.length > 0) result.push(current)
+  return result
+}, [playbackQueue])
+```
+
+Add a ref on the current-song element and call `scrollIntoView({ block: 'center' })` in a `useEffect` when the sheet opens.
+
+For section quick-jump, render a horizontal chip bar at the top of the sheet:
+```tsx
+<div className="flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide border-b border-border/50">
+  {sections.filter(s => s.label).map(s => (
+    <button key={s.label} onClick={() => sectionRefs.current[s.label]?.scrollIntoView({ block: 'start' })}
+      className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted hover:bg-accent">
+      {s.label}
+    </button>
+  ))}
+</div>
+```
+
+**Effort:** Medium — mostly rendering changes in SetlistDrawer, plus a `groupBySections` helper.  
+**Impact:** Transforms the drawer from a flat list into a structured navigation tool. The section grouping alone makes mid-service jumps 2-3× faster. This is the kind of thoughtful detail that professional musicians will notice and appreciate.
 
 ---
 
-## Recommendation 7: Make the AI Chat Panel Work on Mobile
+## Recommendation 7: Library Filters for Setlist Planning
+
+### Context: Phone on the couch, building next week's setlist
 
 **The Problem**
 
-The ChatPanel renders as `w-full sm:w-[400px]` sliding in from the right. On mobile, this covers the entire screen — which means:
+Building a setlist starts with song selection — "what should we sing this Shabbat?" The library has 400+ songs with rich metadata already present: key, BPM, topics (healing, gratitude, Shabbat, High Holidays), last-used date, total usage count, and offline status. But the only way to find songs is a text search box.
 
-1. **Users can't see the setlist while talking to the AI.** If the AI says "I added Shalom Rav, Oseh Shalom, and L'chi Lach to your setlist," the user can't verify without closing the panel, checking, then reopening to continue the conversation.
+A music director thinking "I need an upbeat song in D that we haven't played recently" has to: search by name (if they remember one), scroll through results, visually spot the key badge, and mentally recall when they last used it. The `usageMap` data loads per row but isn't filterable.
 
-2. **Input field at the bottom + mobile keyboard = tiny visible area.** When the keyboard opens on mobile, the conversation history collapses to maybe 3-4 visible messages. Users lose conversation context constantly.
+The metadata is there. The UI just doesn't expose it as filters.
 
-3. **No way to minimize without losing context.** Closing the panel (`close()`) unmounts the scroll position. Reopening shows the conversation but you have to scroll to find where you were.
-
-4. **No quick actions.** The AI understands structured commands (CREATE_SETLIST, ADD_TO_SETLIST, etc.) but users have to type natural language. On mobile, typing "add Shalom Rav to my setlist" is slow compared to a structured UI.
+The same limitation exists in the `AddSongsModal` inside the setlist editor — which is where you actually pick songs to add. That modal has only a text search and folder navigation. A music director adding songs to a setlist has no way to say "show me everything in D" or "what haven't we played in 2 months."
 
 **The Recommendation**
 
-Redesign the mobile chat experience as a half-sheet (similar to Apple Maps or Google Maps search):
+Add a horizontal filter chip bar below the search input in both `SongChartsLibrary` and `AddSongsModal`. Tapping a chip opens a compact picker:
 
-- **Half-sheet default.** Open to 40% height, showing the input field and last 2-3 messages. The setlist editor remains visible above.
-- **Expandable.** Swipe up to full screen for longer conversations.
-- **Quick action chips.** Above the input field, show contextual action chips based on current state: "Add songs," "Build from template," "Reorder by key," "Suggest for [this week's parasha]." These issue structured commands without typing.
-- **Inline confirmations.** When the AI modifies the setlist, show a compact diff ("Added 3 songs: Shalom Rav, Oseh Shalom, L'chi Lach") with an inline Undo button, rather than requiring the user to visually verify.
+**Key filter:** A circle-of-fifths grid (musically intuitive, not alphabetical). Tap C, D, G to show only songs in those keys. Multi-select. This is the most common filter for musicians — "I need something in D because the guitar is already capoed there."
 
-**Implementation Scope**
+**Topic filter:** Chips derived from existing `metadata.topics` across the library. Deduplicated and sorted by frequency. "Shabbat," "Healing," "Gratitude," "High Holidays," "Israel," etc. This directly supports the creative act of liturgical programming.
 
-- Replace the slide-from-right panel with a bottom sheet on mobile (keep slide panel on desktop)
-- Use snap points: 40%, 85% height
-- Add quick action chips component that reads from `contextData` (existing store field)
-- When AI executes a setlist modification, emit a brief inline confirmation with undo affordance
-- Keep keyboard-aware layout: when keyboard opens, sheet stays at current snap point, conversation scrolls to bottom
+**Recency filter:** Three options: "Played recently" (used in last 30 days), "Not played in 60+ days" (fresh repertoire), "Never played" (new material). Uses the `usageMap` data that already loads.
 
-**Impact:** Makes the AI assistant usable on mobile rather than being a desktop-only feature that happens to render on phones. The quick action chips alone could dramatically increase AI usage.
+Active filters show as filled chips with ×. Filters combine with AND logic. Persist in session storage so navigating to a chart and back doesn't reset them.
+
+**Implementation**
+
+New `LibraryFilters` component, extracted as reusable for both `SongChartsLibrary` and `AddSongsModal`:
+- Rendered between search input and breadcrumbs
+- Filter state as local state or in `useLibraryStore`
+- Client-side filtering on `displayedFiles` (no API changes needed)
+- Key filter: render 12 buttons in circle-of-fifths order with major/minor toggle
+- Topic filter: `allFiles.flatMap(f => f.metadata?.topics || [])` → deduplicate → sort by count → render as selectable chips
+- Recency filter: compare against `usageMap` entries
+
+**Effort:** Medium.  
+**Impact:** Transforms song discovery from "I know the name" to "I know what I need." This is the creative tool that music directors actually want. It also surfaces the value of all that AI-extracted metadata that the enrichment pipeline generates — right now that metadata exists but only passively decorates file rows.
 
 ---
 
-## Recommendation 8: Simplify the Track Editing Sheet's Key/Transpose UX
+## Recommendation 8: Simplify the Key/Transpose Editing UX
+
+### Context: Phone, editing a setlist track
 
 **The Problem**
 
-The TrackSheet (song editing on mobile) presents transposition as three separate concepts:
+The TrackSheet presents transposition as three separate, interconnected controls:
 
-1. **Chart Key** (native key from library — "what key is the PDF written in")
-2. **Play In** (setlist key — "what key do we want to perform it in")
-3. **Transpose** (stepper: -11 to +11 semitones)
+1. **Chart Key** — the native key from the library ("what key is the PDF in"). Read-only with a tiny pencil icon to override.
+2. **Play In** — the setlist key ("what key we perform it in"). A KeyPicker dropdown.
+3. **Transpose** — a stepper from -11 to +11 semitones. Has its own Reset button.
 
-These are the same musical concept expressed three ways. A musician thinks: "We need this in G instead of E." They don't think in terms of "chart key vs. setlist key vs. semitone offset." The current UI forces them to understand the internal data model.
+These three controls interact bidirectionally:
+- Changing "Play In" auto-calculates the Transpose value from Chart Key
+- Changing Transpose auto-derives the "Play In" display from Chart Key
+- Overriding Chart Key changes the meaning of Transpose
+- If there's no Chart Key, the Transpose stepper and Play In become independent
 
-Additionally, the three controls interact in confusing ways:
-- Changing "Play In" auto-calculates the transpose value from the native key
-- Changing the transpose stepper auto-derives the "Play In" display
-- The native key can be manually overridden, which changes the meaning of the transpose value
-- If there's no native key detected, the stepper and "Play In" are independent
-
-On mobile, these controls take up significant vertical space (3 separate sections with labels, inputs, and explanatory text) for what should be a single decision: "what key?"
+A musician thinks: "We need this in G instead of E." They don't think in separate concepts of "chart key," "setlist key," and "semitone offset." The current UI forces users to understand the internal data model. On a phone screen, these three sections with labels, inputs, and contextual text take up significant vertical space for what is fundamentally a single decision.
 
 **The Recommendation**
 
-Collapse to a single, smart "Key" control:
+Collapse to one primary control with smart context:
 
-- **One input: "Play In Key"** — a KeyPicker dropdown showing the target key.
-- **Automatic context:** Below it, show a small label: "Chart is in E · Transpose +3" (derived automatically). This is informational, not interactive.
-- **Advanced toggle:** A "Manual override" link that reveals the native key editor and semitone stepper for edge cases.
+**Primary:** "Key" — a single `KeyPicker` showing the target key for this setlist slot. This is what the musician cares about. Pick G, done.
 
-90% of the time, the musician just wants to pick a key from a grid. The transposition math should be invisible.
+**Auto-context:** Below the picker, a single line: `Chart is in E · transposing +3`. This is derived automatically and is informational — not interactive. It tells the musician "yes, I know the chart is written in E, and I'm transposing 3 semitones to get you to G."
 
-**Implementation Scope**
+**Expandable advanced:** A "Manual" link that reveals the native key override and semitone stepper. This serves edge cases: charts where AI key detection got it wrong, or musicians who think in semitones rather than keys.
 
-- Refactor the key/transpose section of TrackSheet into a single `KeyControl` component
-- Primary UI: KeyPicker for target key + auto-derived context label
-- Collapsible "Advanced" section for native key override and manual semitone control
-- Remove the standalone transpose stepper from the default view
-- Keep the calculation logic in `handleSetlistKeyChange` and `handleTranspositionChange` — just change the UI hierarchy
+90% of interactions become: tap Key field → select G from grid → done. One tap, one decision.
 
-**Impact:** Reduces cognitive load for every track edit. Removes a common point of confusion for less technical musicians. The "I just want it in G" use case becomes a single tap instead of navigating three interconnected controls.
+**Implementation**
+
+Refactor the key/transpose section of `TrackSheet` into a `SimpleKeyControl` component:
+
+```tsx
+function SimpleKeyControl({ nativeKey, currentKey, onChange, onNativeKeyOverride }) {
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  
+  return (
+    <div className="space-y-2">
+      <Label>Key</Label>
+      <KeyPicker value={currentKey} onChange={onChange} />
+      {nativeKey && currentKey && nativeKey !== currentKey && (
+        <p className="text-xs text-muted-foreground">
+          Chart is in {nativeKey} · transposing {formatSemitones(calculateSemitones(nativeKey, currentKey))}
+        </p>
+      )}
+      {showAdvanced ? (
+        <AdvancedTransposeControls ... />
+      ) : (
+        <button onClick={() => setShowAdvanced(true)} 
+          className="text-xs text-muted-foreground underline">
+          Manual override
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
+The underlying data model doesn't change — the component still writes `key`, `transposition`, and potentially native key to the track. Just the UI hierarchy changes.
+
+**Effort:** Low — UI refactor of one section within TrackSheet.  
+**Impact:** Reduces cognitive load for every track edit. Makes the app immediately intuitive for new musicians — which matters when the Brothers Lazaroff's band members try it for the first time.
 
 ---
 
-## Recommendation 9: Add Swipe Discoverability and Gesture Coaching
+## Recommendation 9: Live Auto-Follow Mode for Bands
+
+### Context: Tablet, band gig with multiple musicians
 
 **The Problem**
 
-The app relies heavily on gestures that have zero visual affordance:
+The Live Sync feature broadcasts the leader's current track index via Firestore, and followers see a notification toast: "Daniel moved to: Oseh Shalom — tap to jump." The notification appears for 6 seconds and requires an active tap to follow.
 
-- **SwipeToDelete** on setlist tracks: swipe left reveals a red trash zone. No visual hint this exists. The delete threshold (-80px) requires deliberate intent, which is good for safety but means casual exploration won't discover it.
-- **Swipe left/right in PerformerView** to navigate songs: no indicator, no edge animation, no "peek" of the next song.
-- **Drag-and-drop reordering** via GripVertical handles: the handles are tiny (see Rec 3) and there's no onboarding to explain they exist.
-- **Tap-to-toggle toolbar** in performance mode: the only feedback is the toolbar appearing/disappearing, which feels like a bug if you didn't intend it.
-- **Context menu (long-press)** on library items: provides "Add to Setlist (Coming Soon)" and "Digitize" options. Context menus are almost never discovered on mobile.
+For a congregational setting where musicians move at their own pace through a liturgical flow, this opt-in model makes sense. But for a band gig — where the bandleader calls songs and everyone needs to be on the same chart simultaneously — the tap-to-follow model creates unnecessary friction. Every song change requires every band member to look away from their chart, read the notification, and tap it. Multiply by 15 songs and 4 band members: that's 60 interruptions per set.
 
-These are well-implemented gestures, but the app assumes users already know they exist.
+Professional band apps (BandHelper, Setlist Live) offer an "auto-follow" mode where the follower's display automatically advances when the leader moves. This is what bands expect.
 
 **The Recommendation**
 
-Add a lightweight gesture coaching system:
+Add a "Follow" toggle to the Live Sync system. When enabled:
 
-- **First-time hints.** On first use of the setlist editor, briefly show a translucent overlay on the first track row: an animated hand swiping left with "Swipe to delete" text. Show for 2 seconds, then fade. Track shown state in localStorage.
-- **First-time performance hint.** On first enter to PerformerView with a queue, show a brief "Swipe ← → to navigate songs" toast or ghost animation. Once dismissed, never show again.
-- **Edge peek on song boundaries.** When the user scrolls to the very bottom of a chart page (and there's a next song in queue), show a subtle gradient edge with the next song's title peeking up from below. This hints at continuity and teaches swipe-to-advance.
-- **Drag handle visual improvement.** Replace the subtle GripVertical icon with a more prominent grab indicator (three horizontal lines, or a slightly raised "pill" that looks draggable). Add a subtle bounce animation on first render to draw attention.
-- **Replace context menus.** Move "Digitize" to a visible button on admin rows. For "Add to Setlist" (when implemented), use a visible action icon rather than a hidden long-press menu.
+- The follower's chart automatically advances to match the leader's position. No tap required.
+- A brief toast confirms the advance: "→ Oseh Shalom" (1.5 seconds, non-interactive, smaller than current notification).
+- The follower can temporarily "un-follow" by manually navigating to a different song (e.g., to review an upcoming chart). A small "Following [Leader Name]" indicator shows in the status strip (Rec 4), and tapping it re-syncs.
+- If the follower is mid-scroll within a chart when the leader advances, the advance happens with a brief delay (1 second) to avoid jarring mid-read jumps.
 
-**Implementation Scope**
+The existing opt-in notification remains the default. "Auto-follow" is a toggle in the setlist drawer or performance toolbar.
 
-- New `GestureCoach` component that checks localStorage for first-use flags
-- Lottie or CSS animation for swipe/drag hints (keep it lightweight)
-- Edge-peek component at bottom of PerformerView when near last scroll position
-- Replace ContextMenu on LibraryFileRow with visible inline actions for admin functions
-- Track coaching dismissal in localStorage (not Firestore — this is device-specific)
+**Implementation**
 
-**Impact:** Bridges the gap between powerful gesture-based interactions and user discovery. Reduces support questions ("how do I delete a track?" / "how do I go to the next song?"). Relatively low effort for significant UX improvement.
+Extend `LiveNotification` with an `autoFollow` state (stored in the music store or a dedicated live-sync store):
+
+```tsx
+useEffect(() => {
+  if (!liveState?.enabled || !autoFollow) return
+  
+  const newIndex = liveState.currentTrackIndex
+  if (newIndex !== lastIndexRef.current && newIndex !== queueIndex && playbackQueue[newIndex]) {
+    const delay = isUserScrolling ? 1000 : 200
+    const timer = setTimeout(() => {
+      router.push(`/perform/${playbackQueue[newIndex].fileId}`)
+      toast(`→ ${playbackQueue[newIndex].name}`, { duration: 1500 })
+    }, delay)
+    lastIndexRef.current = newIndex
+    return () => clearTimeout(timer)
+  }
+}, [liveState?.currentTrackIndex])
+```
+
+Add the toggle to `SetlistDrawer` when live mode is detected:
+```tsx
+{liveState?.enabled && (
+  <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+    <span className="text-sm font-medium">Auto-follow leader</span>
+    <Switch checked={autoFollow} onCheckedChange={setAutoFollow} />
+  </div>
+)}
+```
+
+**Effort:** Medium — extends existing live sync infrastructure, no schema changes.  
+**Impact:** Makes CentralReform.live viable as a band performance tool, not just a congregational one. This is the feature that would make the Brothers Lazaroff say "we could actually use this for our gigs."
 
 ---
 
-## Recommendation 10: Add Offline-Aware State and Connectivity Feedback Throughout
+## Recommendation 10: Offline Confidence at the Venue
+
+### Context: Tablet on music stand, venue WiFi is unreliable
 
 **The Problem**
 
-The app has excellent offline infrastructure (IndexedDB cache, LRU eviction, background prefetching, service worker) but the user-facing experience doesn't communicate offline state well:
+The offline infrastructure is genuinely impressive — IndexedDB with LRU eviction, background prefetching, service worker caching, typed schemas with versioned migrations. But the user-facing experience doesn't communicate offline state effectively, and critically, the performance layout (`/perform/layout.tsx`) doesn't include the `OfflineIndicator` at all.
 
-1. **Library rows show a tiny CloudOff icon** (w-3 h-3) for cached files. On a phone screen, these are nearly invisible and don't communicate "you can use this offline" clearly.
-2. **The setlist UpcomingSetlistCard** shows "Offline ready" / "Partial" badges but they're small text in the card footer.
-3. **During performance, there's no indication whether you're online or offline.** If WiFi drops at the venue (common), the musician doesn't know if their charts are loading from cache or failing silently.
-4. **The OfflineIndicator** exists in the main layout but not in the perform layout (which is a separate layout group). So performance mode — the context where offline matters most — has no offline indication.
-5. **Background prefetching** runs silently. There's no progress indicator showing "downloading charts for Friday's service."
-6. **The "Download for Offline" button** in the overflow menu doesn't show progress or confirm completion.
+Specific gaps:
+
+1. **Performance mode has zero offline indication.** The `OfflineIndicator` component lives in `(main)/layout.tsx` but not in `perform/layout.tsx`. If WiFi drops at the venue, the musician has no idea whether their charts are loading from cache or failing.
+
+2. **Pre-service prefetch is silent.** `BackgroundPrefetcher` downloads charts ahead of time but shows no progress. A musician can't tell if Friday night's charts are cached and ready.
+
+3. **Download-for-offline is fire-and-forget.** The overflow menu item "Download for Offline" triggers a download but shows no progress and requires reopening the menu to check status.
+
+4. **No auto-prefetch before service.** A musician has to manually trigger "Download for Offline." There's no automatic "it's 30 minutes before your gig, let me cache everything" behavior.
+
+For a venue setting, confidence matters as much as capability. A musician who doesn't *know* they're offline-safe will worry about it all service.
 
 **The Recommendation**
 
-Create a consistent offline-awareness layer:
+**A. Add offline indication to performance mode.** Include a connection-aware banner in `perform/layout.tsx`. When offline, show a thin bar at the top: "Offline · charts from cache" in green (if all cached) or amber (if some missing). When online, show nothing. This reassures rather than alarms.
 
-- **Connection banner in perform layout.** When offline is detected during performance, show a thin banner: "Offline — charts loaded from cache" (green if all cached, amber if some missing). This reassures rather than alarms.
-- **Prefetch progress indicator.** On the dashboard, when BackgroundPrefetcher is active, show a subtle progress bar or "Downloading 3/8 charts for Friday" indicator below the hero card.
-- **Bigger offline badges in library.** Replace the tiny CloudOff icon with a more visible indicator — perhaps a green dot on the file icon, or a filled cloud-check icon at a readable size.
-- **Download status in setlist editor.** The current "Download for Offline" overflow menu item should show actual progress (downloading 3/8) and change to a checkmark "All charts cached" when complete, without requiring the user to reopen the menu.
-- **Pre-service offline check.** 30 minutes before a setlist's event time, if the device has WiFi, automatically trigger a prefetch of any uncached charts. Show a notification if charts couldn't be cached.
+**B. Pre-gig readiness indicator.** On the dashboard hero card for tonight's setlist, surface the existing `offlineStatus` check more prominently: "✓ All 8 charts cached" or "⚠ 2 charts not cached — tap to download." The `UpcomingSetlistCard` already runs this check — it just renders the result as small footer text.
 
-**Implementation Scope**
+**C. Auto-prefetch before service.** In `BackgroundPrefetcher`, if an upcoming setlist's event time is within 2 hours and the device has WiFi, automatically trigger a prefetch of any uncached charts. Show a progress toast: "Caching charts for tonight... 5/8."
 
-- Add `OfflineIndicator` to `perform/layout.tsx`
-- New `PrefetchProgress` component for dashboard (reads from `useOffline` hook or a new prefetch store)
-- Upgrade library offline badge size and visibility
-- Add progress tracking to the download-for-offline flow (track per-file status in `offline-store`)
-- Add pre-service auto-prefetch in BackgroundPrefetcher (compare `eventDate` with `Date.now()`)
+**D. Download progress.** When "Download for Offline" is triggered manually, use progressive toasts: `toast.loading("Downloading 3/8 charts...")` → `toast.success("All charts cached ✓")`.
 
-**Impact:** Transforms offline from a hidden safety net into a visible, reassuring feature. Musicians at venues with bad WiFi (most synagogues) will trust the app more. The pre-service auto-prefetch prevents the "oh no my charts won't load" panic moment.
+**Implementation**
+
+A: Add `<OfflineIndicator variant="performance" />` to `perform/layout.tsx`. The "performance" variant renders as a slim top banner instead of a floating notification.
+
+B: Extend the hero card to surface `offlineStatus` when it's not "full":
+```tsx
+{offlineStatus === 'partial' && (
+  <button onClick={handleDownload} className="text-amber-400 text-xs flex items-center gap-1">
+    <CloudOff className="w-3 h-3" /> Some charts not cached — tap to download
+  </button>
+)}
+```
+
+C: In `BackgroundPrefetcher`, add a time-based trigger:
+```tsx
+useEffect(() => {
+  const interval = setInterval(async () => {
+    const upcoming = getImminentSetlists(2 * 60 * 60 * 1000) // within 2 hours
+    for (const setlist of upcoming) {
+      const uncached = await getUncachedFileIds(setlist.tracks)
+      if (uncached.length > 0 && navigator.onLine) {
+        await prefetchFiles(uncached)
+      }
+    }
+  }, 5 * 60 * 1000) // check every 5 minutes
+  return () => clearInterval(interval)
+}, [])
+```
+
+D: Wrap `downloadSetlist()` calls with toast progress.
+
+**Effort:** Medium across four related changes.  
+**Impact:** Transforms offline from a hidden safety net into visible confidence. The auto-prefetch prevents the "oh no, my charts won't load" panic moment that can happen at any venue.
 
 ---
 
-## Priority Matrix
+## Priority and Sequencing Plan
 
-| # | Recommendation | Effort | Impact | Priority |
-|---|----------------|--------|--------|----------|
-| 1 | Surface Perform as primary action | Low | Critical | **P0** |
-| 3 | Fix safe area + touch targets | Low | High | **P0** |
-| 2 | Unify performance experiences | Medium | High | **P1** |
-| 4 | Persistent mini-bar in performance | Medium | High | **P1** |
-| 8 | Simplify key/transpose UX | Low | Medium | **P1** |
-| 5 | Library smart filters | Medium | High | **P2** |
-| 6 | Redesign performance setlist drawer | Medium | Medium | **P2** |
-| 9 | Gesture coaching/discoverability | Low | Medium | **P2** |
-| 10 | Offline-aware state feedback | Medium | Medium | **P2** |
-| 7 | Mobile-friendly AI chat panel | High | Medium | **P3** |
+### Phase 1: Gig-Ready (Ship this week)
 
-**Recommendation:** Start with P0 items (Recs 1 and 3) — they're the highest-impact, lowest-effort changes. A senior developer reviewing this codebase would flag both immediately. Then move to P1 items which reshape the core performance experience. P2 items are quality-of-life improvements that compound over time. P3 (AI chat redesign) is the largest effort and can wait until the core flows are solid.
+Low-effort, high-impact changes that make the tablet performance experience solid for real gigs immediately.
+
+| # | Recommendation | Effort | What It Fixes |
+|---|---------------|--------|---------------|
+| 1 | One-tap gig launch | ~2 hours | 3-tap friction to start performing |
+| 4 | Always-visible song context | ~1 hour | "Where am I?" during performance |
+| 5 | Wake lock recovery | ~30 min | Screen going dark mid-service |
+| 3 | Instant page turns | ~2 hours | Foot pedal usability for professional musicians |
+
+**Total: ~1 day of work. Immediately improves every tablet performance session.**
+
+### Phase 2: Professional Polish (Ship within 2 weeks)
+
+Reshape the core experience for serious musicians and bands.
+
+| # | Recommendation | Effort | What It Fixes |
+|---|---------------|--------|---------------|
+| 2 | Unify performance modes | ~1 day | Two divergent UIs; broken foot pedals in path B |
+| 6 | Redesign setlist drawer | ~1 day | Flat list with no structure for mid-service jumps |
+| 8 | Simplify key/transpose | ~3 hours | Three interconnected controls for one decision |
+
+**Total: ~2.5 days. After this, the performance experience is ready for professional musicians.**
+
+### Phase 3: Platform Growth (Ship within a month)
+
+Make the planning experience excellent and add band-specific features.
+
+| # | Recommendation | Effort | What It Fixes |
+|---|---------------|--------|---------------|
+| 7 | Library filters | ~2 days | No way to browse by key, topic, recency |
+| 9 | Live auto-follow | ~2 days | Manual tap-to-follow for every song change |
+| 10 | Offline confidence | ~2 days | Users can't tell if they're offline-safe |
+
+**Total: ~6 days. After this, the app serves both congregational and professional band use cases.**
+
+---
+
+## What a Senior Engineer Will See
+
+The recommendations above are ordered by user impact, but here's what a Meta-level engineer reviewing the PR sequence will appreciate:
+
+**Phase 1 commits are surgical.** Four small, well-scoped changes. No refactors. No new abstractions. Each one has a clear before/after and is independently shippable. The wake lock fix is literally 10 lines. The status strip is a single new component with no dependencies.
+
+**Phase 2's unification (Rec 2) is the big architectural win.** Deleting `/perform/setlist/[id]/page.tsx` (200 lines) and replacing it with a 40-line redirect eliminates an entire class of bugs (inconsistent behavior between entry paths). It's the kind of change a senior engineer loves to review: net negative lines, increased consistency, clearer mental model. The `QueueItem` already has the `trackType` field — the infrastructure was built for this unification, it just wasn't completed.
+
+**Phase 3 introduces new capabilities without new complexity.** Library filters are client-side (no API changes). Live follow mode extends existing Firestore listeners. Offline confidence surfaces data the system already tracks. None of these require schema migrations, new services, or infrastructure changes.
+
+**What's *not* in this plan** is as important as what is. I'm not recommending: a bottom navigation redesign, a new component library, a state management migration, a CSS framework change, or any backend work. The architecture is sound. These recommendations work *with* the existing patterns, not against them.
+
+---
+
+## What Professional Musicians Will Feel
+
+After Phase 1 + 2, a musician using this at a gig will experience:
+
+1. **Open the app on their iPad.** The hero card says "Shabbat Evening · starts in 20 min." They tap "Perform." First chart appears instantly.
+
+2. **They play through the opening songs.** Foot pedal taps advance pages instantly — no scroll animation, just snap. At the bottom of a chart, the pedal advances to the next song. A small status strip in the corner says "3/12 · Shalom Rav · in G."
+
+3. **The rabbi skips a reading.** The musician opens the setlist drawer. It shows sections: OPENING → TORAH SERVICE → CLOSING. They tap "CLOSING" and see the closing songs immediately. One more tap and they're on Oseh Shalom.
+
+4. **The screen never goes dark.** Wake lock recovers automatically after an iOS notification. The tablet stays lit for the full 90-minute service.
+
+After Phase 3, a band using this at a gig will additionally experience:
+
+5. **Band members have auto-follow on.** When the leader advances, their iPads switch to the right chart automatically. A brief "→ Oseh Shalom" confirms the transition.
+
+6. **Before the gig, the app auto-cached everything.** A green checkmark on the hero card says "All charts ready." WiFi goes down during the set. Nobody notices.
+
+That's the experience of an app that respects musicians' craft and understands that on stage, every second and every tap counts.
