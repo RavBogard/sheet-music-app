@@ -48,15 +48,27 @@
 
 ### Dead Code Removed
 
+- Unused `_showBars` callback in PerformerView (replaced by `toggleBars`)
+- Dead `onSetlist` prop chain across 4 files: `perform/[id]/page.tsx` → `PerformerView` / `FlowItemView` → `PerformanceToolbar` (was destructured as `_onSetlist`, never called — SetlistDrawer manages its own open/close)
 - Unused `useCallback` wrapper for `setAutoFollow` in LiveNotification (replaced with event-based sync)
 - Placeholder `// ... imports` comment in SmartScoreViewer
 - Unused imports flagged by ESLint (all resolved)
+- Trailing blank lines in `perform/[id]/page.tsx`, `RehearsalToolbar.tsx`, `SongChartsLibrary.tsx`
 
 ### Consistency Fixes
 
 - Import quotes: standardized to double quotes throughout (was mixed single/double in `use-wake-lock.ts`)
 - Semicolons: removed from `use-wake-lock.ts` to match codebase convention (no semicolons)
 - `"use client"` directive: consistent across all client components
+- Template literal classNames converted to `cn()` in AutoFollowToggle for consistency
+
+### Accessibility Improvements
+
+- Added `aria-label` to Audio monitor buttons (mobile + desktop) in PerformanceToolbar
+- Added `aria-label` and `aria-pressed` to AutoFollowToggle button
+- Added `role="switch"` and `aria-checked` to auto-follow toggle visual element
+- PerformanceStatusStrip uses `role="status"` with descriptive `aria-label`
+- LiveNotification auto-follow confirmation uses `role="status"`, manual uses `role="alert"` with full `aria-label`
 
 ---
 
@@ -131,7 +143,10 @@ Pure function. Client-side only. No API changes. Filters: key (multi-select), to
 |------|--------|
 | `src/hooks/use-wake-lock.ts` | Full rewrite: shouldLockRef intent tracking + visibility recovery |
 | `src/hooks/use-upcoming-prep.ts` | Pure useMemo: minute-granularity timer replaces Date.now() |
-| `src/components/views/PerformerView.tsx` | Status strip integration, page-boundary snapping |
+| `src/components/views/PerformerView.tsx` | Status strip integration, page-boundary snapping, removed dead `_showBars` + dead `onSetlist` prop |
+| `src/components/performance/PerformanceToolbar.tsx` | Full toolbar with tools, removed dead `onSetlist` prop, added aria-labels |
+| `src/components/performance/FlowItemView.tsx` | Renders non-song queue items, removed dead `onSetlist` prop |
+| `src/components/performance/LiveNotification.tsx` | Auto-follow toggle with cn(), aria-pressed, role="switch" |
 | `src/components/performance/SetlistDrawer.tsx` | Section grouping, quick-jump chips, auto-scroll |
 | `src/components/setlist/v2/TrackSheet.tsx` | Simplified key/transpose UI |
 | `src/components/music/TransposerMenu.tsx` | Auth-based verifier name (was hardcoded) |
