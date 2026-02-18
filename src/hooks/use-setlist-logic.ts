@@ -266,15 +266,14 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const deleteTrack = (id: string) => {
         if (!canEdit) return
 
-        // No need for toast undo action if we have real undo
-        // But we can keep it as a redundant quick action or remove it. 
-        // Removing toast undo to avoid conflicting state logic.
-
         setTracks(prev => {
             addToHistory(prev)
             return prev.filter(t => t.id !== id)
         })
-        toast("Track deleted")
+        toast("Track deleted", {
+            action: { label: "Undo", onClick: () => undo() },
+            duration: 5000,
+        })
     }
 
     const matchFile = (trackId: string, fileId: string, fileName?: string) => {

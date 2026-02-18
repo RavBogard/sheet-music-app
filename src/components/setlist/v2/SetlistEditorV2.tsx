@@ -38,10 +38,13 @@ import { AddBar } from "./AddBar"
 // Shared components (kept from v1)
 import { PrintModal } from "../PrintModal"
 import { PublishDialog } from "../PublishDialog"
+import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
 import { NamePrompt } from "../modals/NamePrompt"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
+import { createSetlistService } from "@/lib/setlist-firebase"
+import { toast } from "sonner"
 
 interface SetlistEditorV2Props {
     setlistId?: string
@@ -157,6 +160,39 @@ export function SetlistEditorV2({
     const [showPrintModal, setShowPrintModal] = useState(false)
     const [showPublishDialog, setShowPublishDialog] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
+
+    // Service for delete/duplicate operations
+    const editorService = useMemo(
+        () => user ? createSetlistService(user.uid, user.displayName) : null,
+        [user]
+    )
+
+    const handleDeleteSetlist = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        try {
+            await editorService.deleteSetlist(setlistId, isPublic)
+            toast.success("Setlist deleted")
+            onBack()
+        } catch {
+            toast.error("Failed to delete setlist")
+        }
+        setShowDeleteConfirm(false)
+    }, [editorService, setlistId, isPublic, onBack])
+
+    const handleDuplicateSetlist = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        try {
+            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi } as Parameters<typeof editorService.copyToPersonal>[1]
+            const newId = await editorService.copyToPersonal(setlistId, currentSetlist)
+            toast.success("Setlist duplicated!")
+            router.push(`/setlists/${newId}`)
+        } catch {
+            toast.error("Failed to duplicate setlist")
+        }
+        setShowDuplicateConfirm(false)
+    }, [editorService, setlistId, name, tracks, isPublic, rabbi, router])
 
     // Debounce empty state to prevent flash during AI batch edits
     const [showEmpty, setShowEmpty] = useState(tracks.length === 0)
@@ -270,6 +306,8 @@ export function SetlistEditorV2({
                         onSync={() => syncSetlist(tracks)}
                         onOpenAI={() => useChatStore.getState().toggle()}
                         onToggleLive={isLeader ? handleToggleLive : undefined}
+                        onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
+                        onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
                         isPublic={isPublic}
                         isLeader={isLeader}
                         canEdit={canEdit}
@@ -379,6 +417,20 @@ export function SetlistEditorV2({
                     onPublished={() => setIsPublic(true)}
                 />
             )}
+
+            <DeleteSetlistDialog
+                open={showDeleteConfirm}
+                onOpenChange={setShowDeleteConfirm}
+                setlistName={name}
+                onConfirm={handleDeleteSetlist}
+            />
+
+            <DuplicateSetlistDialog
+                open={showDuplicateConfirm}
+                onOpenChange={setShowDuplicateConfirm}
+                setlistName={name}
+                onConfirm={handleDuplicateSetlist}
+            />
         </div>
     )
 }

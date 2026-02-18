@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion"
+import { useDndContext } from "@dnd-kit/core"
 import { Trash2 } from "lucide-react"
 
 interface SwipeToDeleteProps {
@@ -15,12 +16,14 @@ const DELETE_THRESHOLD = -80
 export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProps) {
     const x = useMotionValue(0)
     const [swiping, setSwiping] = useState(false)
+    const { active } = useDndContext()
 
     // Red background opacity based on swipe distance
     const bgOpacity = useTransform(x, [-120, -40, 0], [1, 0.5, 0])
     const iconScale = useTransform(x, [-120, -60, 0], [1.2, 0.8, 0.5])
 
-    if (!enabled) {
+    // Disable swipe when not in edit mode or when a dnd-kit drag is active
+    if (!enabled || active) {
         return <>{children}</>
     }
 
@@ -52,6 +55,7 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
                 onDragStart={() => setSwiping(true)}
                 onDragEnd={handleDragEnd}
                 style={{ x }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className={`relative bg-background ${swiping ? "z-10" : ""}`}
             >
                 {children}
