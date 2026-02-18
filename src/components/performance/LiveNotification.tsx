@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLiveState } from "@/hooks/use-setlist-presence"
 import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
@@ -18,6 +18,7 @@ function getAutoFollow(): boolean {
 function setAutoFollowStorage(value: boolean) {
     if (typeof window === 'undefined') return
     localStorage.setItem('live-auto-follow', String(value))
+    window.dispatchEvent(new CustomEvent('auto-follow-changed'))
 }
 
 /**
@@ -36,6 +37,13 @@ export function LiveNotification({ setlistId }: LiveNotificationProps) {
     const { playbackQueue, queueIndex } = useMusicStore()
     const [autoFollow, setAutoFollowState] = useState(getAutoFollow)
 
+    // Sync auto-follow preference when toggled in the setlist drawer
+    useEffect(() => {
+        const sync = () => setAutoFollowState(getAutoFollow())
+        window.addEventListener('auto-follow-changed', sync)
+        return () => window.removeEventListener('auto-follow-changed', sync)
+    }, [])
+
     const [notification, setNotification] = useState<{
         trackName: string
         trackIndex: number
@@ -43,11 +51,6 @@ export function LiveNotification({ setlistId }: LiveNotificationProps) {
         isAutoFollow: boolean
     } | null>(null)
     const lastIndexRef = useRef<number | null>(null)
-
-    const setAutoFollow = useCallback((value: boolean) => {
-        setAutoFollowState(value)
-        setAutoFollowStorage(value)
-    }, [])
 
     useEffect(() => {
         if (!liveState?.enabled) {

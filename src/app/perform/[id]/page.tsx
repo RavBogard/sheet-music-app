@@ -13,7 +13,6 @@ import { useAuth } from "@/lib/auth-context"
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
 import { LiveNotification } from "@/components/performance/LiveNotification"
 import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
-import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
 import { FlowItemView } from "@/components/performance/FlowItemView"
 
 import { parseFileId } from "@/lib/utils"

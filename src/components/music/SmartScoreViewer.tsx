@@ -5,8 +5,6 @@ import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 import { Loader2, Music2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { Card } from '@/components/ui/card'
-
-// ... imports
 import { getOfflineFile } from '@/lib/offline-store'
 import { logger } from "@/lib/logger"
 

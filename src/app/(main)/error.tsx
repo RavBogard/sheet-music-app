@@ -3,10 +3,10 @@
 import { Button } from "@/components/ui/button"
 
 export default function MainError({
-    error,
+    _error,
     reset,
 }: {
-    error: Error & { digest?: string }
+    _error: Error & { digest?: string }
     reset: () => void
 }) {
     return (

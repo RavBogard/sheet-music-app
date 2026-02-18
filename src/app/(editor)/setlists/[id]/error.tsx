@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
 export default function SetlistEditorError({
-    error,
+    _error,
     reset,
 }: {
-    error: Error & { digest?: string }
+    _error: Error & { digest?: string }
     reset: () => void
 }) {
     const router = useRouter()

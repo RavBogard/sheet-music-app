@@ -174,10 +174,6 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         }
     }
 
-    const combinedItems = tab === "audio"
-        ? [...folders, ...audioFiles]
-        : [...folders, ...files]
-
     // Song usage data
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
 
@@ -186,6 +182,10 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         () => applyLibraryFilters(rawFiles, libraryFilters, usageMap),
         [rawFiles, libraryFilters, usageMap]
     )
+
+    const combinedItems = tab === "audio"
+        ? [...folders, ...audioFiles]
+        : [...folders, ...files]
 
     useEffect(() => {
         const fileIds = combinedItems

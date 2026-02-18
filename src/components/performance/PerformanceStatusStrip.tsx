@@ -10,7 +10,7 @@ import { useMusicStore } from "@/lib/store"
  * pointer-events-none ensures it never interferes with tap/swipe gestures.
  */
 export function PerformanceStatusStrip() {
-    const { playbackQueue, queueIndex, transposition } = useMusicStore()
+    const { playbackQueue, queueIndex } = useMusicStore()
     const current = playbackQueue[queueIndex]
 
     // Only show when there's a queue with multiple songs
@@ -27,7 +27,7 @@ export function PerformanceStatusStrip() {
         >
             <span className="tabular-nums">{queueIndex + 1}/{playbackQueue.length}</span>
             <span className="truncate max-w-[200px]">{current.name}</span>
-            {current.key && transposition !== 0 && (
+            {current.key && (
                 <span className="text-violet-300 font-semibold">in {current.key}</span>
             )}
         </div>

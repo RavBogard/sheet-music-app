@@ -7,8 +7,8 @@ import { ChevronUp, ChevronDown, RotateCcw, Pencil, CheckCircle2 } from "lucide-
 import { cn } from "@/lib/utils"
 import { calculateCapo, estimateKey, transposeChord } from "@/lib/music-math"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
-import { loadLibraryMeta, saveVerification } from "@/lib/chord-cache"
 import { useAuth } from "@/lib/auth-context"
+import { loadLibraryMeta, saveVerification } from "@/lib/chord-cache"
 
 // Common guitar-friendly shapes for the "Play As" grid
 const SHAPES = [
@@ -342,6 +342,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
  */
 export function ChordEditBar() {
     const { isEditingChords, setEditingChords, playbackQueue, queueIndex, fileUrl } = useMusicStore()
+    const { user } = useAuth()
 
     if (!isEditingChords) return null
 
@@ -359,8 +360,8 @@ export function ChordEditBar() {
 
     const handleVerifyAndDone = () => {
         if (fileId) {
-            // TODO: Get actual user name from auth context
-            saveVerification(fileId, 'Daniel')
+            const verifierName = user?.displayName || user?.email || 'Unknown'
+            saveVerification(fileId, verifierName)
         }
         setEditingChords(false)
     }

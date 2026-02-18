@@ -39,6 +39,13 @@ export function useUpcomingPrep() {
     const [songPrefs, setSongPrefs] = useState<Record<string, SongPref>>({})
     const [lastVisitedAt, setLastVisitedAt] = useState<Date | null>(null)
 
+    // Minute-granularity timestamp for urgency calculations (pure memo dep)
+    const [nowMinute, setNowMinute] = useState(() => Math.floor(Date.now() / 60_000) * 60_000)
+    useEffect(() => {
+        const iv = setInterval(() => setNowMinute(Math.floor(Date.now() / 60_000) * 60_000), 60_000)
+        return () => clearInterval(iv)
+    }, [])
+
     // Track last visit time
     useEffect(() => {
         if (!user) return
@@ -101,8 +108,6 @@ export function useUpcomingPrep() {
 
     // Build enriched list
     const enriched: UpcomingSetlistWithPrep[] = useMemo(() => {
-        const now = Date.now()
-
         return setlists.map(s => {
             const tracks = (s.tracks || []).filter(t => t.fileId && t.type !== 'header')
             const total = tracks.length
@@ -117,7 +122,7 @@ export function useUpcomingPrep() {
             const percent = total > 0 ? Math.round((viewed / total) * 100) : 100
 
             const eventDate = toDate(s.eventDate)
-            const msUntil = eventDate ? eventDate.getTime() - now : null
+            const msUntil = eventDate ? eventDate.getTime() - nowMinute : null
             const daysUntil = msUntil !== null ? Math.ceil(msUntil / (1000 * 60 * 60 * 24)) : null
             const hoursUntil = msUntil !== null ? Math.round(msUntil / (1000 * 60 * 60)) : null
 
@@ -155,7 +160,7 @@ export function useUpcomingPrep() {
                 viewedFileIds: viewedIds,
             }
         })
-    }, [setlists, songPrefs, lastVisitedAt])
+    }, [setlists, songPrefs, lastVisitedAt, nowMinute])
 
     return {
         items: enriched,
