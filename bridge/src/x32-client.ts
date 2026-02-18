@@ -413,45 +413,47 @@ export class X32Client extends EventEmitter {
     // ─── Full State Sync ───
 
     async syncFullState(monitorBuses: number[]): Promise<void> {
-        console.log("[X32] Syncing full mixer state...")
+        const start = Date.now()
+        console.log("[X32] Syncing full mixer state (parallel)...")
 
-        // Read all 32 channel names
-        this.channels = []
-        for (let ch = 1; ch <= 32; ch++) {
-            try {
-                const name = await this.queryChannelName(ch)
-                this.channels.push({ index: ch, name, color: 0 })
-            } catch {
-                this.channels.push({ index: ch, name: `Ch ${ch}`, color: 0 })
-            }
-        }
+        // ── Channel names: all 32 in parallel ──
+        const channelPromises = Array.from({ length: 32 }, (_, i) => {
+            const ch = i + 1
+            return this.queryChannelName(ch)
+                .then(name => ({ index: ch, name, color: 0 }))
+                .catch(() => ({ index: ch, name: `Ch ${ch}`, color: 0 }))
+        })
+        this.channels = await Promise.all(channelPromises)
         console.log(`[X32] Read ${this.channels.length} channel names`)
 
-        // Read bus state for monitor buses
-        this.buses = []
-        for (const busIdx of monitorBuses) {
+        // ── Bus state: all buses + their sends in parallel ──
+        const busPromises = monitorBuses.map(async (busIdx) => {
             try {
-                const name = await this.queryBusName(busIdx)
-                const fader = await this.queryBusFader(busIdx)
+                // Bus name + fader in parallel
+                const [name, fader] = await Promise.all([
+                    this.queryBusName(busIdx).catch(() => `Bus ${busIdx}`),
+                    this.queryBusFader(busIdx).catch(() => 0),
+                ])
 
-                // Read all 32 channel sends for this bus
-                const sends: BusSend[] = []
-                for (let ch = 1; ch <= 32; ch++) {
-                    try {
-                        const level = await this.querySendLevel(ch, busIdx)
-                        const on = await this.querySendOn(ch, busIdx)
-                        sends.push({ channelIndex: ch, level, on })
-                    } catch {
-                        sends.push({ channelIndex: ch, level: 0, on: false })
-                    }
-                }
+                // All 32 channel sends: level + on for each channel in parallel
+                const sendPromises = Array.from({ length: 32 }, (_, i) => {
+                    const ch = i + 1
+                    return Promise.all([
+                        this.querySendLevel(ch, busIdx).catch(() => 0),
+                        this.querySendOn(ch, busIdx).catch(() => false),
+                    ]).then(([level, on]) => ({ channelIndex: ch, level, on }))
+                })
+                const sends: BusSend[] = await Promise.all(sendPromises)
 
-                this.buses.push({ index: busIdx, name, fader, sends })
+                return { index: busIdx, name, fader, sends }
             } catch {
-                this.buses.push({ index: busIdx, name: `Bus ${busIdx}`, fader: 0, sends: [] })
+                return { index: busIdx, name: `Bus ${busIdx}`, fader: 0, sends: [] as BusSend[] }
             }
-        }
-        console.log(`[X32] Read ${this.buses.length} bus states with send levels`)
+        })
+        this.buses = await Promise.all(busPromises)
+
+        const elapsed = Date.now() - start
+        console.log(`[X32] Read ${this.buses.length} bus states with send levels (${elapsed}ms)`)
         this.emit("state_synced")
     }
 

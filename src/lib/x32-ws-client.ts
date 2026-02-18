@@ -32,6 +32,7 @@ export class X32WSClient {
     private maxReconnectAttempts = 20
     private reconnectTimeout: ReturnType<typeof setTimeout> | null = null
     private intentionalClose = false
+    private wakeHandler: (() => void) | null = null
 
     constructor(options: X32WSClientOptions) {
         this.options = options
@@ -41,6 +42,9 @@ export class X32WSClient {
         this.url = bridgeUrl
         this.intentionalClose = false
         this.options.onStatusChange("connecting")
+
+        // Listen for iPad wake events — reconnect immediately when screen comes back
+        this.startWakeDetection()
 
         return new Promise((resolve, reject) => {
             try {
@@ -104,6 +108,7 @@ export class X32WSClient {
 
     disconnect(): void {
         this.intentionalClose = true
+        this.stopWakeDetection()
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout)
             this.reconnectTimeout = null
@@ -160,8 +165,10 @@ export class X32WSClient {
             return
         }
 
-        // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
+        // First attempt is instant (0ms), then exponential backoff: 1s, 2s, 4s, max 30s
+        const delay = this.reconnectAttempts === 0
+            ? 0
+            : Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000)
         this.reconnectAttempts++
 
         logger.info(`[Monitor WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
@@ -171,6 +178,41 @@ export class X32WSClient {
                 // Will auto-retry via onclose
             })
         }, delay)
+    }
+
+    // ─── Wake Detection ───────────────────────────────────────
+    // iPads silently kill WebSockets when the screen turns off.
+    // The visibilitychange event fires immediately on wake, so we
+    // can proactively reconnect instead of waiting for a failed write.
+
+    private startWakeDetection(): void {
+        if (typeof document === "undefined") return
+        this.stopWakeDetection()
+
+        this.wakeHandler = () => {
+            if (document.visibilityState !== "visible") return
+            if (this.intentionalClose) return
+
+            // Check if the WebSocket is dead (CLOSED or CLOSING)
+            if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
+                logger.info("[Monitor WS] Wake detected — reconnecting immediately")
+                this.reconnectAttempts = 0 // Reset backoff for fresh start
+                if (this.reconnectTimeout) {
+                    clearTimeout(this.reconnectTimeout)
+                    this.reconnectTimeout = null
+                }
+                this.connect(this.url).catch(() => {})
+            }
+        }
+
+        document.addEventListener("visibilitychange", this.wakeHandler)
+    }
+
+    private stopWakeDetection(): void {
+        if (this.wakeHandler && typeof document !== "undefined") {
+            document.removeEventListener("visibilitychange", this.wakeHandler)
+            this.wakeHandler = null
+        }
     }
 
     // ─── Control Methods (called by UI fader interactions) ───
