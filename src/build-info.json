@@ -1,9 +1,10 @@
 {
   "version": "4.2.0",
-  "commit": "7fea037",
+  "commit": "0d6ee4a",
   "branch": "master",
   "buildDate": "2/18/2026",
   "changelog": [
+    "4.2.0 - feat: auto-versioning from git tags + instant QR code generation",
     "4.2.0 - fix: human-readable error messages in bridge setup code activation",
     "4.2.0 - fix: harden setup code flow — transaction, crypto, http support, index",
     "4.2.0 - feat: setup code flow eliminates Firebase Console from bridge install",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { SetlistTrack, TrackType } from "@/types/models"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, FileText, Music, Minus, Plus, ExternalLink } from "lucide-react"
+import { Trash2, FileText, Music, Minus, Plus, ExternalLink, Check } from "lucide-react"
 import { AudioFilePicker } from "../AudioFilePicker"
 import { TapTempoButton } from "@/components/ui/tap-tempo-button"
 import { KeyPicker } from "@/components/ui/key-picker"
@@ -63,6 +63,8 @@ export function TrackSheet({
     const [nativeKey, setNativeKey] = useState<string | null>(null)
     const [nativeKeySource, setNativeKeySource] = useState<string | null>(null)
     const [editingNativeKey, setEditingNativeKey] = useState(false)
+    const [saved, setSaved] = useState(false)
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Sync local state when track changes
     useEffect(() => {
@@ -135,7 +137,7 @@ export function TrackSheet({
     const isFlowItem = !isSong && !isHeader
 
     // Auto-save on change (debounced via parent's auto-save)
-    const commitChanges = () => {
+    const commitChanges = useCallback(() => {
         if (!track) return
         const data: Partial<SetlistTrack> = { title }
 
@@ -156,7 +158,22 @@ export function TrackSheet({
         }
 
         onUpdate(track.id, data)
-    }
+
+        // Flash save indicator
+        setSaved(true)
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = setTimeout(() => setSaved(false), 1500)
+    }, [track, title, trackType, isSong, isFlowItem, key, bpm, leadMusician, notes, transposition, performer, estimatedMinutes, description, onUpdate])
+
+    // Auto-save when any field loses focus
+    const handleBlur = useCallback(() => {
+        commitChanges()
+    }, [commitChanges])
+
+    // Cleanup save timer
+    useEffect(() => {
+        return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
+    }, [])
 
     const handleClose = () => {
         commitChanges()
@@ -179,9 +196,9 @@ export function TrackSheet({
                 <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    onBlur={handleBlur}
                     className="text-lg font-medium bg-muted/50 border-0 focus-visible:ring-1"
                     placeholder={isHeader ? "SECTION NAME" : "Track title"}
-                    autoFocus
                 />
             </div>
 
@@ -221,6 +238,7 @@ export function TrackSheet({
                                 <Input
                                     value={leadMusician}
                                     onChange={(e) => setLeadMusician(e.target.value)}
+                                    onBlur={handleBlur}
                                     className="bg-muted/50 border-0"
                                     placeholder="Karen"
                                 />
@@ -312,6 +330,7 @@ export function TrackSheet({
                                 type="number"
                                 value={bpm}
                                 onChange={(e) => setBpm(e.target.value)}
+                                onBlur={handleBlur}
                                 placeholder="120"
                                 className="bg-muted/50 border-0 w-24"
                             />
@@ -328,6 +347,7 @@ export function TrackSheet({
                         <Textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
+                            onBlur={handleBlur}
                             className="bg-muted/50 border-0 min-h-[60px] resize-none"
                             placeholder="Performance notes..."
                         />
@@ -388,6 +408,7 @@ export function TrackSheet({
                                 <Input
                                     value={performer}
                                     onChange={(e) => setPerformer(e.target.value)}
+                                    onBlur={handleBlur}
                                     className="bg-muted/50 border-0"
                                     placeholder="Rabbi, Cantor..."
                                 />
@@ -399,6 +420,7 @@ export function TrackSheet({
                                 type="number"
                                 value={estimatedMinutes}
                                 onChange={(e) => setEstimatedMinutes(e.target.value)}
+                                onBlur={handleBlur}
                                 className="bg-muted/50 border-0"
                                 placeholder="5"
                             />
@@ -411,6 +433,7 @@ export function TrackSheet({
                             <Textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                onBlur={handleBlur}
                                 className="bg-muted/50 border-0 min-h-[60px] resize-none"
                                 placeholder={trackType === "note" ? "Note text..." : "Description..."}
                             />
@@ -440,9 +463,15 @@ export function TrackSheet({
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="text-lg">
-                            {isHeader ? "Edit Section" : isSong ? "Edit Song" : `Edit ${trackType.charAt(0).toUpperCase() + trackType.slice(1)}`}
-                        </DialogTitle>
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="text-lg">
+                                {isHeader ? "Edit Section" : isSong ? "Edit Song" : `Edit ${trackType.charAt(0).toUpperCase() + trackType.slice(1)}`}
+                            </DialogTitle>
+                            <span className={`text-xs flex items-center gap-1 transition-opacity duration-300 ${saved ? "opacity-100 text-green-500" : "opacity-40 text-muted-foreground"}`}>
+                                <Check className="h-3 w-3" />
+                                {saved ? "Saved" : "Auto-saves"}
+                            </span>
+                        </div>
                     </DialogHeader>
                     {content}
                 </DialogContent>
@@ -453,11 +482,17 @@ export function TrackSheet({
     // Mobile: bottom sheet
     return (
         <Sheet open={isOpen} onOpenChange={handleClose}>
-            <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl overscroll-contain">
                 <SheetHeader className="pb-2">
-                    <SheetTitle className="text-lg">
-                        {isHeader ? "Edit Section" : isSong ? "Edit Song" : `Edit ${trackType.charAt(0).toUpperCase() + trackType.slice(1)}`}
-                    </SheetTitle>
+                    <div className="flex items-center justify-between">
+                        <SheetTitle className="text-lg">
+                            {isHeader ? "Edit Section" : isSong ? "Edit Song" : `Edit ${trackType.charAt(0).toUpperCase() + trackType.slice(1)}`}
+                        </SheetTitle>
+                        <span className={`text-xs flex items-center gap-1 transition-opacity duration-300 ${saved ? "opacity-100 text-green-500" : "opacity-40 text-muted-foreground"}`}>
+                            <Check className="h-3 w-3" />
+                            {saved ? "Saved" : "Auto-saves"}
+                        </span>
+                    </div>
                 </SheetHeader>
                 {content}
             </SheetContent>
