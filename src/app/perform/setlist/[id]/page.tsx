@@ -16,40 +16,12 @@ import { useParams, useRouter } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
-import { useMusicStore, QueueItem } from "@/lib/store"
+import { useMusicStore } from "@/lib/store"
+import { toQueueItem } from "@/lib/queue-utils"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { logger } from "@/lib/logger"
-
-/** Convert a SetlistTrack to a QueueItem for the unified performance view */
-function toQueueItem(track: SetlistTrack, index: number): QueueItem {
-    const isSong = !track.type || track.type === 'song'
-    const fileId = isSong && track.fileId
-        ? track.fileId
-        : `flow-${index}` // Synthetic ID for non-song items
-
-    const fileType = (() => {
-        if (!track.fileId) return 'pdf'
-        if (track.fileId.startsWith('db-') || track.fileId.endsWith('.musicxml') || track.fileId.endsWith('.xml') || track.fileId.endsWith('.mxl')) return 'musicxml'
-        if (track.fileId.endsWith('.chordpro')) return 'chordpro'
-        return 'pdf'
-    })()
-
-    return {
-        name: track.title,
-        fileId,
-        type: fileType as QueueItem['type'],
-        audioFileId: track.audioFileId,
-        transposition: track.transposition,
-        key: track.key,
-        bpm: track.bpm,
-        trackType: track.type || 'song',
-        performer: track.performer,
-        description: track.description,
-        estimatedMinutes: track.estimatedMinutes,
-    }
-}
 
 export default function SetlistPerformPage() {
     const router = useRouter()

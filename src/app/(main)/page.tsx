@@ -11,6 +11,8 @@ import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { Button } from "@/components/ui/button"
 import { Music2 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
+import { useMusicStore } from "@/lib/store"
+import { buildPerformQueue } from "@/lib/queue-utils"
 import { useCongregation } from "@/lib/congregation-context"
 import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 import { QRSignIn } from "@/components/auth/QRSignIn"
@@ -23,6 +25,7 @@ export default function DashboardPage() {
     const { loadLibrary } = useLibraryStore()
     const congregation = useCongregation()
     const { open: openChat } = useChatStore()
+    const { setQueue } = useMusicStore()
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
@@ -198,7 +201,16 @@ export default function DashboardPage() {
                                     setlist={tonightSetlist}
                                     prep={tonightPrep}
                                     onClick={() => navigateToSetlist(tonightSetlist)}
-                                    onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
+                                    onPerform={() => {
+                                        const result = buildPerformQueue(tonightSetlist.tracks || [])
+                                        if (result) {
+                                            setQueue(result.queue, result.startIndex, `/setlists/${tonightSetlist.id}`, tonightSetlist.id!)
+                                            router.push(`/perform/${result.firstFileId}`)
+                                        } else {
+                                            // Fallback: no playable tracks, just open the setlist
+                                            router.push(`/setlists/${tonightSetlist.id}`)
+                                        }
+                                    }}
                                 />
                             )}
 

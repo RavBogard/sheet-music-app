@@ -27,19 +27,17 @@ export function PDFViewer({ url }: PDFViewerProps) {
     // sourceUrl can be a string (online URL or blob URL) or an object (online URL + headers)
     const [source, setSource] = useState<string | { url: string; httpHeaders: Record<string, string> } | null>(null)
 
-    // 1. Resolve Source (Offline vs Online + Auth)
+    // 1. Resolve Source — check offline cache immediately, fall back to network when auth is ready
     useEffect(() => {
-        if (loading) return // Wait for auth to settle
-
         let active = true
         let objectUrl: string | null = null
 
         const resolveSource = async () => {
-            // Check if it's a Drive file URL
+            // Extract fileId from Drive API URL
             const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
             const fileId = fileIdMatch ? fileIdMatch[1] : null
 
-            // A. Try Offline First
+            // A. Try Offline First — no auth needed, IndexedDB is local
             if (fileId) {
                 const offlineFile = await getOfflineFile(fileId)
                 if (active && offlineFile) {
@@ -50,7 +48,9 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 }
             }
 
-            // B. If Online, we need an Auth Token for our API
+            // B. Online fallback — wait for auth to settle before adding token
+            if (loading) return // Auth still loading, will re-run when ready
+
             if (active) {
                 if (user) {
                     try {
@@ -66,7 +66,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
                         setSource(url) // Fallback
                     }
                 } else {
-                    // Not logged in? Just try the URL (will likely fail if protected)
+                    // Not logged in — try URL directly (works for public file proxy)
                     setSource(url)
                 }
             }
@@ -82,7 +82,6 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
     // 2. Auto-Resize Logic
     const containerRef = useRef<HTMLDivElement>(null)
-    // 2. Auto-Resize Logic (Responsive to container changes)
 
     useEffect(() => {
         if (!containerRef.current) return
