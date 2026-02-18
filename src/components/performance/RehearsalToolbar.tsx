@@ -358,5 +358,3 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         </div>
     )
 }
-
-

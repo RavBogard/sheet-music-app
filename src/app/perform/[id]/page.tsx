@@ -105,14 +105,12 @@ export default function PerformPage() {
             {isFlowItem && currentTrack ? (
                 <FlowItemView
                     onHome={handleHome}
-                    onSetlist={() => router.push('/setlists')}
                 />
             ) : (
                 <PerformerView
                     fileUrl={fileUrl}
                     fileType={fileType}
                     onHome={handleHome}
-                    onSetlist={() => router.push('/setlists')}
                 />
             )}
             {audioUrl && (
@@ -140,4 +138,3 @@ export default function PerformPage() {
         </>
     )
 }
-

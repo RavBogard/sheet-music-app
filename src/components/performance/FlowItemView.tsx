@@ -14,10 +14,8 @@ import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
  */
 export function FlowItemView({
     onHome,
-    onSetlist,
 }: {
     onHome: () => void
-    onSetlist: () => void
 }) {
     const router = useRouter()
     const { playbackQueue, queueIndex, nextSong, prevSong } = useMusicStore()
@@ -103,7 +101,6 @@ export function FlowItemView({
 
             <PerformanceToolbar
                 onHome={onHome}
-                onSetlist={onSetlist}
             />
         </div>
     )

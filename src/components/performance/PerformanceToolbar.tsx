@@ -18,11 +18,10 @@ import { cn } from "@/lib/utils"
 
 interface PerformanceToolbarProps {
     onHome: () => void
-    onSetlist: () => void
     onMenuOpenChange?: (open: boolean) => void
 }
 
-export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenChange }: PerformanceToolbarProps) {
+export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
     const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
@@ -89,7 +88,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5">
+                            <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 <span>Audio</span>
                             </button>
@@ -181,7 +180,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group">
+                            <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 AUDIO
                             </button>

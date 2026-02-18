@@ -5,6 +5,7 @@ import { useLiveState } from "@/hooks/use-setlist-presence"
 import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { Radio, ArrowRight, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface LiveNotificationProps {
     setlistId: string | null
@@ -175,14 +176,16 @@ export function AutoFollowToggle({ setlistId }: { setlistId: string | null }) {
     return (
         <button
             onClick={toggle}
+            aria-label={`Auto-follow leader: ${autoFollow ? 'on' : 'off'}`}
+            aria-pressed={autoFollow}
             className="flex items-center justify-between w-full px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors"
         >
             <div className="flex items-center gap-2">
                 <Radio className="w-4 h-4 text-red-400" />
                 <span className="text-sm font-medium text-foreground">Auto-follow leader</span>
             </div>
-            <div className={`w-10 h-6 rounded-full relative transition-colors ${autoFollow ? 'bg-green-500' : 'bg-muted'}`}>
-                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoFollow ? 'translate-x-5' : 'translate-x-1'}`} />
+            <div className={cn("w-10 h-6 rounded-full relative transition-colors", autoFollow ? 'bg-green-500' : 'bg-muted')} role="switch" aria-checked={autoFollow}>
+                <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform", autoFollow ? 'translate-x-5' : 'translate-x-1')} />
             </div>
         </button>
     )

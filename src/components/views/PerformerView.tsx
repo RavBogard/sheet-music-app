@@ -17,10 +17,9 @@ interface PerformerViewProps {
     fileType: FileType | null
     fileUrl: string | null
     onHome: () => void
-    onSetlist: () => void
 }
 
-export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: PerformerViewProps) {
+export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
     const isAnnotating = useAnnotationStore(s => s.isAnnotating)
     const [barsVisible, setBarsVisible] = useState(true)
@@ -30,15 +29,6 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     const [menuOpen, setMenuOpen] = useState(false)
 
     // ── Single source of truth for toolbar visibility ──
-    const _showBars = useCallback(() => {
-        setBarsVisible(true)
-        // Reset auto-hide timer
-        if (autoHideRef.current) clearTimeout(autoHideRef.current)
-        autoHideRef.current = setTimeout(() => {
-            if (!menuOpen) setBarsVisible(false)
-        }, 8000)
-    }, [menuOpen])
-
     const toggleBars = useCallback(() => {
         setBarsVisible(prev => {
             const next = !prev
@@ -271,7 +261,6 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
             <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${barsVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <PerformanceToolbar
                     onHome={onHome}
-                    onSetlist={onSetlist}
                     onMenuOpenChange={setMenuOpen}
                 />
             </div>
