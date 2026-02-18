@@ -38,7 +38,7 @@ export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: Di
                 <div
                     {...attributes}
                     {...listeners}
-                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground p-1 -ml-1"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <GripVertical className="h-4 w-4" />

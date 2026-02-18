@@ -341,7 +341,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">
-                    <CalendarView setlists={[...personalSetlists, ...publicSetlists]} onSelectSetlist={onSelect} onCreateSetlist={handleCreateFromCalendar} />
+                    <CalendarView setlists={displayedSetlists} onSelectSetlist={onSelect} onCreateSetlist={handleCreateFromCalendar} />
                 </div>
             ) : (
                 <ScrollArea className="flex-1 p-6">

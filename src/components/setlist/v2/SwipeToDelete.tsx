@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion"
 import { Trash2 } from "lucide-react"
 
@@ -15,7 +15,6 @@ const DELETE_THRESHOLD = -80
 export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProps) {
     const x = useMotionValue(0)
     const [swiping, setSwiping] = useState(false)
-    const deleteRef = useRef(false)
 
     // Red background opacity based on swipe distance
     const bgOpacity = useTransform(x, [-120, -40, 0], [1, 0.5, 0])
@@ -28,7 +27,6 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
     const handleDragEnd = (_: unknown, info: PanInfo) => {
         setSwiping(false)
         if (info.offset.x < DELETE_THRESHOLD) {
-            deleteRef.current = true
             onDelete()
         }
     }

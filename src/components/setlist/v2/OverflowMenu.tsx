@@ -36,7 +36,6 @@ interface OverflowMenuProps {
     onPublish?: () => void
     onDuplicate?: () => void
     onTogglePublic: () => void
-    onSetDate?: () => void
     onHistory?: () => void
     onSync?: () => void
     onOpenAI: () => void
