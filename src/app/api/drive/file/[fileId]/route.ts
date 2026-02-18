@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = 'force-dynamic'
 
@@ -7,9 +8,13 @@ import { downloadFromStorage } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
 
 export async function GET(
-    request: Request,
+    request: NextRequest,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
+    // Rate limit to prevent enumeration attacks
+    const limited = await checkRateLimit(request, 'api')
+    if (limited) return limited
+
     // Public Access: We allow anyone with the file ID to proxy the file.
     // This supports the "Public Setlist" feature where users can listen/view without login.
     // Security is based on the obscurity of the fileId.

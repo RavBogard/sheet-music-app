@@ -22,6 +22,7 @@ export function SongRow({ track, canEdit, onTap, onPlayFile }: SongRowProps) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        outline: 'none' as const,
     }
 
     const hasFile = !!track.fileId

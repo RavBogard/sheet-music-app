@@ -51,6 +51,7 @@ export function FlowRow({ track, canEdit, onTap }: FlowRowProps) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        outline: 'none' as const,
     }
 
     const Icon = config.icon

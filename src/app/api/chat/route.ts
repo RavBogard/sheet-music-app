@@ -88,9 +88,10 @@ export async function POST(request: NextRequest) {
     let isAdmin = false
     let userContext = ""
 
+    const auth = await withAuth(request)
+    if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
+
     try {
-      const auth = await withAuth(request)
-      if (!(auth instanceof NextResponse)) {
         if (auth.isAdmin) {
           isAdmin = true
           const usersSnap = await getFirestore().collection('users').limit(50).get()
@@ -100,9 +101,8 @@ export async function POST(request: NextRequest) {
           }).join('\n')
           userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
         }
-      }
     } catch (e) {
-      logger.warn("Auth verification failed in chat:", e)
+      logger.warn("Admin context fetch failed:", e)
     }
 
     if (!apiKey) {

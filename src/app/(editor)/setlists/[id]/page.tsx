@@ -62,6 +62,7 @@ export default function SetlistEditorPage() {
 
     return (
         <SetlistEditorV2
+            key={id}
             setlistId={isNew ? undefined : id}
             initialTracks={tracks}
             initialName={isNew ? "" : existingSetlist?.name}

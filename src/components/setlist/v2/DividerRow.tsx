@@ -21,6 +21,7 @@ export function DividerRow({ track, canEdit, onTap }: DividerRowProps) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        outline: 'none' as const,
     }
 
     return (
