@@ -20,22 +20,15 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 
     if (snap.exists()) {
         const data = snap.data() as UserProfile
-        // Update last login
-        await updateDoc(ref, {
+        // Update last login in background — never block auth on this
+        updateDoc(ref, {
             lastLoginAt: Timestamp.now(),
-            email: user.email, // Keep email in sync
+            email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL
-        })
+        }).catch(() => { /* non-critical */ })
         return data
     } else {
-        // Create new profile
-        // FIRST USER (you) should be Admin automatically? 
-        // For safety, let's stick to 'pending' unless it's a known email, OR just manual update in DB for the first one.
-        // Actually, if I lock myself out, I can't build the admin page.
-        // Let's hardcode the user's email to be 'admin' for now?
-        // No, I'll just make the default 'pending' and I'll tell the user to manually enable themselves or I'll add a backdoor for localhost.
-
         const newProfile: UserProfile = {
             uid: user.uid,
             email: user.email || "",

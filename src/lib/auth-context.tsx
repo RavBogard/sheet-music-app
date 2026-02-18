@@ -46,28 +46,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return
         }
 
+        let unsubscribeProfile: (() => void) | null = null
+
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+            // Clean up previous profile subscription
+            if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
+
             setUser(currentUser)
             if (currentUser) {
-                // 1. Ensure profile exists (create if new)
-                try {
-                    await ensureUserProfile(currentUser)
-                    // 2. Subscribe to profile updates
-                    subscribeToUserProfile(currentUser.uid, (p) => {
-                        setProfile(p)
-                        setLoading(false)
-                    })
-                } catch (e) {
-                    logger.error("Error fetching user profile", e)
+                // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
+                // this returns profile data just as fast as a getDoc, without blocking.
+                unsubscribeProfile = subscribeToUserProfile(currentUser.uid, (p) => {
+                    setProfile(p)
                     setLoading(false)
-                }
+                })
+
+                // Ensure profile exists + update lastLogin in the background (don't block UI)
+                ensureUserProfile(currentUser).catch((e) => {
+                    logger.error("Error ensuring user profile", e)
+                })
             } else {
                 setProfile(null)
                 setLoading(false)
             }
         })
 
-        return () => unsubscribeAuth()
+        return () => {
+            unsubscribeAuth()
+            if (unsubscribeProfile) unsubscribeProfile()
+        }
     }, [])
 
     const signIn = async () => {
