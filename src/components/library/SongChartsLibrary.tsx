@@ -13,6 +13,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useContentSearch } from "@/hooks/use-content-search"
 import { ContentSearchResults } from "@/components/library/ContentSearchResults"
 import { DriveFile } from "@/types/models"
+import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
@@ -87,7 +88,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     useEffect(() => { return () => { reset() } }, [reset])
 
     // Separate folders, charts, and audio
-    const { folders, files, audioFiles } = useMemo(() => {
+    const { folders, files: rawFiles, audioFiles } = useMemo(() => {
         const folders: DriveFile[] = []
         const files: DriveFile[] = []
         const audioFiles: DriveFile[] = []
@@ -102,6 +103,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         })
         return { folders, files, audioFiles }
     }, [displayedFiles])
+
+    // Library filters (key, topic, recency) — state declared after usageMap below
+    const [libraryFilters, setLibraryFilters] = useState<LibraryFilterState>(createEmptyFilters)
 
     const getCleanName = (name: string) =>
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
@@ -176,6 +180,13 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
 
     // Song usage data
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
+
+    // Apply library filters (key, topic, recency) to chart files
+    const files = useMemo(
+        () => applyLibraryFilters(rawFiles, libraryFilters, usageMap),
+        [rawFiles, libraryFilters, usageMap]
+    )
+
     useEffect(() => {
         const fileIds = combinedItems
             .filter(f => !f.mimeType.includes('folder') && !isAudioFile(f))
@@ -236,6 +247,16 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                         className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
                     />
                 </div>
+
+                {/* Library filters (key, topic, recency) */}
+                {tab === "charts" && (
+                    <LibraryFilters
+                        allFiles={rawFiles}
+                        filters={libraryFilters}
+                        onFiltersChange={setLibraryFilters}
+                        usageMap={usageMap}
+                    />
+                )}
 
                 {/* Tabs — only show if audio files exist */}
                 {hasAudio && (

@@ -374,7 +374,15 @@ export function SetlistEditorV2({
                         onTogglePublic={togglePublic}
                         onSetRabbi={canEdit ? setRabbi : undefined}
                         onHistory={setlistId ? () => setShowHistory(!showHistory) : undefined}
-                        onSync={() => syncSetlist(tracks)}
+                        onSync={async () => {
+                            const toastId = toast.loading('Downloading charts for offline…')
+                            try {
+                                await syncSetlist(tracks)
+                                toast.success('All charts cached — ready for offline', { id: toastId })
+                            } catch {
+                                toast.error('Some charts failed to download', { id: toastId })
+                            }
+                        }}
                         onOpenAI={() => useChatStore.getState().toggle()}
                         onToggleLive={isLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}

@@ -8,6 +8,7 @@ import { useMusicStore } from '@/lib/store'
 import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
+import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
 import { FileType } from "@/lib/store"
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
@@ -27,6 +28,10 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
     const router = useRouter()
     const viewRef = useRef<HTMLDivElement>(null)
     const autoHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Detect non-song flow items (readings, prayers, transitions, headers)
+    const currentItem = playbackQueue[queueIndex]
+    const isFlowItem = currentItem?.fileId?.startsWith('flow-') ?? false
     const [menuOpen, setMenuOpen] = useState(false)
 
     // ── Single source of truth for toolbar visibility ──
@@ -236,10 +241,16 @@ export function PerformerView({ fileType, fileUrl, onHome, onSetlist }: Performe
                 onTouchStart={handleSwipeStart}
                 onTouchEnd={handleSwipeEnd}
             >
-                {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
-                {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
+                {/* Flow items: readings, prayers, transitions, headers */}
+                {isFlowItem && currentItem && (
+                    <ServiceFlowCard item={currentItem} index={queueIndex} total={playbackQueue.length} />
+                )}
 
-                {!fileUrl && (
+                {/* Song items: PDF or MusicXML charts */}
+                {!isFlowItem && (fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
+                {!isFlowItem && fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
+
+                {!isFlowItem && !fileUrl && (
                     <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
                         {playbackQueue.length > 0 && queueIndex >= 0 ? (
                             <>

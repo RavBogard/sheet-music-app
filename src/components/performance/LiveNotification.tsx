@@ -1,29 +1,53 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useLiveState } from "@/hooks/use-setlist-presence"
 import { useMusicStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
-import { Radio, ArrowRight } from "lucide-react"
+import { Radio, ArrowRight, Check } from "lucide-react"
 
 interface LiveNotificationProps {
     setlistId: string | null
 }
 
+// Persist auto-follow preference across sessions
+function getAutoFollow(): boolean {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('live-auto-follow') === 'true'
+}
+function setAutoFollowStorage(value: boolean) {
+    if (typeof window === 'undefined') return
+    localStorage.setItem('live-auto-follow', String(value))
+}
+
 /**
- * Floating notification that appears when a leader sends a "go to song" command.
- * Shows for 6 seconds, tappable to jump to the indicated track.
+ * Live sync notification system with optional auto-follow mode.
+ *
+ * Default (auto-follow OFF): Shows a 6-second tappable notification
+ * when the leader advances. Musicians tap to follow at their own pace.
+ *
+ * Auto-follow ON: Automatically navigates to the leader's song.
+ * Shows a brief 1.5-second confirmation instead of the full notification.
+ * Musicians can toggle this in the setlist drawer.
  */
 export function LiveNotification({ setlistId }: LiveNotificationProps) {
     const router = useRouter()
     const liveState = useLiveState(setlistId)
     const { playbackQueue, queueIndex } = useMusicStore()
+    const [autoFollow, setAutoFollowState] = useState(getAutoFollow)
+
     const [notification, setNotification] = useState<{
         trackName: string
         trackIndex: number
         updatedByName: string
+        isAutoFollow: boolean
     } | null>(null)
     const lastIndexRef = useRef<number | null>(null)
+
+    const setAutoFollow = useCallback((value: boolean) => {
+        setAutoFollowState(value)
+        setAutoFollowStorage(value)
+    }, [])
 
     useEffect(() => {
         if (!liveState?.enabled) {
@@ -32,26 +56,44 @@ export function LiveNotification({ setlistId }: LiveNotificationProps) {
         }
 
         const newIndex = liveState.currentTrackIndex
-        // Only notify if it's a change and not the current song
+        // Only act if it's a change and not the current song
         if (
             lastIndexRef.current !== null &&
             newIndex !== lastIndexRef.current &&
             newIndex !== queueIndex &&
             playbackQueue[newIndex]
         ) {
-            setNotification({
-                trackName: playbackQueue[newIndex].name,
-                trackIndex: newIndex,
-                updatedByName: liveState.updatedByName || "Leader",
-            })
+            const track = playbackQueue[newIndex]
+            const leaderName = liveState.updatedByName || "Leader"
 
-            // Auto-dismiss after 6s
-            const timer = setTimeout(() => setNotification(null), 6000)
-            return () => clearTimeout(timer)
+            if (autoFollow) {
+                // Auto-navigate with brief confirmation
+                router.push(`/perform/${track.fileId}`)
+                setNotification({
+                    trackName: track.name,
+                    trackIndex: newIndex,
+                    updatedByName: leaderName,
+                    isAutoFollow: true,
+                })
+                const timer = setTimeout(() => setNotification(null), 1500)
+                lastIndexRef.current = newIndex
+                return () => clearTimeout(timer)
+            } else {
+                // Manual mode: show tappable notification for 6 seconds
+                setNotification({
+                    trackName: track.name,
+                    trackIndex: newIndex,
+                    updatedByName: leaderName,
+                    isAutoFollow: false,
+                })
+                const timer = setTimeout(() => setNotification(null), 6000)
+                lastIndexRef.current = newIndex
+                return () => clearTimeout(timer)
+            }
         }
 
         lastIndexRef.current = newIndex
-    }, [liveState, playbackQueue, queueIndex])
+    }, [liveState, playbackQueue, queueIndex, autoFollow, router])
 
     const handleJump = () => {
         if (notification && playbackQueue[notification.trackIndex]) {
@@ -63,6 +105,22 @@ export function LiveNotification({ setlistId }: LiveNotificationProps) {
 
     if (!notification) return null
 
+    // Auto-follow: brief green confirmation
+    if (notification.isAutoFollow) {
+        return (
+            <div
+                role="status"
+                className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] bg-green-600/90 backdrop-blur-sm
+                    text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2
+                    animate-in slide-in-from-top fade-in duration-300"
+            >
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-sm font-medium">→ {notification.trackName}</span>
+            </div>
+        )
+    }
+
+    // Manual mode: tappable notification
     return (
         <button
             onClick={handleJump}
@@ -92,5 +150,37 @@ export function LiveBadge({ setlistId }: { setlistId: string | null }) {
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
             <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Live</span>
         </div>
+    )
+}
+
+/**
+ * Auto-follow toggle for the setlist drawer.
+ * Only renders when live sync is active.
+ */
+export function AutoFollowToggle({ setlistId }: { setlistId: string | null }) {
+    const liveState = useLiveState(setlistId)
+    const [autoFollow, setAutoFollow] = useState(getAutoFollow)
+
+    const toggle = () => {
+        const newValue = !autoFollow
+        setAutoFollow(newValue)
+        setAutoFollowStorage(newValue)
+    }
+
+    if (!liveState?.enabled) return null
+
+    return (
+        <button
+            onClick={toggle}
+            className="flex items-center justify-between w-full px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors"
+        >
+            <div className="flex items-center gap-2">
+                <Radio className="w-4 h-4 text-red-400" />
+                <span className="text-sm font-medium text-foreground">Auto-follow leader</span>
+            </div>
+            <div className={`w-10 h-6 rounded-full relative transition-colors ${autoFollow ? 'bg-green-500' : 'bg-muted'}`}>
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoFollow ? 'translate-x-5' : 'translate-x-1'}`} />
+            </div>
+        </button>
     )
 }

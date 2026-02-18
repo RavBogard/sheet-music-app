@@ -12,10 +12,11 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
+import { AutoFollowToggle } from "@/components/performance/LiveNotification"
 
 export function SetlistDrawer() {
     const router = useRouter()
-    const { playbackQueue, queueIndex, setQueue } = useMusicStore()
+    const { playbackQueue, queueIndex, setQueue, currentSetlistId } = useMusicStore()
     const { user } = useAuth()
     const [open, setOpen] = useState(false)
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
@@ -174,6 +175,9 @@ export function SetlistDrawer() {
                         </div>
                     ) : (
                         <div className="flex flex-col">
+                            {/* Auto-follow toggle (only shows when live sync is active) */}
+                            <AutoFollowToggle setlistId={currentSetlistId} />
+
                             {/* Section quick-jump chips */}
                             {sectionLabels.length > 1 && (
                                 <div className="flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-border bg-muted/50 scrollbar-hide">
