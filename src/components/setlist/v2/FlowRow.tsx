@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, BookOpen, Heart, ArrowLeftRight, StickyNote } from "lucide-react"
@@ -38,7 +39,7 @@ const FLOW_CONFIG: Record<string, {
     },
 }
 
-export function FlowRow({ track, canEdit, onTap }: FlowRowProps) {
+export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowProps) {
     const trackType = (track.type || "note") as TrackType
     const config = FLOW_CONFIG[trackType] || FLOW_CONFIG.note
 
@@ -103,4 +104,4 @@ export function FlowRow({ track, canEdit, onTap }: FlowRowProps) {
             )}
         </div>
     )
-}
+})

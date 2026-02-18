@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical } from "lucide-react"
@@ -11,7 +12,7 @@ interface DividerRowProps {
     onTap: (track: SetlistTrack) => void
 }
 
-export function DividerRow({ track, canEdit, onTap }: DividerRowProps) {
+export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: DividerRowProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: track.id,
         disabled: !canEdit,
@@ -50,4 +51,4 @@ export function DividerRow({ track, canEdit, onTap }: DividerRowProps) {
             <div className="h-px bg-border flex-1" />
         </div>
     )
-}
+})

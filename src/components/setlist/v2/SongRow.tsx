@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Music } from "lucide-react"
@@ -12,7 +13,7 @@ interface SongRowProps {
     onPlayFile?: (fileId: string, fileName: string) => void
 }
 
-export function SongRow({ track, canEdit, onTap, onPlayFile }: SongRowProps) {
+export const SongRow = memo(function SongRow({ track, canEdit, onTap, onPlayFile }: SongRowProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: track.id,
         disabled: !canEdit,
@@ -100,4 +101,4 @@ export function SongRow({ track, canEdit, onTap, onPlayFile }: SongRowProps) {
             </div>
         </div>
     )
-}
+})
