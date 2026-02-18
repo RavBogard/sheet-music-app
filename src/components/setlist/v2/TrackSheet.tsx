@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, FileText, Music, Minus, Plus, ExternalLink } from "lucide-react"
 import { AudioFilePicker } from "../AudioFilePicker"
 import { TapTempoButton } from "@/components/ui/tap-tempo-button"
+import { KeyPicker } from "@/components/ui/key-picker"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -157,11 +158,10 @@ export function TrackSheet({
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                             <Label className="text-xs text-muted-foreground uppercase tracking-wide">Key</Label>
-                            <Input
+                            <KeyPicker
                                 value={key}
-                                onChange={(e) => setKey(e.target.value)}
-                                className="bg-muted/50 border-0 text-center font-mono"
-                                placeholder="Em"
+                                onChange={setKey}
+                                className="w-full"
                             />
                         </div>
                         <div className="space-y-1.5">
