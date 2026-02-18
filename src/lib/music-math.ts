@@ -232,6 +232,32 @@ export function estimateKey(chords: string[]): string | null {
 }
 
 /**
+ * Calculate semitone distance between two keys.
+ * E.g., calculateSemitones("Dm", "Am") → 7
+ * Normalizes to shortest path (-6..+5 range).
+ */
+export function calculateSemitones(fromKey: string, toKey: string): number {
+    if (!fromKey || !toKey) return 0
+
+    const extractRoot = (key: string): string => {
+        const match = key.match(/^([A-G][#b]?)/)
+        return match ? match[1] : key
+    }
+
+    const fromRoot = extractRoot(fromKey)
+    const toRoot = extractRoot(toKey)
+    const fromIndex = findNoteIndex(fromRoot)
+    const toIndex = findNoteIndex(toRoot)
+
+    if (fromIndex === -1 || toIndex === -1) return 0
+
+    let diff = toIndex - fromIndex
+    if (diff > 6) diff -= 12
+    if (diff < -6) diff += 12
+    return diff
+}
+
+/**
  * Get the display name for a transposition.
  * e.g., transposition=2 with original key "Em" -> "F#m (+2)"
  */

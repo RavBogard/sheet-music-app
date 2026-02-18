@@ -1,12 +1,14 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, RotateCcw } from "lucide-react"
+import { ChevronUp, ChevronDown, RotateCcw, Pencil, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { calculateCapo, estimateKey, transposeChord } from "@/lib/music-math"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
+import { loadLibraryMeta, saveVerification } from "@/lib/chord-cache"
+import { useAuth } from "@/lib/auth-context"
 
 // Common guitar-friendly shapes for the "Play As" grid
 const SHAPES = [
@@ -20,17 +22,61 @@ const SHAPES = [
     { label: "Dm", minor: true },
 ]
 
-export function TransposerMenu() {
+interface TransposerMenuProps {
+    onRequestClose?: () => void
+}
+
+export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
     const {
         transposition,
         setTransposition,
         aiState,
         setCapoFret,
         capoFret,
+        playbackQueue,
+        queueIndex,
+        setEditingChords,
+        fileUrl,
     } = useMusicStore()
 
     // Musician profile for auto-transposition indicator
     const { isAutoTransposed, instrumentLabel, saving } = useMusicianTransposition()
+
+    // Library metadata (native key, verification)
+    const [libraryMeta, setLibraryMeta] = useState<{
+        nativeKey?: string
+        nativeKeySource?: string
+        chordsVerified?: boolean
+        chordsVerifiedBy?: string
+    } | null>(null)
+
+    // Resolve current file ID
+    const fileId = useMemo(() => {
+        if (queueIndex >= 0 && playbackQueue[queueIndex]?.fileId) {
+            return playbackQueue[queueIndex].fileId
+        }
+        if (fileUrl && typeof fileUrl === "string") {
+            const match = fileUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+            if (match) return match[1]
+        }
+        return null
+    }, [queueIndex, playbackQueue, fileUrl])
+
+    // Get setlist key from queue item
+    const setlistKey = useMemo(() => {
+        if (queueIndex >= 0 && playbackQueue[queueIndex]?.key) {
+            return playbackQueue[queueIndex].key
+        }
+        return null
+    }, [queueIndex, playbackQueue])
+
+    // Load library metadata
+    useEffect(() => {
+        if (!fileId) { setLibraryMeta(null); return }
+        loadLibraryMeta(fileId).then(meta => {
+            if (meta) setLibraryMeta(meta)
+        }).catch(() => {})
+    }, [fileId])
 
     // Gather all detected chords across pages
     const allChords = useMemo(() => {
@@ -45,17 +91,27 @@ export function TransposerMenu() {
         return estimateKey(allChords)
     }, [allChords])
 
-    // Pre-compute capo results for all shapes
+    // The "effective key" for capo calculations:
+    // If there's a setlist key, use it (that's what everyone is playing in)
+    // Otherwise use detected key
+    const effectiveKey = setlistKey || (detectedKey && transposition !== 0
+        ? transposeChord(detectedKey, transposition)
+        : detectedKey)
+
+    // Show "Playing in Am (chart: Dm)" when setlist key differs from detected
+    const showSetlistKey = setlistKey && detectedKey && setlistKey !== detectedKey
+
+    // Pre-compute capo results based on effective key (setlist key or transposed key)
     const capoResults = useMemo(() => {
-        if (!detectedKey) return {}
+        if (!effectiveKey) return {}
         const results: Record<string, { fret: number; transposition: number } | null> = {}
         for (const shape of SHAPES) {
-            results[shape.label] = calculateCapo(detectedKey, shape.label)
+            results[shape.label] = calculateCapo(effectiveKey, shape.label)
         }
         return results
-    }, [detectedKey])
+    }, [effectiveKey])
 
-    // Current "play as" shape (reverse-lookup from current transposition + capoFret)
+    // Current "play as" shape
     const activeShape = useMemo(() => {
         if (!capoFret || capoFret === 0) return null
         for (const shape of SHAPES) {
@@ -79,6 +135,11 @@ export function TransposerMenu() {
         setCapoFret(null)
     }
 
+    const handleEditChords = () => {
+        setEditingChords(true)
+        onRequestClose?.()
+    }
+
     const isScanning = aiState.scanningPages.length > 0
     const hasChords = allChords.length > 0
     const isModified = transposition !== 0
@@ -98,6 +159,18 @@ export function TransposerMenu() {
                     {!saving && isAutoTransposed && (
                         <span className="text-green-400/60 ml-auto">✓ saved</span>
                     )}
+                </div>
+            )}
+
+            {/* ── Setlist Key Indicator ── */}
+            {showSetlistKey && (
+                <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
+                    <span className="text-violet-300 text-sm font-medium">
+                        Playing in {setlistKey}
+                    </span>
+                    <span className="text-zinc-500 text-sm ml-1.5">
+                        (chart: {libraryMeta?.nativeKey || detectedKey})
+                    </span>
                 </div>
             )}
 
@@ -171,7 +244,7 @@ export function TransposerMenu() {
             </div>
 
             {/* ── Play As (Capo Shapes) ── */}
-            {detectedKey && (
+            {effectiveKey && (
                 <div className="space-y-2">
                     <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                         Play As (with capo)
@@ -227,19 +300,101 @@ export function TransposerMenu() {
                             </span>
                             <span className="text-zinc-500 text-sm mx-2">→</span>
                             <span className="text-white text-sm font-medium">
-                                sounds {detectedKey}
+                                sounds {effectiveKey}
                             </span>
                         </div>
                     )}
                 </div>
             )}
 
-            {/* ── Chord Count ── */}
+            {/* ── Chord Count + Verification Badge ── */}
             {hasChords && (
-                <div className="text-[10px] text-zinc-600 text-center">
-                    {allChords.length} chords detected across {Object.keys(aiState.pageData).length} page{Object.keys(aiState.pageData).length !== 1 ? 's' : ''}
+                <div className="text-[10px] text-zinc-600 text-center space-y-1">
+                    <div>
+                        {allChords.length} chords detected across {Object.keys(aiState.pageData).length} page{Object.keys(aiState.pageData).length !== 1 ? 's' : ''}
+                    </div>
+                    {libraryMeta?.chordsVerified && libraryMeta?.chordsVerifiedBy && (
+                        <div className="flex items-center justify-center gap-1 text-green-400/80">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Verified by {libraryMeta.chordsVerifiedBy}</span>
+                        </div>
+                    )}
                 </div>
             )}
+
+            {/* ── Edit Chords Button ── */}
+            {hasChords && (
+                <button
+                    onClick={handleEditChords}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg text-sm text-zinc-300 hover:text-white transition-all"
+                >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit Chords
+                </button>
+            )}
+        </div>
+    )
+}
+
+/**
+ * Floating bottom bar shown when editing chords.
+ * Rendered by the performance layout, not the popover.
+ */
+export function ChordEditBar() {
+    const { isEditingChords, setEditingChords, playbackQueue, queueIndex, fileUrl } = useMusicStore()
+
+    if (!isEditingChords) return null
+
+    // Resolve file ID for verification save
+    const fileId = (() => {
+        if (queueIndex >= 0 && playbackQueue[queueIndex]?.fileId) {
+            return playbackQueue[queueIndex].fileId
+        }
+        if (fileUrl && typeof fileUrl === "string") {
+            const match = fileUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+            if (match) return match[1]
+        }
+        return null
+    })()
+
+    const handleVerifyAndDone = () => {
+        if (fileId) {
+            // TODO: Get actual user name from auth context
+            saveVerification(fileId, 'Daniel')
+        }
+        setEditingChords(false)
+    }
+
+    const handleCancel = () => {
+        setEditingChords(false)
+    }
+
+    return (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe">
+            <div className="flex items-center justify-between bg-zinc-900 border border-violet-500/30 rounded-t-xl px-4 py-3 shadow-lg shadow-violet-500/10">
+                <div className="flex items-center gap-2 text-violet-300 text-sm font-medium">
+                    <Pencil className="h-4 w-4" />
+                    Editing Chords
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancel}
+                        className="text-zinc-400 hover:text-white h-8 text-xs"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleVerifyAndDone}
+                        className="bg-violet-600 hover:bg-violet-500 text-white h-8 text-xs"
+                    >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        Verify & Done
+                    </Button>
+                </div>
+            </div>
         </div>
     )
 }

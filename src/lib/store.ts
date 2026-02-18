@@ -32,7 +32,7 @@ export interface MusicState {
         scanningPages: number[] // List of page indexes currently scanning
         pageData: Record<number, {
             strips: { id: string; y: number; height: number; image?: string }[]
-            chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number }[]
+            chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number; source?: 'textLayer' | 'ai' | 'user' }[]
         }>
         error: string | null
     }
@@ -59,6 +59,10 @@ export interface MusicState {
         fret: number // e.g. 3
     }
 
+    // Chord Edit Mode
+    isEditingChords: boolean
+    setEditingChords: (editing: boolean) => void
+
     capoFret: number | null
     setCapoFret: (fret: number | null) => void
 
@@ -72,7 +76,7 @@ export interface MusicState {
     setPageScanning: (pageIndex: number, isScanning: boolean) => void
     setPageData: (pageIndex: number, data: {
         strips: { id: string; y: number; height: number; image?: string }[]
-        chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number }[]
+        chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number; source?: 'textLayer' | 'ai' | 'user' }[]
     }) => void
     setAiError: (error: string | null) => void
 
@@ -123,6 +127,7 @@ export const useMusicStore = create<MusicState>()(
                 targetShape: '',
                 fret: 0
             },
+            isEditingChords: false,
             capoFret: null,
 
             audio: {
@@ -140,6 +145,7 @@ export const useMusicStore = create<MusicState>()(
                 transposition: 0,
                 capo: { active: false, targetShape: '', fret: 0 },
                 capoFret: null,
+                isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null // Clear AI content
             }),
@@ -166,10 +172,10 @@ export const useMusicStore = create<MusicState>()(
                 if (queueIndex < playbackQueue.length - 1) {
                     const nextIndex = queueIndex + 1
                     const nextTrack = playbackQueue[nextIndex]
-                    // Apply per-track transposition, clear page data for new song
                     set({
                         queueIndex: nextIndex,
                         transposition: nextTrack.transposition ?? 0,
+                        isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
                     return nextTrack
@@ -181,10 +187,10 @@ export const useMusicStore = create<MusicState>()(
                 if (queueIndex > 0) {
                     const prevIndex = queueIndex - 1
                     const prevTrack = playbackQueue[prevIndex]
-                    // Apply per-track transposition, clear page data for new song
                     set({
                         queueIndex: prevIndex,
                         transposition: prevTrack.transposition ?? 0,
+                        isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
                     return prevTrack
@@ -224,6 +230,8 @@ export const useMusicStore = create<MusicState>()(
 
             setCapoFret: (fret) => set({ capoFret: fret }),
 
+            setEditingChords: (editing) => set({ isEditingChords: editing }),
+
             reset: () => set({
                 fileType: null,
                 fileUrl: null,
@@ -231,6 +239,7 @@ export const useMusicStore = create<MusicState>()(
                 zoom: 1,
                 currentVisiblePage: 1,
                 aiXmlContent: null,
+                isEditingChords: false,
                 playbackQueue: [],
                 queueIndex: -1,
                 returnPath: null,

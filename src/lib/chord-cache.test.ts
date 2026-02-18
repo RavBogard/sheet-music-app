@@ -28,13 +28,14 @@ describe('chord-cache', () => {
                         chords: mockChords,
                         scannedAt: '2025-01-01',
                         scanMethod: 'textLayer',
-                        cacheVersion: 5
+                        cacheVersion: 6,
+                        aiValidated: true
                     }
                 })
             } as Response)
 
             const result = await loadChordCache('file-123', 1)
-            expect(result).toEqual(mockChords)
+            expect(result).toEqual({ chords: mockChords, aiValidated: true })
             expect(mockApiFetch).toHaveBeenCalledWith(
                 '/api/library/chord-cache?fileId=file-123&page=1'
             )
@@ -101,7 +102,7 @@ describe('chord-cache', () => {
         it('does not throw on network error (fire-and-forget)', () => {
             mockApiFetch.mockRejectedValueOnce(new Error('Offline'))
             expect(() => {
-                saveChordCache('file-456', 1, [{ text: 'G', originalText: 'G', x: 0, y: 0 }], 'geminiOCR')
+                saveChordCache('file-456', 1, [{ text: 'G', originalText: 'G', x: 0, y: 0 }], 'ai')
             }).not.toThrow()
         })
     })

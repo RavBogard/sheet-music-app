@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Home, Sparkles, Loader2, Speaker, Pencil } from "lucide-react"
-import { TransposerMenu } from "../music/TransposerMenu"
+import { TransposerMenu, ChordEditBar } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
@@ -29,6 +29,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
 
     // Track which popovers are open to keep bars visible
     const [openPopovers, setOpenPopovers] = useState<Set<string>>(new Set())
+    const [transposerOpen, setTransposerOpen] = useState(false)
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -106,7 +107,8 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     </Popover>
 
                     {/* Transposer */}
-                    <Popover onOpenChange={(open) => {
+                    <Popover open={transposerOpen} onOpenChange={(open) => {
+                        setTransposerOpen(open)
                         trackPopover('transposer', open)
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
@@ -128,7 +130,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                            <TransposerMenu />
+                            <TransposerMenu onRequestClose={() => setTransposerOpen(false)} />
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -204,7 +206,8 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     </div>
 
                     {/* Transposer */}
-                    <Popover onOpenChange={(open) => {
+                    <Popover open={transposerOpen} onOpenChange={(open) => {
+                        setTransposerOpen(open)
                         trackPopover('transposer-desktop', open)
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
@@ -226,7 +229,7 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                            <TransposerMenu />
+                            <TransposerMenu onRequestClose={() => setTransposerOpen(false)} />
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -239,6 +242,9 @@ export function PerformanceToolbar({ onHome, onSetlist: _onSetlist, onMenuOpenCh
                     onClose={() => setAnnotating(false)}
                 />
             )}
+
+            {/* Chord edit floating bar */}
+            <ChordEditBar />
         </div>
     )
 }

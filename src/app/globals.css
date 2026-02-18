@@ -178,3 +178,51 @@
     @apply bg-card/80 backdrop-blur-md border border-border shadow-md;
   }
 }
+
+/* ── Dashboard Stagger Animations ── */
+@keyframes dash-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dash-progress-fill {
+  from { width: 0%; }
+}
+
+@keyframes dash-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.dash-stagger {
+  opacity: 0;
+  animation: dash-fade-up 0.35s ease-out forwards;
+}
+
+/* Stagger delays: each child gets progressively later start */
+.dash-stagger-0 { animation-delay: 0ms; }
+.dash-stagger-1 { animation-delay: 60ms; }
+.dash-stagger-2 { animation-delay: 120ms; }
+.dash-stagger-3 { animation-delay: 180ms; }
+.dash-stagger-4 { animation-delay: 240ms; }
+.dash-stagger-5 { animation-delay: 300ms; }
+
+/* Skip animations on return visits / fast nav */
+.dash-no-animate .dash-stagger {
+  opacity: 1;
+  animation: none;
+}
+
+.dash-progress-bar {
+  animation: dash-progress-fill 0.6s ease-out forwards;
+}
+
+.dash-pulse {
+  animation: dash-pulse-soft 2s ease-in-out infinite;
+}

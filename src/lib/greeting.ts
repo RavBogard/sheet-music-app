@@ -13,13 +13,15 @@ interface HebrewDate {
     display: string
 }
 
-interface Greeting {
+export interface Greeting {
     /** The greeting text (e.g., "Shabbat Shalom" or "Good evening") */
     text: string
     /** Optional Hebrew date for subtle display */
     hebrewDate: string
     /** Whether this is a special occasion (holiday/shabbat) */
     isSpecial: boolean
+    /** Atmosphere hint for UI theming */
+    atmosphere: 'morning' | 'afternoon' | 'evening' | 'shabbat' | 'holiday'
 }
 
 /**
@@ -128,7 +130,7 @@ function getHolidayGreeting(hDate: HebrewDate): string | null {
  * Approximation: Friday 4:00 PM through Saturday 9:00 PM.
  * (Not astronomically precise, but right for greeting context.)
  */
-function isShabbatTime(date: Date): boolean {
+export function isShabbatTime(date: Date): boolean {
     const day = date.getDay() // 0=Sun, 5=Fri, 6=Sat
     const hour = date.getHours()
 
@@ -167,7 +169,8 @@ export function getContextualGreeting(name: string | null, date?: Date, appName?
         return {
             text: name ? `${holidayGreeting}, ${name}` : holidayGreeting,
             hebrewDate: hDate.display,
-            isSpecial: true
+            isSpecial: true,
+            atmosphere: 'holiday'
         }
     }
 
@@ -176,15 +179,19 @@ export function getContextualGreeting(name: string | null, date?: Date, appName?
         return {
             text: name ? `Shabbat Shalom, ${name}` : 'Shabbat Shalom',
             hebrewDate: hDate.display,
-            isSpecial: true
+            isSpecial: true,
+            atmosphere: 'shabbat'
         }
     }
 
     // 3. Time-of-day fallback
     const timeGreeting = getTimeGreeting(now)
+    const hour = now.getHours()
+    const atmosphere = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
     return {
         text: name ? `${timeGreeting}, ${name}` : `Welcome to ${appName || 'CRC Music'}`,
         hebrewDate: hDate.display,
-        isSpecial: false
+        isSpecial: false,
+        atmosphere
     }
 }
