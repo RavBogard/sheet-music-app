@@ -153,5 +153,10 @@ service cloud.firestore {
     match /qr-sessions/{code} {
       allow read, write: if false;
     }
+
+    // Bridge setup codes — server-only (Admin SDK)
+    match /bridge-setup-codes/{code} {
+      allow read, write: if false;
+    }
   }
 }

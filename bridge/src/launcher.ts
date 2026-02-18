@@ -22,7 +22,7 @@ import { execSync, exec } from "child_process"
 const APP_DIR = path.dirname(process.execPath || __dirname)
 const CONFIG_FILE = path.join(APP_DIR, "bridge-config.json")
 const KEY_FILE = path.join(APP_DIR, "service-account-key.json")
-const VERSION = "1.1.0"
+const VERSION = "1.2.0"
 
 interface BridgeConfig {
     installed: boolean
@@ -31,6 +31,7 @@ interface BridgeConfig {
     httpPort: number
     installedAt: string
     serviceInstalled: boolean
+    appUrl: string
 }
 
 const DEFAULT_CONFIG: BridgeConfig = {
@@ -40,6 +41,7 @@ const DEFAULT_CONFIG: BridgeConfig = {
     httpPort: 9001,
     installedAt: "",
     serviceInstalled: false,
+    appUrl: "",
 }
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -194,6 +196,91 @@ function openBrowser(url: string): void {
     } catch { /* browser didn't open, not critical */ }
 }
 
+// ─── Setup Code Activation ─────────────────────────────────
+
+/**
+ * Call the app's API to redeem a setup code for Firebase credentials.
+ */
+async function activateSetupCode(code: string): Promise<{ success: boolean; credentials?: Record<string, unknown>; error?: string }> {
+    try {
+        const https = require("https")
+        const config = loadConfig()
+        const appUrl = config.appUrl
+
+        if (!appUrl) {
+            return { success: false, error: "App URL not set — enter your site URL first" }
+        }
+
+        const url = `${appUrl}/api/bridge/setup-code?code=${encodeURIComponent(code)}`
+
+        const data: string = await new Promise((resolve, reject) => {
+            const req = https.get(url, { timeout: 10000 },
+                (res: { statusCode: number; on: (e: string, cb: (d: Buffer) => void) => void }) => {
+                    let body = ""
+                    res.on("data", (d: Buffer) => body += d)
+                    res.on("end", () => resolve(body))
+                }
+            )
+            req.on("error", reject)
+            req.on("timeout", () => { req.destroy(); reject(new Error("timeout")) })
+        })
+
+        const parsed = JSON.parse(data)
+
+        if (parsed.credentials) {
+            return { success: true, credentials: parsed.credentials }
+        }
+        return { success: false, error: parsed.error || "Unknown error" }
+    } catch (err) {
+        return { success: false, error: `Could not reach app: ${(err as Error).message}` }
+    }
+}
+
+/**
+ * Fallback: find a key file on disk (the old manual flow).
+ */
+async function findKeyFile(rl: readline.Interface, possiblePaths: string[]): Promise<string> {
+    console.log("\n  Drop the key file into this folder:")
+    console.log(`  ${APP_DIR}\n`)
+    console.log("  Or type the full path to the file:\n")
+
+    while (true) {
+        const input = await ask(rl, "  Path to key file (or Enter to check folder again): ")
+
+        if (input === "") {
+            // Re-scan the folder
+            for (const p of possiblePaths) {
+                if (fileExists(p)) return p
+            }
+            // Also scan for any .json file that looks like a service account key
+            const files = fs.readdirSync(APP_DIR).filter(f => f.endsWith(".json"))
+            for (const f of files) {
+                const fullPath = path.join(APP_DIR, f)
+                try {
+                    const content = JSON.parse(fs.readFileSync(fullPath, "utf-8"))
+                    if (content.type === "service_account" && content.project_id) {
+                        console.log(`\n  ✓ Found: ${f} (project: ${content.project_id})\n`)
+                        const confirm = await ask(rl, "  Use this file? (Y/n): ")
+                        if (confirm.toLowerCase() !== "n") return fullPath
+                    }
+                } catch { /* not valid JSON */ }
+            }
+            console.log("\n  No key file found yet. Drop it in and try again.\n")
+        } else {
+            // User provided a path
+            const cleaned = input.replace(/"/g, "").trim()
+            if (fileExists(cleaned)) {
+                const dest = path.join(APP_DIR, "service-account-key.json")
+                fs.copyFileSync(cleaned, dest)
+                console.log(`\n  ✓ Copied to ${path.basename(dest)}\n`)
+                return dest
+            } else {
+                console.log(`\n  ✗ File not found: ${cleaned}\n`)
+            }
+        }
+    }
+}
+
 // ─── Setup Wizard ──────────────────────────────────────────
 
 async function runSetup(): Promise<BridgeConfig> {
@@ -206,25 +293,12 @@ async function runSetup(): Promise<BridgeConfig> {
     console.log("  This will take about 2 minutes.\n")
     await pressEnter(rl)
 
-    // ── Step 1: Firebase Service Account Key ──
+    // ── Step 1: Firebase Credentials ──
     cls()
     banner()
-    console.log("  STEP 1 of 4 — Firebase Service Account Key\n")
-    console.log("  The bridge needs a key file to talk to Firebase.")
-    console.log("  If you don't have one yet:\n")
-    console.log("    1. Go to https://console.firebase.google.com")
-    console.log("    2. Select the CentralReform project")
-    console.log("    3. Gear icon → Project settings → Service accounts")
-    console.log("    4. Click 'Generate new private key'")
-    console.log("    5. Save the file\n")
+    console.log("  STEP 1 of 4 — Connect to Firebase\n")
 
-    const openConsole = await ask(rl, "  Open Firebase Console in your browser? (Y/n): ")
-    if (openConsole.toLowerCase() !== "n") {
-        openBrowser("https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk")
-        console.log("  ✓ Opened in browser\n")
-    }
-
-    // Check common locations
+    // Check if key file already exists
     const possiblePaths = [
         KEY_FILE,
         path.join(APP_DIR, "serviceAccountKey.json"),
@@ -234,64 +308,86 @@ async function runSetup(): Promise<BridgeConfig> {
     let keyPath = ""
     for (const p of possiblePaths) {
         if (fileExists(p)) {
-            console.log(`  ✓ Found key file: ${path.basename(p)}\n`)
-            const confirm = await ask(rl, `  Use this file? (Y/n): `)
-            if (confirm.toLowerCase() !== "n") {
-                keyPath = p
-                break
-            }
+            try {
+                const content = JSON.parse(fs.readFileSync(p, "utf-8"))
+                if (content.type === "service_account" || (content.project_id && content.private_key)) {
+                    console.log(`  ✓ Key file already exists: ${path.basename(p)}`)
+                    console.log(`    Project: ${content.project_id}\n`)
+                    const confirm = await ask(rl, "  Use this file? (Y/n): ")
+                    if (confirm.toLowerCase() !== "n") {
+                        keyPath = p
+                    }
+                }
+            } catch { /* not valid */ }
+            if (keyPath) break
         }
     }
 
     if (!keyPath) {
-        console.log("  Drop the key file into this folder:")
-        console.log(`  ${APP_DIR}\n`)
-        console.log("  Or type the full path to the file:\n")
+        console.log("  The easiest way: get a setup code from the admin panel.\n")
+
+        // Get the app URL (needed to call the setup code API)
+        if (!config.appUrl) {
+            console.log("  First, what's your CentralReform site address?")
+            console.log("  (This is where musicians log in — e.g., https://your-app.vercel.app)\n")
+            while (true) {
+                const urlInput = await ask(rl, "  Site URL: ")
+                const trimmedUrl = urlInput.trim().replace(/\/+$/, "") // strip trailing slashes
+                if (trimmedUrl.startsWith("https://")) {
+                    config.appUrl = trimmedUrl
+                    saveConfig(config)
+                    console.log()
+                    break
+                } else if (trimmedUrl.startsWith("http://")) {
+                    config.appUrl = trimmedUrl
+                    saveConfig(config)
+                    console.log()
+                    break
+                } else if (trimmedUrl.includes(".")) {
+                    // They forgot the protocol
+                    config.appUrl = `https://${trimmedUrl}`
+                    saveConfig(config)
+                    console.log(`  → Using ${config.appUrl}\n`)
+                    break
+                }
+                console.log("  ✗ Please enter a full URL (e.g., https://your-app.vercel.app)\n")
+            }
+        }
+
+        console.log("  Now get a setup code:")
+        console.log("    1. Open your CentralReform admin panel → Sound System")
+        console.log("    2. Click 'Generate Setup Code'")
+        console.log("    3. Enter the 6-character code below\n")
+        console.log("  (If you have a key file instead, type 'file')\n")
 
         while (true) {
-            const input = await ask(rl, "  Path to key file (or Enter to check folder again): ")
+            const input = await ask(rl, "  Setup code (or 'file' for key file): ")
+            const trimmed = input.trim().toUpperCase()
 
-            if (input === "") {
-                // Re-scan the folder
-                for (const p of possiblePaths) {
-                    if (fileExists(p)) {
-                        keyPath = p
-                        break
-                    }
-                }
-                // Also scan for any .json file that looks like a service account key
-                if (!keyPath) {
-                    const files = fs.readdirSync(APP_DIR).filter(f => f.endsWith(".json"))
-                    for (const f of files) {
-                        const fullPath = path.join(APP_DIR, f)
-                        try {
-                            const content = JSON.parse(fs.readFileSync(fullPath, "utf-8"))
-                            if (content.type === "service_account" && content.project_id) {
-                                console.log(`\n  ✓ Found: ${f} (project: ${content.project_id})\n`)
-                                const confirm = await ask(rl, "  Use this file? (Y/n): ")
-                                if (confirm.toLowerCase() !== "n") {
-                                    keyPath = fullPath
-                                    break
-                                }
-                            }
-                        } catch { /* not valid JSON */ }
-                    }
-                }
-                if (keyPath) break
-                console.log("\n  No key file found yet. Drop it in and try again.\n")
-            } else {
-                // User provided a path
-                const cleaned = input.replace(/"/g, "").trim()
-                if (fileExists(cleaned)) {
-                    // Copy it to our directory as the standard name
+            if (trimmed === "FILE") {
+                // Fall back to key file flow
+                keyPath = await findKeyFile(rl, possiblePaths)
+                break
+            }
+
+            if (trimmed.length === 6 && /^[A-Z0-9]+$/.test(trimmed)) {
+                console.log("\n  Activating...")
+                const result = await activateSetupCode(trimmed)
+                if (result.success && result.credentials) {
+                    // Save the credentials as our key file
                     const dest = path.join(APP_DIR, "service-account-key.json")
-                    fs.copyFileSync(cleaned, dest)
+                    fs.writeFileSync(dest, JSON.stringify(result.credentials, null, 2))
                     keyPath = dest
-                    console.log(`\n  ✓ Copied to ${path.basename(dest)}\n`)
+                    console.log(`  ✓ Credentials saved! (project: ${result.credentials.project_id})\n`)
                     break
                 } else {
-                    console.log(`\n  ✗ File not found: ${cleaned}\n`)
+                    console.log(`  ✗ ${result.error}\n`)
+                    if (result.error?.includes("expired") || result.error?.includes("already used")) {
+                        console.log("  Generate a new code from the admin panel and try again.\n")
+                    }
                 }
+            } else if (trimmed.length > 0) {
+                console.log("  ✗ Code should be 6 characters (letters and numbers)\n")
             }
         }
     }

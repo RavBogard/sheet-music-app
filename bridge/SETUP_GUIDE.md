@@ -19,39 +19,37 @@ Musicians' iPads ──WiFi──► Production PC (this bridge) ──Ethernet/
 
 ## The Easy Way: One-Click Installer
 
-### Step 1: Download Two Files
+### Step 1: Download the EXE
 
-Put these in the same folder (like `C:\CentralReform\`):
+Download **CentralReform-Bridge.exe** from the [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases) and put it in a folder (like `C:\CentralReform\`).
 
-1. **CentralReform-Bridge.exe** — from the [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases)
+### Step 2: Get a Setup Code
 
-2. **Firebase service account key** — a JSON file you download from Firebase:
-   - Go to https://console.firebase.google.com
-   - Select the CentralReform project
-   - Gear icon (⚙️) → Project settings → Service accounts tab
-   - Click "Generate new private key"
-   - Save the downloaded file into the same folder as the exe
+1. Open your CentralReform admin panel → **Sound System**
+2. Click **"Generate Setup Code"**
+3. You'll see a 6-character code (valid for 10 minutes)
 
-### Step 2: Double-Click the EXE
+### Step 3: Double-Click the EXE
 
 The setup wizard walks you through everything:
 
-1. **Key file** — It auto-detects the Firebase key in the folder. Hit Enter to confirm.
-2. **Ports** — Defaults are fine (9000 for iPads, 9001 for health checks). Hit Enter.
-3. **Firewall** — If running as admin, it opens the ports automatically. Hit Enter.
-4. **Service** — Installs as a Windows service so it auto-starts on boot. Hit Enter.
+1. **Site URL** — Enter your CentralReform address (e.g., `https://your-app.vercel.app`)
+2. **Setup code** — Enter the 6-character code from Step 2. Credentials are downloaded automatically.
+3. **Ports** — Defaults are fine (9000 for iPads, 9001 for health checks). Hit Enter.
+4. **Firewall** — If running as admin, it opens the ports automatically. Hit Enter.
+5. **Service** — Installs as a Windows service so it auto-starts on boot. Hit Enter.
 
-That's it. The bridge is running.
+That's it. The bridge is running. No Firebase Console visit needed.
 
-### Step 3: Configure Buses in the Web App
+### Step 4: Configure Buses in the Web App
 
-1. Open **https://your-site.vercel.app/admin** → Sound System
+1. Open your admin panel → **Sound System**
 2. The Bridge URL is already filled in (the bridge published it automatically)
 3. Choose which **monitor buses** to expose (e.g., buses 1–4)
 4. **Assign buses** to musicians and **authorize** who gets access
 5. Save
 
-### Step 4: Test
+### Step 5: Test
 
 On a musician's iPad, open the app → tap the Audio button in performance mode. Faders should appear. Move one — the X32 responds.
 
@@ -76,7 +74,8 @@ The bridge runs silently in the background. It starts on boot, restarts on crash
 | Problem | Fix |
 |---------|-----|
 | "Windows protected your PC" on first run | Click "More info" → "Run anyway" |
-| Wizard can't find the key file | Make sure it's a `.json` file in the same folder as the exe |
+| Setup code rejected | Code expires after 10 minutes. Generate a new one from the admin panel |
+| "Could not reach app" during setup | Check the site URL you entered. Try opening it in a browser first |
 | iPads can't connect | Check firewall (re-run with `--setup`), confirm same WiFi |
 | Bridge starts but X32 not found | Verify X32 is on, check its IP on the X32 Setup screen |
 | Faders move on iPad but X32 doesn't respond | Check bridge.log for errors |

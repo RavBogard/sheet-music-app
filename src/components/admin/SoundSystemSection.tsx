@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import {
     Loader2, Radio, Users, CheckCircle,
-    Radar, Save, Settings2, Music2,
+    Radar, Save, Settings2, Music2, Download, Copy, KeyRound,
 } from "lucide-react"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
@@ -41,6 +41,9 @@ export function SoundSystemSection() {
     const [scanning, setScanning] = useState(false)
     const [scanResult, setScanResult] = useState<string | null>(null)
     const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
+    const [setupCode, setSetupCode] = useState<string | null>(null)
+    const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
+    const [generatingCode, setGeneratingCode] = useState(false)
 
     useEffect(() => {
         const unsub = subscribeToAllMusicianProfiles(setMusicians)
@@ -105,6 +108,32 @@ export function SoundSystemSection() {
             setScanResult("Could not reach bridge server — is it running?")
         } finally { setScanning(false) }
     }, [bridgeUrl])
+
+    const handleGenerateSetupCode = useCallback(async () => {
+        setGeneratingCode(true)
+        try {
+            const { auth: firebaseAuth } = await import("@/lib/firebase")
+            const user = firebaseAuth.currentUser
+            if (!user) throw new Error("Not signed in")
+            const token = await user.getIdToken()
+            const res = await fetch("/api/bridge/setup-code", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || "Failed to generate code")
+            }
+            const { code, expiresAt } = await res.json()
+            setSetupCode(code)
+            setSetupCodeExpiry(expiresAt)
+            toast.success("Setup code generated")
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to generate setup code")
+        } finally {
+            setGeneratingCode(false)
+        }
+    }, [])
 
     const handleMonitorSave = useCallback(async () => {
         setMonitorSaving(true); setMonitorSaved(false)
@@ -179,6 +208,41 @@ export function SoundSystemSection() {
                 />
             ) : (
                 <div className="space-y-4">
+                    {/* Bridge Installation */}
+                    <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
+                            <Download className="w-4 h-4 text-muted-foreground" />
+                            Bridge Installation
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                            The bridge runs on the production PC and connects iPads to the X32 mixer. Generate a setup code, then enter it in the bridge installer — no Firebase Console needed.
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <Button onClick={handleGenerateSetupCode} disabled={generatingCode} variant="outline" size="sm" className="gap-2">
+                                {generatingCode ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+                                Generate Setup Code
+                            </Button>
+                            {setupCode && (
+                                <div className="flex items-center gap-2">
+                                    <code className="bg-muted px-4 py-2 rounded-lg text-lg font-mono font-bold tracking-[0.3em] select-all">
+                                        {setupCode}
+                                    </code>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                        navigator.clipboard.writeText(setupCode)
+                                        toast.success("Copied!")
+                                    }}>
+                                        <Copy className="w-3 h-3" />
+                                    </Button>
+                                    {setupCodeExpiry && (
+                                        <span className="text-xs text-muted-foreground">
+                                            Expires in {Math.max(0, Math.round((setupCodeExpiry - Date.now()) / 60000))} min
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                         <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
                             <Settings2 className="w-4 h-4 text-muted-foreground" />
