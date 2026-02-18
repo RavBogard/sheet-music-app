@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ListMusic, PlayCircle, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 
@@ -20,6 +20,49 @@ export function SetlistDrawer() {
     const [open, setOpen] = useState(false)
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(false)
+    const currentSongRef = useRef<HTMLButtonElement>(null)
+    const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+    // Group queue items by section headers
+    const sections = useMemo(() => {
+        const result: { label: string | null; tracks: { item: QueueItem; globalIndex: number }[] }[] = []
+        let currentSection: typeof result[0] = { label: null, tracks: [] }
+
+        playbackQueue.forEach((item, index) => {
+            if (item.trackType === 'header') {
+                // Start a new section
+                if (currentSection.tracks.length > 0 || currentSection.label !== null) {
+                    result.push(currentSection)
+                }
+                currentSection = { label: item.name, tracks: [] }
+            } else {
+                currentSection.tracks.push({ item, globalIndex: index })
+            }
+        })
+        // Push last section
+        if (currentSection.tracks.length > 0 || currentSection.label !== null) {
+            result.push(currentSection)
+        }
+        return result
+    }, [playbackQueue])
+
+    const sectionLabels = sections.filter(s => s.label).map(s => s.label!)
+
+    // Auto-scroll to current song when drawer opens
+    useEffect(() => {
+        if (open && currentSongRef.current) {
+            // Brief delay to let the sheet animation start
+            const timer = setTimeout(() => {
+                currentSongRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            }, 150)
+            return () => clearTimeout(timer)
+        }
+    }, [open])
+
+    const scrollToSection = (label: string) => {
+        const el = sectionRefs.current.get(label)
+        if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }
 
     // Calculate if we should show the empty state (Public Setlists)
     const showPublicPicker = playbackQueue.length === 0
@@ -130,55 +173,99 @@ export function SetlistDrawer() {
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col p-2 gap-1">
-                            {playbackQueue.map((track, index) => {
-                                const isCurrent = index === queueIndex
-                                return (
-                                    <button
-                                        key={`${track.fileId}-${index}`}
-                                        onClick={() => {
-                                            router.push(`/perform/${track.fileId}`)
-                                            setOpen(false)
+                        <div className="flex flex-col">
+                            {/* Section quick-jump chips */}
+                            {sectionLabels.length > 1 && (
+                                <div className="flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-border bg-muted/50 scrollbar-hide">
+                                    {sectionLabels.map(label => (
+                                        <button
+                                            key={label}
+                                            onClick={() => scrollToSection(label)}
+                                            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold
+                                                bg-muted hover:bg-accent text-muted-foreground hover:text-foreground
+                                                border border-border transition-colors"
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="flex flex-col p-2 gap-0.5">
+                                {sections.map((section, sectionIdx) => (
+                                    <div
+                                        key={`section-${sectionIdx}`}
+                                        ref={(el) => {
+                                            if (el && section.label) sectionRefs.current.set(section.label, el)
                                         }}
-                                        className={cn(
-                                            "flex items-center gap-4 p-4 rounded-xl transition-all text-left",
-                                            isCurrent
-                                                ? "bg-blue-600 text-foreground shadow-lg"
-                                                : "hover:bg-card text-muted-foreground hover:text-foreground"
-                                        )}
                                     >
-                                        <div className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                                            isCurrent ? "bg-white/20 text-foreground" : "bg-muted text-muted-foreground"
-                                        )}>
-                                            {index + 1}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <div className="font-bold truncate text-lg">
-                                                    {track.name}
-                                                </div>
-                                                {track.key && (
-                                                    <span className={cn(
-                                                        "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
-                                                        isCurrent
-                                                            ? "bg-white/20 border-white/30 text-foreground"
-                                                            : "bg-muted border-border text-muted-foreground"
-                                                    )}>
-                                                        {track.key}
-                                                    </span>
-                                                )}
+                                        {/* Section header */}
+                                        {section.label && (
+                                            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm px-4 py-2 mt-2 first:mt-0
+                                                text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50">
+                                                {section.label}
                                             </div>
-                                            {track.type && (
-                                                <div className="text-xs opacity-70 uppercase tracking-wider">
-                                                    {track.type}
-                                                </div>
-                                            )}
-                                        </div>
-                                        {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600" />}
-                                    </button>
-                                )
-                            })}
+                                        )}
+
+                                        {/* Tracks in section */}
+                                        {section.tracks.map(({ item: track, globalIndex }) => {
+                                            const isCurrent = globalIndex === queueIndex
+                                            const isFlowItem = track.trackType && track.trackType !== 'song'
+
+                                            return (
+                                                <button
+                                                    key={`${track.fileId}-${globalIndex}`}
+                                                    ref={isCurrent ? currentSongRef : undefined}
+                                                    onClick={() => {
+                                                        router.push(`/perform/${track.fileId}`)
+                                                        setOpen(false)
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center gap-4 p-4 rounded-xl transition-all text-left w-full",
+                                                        isCurrent
+                                                            ? "bg-blue-600 text-foreground shadow-lg"
+                                                            : "hover:bg-card text-muted-foreground hover:text-foreground",
+                                                        isFlowItem && !isCurrent && "opacity-60"
+                                                    )}
+                                                >
+                                                    <div className={cn(
+                                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                                                        isCurrent ? "bg-white/20 text-foreground" : "bg-muted text-muted-foreground"
+                                                    )}>
+                                                        {globalIndex + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={cn(
+                                                                "font-bold truncate",
+                                                                isFlowItem ? "text-base" : "text-lg"
+                                                            )}>
+                                                                {track.name}
+                                                            </div>
+                                                            {track.key && (
+                                                                <span className={cn(
+                                                                    "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
+                                                                    isCurrent
+                                                                        ? "bg-white/20 border-white/30 text-foreground"
+                                                                        : "bg-muted border-border text-muted-foreground"
+                                                                )}>
+                                                                    {track.key}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {isFlowItem && track.trackType && (
+                                                            <div className="text-xs opacity-70 uppercase tracking-wider mt-0.5">
+                                                                {track.trackType}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </ScrollArea>

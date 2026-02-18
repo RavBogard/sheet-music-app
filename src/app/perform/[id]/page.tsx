@@ -13,6 +13,8 @@ import { useAuth } from "@/lib/auth-context"
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
 import { LiveNotification } from "@/components/performance/LiveNotification"
 import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
+import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
+import { FlowItemView } from "@/components/performance/FlowItemView"
 
 import { parseFileId } from "@/lib/utils"
 
@@ -94,16 +96,26 @@ export default function PerformPage() {
         }
     }, [playbackQueue, queueIndex])
 
+    // Detect if current queue item is a non-song flow item (reading, prayer, header, etc.)
+    const isFlowItem = currentTrack?.trackType && currentTrack.trackType !== 'song'
+
     return (
         <>
             {showIntro && <PerformanceIntro onDismiss={dismissIntro} />}
             <LiveNotification setlistId={originSetlistId} />
-            <PerformerView
-                fileUrl={fileUrl}
-                fileType={fileType}
-                onHome={handleHome}
-                onSetlist={() => router.push('/setlists')}
-            />
+            {isFlowItem && currentTrack ? (
+                <FlowItemView
+                    onHome={handleHome}
+                    onSetlist={() => router.push('/setlists')}
+                />
+            ) : (
+                <PerformerView
+                    fileUrl={fileUrl}
+                    fileType={fileType}
+                    onHome={handleHome}
+                    onSetlist={() => router.push('/setlists')}
+                />
+            )}
             {audioUrl && (
                 <RehearsalToolbar
                     audioUrl={audioUrl}

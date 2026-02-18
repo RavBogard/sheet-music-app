@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, FileText, Music, Minus, Plus, ExternalLink, Pencil } from "lucide-react"
+import { Trash2, FileText, Music, Minus, Plus, ExternalLink } from "lucide-react"
 import { AudioFilePicker } from "../AudioFilePicker"
 import { TapTempoButton } from "@/components/ui/tap-tempo-button"
 import { KeyPicker } from "@/components/ui/key-picker"
@@ -205,51 +205,11 @@ export function TrackSheet({
             {/* Song-specific fields */}
             {isSong && (
                 <>
-                    {/* Chart Key (native) + Play In (setlist key) */}
+                    {/* Key — single primary control */}
                     <div className="space-y-3">
-                        {/* Chart Key — from library, read-only unless editing */}
-                        {nativeKey && !editingNativeKey && (
-                            <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Chart Key</Label>
-                                <span className="font-mono text-sm font-medium">{nativeKey}</span>
-                                <span className="text-[10px] text-muted-foreground">
-                                    ({nativeKeySource === 'manual' ? 'manual' : 'auto ✓'})
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingNativeKey(true)}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    <Pencil className="h-3 w-3" />
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Native key editor (shown when editing or no native key) */}
-                        {(editingNativeKey || (!nativeKey && track?.fileId)) && (
-                            <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Chart Key</Label>
-                                <KeyPicker
-                                    value={nativeKey || ""}
-                                    onChange={handleNativeKeyOverride}
-                                    className="w-20"
-                                />
-                                {editingNativeKey && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditingNativeKey(false)}
-                                        className="text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                        Cancel
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Play In (setlist key) + Lead row */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Play In</Label>
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Key</Label>
                                 <KeyPicker
                                     value={key}
                                     onChange={handleSetlistKeyChange}
@@ -266,46 +226,82 @@ export function TrackSheet({
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    {/* Transpose stepper */}
-                    <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Transpose</Label>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 bg-muted/50 rounded-md">
-                                <Button
+                        {/* Auto-context: shows native key and transposition when relevant */}
+                        {nativeKey && key && nativeKey !== key && (
+                            <p className="text-xs text-violet-500 dark:text-violet-400 font-medium pl-0.5">
+                                Chart is in {nativeKey} · transposing {transposition > 0 ? '+' : ''}{transposition}
+                            </p>
+                        )}
+
+                        {/* Manual override — expandable for advanced users */}
+                        {!editingNativeKey ? (
+                            <button
+                                type="button"
+                                onClick={() => setEditingNativeKey(true)}
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors pl-0.5"
+                            >
+                                {nativeKey
+                                    ? `Chart key: ${nativeKey} (${nativeKeySource === 'manual' ? 'manual' : 'auto'}) · Edit`
+                                    : track?.fileId ? 'Set chart key manually' : 'Advanced transpose'
+                                }
+                            </button>
+                        ) : (
+                            <div className="space-y-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+                                {/* Native key override */}
+                                {track?.fileId && (
+                                    <div className="flex items-center gap-2">
+                                        <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Chart Key</Label>
+                                        <KeyPicker
+                                            value={nativeKey || ""}
+                                            onChange={handleNativeKeyOverride}
+                                            className="w-20"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Semitone stepper */}
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Semitones</Label>
+                                    <div className="flex items-center gap-1 bg-muted/50 rounded-md">
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-9 w-9"
+                                            onClick={() => handleTranspositionChange(Math.max(transposition - 1, -11))}
+                                        >
+                                            <Minus className="h-4 w-4" />
+                                        </Button>
+                                        <span className={`w-10 text-center font-mono text-sm ${transposition !== 0 ? "text-violet-500 dark:text-violet-400" : "text-muted-foreground"}`}>
+                                            {transposition > 0 ? `+${transposition}` : transposition}
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-9 w-9"
+                                            onClick={() => handleTranspositionChange(Math.min(transposition + 1, 11))}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    {transposition !== 0 && (
+                                        <Button type="button" variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleTranspositionChange(0)}>
+                                            Reset
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <button
                                     type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9"
-                                    onClick={() => handleTranspositionChange(Math.max(transposition - 1, -11))}
+                                    onClick={() => setEditingNativeKey(false)}
+                                    className="text-xs text-muted-foreground hover:text-foreground"
                                 >
-                                    <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className={`w-10 text-center font-mono text-sm ${transposition !== 0 ? "text-violet-500 dark:text-violet-400" : "text-muted-foreground"}`}>
-                                    {transposition > 0 ? `+${transposition}` : transposition}
-                                </span>
-                                <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9"
-                                    onClick={() => handleTranspositionChange(Math.min(transposition + 1, 11))}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
+                                    Done
+                                </button>
                             </div>
-                            {transposition !== 0 && key && (
-                                <span className="text-sm text-violet-500 dark:text-violet-400 font-medium">
-                                    {nativeKey ? `${nativeKey} → ${key}` : `→ ${key}`}
-                                </span>
-                            )}
-                            {transposition !== 0 && (
-                                <Button type="button" variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleTranspositionChange(0)}>
-                                    Reset
-                                </Button>
-                            )}
-                        </div>
+                        )}
                     </div>
 
                     {/* BPM */}
