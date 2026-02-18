@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from "react"
 import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
 import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         let unsubscribeProfile: (() => void) | null = null
 
-        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
 
@@ -93,17 +93,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    // CRITICAL: Memoize the context value.
+    // Without this, every setProfile() creates a new value object, causing ALL
+    // useAuth() consumers (PDFViewer, setlist editor, prefetcher, etc.) to
+    // re-render even if only profile changed. This cascades into effect re-runs,
+    // aborted PDF fetches, and general sluggishness.
+    const value = useMemo(() => ({
+        user,
+        profile,
+        loading,
+        signIn,
+        signOut,
+        isAdmin,
+        isLeader,
+        isMember
+    }), [user, profile, loading, isAdmin, isLeader, isMember])
+
     return (
-        <AuthContext.Provider value={{
-            user,
-            profile,
-            loading,
-            signIn,
-            signOut,
-            isAdmin,
-            isLeader,
-            isMember
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     )

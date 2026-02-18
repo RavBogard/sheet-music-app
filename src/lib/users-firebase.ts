@@ -45,16 +45,31 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 }
 
 /**
- * Subscribe to the current user's profile
+ * Subscribe to the current user's profile.
+ * 
+ * Deduplicates updates: only fires callback when meaningful fields change.
+ * This prevents the ensureUserProfile() lastLoginAt update from triggering
+ * a re-render cascade through the entire app via AuthContext.
  */
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
     if (!db || Object.keys(db).length === 0) return () => { }
     const ref = doc(db, "users", uid)
+    let lastProfile: string | null = null
+
     return onSnapshot(ref, (snap) => {
         if (snap.exists()) {
-            callback(snap.data() as UserProfile)
+            const profile = snap.data() as UserProfile
+            // Compare meaningful fields only (skip lastLoginAt which changes every session)
+            const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
+            if (key !== lastProfile) {
+                lastProfile = key
+                callback(profile)
+            }
         } else {
-            callback(null)
+            if (lastProfile !== null) {
+                lastProfile = null
+                callback(null)
+            }
         }
     })
 }

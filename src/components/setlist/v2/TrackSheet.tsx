@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { SetlistTrack, TrackType } from "@/types/models"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -473,6 +473,7 @@ export function TrackSheet({
                             </span>
                         </div>
                     </DialogHeader>
+                    <DialogDescription className="sr-only">Edit track details</DialogDescription>
                     {content}
                 </DialogContent>
             </Dialog>

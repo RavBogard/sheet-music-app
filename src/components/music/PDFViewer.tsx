@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
@@ -24,13 +24,34 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
 
-    // sourceUrl can be a string (online URL or blob URL) or an object (online URL + headers)
-    const [source, setSource] = useState<string | { url: string; httpHeaders: Record<string, string> } | null>(null)
+    // Source can be: string (blob URL or plain URL) or object with headers
+    const [sourceUrl, setSourceUrl] = useState<string | null>(null)
+    const [sourceToken, setSourceToken] = useState<string | null>(null)
+    const [sourceType, setSourceType] = useState<'blob' | 'authenticated' | 'plain' | null>(null)
 
-    // 1. Resolve Source — check offline cache immediately, fall back to network when auth is ready
+    // Track which URL we've already resolved to avoid re-running on auth changes
+    const resolvedUrlRef = useRef<string | null>(null)
+    // Track blob URL for proper cleanup on unmount (not on effect re-runs)
+    const blobUrlRef = useRef<string | null>(null)
+
+    // Clean up blob URL on unmount only
     useEffect(() => {
+        return () => {
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current)
+                blobUrlRef.current = null
+            }
+        }
+    }, [])
+
+    // 1. Resolve Source — runs ONCE per url prop change
+    useEffect(() => {
+        // Don't re-resolve if we already have a source for this URL
+        if (resolvedUrlRef.current === url && sourceType !== null) return
+        // Wait for auth to settle
+        if (loading) return
+
         let active = true
-        let objectUrl: string | null = null
 
         const resolveSource = async () => {
             // Extract fileId from Drive API URL
@@ -39,36 +60,50 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
             // A. Try Offline First — no auth needed, IndexedDB is local
             if (fileId) {
-                const offlineFile = await getOfflineFile(fileId)
-                if (active && offlineFile) {
-                    logger.info("Serving offline file for:", fileId)
-                    objectUrl = URL.createObjectURL(offlineFile.blob)
-                    setSource(objectUrl)
-                    return
+                try {
+                    const offlineFile = await getOfflineFile(fileId)
+                    if (active && offlineFile) {
+                        logger.info("Serving offline file for:", fileId)
+                        const objectUrl = URL.createObjectURL(offlineFile.blob)
+                        blobUrlRef.current = objectUrl
+                        resolvedUrlRef.current = url
+                        setSourceUrl(objectUrl)
+                        setSourceToken(null)
+                        setSourceType('blob')
+                        return
+                    }
+                } catch {
+                    // IndexedDB may fail — fall through to network
                 }
             }
 
-            // B. Online fallback — wait for auth to settle before adding token
-            if (loading) return // Auth still loading, will re-run when ready
+            if (!active) return
 
-            if (active) {
-                if (user) {
-                    try {
-                        const token = await user.getIdToken()
-                        setSource({
-                            url: url,
-                            httpHeaders: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        })
-                    } catch (e) {
-                        logger.error("Failed to get token for PDF:", e)
-                        setSource(url) // Fallback
+            // B. Online fallback
+            if (user) {
+                try {
+                    const token = await user.getIdToken()
+                    if (active) {
+                        resolvedUrlRef.current = url
+                        setSourceUrl(url)
+                        setSourceToken(token)
+                        setSourceType('authenticated')
                     }
-                } else {
-                    // Not logged in — try URL directly (works for public file proxy)
-                    setSource(url)
+                } catch (e) {
+                    logger.error("Failed to get token for PDF:", e)
+                    if (active) {
+                        resolvedUrlRef.current = url
+                        setSourceUrl(url)
+                        setSourceToken(null)
+                        setSourceType('plain')
+                    }
                 }
+            } else {
+                // Not logged in — try URL directly (public file proxy)
+                resolvedUrlRef.current = url
+                setSourceUrl(url)
+                setSourceToken(null)
+                setSourceType('plain')
             }
         }
 
@@ -76,9 +111,25 @@ export function PDFViewer({ url }: PDFViewerProps) {
 
         return () => {
             active = false
-            if (objectUrl) URL.revokeObjectURL(objectUrl)
         }
-    }, [url, user, loading])
+    }, [url, user, loading, sourceType])
+
+    // CRITICAL: Memoize the source object passed to react-pdf's <Document>.
+    // Without this, every render creates a new {url, httpHeaders} object,
+    // which react-pdf treats as a different file → aborts download → restarts.
+    // This was the root cause of the AbortError flood.
+    const source = useMemo(() => {
+        if (!sourceUrl) return null
+        if (sourceType === 'authenticated' && sourceToken) {
+            return {
+                url: sourceUrl,
+                httpHeaders: {
+                    'Authorization': `Bearer ${sourceToken}`
+                }
+            }
+        }
+        return sourceUrl
+    }, [sourceUrl, sourceToken, sourceType])
 
     // 2. Auto-Resize Logic
     const containerRef = useRef<HTMLDivElement>(null)
@@ -103,8 +154,9 @@ export function PDFViewer({ url }: PDFViewerProps) {
         setNumPages(numPages)
     }
 
-    // 3. Transposer State (Just for zoom/transposition read)
-    const { zoom, transposition } = useMusicStore()
+    // 3. Transposer State — use selectors to avoid re-render on unrelated store changes
+    const zoom = useMusicStore(s => s.zoom)
+    const transposition = useMusicStore(s => s.transposition)
 
     return (
         <div className="flex flex-col h-full w-full relative group">
