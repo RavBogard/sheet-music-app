@@ -81,6 +81,8 @@ export function ChatPanel() {
                 body: JSON.stringify({
                     messages: [...messages, userMsg],
                     currentSetlist: contextData.currentSetlist || [],
+                    setlistName: contextData.setlistName,
+                    rabbi: contextData.rabbi,
                     libraryFiles: allFiles.map(f => ({ id: f.id, name: f.name }))
                 })
             })

@@ -21,6 +21,9 @@ export interface ChatEditAction {
 
 interface ChatContextData {
     currentSetlist?: SetlistTrack[]
+    setlistName?: string
+    setlistId?: string
+    rabbi?: string
     libraryFiles?: Array<{ id: string; name: string; mimeType: string }>
 }
 

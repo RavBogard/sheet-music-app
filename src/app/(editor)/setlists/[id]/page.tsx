@@ -69,6 +69,7 @@ export default function SetlistEditorPage() {
             initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
             initialEventDate={existingSetlist?.eventDate ? toDate(existingSetlist.eventDate) : undefined}
+            initialRabbi={existingSetlist?.rabbi}
             onBack={() => {
                 clearPending()
                 router.push("/setlists")

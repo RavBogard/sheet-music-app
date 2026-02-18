@@ -62,6 +62,7 @@ export interface Setlist {
     isPublic?: boolean
     ownerId?: string
     ownerName?: string
+    rabbi?: string // Which rabbi is leading this service
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string

@@ -16,6 +16,7 @@ interface UseSetlistLogicProps {
     initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
+    initialRabbi?: string
 
     onSave?: (id: string) => void
 }
@@ -28,6 +29,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         suggestedName = "",
         initialIsPublic = false,
         initialOwnerId,
+        initialRabbi = "",
 
         onSave
     } = props
@@ -50,6 +52,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const [tracks, setTracks] = useState<SetlistTrack[]>(initialTracks)
     const [isPublic, setIsPublic] = useState(initialIsPublic)
     const [eventDate, setEventDate] = useState<Date | null>(props.initialEventDate ? new Date(props.initialEventDate) : null)
+    const [rabbi, setRabbi] = useState(initialRabbi)
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
@@ -179,9 +182,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     useEffect(() => {
         setContextData({
-            currentSetlist: tracks
+            currentSetlist: tracks,
+            setlistName: name,
+            setlistId,
+            rabbi,
         })
-    }, [tracks, setContextData])
+    }, [tracks, name, setlistId, rabbi, setContextData])
 
     useEffect(() => {
         registerOnApplyEdits(handleApplyEdits)
@@ -190,14 +196,14 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     // Refs to always read latest values inside the debounced save
-    const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate })
+    const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate, rabbi })
     useEffect(() => {
-        latestRef.current = { setlistId, name, tracks, isPublic, eventDate }
-    }, [setlistId, name, tracks, isPublic, eventDate])
+        latestRef.current = { setlistId, name, tracks, isPublic, eventDate, rabbi }
+    }, [setlistId, name, tracks, isPublic, eventDate, rabbi])
 
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {
-        const { setlistId: id, name: n, tracks: t, isPublic: pub, eventDate: ed } = latestRef.current
+        const { setlistId: id, name: n, tracks: t, isPublic: pub, eventDate: ed, rabbi: rab } = latestRef.current
         if (!n || n.length === 0 || !canEdit || !setlistService) return
 
         setSaving(true)
@@ -206,7 +212,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 name: n,
                 tracks: t,
                 trackCount: t.length,
-                eventDate: ed ? ed.toISOString() : undefined
+                eventDate: ed ? ed.toISOString() : undefined,
+                rabbi: rab || undefined,
             }
 
             if (id) {
@@ -246,7 +253,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [name, tracks, isPublic, eventDate, performSave, canEdit])
+    }, [name, tracks, isPublic, eventDate, rabbi, performSave, canEdit])
 
     // --- Actions ---
 
@@ -425,6 +432,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         togglePublic,
         eventDate,
         setEventDate,
+        rabbi,
+        setRabbi,
         undo,
         redo,
         canUndo,

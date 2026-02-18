@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, Undo2, Redo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState, useRef, useEffect } from "react"
@@ -12,6 +12,10 @@ interface SetlistTopBarProps {
     canEdit: boolean
     saving: boolean
     lastSaved: Date | null
+    onUndo?: () => void
+    onRedo?: () => void
+    canUndo?: boolean
+    canRedo?: boolean
     overflowTrigger: React.ReactNode
 }
 
@@ -22,6 +26,10 @@ export function SetlistTopBar({
     canEdit,
     saving,
     lastSaved,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
     overflowTrigger,
 }: SetlistTopBarProps) {
     const [editing, setEditing] = useState(false)
@@ -63,12 +71,38 @@ export function SetlistTopBar({
             </div>
 
             {/* Save status dot */}
-            <div className="shrink-0 flex items-center gap-2">
+            <div className="shrink-0 flex items-center gap-1">
                 {saving && (
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" title="Saving..." />
+                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse mr-1" title="Saving..." />
                 )}
                 {!saving && lastSaved && (
-                    <div className="h-2 w-2 rounded-full bg-green-500" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-1" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
+                )}
+
+                {/* Undo / Redo */}
+                {canEdit && onUndo && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={onUndo}
+                        disabled={!canUndo}
+                        title="Undo"
+                    >
+                        <Undo2 className="h-4 w-4" />
+                    </Button>
+                )}
+                {canEdit && onRedo && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={onRedo}
+                        disabled={!canRedo}
+                        title="Redo"
+                    >
+                        <Redo2 className="h-4 w-4" />
+                    </Button>
                 )}
             </div>
 

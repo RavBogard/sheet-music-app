@@ -53,6 +53,7 @@ export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloadin
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-blue-500 dark:group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
                 {setlist.ownerName && <p className="text-muted-foreground text-sm">Leader: {setlist.ownerName}</p>}
+                {setlist.rabbi && <p className="text-muted-foreground text-sm">Rabbi {setlist.rabbi}</p>}
 
                 <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{setlist.trackCount || 0} songs</span>
@@ -136,7 +137,7 @@ export function SetlistCard({ setlist, onClick, onDuplicate, onDelete, canDelete
                 </div>
             )}
             <div className="mt-2 text-muted-foreground text-sm">
-                {setlist.trackCount || 0} songs
+                {setlist.trackCount || 0} songs{setlist.rabbi ? ` · Rabbi ${setlist.rabbi}` : ''}
             </div>
         </button>
     )

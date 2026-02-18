@@ -61,8 +61,8 @@ export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowP
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer
-                ${config.tint} hover:bg-accent/40 active:bg-accent
+            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer
+                ${config.tint} hover:bg-accent/50 active:bg-accent
                 ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50" : ""}
             `}
             onClick={() => onTap(track)}
@@ -72,31 +72,45 @@ export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowP
                 <div
                     {...attributes}
                     {...listeners}
-                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30 hover:text-muted-foreground p-1 -ml-1"
+                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground p-1 -ml-1"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <GripVertical className="h-4 w-4" />
+                    <GripVertical className="h-5 w-5" />
                 </div>
             )}
 
             {/* Type icon */}
-            <div className={`shrink-0 ${config.iconColor}`}>
-                <Icon className="h-3.5 w-3.5" />
-            </div>
+            {!canEdit && (
+                <div className={`shrink-0 ${config.iconColor}`}>
+                    <Icon className="h-4 w-4" />
+                </div>
+            )}
 
-            {/* Content - single line */}
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-                <span className="text-sm text-foreground/80 truncate">
-                    {track.title || trackType.charAt(0).toUpperCase() + trackType.slice(1)}
-                </span>
-                {track.performer && (
-                    <span className="text-xs text-muted-foreground/60 shrink-0 hidden sm:inline">
-                        · {track.performer}
+            {/* Content — two lines to match SongRow */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    {canEdit && (
+                        <div className={`shrink-0 ${config.iconColor}`}>
+                            <Icon className="h-4 w-4" />
+                        </div>
+                    )}
+                    <span className="font-medium text-foreground/80 truncate">
+                        {track.title || trackType.charAt(0).toUpperCase() + trackType.slice(1)}
                     </span>
-                )}
+                    {track.performer && (
+                        <span className="shrink-0 text-xs text-muted-foreground italic hidden sm:inline">
+                            {track.performer}
+                        </span>
+                    )}
+                </div>
+                <div className="text-xs text-muted-foreground/60 truncate mt-0.5">
+                    {trackType.charAt(0).toUpperCase() + trackType.slice(1)}
+                    {track.estimatedMinutes && track.estimatedMinutes > 0 ? ` · ~${track.estimatedMinutes} min` : ""}
+                    {track.description ? ` — ${track.description}` : ""}
+                </div>
             </div>
 
-            {/* Duration */}
+            {/* Duration badge */}
             {track.estimatedMinutes && track.estimatedMinutes > 0 && (
                 <span className="text-xs text-muted-foreground/50 shrink-0">
                     ~{track.estimatedMinutes}m

@@ -65,6 +65,7 @@ You must return a JSON object with this structure:
 - When building Shabbat morning setlists: Birchot HaShachar header → Morning Blessings → P'sukei D'zimra header → Ashrei → Nishmat → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah header → Silent Prayer → Torah Service header → Torah Processional → Torah Reading → Haftarah → Returning the Torah → Sermon → Aleinu → Mourner's Kaddish → Adon Olam/Ein Keloheinu → Kiddush.
 - Search the library context to find matching files for each liturgical slot.
 - When SONG USAGE HISTORY is available, use it to rotate repertoire: prefer songs not used recently over ones used last week. Mention rotation reasoning if asked.
+- **Rabbi-Specific Preferences**: Each rabbi has their own style and preferences. The "ALL SETLISTS" context shows which rabbi led each past service. When building or suggesting setlists, study past setlists tagged with the same rabbi to learn their patterns — typical song choices, service flow ordering, liturgical emphasis, and preferred musicians. If the current setlist has a rabbi assigned, tailor your suggestions to match that rabbi's established patterns. If asked about differences between rabbis, compare their past setlists.
 - If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST with both "title" and "fileId".
 - ADD_TO_SETLIST payload uses "title" (not "fileName") for the display name. Include "fileId" if found in the library. For non-song items, include "type", "performer", "estimatedMinutes".
 - If asked to "Remove the first song", issue REMOVE_FROM_SETLIST with index 0.
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     const limited = await checkRateLimit(request, 'ai')
     if (limited) return limited
 
-    const { messages, currentSetlist, libraryFiles } = await request.json()
+    const { messages, currentSetlist, libraryFiles, setlistName, rabbi } = await request.json()
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
     // 1. Authenticate & Check Admin Status
@@ -131,13 +132,14 @@ export async function POST(request: NextRequest) {
         if (!setlistsSnap.empty) {
             const setlistLines = setlistsSnap.docs.map(doc => {
                 const data = doc.data()
+                const rabbiTag = data.rabbi ? ` [Rabbi: ${data.rabbi}]` : ''
                 const trackList = (data.tracks || [])
                     .filter((t: { type?: string }) => !t.type || t.type === 'song')
                     .map((t: { title: string; fileId?: string }, i: number) =>
                         `  ${i + 1}. ${t.title}${t.fileId ? ` (fileId: ${t.fileId})` : ''}`
                     )
                     .join('\n')
-                return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks)\n${trackList}`
+                return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks${rabbiTag})\n${trackList}`
             }).join('\n\n')
             allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
         }
@@ -199,7 +201,7 @@ CONTEXT:
 ${libraryContext}
 -------------------------------
 
---- CURRENT SETLIST ---
+--- CURRENT SETLIST${setlistName ? ` ("${setlistName}")` : ''}${rabbi ? ` [Rabbi: ${rabbi}]` : ''} ---
 ${setlistContext}
 -----------------------
 ${allSetlistsContext}${liturgicalContext}${usageContext}${userContext}

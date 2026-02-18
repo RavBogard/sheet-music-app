@@ -6,6 +6,9 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +26,7 @@ import {
     Radio,
     Trash2,
     Clock,
+    User,
 } from "lucide-react"
 
 interface OverflowMenuProps {
@@ -38,12 +42,14 @@ interface OverflowMenuProps {
     onOpenAI: () => void
     onToggleLive?: () => void
     onDelete?: () => void
+    onSetRabbi?: (rabbi: string) => void
 
     // State
     isPublic: boolean
     isLeader: boolean
     canEdit: boolean
     setlistId?: string
+    rabbi?: string
     liveEnabled?: boolean
     isSyncing?: boolean
     isFullyOffline?: boolean
@@ -62,10 +68,12 @@ export function OverflowMenu({
     onOpenAI,
     onToggleLive,
     onDelete,
+    onSetRabbi,
     isPublic,
     isLeader,
     canEdit,
     setlistId,
+    rabbi,
     liveEnabled,
     isSyncing,
     isFullyOffline,
@@ -125,6 +133,27 @@ export function OverflowMenu({
                 <DropdownMenuSeparator />
 
                 {/* Settings */}
+                {canEdit && onSetRabbi && (
+                    <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                            <User className="h-4 w-4 mr-2" />
+                            {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                            {["Daniel", "Karen"].map((r) => (
+                                <DropdownMenuItem key={r} onClick={() => onSetRabbi(r)}>
+                                    {rabbi === r && <Check className="h-3 w-3 mr-2" />}
+                                    <span className={rabbi === r ? "font-medium" : ""}>Rabbi {r}</span>
+                                </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onSetRabbi("")}>
+                                Clear
+                            </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                )}
+
                 {canEdit && setlistId && (
                     <DropdownMenuItem onClick={onTogglePublic} disabled={!isPublic && !isLeader}>
                         {isPublic ? <Lock className="h-4 w-4 mr-2" /> : <Globe className="h-4 w-4 mr-2" />}

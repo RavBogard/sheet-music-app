@@ -50,6 +50,7 @@ interface SetlistEditorV2Props {
     initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
+    initialRabbi?: string
     onBack: () => void
     onSave?: (id: string) => void
     onPlayTrack?: (fileId: string, fileName: string) => void
@@ -63,6 +64,7 @@ export function SetlistEditorV2({
     initialIsPublic = false,
     initialOwnerId,
     initialEventDate,
+    initialRabbi,
     onBack,
     onSave,
     onPlayTrack,
@@ -82,6 +84,8 @@ export function SetlistEditorV2({
         setIsPublic,
         eventDate,
         setEventDate,
+        rabbi,
+        setRabbi,
         saving,
         lastSaved,
         isSyncing,
@@ -94,6 +98,10 @@ export function SetlistEditorV2({
         addSongsFromLibrary,
         addServiceItem,
         togglePublic,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
         restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
@@ -103,6 +111,7 @@ export function SetlistEditorV2({
         initialIsPublic,
         initialOwnerId,
         initialEventDate,
+        initialRabbi,
         onSave,
     })
 
@@ -224,12 +233,17 @@ export function SetlistEditorV2({
                 canEdit={canEdit}
                 saving={saving}
                 lastSaved={lastSaved}
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
                 overflowTrigger={
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
                         onPrint={() => setShowPrintModal(true)}
                         onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
                         onTogglePublic={togglePublic}
+                        onSetRabbi={canEdit ? setRabbi : undefined}
                         onHistory={setlistId ? () => setShowHistory(!showHistory) : undefined}
                         onSync={() => syncSetlist(tracks)}
                         onOpenAI={() => useChatStore.getState().toggle()}
@@ -238,6 +252,7 @@ export function SetlistEditorV2({
                         isLeader={isLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
+                        rabbi={rabbi}
                         liveEnabled={liveState?.enabled}
                         isSyncing={isSyncing}
                         isFullyOffline={isFullyOffline}
