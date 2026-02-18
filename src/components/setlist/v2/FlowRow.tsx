@@ -9,7 +9,7 @@ import { SetlistTrack, TrackType } from "@/types/models"
 interface FlowRowProps {
     track: SetlistTrack
     canEdit: boolean
-    onTap: (track: SetlistTrack) => void
+    onTap?: (track: SetlistTrack) => void
 }
 
 const FLOW_CONFIG: Record<string, {
@@ -65,7 +65,7 @@ export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowP
                 ${config.tint} hover:bg-accent/50 active:bg-accent
                 ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50" : ""}
             `}
-            onClick={() => onTap(track)}
+            onClick={() => onTap?.(track)}
         >
             {/* Drag handle */}
             {canEdit && (

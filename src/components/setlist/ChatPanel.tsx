@@ -25,7 +25,7 @@ import { logger } from "@/lib/logger"
 
 export function ChatPanel() {
     const { user } = useAuth() // Get user for auth token
-    const { isOpen, close, messages, addMessage, contextData, onApplyEdits } = useChatStore()
+    const { isOpen, close, messages, addMessage, replaceLastAssistant, contextData, onApplyEdits } = useChatStore()
     const { allFiles } = useLibraryStore()
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
@@ -70,7 +70,7 @@ export function ChatPanel() {
         setLoading(true)
 
         try {
-            // Send to AI API
+            // Send to AI API (now returns SSE stream)
             const res = await apiFetch('/api/chat', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -87,22 +87,69 @@ export function ChatPanel() {
                 throw new Error(errorData.error || `Server error (${res.status})`)
             }
 
-            const data = await res.json()
+            // Read the SSE stream
+            const reader = res.body?.getReader()
+            if (!reader) throw new Error("No response stream")
 
-            // 1. Add Message
-            if (data.message) {
-                addMessage({ role: 'assistant', content: data.message })
+            const decoder = new TextDecoder()
+            let streamedMessage = ""
+            let assistantMsgAdded = false
+
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                const text = decoder.decode(value, { stream: true })
+                // Parse SSE lines
+                for (const line of text.split('\n')) {
+                    if (!line.startsWith('data: ')) continue
+                    try {
+                        const payload = JSON.parse(line.slice(6))
+
+                        if (payload.error) {
+                            throw new Error(payload.error)
+                        }
+
+                        if (payload.done) {
+                            // Final message — process commands
+                            const finalMessage = payload.message || streamedMessage
+                            if (finalMessage) {
+                                // Replace streaming message with final
+                                replaceLastAssistant(finalMessage)
+                            }
+
+                            // Handle Legacy Edits
+                            if (payload.edits && payload.edits.length > 0 && onApplyEdits) {
+                                onApplyEdits(payload.edits)
+                                toast.success("Setlist updated!")
+                            }
+
+                            // Handle Commands
+                            if (payload.commands && Array.isArray(payload.commands)) {
+                                await handleCommands(payload.commands)
+                            }
+                        } else if (payload.chunk) {
+                            // Streaming chunk — show progressive text
+                            streamedMessage = payload.accumulated || (streamedMessage + payload.chunk)
+                            if (!assistantMsgAdded) {
+                                addMessage({ role: 'assistant', content: streamedMessage })
+                                assistantMsgAdded = true
+                            } else {
+                                replaceLastAssistant(streamedMessage)
+                            }
+                        }
+                    } catch (parseErr) {
+                        // Skip malformed SSE lines
+                        if (parseErr instanceof Error && parseErr.message !== "No response stream") {
+                            logger.warn("SSE parse error:", parseErr)
+                        }
+                    }
+                }
             }
 
-            // 2. Handle Legacy Edits (Backward compatibility)
-            if (data.edits && data.edits.length > 0 && onApplyEdits) {
-                onApplyEdits(data.edits)
-                toast.success("Setlist updated!")
-            }
-
-            // 3. Handle New Commands (The Agent Logic)
-            if (data.commands && Array.isArray(data.commands)) {
-                await handleCommands(data.commands)
+            // If no streaming messages came through, ensure we have something
+            if (!assistantMsgAdded && streamedMessage) {
+                addMessage({ role: 'assistant', content: streamedMessage })
             }
 
         } catch (error: unknown) {

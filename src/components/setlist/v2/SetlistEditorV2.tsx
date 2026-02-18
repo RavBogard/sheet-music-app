@@ -33,6 +33,7 @@ import { DividerRow } from "./DividerRow"
 import { FlowRow } from "./FlowRow"
 import { TrackSheet } from "./TrackSheet"
 import { SwipeToDelete } from "./SwipeToDelete"
+import { BatchActionBar } from "./BatchActionBar"
 import { AddBar } from "./AddBar"
 
 // Shared components (kept from v1)
@@ -106,6 +107,8 @@ export function SetlistEditorV2({
         redo,
         canUndo,
         canRedo,
+        addToHistory,
+        setTracks,
         restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
@@ -162,6 +165,10 @@ export function SetlistEditorV2({
     const [showHistory, setShowHistory] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
+
+    // Batch select mode
+    const [selectMode, setSelectMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
     // Service for delete/duplicate operations
     const editorService = useMemo(
@@ -237,26 +244,90 @@ export function SetlistEditorV2({
         }
     }
 
+    // ── Batch select operations ──
+
+    const toggleSelectId = useCallback((id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }, [])
+
+    const handleBatchDelete = useCallback(() => {
+        if (selectedIds.size === 0) return
+        addToHistory(tracks)
+        setTracks(prev => prev.filter(t => !selectedIds.has(t.id)))
+        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} deleted`, {
+            action: { label: "Undo", onClick: () => undo() },
+            duration: 5000,
+        })
+        setSelectedIds(new Set())
+    }, [selectedIds, tracks, addToHistory, setTracks, undo])
+
+    const handleBatchDuplicate = useCallback(() => {
+        if (selectedIds.size === 0) return
+        addToHistory(tracks)
+        const newTracks = [...tracks]
+        // Insert duplicates after the last selected item
+        const selectedArr = tracks.filter(t => selectedIds.has(t.id))
+        const lastSelectedIdx = tracks.findIndex(t => t.id === selectedArr[selectedArr.length - 1]?.id)
+        const duplicates = selectedArr.map(t => ({
+            ...t,
+            id: crypto.randomUUID(),
+        }))
+        newTracks.splice(lastSelectedIdx + 1, 0, ...duplicates)
+        setTracks(newTracks)
+        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} duplicated`)
+        setSelectedIds(new Set())
+    }, [selectedIds, tracks, addToHistory, setTracks])
+
+    const exitSelectMode = useCallback(() => {
+        setSelectMode(false)
+        setSelectedIds(new Set())
+    }, [])
+
     // ── Track rendering ──
 
     const renderTrack = (track: SetlistTrack) => {
+        // In select mode, suppress tap/play behaviors
+        const tapHandler = selectMode ? () => {} : setEditingTrack
+        const playHandler = selectMode ? undefined : handlePlayTrack
+
         const row = (() => {
             if (track.type === "header") {
-                return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
+                return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
             }
             if (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type)) {
-                return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={setEditingTrack} />
+                return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
             }
             return (
                 <SongRow
                     key={track.id}
                     track={track}
                     canEdit={canEdit}
-                    onTap={setEditingTrack}
-                    onPlayFile={handlePlayTrack}
+                    onTap={tapHandler}
+                    onPlayFile={playHandler}
                 />
             )
         })()
+
+        if (selectMode) {
+            const isSelected = selectedIds.has(track.id)
+            return (
+                <div
+                    key={track.id}
+                    className={`flex items-center gap-2 cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 rounded-lg' : ''}`}
+                    onClick={() => toggleSelectId(track.id)}
+                >
+                    <div className={`ml-2 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                        {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">{row}</div>
+                </div>
+            )
+        }
 
         return (
             <SwipeToDelete key={track.id} enabled={canEdit} onDelete={() => deleteTrack(track.id)}>
@@ -308,6 +379,7 @@ export function SetlistEditorV2({
                         onToggleLive={isLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
+                        onSelectMode={canEdit && tracks.length > 0 ? () => setSelectMode(true) : undefined}
                         isPublic={isPublic}
                         isLeader={isLeader}
                         canEdit={canEdit}
@@ -360,11 +432,24 @@ export function SetlistEditorV2({
                 </DndContext>
             </div>
 
-            {/* Add bar (sticky bottom) - only for editors */}
-            {canEdit && (
+            {/* Add bar (sticky bottom) - only for editors, hidden in select mode */}
+            {canEdit && !selectMode && (
                 <AddBar
                     onAddSongs={() => setShowAddSongs(true)}
                     onAddItem={(type: TrackType) => addServiceItem(type)}
+                />
+            )}
+
+            {/* Batch action bar (select mode) */}
+            {selectMode && (
+                <BatchActionBar
+                    selectedCount={selectedIds.size}
+                    totalCount={tracks.length}
+                    onDelete={handleBatchDelete}
+                    onDuplicate={handleBatchDuplicate}
+                    onSelectAll={() => setSelectedIds(new Set(tracks.map(t => t.id)))}
+                    onClearSelection={() => setSelectedIds(new Set())}
+                    onExitSelectMode={exitSelectMode}
                 />
             )}
 

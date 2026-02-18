@@ -9,7 +9,7 @@ import { SetlistTrack } from "@/types/models"
 interface DividerRowProps {
     track: SetlistTrack
     canEdit: boolean
-    onTap: (track: SetlistTrack) => void
+    onTap?: (track: SetlistTrack) => void
 }
 
 export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: DividerRowProps) {
@@ -32,7 +32,7 @@ export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: Di
             className={`flex items-center gap-3 py-2 mt-3 mb-1 group cursor-pointer
                 ${isDragging ? "opacity-50 z-50" : ""}
             `}
-            onClick={() => canEdit && onTap(track)}
+            onClick={() => canEdit && onTap?.(track)}
         >
             {canEdit && (
                 <div

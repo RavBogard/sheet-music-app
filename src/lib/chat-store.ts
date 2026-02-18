@@ -37,6 +37,7 @@ interface ChatState {
     // Chat Data
     messages: Message[]
     addMessage: (message: Message) => void
+    replaceLastAssistant: (content: string) => void
     setMessages: (messages: Message[]) => void
     clearMessages: () => void
 
@@ -62,6 +63,16 @@ export const useChatStore = create<ChatState>((set) => ({
 
     messages: [],
     addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+    replaceLastAssistant: (content) => set((state) => {
+        const msgs = [...state.messages]
+        for (let i = msgs.length - 1; i >= 0; i--) {
+            if (msgs[i].role === 'assistant') {
+                msgs[i] = { ...msgs[i], content }
+                return { messages: msgs }
+            }
+        }
+        return { messages: [...msgs, { role: 'assistant', content }] }
+    }),
     setMessages: (messages) => set({ messages }),
     clearMessages: () => set({ messages: [] }),
 

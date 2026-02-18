@@ -211,10 +211,45 @@ USER MESSAGE:
 ${messages[messages.length - 1].content}
 `
 
-    const result = await model.generateContent(prompt)
-    const responseText = result.response.text()
+    const result = await model.generateContentStream(prompt)
 
-    return NextResponse.json(JSON.parse(responseText))
+    // Stream response as Server-Sent Events
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let accumulated = ""
+          for await (const chunk of result.stream) {
+            const text = chunk.text()
+            if (text) {
+              accumulated += text
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: text, accumulated })}\n\n`))
+            }
+          }
+          // Final event with complete parsed response
+          try {
+            const parsed = JSON.parse(accumulated)
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, ...parsed })}\n\n`))
+          } catch {
+            // If JSON parse fails, send raw text as message
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, message: accumulated, commands: [] })}\n\n`))
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Stream error"
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        } finally {
+          controller.close()
+        }
+      }
+    })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }
+    })
 
   } catch (error: unknown) {
     logger.error("Chat API Error:", error)

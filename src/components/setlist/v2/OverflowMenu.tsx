@@ -22,6 +22,7 @@ import {
     History,
     Download,
     Check,
+    ListChecks,
     Sparkles,
     Radio,
     Trash2,
@@ -41,6 +42,7 @@ interface OverflowMenuProps {
     onOpenAI: () => void
     onToggleLive?: () => void
     onDelete?: () => void
+    onSelectMode?: () => void
     onSetRabbi?: (rabbi: string) => void
 
     // State
@@ -67,6 +69,7 @@ export function OverflowMenu({
     onOpenAI,
     onToggleLive,
     onDelete,
+    onSelectMode,
     onSetRabbi,
     isPublic,
     isLeader,
@@ -126,6 +129,13 @@ export function OverflowMenu({
                     <DropdownMenuItem onClick={onDuplicate}>
                         <Copy className="h-4 w-4 mr-2" />
                         Duplicate Setlist
+                    </DropdownMenuItem>
+                )}
+
+                {canEdit && onSelectMode && (
+                    <DropdownMenuItem onClick={onSelectMode}>
+                        <ListChecks className="h-4 w-4 mr-2" />
+                        Select Items
                     </DropdownMenuItem>
                 )}
 

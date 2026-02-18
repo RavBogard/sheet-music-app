@@ -9,7 +9,7 @@ import { SetlistTrack } from "@/types/models"
 interface SongRowProps {
     track: SetlistTrack
     canEdit: boolean
-    onTap: (track: SetlistTrack) => void
+    onTap?: (track: SetlistTrack) => void
     onPlayFile?: (fileId: string, fileName: string) => void
 }
 
@@ -43,7 +43,7 @@ export const SongRow = memo(function SongRow({ track, canEdit, onTap, onPlayFile
                 hover:bg-accent/50 active:bg-accent
                 ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50 bg-accent" : ""}
             `}
-            onClick={() => onTap(track)}
+            onClick={() => onTap?.(track)}
         >
             {/* Drag handle */}
             {canEdit && (
