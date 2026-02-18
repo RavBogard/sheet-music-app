@@ -146,5 +146,12 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+
+    // QR SIGN-IN SESSIONS — server-only via admin SDK
+    // iPad creates via API, phone approves via API, iPad polls via API.
+    // No direct client reads/writes needed.
+    match /qr-sessions/{code} {
+      allow read, write: if false;
+    }
   }
 }

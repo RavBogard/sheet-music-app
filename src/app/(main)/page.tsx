@@ -26,6 +26,7 @@ import { useChatStore } from "@/lib/chat-store"
 import { isFileOffline } from "@/lib/offline-store"
 import { useCongregation } from "@/lib/congregation-context"
 import { useUpcomingPrep, type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
+import { QRSignIn } from "@/components/auth/QRSignIn"
 import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
@@ -354,15 +355,18 @@ export default function DashboardPage() {
 
                 {/* ── Guest Sign-In ── */}
                 {!user && (
-                    <div className={cn("bg-card rounded-2xl p-5 text-center space-y-3 border border-border", stagger(4))}>
-                        <p className="text-muted-foreground text-sm">
-                            Sign in to access the full library, create setlists, and use AI tools.
-                        </p>
+                    <div className={cn("bg-card rounded-2xl p-5 text-center space-y-4 border border-border", stagger(4))}>
+                        <QRSignIn />
+                        <div className="flex items-center gap-3">
+                            <div className="h-px flex-1 bg-border" />
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">or</span>
+                            <div className="h-px flex-1 bg-border" />
+                        </div>
                         <Button
                             onClick={signIn}
                             className="w-full h-11 rounded-xl font-semibold bg-primary text-primary-foreground hover:opacity-90"
                         >
-                            Sign In
+                            Sign In with Google
                         </Button>
                     </div>
                 )}
