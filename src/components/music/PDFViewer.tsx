@@ -12,8 +12,8 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+// Configure PDF.js worker — self-hosted for speed (Vercel edge + SW cache vs unpkg CDN)
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`
 
 interface PDFViewerProps {
     url: string

@@ -10,6 +10,8 @@ export default function PerformLayout({
     // Force dark mode for performance/stage use
     return (
         <div className="dark bg-zinc-950 text-white min-h-screen">
+            {/* Preload PDF.js worker so it's ready before PDFViewer mounts */}
+            <link rel="preload" href="/pdf.worker.min.mjs" as="script" />
             <PerformanceOfflineIndicator />
             {children}
         </div>
