@@ -93,8 +93,8 @@ export async function emailAllMembers(
             recipientName: member.displayName,
             setlistName,
             eventDate,
-            setlistUrl: `${baseUrl}/setlists/${setlistId}`,
-            packetUrl: `${baseUrl}/api/setlist/print/personal?setlistId=${setlistId}`,
+            setlistUrl: `${baseUrl}/perform/setlist/${setlistId}`,
+            packetUrl: `${baseUrl}/api/setlist/print/public?setlistId=${setlistId}`,
             songs,
             publisherName,
         })

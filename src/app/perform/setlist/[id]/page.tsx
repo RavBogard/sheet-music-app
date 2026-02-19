@@ -173,14 +173,14 @@ export default function SetlistPerformPage() {
 
             {/* Section quick-jump chips */}
             {sectionLabels.length > 1 && (
-                <div className="flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-zinc-800/50 bg-zinc-900/50 scrollbar-hide">
+                <div className="flex gap-2 px-4 py-2 overflow-x-auto border-b border-zinc-800/50 bg-zinc-900/80 scrollbar-hide">
                     {sectionLabels.map((label) => (
                         <button
                             key={label}
                             onClick={() => scrollToSection(label)}
-                            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold
-                                bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200
-                                border border-zinc-700/50 transition-colors"
+                            className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold
+                                bg-zinc-700 hover:bg-zinc-600 text-zinc-200 hover:text-white
+                                border border-zinc-600/50 transition-colors"
                         >
                             {label}
                         </button>
