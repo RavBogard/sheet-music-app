@@ -104,7 +104,7 @@ export function SetlistDrawer() {
             } as QueueItem))
 
         if (queue.length > 0) {
-            setQueue(queue, 0, `/setlists/${setlist.id}`)
+            setQueue(queue, 0, `/perform/setlist/${setlist.id}`, setlist.id)
             router.push(`/perform/${queue[0].fileId}`)
             setOpen(false)
         }

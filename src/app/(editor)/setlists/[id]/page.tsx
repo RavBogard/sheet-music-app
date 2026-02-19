@@ -74,7 +74,8 @@ export default function SetlistEditorPage() {
             initialRabbi={existingSetlist?.rabbi}
             onBack={() => {
                 clearPending()
-                router.push("/setlists")
+                // Existing setlists: back to perform view. New: back to dashboard.
+                router.push(isNew ? "/setlists" : `/perform/setlist/${id}`)
             }}
             onSave={() => {
                 clearPending()

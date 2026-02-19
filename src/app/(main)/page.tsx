@@ -131,7 +131,7 @@ export default function DashboardPage() {
         shouldAnimate ? `dash-stagger dash-stagger-${n}` : ''
 
     const navigateToSetlist = (s: Setlist) => {
-        router.push(`/setlists/${s.id}${s.isPublic && !user ? '?public=true' : ''}`)
+        router.push(`/perform/setlist/${s.id}`)
     }
 
     // Timeline items exclude the hero setlist to avoid duplication
@@ -204,11 +204,11 @@ export default function DashboardPage() {
                                     onPerform={() => {
                                         const result = buildPerformQueue(tonightSetlist.tracks || [])
                                         if (result) {
-                                            setQueue(result.queue, result.startIndex, `/setlists/${tonightSetlist.id}`, tonightSetlist.id!)
+                                            setQueue(result.queue, result.startIndex, `/perform/setlist/${tonightSetlist.id}`, tonightSetlist.id!)
                                             router.push(`/perform/${result.firstFileId}`)
                                         } else {
-                                            // Fallback: no playable tracks, just open the setlist
-                                            router.push(`/setlists/${tonightSetlist.id}`)
+                                            // Fallback: no playable tracks, open setlist view
+                                            router.push(`/perform/setlist/${tonightSetlist.id}`)
                                         }
                                     }}
                                 />

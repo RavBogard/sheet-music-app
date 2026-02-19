@@ -21,7 +21,7 @@ export default function PerformPage() {
     const router = useRouter()
     const params = useParams()
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
-    const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath } = useMusicStore()
+    const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath, currentSetlistId } = useMusicStore()
     const [showIntro, dismissIntro] = usePerformanceIntro()
 
     // Current track from queue (for audio/rehearsal)
@@ -30,11 +30,6 @@ export default function PerformPage() {
         : null
     const audioUrl = currentTrack?.audioFileId
         ? `/api/drive/file/${currentTrack.audioFileId}`
-        : null
-
-    // Extract setlist ID from returnPath (e.g., "/setlists/abc123" → "abc123")
-    const originSetlistId = returnPath?.startsWith("/setlists/")
-        ? returnPath.split("/")[2] || null
         : null
 
     // Auto-apply musician profile transposition
@@ -101,7 +96,7 @@ export default function PerformPage() {
     return (
         <>
             {showIntro && <PerformanceIntro onDismiss={dismissIntro} />}
-            <LiveNotification setlistId={originSetlistId} />
+            <LiveNotification setlistId={currentSetlistId} />
             {isFlowItem && currentTrack ? (
                 <FlowItemView
                     onHome={handleHome}

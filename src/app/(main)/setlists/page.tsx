@@ -17,7 +17,7 @@ export default function SetlistsPage() {
         <>
             <SetlistDashboard
                 onBack={() => router.back()}
-                onSelect={(setlist) => router.push(`/setlists/${setlist.id}${setlist.isPublic ? '?public=true' : ''}`)}
+                onSelect={(setlist) => router.push(`/perform/setlist/${setlist.id}`)}
                 onCreateNew={() => router.push('/setlists/new')}
             />
         </>
