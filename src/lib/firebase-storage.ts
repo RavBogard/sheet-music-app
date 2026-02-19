@@ -11,7 +11,6 @@
 
 import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
-import { logger } from "@/lib/logger"
 
 const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
 

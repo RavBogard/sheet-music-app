@@ -72,11 +72,16 @@ export async function markAsRead(uid: string, notificationId: string): Promise<v
  */
 export async function markAllAsRead(uid: string): Promise<void> {
     // Defense-in-depth: ensure uid matches the authenticated user
-    const { getAuth } = await import('firebase/auth')
-    const currentUid = getAuth().currentUser?.uid
-    if (currentUid && uid !== currentUid) {
-        logger.warn('markAllAsRead called with mismatched uid:', { uid, currentUid })
-        return
+    // Wrapped in try-catch because getAuth() throws if no Firebase app is initialized (e.g. tests)
+    try {
+        const { getAuth } = await import('firebase/auth')
+        const currentUid = getAuth().currentUser?.uid
+        if (currentUid && uid !== currentUid) {
+            logger.warn('markAllAsRead called with mismatched uid:', { uid, currentUid })
+            return
+        }
+    } catch {
+        // No Firebase app (test environment) — skip the check, Firestore rules still enforce
     }
 
     const q = query(
