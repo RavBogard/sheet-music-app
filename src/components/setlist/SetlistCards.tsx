@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus, CloudOff, CheckCircle2 } from "lucide-react"
+import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus, CloudOff, CheckCircle2, Loader2 } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileOffline } from "@/lib/offline-store"
 
@@ -11,11 +11,13 @@ import { isFileOffline } from "@/lib/offline-store"
 interface UpcomingCardProps {
     setlist: Setlist
     onClick: () => void
+    navigatingTo?: string | null
     onDownload: (setlist: Setlist) => void
     isDownloading: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloading }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload, isDownloading }: UpcomingCardProps) {
+    const isLoading = navigatingTo === setlist.id
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
     useEffect(() => {
@@ -29,8 +31,14 @@ export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloadin
     return (
         <button
             onClick={onClick}
-            className="bg-card hover:bg-muted border-l-4 border-l-blue-500 border-y border-r border-border rounded-r-xl p-6 text-left transition-all group relative overflow-hidden"
+            disabled={!!navigatingTo}
+            className={`bg-card hover:bg-muted border-l-4 border-l-blue-500 border-y border-r border-border rounded-r-xl p-6 text-left transition-all group relative overflow-hidden ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                </div>
+            )}
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Calendar className="h-24 w-24 -mr-4 -mt-4 text-blue-500" />
             </div>
@@ -79,18 +87,27 @@ export function UpcomingSetlistCard({ setlist, onClick, onDownload, isDownloadin
 interface PastCardProps {
     setlist: Setlist
     onClick: () => void
+    navigatingTo?: string | null
     onDuplicate?: (setlist: Setlist, e: React.MouseEvent) => void
     onDelete?: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
 }
 
-export function SetlistCard({ setlist, onClick, onDuplicate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+    const isLoading = navigatingTo === setlist.id
+
     return (
         <button
             onClick={onClick}
-            className="bg-card hover:bg-muted border border-border rounded-xl p-6 text-left transition-all group relative"
+            disabled={!!navigatingTo}
+            className={`bg-card hover:bg-muted border border-border rounded-xl p-6 text-left transition-all group relative ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                </div>
+            )}
             <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                     {setlist.isPublic ? (

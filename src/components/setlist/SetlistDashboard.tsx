@@ -44,6 +44,13 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     const [view, setView] = useState<'list' | 'calendar'>('list')
     const [searchQuery, setSearchQuery] = useState("")
     const [rabbiFilter, setRabbiFilter] = useState("")
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+
+    // Wrap onSelect to show immediate feedback before navigation
+    const handleSelect = (setlist: Setlist) => {
+        setNavigatingTo(setlist.id)
+        onSelect(setlist)
+    }
 
     // Dialog state
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -340,7 +347,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">
-                    <CalendarView setlists={displayedSetlists} onSelectSetlist={onSelect} onCreateSetlist={handleCreateFromCalendar} />
+                    <CalendarView setlists={displayedSetlists} onSelectSetlist={handleSelect} onCreateSetlist={handleCreateFromCalendar} />
                 </div>
             ) : (
                 <ScrollArea className="flex-1 p-6">
@@ -365,7 +372,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {upcoming.map(setlist => (
-                                            <UpcomingSetlistCard key={setlist.id} setlist={setlist} onClick={() => onSelect(setlist)} onDownload={handleDownload} isDownloading={isDownloading} />
+                                            <UpcomingSetlistCard key={setlist.id} setlist={setlist} onClick={() => handleSelect(setlist)} navigatingTo={navigatingTo} onDownload={handleDownload} isDownloading={isDownloading} />
                                         ))}
                                         {placeholders.map((p, idx) => (
                                             <PlaceholderCard key={idx} date={p.date} onCreate={handleCreateFromCalendar} />
@@ -388,7 +395,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                             <SetlistCard
                                                 key={setlist.id}
                                                 setlist={setlist}
-                                                onClick={() => onSelect(setlist)}
+                                                onClick={() => handleSelect(setlist)}
+                                                navigatingTo={navigatingTo}
                                                 onDuplicate={handleDuplicateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
