@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore, FirestoreSettings } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -34,16 +34,24 @@ try {
 
     if (firebaseConfig.apiKey) {
         // Use initializeFirestore instead of getFirestore to configure transport.
-        // Firebase SDK 12.8.0 has a BloomFilter bug that causes the default
-        // WebChannel streaming transport to enter a retry loop, generating
-        // dozens of AbortErrors per second and degrading the entire app.
-        // Force long-polling to completely bypass the buggy streaming transport.
-        // (experimentalAutoDetectLongPolling wasn't aggressive enough — still
-        // generated ~9 AbortErrors before falling back.)
+        //
+        // Two settings work together to eliminate AbortError console noise:
+        //
+        // 1. experimentalForceLongPolling: Bypasses WebChannel streaming,
+        //    which had a retry loop bug in SDK 12.8.0 generating dozens
+        //    of AbortErrors per second.
+        //
+        // 2. useFetchStreams: false: Uses XMLHttpRequest instead of fetch()
+        //    for the long-polling transport. When the SDK adds/removes
+        //    listeners, it aborts the current in-flight poll request.
+        //    fetch().abort() throws a DOMException(AbortError) that shows
+        //    in the console. XHR.abort() cancels silently. Same behavior,
+        //    no console noise from normal SDK operations.
         try {
             db = initializeFirestore(app, {
                 experimentalForceLongPolling: true,
-            });
+                useFetchStreams: false,
+            } as FirestoreSettings);
         } catch {
             // initializeFirestore throws if already initialized (e.g. hot reload)
             db = getFirestore(app);
