@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
             for (const doc of userDocs) {
                 if (doc.exists) {
                     const data = doc.data()!
-                    if (data.email && doc.id !== auth.uid) {
+                    if (data.email) {
                         emailRecipients.push({
                             email: data.email,
                             displayName: data.displayName || data.email.split('@')[0],
