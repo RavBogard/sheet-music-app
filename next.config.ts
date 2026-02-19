@@ -3,13 +3,13 @@ import type { NextConfig } from "next";
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  // cacheOnFrontEndNav and aggressiveFrontEndNavCaching REMOVED.
+  // They caused the SW to serve stale HTML/JS after Vercel deploys,
+  // preventing critical fixes from reaching users.
   workboxOptions: {
     disableDevLogs: true,
-    skipWaiting: true,    // New SW activates immediately (don't wait for old tabs to close)
-    clientsClaim: true,   // New SW takes over existing clients right away
-    // PDF caching handled by IndexedDB (offline-store.ts) — no runtimeCaching needed
+    skipWaiting: true,
+    clientsClaim: true,
   },
 });
 
