@@ -128,7 +128,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
     }
 
     // AI Digitize
-    const { isAdmin, isLeader } = useAuth()
+    const { isAdmin, isBandLeader } = useAuth()
     const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
@@ -216,7 +216,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <h1 className="text-2xl font-bold">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
-                {(isLeader || isAdmin) && (
+                {(isBandLeader || isAdmin) && (
                     <UploadDialog onUploadComplete={() => {
                         // Trigger a re-fetch of the library
                         toast.success("Reload the library to see your upload")

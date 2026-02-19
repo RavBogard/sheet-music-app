@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
  */
 export function CommandRow({
     isMember,
-    isLeader,
+    isBandLeader,
     isLoggedIn,
     onLibrary,
     onSetlists,
@@ -18,7 +18,7 @@ export function CommandRow({
     className,
 }: {
     isMember: boolean
-    isLeader: boolean
+    isBandLeader: boolean
     isLoggedIn: boolean
     onLibrary: () => void
     onSetlists: () => void
@@ -38,7 +38,7 @@ export function CommandRow({
         actions.push({ icon: Sparkles, label: 'Ask AI', onClick: onAI, color: 'text-violet-500 bg-violet-500/10' })
     }
 
-    if (isLeader) {
+    if (isBandLeader) {
         actions.push({ icon: Plus, label: 'New', onClick: onNewSetlist, color: 'text-amber-500 bg-amber-500/10' })
     }
 

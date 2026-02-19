@@ -79,7 +79,7 @@ export interface Setlist {
     previousOwnerId?: string
 }
 
-export type UserRole = 'admin' | 'leader' | 'member' | 'pending'
+export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending'
 
 export interface UserProfile {
     uid: string
@@ -88,6 +88,7 @@ export interface UserProfile {
     photoURL?: string
     viewedWelcomeModal?: boolean
     role: UserRole
+    soundEngineer?: boolean
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate
     claimsUpdatedAt?: FirestoreDate

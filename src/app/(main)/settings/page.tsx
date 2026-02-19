@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
-    const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth()
+    const { user, profile, isAdmin, isBandLeader, loading: authLoading, signOut } = useAuth()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [editingName, setEditingName] = useState(false)
@@ -39,7 +39,7 @@ export default function SettingsPage() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-semibold">Settings</h1>
-                        <p className="text-muted-foreground text-sm">Profile, preferences{isAdmin ? ", and administration" : ""}</p>
+                        <p className="text-muted-foreground text-sm">Profile, preferences{isBandLeader ? ", and administration" : ""}</p>
                     </div>
                 </div>
 
@@ -97,7 +97,10 @@ export default function SettingsPage() {
                             <p className="text-muted-foreground text-sm">{user?.email}</p>
                         </div>
                         <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">
-                            {isAdmin ? "ADMIN" : "MEMBER"}
+                            {(() => {
+                                const labels: Record<string, string> = { admin: 'ADMIN', band_leader: 'BAND LEADER', musician: 'MUSICIAN', member: 'MEMBER', leader: 'BAND LEADER', pending: 'PENDING' }
+                                return labels[profile?.role || ''] || profile?.role?.toUpperCase() || 'MEMBER'
+                            })()}
                         </div>
                     </div>
 
@@ -138,8 +141,8 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
-                {/* Admin Sections — integrated inline for admins */}
-                {isAdmin && (
+                {/* Admin Sections — People for band leaders+, full admin for admins */}
+                {isBandLeader && (
                     <section className="space-y-4">
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                             <ShieldAlert className="w-3.5 h-3.5 text-violet-500" />

@@ -10,21 +10,27 @@ import { toast } from "sonner"
 import { Loader2, Users } from "lucide-react"
 
 export function PeopleSection() {
-    const { user, isAdmin } = useAuth()
+    const { user, profile, isAdmin, isBandLeader } = useAuth()
     const [users, setUsers] = useState<UserProfile[]>([])
     const [usersLoading, setUsersLoading] = useState(true)
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
 
+    // Band leaders and admins can see the people section
+    const canManagePeople = isBandLeader
+
     useEffect(() => {
-        if (!isAdmin) return
+        if (!canManagePeople) return
         const unsub = subscribeToAllUsers(
             (data) => { setUsers(data); setUsersLoading(false) },
             () => setUsersLoading(false)
         )
         return unsub
-    }, [isAdmin])
+    }, [canManagePeople])
+
+    if (!canManagePeople) return null
 
     const pendingCount = users.filter(u => u.role === "pending").length
+    const currentUserRole = (profile?.role || 'member') as UserRole
 
     const toggleUserSelection = (uid: string) => {
         setSelectedUsers(prev => {
@@ -52,7 +58,8 @@ export function PeopleSection() {
                 success++
             } catch { /* skip failures */ }
         }
-        toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${role}`)
+        const labels: Record<string, string> = { member: 'Member', musician: 'Musician', band_leader: 'Band Leader' }
+        toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
         clearSelection()
     }
 
@@ -86,16 +93,24 @@ export function PeopleSection() {
                                     </span>
                                     <button
                                         onClick={() => bulkSetRole('member')}
-                                        className="text-xs bg-green-600 hover:bg-green-500 text-white px-2.5 py-1 rounded-md font-medium transition-colors"
+                                        className="text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground px-2.5 py-1 rounded-md font-medium transition-colors"
                                     >
                                         Approve as Member
                                     </button>
                                     <button
-                                        onClick={() => bulkSetRole('leader')}
-                                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-md font-medium transition-colors"
+                                        onClick={() => bulkSetRole('musician')}
+                                        className="text-xs bg-green-600 hover:bg-green-500 text-white px-2.5 py-1 rounded-md font-medium transition-colors"
                                     >
-                                        Approve as Leader
+                                        Approve as Musician
                                     </button>
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => bulkSetRole('band_leader')}
+                                            className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-md font-medium transition-colors"
+                                        >
+                                            Approve as Band Leader
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -111,7 +126,7 @@ export function PeopleSection() {
                                 />
                             )}
                             <div className="flex-1">
-                                <UserRow user={u} currentUserUid={user?.uid || ""} />
+                                <UserRow user={u} currentUserUid={user?.uid || ""} currentUserRole={currentUserRole} />
                             </div>
                         </div>
                     ))}

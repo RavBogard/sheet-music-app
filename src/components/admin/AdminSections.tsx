@@ -15,22 +15,22 @@ import { Loader2 } from "lucide-react"
  * Previously a 726-line monolith, now a slim composition wrapper.
  */
 export default function AdminSections() {
-    const { isAdmin, loading: authLoading } = useAuth()
+    const { isAdmin, isBandLeader, loading: authLoading } = useAuth()
 
     if (authLoading) return (
         <div className="flex justify-center py-8">
             <Loader2 className="animate-spin text-violet-500" />
         </div>
     )
-    if (!isAdmin) return null
+    if (!isBandLeader) return null
 
     return (
         <div className="space-y-8">
             <PeopleSection />
-            <BandPrepSection />
-            <SoundSystemSection />
-            <LibraryDataSection />
-            <SystemSection />
+            {isAdmin && <BandPrepSection />}
+            {isAdmin && <SoundSystemSection />}
+            {isAdmin && <LibraryDataSection />}
+            {isAdmin && <SystemSection />}
         </div>
     )
 }

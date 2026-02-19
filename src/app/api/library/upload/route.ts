@@ -28,7 +28,7 @@ const ALLOWED_TYPES: Record<string, string> = {
  *   - bpm: (optional) Tempo
  *   - tags: (optional) Comma-separated tags
  * 
- * Requires 'leader' role or above.
+ * Requires 'band_leader' role or above.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         if (limited) return limited
 
         // Auth check: leaders and admins can upload
-        const auth = await withAuth(req, 'leader')
+        const auth = await withAuth(req, 'band_leader')
         if (auth instanceof NextResponse) return auth
 
         const formData = await req.formData()

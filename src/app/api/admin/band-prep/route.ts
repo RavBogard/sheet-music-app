@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger"
  */
 export async function GET(req: NextRequest) {
     try {
-        const auth = await withAuth(req, 'leader')
+        const auth = await withAuth(req, 'band_leader')
         if (auth instanceof NextResponse) return auth
 
         const db = getFirestore()
@@ -33,13 +33,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ setlists: [] })
         }
 
-        // 2. Get all active members
+        // 2. Get all band members (musicians and above — not community members)
         const usersSnap = await db.collection('users').get()
         const members: { uid: string; name: string }[] = []
+        const bandRoles = new Set(['musician', 'band_leader', 'leader', 'admin'])
         usersSnap.docs.forEach(d => {
             const data = d.data()
             const role = data.role
-            if (role && role !== 'pending') {
+            if (role && bandRoles.has(role)) {
                 members.push({
                     uid: d.id,
                     name: data.displayName || data.email || d.id,

@@ -21,20 +21,26 @@ service cloud.firestore {
           || request.auth.token.role == 'admin';
     }
 
-    // Leader: Can Create/Edit Public Setlists
-    function isLeader() {
-      return isAdmin() || request.auth.token.role == 'leader';
+    // Band Leader: Can Create/Edit/Publish Setlists, Manage People
+    function isBandLeader() {
+      return isAdmin() || request.auth.token.role == 'band_leader'
+          || request.auth.token.role == 'leader'; // backward compat
     }
 
-    // Member: Can Read Library
+    // Musician: Band member — appears in picker, receives emails, performs
+    function isMusician() {
+      return isBandLeader() || request.auth.token.role == 'musician';
+    }
+
+    // Member: Community access — library + public setlists (no band features)
     function isMember() {
-      return isLeader() || request.auth.token.role == 'member';
+      return isMusician() || request.auth.token.role == 'member';
     }
 
     // USERS Collection
     match /users/{userId} {
       // Secure Rule: Own data, Leaders (for musician picker), or Admin
-      allow read: if (isSignedIn() && request.auth.uid == userId) || isLeader() || isAdmin();
+      allow read: if (isSignedIn() && request.auth.uid == userId) || isBandLeader() || isAdmin();
       allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
 
       // Legacy subcollections (if needed)
@@ -77,13 +83,13 @@ service cloud.firestore {
       //    - Only Leaders/Admins can create PUBLIC setlists.
       allow create: if isSignedIn() 
                     && request.resource.data.ownerId == request.auth.uid
-                    && (request.resource.data.isPublic != true || isLeader());
+                    && (request.resource.data.isPublic != true || isBandLeader());
 
       // 3. UPDATE: 
       //    - Owner can always update.
       //    - Leaders/Admins can update ANY Public setlist.
       allow update: if isOwner(resource) 
-                    || (resource.data.isPublic == true && isLeader());
+                    || (resource.data.isPublic == true && isBandLeader());
 
       // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
       allow delete: if isOwner(resource) || isAdmin();
@@ -139,7 +145,7 @@ service cloud.firestore {
 
     // EMAIL DELIVERY TRACKING — server writes, leaders/admins read
     match /setlists/{setlistId}/emailEvents/{eventId} {
-      allow read: if isLeader();
+      allow read: if isBandLeader();
       allow write: if false; // Server-only via admin SDK + webhooks
     }
 

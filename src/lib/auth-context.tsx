@@ -22,8 +22,10 @@ interface AuthContextType {
     signIn: () => Promise<void>
     signOut: () => Promise<void>
     isAdmin: boolean
+    isBandLeader: boolean
+    isMusician: boolean
     isMember: boolean
-    isLeader: boolean
+    isSoundEngineer: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,8 +36,10 @@ const AuthContext = createContext<AuthContextType>({
     signIn: async () => { },
     signOut: async () => { },
     isAdmin: false,
+    isBandLeader: false,
+    isMusician: false,
     isMember: false,
-    isLeader: false
+    isSoundEngineer: false,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,10 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch { return null }
     })
 
-    // Derived roles for convenience
-    const isAdmin = profile?.role === 'admin'
-    const isLeader = profile?.role === 'leader' || isAdmin
-    const isMember = profile?.role === 'member' || isLeader
+    // Derived roles — hierarchical: admin > band_leader > musician > member > pending
+    // Backward compat: old 'leader' maps to band_leader, old 'member' maps to musician (until migration)
+    const role = profile?.role
+    const isAdmin = role === 'admin'
+    const isBandLeader = isAdmin || role === 'band_leader' || role === 'leader' as string
+    const isMusician = isBandLeader || role === 'musician'
+    const isMember = isMusician || role === 'member'
+    const isSoundEngineer = !!profile?.soundEngineer
 
     useEffect(() => {
         // Build-time safety: If auth is mock (empty object), return
@@ -95,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 photoURL: p.photoURL || null,
                                 email: p.email,
                                 role: p.role,
+                                soundEngineer: p.soundEngineer || false,
                             }))
                         } catch { /* quota exceeded or private browsing */ }
                     }
@@ -146,9 +155,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         isAdmin,
-        isLeader,
-        isMember
-    }), [user, profile, cachedUser, loading, isAdmin, isLeader, isMember])
+        isBandLeader,
+        isMusician,
+        isMember,
+        isSoundEngineer,
+    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer])
 
     return (
         <AuthContext.Provider value={value}>

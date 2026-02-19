@@ -25,12 +25,12 @@ interface SetlistPrep {
 import { formatDuration } from "@/lib/format-utils"
 
 export function BandPrepSection() {
-    const { user, isLeader } = useAuth()
+    const { user, isBandLeader } = useAuth()
     const [data, setData] = useState<SetlistPrep[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (!user || !isLeader) return
+        if (!user || !isBandLeader) return
 
         const load = async () => {
             try {
@@ -47,9 +47,9 @@ export function BandPrepSection() {
         }
         load()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
-    }, [user?.uid, isLeader])
+    }, [user?.uid, isBandLeader])
 
-    if (!isLeader) return null
+    if (!isBandLeader) return null
 
     return (
         <CollapsibleSection

@@ -51,7 +51,7 @@ interface OverflowMenuProps {
 
     // State
     isPublic: boolean
-    isLeader: boolean
+    isBandLeader: boolean
     canEdit: boolean
     setlistId?: string
     rabbi?: string
@@ -78,7 +78,7 @@ export function OverflowMenu({
     onSelectMode,
     onSetRabbi,
     isPublic,
-    isLeader,
+    isBandLeader,
     canEdit,
     setlistId,
     rabbi,
@@ -124,7 +124,7 @@ export function OverflowMenu({
                     Print Gig Packets
                 </DropdownMenuItem>
 
-                {onPublish && isLeader && setlistId && (
+                {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
                         Publish & Notify
@@ -145,7 +145,7 @@ export function OverflowMenu({
                     </DropdownMenuItem>
                 )}
 
-                {onSaveAsTemplate && canEdit && isLeader && (
+                {onSaveAsTemplate && canEdit && isBandLeader && (
                     <DropdownMenuItem onClick={onSaveAsTemplate}>
                         <BookmarkPlus className="h-4 w-4 mr-2" />
                         Save as Template
@@ -184,13 +184,13 @@ export function OverflowMenu({
                 )}
 
                 {canEdit && setlistId && (
-                    <DropdownMenuItem onClick={onTogglePublic} disabled={!isPublic && !isLeader}>
+                    <DropdownMenuItem onClick={onTogglePublic} disabled={!isPublic && !isBandLeader}>
                         {isPublic ? <Lock className="h-4 w-4 mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
                         {isPublic ? "Make Private" : "Make Public"}
                     </DropdownMenuItem>
                 )}
 
-                {isLeader && setlistId && onHistory && (
+                {isBandLeader && setlistId && onHistory && (
                     <DropdownMenuItem onClick={onHistory}>
                         <History className="h-4 w-4 mr-2" />
                         Version History
@@ -216,7 +216,7 @@ export function OverflowMenu({
                     AI Assistant
                 </DropdownMenuItem>
 
-                {isLeader && onToggleLive && (
+                {isBandLeader && onToggleLive && (
                     <DropdownMenuItem onClick={onToggleLive}>
                         <Radio className={`h-4 w-4 mr-2 ${liveEnabled ? "text-red-500" : ""}`} />
                         {liveEnabled ? "Stop Live Sync" : "Go Live"}

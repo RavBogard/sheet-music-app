@@ -105,18 +105,18 @@ describe('requireAuth', () => {
         }
     })
 
-    it('allows leader to access member routes', async () => {
+    it('allows band_leader to access member routes', async () => {
         mockVerify.mockResolvedValue({
             uid: 'user2',
             email: 'l@test.com',
-            role: 'leader',
+            role: 'band_leader',
         } as never)
 
         const result = await requireAuth(makeReq('tok'), 'member')
-        expect(result.role).toBe('leader')
+        expect(result.role).toBe('band_leader')
     })
 
-    it('blocks member from leader routes', async () => {
+    it('blocks member from band_leader routes', async () => {
         mockVerify.mockResolvedValue({
             uid: 'user3',
             email: 'm@test.com',
@@ -124,7 +124,7 @@ describe('requireAuth', () => {
         } as never)
 
         try {
-            await requireAuth(makeReq('tok'), 'leader')
+            await requireAuth(makeReq('tok'), 'band_leader')
             expect.unreachable('Should have thrown')
         } catch (err: unknown) {
             const res = err as Response

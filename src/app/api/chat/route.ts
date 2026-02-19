@@ -99,17 +99,16 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
-    // 2. Check Admin Status
-    let isAdmin = false
+    // 2. Check Role & Build User Context
+    const userRole = auth.role || 'member'
     let userContext = ""
 
     try {
-        if (auth.isAdmin) {
-          isAdmin = true
+        if (auth.isAdmin || auth.isBandLeader) {
           const usersSnap = await getFirestore().collection('users').limit(50).get()
           const users = usersSnap.docs.map(d => {
             const data = d.data()
-            return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]`
+            return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]${data.soundEngineer ? ' [Sound Engineer]' : ''}`
           }).join('\n')
           userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
         }
@@ -222,7 +221,7 @@ Hebrew Date: ${friCtx.hebrewDate.display}
     const prompt = `
 ${SYSTEM_PROMPT}
 
-CURRENT USER ROLE: ${isAdmin ? 'ADMIN' : 'MEMBER'}
+CURRENT USER ROLE: ${userRole.toUpperCase()}
 
 CONTEXT:
 --- LIBRARY FILES (Top 500) ---

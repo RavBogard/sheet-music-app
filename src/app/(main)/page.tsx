@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, profile, cachedUser, signIn, isMember, isLeader, loading: authLoading } = useAuth()
+    const { user, profile, cachedUser, signIn, isMember, isBandLeader, loading: authLoading } = useAuth()
     const { loadLibrary } = useLibraryStore()
     const congregation = useCongregation()
     const { open: openChat } = useChatStore()
@@ -265,7 +265,7 @@ export default function DashboardPage() {
                             {/* Command Row — always visible immediately */}
                             <CommandRow
                                 isMember={isMember}
-                                isLeader={isLeader}
+                                isBandLeader={isBandLeader}
                                 isLoggedIn={!!user}
                                 onLibrary={() => router.push('/library')}
                                 onSetlists={() => router.push('/setlists')}

@@ -15,7 +15,7 @@ import { initAdmin, verifyIdToken } from "@/lib/firebase-admin"
 import { DecodedIdToken } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
 
-export type AuthRole = 'admin' | 'leader' | 'member'
+export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
 export interface AuthResult {
     uid: string
@@ -23,6 +23,8 @@ export interface AuthResult {
     token: DecodedIdToken
     role: string | undefined
     isAdmin: boolean
+    isBandLeader: boolean
+    isMusician: boolean
 }
 
 const SUPER_ADMIN_UID = '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3'
@@ -59,8 +61,11 @@ export async function requireAuth(
 
     const userRole = (decoded.role as string) || undefined
     const isAdmin = decoded.uid === SUPER_ADMIN_UID || userRole === 'admin'
+    // Backward compat: old 'leader' maps to band_leader
+    const isBandLeader = isAdmin || userRole === 'band_leader' || userRole === 'leader'
+    const isMusician = isBandLeader || userRole === 'musician'
 
-    // Role hierarchy: admin > leader > member > (none)
+    // Role hierarchy: admin > band_leader > musician > member > pending
     if (requiredRole) {
         const hasRole = checkRoleHierarchy(userRole, isAdmin, requiredRole)
         if (!hasRole) {
@@ -76,16 +81,30 @@ export async function requireAuth(
         email: decoded.email,
         token: decoded,
         role: userRole,
-        isAdmin
+        isAdmin,
+        isBandLeader,
+        isMusician,
     }
 }
 
 function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, required: AuthRole): boolean {
     if (isAdmin) return true
     if (required === 'admin') return false
-    if (required === 'leader') return userRole === 'leader'
-    if (required === 'member') return userRole === 'member' || userRole === 'leader'
-    return false
+
+    // Backward compat: old 'leader' = band_leader
+    const effectiveRole = userRole === 'leader' ? 'band_leader' : userRole
+
+    const hierarchy: Record<string, number> = {
+        'admin': 4,
+        'band_leader': 3,
+        'musician': 2,
+        'member': 1,
+        'pending': 0,
+    }
+
+    const userLevel = hierarchy[effectiveRole || ''] ?? -1
+    const requiredLevel = hierarchy[required] ?? 99
+    return userLevel >= requiredLevel
 }
 
 /**

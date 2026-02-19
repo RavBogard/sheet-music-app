@@ -20,7 +20,7 @@ interface NamePromptProps {
     initialName: string
     initialIsPublic: boolean
     initialDate?: Date | null
-    isLeader: boolean
+    isBandLeader: boolean
     onConfirm: (name: string, isPublic: boolean, date: Date | null) => void
 }
 
@@ -30,7 +30,7 @@ export function NamePrompt({
     initialName,
     initialIsPublic,
     initialDate,
-    isLeader,
+    isBandLeader,
     onConfirm
 }: NamePromptProps) {
     const [name, setName] = useState(initialName)
@@ -100,7 +100,7 @@ export function NamePrompt({
                             <Lock className="h-4 w-4" />
                             Personal
                         </button>
-                        {isLeader ? (
+                        {isBandLeader ? (
                             <button
                                 onClick={() => setIsPublic(true)}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${isPublic ? 'bg-green-600 text-foreground shadow-lg shadow-green-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-accent'

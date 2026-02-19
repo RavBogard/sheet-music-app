@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
 
         // Verify auth: must be owner or leader/admin
         const isOwner = setlist.ownerId === auth.uid
-        const isLeaderOrAdmin = auth.isAdmin || auth.role === 'leader'
-        if (!isOwner && !isLeaderOrAdmin) {
+        const isBandLeaderOrAdmin = auth.isAdmin || auth.isBandLeader
+        if (!isOwner && !isBandLeaderOrAdmin) {
             return NextResponse.json({ error: 'Must be owner or leader' }, { status: 403 })
         }
 
-        // Load members
+        // Load band members (musicians and above — not plain community members)
         const usersSnap = await db.collection('users')
-            .where('role', 'in', ['admin', 'leader', 'member'])
+            .where('role', 'in', ['admin', 'band_leader', 'musician', 'leader', 'member'])
             .get()
 
         interface MemberData { uid: string; email?: string; displayName?: string }

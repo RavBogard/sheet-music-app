@@ -58,13 +58,13 @@ export async function POST(request: NextRequest) {
 
         const setlist = setlistDoc.data()!
 
-        // Auth check: owner, leader, or admin
+        // Auth check: owner, band leader, or admin
         const isOwner = setlist.ownerId === auth.uid
         if (!isOwner && !auth.isAdmin) {
             const userDoc = await db.collection('users').doc(auth.uid).get()
             const role = userDoc.data()?.role
-            if (role !== 'leader' && role !== 'admin') {
-                return NextResponse.json({ error: 'Unauthorized — must be owner, leader, or admin' }, { status: 403 })
+            if (role !== 'band_leader' && role !== 'leader' && role !== 'admin') {
+                return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
             }
         }
 

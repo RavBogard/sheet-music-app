@@ -32,7 +32,7 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
 }))
 
 export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPublished }: MusicianPickerProps) {
-    const { isAdmin, isLeader, user: currentUser } = useAuth()
+    const { isAdmin, isBandLeader, user: currentUser } = useAuth()
     const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
@@ -72,15 +72,18 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
+            // Only show musicians, band leaders, and admins in the picker
+            // (not plain members — they're community, not band)
+            // Backward compat: old 'leader' role maps to band_leader
             let active = users.filter(u =>
-                u.role === 'member' || u.role === 'leader' || u.role === 'admin'
+                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
             )
             if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
                 active = [{
                     uid: currentUser.uid,
                     email: currentUser.email || '',
                     displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Me',
-                    role: 'member' as const,
+                    role: 'musician' as const,
                 } as UserProfile, ...active]
             }
             setAllUsers(active)

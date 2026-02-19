@@ -85,7 +85,7 @@ export function SetlistEditorV2({
     // Core logic hook (unchanged from v1)
     const {
         canEdit,
-        isLeader,
+        isBandLeader,
         setlistId,
         name,
         setName,
@@ -382,7 +382,7 @@ export function SetlistEditorV2({
                 initialName={name}
                 initialIsPublic={isPublic}
                 initialDate={eventDate ? new Date(eventDate) : null}
-                isLeader={isLeader}
+                isBandLeader={isBandLeader}
                 onConfirm={(newName, newIsPublic, newDate) => {
                     setName(newName)
                     setIsPublic(newIsPublic)
@@ -421,14 +421,14 @@ export function SetlistEditorV2({
                             }
                         }}
                         onOpenAI={() => useChatStore.getState().toggle()}
-                        onToggleLive={isLeader ? handleToggleLive : undefined}
+                        onToggleLive={isBandLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
                         onCloneNextWeek={setlistId ? handleCloneNextWeek : undefined}
                         onSaveAsTemplate={setlistId ? handleSaveAsTemplate : undefined}
                         onSelectMode={canEdit && tracks.length > 0 ? () => setSelectMode(true) : undefined}
                         isPublic={isPublic}
-                        isLeader={isLeader}
+                        isBandLeader={isBandLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
                         rabbi={rabbi}

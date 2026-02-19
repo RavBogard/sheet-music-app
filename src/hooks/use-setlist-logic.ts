@@ -38,7 +38,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
         onSave
     } = props
-    const { user, isLeader } = useAuth()
+    const { user, isBandLeader } = useAuth()
 
     // Create user-specific service
     // Create user-specific service — use uid/displayName (stable strings) not user object
@@ -52,7 +52,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     }, [uid, displayName])
 
     // Determine if user can edit
-    const canEdit = (!initialOwnerId || initialOwnerId === user?.uid) || (isLeader && initialIsPublic)
+    const canEdit = (!initialOwnerId || initialOwnerId === user?.uid) || (isBandLeader && initialIsPublic)
 
     // Core state
     const [setlistId, setSetlistId] = useState<string | undefined>(initialSetlistId)
@@ -444,7 +444,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     const togglePublic = async () => {
         if (!setlistService || !setlistId) return
-        if (!isPublic && !isLeader) {
+        if (!isPublic && !isBandLeader) {
             toast.error("Only Leaders can make setlists public.")
             return
         }
@@ -477,7 +477,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     return {
         canEdit,
-        isLeader,
+        isBandLeader,
         setlistId,
         name,
         setName, // Exposed for UI inputs

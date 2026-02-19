@@ -24,5 +24,5 @@ export const createSetlistSchema = z.object({
 
 export const updateRoleSchema = z.object({
     targetUserId: z.string(),
-    newRole: z.enum(['admin', 'leader', 'member', 'pending'])
+    newRole: z.enum(['admin', 'band_leader', 'musician', 'member', 'pending'])
 })

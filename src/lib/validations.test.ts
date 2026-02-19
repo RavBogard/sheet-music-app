@@ -99,7 +99,7 @@ describe('updateRoleSchema', () => {
         expect(result.success).toBe(true)
     })
 
-    it.each(['admin', 'leader', 'member', 'pending'] as const)(
+    it.each(['admin', 'band_leader', 'musician', 'member', 'pending'] as const)(
         'accepts role: %s',
         (role) => {
             const result = updateRoleSchema.safeParse({
