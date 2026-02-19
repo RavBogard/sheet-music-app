@@ -50,13 +50,14 @@ export default function PerformPage() {
     // Track chart view for preparation progress
     useEffect(() => {
         if (authUser?.uid && fileId) {
-            import("firebase/firestore").then(({ doc, setDoc, serverTimestamp }) => {
-                import("@/lib/firebase").then(({ db: clientDb }) => {
+            (async () => {
+                try {
+                    const { doc, setDoc, serverTimestamp } = await import("firebase/firestore")
+                    const { db: clientDb } = await import("@/lib/firebase")
                     const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
-                    setDoc(ref, { lastViewedAt: serverTimestamp() }, { merge: true })
-                        .catch(() => {/* silent */})
-                })
-            })
+                    await setDoc(ref, { lastViewedAt: serverTimestamp() }, { merge: true })
+                } catch { /* silent — non-critical tracking */ }
+            })()
         }
     }, [authUser?.uid, fileId])
 
@@ -116,16 +117,18 @@ export default function PerformPage() {
                     onPracticeTime={(seconds) => {
                         // Track practice time in Firestore
                         if (authUser?.uid && fileId && seconds > 5) {
-                            import("firebase/firestore").then(({ doc, setDoc, increment }) => {
-                                import("@/lib/firebase").then(({ db: clientDb }) => {
+                            (async () => {
+                                try {
+                                    const { doc, setDoc, increment } = await import("firebase/firestore")
+                                    const { db: clientDb } = await import("@/lib/firebase")
                                     const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
-                                    setDoc(ref, {
+                                    await setDoc(ref, {
                                         practiceSeconds: increment(seconds),
                                         practiceSessionCount: increment(1),
                                         lastPracticedAt: new Date().toISOString(),
-                                    }, { merge: true }).catch(() => {})
-                                })
-                            })
+                                    }, { merge: true })
+                                } catch { /* silent — non-critical tracking */ }
+                            })()
                         }
                     }}
                 />

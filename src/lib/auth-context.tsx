@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from "react"
 import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
 import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
+    const lastClaimsUpdate = useRef<string | null>(null)
 
     // Derived roles for convenience
     const isAdmin = profile?.role === 'admin'
@@ -57,6 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
                 unsubscribeProfile = subscribeToUserProfile(currentUser.uid, (p) => {
+                    // Detect when admin changes user's role: claimsUpdatedAt changes
+                    // Force-refresh the ID token so new custom claims take effect immediately
+                    const claimsTs = p?.claimsUpdatedAt?.toString() || null
+                    if (claimsTs && lastClaimsUpdate.current && claimsTs !== lastClaimsUpdate.current) {
+                        currentUser.getIdToken(true).catch(() => {})
+                    }
+                    lastClaimsUpdate.current = claimsTs
+
                     setProfile(p)
                     setLoading(false)
                 })

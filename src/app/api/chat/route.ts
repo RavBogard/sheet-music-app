@@ -86,7 +86,17 @@ export async function POST(request: NextRequest) {
     const auth = await withAuth(request)
     if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
 
-    const { messages, currentSetlist, libraryFiles, setlistName, rabbi } = await request.json()
+    const body = await request.json().catch(() => null)
+    if (!body) {
+        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    }
+
+    const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi } = body
+
+    if (!Array.isArray(messages) || messages.length === 0 || !messages[messages.length - 1]?.content) {
+        return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })
+    }
+
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
     // 2. Check Admin Status
@@ -125,13 +135,31 @@ export async function POST(request: NextRequest) {
     let allSetlistsContext = ""
     try {
         const firestore = getFirestore()
-        const setlistsSnap = await firestore.collection('setlists')
-            .orderBy('date', 'desc')
-            .limit(100)
-            .get()
+        // Only include public setlists + the requesting user's own setlists (privacy)
+        const [publicSnap, ownSnap] = await Promise.all([
+            firestore.collection('setlists')
+                .where('isPublic', '==', true)
+                .orderBy('date', 'desc')
+                .limit(80)
+                .get(),
+            firestore.collection('setlists')
+                .where('ownerId', '==', auth.uid)
+                .where('isPublic', '==', false)
+                .orderBy('date', 'desc')
+                .limit(20)
+                .get(),
+        ])
 
-        if (!setlistsSnap.empty) {
-            const setlistLines = setlistsSnap.docs.map(doc => {
+        // Merge and deduplicate
+        const seen = new Set<string>()
+        const allDocs = [...publicSnap.docs, ...ownSnap.docs].filter(doc => {
+            if (seen.has(doc.id)) return false
+            seen.add(doc.id)
+            return true
+        })
+
+        if (allDocs.length > 0) {
+            const setlistLines = allDocs.map(doc => {
                 const data = doc.data()
                 const rabbiTag = data.rabbi ? ` [Rabbi: ${data.rabbi}]` : ''
                 const trackList = (data.tracks || [])

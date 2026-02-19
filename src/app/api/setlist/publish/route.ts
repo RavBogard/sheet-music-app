@@ -84,11 +84,36 @@ export async function POST(request: NextRequest) {
                 return { recorded: 0, skipped: 0 }
             })
 
-        // Step 3: In-app notifications (fire-and-forget via client-side — already handled)
-        // The client calls notifySetlistPublished() directly after this API succeeds.
+        // Step 3: In-app notifications (server-side via admin SDK)
+        // Must be server-side because client Firestore rules prevent reading all user docs
+        const membersSnap = await db.collection('users').get()
+        const memberUids = membersSnap.docs
+            .filter(doc => {
+                const role = doc.data().role
+                return role && role !== 'pending' && doc.id !== auth.uid
+            })
+            .map(doc => doc.id)
+
+        const notifBatchSize = 50
+        for (let i = 0; i < memberUids.length; i += notifBatchSize) {
+            const batch = db.batch()
+            const chunk = memberUids.slice(i, i + notifBatchSize)
+            for (const uid of chunk) {
+                const ref = db.collection('users').doc(uid).collection('notifications').doc()
+                batch.set(ref, {
+                    type: 'setlist_published',
+                    title: 'New setlist published',
+                    body: `"${setlistName}" is now available`,
+                    link: `/setlist/${setlistId}`,
+                    entityId: setlistId,
+                    read: false,
+                    createdAt: FieldValue.serverTimestamp(),
+                })
+            }
+            batch.commit().catch(err => logger.warn('[Publish] In-app notification batch failed:', err))
+        }
 
         // Step 4: Email notifications
-        const membersSnap = await db.collection('users').get()
         const members: Array<{ email: string; displayName: string }> = []
         membersSnap.docs.forEach(doc => {
             const data = doc.data()

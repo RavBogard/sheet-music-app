@@ -80,6 +80,7 @@ export interface UserProfile {
     role: UserRole
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate
+    claimsUpdatedAt?: FirestoreDate
     musicianProfile?: MusicianProfile
 }
 

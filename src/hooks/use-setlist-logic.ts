@@ -258,14 +258,22 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         setSaving(false)
     }, [canEdit, setlistService, onSave])
 
+    // Track whether there are unsaved changes pending
+    const hasPendingSave = useRef(false)
+
     // Trigger auto-save on changes (stable deps — only performSave identity matters)
     useEffect(() => {
         if (!name || !canEdit) return
 
+        hasPendingSave.current = true
+
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current)
         }
-        saveTimeoutRef.current = setTimeout(performSave, 1000)
+        saveTimeoutRef.current = setTimeout(() => {
+            hasPendingSave.current = false
+            performSave()
+        }, 1000)
 
         return () => {
             if (saveTimeoutRef.current) {
@@ -273,6 +281,39 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
         }
     }, [name, tracks, isPublic, eventDate, rabbi, performSave, canEdit])
+
+    // Flush pending saves when user navigates away or switches apps
+    const performSaveRef = useRef(performSave)
+    useEffect(() => { performSaveRef.current = performSave }, [performSave])
+
+    useEffect(() => {
+        const flushSave = () => {
+            if (hasPendingSave.current && saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current)
+                saveTimeoutRef.current = null
+                hasPendingSave.current = false
+                performSaveRef.current()
+            }
+        }
+
+        // Flush on tab/app switch (iPad home button, app switcher)
+        const handleVisibility = () => {
+            if (document.visibilityState === 'hidden') flushSave()
+        }
+
+        // Flush on page unload (navigation, refresh)
+        const handleBeforeUnload = () => flushSave()
+
+        document.addEventListener('visibilitychange', handleVisibility)
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        window.addEventListener('pagehide', handleBeforeUnload)
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility)
+            window.removeEventListener('beforeunload', handleBeforeUnload)
+            window.removeEventListener('pagehide', handleBeforeUnload)
+        }
+    }, [])
 
     // --- Actions ---
 

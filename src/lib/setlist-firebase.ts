@@ -10,16 +10,10 @@ import {
     orderBy,
     serverTimestamp,
     where,
-    getDoc
 } from "firebase/firestore";
 
 import { SetlistTrack } from "@/types/api"
 import { logSetlistChange } from "@/lib/setlist-audit"
-import { notifySetlistPublished, notifySetlistUpdated } from "@/lib/notification-store"
-
-// Throttle track-update notifications to avoid spam on auto-save (5 min cooldown per setlist)
-const lastTrackNotify: Record<string, number> = {}
-const NOTIFY_THROTTLE_MS = 5 * 60 * 1000
 
 // export interface SetlistTrack { ... } // Removed local definition
 export type { SetlistTrack }
@@ -105,16 +99,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
             }, data.tracks)
 
-            // Notify members when tracks change on a public setlist (throttled)
-            if (isPublic && data.tracks !== undefined) {
-                const now = Date.now()
-                if (!lastTrackNotify[id] || now - lastTrackNotify[id] > NOTIFY_THROTTLE_MS) {
-                    lastTrackNotify[id] = now
-                    const snap = await getDoc(docRef)
-                    const name = snap.data()?.name || 'Setlist'
-                    notifySetlistUpdated(name, id, data.tracks.length, userId || undefined).catch(() => {})
-                }
-            }
+            // Note: Update notifications are handled server-side (publish route)
+            // Client-side broadcast would fail because Firestore rules restrict user doc reads
         },
 
         async deleteSetlist(id: string, _isPublic: boolean) {
@@ -179,10 +165,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 });
                 logSetlistChange(setlistId, 'made_public', userId || '', userName || 'Anonymous')
 
-                // Fire-and-forget notification to all members
-                const snap = await getDoc(docRef)
-                const name = snap.data()?.name || 'Setlist'
-                notifySetlistPublished(name, setlistId, userId || undefined).catch(() => {})
+                // Note: Publish notifications are handled server-side via /api/setlist/publish
 
                 return setlistId;
             } catch (e) {

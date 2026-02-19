@@ -8,13 +8,21 @@ export const maxDuration = 60
 
 function getAllowedOrigin(request: NextRequest): string {
     const origin = request.headers.get('origin') || ''
-    if (
-        origin.includes('centralreform.live') ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.endsWith('.vercel.app')
-    ) {
-        return origin
+    // Parse origin to check hostname safely
+    try {
+        const url = new URL(origin)
+        const host = url.hostname
+        if (
+            host === 'centralreform.live' ||
+            host === 'www.centralreform.live' ||
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host.endsWith('.vercel.app')
+        ) {
+            return origin
+        }
+    } catch {
+        // Invalid URL — fall through to default
     }
     return 'https://centralreform.live'
 }

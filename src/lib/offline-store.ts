@@ -44,14 +44,34 @@ export const initDB = async () => {
 
 export const saveOfflineFile = async (id: string, blob: Blob, name: string, mimeType: string) => {
     const db = await initDB();
-    await db.put('files', {
-        id,
-        blob,
-        name,
-        mimeType,
-        updatedAt: Date.now(),
-        lastAccessedAt: Date.now(),
-    });
+    try {
+        await db.put('files', {
+            id,
+            blob,
+            name,
+            mimeType,
+            updatedAt: Date.now(),
+            lastAccessedAt: Date.now(),
+        });
+    } catch (err: unknown) {
+        // On QuotaExceededError, evict stale files and retry once
+        if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+            const evicted = await evictStaleFiles(14); // Evict files not accessed in 14 days
+            if (evicted > 0) {
+                // Retry after eviction
+                await db.put('files', {
+                    id,
+                    blob,
+                    name,
+                    mimeType,
+                    updatedAt: Date.now(),
+                    lastAccessedAt: Date.now(),
+                });
+                return;
+            }
+        }
+        throw err; // Re-throw if not quota or eviction didn't help
+    }
 };
 
 export const getOfflineFile = async (id: string) => {

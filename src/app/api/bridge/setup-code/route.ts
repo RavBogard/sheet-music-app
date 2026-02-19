@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { randomBytes } from "crypto"
 
@@ -74,6 +75,10 @@ export async function POST(req: NextRequest) {
 // GET: Bridge redeems a setup code for credentials
 export async function GET(req: NextRequest) {
     try {
+        // Rate limit redemption attempts to prevent brute-force
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         const url = new URL(req.url)
         const code = url.searchParams.get("code")?.toUpperCase().trim()
 

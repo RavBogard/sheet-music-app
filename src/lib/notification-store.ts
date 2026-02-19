@@ -67,6 +67,8 @@ export async function markAsRead(uid: string, notificationId: string): Promise<v
 
 /**
  * Mark all notifications as read.
+ * Note: Firestore rules enforce uid == request.auth.uid, so this
+ * only succeeds for the caller's own notifications regardless of uid param.
  */
 export async function markAllAsRead(uid: string): Promise<void> {
     const q = query(

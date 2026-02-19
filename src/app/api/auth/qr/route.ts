@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { verifyIdToken } from "@/lib/firebase-admin"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { randomBytes } from "crypto"
 import { logger } from "@/lib/logger"
 
@@ -34,6 +35,9 @@ function generateCode(): string {
  */
 export async function POST(req: NextRequest) {
     try {
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         initAdmin()
         const db = getFirestore()
 
@@ -70,6 +74,9 @@ export async function POST(req: NextRequest) {
  * Returns { status: 'pending' } or { status: 'approved', token: '...' }
  */
 export async function GET(req: NextRequest) {
+    const limited = await checkRateLimit(req, 'api')
+    if (limited) return limited
+
     const code = req.nextUrl.searchParams.get("code")
     if (!code) {
         return NextResponse.json({ error: "Missing code" }, { status: 400 })
@@ -118,6 +125,9 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
     try {
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         // Verify phone user's auth
         const authHeader = req.headers.get("Authorization")
         const rawToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null

@@ -19,8 +19,11 @@ export async function POST(request: Request) {
         await getAuth().setCustomUserClaims(targetUserId, { role: newRole })
 
         // Update Firestore for UI consistency
+        // claimsUpdatedAt signals the client to force-refresh their ID token
+        const { FieldValue } = await import('firebase-admin/firestore')
         await getFirestore().collection("users").doc(targetUserId).update({
-            role: newRole
+            role: newRole,
+            claimsUpdatedAt: FieldValue.serverTimestamp(),
         })
 
         return NextResponse.json({ success: true, role: newRole })
