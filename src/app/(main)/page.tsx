@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, profile, signIn, isMember, isLeader } = useAuth()
+    const { user, profile, signIn, isMember, isLeader, loading: authLoading } = useAuth()
     const { loadLibrary } = useLibraryStore()
     const congregation = useCongregation()
     const { open: openChat } = useChatStore()
@@ -353,8 +353,8 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* ── Guest Sign-In ── */}
-                {!user && (
+                {/* ── Guest Sign-In (only after auth confirms no user) ── */}
+                {!user && !authLoading && (
                     <div className={cn("bg-card rounded-2xl p-5 text-center space-y-4 border border-border", stagger(4))}>
                         <QRSignIn />
                         <div className="flex items-center gap-3">
