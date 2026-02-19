@@ -49,6 +49,7 @@ export function UserRow({ user, currentUserUid, currentUserRole }: UserRowProps)
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'
+    const isCurrentBandLeaderOrAbove = currentLevel >= ROLE_HIERARCHY.band_leader
     const isSelf = user.uid === currentUserUid
 
     const handleRoleChange = async (newRole: string) => {
@@ -153,8 +154,8 @@ export function UserRow({ user, currentUserUid, currentUserRole }: UserRowProps)
                 {/* Spacer */}
                 <div className="flex-1" />
 
-                {/* Sound Engineer toggle */}
-                {isCurrentAdmin && !isSelf && effectiveRole !== 'pending' && (
+                {/* Sound Engineer toggle — band leaders and admins */}
+                {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
                     <button
                         onClick={handleSoundEngineerToggle}
                         className={`p-1.5 rounded-lg border transition-colors ${

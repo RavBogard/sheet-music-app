@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useCallback, useState } from "react"
+import { useEffect, useCallback, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
-import { X32WSClient } from "@/lib/x32-ws-client"
+import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
-import { doc, onSnapshot, getDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Loader2, Star, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
@@ -19,7 +19,6 @@ function isBridgeOnline(bridge?: BridgeStatus): boolean {
     if (!bridge?.lastSeen) return true // No heartbeat data = legacy bridge, assume online
     if (bridge.status === "offline") return false
 
-    // Firestore Timestamp has a toDate() method, or it's a plain date
     let lastSeen: Date
     try {
         const ts = bridge.lastSeen as { toDate?: () => Date; seconds?: number }
@@ -27,11 +26,11 @@ function isBridgeOnline(bridge?: BridgeStatus): boolean {
         else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
         else lastSeen = new Date(bridge.lastSeen as string)
     } catch {
-        return true // Can't parse timestamp, don't block
+        return true
     }
 
     const ageMs = Date.now() - lastSeen.getTime()
-    return ageMs < 120_000 // 2 minutes
+    return ageMs < 120_000
 }
 
 function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
@@ -44,17 +43,19 @@ function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
 /**
  * Compact monitor mixer panel for the performance toolbar.
  * Shows master fader + active/pinned channel sends.
- * Connects to the bridge server via WebSocket.
+ * Uses singleton connection — shared with MonitorPage.
  */
 export function QuickMonitorPanel() {
     const { user } = useAuth()
     const { hasAccess } = useMonitorAccess()
-    const clientRef = useRef<X32WSClient | null>(null)
     const [pinnedChannels, setPinnedChannels] = useState<number[]>([])
+
+    // Fix #9: Singleton connection — no duplicate WebSockets
+    const { client } = useMonitorConnection()
 
     const {
         status, channels, buses, config, myBusIndex,
-        setStatus, setSnapshot, updateBusFader, updateSendLevel, updateSendOn, setConfig, reset,
+        updateBusFader, updateSendLevel, updateSendOn,
     } = useMonitorStore()
 
     // Load pinned channels from Firestore
@@ -63,7 +64,7 @@ export function QuickMonitorPanel() {
         getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
             if (snap.exists()) setPinnedChannels(snap.data().pinnedChannels || [])
         }).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid])
 
     // Save pinned channels
@@ -73,78 +74,30 @@ export function QuickMonitorPanel() {
             const next = prev.includes(channelIndex)
                 ? prev.filter(c => c !== channelIndex)
                 : [...prev, channelIndex]
-            // Fire-and-forget save
             setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => {})
             return next
         })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid])
-
-    // Load config from Firestore
-    useEffect(() => {
-        if (!user || !hasAccess) return
-        const unsub = onSnapshot(doc(db, "config", "monitor"), (snap) => {
-            if (snap.exists()) setConfig(snap.data() as MonitorConfig)
-        })
-        return unsub
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
-    }, [user?.uid, hasAccess, setConfig])
-
-    // Connect to bridge
-    useEffect(() => {
-        if (!user || !hasAccess || !config?.bridgeUrl) return
-
-        // Don't try to connect if bridge heartbeat says it's offline
-        if (!isBridgeOnline(config.bridge)) return
-
-        // Don't reconnect if already connected
-        if (clientRef.current) return
-
-        const client = new X32WSClient({
-            onStateUpdate: (snapshot) => setSnapshot(snapshot, user.uid),
-            onFaderUpdate: (busIndex, _field, value) => updateBusFader(busIndex, value),
-            onSendUpdate: (busIndex, channelIndex, field, value) => {
-                if (field === "level") updateSendLevel(busIndex, channelIndex, value as number)
-                if (field === "on") updateSendOn(busIndex, channelIndex, value as boolean)
-            },
-            onMatrixUpdate: (matrixIndex, field, value) => {
-                const store = useMonitorStore.getState()
-                if (field === "fader") store.updateMatrixFader(matrixIndex, value as number)
-                if (field === "on") store.updateMatrixOn(matrixIndex, value as boolean)
-            },
-            onConfigUpdate: setConfig,
-            onStatusChange: setStatus,
-        })
-
-        clientRef.current = client
-        client.connect(config.bridgeUrl).catch(() => {})
-
-        return () => {
-            client.disconnect()
-            clientRef.current = null
-            reset()
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user/config change
-    }, [user?.uid, hasAccess, config?.bridgeUrl, config?.bridge?.status, config?.bridge?.lastSeen])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {
         if (!myBusIndex) return
         updateBusFader(myBusIndex, value)
-        clientRef.current?.setBusMaster(myBusIndex, value)
-    }, [myBusIndex, updateBusFader])
+        client?.setBusMaster(myBusIndex, value)
+    }, [myBusIndex, updateBusFader, client])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
         if (!myBusIndex) return
         updateSendLevel(myBusIndex, channelIndex, value)
-        clientRef.current?.setSendLevel(myBusIndex, channelIndex, value)
-    }, [myBusIndex, updateSendLevel])
+        client?.setSendLevel(myBusIndex, channelIndex, value)
+    }, [myBusIndex, updateSendLevel, client])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
         if (!myBusIndex) return
         updateSendOn(myBusIndex, channelIndex, on)
-        clientRef.current?.setSendOn(myBusIndex, channelIndex, on)
-    }, [myBusIndex, updateSendOn])
+        client?.setSendOn(myBusIndex, channelIndex, on)
+    }, [myBusIndex, updateSendOn, client])
 
     // Derived state
     const myBus = buses.find(b => b.index === myBusIndex)

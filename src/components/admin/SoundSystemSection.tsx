@@ -3,18 +3,16 @@
 import { useState, useEffect, useCallback } from "react"
 import { doc, getDoc, onSnapshot, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { subscribeToAllMusicianProfiles } from "@/lib/musician-profile"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
-import { MusicianProfile } from "@/types/models"
-import { MonitorConfig, BusAssignment } from "@/types/monitor"
+import { MonitorConfig } from "@/types/monitor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import {
     Loader2, Radio, CheckCircle,
-    Radar, Save, Settings2, Music2, Download, Copy, KeyRound,
+    Radar, Save, Settings2, Download, Copy, KeyRound,
 } from "lucide-react"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
@@ -26,7 +24,6 @@ const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
 }
 
 export function SoundSystemSection() {
-    const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
     const [monitorLoading, setMonitorLoading] = useState(true)
     const [monitorConfigExists, setMonitorConfigExists] = useState(true)
     const [monitorSaving, setMonitorSaving] = useState(false)
@@ -35,18 +32,12 @@ export function SoundSystemSection() {
     const [x32Address, setX32Address] = useState("")
     const [x32Port, setX32Port] = useState("10023")
     const [monitorBusesStr, setMonitorBusesStr] = useState("")
-    const [busAssignments, setBusAssignments] = useState<Record<string, BusAssignment | null>>({})
     const [scanning, setScanning] = useState(false)
     const [scanResult, setScanResult] = useState<string | null>(null)
     const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
     const [setupCode, setSetupCode] = useState<string | null>(null)
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
-
-    useEffect(() => {
-        const unsub = subscribeToAllMusicianProfiles(setMusicians)
-        return unsub
-    }, [])
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "config", "monitor"), (configDoc) => {
@@ -59,7 +50,6 @@ export function SoundSystemSection() {
                 setX32Address(data.x32Address)
                 setX32Port(String(data.x32Port))
                 setMonitorBusesStr(data.monitorBuses.join(", "))
-                setBusAssignments(data.busAssignments || {})
 
                 const raw = configDoc.data()
                 const bridge = raw?.bridge
@@ -134,18 +124,17 @@ export function SoundSystemSection() {
 
     const handleMonitorSave = useCallback(async () => {
         setMonitorSaving(true); setMonitorSaved(false)
-        const parsed: MonitorConfig = {
+        const parsed = {
             bridgeUrl: bridgeUrl.trim(),
             x32Address: x32Address.trim(),
             x32Port: parseInt(x32Port) || 10023,
             monitorBuses: monitorBusesStr.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 16),
-            busAssignments,
         }
         try {
             const ref = doc(db, "config", "monitor")
             const existing = await getDoc(ref)
             if (existing.exists()) { await updateDoc(ref, { ...parsed } as Record<string, unknown>) }
-            else { await setDoc(ref, parsed) }
+            else { await setDoc(ref, { ...parsed, busAssignments: {} }) }
             setMonitorSaved(true)
             toast.success("Monitor config saved")
             setTimeout(() => setMonitorSaved(false), 2000)
@@ -153,21 +142,7 @@ export function SoundSystemSection() {
             logger.error("Failed to save:", err)
             toast.error("Failed to save monitor config")
         } finally { setMonitorSaving(false) }
-    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr, busAssignments])
-
-    const assignBus = (busIdx: number, userId: string | null) => {
-        setBusAssignments(prev => {
-            const next = { ...prev }
-            if (!userId) { next[String(busIdx)] = null }
-            else {
-                const musician = musicians.find(m => m.uid === userId)
-                next[String(busIdx)] = { userId, userName: musician?.displayName || "Unknown" }
-            }
-            return next
-        })
-    }
-
-    const parsedBuses = monitorBusesStr.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 16)
+    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr])
 
     return (
         <CollapsibleSection
@@ -295,32 +270,6 @@ export function SoundSystemSection() {
                             <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4" />
                             <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
                         </div>
-                    </div>
-
-                    <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-                        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-                            <Music2 className="w-4 h-4 text-muted-foreground" />
-                            Bus Assignments
-                        </h3>
-                        {parsedBuses.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Add monitor bus numbers above to assign them.</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {parsedBuses.map(busIdx => {
-                                    const assignment = busAssignments[String(busIdx)]
-                                    return (
-                                        <div key={busIdx} className="flex items-center gap-3">
-                                            <span className="text-sm font-medium w-16 shrink-0">Bus {busIdx}</span>
-                                            <select value={assignment?.userId || ""} onChange={e => assignBus(busIdx, e.target.value || null)}
-                                                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                                                <option value="">Unassigned</option>
-                                                {musicians.map(m => <option key={m.uid} value={m.uid}>{m.displayName}</option>)}
-                                            </select>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
                     </div>
                 </div>
             )}

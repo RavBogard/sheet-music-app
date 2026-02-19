@@ -171,7 +171,7 @@ export class BridgeWSServer {
                 return
             }
 
-            if (!this.config.isAuthorized(user.uid, user.soundEngineer)) {
+            if (!this.config.isAuthorized(user.uid, user.role, user.soundEngineer)) {
                 this.sendTo(ws, { type: "error", message: "Not authorized for monitor access" })
                 ws.close()
                 return
@@ -180,7 +180,8 @@ export class BridgeWSServer {
             clearTimeout(authTimeout)
 
             const busIndex = this.config.getUserBus(user.uid)
-            const isSoundEngineer = user.soundEngineer === true
+            // Admins and sound engineers both get full engineer controls
+            const isSoundEngineer = user.soundEngineer === true || user.role === "admin"
             this.clients.set(ws, { ws, uid: user.uid, busIndex, isSoundEngineer })
 
             console.log(`[WS] Authenticated: ${user.uid} → bus ${busIndex}${isSoundEngineer ? " (sound engineer)" : ""}`)

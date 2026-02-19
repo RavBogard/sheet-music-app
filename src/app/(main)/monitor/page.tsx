@@ -1,97 +1,39 @@
 "use client"
 
-import { useEffect, useRef, useCallback, useState } from "react"
+import { useCallback, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useMonitorStore } from "@/lib/monitor-store"
-import { X32WSClient } from "@/lib/x32-ws-client"
-import { doc, getDoc, updateDoc } from "firebase/firestore"
+import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { BusSelector } from "@/components/monitor/BusSelector"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
-import { MonitorConfig } from "@/types/monitor"
 import { Loader2, Radio, ChevronDown, ChevronUp } from "lucide-react"
+import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 
 export default function MonitorPage() {
-    const { user, loading: authLoading } = useAuth()
+    const { user, loading: authLoading, isAdmin } = useAuth()
     const { hasAccess, isSoundEngineer, loading: accessLoading } = useMonitorAccess()
-    const wsRef = useRef<X32WSClient | null>(null)
-    const [showEngSection, setShowEngSection] = useState(false)
+    // Fix #4: sound engineers see their section open by default
+    const [showEngSection, setShowEngSection] = useState(true)
+
+    // Fix #9: singleton connection — shared with QuickMonitorPanel
+    const { client } = useMonitorConnection()
 
     const {
-        status,
-        error,
-        channels,
-        buses,
-        matrices,
-        config,
-        myBusIndex,
-        userId,
-        setStatus,
-        setSnapshot,
-        updateBusFader,
-        updateSendLevel,
-        updateSendOn,
-        updateMatrixFader,
-        updateMatrixOn,
-        setConfig,
-        reset,
+        status, error, channels, buses, matrices, config, myBusIndex, userId,
+        updateBusFader, updateSendLevel, updateSendOn, updateMatrixFader, updateMatrixOn,
     } = useMonitorStore()
 
-    // Connect to bridge on mount
-    useEffect(() => {
-        if (!user || !hasAccess) return
+    // Admins or sound engineers get full controls
+    const hasEngineerAccess = isSoundEngineer || isAdmin
 
-        let cancelled = false
-
-        async function connectToBridge() {
-            // Read bridge URL from Firestore config
-            const configDoc = await getDoc(doc(db, "config", "monitor"))
-            if (!configDoc.exists() || cancelled) return
-
-            const monitorConfig = configDoc.data() as MonitorConfig
-            if (!monitorConfig.bridgeUrl) return
-
-            const client = new X32WSClient({
-                onStateUpdate: (snapshot) => setSnapshot(snapshot, user!.uid),
-                onFaderUpdate: (busIndex, _field, value) => updateBusFader(busIndex, value),
-                onSendUpdate: (busIndex, channelIndex, field, value) => {
-                    if (field === "level") updateSendLevel(busIndex, channelIndex, value as number)
-                    if (field === "on") updateSendOn(busIndex, channelIndex, value as boolean)
-                },
-                onMatrixUpdate: (matrixIndex, field, value) => {
-                    if (field === "fader") updateMatrixFader(matrixIndex, value as number)
-                    if (field === "on") updateMatrixOn(matrixIndex, value as boolean)
-                },
-                onConfigUpdate: (cfg) => setConfig(cfg),
-                onStatusChange: (s, err) => setStatus(s, err),
-            })
-
-            wsRef.current = client
-
-            try {
-                await client.connect(monitorConfig.bridgeUrl)
-            } catch {
-                // Auto-reconnect handles this
-            }
-        }
-
-        connectToBridge()
-
-        return () => {
-            cancelled = true
-            wsRef.current?.disconnect()
-            wsRef.current = null
-            reset()
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user change
-    }, [user?.uid, hasAccess])
-
-    // Self-assign a bus
+    // Fix #2: Self-assign with error handling
     const handleSelectBus = useCallback(async (busIndex: number) => {
         if (!user || !config) return
         const newAssignments = { ...config.busAssignments }
@@ -104,41 +46,43 @@ export default function MonitorPage() {
             await updateDoc(doc(db, "config", "monitor"), {
                 busAssignments: newAssignments,
             })
+            toast.success(`Assigned to Bus ${busIndex}`)
         } catch (err) {
             logger.error("Failed to self-assign bus:", err)
+            toast.error("Can't self-assign — ask a sound engineer to assign you")
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, config])
 
     // Fader handlers — own bus
     const handleBusMaster = useCallback((value: number) => {
         if (!myBusIndex) return
-        updateBusFader(myBusIndex, value) // Optimistic local update
-        wsRef.current?.setBusMaster(myBusIndex, value)
-    }, [myBusIndex, updateBusFader])
+        updateBusFader(myBusIndex, value)
+        client?.setBusMaster(myBusIndex, value)
+    }, [myBusIndex, updateBusFader, client])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
         if (!myBusIndex) return
         updateSendLevel(myBusIndex, channelIndex, value)
-        wsRef.current?.setSendLevel(myBusIndex, channelIndex, value)
-    }, [myBusIndex, updateSendLevel])
+        client?.setSendLevel(myBusIndex, channelIndex, value)
+    }, [myBusIndex, updateSendLevel, client])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
         if (!myBusIndex) return
         updateSendOn(myBusIndex, channelIndex, on)
-        wsRef.current?.setSendOn(myBusIndex, channelIndex, on)
-    }, [myBusIndex, updateSendOn])
+        client?.setSendOn(myBusIndex, channelIndex, on)
+    }, [myBusIndex, updateSendOn, client])
 
-    // Matrix handlers — sound engineers only
+    // Matrix handlers — engineers only
     const handleMatrixFader = useCallback((matrixIndex: number, value: number) => {
         updateMatrixFader(matrixIndex, value)
-        wsRef.current?.setMatrixFader(matrixIndex, value)
-    }, [updateMatrixFader])
+        client?.setMatrixFader(matrixIndex, value)
+    }, [updateMatrixFader, client])
 
     const handleMatrixOn = useCallback((matrixIndex: number, on: boolean) => {
         updateMatrixOn(matrixIndex, on)
-        wsRef.current?.setMatrixOn(matrixIndex, on)
-    }, [updateMatrixOn])
+        client?.setMatrixOn(matrixIndex, on)
+    }, [updateMatrixOn, client])
 
     // ── Loading ──
     if (authLoading || accessLoading) {
@@ -187,7 +131,45 @@ export default function MonitorPage() {
         )
     }
 
-    // ── No bus assigned → show selector (or bus assignment for sound engineers) ──
+    // ── Fix #3: Engineer without a bus → engineer dashboard (not "pick your bus") ──
+    if (config && myBusIndex === null && hasEngineerAccess) {
+        return (
+            <div className="max-w-lg mx-auto p-4 space-y-6">
+                <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-2xl font-bold">Sound Engineer</h1>
+                    <ConnectionIndicator status={status} error={error} />
+                </div>
+
+                <BusAssignmentPanel config={config} />
+
+                {matrices.length > 0 && (
+                    <MatrixPanel
+                        matrices={matrices}
+                        onFaderChange={handleMatrixFader}
+                        onToggle={handleMatrixOn}
+                    />
+                )}
+
+                {/* Subtle option to self-assign a personal bus */}
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                    Need a personal monitor mix?{" "}
+                    <button
+                        onClick={() => {
+                            // Find first unassigned bus
+                            const available = config.monitorBuses.find(b => !config.busAssignments[String(b)])
+                            if (available) handleSelectBus(available)
+                            else toast.error("No buses available")
+                        }}
+                        className="text-violet-400 hover:text-violet-300 underline"
+                    >
+                        Assign yourself a bus
+                    </button>
+                </p>
+            </div>
+        )
+    }
+
+    // ── Musician without a bus → bus selector ──
     if (config && myBusIndex === null) {
         return (
             <div className="max-w-lg mx-auto p-4 space-y-6">
@@ -196,20 +178,6 @@ export default function MonitorPage() {
                     <ConnectionIndicator status={status} error={error} />
                 </div>
                 <BusSelector config={config} userId={userId || ""} onSelect={handleSelectBus} />
-
-                {/* Sound engineers can still access matrix + assignments even without own bus */}
-                {isSoundEngineer && (
-                    <div className="space-y-4">
-                        <BusAssignmentPanel config={config} />
-                        {matrices.length > 0 && (
-                            <MatrixPanel
-                                matrices={matrices}
-                                onFaderChange={handleMatrixFader}
-                                onToggle={handleMatrixOn}
-                            />
-                        )}
-                    </div>
-                )}
             </div>
         )
     }
@@ -276,8 +244,8 @@ export default function MonitorPage() {
                 </div>
             </div>
 
-            {/* Sound Engineer Section — collapsible */}
-            {isSoundEngineer && (
+            {/* Sound Engineer Section — collapsible, open by default */}
+            {hasEngineerAccess && (
                 <div className="mt-4 space-y-4">
                     <button
                         onClick={() => setShowEngSection(!showEngSection)}

@@ -6,7 +6,7 @@
  * so Firestore rules can check the claim.
  * 
  * Body: { targetUserId: string, soundEngineer: boolean }
- * Requires admin role.
+ * Requires band_leader role or above.
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -17,7 +17,7 @@ import { logger } from "@/lib/logger"
 
 export async function POST(request: NextRequest) {
     try {
-        const auth = await withAuth(request, "admin")
+        const auth = await withAuth(request, "band_leader")
         if (auth instanceof NextResponse) return auth
 
         const body = await request.json()

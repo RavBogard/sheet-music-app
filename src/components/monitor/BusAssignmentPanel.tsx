@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
 import { subscribeToAllUsers, UserProfile } from "@/lib/users-firebase"
 import { doc, updateDoc } from "firebase/firestore"
@@ -16,9 +16,16 @@ interface BusAssignmentPanelProps {
  * Sound engineer panel for assigning musicians to monitor buses.
  * Shows each configured bus with a dropdown of musicians/band leaders/admins.
  * Saves directly to Firestore — no separate save button needed.
+ * Fix #8: Confirms before reassigning a bus from one user to another.
  */
 export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
     const [users, setUsers] = useState<UserProfile[]>([])
+    const [pendingChange, setPendingChange] = useState<{
+        busIdx: number
+        fromName: string
+        toId: string
+        toName: string
+    } | null>(null)
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((all) => {
@@ -29,7 +36,7 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
         return unsub
     }, [])
 
-    const handleAssign = async (busIdx: number, userId: string | null) => {
+    const doAssign = useCallback(async (busIdx: number, userId: string | null) => {
         const newAssignments: Record<string, BusAssignment | null> = { ...config.busAssignments }
 
         if (!userId) {
@@ -51,7 +58,26 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
         } catch {
             toast.error("Failed to update bus assignment")
         }
-    }
+    }, [config.busAssignments, users])
+
+    const handleAssign = useCallback((busIdx: number, userId: string | null) => {
+        const currentAssignment = config.busAssignments?.[String(busIdx)]
+
+        // Reassigning from one user to another? Confirm first.
+        if (currentAssignment?.userId && userId && currentAssignment.userId !== userId) {
+            const toUser = users.find(u => u.uid === userId)
+            setPendingChange({
+                busIdx,
+                fromName: currentAssignment.userName,
+                toId: userId,
+                toName: toUser?.displayName || "Unknown",
+            })
+            return
+        }
+
+        // Unassigning or assigning empty bus — no confirmation needed
+        doAssign(busIdx, userId)
+    }, [config.busAssignments, users, doAssign])
 
     const parsedBuses = config.monitorBuses || []
 
@@ -85,6 +111,36 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
                     )
                 })}
             </div>
+
+            {/* Fix #8: Reassignment confirmation */}
+            {pendingChange && (
+                <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-sm text-yellow-200 mb-2">
+                        Bus {pendingChange.busIdx} is currently assigned to <strong>{pendingChange.fromName}</strong>.
+                        Reassign to <strong>{pendingChange.toName}</strong>?
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                doAssign(pendingChange.busIdx, pendingChange.toId)
+                                setPendingChange(null)
+                            }}
+                            className="px-3 py-1 text-xs font-medium bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 rounded-lg transition-colors"
+                        >
+                            Reassign
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Reset dropdown to current assignment
+                                setPendingChange(null)
+                            }}
+                            className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
