@@ -71,6 +71,7 @@ export interface Setlist {
     ownerId?: string
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service
+    serviceNotes?: string // Service-wide instructions for performers
     musicians?: SetlistMusician[] // Who's playing this service
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'

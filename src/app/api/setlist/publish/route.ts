@@ -171,10 +171,14 @@ export async function POST(request: NextRequest) {
         const publishNote = typeof note === 'string' ? note.trim().slice(0, 500) : undefined
         const publishSubject = typeof subject === 'string' ? subject.trim().slice(0, 200) : undefined
 
+        // Combine publisher's custom note with service-level notes
+        const serviceNotes = setlist.serviceNotes ? String(setlist.serviceNotes).trim() : undefined
+        const combinedNote = [publishNote, serviceNotes].filter(Boolean).join('\n\n') || undefined
+
         const emailPromise = emailRecipients.length > 0
             ? emailAllMembers(
                 emailRecipients, setlistId, setlistName, eventDateStr,
-                publisherName, songNames, origin, publishNote, publishSubject
+                publisherName, songNames, origin, combinedNote, publishSubject
             ).catch(err => {
                 logger.warn('[Publish] Email sending failed:', err)
                 return { sent: 0, failed: 0, errors: [], error: err instanceof Error ? err.message : String(err) }

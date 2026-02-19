@@ -36,6 +36,7 @@ export default function SetlistPerformPage() {
 
     const [name, setName] = useState("")
     const [tracks, setTracks] = useState<SetlistTrack[]>([])
+    const [serviceNotes, setServiceNotes] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [tappedIndex, setTappedIndex] = useState<number | null>(null)
@@ -51,6 +52,7 @@ export default function SetlistPerformPage() {
                     const data = snap.data()
                     setName(data.name || "Untitled")
                     setTracks(data.tracks || [])
+                    setServiceNotes(data.serviceNotes || null)
                 } else {
                     setError("Setlist not found")
                 }
@@ -174,6 +176,13 @@ export default function SetlistPerformPage() {
             {/* Track list */}
             <ScrollArea className="flex-1">
                 <div className="flex flex-col p-2 pb-24 gap-0.5">
+
+                    {/* Service notes banner */}
+                    {serviceNotes && (
+                        <div className="mx-1 mb-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                            <p className="text-sm text-blue-200 whitespace-pre-wrap">{serviceNotes}</p>
+                        </div>
+                    )}
 
                     {/* Section quick-jump chips — inside scroll area */}
                     {sectionLabels.length > 1 && (

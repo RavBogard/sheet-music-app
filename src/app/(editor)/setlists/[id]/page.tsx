@@ -72,6 +72,7 @@ export default function SetlistEditorPage() {
             initialOwnerId={existingSetlist?.ownerId}
             initialEventDate={existingSetlist?.eventDate ? toDate(existingSetlist.eventDate) : undefined}
             initialRabbi={existingSetlist?.rabbi}
+            initialServiceNotes={existingSetlist?.serviceNotes}
             initialMusicians={existingSetlist?.musicians}
             onBack={() => {
                 clearPending()

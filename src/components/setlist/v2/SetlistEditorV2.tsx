@@ -57,6 +57,7 @@ interface SetlistEditorV2Props {
     initialOwnerId?: string
     initialEventDate?: string | Date | null
     initialRabbi?: string
+    initialServiceNotes?: string
     initialMusicians?: SetlistMusician[]
     onBack: () => void
     onSave?: (id: string) => void
@@ -72,6 +73,7 @@ export function SetlistEditorV2({
     initialOwnerId,
     initialEventDate,
     initialRabbi,
+    initialServiceNotes,
     initialMusicians,
     onBack,
     onSave,
@@ -94,6 +96,8 @@ export function SetlistEditorV2({
         setEventDate,
         rabbi,
         setRabbi,
+        serviceNotes,
+        setServiceNotes,
         musicians,
         setMusicians,
         saving,
@@ -124,6 +128,7 @@ export function SetlistEditorV2({
         initialOwnerId,
         initialEventDate,
         initialRabbi,
+        initialServiceNotes,
         initialMusicians,
         onSave,
     })
@@ -463,6 +468,35 @@ export function SetlistEditorV2({
                     onChange={setMusicians}
                     canEdit={canEdit}
                 />
+            )}
+
+            {/* Service notes */}
+            {(canEdit || serviceNotes) && (
+                <div className="border-b border-border/50 px-4 py-2">
+                    {!serviceNotes && canEdit ? (
+                        <button
+                            onClick={() => setServiceNotes(" ")}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <span>+ Add service notes</span>
+                        </button>
+                    ) : (
+                        <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>
+                            {canEdit ? (
+                                <textarea
+                                    value={serviceNotes?.trim() || ""}
+                                    onChange={(e) => setServiceNotes(e.target.value)}
+                                    placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
+                                    className="w-full text-sm bg-muted/30 rounded-lg border border-border/50 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    rows={2}
+                                />
+                            ) : (
+                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{serviceNotes}</p>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Track list */}
