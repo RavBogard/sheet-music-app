@@ -44,18 +44,17 @@ export default function DashboardPage() {
         } catch { /* SSR or private mode */ }
     }, [])
 
-    // Safety timeout: if subscriptions haven't resolved in 4s, mark loaded anyway.
-    // Prevents the loading screen from hanging on slow/offline networks.
+    // Safety timeout: 2s (was 4s). Prevents hanging on slow networks.
     useEffect(() => {
         if (personalLoaded && publicLoaded) return
         const timer = setTimeout(() => {
             setPersonalLoaded(true)
             setPublicLoaded(true)
-        }, 4000)
+        }, 2000)
         return () => clearTimeout(timer)
     }, [personalLoaded, publicLoaded])
 
-    // Greeting
+    // Greeting — compute immediately (no data dependency)
     const greeting = useMemo(() => {
         const firstName = user?.displayName?.split(' ')[0] || null
         return getContextualGreeting(firstName, undefined, congregation.shortName)
@@ -64,29 +63,14 @@ export default function DashboardPage() {
     // Prep data for upcoming setlists (members only)
     const { items: upcomingWithPrep, hasData: hasWeekData } = useUpcomingPrep()
 
-    // Setlist Service for primary upcoming/recent fetching
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user?.uid, user?.displayName])
 
-    // Fetch upcoming setlists (personal or public)
-    // Wait for auth to settle before subscribing — avoids the race where anonymous
-    // subscriptions resolve fast (from Firestore cache), then auth finishes and the
-    // effect re-runs, causing a brief flash of stale empty state.
-    useEffect(() => {
-        if (!setlistService || authLoading) return
-
-        // Reset loaded flags when service changes (e.g., user logs in/out)
-        setPersonalLoaded(false)
-        setPublicLoaded(false)
-
-        let unsubPersonal: (() => void) | null = null
-        let unsubPublic: (() => void) | null = null
-
-        const now = new Date()
-        now.setHours(0, 0, 0, 0)
-
-        const filterUpcoming = (setlists: Setlist[]) => {
+    const filterUpcoming = useMemo(() => {
+        return (setlists: Setlist[]) => {
+            const now = new Date()
+            now.setHours(0, 0, 0, 0)
             return setlists.filter(s => {
                 if (!s.eventDate) return false
                 const d = toDate(s.eventDate)
@@ -99,22 +83,16 @@ export default function DashboardPage() {
                 return (da?.getTime() || 0) - (db?.getTime() || 0)
             })
         }
+    }, [])
 
-        if (user?.uid) {
-            unsubPersonal = setlistService.subscribeToPersonalSetlists((setlists, fromCache) => {
-                setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
-                // Only mark loaded if we got real data from cache (returning user) or network result (definitive).
-                // Empty cache on cold start = wait for network.
-                if (!fromCache || setlists.length > 0) {
-                    setPersonalLoaded(true)
-                }
-            })
-        } else {
-            // No personal subscription needed — mark as loaded immediately
-            setPersonalLoaded(true)
-        }
+    // ── PUBLIC setlists: start IMMEDIATELY — no auth gate ──
+    // Firestore rules allow anyone to read isPublic === true.
+    // This breaks the waterfall: data loads in parallel with auth.
+    useEffect(() => {
+        if (!setlistService) return
+        setPublicLoaded(false)
 
-        unsubPublic = setlistService.subscribeToPublicSetlists((setlists, fromCache) => {
+        const unsub = setlistService.subscribeToPublicSetlists((setlists) => {
             const upcoming = filterUpcoming(setlists)
             const recent = setlists
                 .filter(s => s.eventDate)
@@ -123,30 +101,46 @@ export default function DashboardPage() {
             setRecentPublicSetlists(recent)
 
             if (!user?.uid) setUpcomingSetlists(upcoming.slice(0, 5))
-            // Same logic: don't mark loaded on empty cache (wait for network)
-            if (!fromCache || setlists.length > 0) {
-                setPublicLoaded(true)
-            }
+            // Accept data immediately — cache or network, first callback wins
+            setPublicLoaded(true)
         })
 
-        return () => { unsubPersonal?.(); unsubPublic?.() }
-    }, [setlistService, user?.uid, authLoading])
+        return () => unsub()
+    }, [setlistService, user?.uid, filterUpcoming])
+
+    // ── PERSONAL setlists: fire after auth resolves ──
+    useEffect(() => {
+        if (authLoading) return
+
+        if (!user?.uid) {
+            setPersonalLoaded(true)
+            return
+        }
+
+        if (!setlistService) return
+        setPersonalLoaded(false)
+
+        const unsub = setlistService.subscribeToPersonalSetlists((setlists) => {
+            setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
+            setPersonalLoaded(true)
+        })
+
+        return () => unsub()
+    }, [setlistService, user?.uid, authLoading, filterUpcoming])
 
     useEffect(() => { loadLibrary() }, [loadLibrary])
 
-    // True until both personal + public subscriptions have fired at least once
-    const setlistsLoading = authLoading || !personalLoaded || !publicLoaded
-
+    // Content is ready once public setlists have loaded.
+    // Personal setlists augment later — no need to wait.
+    const setlistsReady = publicLoaded
     const tonightSetlist = upcomingSetlists[0]
     const additionalUpcoming = upcomingSetlists.slice(1)
 
-    // Find prep data for tonight's setlist
     const tonightPrep = useMemo(() => {
         if (!tonightSetlist) return null
         return upcomingWithPrep.find(u => u.setlist.id === tonightSetlist.id) || null
     }, [tonightSetlist, upcomingWithPrep])
 
-    // Atmosphere gradient classes
     const atmosphereClasses = useMemo(() => {
         switch (greeting.atmosphere) {
             case 'shabbat':
@@ -169,7 +163,6 @@ export default function DashboardPage() {
         router.push(`/perform/setlist/${s.id}`)
     }
 
-    // Timeline items exclude the hero setlist to avoid duplication
     const timelineItems = useMemo(() => {
         if (!tonightSetlist) return upcomingWithPrep
         return upcomingWithPrep.filter(u => u.setlist.id !== tonightSetlist.id)
@@ -179,54 +172,8 @@ export default function DashboardPage() {
         <div className={cn("flex flex-col w-full pb-28", !shouldAnimate && "dash-no-animate")}>
 
             {/* ══════════════════════════════════════════
-                LOADING SPLASH
-                Shows a clean branded state until all data is ready.
-                Prevents the confusing piecemeal loading where pieces
-                pop in one-by-one and "No setlists" flashes.
-               ══════════════════════════════════════════ */}
-            {setlistsLoading && (
-                <div className="flex flex-col items-center justify-center px-4 pt-16 pb-8 animate-in fade-in duration-200">
-                    <div className="flex flex-col items-center gap-4 max-w-xs text-center">
-                        <img
-                            src="/logo.jpg"
-                            alt={congregation.shortName}
-                            className="w-14 h-14 rounded-full border border-border/50 animate-pulse"
-                        />
-                        <div className="space-y-2">
-                            <h1 className="text-xl font-bold tracking-tight text-foreground">
-                                {greeting.text}
-                            </h1>
-                            <p className="text-sm text-muted-foreground/80 font-medium tracking-wide">
-                                {greeting.hebrewDate.split(' ').map((part, i, arr) => (
-                                    <span key={i}>
-                                        {part}
-                                        {i < arr.length - 1 && (i === arr.length - 2
-                                            ? <span className="mx-1.5 text-muted-foreground/40">·</span>
-                                            : ' '
-                                        )}
-                                    </span>
-                                ))}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 pt-2">
-                            <div className="h-1 w-8 rounded-full bg-muted-foreground/20 animate-pulse" />
-                            <div className="h-1 w-6 rounded-full bg-muted-foreground/15 animate-pulse [animation-delay:150ms]" />
-                            <div className="h-1 w-4 rounded-full bg-muted-foreground/10 animate-pulse [animation-delay:300ms]" />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ══════════════════════════════════════════
-                MAIN CONTENT — hidden during loading, fades in once ready
-               ══════════════════════════════════════════ */}
-            <div className={cn(
-                "transition-opacity duration-500",
-                setlistsLoading ? "opacity-0 h-0 overflow-hidden" : "opacity-100"
-            )}>
-
-            {/* ══════════════════════════════════════════
-                ATMOSPHERIC HERO ZONE
+                ATMOSPHERIC HERO ZONE — renders immediately,
+                no data dependency. Greeting is computed client-side.
                ══════════════════════════════════════════ */}
             <div className={`bg-gradient-to-b ${atmosphereClasses} px-4 md:px-6 pt-4 pb-6`}>
                 <div className="max-w-2xl mx-auto w-full">
@@ -277,8 +224,22 @@ export default function DashboardPage() {
                         {/* Left column: hero card + command row */}
                         <div className="flex-1 min-w-0 flex flex-col gap-4">
 
-                            {/* Hero: Tonight's Setlist */}
-                            {tonightSetlist && (
+                            {/* Hero: skeleton → setlist card → empty state */}
+                            {!setlistsReady ? (
+                                /* Skeleton card while loading */
+                                <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-muted-foreground/15 animate-pulse" />
+                                        <div className="h-3 w-20 bg-muted-foreground/10 rounded animate-pulse" />
+                                    </div>
+                                    <div className="h-5 w-52 bg-muted-foreground/15 rounded animate-pulse" />
+                                    <div className="h-3 w-32 bg-muted-foreground/10 rounded animate-pulse" />
+                                    <div className="flex gap-2 pt-1">
+                                        <div className="h-9 flex-1 bg-muted-foreground/10 rounded-lg animate-pulse" />
+                                        <div className="h-9 w-24 bg-muted-foreground/8 rounded-lg animate-pulse" />
+                                    </div>
+                                </div>
+                            ) : tonightSetlist ? (
                                 <HeroCard
                                     setlist={tonightSetlist}
                                     prep={tonightPrep}
@@ -293,16 +254,13 @@ export default function DashboardPage() {
                                         }
                                     }}
                                 />
-                            )}
-
-                            {/* No upcoming setlists — subtle message only when we have recent data to show */}
-                            {!tonightSetlist && recentPublicSetlists.length > 0 && (
+                            ) : recentPublicSetlists.length > 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-2">
                                     No upcoming services scheduled
                                 </p>
-                            )}
+                            ) : null}
 
-                            {/* Command Row */}
+                            {/* Command Row — always visible immediately */}
                             <CommandRow
                                 isMember={isMember}
                                 isLeader={isLeader}
@@ -398,7 +356,7 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* ── Additional upcoming (non-prep-tracked, e.g. personal setlists not in Your Week) ── */}
+                {/* ── Additional upcoming (non-prep-tracked) ── */}
                 {additionalUpcoming.length > 0 && !hasWeekData && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -414,8 +372,8 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* ── Recent Public Setlists (fallback when no upcoming) ── */}
-                {!tonightSetlist && recentPublicSetlists.length > 0 && (
+                {/* ── Recent Public Setlists ── */}
+                {setlistsReady && !tonightSetlist && recentPublicSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Recent Setlists
@@ -430,7 +388,7 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* ── Guest Sign-In (only after auth confirms no user) ── */}
+                {/* ── Guest Sign-In ── */}
                 {!user && !authLoading && (
                     <div className={cn("bg-card rounded-2xl p-5 text-center space-y-4 border border-border", stagger(4))}>
                         <QRSignIn />
@@ -447,9 +405,6 @@ export default function DashboardPage() {
                         </Button>
                     </div>
                 )}
-            </div>
-
-            {/* End of main content wrapper */}
             </div>
         </div>
     )
