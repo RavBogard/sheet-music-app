@@ -11,7 +11,7 @@
  */
 
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
-import { DriveClient } from "@/lib/google-drive"
+import { fetchFileById } from "@/lib/file-fetcher"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { initAdmin, getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -518,7 +518,6 @@ export async function generatePrintPdf(
         currentTitle: '', message: 'Preparing print job...',
     })
 
-    const drive = new DriveClient()
     const hasTranspositions = req.tracks.some(t => t.transposition && t.transposition !== 0)
 
     // Read congregation branding
@@ -567,14 +566,14 @@ export async function generatePrintPdf(
         })
 
         try {
-            // Fetch PDF
-            const fileBuffer = await drive.getFile(track.fileId)
-            if (!fileBuffer || !(fileBuffer instanceof ArrayBuffer) || fileBuffer.byteLength === 0) {
-                logger.warn(`[PrintPipeline] Empty file: ${track.title}`)
+            // Fetch PDF — Storage first, Drive fallback
+            const fetched = await fetchFileById(track.fileId)
+            if (!fetched || fetched.buffer.byteLength === 0) {
+                logger.warn(`[PrintPipeline] Empty or missing file: ${track.title}`)
                 continue
             }
 
-            let pdfBytes = new Uint8Array(fileBuffer)
+            let pdfBytes = new Uint8Array(fetched.buffer)
 
             // Transpose if needed
             const needsTransposition = track.transposition && track.transposition !== 0
@@ -667,7 +666,6 @@ export interface PreExtractResult {
  */
 export async function preExtractChords(fileIds: string[]): Promise<PreExtractResult> {
     initAdmin()
-    const drive = new DriveClient()
     const { extractChordsFromPdf } = await import("@/lib/pdf-chord-extractor")
 
     const result: PreExtractResult = { total: fileIds.length, extracted: 0, alreadyCached: 0, errors: 0 }
@@ -681,14 +679,14 @@ export async function preExtractChords(fileIds: string[]): Promise<PreExtractRes
                 continue
             }
 
-            // Fetch and extract
-            const fileBuffer = await drive.getFile(fileId)
-            if (!fileBuffer || !(fileBuffer instanceof ArrayBuffer)) {
+            // Fetch from Storage (fast) or Drive (fallback)
+            const fetched = await fetchFileById(fileId)
+            if (!fetched || fetched.buffer.byteLength === 0) {
                 result.errors++
                 continue
             }
 
-            const extraction = await extractChordsFromPdf(new Uint8Array(fileBuffer))
+            const extraction = await extractChordsFromPdf(new Uint8Array(fetched.buffer))
             if (extraction.totalChords > 0) {
                 await cacheChords(fileId, extraction)
                 result.extracted++

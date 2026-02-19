@@ -65,7 +65,7 @@ export default function PerformPage() {
 
     // Sync URL with Store
     useEffect(() => {
-        if (fileId) {
+        if (fileId && !fileId.startsWith('flow-')) {
             const { apiUrl, defaultType } = parseFileId(fileId)
 
             // CRITICAL: Only update the store if the URL actually represents a different file

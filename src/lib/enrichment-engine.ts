@@ -1,6 +1,6 @@
 
 import { geminiFlash } from "@/lib/gemini"
-import { DriveClient } from "@/lib/google-drive"
+import { fetchFileById } from "@/lib/file-fetcher"
 import { getFirestore } from "firebase-admin/firestore"
 import { initAdmin } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -22,12 +22,13 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
     // 1. Init Services
     initAdmin()
     const db = getFirestore()
-    const drive = new DriveClient()
 
-    // 2. Fetch File Content
-    // We need the *actual* PDF content to send to Vision AI
-    const fileBuffer = await drive.getFile(fileId)
-    const base64Data = Buffer.from(fileBuffer as ArrayBuffer).toString("base64")
+    // 2. Fetch File Content (Storage first, Drive fallback)
+    const fetched = await fetchFileById(fileId)
+    if (!fetched) {
+        throw new Error(`File not found: ${fileId}`)
+    }
+    const base64Data = fetched.buffer.toString("base64")
 
     // 3. Prompt Gemini
     const prompt = `
