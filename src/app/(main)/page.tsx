@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
     const router = useRouter()
-    const { user, profile, signIn, isMember, isLeader, loading: authLoading } = useAuth()
+    const { user, profile, cachedUser, signIn, isMember, isLeader, loading: authLoading } = useAuth()
     const { loadLibrary } = useLibraryStore()
     const congregation = useCongregation()
     const { open: openChat } = useChatStore()
@@ -55,10 +55,12 @@ export default function DashboardPage() {
     }, [personalLoaded, publicLoaded])
 
     // Greeting — compute immediately (no data dependency)
+    // Use cachedUser for instant personalization before Firebase Auth resolves
     const greeting = useMemo(() => {
-        const firstName = user?.displayName?.split(' ')[0] || null
+        const displayName = profile?.displayName || user?.displayName || cachedUser?.displayName
+        const firstName = displayName?.split(' ')[0] || null
         return getContextualGreeting(firstName, undefined, congregation.shortName)
-    }, [user?.displayName, congregation.shortName])
+    }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName])
 
     // Prep data for upcoming setlists (members only)
     const { items: upcomingWithPrep, hasData: hasWeekData } = useUpcomingPrep()

@@ -149,7 +149,7 @@ export function OverflowMenu({
                             {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
-                            {["Daniel", "Karen"].map((r) => (
+                            {["Daniel", "Karen", "Randy"].map((r) => (
                                 <DropdownMenuItem key={r} onClick={() => onSetRabbi(r)}>
                                     {rabbi === r && <Check className="h-3 w-3 mr-2" />}
                                     <span className={rabbi === r ? "font-medium" : ""}>Rabbi {r}</span>

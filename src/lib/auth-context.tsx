@@ -7,9 +7,17 @@ import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 
+interface CachedUser {
+    displayName: string | null
+    photoURL: string | null
+    email: string | null
+    role: string | null
+}
+
 interface AuthContextType {
     user: User | null
     profile: UserProfile | null
+    cachedUser: CachedUser | null
     loading: boolean
     signIn: () => Promise<void>
     signOut: () => Promise<void>
@@ -21,6 +29,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
+    cachedUser: null,
     loading: true,
     signIn: async () => { },
     signOut: async () => { },
@@ -34,6 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
     const lastClaimsUpdate = useRef<string | null>(null)
+
+    // Read cached user from localStorage for instant greeting (before Firebase Auth resolves)
+    const [cachedUser] = useState<CachedUser | null>(() => {
+        if (typeof window === 'undefined') return null
+        try {
+            const raw = localStorage.getItem('crc_cached_user')
+            return raw ? JSON.parse(raw) : null
+        } catch { return null }
+    })
 
     // Derived roles for convenience
     const isAdmin = profile?.role === 'admin'
@@ -68,6 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                     setProfile(p)
                     setLoading(false)
+
+                    // Cache for instant greeting on next visit
+                    if (p) {
+                        try {
+                            localStorage.setItem('crc_cached_user', JSON.stringify({
+                                displayName: p.displayName,
+                                photoURL: p.photoURL || null,
+                                email: p.email,
+                                role: p.role,
+                            }))
+                        } catch { /* quota exceeded or private browsing */ }
+                    }
                 })
 
                 // Ensure profile exists + update lastLogin in the background (don't block UI)
@@ -96,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signOut = async () => {
         try {
+            localStorage.removeItem('crc_cached_user')
             await firebaseSignOut(auth)
         } catch (error) {
             logger.error("Sign out error:", error)
@@ -110,13 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const value = useMemo(() => ({
         user,
         profile,
+        cachedUser,
         loading,
         signIn,
         signOut,
         isAdmin,
         isLeader,
         isMember
-    }), [user, profile, loading, isAdmin, isLeader, isMember])
+    }), [user, profile, cachedUser, loading, isAdmin, isLeader, isMember])
 
     return (
         <AuthContext.Provider value={value}>
