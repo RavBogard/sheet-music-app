@@ -101,6 +101,7 @@ export default function MonitorPage() {
         } catch (err) {
             logger.error("Failed to self-assign bus:", err)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid, config])
 
     // Fader handlers

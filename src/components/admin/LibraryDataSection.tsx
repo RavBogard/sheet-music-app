@@ -52,6 +52,7 @@ export function LibraryDataSection() {
             .then(r => r.ok ? r.json() : null)
             .then(data => { if (data) setFailedEnrichCount(data.count) })
             .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid])
 
     const handleResetFailures = async () => {

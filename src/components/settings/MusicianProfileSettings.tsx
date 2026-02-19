@@ -23,6 +23,7 @@ export function MusicianProfileSettings() {
             setLoaded(true)
         })
         return unsub
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid])
 
     const updateField = <K extends keyof MusicianProfile>(key: K, value: MusicianProfile[K]) => {

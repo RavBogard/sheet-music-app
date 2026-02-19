@@ -46,6 +46,7 @@ export function BandPrepSection() {
             }
         }
         load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid, isLeader])
 
     if (!isLeader) return null

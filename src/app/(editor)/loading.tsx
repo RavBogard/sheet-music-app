@@ -17,7 +17,7 @@ export default function EditorLoading() {
                     <div key={i} className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border">
                         <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0" />
                         <div className="flex-1 space-y-2">
-                            <div className="h-4 rounded bg-muted animate-pulse" style={{ width: `${60 + Math.random() * 30}%` }} />
+                            <div className="h-4 rounded bg-muted animate-pulse w-3/4" />
                             <div className="h-3 rounded bg-muted animate-pulse w-24" />
                         </div>
                     </div>

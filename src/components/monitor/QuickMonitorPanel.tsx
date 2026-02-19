@@ -63,6 +63,7 @@ export function QuickMonitorPanel() {
         getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
             if (snap.exists()) setPinnedChannels(snap.data().pinnedChannels || [])
         }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid])
 
     // Save pinned channels
@@ -76,6 +77,7 @@ export function QuickMonitorPanel() {
             setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => {})
             return next
         })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid])
 
     // Load config from Firestore
@@ -85,6 +87,7 @@ export function QuickMonitorPanel() {
             if (snap.exists()) setConfig(snap.data() as MonitorConfig)
         })
         return unsub
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid, hasAccess, setConfig])
 
     // Connect to bridge
