@@ -9,6 +9,7 @@ import { getContextualGreeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Music2 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
 import { useMusicStore } from "@/lib/store"
@@ -29,6 +30,8 @@ export default function DashboardPage() {
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
+    const [personalLoaded, setPersonalLoaded] = useState(false)
+    const [publicLoaded, setPublicLoaded] = useState(false)
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -60,6 +63,10 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!setlistService) return
 
+        // Reset loaded flags when service changes (e.g., user logs in/out)
+        setPersonalLoaded(false)
+        setPublicLoaded(false)
+
         let unsubPersonal: (() => void) | null = null
         let unsubPublic: (() => void) | null = null
 
@@ -83,7 +90,11 @@ export default function DashboardPage() {
         if (user?.uid) {
             unsubPersonal = setlistService.subscribeToPersonalSetlists((setlists) => {
                 setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
+                setPersonalLoaded(true)
             })
+        } else {
+            // No personal subscription needed — mark as loaded immediately
+            setPersonalLoaded(true)
         }
 
         unsubPublic = setlistService.subscribeToPublicSetlists((setlists) => {
@@ -95,12 +106,16 @@ export default function DashboardPage() {
             setRecentPublicSetlists(recent)
 
             if (!user?.uid) setUpcomingSetlists(upcoming.slice(0, 5))
+            setPublicLoaded(true)
         })
 
         return () => { unsubPersonal?.(); unsubPublic?.() }
     }, [setlistService, user?.uid])
 
     useEffect(() => { loadLibrary() }, [loadLibrary])
+
+    // True until both personal + public subscriptions have fired at least once
+    const setlistsLoading = authLoading || !personalLoaded || !publicLoaded
 
     const tonightSetlist = upcomingSetlists[0]
     const additionalUpcoming = upcomingSetlists.slice(1)
@@ -195,8 +210,24 @@ export default function DashboardPage() {
 
                         {/* Left column: hero card + command row */}
                         <div className="flex-1 min-w-0 flex flex-col gap-4">
+                            {/* Hero: Loading skeleton */}
+                            {setlistsLoading && (
+                                <div className="w-full rounded-2xl p-5 border border-border/50 bg-muted/30 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Skeleton className="h-6 w-24 rounded-full" />
+                                        <Skeleton className="h-4 w-12" />
+                                    </div>
+                                    <Skeleton className="h-7 w-3/4" />
+                                    <Skeleton className="h-1.5 w-full rounded-full" />
+                                    <div className="flex items-center gap-2">
+                                        <Skeleton className="h-5 w-5 rounded-full" />
+                                        <Skeleton className="h-4 w-28" />
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Hero: Tonight's Setlist */}
-                            {tonightSetlist && (
+                            {!setlistsLoading && tonightSetlist && (
                                 <HeroCard
                                     setlist={tonightSetlist}
                                     prep={tonightPrep}
@@ -214,8 +245,8 @@ export default function DashboardPage() {
                                 />
                             )}
 
-                            {/* No upcoming → show recent or empty */}
-                            {!tonightSetlist && (
+                            {/* No upcoming → show recent or empty (only after data loaded) */}
+                            {!setlistsLoading && !tonightSetlist && (
                                 <div className="text-center py-4">
                                     {recentPublicSetlists.length > 0 ? (
                                         <p className="text-sm text-muted-foreground">No upcoming services this week</p>
