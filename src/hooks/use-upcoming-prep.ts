@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocFromCache, setDoc, Timestamp, serverTimestamp } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 
@@ -83,9 +83,8 @@ export function useUpcomingPrep() {
         }, () => {/* silent */})
     }, [user, isMember])
 
-    // Load user's song preferences — cache-first to avoid N network round-trips.
-    // With Firestore persistence enabled, returning users get instant results from
-    // IndexedDB cache. Only cache misses trigger network reads.
+    // Load user's song preferences — batched query instead of N individual reads.
+    // Firestore `in` queries support up to 30 items per batch, so we chunk if needed.
     useEffect(() => {
         if (!user || setlists.length === 0) return
 
@@ -97,22 +96,35 @@ export function useUpcomingPrep() {
         }
         if (fileIds.size === 0) return
 
-        const prefs: Record<string, SongPref> = {}
-        const loads = Array.from(fileIds).map(async (fileId) => {
-            try {
-                const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
-                // Try cache first (instant, no network) — fall back to network on miss
-                let snap
-                try {
-                    snap = await getDocFromCache(ref)
-                } catch {
-                    snap = await getDoc(ref)
-                }
-                if (snap.exists()) prefs[fileId] = snap.data() as SongPref
-            } catch {/* silent */}
-        })
+        const allIds = Array.from(fileIds)
+        const BATCH_SIZE = 30 // Firestore 'in' query limit
 
-        Promise.all(loads).then(() => setSongPrefs(prefs))
+        const loadBatches = async () => {
+            const prefs: Record<string, SongPref> = {}
+
+            for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+                const batch = allIds.slice(i, i + BATCH_SIZE)
+                try {
+                    const colRef = collection(db, 'users', user.uid, 'songPreferences')
+                    const q = query(colRef, where(documentId(), 'in', batch))
+                    const snap = await getDocs(q)
+                    snap.forEach(d => { prefs[d.id] = d.data() as SongPref })
+                } catch {
+                    // Fallback: read individually from cache on query failure
+                    for (const fileId of batch) {
+                        try {
+                            const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
+                            const snap = await getDocFromCache(ref).catch(() => getDoc(ref))
+                            if (snap.exists()) prefs[fileId] = snap.data() as SongPref
+                        } catch {/* silent */}
+                    }
+                }
+            }
+
+            setSongPrefs(prefs)
+        }
+
+        loadBatches()
     }, [user, setlists])
 
     // Build enriched list

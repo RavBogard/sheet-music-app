@@ -5,7 +5,22 @@ import { useAuth } from "@/lib/auth-context"
 import { DriveFile } from "@/types/models"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore, FileType } from "@/lib/store"
-import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
+import dynamic from "next/dynamic"
+
+// Lazy-load the library component (420+ lines, Fuse.js search, file grid).
+// The library page is already behind auth, so the brief loading state
+// is masked by the auth check.
+const SongChartsLibrary = dynamic(
+    () => import("@/components/library/SongChartsLibrary").then(m => m.SongChartsLibrary),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+                <div className="animate-pulse text-muted-foreground">Loading library...</div>
+            </div>
+        ),
+    }
+)
 
 export default function LibraryPage() {
     const router = useRouter()

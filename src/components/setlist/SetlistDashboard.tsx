@@ -9,11 +9,18 @@ import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles } from "lucide-react"
-import { CalendarView } from "@/components/calendar/CalendarView"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
+import dynamic from "next/dynamic"
+
+// Lazy-load CalendarView — most users stay on list view, so the
+// calendar component (+ its date-fns dependencies) can load on demand.
+const CalendarView = dynamic(
+    () => import("@/components/calendar/CalendarView").then(m => m.CalendarView),
+    { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
+)
 import { useOffline } from "@/hooks/use-offline"
 import { toast } from "sonner"
 

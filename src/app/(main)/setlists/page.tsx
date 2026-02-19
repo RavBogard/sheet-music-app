@@ -3,7 +3,19 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLibraryStore } from "@/lib/library-store"
-import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
+import dynamic from "next/dynamic"
+
+const SetlistDashboard = dynamic(
+    () => import("@/components/setlist/SetlistDashboard").then(m => m.SetlistDashboard),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+                <div className="animate-pulse text-muted-foreground">Loading setlists...</div>
+            </div>
+        ),
+    }
+)
 
 export default function SetlistsPage() {
     const router = useRouter()

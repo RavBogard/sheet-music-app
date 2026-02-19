@@ -5,7 +5,22 @@ import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { useLibraryStore } from "@/lib/library-store"
 import { useSetlistStore } from "@/lib/setlist-store"
 import { useMusicStore, FileType } from "@/lib/store"
-import { SetlistEditorV2 } from "@/components/setlist/v2/SetlistEditorV2"
+import dynamic from "next/dynamic"
+
+// Lazy-load the editor (625+ lines + heavy sub-components like TrackSheet,
+// MusicianPicker, EmailPanel). This keeps the editor bundle out of the
+// shared chunk, so other pages load faster.
+const SetlistEditorV2 = dynamic(
+    () => import("@/components/setlist/v2/SetlistEditorV2").then(m => m.SetlistEditorV2),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="h-[100dvh] flex items-center justify-center text-muted-foreground">
+                <div className="animate-pulse">Loading editor...</div>
+            </div>
+        ),
+    }
+)
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { SetlistTrack } from "@/types/models"
