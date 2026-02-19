@@ -11,7 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Check, Bell, Mail, Music, AlertTriangle, Users } from "lucide-react"
+import { Loader2, Check, Mail, Music, AlertTriangle, Users } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { SetlistMusician } from "@/types/models"
@@ -30,6 +30,7 @@ interface PublishResult {
     success: boolean
     wasAlreadyPublic: boolean
     notified: number
+    musicianCount: number
     emailed: number
     emailError?: string
     emailTargets: number
@@ -61,7 +62,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
             onPublished?.()
 
             toast.success(data.wasAlreadyPublic ? 'Re-notified!' : 'Published!', {
-                description: `${data.emailed}/${data.emailTargets} emailed · ${data.usageRecorded} songs indexed`
+                description: `${data.musicianCount} musicians · ${data.emailed}/${data.emailTargets} emailed · ${data.usageRecorded} songs indexed`
                     + (data.emailError ? ` ⚠️ ${data.emailError}` : ''),
             })
         } catch (err) {
@@ -164,8 +165,8 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
 
                         <div className="space-y-3 py-4">
                             <div className="flex items-center gap-3 text-sm">
-                                <Bell className="h-4 w-4 text-blue-500 shrink-0" />
-                                <span>{result.notified} musician{result.notified !== 1 ? 's' : ''} notified</span>
+                                <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                                <span>{result.musicianCount} musician{result.musicianCount !== 1 ? 's' : ''} assigned</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm">
                                 <Mail className={`h-4 w-4 shrink-0 ${result.emailError ? 'text-amber-500' : 'text-green-500'}`} />

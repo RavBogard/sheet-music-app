@@ -195,7 +195,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             wasAlreadyPublic: wasPublic,
-            notified: registeredMusicians.length,
+            notified: registeredMusicians.length, // in-app only (excludes publisher)
+            musicianCount: musicians.length,
             emailed,
             emailError: emailError || undefined,
             emailTargets: emailRecipients.length,
