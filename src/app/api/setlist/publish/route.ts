@@ -4,8 +4,8 @@
  * Publishes a setlist and triggers notifications:
  * 1. Set isPublic: true, publishedAt timestamp
  * 2. Record song usage (fire-and-forget)
- * 3. In-app notifications to all members (fire-and-forget)
- * 4. Email notifications to all members with emails (fire-and-forget)
+ * 3. In-app notifications to assigned musicians with accounts
+ * 4. Email notifications to all assigned musicians
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,6 +17,13 @@ import { recordSongUsage } from '@/lib/song-usage'
 import { emailAllMembers } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
+interface MusicianPayload {
+    uid?: string
+    name: string
+    email: string
+    instrument?: string
+}
+
 export async function POST(request: NextRequest) {
     try {
         // Auth
@@ -27,9 +34,15 @@ export async function POST(request: NextRequest) {
         const limited = await checkRateLimit(request, 'api')
         if (limited) return limited
 
-        const { setlistId } = await request.json()
+        const { setlistId, musicians: rawMusicians } = await request.json()
         if (!setlistId || typeof setlistId !== 'string') {
             return NextResponse.json({ error: 'setlistId is required' }, { status: 400 })
+        }
+
+        // Validate musicians array
+        const musicians: MusicianPayload[] = Array.isArray(rawMusicians) ? rawMusicians : []
+        if (musicians.length === 0) {
+            return NextResponse.json({ error: 'At least one musician must be assigned' }, { status: 400 })
         }
 
         initAdmin()
@@ -48,7 +61,6 @@ export async function POST(request: NextRequest) {
         // Auth check: owner, leader, or admin
         const isOwner = setlist.ownerId === auth.uid
         if (!isOwner && !auth.isAdmin) {
-            // Check if user is a leader
             const userDoc = await db.collection('users').doc(auth.uid).get()
             const role = userDoc.data()?.role
             if (role !== 'leader' && role !== 'admin') {
@@ -56,7 +68,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Validate: must have eventDate and at least one song
+        // Validate: must have at least one song
         const tracks: Array<{ fileId?: string; title: string; key?: string; type?: string }> = setlist.tracks || []
         const hasSongs = tracks.some(t => t.fileId && (!t.type || t.type === 'song'))
         if (!hasSongs) {
@@ -84,22 +96,14 @@ export async function POST(request: NextRequest) {
                 return { recorded: 0, skipped: 0 }
             })
 
-        // Step 3: In-app notifications (server-side via admin SDK)
-        // Must be server-side because client Firestore rules prevent reading all user docs
-        const membersSnap = await db.collection('users').get()
-        const memberUids = membersSnap.docs
-            .filter(doc => {
-                const role = doc.data().role
-                return role && role !== 'pending' && doc.id !== auth.uid
-            })
-            .map(doc => doc.id)
-
+        // Step 3: In-app notifications — only for registered musicians (with uid), excluding publisher
+        const registeredMusicians = musicians.filter(m => m.uid && m.uid !== auth.uid)
         const notifBatchSize = 50
-        for (let i = 0; i < memberUids.length; i += notifBatchSize) {
+        for (let i = 0; i < registeredMusicians.length; i += notifBatchSize) {
             const batch = db.batch()
-            const chunk = memberUids.slice(i, i + notifBatchSize)
-            for (const uid of chunk) {
-                const ref = db.collection('users').doc(uid).collection('notifications').doc()
+            const chunk = registeredMusicians.slice(i, i + notifBatchSize)
+            for (const musician of chunk) {
+                const ref = db.collection('users').doc(musician.uid!).collection('notifications').doc()
                 batch.set(ref, {
                     type: 'setlist_published',
                     title: 'New setlist published',
@@ -113,31 +117,54 @@ export async function POST(request: NextRequest) {
             batch.commit().catch(err => logger.warn('[Publish] In-app notification batch failed:', err))
         }
 
-        // Step 4: Email notifications
-        const members: Array<{ email: string; displayName: string }> = []
-        membersSnap.docs.forEach(doc => {
-            const data = doc.data()
-            const role = data.role
-            if (role && role !== 'pending' && doc.id !== auth.uid && data.email) {
-                members.push({
-                    email: data.email,
-                    displayName: data.displayName || data.email.split('@')[0],
+        // Step 4: Build email recipient list
+        // For registered musicians: look up their email from Firestore (since client may not have it)
+        // For guests: use the email from the payload
+        const emailRecipients: Array<{ email: string; displayName: string }> = []
+
+        // Batch-fetch registered user docs to get emails
+        const registeredUids = musicians.filter(m => m.uid).map(m => m.uid!)
+        if (registeredUids.length > 0) {
+            const userDocs = await Promise.all(
+                registeredUids.map(uid => db.collection('users').doc(uid).get())
+            )
+            for (const doc of userDocs) {
+                if (doc.exists) {
+                    const data = doc.data()!
+                    if (data.email && doc.id !== auth.uid) {
+                        emailRecipients.push({
+                            email: data.email,
+                            displayName: data.displayName || data.email.split('@')[0],
+                        })
+                    }
+                }
+            }
+        }
+
+        // Add guest musicians (no uid — email comes from payload)
+        for (const m of musicians) {
+            if (!m.uid && m.email) {
+                emailRecipients.push({
+                    email: m.email,
+                    displayName: m.name || m.email.split('@')[0],
                 })
             }
-        })
+        }
 
         // Determine base URL
         const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
         const publisherName = auth.email?.split('@')[0] || 'A band member'
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
 
-        const emailPromise = emailAllMembers(
-            members, setlistId, setlistName, eventDateStr,
-            publisherName, songNames, origin
-        ).catch(err => {
-            logger.warn('[Publish] Email sending failed:', err)
-            return 0
-        })
+        const emailPromise = emailRecipients.length > 0
+            ? emailAllMembers(
+                emailRecipients, setlistId, setlistName, eventDateStr,
+                publisherName, songNames, origin
+            ).catch(err => {
+                logger.warn('[Publish] Email sending failed:', err)
+                return { sent: 0, failed: 0, errors: [], error: err instanceof Error ? err.message : String(err) }
+            })
+            : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[] })
 
         // Step 5: Log audit entry (fire-and-forget)
         const historyRef = setlistRef.collection('history').doc()
@@ -149,19 +176,29 @@ export async function POST(request: NextRequest) {
                 timestamp: FieldValue.serverTimestamp(),
                 details: {
                     wasAlreadyPublic: wasPublic,
-                    memberCount: members.length,
+                    musicianCount: musicians.length,
+                    musicianNames: musicians.map(m => m.name),
                 },
             })
         }).catch(err => logger.warn('[Publish] Audit log failed:', err))
 
         // Wait for usage + email results
-        const [usageResult, emailsSent] = await Promise.all([usagePromise, emailPromise])
+        const [usageResult, emailResult] = await Promise.all([usagePromise, emailPromise])
+
+        const emailed = 'sent' in emailResult ? emailResult.sent : 0
+        const emailError = 'error' in emailResult && emailResult.error
+            ? String(emailResult.error)
+            : 'errors' in emailResult && emailResult.errors.length > 0
+                ? `Failed for: ${emailResult.errors.join(', ')}`
+                : undefined
 
         return NextResponse.json({
             success: true,
             wasAlreadyPublic: wasPublic,
-            notified: members.length,
-            emailed: emailsSent,
+            notified: registeredMusicians.length,
+            emailed,
+            emailError: emailError || undefined,
+            emailTargets: emailRecipients.length,
             usageRecorded: usageResult.recorded,
         })
     } catch (err) {

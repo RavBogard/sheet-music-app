@@ -51,6 +51,14 @@ export interface SetlistTrack {
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
 }
 
+/** A musician assigned to play a specific service/setlist */
+export interface SetlistMusician {
+    uid?: string        // Present if registered user
+    name: string
+    email: string
+    instrument?: string
+}
+
 export interface Setlist {
     id: string
     name: string
@@ -63,6 +71,7 @@ export interface Setlist {
     ownerId?: string
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service
+    musicians?: SetlistMusician[] // Who's playing this service
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string

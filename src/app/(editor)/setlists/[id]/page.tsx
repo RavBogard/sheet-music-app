@@ -72,6 +72,7 @@ export default function SetlistEditorPage() {
             initialOwnerId={existingSetlist?.ownerId}
             initialEventDate={existingSetlist?.eventDate ? toDate(existingSetlist.eventDate) : undefined}
             initialRabbi={existingSetlist?.rabbi}
+            initialMusicians={existingSetlist?.musicians}
             onBack={() => {
                 clearPending()
                 // Existing setlists: back to perform view. New: back to dashboard.

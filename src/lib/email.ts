@@ -48,12 +48,18 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<bool
     try {
         const html = buildSetlistEmailHtml(params)
 
-        await client.emails.send({
+        const result = await client.emails.send({
             from: `CRC Music <${getFromEmail()}>`,
             to: params.to,
             subject: `🎵 ${params.setlistName} — Setlist Published`,
             html,
         })
+
+        // Resend returns { id, error } — check for error
+        if ('error' in result && result.error) {
+            logger.error(`[Email] Resend error for ${params.to}:`, result.error)
+            return false
+        }
 
         logger.info(`[Email] Sent setlist notification to ${params.to}`)
         return true
@@ -65,7 +71,7 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<bool
 
 /**
  * Send setlist email notifications to all active members with emails.
- * Returns the count of successfully sent emails.
+ * Returns structured result with count and any error details.
  */
 export async function emailAllMembers(
     members: Array<{ email: string; displayName: string }>,
@@ -75,8 +81,10 @@ export async function emailAllMembers(
     publisherName: string,
     songs: string[],
     baseUrl: string
-): Promise<number> {
+): Promise<{ sent: number; failed: number; errors: string[] }> {
     let sent = 0
+    let failed = 0
+    const errors: string[] = []
 
     for (const member of members) {
         if (!member.email) continue
@@ -90,10 +98,15 @@ export async function emailAllMembers(
             songs,
             publisherName,
         })
-        if (success) sent++
+        if (success) {
+            sent++
+        } else {
+            failed++
+            errors.push(member.email)
+        }
     }
 
-    return sent
+    return { sent, failed, errors }
 }
 
 /**

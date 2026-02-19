@@ -17,7 +17,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { SetlistTrack, TrackType } from "@/types/models"
+import { SetlistTrack, TrackType, SetlistMusician } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
 import { useSetlistPresence, useLiveState } from "@/hooks/use-setlist-presence"
 import { enableLiveMode, updateLiveTrack } from "@/lib/setlist-live"
@@ -35,6 +35,7 @@ import { TrackSheet } from "./TrackSheet"
 import { SwipeToDelete } from "./SwipeToDelete"
 import { BatchActionBar } from "./BatchActionBar"
 import { AddBar } from "./AddBar"
+import { MusicianPicker } from "./MusicianPicker"
 
 // Shared components (kept from v1)
 import { PrintModal } from "../PrintModal"
@@ -56,6 +57,7 @@ interface SetlistEditorV2Props {
     initialOwnerId?: string
     initialEventDate?: string | Date | null
     initialRabbi?: string
+    initialMusicians?: SetlistMusician[]
     onBack: () => void
     onSave?: (id: string) => void
     onPlayTrack?: (fileId: string, fileName: string) => void
@@ -70,6 +72,7 @@ export function SetlistEditorV2({
     initialOwnerId,
     initialEventDate,
     initialRabbi,
+    initialMusicians,
     onBack,
     onSave,
     onPlayTrack,
@@ -91,6 +94,8 @@ export function SetlistEditorV2({
         setEventDate,
         rabbi,
         setRabbi,
+        musicians,
+        setMusicians,
         saving,
         lastSaved,
         isSyncing,
@@ -119,6 +124,7 @@ export function SetlistEditorV2({
         initialOwnerId,
         initialEventDate,
         initialRabbi,
+        initialMusicians,
         onSave,
     })
 
@@ -423,6 +429,15 @@ export function SetlistEditorV2({
                 </div>
             )}
 
+            {/* Musician assignment */}
+            {canEdit && (
+                <MusicianPicker
+                    musicians={musicians}
+                    onChange={setMusicians}
+                    canEdit={canEdit}
+                />
+            )}
+
             {/* Track list */}
             <div className="flex-1 overflow-y-auto">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -507,6 +522,7 @@ export function SetlistEditorV2({
                     setlistId={setlistId}
                     setlistName={name}
                     songCount={songCount}
+                    musicians={musicians}
                     onPublished={() => setIsPublic(true)}
                 />
             )}
