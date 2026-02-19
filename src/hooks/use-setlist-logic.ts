@@ -37,12 +37,15 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const { user, isLeader } = useAuth()
 
     // Create user-specific service
+    // Create user-specific service — use uid/displayName (stable strings) not user object
+    const uid = user?.uid || null
+    const displayName = user?.displayName || null
     const setlistService = useMemo(() => {
-        if (user) {
-            return createSetlistService(user.uid, user.displayName)
+        if (uid) {
+            return createSetlistService(uid, displayName)
         }
         return null
-    }, [user])
+    }, [uid, displayName])
 
     // Determine if user can edit
     const canEdit = (!initialOwnerId || initialOwnerId === user?.uid) || (isLeader && initialIsPublic)

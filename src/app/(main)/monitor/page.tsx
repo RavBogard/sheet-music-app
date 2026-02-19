@@ -83,7 +83,7 @@ export default function MonitorPage() {
             reset()
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user change
-    }, [user])
+    }, [user?.uid])
 
     // Self-assign a bus
     const handleSelectBus = useCallback(async (busIndex: number) => {
@@ -101,7 +101,7 @@ export default function MonitorPage() {
         } catch (err) {
             logger.error("Failed to self-assign bus:", err)
         }
-    }, [user, config])
+    }, [user?.uid, config])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {

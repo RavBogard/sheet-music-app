@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -33,7 +33,20 @@ try {
     }
 
     if (firebaseConfig.apiKey) {
-        db = getFirestore(app);
+        // Use initializeFirestore instead of getFirestore to configure transport.
+        // Firebase SDK 12.8.0 has a BloomFilter bug that causes the default
+        // WebChannel streaming transport to enter a retry loop, generating
+        // dozens of AbortErrors per second and degrading the entire app.
+        // experimentalAutoDetectLongPolling falls back to long-polling when
+        // streaming fails, which is more stable on mobile browsers.
+        try {
+            db = initializeFirestore(app, {
+                experimentalAutoDetectLongPolling: true,
+            });
+        } catch {
+            // initializeFirestore throws if already initialized (e.g. hot reload)
+            db = getFirestore(app);
+        }
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
     } else {

@@ -89,8 +89,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
 
     // Force 'public' tab if guest
     useEffect(() => {
-        if (!user) setActiveTab('public')
-    }, [user])
+        if (!user?.uid) setActiveTab('public')
+    }, [user?.uid])
 
     /* ─── Handlers ─── */
 

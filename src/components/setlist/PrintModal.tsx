@@ -134,7 +134,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         if (preset?.label) parts.push(preset.label)
         if (myProfile.preferredCapoFret) parts.push(`Capo ${myProfile.preferredCapoFret}`)
         return parts.join(" — ")
-    }, [myProfile, user])
+    }, [myProfile, user?.uid])
 
     // ── PDF Generation ──
     const generateForMusician = async (

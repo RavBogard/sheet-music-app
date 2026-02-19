@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2 } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
 import { useMusicStore } from '@/lib/store'
 import { getOfflineFile } from '@/lib/offline-store'
 import { PDFPageWrapper } from './PDFPageWrapper'
@@ -20,19 +19,14 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
-    const { loading } = useAuth()
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
+    const [source, setSource] = useState<string | null>(null)
 
-    // Source can be: string (blob URL or plain URL) or object with headers
-    const [sourceUrl, setSourceUrl] = useState<string | null>(null)
-    const [sourceToken, setSourceToken] = useState<string | null>(null)
-    const [sourceType, setSourceType] = useState<'blob' | 'authenticated' | 'plain' | null>(null)
-
-    // Track which URL we've already resolved to avoid re-running on auth changes
-    const resolvedUrlRef = useRef<string | null>(null)
-    // Track blob URL for proper cleanup on unmount (not on effect re-runs)
+    // Track blob URL for cleanup on unmount
     const blobUrlRef = useRef<string | null>(null)
+    // Track which URL we've resolved to avoid re-running
+    const resolvedUrlRef = useRef<string | null>(null)
 
     // Clean up blob URL on unmount only
     useEffect(() => {
@@ -44,25 +38,21 @@ export function PDFViewer({ url }: PDFViewerProps) {
         }
     }, [])
 
-    // 1. Resolve Source — runs ONCE per url prop change, after auth settles
-    // CRITICAL: Do NOT depend on `user` — use auth.currentUser directly.
-    // Depending on the `user` state from useAuth() causes this effect to re-run
-    // on every auth context change (profile updates, etc.), which creates a new
-    // source object → react-pdf aborts in-progress download → AbortError flood.
+    // Resolve source: try offline cache first, then use plain URL.
+    // The /api/drive/file/ route is PUBLIC (no auth required), so we
+    // don't need auth headers — eliminating all the auth-dependent
+    // complexity that was causing cascading re-renders and AbortErrors.
     useEffect(() => {
-        // Don't re-resolve if we already have a source for this URL
         if (resolvedUrlRef.current === url) return
-        // Wait for auth to settle
-        if (loading) return
 
         let active = true
 
-        const resolveSource = async () => {
+        const resolve = async () => {
             // Extract fileId from Drive API URL
             const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
             const fileId = fileIdMatch ? fileIdMatch[1] : null
 
-            // A. Try Offline First — no auth needed, IndexedDB is local
+            // Try offline cache first — instant, no network
             if (fileId) {
                 try {
                     const offlineFile = await getOfflineFile(fileId)
@@ -71,9 +61,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
                         const objectUrl = URL.createObjectURL(offlineFile.blob)
                         blobUrlRef.current = objectUrl
                         resolvedUrlRef.current = url
-                        setSourceUrl(objectUrl)
-                        setSourceToken(null)
-                        setSourceType('blob')
+                        setSource(objectUrl)
                         return
                     }
                 } catch {
@@ -81,64 +69,19 @@ export function PDFViewer({ url }: PDFViewerProps) {
                 }
             }
 
-            if (!active) return
-
-            // B. Online fallback — use auth.currentUser directly (stable reference)
-            const { auth: firebaseAuth } = await import('@/lib/firebase')
-            const currentUser = firebaseAuth.currentUser
-
-            if (currentUser) {
-                try {
-                    const token = await currentUser.getIdToken()
-                    if (active) {
-                        resolvedUrlRef.current = url
-                        setSourceUrl(url)
-                        setSourceToken(token)
-                        setSourceType('authenticated')
-                    }
-                } catch (e) {
-                    logger.error("Failed to get token for PDF:", e)
-                    if (active) {
-                        resolvedUrlRef.current = url
-                        setSourceUrl(url)
-                        setSourceToken(null)
-                        setSourceType('plain')
-                    }
-                }
-            } else {
-                // Not logged in — try URL directly (public file proxy)
+            // Use URL directly — API route is public, no auth needed
+            if (active) {
                 resolvedUrlRef.current = url
-                setSourceUrl(url)
-                setSourceToken(null)
-                setSourceType('plain')
+                setSource(url)
             }
         }
 
-        resolveSource()
+        resolve()
 
-        return () => {
-            active = false
-        }
-    }, [url, loading])
+        return () => { active = false }
+    }, [url])
 
-    // CRITICAL: Memoize the source object passed to react-pdf's <Document>.
-    // Without this, every render creates a new {url, httpHeaders} object,
-    // which react-pdf treats as a different file → aborts download → restarts.
-    // This was the root cause of the AbortError flood.
-    const source = useMemo(() => {
-        if (!sourceUrl) return null
-        if (sourceType === 'authenticated' && sourceToken) {
-            return {
-                url: sourceUrl,
-                httpHeaders: {
-                    'Authorization': `Bearer ${sourceToken}`
-                }
-            }
-        }
-        return sourceUrl
-    }, [sourceUrl, sourceToken, sourceType])
-
-    // 2. Auto-Resize Logic
+    // Auto-Resize
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -147,7 +90,6 @@ export function PDFViewer({ url }: PDFViewerProps) {
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.contentRect) {
-                    // Subtract small buffer to prevent horizontal scrollbars
                     setWidth(entry.contentRect.width - 4)
                 }
             }
@@ -161,7 +103,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
         setNumPages(numPages)
     }
 
-    // 3. Transposer State — use selectors to avoid re-render on unrelated store changes
+    // Use selectors to avoid re-render on unrelated store changes
     const zoom = useMusicStore(s => s.zoom)
     const transposition = useMusicStore(s => s.transposition)
 

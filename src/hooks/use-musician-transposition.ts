@@ -51,12 +51,12 @@ export function useMusicianTransposition() {
 
     // Subscribe to musician profile
     useEffect(() => {
-        if (!user) return
+        if (!user?.uid) return
         const unsub = subscribeToMusicianProfile(user.uid, (p) => {
             setProfile(p)
         })
         return unsub
-    }, [user])
+    }, [user?.uid])
 
     // Load per-song preference when file changes
     useEffect(() => {
@@ -108,11 +108,11 @@ export function useMusicianTransposition() {
         loadPref()
         return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: loads pref on file change only, not on transposition change
-    }, [user, fileId, profile, trackTransposition])
+    }, [user?.uid, fileId, profile, trackTransposition])
 
     // Auto-save when user manually changes transposition (debounced)
     useEffect(() => {
-        if (!user || !fileId) return
+        if (!user?.uid || !fileId) return
         if (!appliedForFile || fileId !== appliedForFile) return
 
         // Skip if this is the initial load
@@ -126,16 +126,18 @@ export function useMusicianTransposition() {
         isUserAdjustingRef.current = true
         lastAppliedTranspositionRef.current = transposition
 
+        const uid = user.uid
+
         // Debounce save
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current)
         }
 
         saveTimeoutRef.current = setTimeout(async () => {
-            if (!user || !fileId) return
+            if (!uid || !fileId) return
             try {
                 setSaving(true)
-                await saveSongPreference(user.uid, fileId, transposition)
+                await saveSongPreference(uid, fileId, transposition)
             } catch {
                 // Silent fail
             } finally {
@@ -148,7 +150,7 @@ export function useMusicianTransposition() {
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [transposition, user, fileId, appliedForFile, trackTransposition])
+    }, [transposition, user?.uid, fileId, appliedForFile, trackTransposition])
 
     const getInstrumentLabel = useCallback((instrument: string): string => {
         return INSTRUMENT_PRESETS[instrument]?.label || instrument

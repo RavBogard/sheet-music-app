@@ -46,7 +46,7 @@ export function BandPrepSection() {
             }
         }
         load()
-    }, [user, isLeader])
+    }, [user?.uid, isLeader])
 
     if (!isLeader) return null
 

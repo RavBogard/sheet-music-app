@@ -23,7 +23,7 @@ export function MusicianProfileSettings() {
             setLoaded(true)
         })
         return unsub
-    }, [user])
+    }, [user?.uid])
 
     const updateField = <K extends keyof MusicianProfile>(key: K, value: MusicianProfile[K]) => {
         setProfile(prev => ({ ...prev, [key]: value }))

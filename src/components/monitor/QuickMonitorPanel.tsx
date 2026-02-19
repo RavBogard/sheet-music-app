@@ -63,7 +63,7 @@ export function QuickMonitorPanel() {
         getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
             if (snap.exists()) setPinnedChannels(snap.data().pinnedChannels || [])
         }).catch(() => {})
-    }, [user])
+    }, [user?.uid])
 
     // Save pinned channels
     const togglePin = useCallback(async (channelIndex: number) => {
@@ -76,7 +76,7 @@ export function QuickMonitorPanel() {
             setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => {})
             return next
         })
-    }, [user])
+    }, [user?.uid])
 
     // Load config from Firestore
     useEffect(() => {
@@ -85,7 +85,7 @@ export function QuickMonitorPanel() {
             if (snap.exists()) setConfig(snap.data() as MonitorConfig)
         })
         return unsub
-    }, [user, hasAccess, setConfig])
+    }, [user?.uid, hasAccess, setConfig])
 
     // Connect to bridge
     useEffect(() => {
@@ -118,7 +118,7 @@ export function QuickMonitorPanel() {
             reset()
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user/config change
-    }, [user, hasAccess, config?.bridgeUrl, config?.authorizedUsers, config?.bridge?.status, config?.bridge?.lastSeen])
+    }, [user?.uid, hasAccess, config?.bridgeUrl, config?.authorizedUsers, config?.bridge?.status, config?.bridge?.lastSeen])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {

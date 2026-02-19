@@ -40,7 +40,7 @@ export function useMonitorAccess(): { hasAccess: boolean; isAdmin: boolean; load
         )
 
         return unsub
-    }, [user])
+    }, [user?.uid])
 
     return { hasAccess: hasAccess || isAdmin, isAdmin, loading }
 }

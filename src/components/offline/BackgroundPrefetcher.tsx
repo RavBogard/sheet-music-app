@@ -33,7 +33,7 @@ export function BackgroundPrefetcher() {
         }, 5000)
 
         return () => clearTimeout(timer)
-    }, [user, isMember])
+    }, [user?.uid, isMember])
 
     return null // No UI
 }

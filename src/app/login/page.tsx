@@ -29,7 +29,7 @@ export default function LoginPage() {
         if (!loading && user) {
             router.replace("/")
         }
-    }, [user, loading, router])
+    }, [user?.uid, loading, router])
 
     const handleSignIn = async () => {
         setSigningIn(true)

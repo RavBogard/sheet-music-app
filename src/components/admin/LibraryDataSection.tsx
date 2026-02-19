@@ -49,7 +49,7 @@ export function LibraryDataSection() {
             .then(r => r.ok ? r.json() : null)
             .then(data => { if (data) setFailedEnrichCount(data.count) })
             .catch(() => {})
-    }, [user])
+    }, [user?.uid])
 
     const handleResetFailures = async () => {
         setResettingFailures(true)
