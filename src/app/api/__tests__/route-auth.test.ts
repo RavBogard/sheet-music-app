@@ -36,7 +36,7 @@ import { verifyIdToken } from '@/lib/firebase-admin'
 
 const mockVerify = vi.mocked(verifyIdToken)
 
-// Mock Firestore
+// Mock Firestore — use shared mock instances for call inspection
 const mockDoc = {
     exists: true,
     data: () => ({
@@ -61,6 +61,10 @@ const mockUsersSnap = {
     ],
 }
 
+const mockWhere = vi.fn(() => ({
+    get: vi.fn(() => mockUsersSnap),
+}))
+
 const mockFirestore = {
     collection: vi.fn(() => ({
         doc: vi.fn(() => ({
@@ -70,9 +74,7 @@ const mockFirestore = {
                 doc: vi.fn(() => ({ set: vi.fn() })),
             })),
         })),
-        where: vi.fn(() => ({
-            get: vi.fn(() => mockUsersSnap),
-        })),
+        where: mockWhere,
     })),
 }
 
@@ -277,15 +279,11 @@ describe('POST /api/setlist/email-packets', () => {
         }))
 
         // Check the role filter passed to Firestore query
-        const collectionFn = mockFirestore.collection as ReturnType<typeof vi.fn>
-        const whereCall = collectionFn()?.where as ReturnType<typeof vi.fn>
-        if (whereCall?.mock?.calls?.length > 0) {
-            const roleFilter = whereCall.mock.calls.find(
-                (c: string[]) => c[0] === 'role' && c[1] === 'in'
-            )
-            if (roleFilter) {
-                expect(roleFilter[2]).not.toContain('member')
-            }
-        }
+        // mockWhere is the shared mock — its calls reflect what the route actually did
+        const roleCall = mockWhere.mock.calls.find(
+            (c: unknown[]) => c[0] === 'role' && c[1] === 'in'
+        ) as unknown[] | undefined
+        expect(roleCall).toBeTruthy()
+        expect(roleCall![2]).not.toContain('member')
     })
 })

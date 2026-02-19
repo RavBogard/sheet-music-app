@@ -42,7 +42,11 @@ function extractTypeBlock(content, name) {
         's'
     )
     const m = content.match(interfaceRe) || content.match(typeRe)
-    return m ? m[0].replace(/\s+/g, ' ').trim() : null
+    return m ? m[0] : null
+}
+
+function normalizeBlock(block) {
+    return block ? block.replace(/\s+/g, ' ').trim() : null
 }
 
 const fix = process.argv.includes('--fix')
@@ -82,7 +86,7 @@ for (const name of canonicalNames) {
     const canonicalBlock = extractTypeBlock(canonical, name)
     const mirrorBlock = extractTypeBlock(mirror, name)
 
-    if (canonicalBlock && mirrorBlock && canonicalBlock !== mirrorBlock) {
+    if (canonicalBlock && mirrorBlock && normalizeBlock(canonicalBlock) !== normalizeBlock(mirrorBlock)) {
         issues.push(`⚠️  Drifted: ${name}`)
         drifted = true
     }
