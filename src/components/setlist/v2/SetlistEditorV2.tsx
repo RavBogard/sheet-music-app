@@ -238,6 +238,7 @@ export function SetlistEditorV2({
     }, [editorService, setlistId, name, tracks])
 
     // Debounce empty state to prevent flash during AI batch edits
+    const currentTrackFileIds = useMemo(() => new Set(tracks.filter(t => t.fileId).map(t => t.fileId!)), [tracks])
     const [showEmpty, setShowEmpty] = useState(tracks.length === 0)
     const emptyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
     useEffect(() => {
@@ -559,6 +560,7 @@ export function SetlistEditorV2({
                     addSongsFromLibrary(files)
                     setShowAddSongs(false)
                 }}
+                currentTrackFileIds={currentTrackFileIds}
             />
 
             <MatchFileModal

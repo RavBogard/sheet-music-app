@@ -1,10 +1,10 @@
 "use client"
 
 import { MIME_TYPES } from "@/lib/constants"
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Check, ChevronLeft, Music, Folder } from "lucide-react"
+import { Check, ChevronLeft, Music, Folder, Lightbulb, Flame, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
 import {
@@ -15,17 +15,20 @@ import {
     DialogFooter
 } from "@/components/ui/dialog"
 import { useLibraryStore } from "@/lib/library-store"
+import { fetchUsageData, getSuggestions, SongSuggestion, UsageInfo } from "@/lib/song-suggestions"
 
 interface AddSongsModalProps {
     isOpen: boolean
     onClose: () => void
     onAdd: (files: DriveFile[]) => void
+    currentTrackFileIds?: Set<string>
 }
 
 export function AddSongsModal({
     isOpen,
     onClose,
-    onAdd
+    onAdd,
+    currentTrackFileIds = new Set(),
 }: AddSongsModalProps) {
     const {
         displayedFiles,
@@ -42,10 +45,18 @@ export function AddSongsModal({
     ])
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
+    // Smart suggestions
+    const [usageMap, setUsageMap] = useState<Map<string, UsageInfo>>(new Map())
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+    const usageFetchedRef = useRef(false)
+
     // Fetch on mount/change
     useEffect(() => {
         if (isOpen) {
             loadLibrary()
+        } else {
+            // Reset on close
+            usageFetchedRef.current = false
         }
     }, [isOpen, loadLibrary])
 
@@ -55,11 +66,27 @@ export function AddSongsModal({
         }
     }, [isOpen, currentFolderId, searchQuery, setFilter])
 
-    // Cleanup when modal closes (reset library store so main view isn't affected? 
-    // Actually, we probably want to leave it alone or reset it. 
-    // Resetting is safer to ensure consistent state next open.
-    // BUT if we reset on unmount, verify we don't break main library if it's mounted behind.
-    // Given the modal is used in Editor (separate page usually), it's fine.
+    // Fetch usage data once per modal open (after library loads)
+    useEffect(() => {
+        if (!isOpen || usageFetchedRef.current || displayedFiles.length === 0) return
+
+        const allFiles = displayedFiles.filter(f => !f.mimeType.includes('folder'))
+        if (allFiles.length === 0) return
+
+        usageFetchedRef.current = true
+        setSuggestionsLoading(true)
+
+        fetchUsageData(allFiles.map(f => f.id))
+            .then(setUsageMap)
+            .finally(() => setSuggestionsLoading(false))
+    }, [isOpen, displayedFiles])
+
+    // Compute suggestions
+    const suggestions = useMemo(() => {
+        if (usageMap.size === 0) return []
+        const allLibFiles = displayedFiles.filter(f => !f.mimeType.includes('folder'))
+        return getSuggestions(allLibFiles, usageMap, currentTrackFileIds, 6)
+    }, [displayedFiles, usageMap, currentTrackFileIds])
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value)
@@ -121,6 +148,8 @@ export function AddSongsModal({
         setSearchQuery("")
     }
 
+    const showSuggestions = !searchQuery && suggestions.length > 0 && !currentFolderId
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="bg-card border-border text-foreground max-w-2xl h-[80vh] flex flex-col p-6">
@@ -166,6 +195,44 @@ export function AddSongsModal({
                     />
 
                     <div className="flex-1 overflow-y-auto -mx-2 px-2">
+                        {/* Smart Suggestions */}
+                        {showSuggestions && (
+                            <div className="mb-4">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                    <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Suggested</p>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {suggestions.map((s: SongSuggestion) => {
+                                        const isSelected = selectedFiles.has(s.file.id)
+                                        return (
+                                            <button
+                                                key={s.file.id}
+                                                onClick={() => toggleFileSelection(s.file)}
+                                                className={cn(
+                                                    "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all border",
+                                                    isSelected
+                                                        ? "bg-blue-600 border-blue-500 text-white"
+                                                        : "bg-muted/50 border-border/50 text-foreground hover:border-border"
+                                                )}
+                                            >
+                                                {s.category === 'staple' ? (
+                                                    <Flame className="h-3 w-3 text-orange-400" />
+                                                ) : (
+                                                    <Sparkles className="h-3 w-3 text-emerald-400" />
+                                                )}
+                                                <span className="truncate max-w-[150px]">{s.file.name}</span>
+                                                <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">{s.reason}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                {suggestionsLoading && (
+                                    <p className="text-xs text-muted-foreground/50 mt-1">Loading suggestions…</p>
+                                )}
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 gap-2 pb-2">
                             {combinedItems.map(file => {
                                 const isFolder = file.mimeType.includes('folder')
@@ -228,4 +295,3 @@ export function AddSongsModal({
         </Dialog>
     )
 }
-
