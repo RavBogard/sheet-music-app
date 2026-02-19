@@ -21,7 +21,7 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
 }))
 
 export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerProps) {
-    const { isAdmin } = useAuth()
+    const { isAdmin, user: currentUser } = useAuth()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
     const [showAddGuest, setShowAddGuest] = useState(false)
@@ -35,13 +35,24 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
     // Subscribe to all users — filter to active members
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
-            const active = users.filter(u =>
+            let active = users.filter(u =>
                 u.role === 'member' || u.role === 'leader' || u.role === 'admin'
             )
+
+            // Ensure current user is always in the list
+            if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
+                active = [{
+                    uid: currentUser.uid,
+                    email: currentUser.email || '',
+                    displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Me',
+                    role: 'member' as const,
+                } as UserProfile, ...active]
+            }
+
             setAllUsers(active)
         })
         return () => unsub()
-    }, [])
+    }, [currentUser])
 
     // Close instrument picker on outside click
     useEffect(() => {

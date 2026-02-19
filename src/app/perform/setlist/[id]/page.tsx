@@ -171,26 +171,27 @@ export default function SetlistPerformPage() {
                 </button>
             </div>
 
-            {/* Section quick-jump chips */}
-            {sectionLabels.length > 1 && (
-                <div className="flex gap-2 px-4 py-2 overflow-x-auto border-b border-zinc-800/50 bg-zinc-900/80 scrollbar-hide">
-                    {sectionLabels.map((label) => (
-                        <button
-                            key={label}
-                            onClick={() => scrollToSection(label)}
-                            className="shrink-0 px-3 py-1 rounded-full text-xs font-semibold
-                                bg-zinc-700 hover:bg-zinc-600 text-zinc-200 hover:text-white
-                                border border-zinc-600/50 transition-colors"
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            )}
-
             {/* Track list */}
             <ScrollArea className="flex-1">
                 <div className="flex flex-col p-2 pb-24 gap-0.5">
+
+                    {/* Section quick-jump chips — inside scroll area */}
+                    {sectionLabels.length > 1 && (
+                        <div className="flex gap-2 px-2 py-2 mb-1 overflow-x-auto">
+                            {sectionLabels.map((label) => (
+                                <button
+                                    key={label}
+                                    onClick={() => scrollToSection(label)}
+                                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold
+                                        bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white
+                                        border border-zinc-700/50 transition-colors"
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {tracks.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                             <Music className="h-12 w-12 mb-3 opacity-30" />
