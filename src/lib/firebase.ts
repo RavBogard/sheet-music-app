@@ -37,11 +37,12 @@ try {
         // Firebase SDK 12.8.0 has a BloomFilter bug that causes the default
         // WebChannel streaming transport to enter a retry loop, generating
         // dozens of AbortErrors per second and degrading the entire app.
-        // experimentalAutoDetectLongPolling falls back to long-polling when
-        // streaming fails, which is more stable on mobile browsers.
+        // Force long-polling to completely bypass the buggy streaming transport.
+        // (experimentalAutoDetectLongPolling wasn't aggressive enough — still
+        // generated ~9 AbortErrors before falling back.)
         try {
             db = initializeFirestore(app, {
-                experimentalAutoDetectLongPolling: true,
+                experimentalForceLongPolling: true,
             });
         } catch {
             // initializeFirestore throws if already initialized (e.g. hot reload)

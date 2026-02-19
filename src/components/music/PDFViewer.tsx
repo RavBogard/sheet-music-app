@@ -11,8 +11,13 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 
-// Configure PDF.js worker — self-hosted for speed (Vercel edge + SW cache vs unpkg CDN)
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`
+// Configure PDF.js worker — version MUST match react-pdf's bundled pdfjs-dist.
+// react-pdf re-exports pdfjs, so pdfjs.version gives us the exact version it uses.
+// Using unpkg CDN with pinned version guarantees version match and eliminates
+// the worker/library mismatch that caused AbortErrors.
+const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
+pdfjs.GlobalWorkerOptions.workerSrc =
+    `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
 
 interface PDFViewerProps {
     url: string

@@ -10,8 +10,8 @@ export default function PerformLayout({
     // Force dark mode for performance/stage use
     return (
         <div className="dark bg-zinc-950 text-white min-h-screen">
-            {/* Preload PDF.js worker so it's ready before PDFViewer mounts */}
-            <link rel="preload" href="/pdf.worker.min.mjs" as="script" />
+            {/* PDF worker is loaded from CDN (unpkg) with version pinned to react-pdf's pdfjs */}
+            {/* No preload needed — CDN has excellent caching and worker loads fast */}
             <PerformanceOfflineIndicator />
             {children}
         </div>
