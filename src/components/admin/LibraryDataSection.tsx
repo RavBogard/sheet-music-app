@@ -33,9 +33,12 @@ export function LibraryDataSection() {
     const [resettingFailures, setResettingFailures] = useState(false)
     const [clearingChords, setClearingChords] = useState(false)
     const [migrating, setMigrating] = useState(false)
-    const [migrationStats, setMigrationStats] = useState<{
-        total: number; succeeded: number; failed: number; remaining: number;
-        previouslyDone: number; previouslyFailed: number; message: string
+    const [migrationStatus, setMigrationStatus] = useState<{
+        total: number; inStorage: number; failed: number; pending: number;
+        percentComplete: number; failedFiles?: { name: string; id: string; error: string }[]
+    } | null>(null)
+    const [migrationProgress, setMigrationProgress] = useState<{
+        succeeded: number; failed: number; remaining: number; phase: string; message: string
     } | null>(null)
     const [pruneLoading, setPruneLoading] = useState(false)
     const [pruneScanData, setPruneScanData] = useState<{
@@ -98,30 +101,55 @@ export function LibraryDataSection() {
         finally { setClearingChords(false) }
     }
 
-    const handleMigration = async () => {
-        setMigrating(true); setMigrationStats(null)
+    const fetchMigrationStatus = async () => {
+        try {
+            const res = await apiFetch("/api/admin/migrate-storage")
+            if (res.ok) {
+                const data = await res.json()
+                setMigrationStatus(data)
+            }
+        } catch { /* silent */ }
+    }
+
+    // Load migration status on mount
+    useEffect(() => { fetchMigrationStatus() }, [])
+
+    const handleMigration = async (retryFailed = false) => {
+        setMigrating(true)
+        setMigrationProgress(null)
         let totalSucceeded = 0, totalFailed = 0
         try {
             let remaining = Infinity, rounds = 0
-            while (remaining > 0 && rounds < 25) {
+            const maxRounds = 50 // 50 × 20 = 1000 files max
+            const params = retryFailed ? '?retryFailed=true' : ''
+            while (remaining > 0 && rounds < maxRounds) {
                 rounds++
                 let res: Response
-                try { res = await apiFetch("/api/admin/migrate-storage", { method: "POST" }) }
-                catch {
+                try {
+                    res = await apiFetch(`/api/admin/migrate-storage${params}`, { method: "POST" })
+                } catch {
                     await new Promise(r => setTimeout(r, 3000))
-                    try { res = await apiFetch("/api/admin/migrate-storage", { method: "POST" }) }
-                    catch { toast.error("Network error"); break }
+                    try { res = await apiFetch(`/api/admin/migrate-storage${params}`, { method: "POST" }) }
+                    catch { toast.error("Network error — migration paused"); break }
                 }
                 const data = await res!.json()
                 if (!res!.ok) { toast.error(data.error || "Batch failed"); break }
                 totalSucceeded += data.succeeded || 0
                 totalFailed += data.failed || 0
                 remaining = data.remaining || 0
-                setMigrationStats({ total: data.total, succeeded: totalSucceeded, failed: totalFailed, remaining, previouslyDone: data.previouslyDone || 0, previouslyFailed: data.previouslyFailed || 0, message: data.message })
+                setMigrationProgress({
+                    succeeded: totalSucceeded,
+                    failed: totalFailed,
+                    remaining,
+                    phase: data.phase,
+                    message: data.message,
+                })
                 if (data.processed === 0) break
             }
-            if (remaining <= 0) toast.success("Migration complete!")
+            if (remaining <= 0) toast.success(`Migration complete! ${totalSucceeded} files migrated.`)
             else toast.info(`Paused: ${totalSucceeded} migrated, ${remaining} remaining`)
+            // Refresh status
+            await fetchMigrationStatus()
         } catch (e: unknown) { toast.error("Migration failed: " + (e instanceof Error ? e.message : "Unknown")) }
         finally { setMigrating(false) }
     }
@@ -234,20 +262,68 @@ export function LibraryDataSection() {
 
                 {/* Firebase Migration */}
                 <div className="bg-card border border-border p-5 rounded-xl space-y-3">
-                    <h3 className="font-semibold text-foreground text-sm">Firebase Migration</h3>
-                    <p className="text-xs text-muted-foreground">Drive → Firebase Storage CDN</p>
-                    <Button onClick={handleMigration} disabled={migrating} className="w-full gap-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl" size="sm">
-                        <Repeat className={`w-3 h-3 ${migrating ? "animate-spin" : ""}`} />
-                        {migrating ? "Migrating..." : "Migrate Files"}
-                    </Button>
-                    {migrationStats && (
+                    <h3 className="font-semibold text-foreground text-sm">Firebase Storage</h3>
+                    <p className="text-xs text-muted-foreground">Copy files from Drive → Firebase Storage CDN for fast, reliable serving.</p>
+
+                    {/* Current status */}
+                    {migrationStatus && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{migrationStatus.inStorage} / {migrationStatus.total} files in Storage</span>
+                                <span className="font-mono">{migrationStatus.percentComplete}%</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${migrationStatus.percentComplete}%` }}
+                                />
+                            </div>
+                            {migrationStatus.pending > 0 && (
+                                <p className="text-xs text-orange-500">{migrationStatus.pending} files not yet migrated</p>
+                            )}
+                            {migrationStatus.failed > 0 && (
+                                <p className="text-xs text-red-500">{migrationStatus.failed} files failed previously</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => handleMigration(false)}
+                            disabled={migrating}
+                            className="flex-1 gap-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl"
+                            size="sm"
+                        >
+                            <Repeat className={`w-3 h-3 ${migrating ? "animate-spin" : ""}`} />
+                            {migrating ? "Migrating..." : "Migrate Pending"}
+                        </Button>
+                        {migrationStatus && migrationStatus.failed > 0 && (
+                            <Button
+                                onClick={() => handleMigration(true)}
+                                disabled={migrating}
+                                variant="outline"
+                                className="gap-2 rounded-xl text-orange-600 border-orange-300"
+                                size="sm"
+                            >
+                                <AlertTriangle className="w-3 h-3" />
+                                Retry Failed
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Progress during migration */}
+                    {migrationProgress && (
                         <div className="p-2 bg-muted/50 rounded-lg text-xs space-y-1 border border-border">
-                            <span className={`flex items-center gap-1 font-semibold ${migrationStats.remaining > 0 ? "text-orange-500" : "text-green-500"}`}>
-                                <CheckCircle className="w-3 h-3" /> {migrationStats.remaining > 0 ? "In Progress..." : "Complete"}
+                            <span className={`flex items-center gap-1 font-semibold ${
+                                migrationProgress.phase === 'complete' ? "text-green-500" : "text-orange-500"
+                            }`}>
+                                <CheckCircle className="w-3 h-3" />
+                                {migrationProgress.phase === 'complete' ? "Complete" : "In Progress..."}
                             </span>
                             <span className="text-muted-foreground">
-                                Migrated: {migrationStats.succeeded} · Remaining: {migrationStats.remaining}
-                                {migrationStats.failed > 0 && <span className="text-red-500"> · Failed: {migrationStats.failed}</span>}
+                                Migrated: {migrationProgress.succeeded} · Remaining: {migrationProgress.remaining}
+                                {migrationProgress.failed > 0 && <span className="text-red-500"> · Failed: {migrationProgress.failed}</span>}
                             </span>
                         </div>
                     )}
