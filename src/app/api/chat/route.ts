@@ -144,7 +144,6 @@ export async function POST(request: NextRequest) {
                 .get(),
             firestore.collection('setlists')
                 .where('ownerId', '==', auth.uid)
-                .where('isPublic', '==', false)
                 .orderBy('date', 'desc')
                 .limit(20)
                 .get(),
