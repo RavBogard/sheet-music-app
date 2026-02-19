@@ -40,8 +40,6 @@ export function useMonitorConnection(): { client: X32WSClient | null } {
     const { hasAccess } = useMonitorAccess()
     const clientRef = useRef<X32WSClient | null>(null)
 
-    const store = useMonitorStore()
-
     useEffect(() => {
         if (!user || !hasAccess) return
 

@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
-    const { user, profile, isAdmin, isBandLeader, loading: authLoading, signOut } = useAuth()
+    const { user, profile, isBandLeader, loading: authLoading, signOut } = useAuth()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [editingName, setEditingName] = useState(false)

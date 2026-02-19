@@ -8,7 +8,7 @@ import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { MonitorConfig, BridgeStatus } from "@/types/monitor"
+import { BridgeStatus } from "@/types/monitor"
 import { Loader2, Star, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
 
 /**

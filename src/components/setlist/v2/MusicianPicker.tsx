@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { SetlistMusician, UserProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { subscribeToAllUsers } from "@/lib/users-firebase"
@@ -32,7 +32,7 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
 }))
 
 export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPublished }: MusicianPickerProps) {
-    const { isAdmin, isBandLeader, user: currentUser } = useAuth()
+    const { isAdmin, user: currentUser } = useAuth()
     const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
@@ -44,8 +44,8 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
     const instrumentRef = useRef<HTMLDivElement>(null)
     const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailStatus>>(new Map())
 
-    const defaultMusicians = congregation.defaultMusicians || []
-    const defaultUids = new Set(defaultMusicians.map(m => m.uid))
+    const defaultMusicians = useMemo(() => congregation.defaultMusicians || [], [congregation.defaultMusicians])
+    const defaultUids = useMemo(() => new Set(defaultMusicians.map(m => m.uid)), [defaultMusicians])
 
     // Subscribe to email delivery status after publish
     useEffect(() => {

@@ -22,14 +22,6 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
     const currentOffset = useRef(0)
     const { active } = useDndContext()
 
-    // Disable swipe when not in edit mode or when a dnd-kit drag is active
-    if (!enabled || active) {
-        return <>{children}</>
-    }
-
-    const bgOpacity = Math.min(1, Math.max(0, Math.abs(offsetX) / 120))
-    const iconScale = 0.5 + (Math.min(1, Math.abs(offsetX) / 120) * 0.7)
-
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         startX.current = e.touches[0].clientX
         startY.current = e.touches[0].clientY
@@ -69,6 +61,14 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
         setOffsetX(0)
         locked.current = null
     }, [onDelete])
+
+    // Disable swipe when not in edit mode or when a dnd-kit drag is active
+    if (!enabled || active) {
+        return <>{children}</>
+    }
+
+    const bgOpacity = Math.min(1, Math.max(0, Math.abs(offsetX) / 120))
+    const iconScale = 0.5 + (Math.min(1, Math.abs(offsetX) / 120) * 0.7)
 
     return (
         <div className="relative overflow-hidden rounded-lg touch-pan-y">

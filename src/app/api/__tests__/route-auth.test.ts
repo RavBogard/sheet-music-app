@@ -5,7 +5,7 @@
  * These tests mock Firebase Admin and test route handlers directly.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 // ── Mocks ──
 

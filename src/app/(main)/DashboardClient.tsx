@@ -26,7 +26,7 @@ export interface DashboardServerProps {
     serverShortName: string | null
 }
 
-export default function DashboardClient({ serverGreeting, serverShortName }: DashboardServerProps) {
+export default function DashboardClient({ serverGreeting: _serverGreeting, serverShortName }: DashboardServerProps) {
     const router = useRouter()
     const { user, profile, cachedUser, signIn, isMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
