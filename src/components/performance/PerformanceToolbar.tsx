@@ -28,7 +28,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
     // Track which popovers are open to keep bars visible
     const [openPopovers, setOpenPopovers] = useState<Set<string>>(new Set())
-    const [transposerOpen, setTransposerOpen] = useState(false)
+    // Separate state for mobile vs desktop transposer — sharing one controlled
+    // state across two Radix Popovers causes their dismiss layers to conflict
+    // (the hidden breakpoint's portal fires onOpenChange(false) immediately)
+    const [transposerOpenMobile, setTransposerOpenMobile] = useState(false)
+    const [transposerOpenDesktop, setTransposerOpenDesktop] = useState(false)
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -106,8 +110,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     </Popover>
 
                     {/* Transposer */}
-                    <Popover open={transposerOpen} onOpenChange={(open) => {
-                        setTransposerOpen(open)
+                    <Popover open={transposerOpenMobile} onOpenChange={(open) => {
+                        setTransposerOpenMobile(open)
                         trackPopover('transposer', open)
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
@@ -129,7 +133,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                            <TransposerMenu onRequestClose={() => setTransposerOpen(false)} />
+                            <TransposerMenu onRequestClose={() => setTransposerOpenMobile(false)} />
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -205,8 +209,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     </div>
 
                     {/* Transposer */}
-                    <Popover open={transposerOpen} onOpenChange={(open) => {
-                        setTransposerOpen(open)
+                    <Popover open={transposerOpenDesktop} onOpenChange={(open) => {
+                        setTransposerOpenDesktop(open)
                         trackPopover('transposer-desktop', open)
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
@@ -228,7 +232,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
-                            <TransposerMenu onRequestClose={() => setTransposerOpen(false)} />
+                            <TransposerMenu onRequestClose={() => setTransposerOpenDesktop(false)} />
                         </PopoverContent>
                     </Popover>
                 </div>
