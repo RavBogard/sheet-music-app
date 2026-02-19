@@ -75,12 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         let unsubscribeProfile: (() => void) | null = null
 
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
 
             setUser(currentUser)
             if (currentUser) {
+                // Sync session cookie for SSR — fire-and-forget, don't block UI
+                currentUser.getIdToken().then((idToken) => {
+                    fetch("/api/auth/session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ idToken }),
+                    }).catch(() => {/* non-critical: SSR just won't have auth */})
+                }).catch(() => {})
+
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
                 unsubscribeProfile = subscribeToUserProfile(currentUser.uid, (p) => {
@@ -136,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signOut = async () => {
         try {
             localStorage.removeItem('crc_cached_user')
+            // Clear server session cookie
+            fetch("/api/auth/session", { method: "DELETE" }).catch(() => {})
             await firebaseSignOut(auth)
         } catch (error) {
             logger.error("Sign out error:", error)
