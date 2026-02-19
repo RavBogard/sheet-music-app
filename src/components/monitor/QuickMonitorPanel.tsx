@@ -93,7 +93,6 @@ export function QuickMonitorPanel() {
     // Connect to bridge
     useEffect(() => {
         if (!user || !hasAccess || !config?.bridgeUrl) return
-        if (!config.authorizedUsers.includes(user.uid)) return
 
         // Don't try to connect if bridge heartbeat says it's offline
         if (!isBridgeOnline(config.bridge)) return
@@ -108,6 +107,11 @@ export function QuickMonitorPanel() {
                 if (field === "level") updateSendLevel(busIndex, channelIndex, value as number)
                 if (field === "on") updateSendOn(busIndex, channelIndex, value as boolean)
             },
+            onMatrixUpdate: (matrixIndex, field, value) => {
+                const store = useMonitorStore.getState()
+                if (field === "fader") store.updateMatrixFader(matrixIndex, value as number)
+                if (field === "on") store.updateMatrixOn(matrixIndex, value as boolean)
+            },
             onConfigUpdate: setConfig,
             onStatusChange: setStatus,
         })
@@ -121,7 +125,7 @@ export function QuickMonitorPanel() {
             reset()
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- WebSocket: reconnect only on user/config change
-    }, [user?.uid, hasAccess, config?.bridgeUrl, config?.authorizedUsers, config?.bridge?.status, config?.bridge?.lastSeen])
+    }, [user?.uid, hasAccess, config?.bridgeUrl, config?.bridge?.status, config?.bridge?.lastSeen])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {

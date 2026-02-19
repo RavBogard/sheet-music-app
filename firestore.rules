@@ -37,6 +37,11 @@ service cloud.firestore {
       return isMusician() || request.auth.token.role == 'member';
     }
 
+    // Sound Engineer: Cross-cutting — can be any role, checked via custom claim
+    function isSoundEngineer() {
+      return request.auth.token.soundEngineer == true;
+    }
+
     // USERS Collection
     match /users/{userId} {
       // Secure Rule: Own data, Leaders (for musician picker), or Admin
@@ -121,6 +126,7 @@ service cloud.firestore {
     match /config/monitor {
       allow read: if isSignedIn();
       allow write: if isAdmin()
+                   || isSoundEngineer()
                    || (isSignedIn() && request.auth.uid in resource.data.authorizedUsers);
     }
 

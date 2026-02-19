@@ -20,6 +20,7 @@ export interface X32WSClientOptions {
     onStateUpdate: (snapshot: MixerSnapshot) => void
     onFaderUpdate: (busIndex: number, field: "master", value: number) => void
     onSendUpdate: (busIndex: number, channelIndex: number, field: "level" | "on", value: number | boolean) => void
+    onMatrixUpdate?: (matrixIndex: number, field: "fader" | "on", value: number | boolean) => void
     onConfigUpdate: (config: MonitorConfig) => void
     onStatusChange: (status: ConnectionStatus, error?: string) => void
 }
@@ -141,6 +142,10 @@ export class X32WSClient {
                 )
                 break
 
+            case "matrix_update":
+                this.options.onMatrixUpdate?.(msg.matrixIndex, msg.field, msg.value)
+                break
+
             case "config_update":
                 this.options.onConfigUpdate(msg.config)
                 break
@@ -227,6 +232,14 @@ export class X32WSClient {
 
     setSendOn(busIndex: number, channelIndex: number, on: boolean): void {
         this.send({ type: "set_send_on", busIndex, channelIndex, value: on })
+    }
+
+    setMatrixFader(matrixIndex: number, value: number): void {
+        this.send({ type: "set_matrix_fader", matrixIndex, value })
+    }
+
+    setMatrixOn(matrixIndex: number, on: boolean): void {
+        this.send({ type: "set_matrix_on", matrixIndex, value: on })
     }
 
     requestState(): void {

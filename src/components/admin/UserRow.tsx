@@ -16,7 +16,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
-import { doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { doc, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Headphones, Trash2 } from "lucide-react"
 
@@ -79,9 +79,16 @@ export function UserRow({ user, currentUserUid, currentUserRole }: UserRowProps)
 
     const handleSoundEngineerToggle = async () => {
         try {
-            await updateDoc(doc(db, "users", user.uid), {
-                soundEngineer: !user.soundEngineer,
+            const { auth: firebaseAuth } = await import("@/lib/firebase")
+            const currentUser = firebaseAuth.currentUser
+            if (!currentUser) return
+            const token = await currentUser.getIdToken()
+            const res = await fetch("/api/admin/set-sound-engineer", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ targetUserId: user.uid, soundEngineer: !user.soundEngineer }),
             })
+            if (!res.ok) throw new Error("Failed")
             toast.success(`${user.displayName}: sound engineer ${user.soundEngineer ? 'removed' : 'enabled'}`)
         } catch (e) {
             logger.error(e)

@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
                     await fbAuth.setCustomUserClaims(doc.id, {
                         ...currentClaims,
                         role: updates.role || currentClaims.role || oldRole,
+                        ...(updates.soundEngineer !== undefined ? { soundEngineer: updates.soundEngineer } : {}),
                     })
                 } catch (claimErr) {
                     logger.warn(`[MigrateRoles] Failed to update claims for ${doc.id}:`, claimErr)

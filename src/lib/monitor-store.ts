@@ -11,6 +11,7 @@ import {
     MonitorConfig,
     ChannelInfo,
     BusInfo,
+    MatrixInfo,
     MixerSnapshot,
 } from "@/types/monitor"
 
@@ -22,6 +23,7 @@ interface MonitorState {
     // Mixer state from bridge
     channels: ChannelInfo[]
     buses: BusInfo[]
+    matrices: MatrixInfo[]
     config: MonitorConfig | null
 
     // User's assigned bus
@@ -34,6 +36,8 @@ interface MonitorState {
     updateBusFader: (busIndex: number, value: number) => void
     updateSendLevel: (busIndex: number, channelIndex: number, value: number) => void
     updateSendOn: (busIndex: number, channelIndex: number, on: boolean) => void
+    updateMatrixFader: (matrixIndex: number, value: number) => void
+    updateMatrixOn: (matrixIndex: number, on: boolean) => void
     setConfig: (config: MonitorConfig) => void
     reset: () => void
 }
@@ -43,6 +47,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     error: null,
     channels: [],
     buses: [],
+    matrices: [],
     config: null,
     myBusIndex: null,
     userId: null,
@@ -64,6 +69,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         set({
             channels: snapshot.channels,
             buses: snapshot.buses,
+            matrices: snapshot.matrices || [],
             config: snapshot.config,
             myBusIndex,
             userId,
@@ -111,6 +117,24 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         })
     },
 
+    updateMatrixFader: (matrixIndex, value) => {
+        const { matrices } = get()
+        set({
+            matrices: matrices.map(m =>
+                m.index === matrixIndex ? { ...m, fader: value } : m
+            )
+        })
+    },
+
+    updateMatrixOn: (matrixIndex, on) => {
+        const { matrices } = get()
+        set({
+            matrices: matrices.map(m =>
+                m.index === matrixIndex ? { ...m, on } : m
+            )
+        })
+    },
+
     setConfig: (config) => {
         const { userId } = get()
         let myBusIndex: number | null = null
@@ -130,6 +154,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         error: null,
         channels: [],
         buses: [],
+        matrices: [],
         config: null,
         myBusIndex: null,
         userId: null,

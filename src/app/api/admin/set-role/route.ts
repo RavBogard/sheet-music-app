@@ -15,8 +15,11 @@ export async function POST(request: Request) {
             return new NextResponse("Missing targetUserId or newRole", { status: 400 })
         }
 
-        // Set Custom Claims
-        await getAuth().setCustomUserClaims(targetUserId, { role: newRole })
+        // Set Custom Claims — preserve existing claims (like soundEngineer)
+        const fbAuth = getAuth()
+        const existingUser = await fbAuth.getUser(targetUserId)
+        const existingClaims = existingUser.customClaims || {}
+        await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
 
         // Update Firestore for UI consistency
         // claimsUpdatedAt signals the client to force-refresh their ID token
