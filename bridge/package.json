@@ -1,6 +1,6 @@
 {
   "name": "centralreform-bridge",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "CentralReform X32 Monitor Bridge — connects iPads to the Behringer X32 via OSC",
   "main": "dist/index.js",
   "scripts": {

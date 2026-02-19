@@ -9,8 +9,16 @@ iPad Browser ──WebSocket──► Bridge Server ──OSC/UDP──► X32
                               │
                               ├── Reads config from Firestore
                               ├── Verifies Firebase auth tokens
-                              └── Syncs fader state bidirectionally
+                              ├── Syncs bus fader state bidirectionally
+                              ├── Matrix output control (sound engineers)
+                              └── Auto-discovers X32, publishes bridge URL
 ```
+
+### v2.0.0 Changes
+- **Matrix output support** — Sound engineers can mute/unmute and control levels for all 6 matrix outputs (house speakers, lobby, stream, recording, etc.)
+- **Sound engineer role** — The `soundEngineer` custom claim grants automatic monitor access + matrix controls. No manual authorized-user list needed.
+- **Broader authorization** — Users with an assigned bus get auto-access. Sound engineers get full access. The authorized-users list is now a fallback.
+- **Bus assignment by engineers** — Sound engineers can assign musicians to buses from the Monitor page (no admin panel needed).
 
 ## Quick Start
 

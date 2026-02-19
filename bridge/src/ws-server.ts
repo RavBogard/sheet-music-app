@@ -9,6 +9,11 @@
  * 3. Bridge verifies token, checks authorization
  * 4. Bridge sends full mixer state snapshot
  * 5. Bidirectional fader updates flow in real-time
+ * 
+ * Authorization:
+ * - Musicians: control their own assigned bus only
+ * - Sound Engineers: control any bus + all 6 matrix outputs
+ * - Musicians get bus-specific updates; engineers get everything
  */
 
 import { WebSocketServer, WebSocket } from "ws"
@@ -24,7 +29,8 @@ import {
 interface AuthenticatedClient {
     ws: WebSocket
     uid: string
-    busIndex: number | null  // Which bus this user is assigned to
+    busIndex: number | null      // Which bus this user is assigned to
+    isSoundEngineer: boolean     // Can control matrix outputs + any bus
 }
 
 export class BridgeWSServer {
@@ -68,7 +74,7 @@ export class BridgeWSServer {
             ws.on("close", () => {
                 const client = this.clients.get(ws)
                 if (client) {
-                    console.log(`[WS] Client disconnected: ${client.uid} (bus ${client.busIndex})`)
+                    console.log(`[WS] Client disconnected: ${client.uid} (bus ${client.busIndex}${client.isSoundEngineer ? ", engineer" : ""})`)
                 }
                 clearTimeout(authTimeout)
                 this.clients.delete(ws)
@@ -85,14 +91,12 @@ export class BridgeWSServer {
 
         // Listen for config changes and update client assignments
         this.config.onChange((newConfig) => {
-            // Re-evaluate bus assignments
+            // Re-evaluate bus assignments and authorization
             for (const [ws, client] of this.clients) {
-                const newBus = newConfig.busAssignments
-                    ? this.config.getUserBus(client.uid)
-                    : null
+                const newBus = this.config.getUserBus(client.uid)
 
-                // Check if still authorized
-                if (!newConfig.authorizedUsers.includes(client.uid)) {
+                // Check if still authorized (sound engineers always stay)
+                if (!client.isSoundEngineer && !this.config.isAuthorized(client.uid, false)) {
                     this.sendTo(ws, { type: "error", message: "Access revoked" })
                     ws.close()
                     this.clients.delete(ws)
@@ -101,18 +105,18 @@ export class BridgeWSServer {
 
                 if (newBus !== client.busIndex) {
                     client.busIndex = newBus
-                    // Send updated state
+                    // Send updated state with new bus assignment
                     this.sendSnapshot(ws)
                 }
             }
 
-            // Broadcast config update
+            // Broadcast config update to all clients
             this.broadcast({ type: "config_update", config: newConfig })
         })
     }
 
     private setupX32Listeners(): void {
-        // Bus master fader changes
+        // Bus master fader changes → send to users on that bus + all engineers
         this.x32.on("bus_fader", (busIndex: number, value: number) => {
             this.broadcastToBusClients(busIndex, {
                 type: "fader_update",
@@ -143,6 +147,26 @@ export class BridgeWSServer {
                 value: on,
             })
         })
+
+        // Matrix fader changes → broadcast to all sound engineers
+        this.x32.on("matrix_fader", (matrixIndex: number, value: number) => {
+            this.broadcastToEngineers({
+                type: "matrix_update",
+                matrixIndex,
+                field: "fader",
+                value,
+            })
+        })
+
+        // Matrix on/off changes → broadcast to all sound engineers
+        this.x32.on("matrix_on", (matrixIndex: number, on: boolean) => {
+            this.broadcastToEngineers({
+                type: "matrix_update",
+                matrixIndex,
+                field: "on",
+                value: on,
+            })
+        })
     }
 
     private async handleMessage(ws: WebSocket, msg: ClientMessage, authTimeout: ReturnType<typeof setTimeout>): Promise<void> {
@@ -155,7 +179,7 @@ export class BridgeWSServer {
                 return
             }
 
-            if (!this.config.isAuthorized(user.uid)) {
+            if (!this.config.isAuthorized(user.uid, user.soundEngineer)) {
                 this.sendTo(ws, { type: "error", message: "Not authorized for monitor access" })
                 ws.close()
                 return
@@ -164,9 +188,10 @@ export class BridgeWSServer {
             clearTimeout(authTimeout)
 
             const busIndex = this.config.getUserBus(user.uid)
-            this.clients.set(ws, { ws, uid: user.uid, busIndex })
+            const isSoundEngineer = user.soundEngineer === true
+            this.clients.set(ws, { ws, uid: user.uid, busIndex, isSoundEngineer })
 
-            console.log(`[WS] Authenticated: ${user.uid} → bus ${busIndex}`)
+            console.log(`[WS] Authenticated: ${user.uid} → bus ${busIndex}${isSoundEngineer ? " (sound engineer)" : ""}`)
 
             this.sendTo(ws, { type: "auth_ok", userId: user.uid })
             this.sendSnapshot(ws)
@@ -182,8 +207,8 @@ export class BridgeWSServer {
 
         // ── Set bus master level ──
         if (msg.type === "set_bus_master") {
-            // Verify the user is assigned to this bus
-            if (client.busIndex !== msg.busIndex) {
+            // Sound engineers can control any bus; musicians only their own
+            if (!client.isSoundEngineer && client.busIndex !== msg.busIndex) {
                 this.sendTo(ws, { type: "error", message: "Not your bus" })
                 return
             }
@@ -193,7 +218,7 @@ export class BridgeWSServer {
 
         // ── Set channel send level ──
         if (msg.type === "set_send_level") {
-            if (client.busIndex !== msg.busIndex) {
+            if (!client.isSoundEngineer && client.busIndex !== msg.busIndex) {
                 this.sendTo(ws, { type: "error", message: "Not your bus" })
                 return
             }
@@ -203,11 +228,31 @@ export class BridgeWSServer {
 
         // ── Set channel send on/off ──
         if (msg.type === "set_send_on") {
-            if (client.busIndex !== msg.busIndex) {
+            if (!client.isSoundEngineer && client.busIndex !== msg.busIndex) {
                 this.sendTo(ws, { type: "error", message: "Not your bus" })
                 return
             }
             this.x32.setSendOn(msg.channelIndex, msg.busIndex, msg.value)
+            return
+        }
+
+        // ── Set matrix fader (sound engineers only) ──
+        if (msg.type === "set_matrix_fader") {
+            if (!client.isSoundEngineer) {
+                this.sendTo(ws, { type: "error", message: "Matrix control requires sound engineer access" })
+                return
+            }
+            this.x32.setMatrixFader(msg.matrixIndex, msg.value)
+            return
+        }
+
+        // ── Set matrix on/off (sound engineers only) ──
+        if (msg.type === "set_matrix_on") {
+            if (!client.isSoundEngineer) {
+                this.sendTo(ws, { type: "error", message: "Matrix control requires sound engineer access" })
+                return
+            }
+            this.x32.setMatrixOn(msg.matrixIndex, msg.value)
             return
         }
 
@@ -222,6 +267,7 @@ export class BridgeWSServer {
         const snapshot: MixerSnapshot = {
             channels: this.x32.channels,
             buses: this.x32.buses,
+            matrices: this.x32.matrices,
             config: this.config.getConfig(),
         }
         this.sendTo(ws, { type: "state", data: snapshot })
@@ -239,9 +285,24 @@ export class BridgeWSServer {
         }
     }
 
+    /**
+     * Send to clients assigned to this bus AND all sound engineers.
+     * Engineers need to see all bus activity for monitoring.
+     */
     private broadcastToBusClients(busIndex: number, msg: ServerMessage): void {
         for (const [ws, client] of this.clients) {
-            if (client.busIndex === busIndex) {
+            if (client.busIndex === busIndex || client.isSoundEngineer) {
+                this.sendTo(ws, msg)
+            }
+        }
+    }
+
+    /**
+     * Send only to sound engineer clients (matrix updates, etc.)
+     */
+    private broadcastToEngineers(msg: ServerMessage): void {
+        for (const [ws, client] of this.clients) {
+            if (client.isSoundEngineer) {
                 this.sendTo(ws, msg)
             }
         }

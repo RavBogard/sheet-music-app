@@ -22,7 +22,7 @@ import { execSync, exec } from "child_process"
 const APP_DIR = path.dirname(process.execPath || __dirname)
 const CONFIG_FILE = path.join(APP_DIR, "bridge-config.json")
 const KEY_FILE = path.join(APP_DIR, "service-account-key.json")
-const VERSION = "1.2.0"
+const VERSION = "2.0.0"
 
 interface BridgeConfig {
     installed: boolean

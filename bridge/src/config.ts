@@ -91,18 +91,29 @@ export class ConfigManager {
     }
 
     /** Verify a Firebase Auth ID token */
-    async verifyToken(token: string): Promise<{ uid: string; email?: string } | null> {
+    async verifyToken(token: string): Promise<{ uid: string; email?: string; soundEngineer?: boolean } | null> {
         try {
             const decoded = await admin.auth().verifyIdToken(token)
-            return { uid: decoded.uid, email: decoded.email }
+            return {
+                uid: decoded.uid,
+                email: decoded.email,
+                soundEngineer: decoded.soundEngineer === true,
+            }
         } catch {
             return null
         }
     }
 
-    /** Check if a user is authorized for monitor access */
-    isAuthorized(uid: string): boolean {
-        return this.config.authorizedUsers.includes(uid)
+    /**
+     * Check if a user is authorized for monitor access.
+     * Authorized if ANY of: in authorizedUsers list, has soundEngineer claim,
+     * or has a bus assigned to them.
+     */
+    isAuthorized(uid: string, soundEngineer?: boolean): boolean {
+        if (this.config.authorizedUsers.includes(uid)) return true
+        if (soundEngineer) return true
+        if (this.getUserBus(uid) !== null) return true
+        return false
     }
 
     /** Get which bus is assigned to a user */
@@ -154,7 +165,7 @@ export class ConfigManager {
                 "bridge.x32Connected": data.x32Connected,
                 "bridge.clients": data.clients,
                 "bridge.localIp": data.localIp,
-                "bridge.version": process.env.BRIDGE_VERSION || "1.1.0",
+                "bridge.version": process.env.BRIDGE_VERSION || "2.0.0",
             }
             // 5s timeout — never let heartbeat block the bridge
             await Promise.race([

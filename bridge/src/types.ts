@@ -25,6 +25,7 @@ export interface BusAssignment {
 export interface X32State {
     channels: ChannelInfo[]
     buses: BusInfo[]
+    matrices: MatrixInfo[]
 }
 
 export interface ChannelInfo {
@@ -46,6 +47,14 @@ export interface BusSend {
     on: boolean           // Send enabled/disabled
 }
 
+/** X32 Matrix Output (1–6) */
+export interface MatrixInfo {
+    index: number      // 1-6
+    name: string       // e.g., "House L", "Stream"
+    fader: number      // 0.0 – 1.0
+    on: boolean        // true = unmuted
+}
+
 // ─── WebSocket Messages (iPad ↔ Bridge) ───
 
 /** Messages sent FROM bridge TO iPad */
@@ -53,6 +62,7 @@ export type ServerMessage =
     | { type: "state"; data: MixerSnapshot }
     | { type: "fader_update"; busIndex: number; field: "master"; value: number }
     | { type: "send_update"; busIndex: number; channelIndex: number; field: "level" | "on"; value: number | boolean }
+    | { type: "matrix_update"; matrixIndex: number; field: "fader" | "on"; value: number | boolean }
     | { type: "config_update"; config: MonitorConfig }
     | { type: "error"; message: string }
     | { type: "auth_ok"; userId: string }
@@ -63,11 +73,14 @@ export type ClientMessage =
     | { type: "set_bus_master"; busIndex: number; value: number }
     | { type: "set_send_level"; busIndex: number; channelIndex: number; value: number }
     | { type: "set_send_on"; busIndex: number; channelIndex: number; value: boolean }
+    | { type: "set_matrix_fader"; matrixIndex: number; value: number }
+    | { type: "set_matrix_on"; matrixIndex: number; value: boolean }
     | { type: "request_state" }
 
 /** Snapshot of mixer state sent on connect */
 export interface MixerSnapshot {
     channels: ChannelInfo[]
     buses: BusInfo[]
+    matrices: MatrixInfo[]
     config: MonitorConfig
 }

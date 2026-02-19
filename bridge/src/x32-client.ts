@@ -12,7 +12,7 @@
 
 import * as dgram from "dgram"
 import { EventEmitter } from "events"
-import { ChannelInfo, BusInfo, BusSend } from "./types"
+import { ChannelInfo, BusInfo, BusSend, MatrixInfo } from "./types"
 
 // OSC message encoding/decoding helpers
 function padTo4(len: number): number {
@@ -127,6 +127,7 @@ export class X32Client extends EventEmitter {
     // Cached mixer state
     channels: ChannelInfo[] = []
     buses: BusInfo[] = []
+    matrices: MatrixInfo[] = []
 
     constructor(options: X32ClientOptions) {
         super()
@@ -343,6 +344,39 @@ export class X32Client extends EventEmitter {
             }
             return
         }
+
+        // Matrix name: /mtx/01/config/name
+        const mtxNameMatch = msg.address.match(/^\/mtx\/(\d+)\/config\/name$/)
+        if (mtxNameMatch && msg.args[0]?.type === "s") {
+            const idx = parseInt(mtxNameMatch[1])
+            const mtx = this.matrices.find(m => m.index === idx)
+            if (mtx) mtx.name = msg.args[0].value as string
+            return
+        }
+
+        // Matrix fader: /mtx/01/mix/fader
+        const mtxFaderMatch = msg.address.match(/^\/mtx\/(\d+)\/mix\/fader$/)
+        if (mtxFaderMatch && msg.args[0]?.type === "f") {
+            const idx = parseInt(mtxFaderMatch[1])
+            const mtx = this.matrices.find(m => m.index === idx)
+            if (mtx) {
+                mtx.fader = msg.args[0].value as number
+                this.emit("matrix_fader", idx, mtx.fader)
+            }
+            return
+        }
+
+        // Matrix on/off: /mtx/01/mix/on
+        const mtxOnMatch = msg.address.match(/^\/mtx\/(\d+)\/mix\/on$/)
+        if (mtxOnMatch && msg.args[0]) {
+            const idx = parseInt(mtxOnMatch[1])
+            const mtx = this.matrices.find(m => m.index === idx)
+            if (mtx) {
+                mtx.on = (msg.args[0].value as number) === 1
+                this.emit("matrix_on", idx, mtx.on)
+            }
+            return
+        }
     }
 
     // ─── Queries (request current values) ───
@@ -393,6 +427,24 @@ export class X32Client extends EventEmitter {
         return (msg.args[0]?.value as number) === 1
     }
 
+    async queryMatrixName(mtx: number): Promise<string> {
+        const addr = `/mtx/${String(mtx).padStart(2, "0")}/config/name`
+        const msg = await this.query(addr)
+        return (msg.args[0]?.value as string) || `Matrix ${mtx}`
+    }
+
+    async queryMatrixFader(mtx: number): Promise<number> {
+        const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/fader`
+        const msg = await this.query(addr)
+        return (msg.args[0]?.value as number) || 0
+    }
+
+    async queryMatrixOn(mtx: number): Promise<boolean> {
+        const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/on`
+        const msg = await this.query(addr)
+        return (msg.args[0]?.value as number) === 1
+    }
+
     // ─── Commands (set values on X32) ───
 
     setBusFader(bus: number, value: number): void {
@@ -407,6 +459,16 @@ export class X32Client extends EventEmitter {
 
     setSendOn(ch: number, bus: number, on: boolean): void {
         const addr = `/ch/${String(ch).padStart(2, "0")}/mix/${String(bus).padStart(2, "0")}/on`
+        this.send(addr, [{ type: "i", value: on ? 1 : 0 }])
+    }
+
+    setMatrixFader(mtx: number, value: number): void {
+        const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/fader`
+        this.send(addr, [{ type: "f", value: Math.max(0, Math.min(1, value)) }])
+    }
+
+    setMatrixOn(mtx: number, on: boolean): void {
+        const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/on`
         this.send(addr, [{ type: "i", value: on ? 1 : 0 }])
     }
 
@@ -454,6 +516,20 @@ export class X32Client extends EventEmitter {
 
         const elapsed = Date.now() - start
         console.log(`[X32] Read ${this.buses.length} bus states with send levels (${elapsed}ms)`)
+
+        // ── Matrix outputs: all 6 in parallel ──
+        const matrixPromises = Array.from({ length: 6 }, (_, i) => {
+            const mtx = i + 1
+            return Promise.all([
+                this.queryMatrixName(mtx).catch(() => `Matrix ${mtx}`),
+                this.queryMatrixFader(mtx).catch(() => 0),
+                this.queryMatrixOn(mtx).catch(() => true),
+            ]).then(([name, fader, on]) => ({ index: mtx, name, fader, on }))
+        })
+        this.matrices = await Promise.all(matrixPromises)
+
+        const totalElapsed = Date.now() - start
+        console.log(`[X32] Read ${this.matrices.length} matrix outputs (${totalElapsed}ms total)`)
         this.emit("state_synced")
     }
 

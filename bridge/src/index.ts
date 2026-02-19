@@ -52,7 +52,7 @@ function getLocalIp(): string | null {
 }
 
 async function main() {
-    const version = process.env.BRIDGE_VERSION || "1.1.0"
+    const version = process.env.BRIDGE_VERSION || "2.0.0"
     console.log("╔═══════════════════════════════════════════╗")
     console.log(`║  CentralReform X32 Monitor Bridge v${version}  ║`)
     console.log("╚═══════════════════════════════════════════╝")
@@ -228,7 +228,7 @@ async function main() {
             const uptime = process.uptime()
             res.end(JSON.stringify({
                 status: "ok",
-                version: process.env.BRIDGE_VERSION || "1.1.0",
+                version: process.env.BRIDGE_VERSION || "2.0.0",
                 uptime: Math.round(uptime),
                 x32Connected: x32.isConnected(),
                 clients: ws.getConnectedCount(),
