@@ -38,20 +38,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      {
-        // Cache PDF/audio file proxy responses aggressively
-        source: '/api/drive/file/:fileId*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400' },
-        ],
-      },
-      {
-        // Cache library file responses (Firebase Storage backed)
-        source: '/api/library/file/:id*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400' },
-        ],
-      },
+      // NOTE: Cache-Control for /api/drive/file/ and /api/library/file/
+      // is set BY THE ROUTE HANDLER itself, not here. The route sets:
+      //   Success: public, max-age=86400 (storage) or max-age=3600 (drive)
+      //   Error:   no-store
+      // Setting it here would override the route's error headers,
+      // causing Vercel CDN to cache 502 errors for hours.
       {
         // Security headers for all routes
         source: '/(.*)',

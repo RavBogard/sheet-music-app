@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // Allow up to 60s for large files from Drive
 
 import { DriveClient } from "@/lib/google-drive"
-import { downloadFromStorage } from "@/lib/firebase-storage"
+import { downloadFromStorage, uploadToStorage } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
 
 function getAllowedOrigin(request: NextRequest): string {
     const origin = request.headers.get('origin') || ''
-    // Allow app domain and local dev
     if (
         origin.includes('centralreform.live') ||
         origin.includes('localhost') ||
@@ -25,7 +25,6 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
-    // Rate limit to prevent enumeration attacks
     const limited = await checkRateLimit(request, 'api')
     if (limited) return limited
 
@@ -33,7 +32,6 @@ export async function GET(
 
     try {
         // 1. Try Firebase Storage first (fast, CDN-cached)
-        let storageError: string | null = null
         try {
             const storageResult = await downloadFromStorage(fileId)
             if (storageResult) {
@@ -48,54 +46,48 @@ export async function GET(
                 })
             }
         } catch (e) {
-            storageError = e instanceof Error ? e.message : String(e)
-            logger.warn(`[FileProxy] Storage error for ${fileId}:`, storageError)
+            logger.warn(`[FileProxy] Storage lookup failed for ${fileId}:`, e instanceof Error ? e.message : e)
         }
 
-        // 2. Fall back to Google Drive
-        let driveError: string | null = null
-        try {
-            const drive = new DriveClient()
-            const metadata = await drive.getFileMetadata(fileId)
+        // 2. Not in Storage — fetch from Google Drive
+        const drive = new DriveClient()
+        const metadata = await drive.getFileMetadata(fileId)
 
-            let fileData;
-            let contentType = 'application/pdf';
+        let fileData: ArrayBuffer;
+        let contentType = 'application/pdf';
 
-            if (metadata.mimeType?.startsWith('application/vnd.google-apps.')) {
-                fileData = await drive.exportDoc(fileId, 'application/pdf')
-            } else {
-                fileData = await drive.getFile(fileId)
-                contentType = metadata.mimeType || 'application/octet-stream'
+        if (metadata.mimeType?.startsWith('application/vnd.google-apps.')) {
+            // Google Doc/Sheet/Slide → Export as PDF
+            fileData = await drive.exportDoc(fileId, 'application/pdf') as ArrayBuffer
+        } else {
+            // Native file (PDF, mp3, image) → download directly
+            fileData = await drive.getFile(fileId) as ArrayBuffer
+            contentType = metadata.mimeType || 'application/octet-stream'
+        }
+
+        const data = new Uint8Array(fileData)
+
+        // 3. Cache-through: copy to Firebase Storage for next time
+        //    Fire-and-forget — don't block the response
+        uploadToStorage(fileId, Buffer.from(fileData), contentType).catch(e => {
+            logger.warn(`[FileProxy] Cache-through upload failed for ${fileId}:`, e instanceof Error ? e.message : e)
+        })
+
+        return new NextResponse(data, {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': getAllowedOrigin(request),
+                'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+                'Content-Type': contentType,
+                'X-Served-From': 'google-drive',
             }
-
-            return new NextResponse(new Uint8Array(fileData as ArrayBuffer), {
-                status: 200,
-                headers: {
-                    'Access-Control-Allow-Origin': getAllowedOrigin(request),
-                    'Cache-Control': 'public, max-age=3600',
-                    'Content-Type': contentType,
-                    'X-Served-From': 'google-drive',
-                }
-            })
-        } catch (e) {
-            driveError = e instanceof Error ? e.message : String(e)
-            logger.error(`[FileProxy] Drive error for ${fileId}:`, driveError)
-        }
-
-        // Both sources failed — return diagnostic error
-        const reason = driveError || storageError || 'Unknown error'
-        logger.error(`[FileProxy] All sources failed for ${fileId}: storage=${storageError}, drive=${driveError}`)
+        })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(`[FileProxy] Failed for ${fileId}:`, message)
 
         return NextResponse.json(
-            {
-                error: 'File unavailable',
-                fileId,
-                reason,
-                sources: {
-                    storage: storageError || 'not found',
-                    drive: driveError || 'not attempted',
-                }
-            },
+            { error: 'File unavailable', fileId, reason: message },
             {
                 status: 502,
                 headers: {
@@ -103,13 +95,6 @@ export async function GET(
                     'Cache-Control': 'no-store',
                 }
             }
-        )
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        logger.error(`[FileProxy] Unexpected error for ${fileId}:`, message)
-        return NextResponse.json(
-            { error: 'Internal error', fileId, reason: message },
-            { status: 500 }
         )
     }
 }

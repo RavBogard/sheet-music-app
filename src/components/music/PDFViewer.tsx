@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
-import { getOfflineFile, saveOfflineFile } from '@/lib/offline-store'
+import { getOfflineFile } from '@/lib/offline-store'
 import { PDFPageWrapper } from './PDFPageWrapper'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -12,7 +12,10 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 
 // Configure PDF.js worker — version MUST match react-pdf's bundled pdfjs-dist.
-const PDFJS_VERSION = pdfjs.version
+// react-pdf re-exports pdfjs, so pdfjs.version gives us the exact version it uses.
+// Using unpkg CDN with pinned version guarantees version match and eliminates
+// the worker/library mismatch that caused AbortErrors.
+const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
 pdfjs.GlobalWorkerOptions.workerSrc =
     `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
 
@@ -20,157 +23,105 @@ interface PDFViewerProps {
     url: string
 }
 
-const MAX_RETRIES = 2
-const RETRY_DELAY = 1500
-
 export function PDFViewer({ url }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
-    const [pdfData, setPdfData] = useState<Uint8Array | string | null>(null)
-    const [loading, setLoading] = useState(true)
+    const [source, setSource] = useState<{ data: Uint8Array } | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [retryCount, setRetryCount] = useState(0)
+    const [loading, setLoading] = useState(true)
 
-    // Track blob URL for cleanup
-    const blobUrlRef = useRef<string | null>(null)
-    // Track which URL we've fetched
-    const fetchedUrlRef = useRef<string | null>(null)
-    // Abort controller for cancelling fetches
-    const abortRef = useRef<AbortController | null>(null)
+    // Track which URL we've resolved to avoid re-running
+    const resolvedUrlRef = useRef<string | null>(null)
+    const retryCountRef = useRef(0)
 
-    // Clean up on unmount
-    useEffect(() => {
-        return () => {
-            if (blobUrlRef.current) {
-                URL.revokeObjectURL(blobUrlRef.current)
-                blobUrlRef.current = null
-            }
-            abortRef.current?.abort()
-        }
-    }, [])
-
-    // Fetch PDF data with retry logic
-    const fetchPdf = useCallback(async (targetUrl: string, attempt = 0) => {
-        // Cancel any in-flight request
-        abortRef.current?.abort()
-        const controller = new AbortController()
-        abortRef.current = controller
+    const fetchPdf = useCallback(async (fetchUrl: string, isRetry = false) => {
+        if (resolvedUrlRef.current === fetchUrl && !isRetry) return
 
         setLoading(true)
         setError(null)
+        resolvedUrlRef.current = fetchUrl
 
-        try {
-            // Extract fileId from URL
-            const fileIdMatch = targetUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
-            const fileId = fileIdMatch ? fileIdMatch[1] : null
+        // Extract fileId from Drive API URL
+        const fileIdMatch = fetchUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
+        const fileId = fileIdMatch ? fileIdMatch[1] : null
 
-            // 1. Try offline cache first
-            if (fileId) {
-                try {
-                    const offlineFile = await getOfflineFile(fileId)
-                    if (offlineFile) {
-                        logger.info("[PDFViewer] Serving from offline cache:", fileId)
-                        const arrayBuffer = await offlineFile.blob.arrayBuffer()
-                        setPdfData(new Uint8Array(arrayBuffer))
-                        setLoading(false)
-                        fetchedUrlRef.current = targetUrl
-                        return
-                    }
-                } catch {
-                    // IndexedDB may fail — fall through
+        // Try offline cache first — instant, no network
+        if (fileId) {
+            try {
+                const offlineFile = await getOfflineFile(fileId)
+                if (offlineFile) {
+                    logger.info("Serving offline file for:", fileId)
+                    const arrayBuffer = await offlineFile.blob.arrayBuffer()
+                    setSource({ data: new Uint8Array(arrayBuffer) })
+                    setLoading(false)
+                    return
                 }
+            } catch {
+                // IndexedDB may fail — fall through to network
             }
+        }
 
-            // 2. Fetch from API
-            const response = await fetch(targetUrl, {
-                signal: controller.signal,
-                cache: 'no-cache', // Bypass SW cache for reliability
-            })
+        // Fetch the PDF ourselves so we can diagnose failures
+        try {
+            const res = await fetch(fetchUrl)
 
-            if (controller.signal.aborted) return
-
-            if (!response.ok) {
-                let errorDetail = `HTTP ${response.status}`
+            if (!res.ok) {
+                // Try to read error body for diagnostics
+                let detail = `HTTP ${res.status}`
                 try {
-                    const body = await response.text()
-                    // Try to parse as JSON for diagnostic info
-                    try {
-                        const json = JSON.parse(body)
-                        errorDetail = json.reason || json.error || errorDetail
-                    } catch {
-                        if (body.length < 200) errorDetail = body
-                    }
-                } catch { /* ignore */ }
-
-                throw new Error(errorDetail)
+                    const body = await res.json()
+                    if (body.reason) detail += `: ${body.reason}`
+                    else if (body.error) detail += `: ${body.error}`
+                } catch {
+                    // Not JSON, just use status
+                }
+                throw new Error(detail)
             }
 
-            const contentType = response.headers.get('content-type') || ''
-            if (!contentType.includes('pdf') && !contentType.includes('octet-stream')) {
-                logger.warn('[PDFViewer] Unexpected content-type:', contentType, 'for', targetUrl)
+            const contentType = res.headers.get('content-type') || ''
+
+            // Verify we got a PDF (or at least binary data), not an HTML error page
+            if (contentType.includes('text/html') || contentType.includes('application/json')) {
+                const text = await res.text()
+                throw new Error(`Expected PDF but got ${contentType}: ${text.substring(0, 100)}`)
             }
 
-            const arrayBuffer = await response.arrayBuffer()
-            if (controller.signal.aborted) return
+            const arrayBuffer = await res.arrayBuffer()
 
             if (arrayBuffer.byteLength < 100) {
-                throw new Error('Response too small to be a valid PDF')
+                throw new Error(`Response too small (${arrayBuffer.byteLength} bytes) — likely not a valid PDF`)
             }
 
-            const data = new Uint8Array(arrayBuffer)
-            setPdfData(data)
+            setSource({ data: new Uint8Array(arrayBuffer) })
+            setError(null)
+            retryCountRef.current = 0
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
+            setError(msg)
+            setSource(null)
+        } finally {
             setLoading(false)
-            fetchedUrlRef.current = targetUrl
-
-            // Cache for offline use
-            if (fileId) {
-                try {
-                    const blob = new Blob([data], { type: 'application/pdf' })
-                    await saveOfflineFile(fileId, blob, fileId, 'application/pdf')
-                } catch { /* silent */ }
-            }
-        } catch (err) {
-            if (controller.signal.aborted) return
-
-            const message = err instanceof Error ? err.message : 'Unknown error'
-            logger.error('[PDFViewer] Fetch failed:', message, '| url:', targetUrl, '| attempt:', attempt)
-
-            if (attempt < MAX_RETRIES) {
-                // Retry with delay
-                setTimeout(() => {
-                    if (!controller.signal.aborted) {
-                        fetchPdf(targetUrl, attempt + 1)
-                    }
-                }, RETRY_DELAY * (attempt + 1))
-            } else {
-                setError(message)
-                setLoading(false)
-            }
         }
     }, [])
 
-    // Trigger fetch when URL changes
+    // Resolve source when URL changes
     useEffect(() => {
-        if (!url) return
-        if (fetchedUrlRef.current === url && pdfData) return
-
-        fetchedUrlRef.current = null
-        setPdfData(null)
-        setRetryCount(0)
-        fetchPdf(url)
-
-        return () => {
-            abortRef.current?.abort()
-        }
-    }, [url, fetchPdf, pdfData])
-
-    // Manual retry
-    const handleRetry = useCallback(() => {
-        fetchedUrlRef.current = null
-        setPdfData(null)
-        setRetryCount(r => r + 1)
-        fetchPdf(url)
+        // Cache-bust v2: forces CDN cache invalidation after fix for
+        // stale error responses being cached. Can be removed after 2026-02-20.
+        const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
+        fetchPdf(bustUrl)
     }, [url, fetchPdf])
+
+    const handleRetry = () => {
+        retryCountRef.current++
+        resolvedUrlRef.current = null
+        // Add cache-bust param to bypass any stale CDN-cached errors
+        const bustUrl = url.includes('?')
+            ? `${url}&_r=${retryCountRef.current}`
+            : `${url}?_r=${retryCountRef.current}`
+        fetchPdf(bustUrl, true)
+    }
 
     // Auto-Resize
     const containerRef = useRef<HTMLDivElement>(null)
@@ -215,31 +166,38 @@ export function PDFViewer({ url }: PDFViewerProps) {
                     )}
 
                     {error && !loading && (
-                        <div className="flex flex-col items-center text-center p-10 gap-3 mt-10">
-                            <p className="text-destructive font-semibold text-lg">Failed to load PDF</p>
-                            <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
+                        <div className="text-destructive p-10 text-center space-y-3">
+                            <p className="font-semibold">Failed to load PDF</p>
+                            <p className="text-xs text-muted-foreground max-w-xs mx-auto break-words">
+                                {error}
+                            </p>
                             <button
                                 onClick={handleRetry}
-                                className="flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium transition-colors"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
                             >
                                 <RefreshCw className="h-4 w-4" />
-                                Retry
+                                Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current})` : ''}
                             </button>
                         </div>
                     )}
 
-                    {pdfData && !error && (
+                    {source && !loading && (
                         <Document
-                            file={{ data: pdfData }}
+                            file={source}
                             onLoadSuccess={onDocumentLoadSuccess}
                             onLoadError={onDocumentLoadError}
-                            loading={null}
+                            loading={
+                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
+                                    <Loader2 className="animate-spin h-10 w-10" />
+                                    <p>Rendering…</p>
+                                </div>
+                            }
                             error={
-                                <div className="flex flex-col items-center text-center p-10 gap-3 mt-10">
-                                    <p className="text-destructive font-semibold">Invalid PDF data</p>
+                                <div className="text-destructive p-10 text-center space-y-2">
+                                    <p className="font-semibold">PDF render error</p>
                                     <button
                                         onClick={handleRetry}
-                                        className="flex items-center gap-2 mt-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium transition-colors"
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
                                     >
                                         <RefreshCw className="h-4 w-4" />
                                         Retry

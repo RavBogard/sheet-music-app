@@ -37,10 +37,15 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                     objectUrl = URL.createObjectURL(offlineFile.blob)
                     setSourceUrl(objectUrl)
                 } else if (active) {
-                    setSourceUrl(url)
+                    // Cache-bust v2: bypass stale CDN-cached errors
+                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
+                    setSourceUrl(bustUrl)
                 }
             } else {
-                if (active) setSourceUrl(url)
+                if (active) {
+                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
+                    setSourceUrl(bustUrl)
+                }
             }
         }
         loadOffline()
