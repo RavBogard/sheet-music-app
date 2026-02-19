@@ -47,6 +47,11 @@ try {
         //    fetch().abort() throws a DOMException(AbortError) that shows
         //    in the console. XHR.abort() cancels silently. Same behavior,
         //    no console noise from normal SDK operations.
+        //
+        // PERFORMANCE NOTE: Long polling adds ~200-500ms to cold start vs
+        // WebChannel streaming. If Firebase SDK 13+ fixes the AbortError
+        // issue, removing these flags would speed up first-load. Return
+        // visits are unaffected (persistence serves from cache instantly).
         try {
             db = initializeFirestore(app, {
                 experimentalForceLongPolling: true,
