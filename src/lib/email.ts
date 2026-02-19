@@ -87,8 +87,13 @@ export async function emailAllMembers(
     let failed = 0
     const errors: string[] = []
 
-    for (const member of members) {
+    for (let i = 0; i < members.length; i++) {
+        const member = members[i]
         if (!member.email) continue
+
+        // Resend free tier: 2 requests/second. Space them out.
+        if (i > 0) await new Promise(r => setTimeout(r, 600))
+
         const result = await sendSetlistEmail({
             to: member.email,
             recipientName: member.displayName,
