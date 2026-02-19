@@ -37,12 +37,23 @@ try {
     // Find latest version tag
     let latestTag;
     try {
+        // First try to unshallow if needed (Vercel does shallow clones)
+        try { run('git fetch --tags --depth=1 2>/dev/null || true'); } catch { /* ok */ }
         latestTag = run('git describe --tags --abbrev=0 --match "v*"');
     } catch {
-        latestTag = 'v0.0.0';
+        latestTag = null;
     }
 
-    const base = parseVersion(latestTag) || { major: 0, minor: 0, patch: 0 };
+    // If no tag found (shallow clone), read version from package.json as baseline
+    let base;
+    if (latestTag) {
+        base = parseVersion(latestTag) || { major: 0, minor: 0, patch: 0 };
+    } else {
+        const pkgPath = path.join(__dirname, '..', 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        base = parseVersion('v' + (pkg.version || '0.0.0')) || { major: 0, minor: 0, patch: 0 };
+        latestTag = 'v' + pkg.version;
+    }
 
     // Get commits since that tag
     let commitsSinceTag = [];
@@ -50,7 +61,11 @@ try {
         const log = run(`git log ${latestTag}..HEAD --oneline --no-merges`);
         if (log) commitsSinceTag = log.split('\n');
     } catch {
-        // No commits since tag, or tag doesn't exist in history
+        // Shallow clone can't compare to tag — try last 20 commits instead
+        try {
+            const log = run('git log --oneline --no-merges -20');
+            if (log) commitsSinceTag = log.split('\n');
+        } catch { /* no git log available */ }
     }
 
     // Compute version

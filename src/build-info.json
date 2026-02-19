@@ -1,20 +1,9 @@
 {
   "version": "4.2.0",
-  "commit": "3368602",
+  "commit": "953b1d6",
   "branch": "master",
   "buildDate": "2/19/2026",
   "changelog": [
-    "4.2.0 - feat: email delivery tracking with Resend webhooks",
-    "4.2.0 - feat: smart song suggestions in Add Songs modal",
-    "4.2.0 - feat: service-level notes for performers",
-    "4.2.0 - feat: Clone for Next Week + Save as Template",
-    "4.2.0 - feat: default band roster with one-tap load and star toggles",
-    "4.2.0 - feat: Rabbi Randy option + instant personalized greeting",
-    "4.2.0 - feat: editable email subject line in publish dialog",
-    "4.2.0 - feat: email opt-out per musician, custom publish note, editable name",
-    "4.2.0 - fix: throttle email sends to 600ms apart (Resend 2/sec limit)",
-    "4.2.0 - fix: surface actual Resend error messages for failed emails",
-    "4.2.0 - fix: section chips inside scroll area, current user always in picker",
-    "4.2.0 - perf: progressive dashboard loading, break auth→setlist waterfall"
+    "4.2.0 - feat: sound engineer monitor controls — matrix outputs, bus assignment, auto-access"
   ]
 }
