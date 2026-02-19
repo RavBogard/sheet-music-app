@@ -181,8 +181,10 @@ export function DesktopHeader() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />
-                                <DropdownMenuItem className="hover:bg-accent cursor-pointer" onClick={() => router.push("/settings")}>
-                                    <Settings className="mr-2 h-4 w-4" /> Settings
+                                <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
+                                    <Link href="/settings">
+                                        <Settings className="mr-2 h-4 w-4" /> Settings
+                                    </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>

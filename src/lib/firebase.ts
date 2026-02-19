@@ -33,29 +33,15 @@ try {
     }
 
     if (firebaseConfig.apiKey) {
-        // Use initializeFirestore instead of getFirestore to configure transport.
+        // Use WebChannel streaming (the default) for best performance.
+        // All Firestore listeners share a single multiplexed connection,
+        // giving ~200-500ms faster cold reads vs the old long-polling config.
         //
-        // Two settings work together to eliminate AbortError console noise:
-        //
-        // 1. experimentalForceLongPolling: Bypasses WebChannel streaming,
-        //    which had a retry loop bug in SDK 12.8.0 generating dozens
-        //    of AbortErrors per second.
-        //
-        // 2. useFetchStreams: false: Uses XMLHttpRequest instead of fetch()
-        //    for the long-polling transport. When the SDK adds/removes
-        //    listeners, it aborts the current in-flight poll request.
-        //    fetch().abort() throws a DOMException(AbortError) that shows
-        //    in the console. XHR.abort() cancels silently. Same behavior,
-        //    no console noise from normal SDK operations.
-        //
-        // PERFORMANCE NOTE: Long polling adds ~200-500ms to cold start vs
-        // WebChannel streaming. If Firebase SDK 13+ fixes the AbortError
-        // issue, removing these flags would speed up first-load. Return
-        // visits are unaffected (persistence serves from cache instantly).
+        // Historical note: Long polling was previously enabled to suppress
+        // AbortError console noise in Firebase SDK <12.5. That bug is fixed
+        // in v12.9+, so we use the default streaming transport now.
         try {
             db = initializeFirestore(app, {
-                experimentalForceLongPolling: true,
-                useFetchStreams: false,
                 localCache: persistentLocalCache({
                     tabManager: persistentMultipleTabManager(),
                 }),
@@ -64,10 +50,7 @@ try {
             // Persistence may fail in private browsing or restricted environments.
             // Fall back to in-memory cache (no offline persistence).
             try {
-                db = initializeFirestore(app, {
-                    experimentalForceLongPolling: true,
-                    useFetchStreams: false,
-                } as FirestoreSettings);
+                db = initializeFirestore(app, {} as FirestoreSettings);
             } catch {
                 // Already initialized (e.g. hot reload)
                 db = getFirestore(app);

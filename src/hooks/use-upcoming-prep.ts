@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, setDoc, Timestamp, serverTimestamp } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocFromCache, setDoc, Timestamp, serverTimestamp } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 
@@ -46,11 +46,12 @@ export function useUpcomingPrep() {
         return () => clearInterval(iv)
     }, [])
 
-    // Track last visit time
+    // Track last visit time — cache-first for instant load
     useEffect(() => {
         if (!user) return
         const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
-        getDoc(prefRef).then(snap => {
+        // Read from cache first, then update in background
+        getDocFromCache(prefRef).catch(() => getDoc(prefRef)).then(snap => {
             const ts = snap.data()?.lastVisitedAt
             if (ts?.toDate) setLastVisitedAt(ts.toDate())
             else if (ts) setLastVisitedAt(new Date(ts))
@@ -82,7 +83,9 @@ export function useUpcomingPrep() {
         }, () => {/* silent */})
     }, [user, isMember])
 
-    // Load user's song preferences
+    // Load user's song preferences — cache-first to avoid N network round-trips.
+    // With Firestore persistence enabled, returning users get instant results from
+    // IndexedDB cache. Only cache misses trigger network reads.
     useEffect(() => {
         if (!user || setlists.length === 0) return
 
@@ -98,7 +101,13 @@ export function useUpcomingPrep() {
         const loads = Array.from(fileIds).map(async (fileId) => {
             try {
                 const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
-                const snap = await getDoc(ref)
+                // Try cache first (instant, no network) — fall back to network on miss
+                let snap
+                try {
+                    snap = await getDocFromCache(ref)
+                } catch {
+                    snap = await getDoc(ref)
+                }
                 if (snap.exists()) prefs[fileId] = snap.data() as SongPref
             } catch {/* silent */}
         })

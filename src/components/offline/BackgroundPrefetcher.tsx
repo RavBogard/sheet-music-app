@@ -25,12 +25,27 @@ export function BackgroundPrefetcher() {
         if (!user || !isMember || hasRun.current) return
         hasRun.current = true
 
-        // Delay to avoid competing with initial page load
+        // Delay significantly to avoid competing with initial page load.
+        // On slow networks, skip entirely (user is likely on limited data).
         const timer = setTimeout(() => {
-            prefetchUpcomingSetlists()
-                .then(() => evictStaleFiles(60)) // Evict files not accessed in 60 days
-                .catch(() => {/* silent */})
-        }, 5000)
+            // Skip on slow networks or data-saver mode
+            const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+            if (conn && (conn.saveData || conn.effectiveType === '2g')) return
+
+            const startPrefetch = () => {
+                prefetchUpcomingSetlists()
+                    .then(() => evictStaleFiles(60))
+                    .catch(() => {/* silent */})
+            }
+
+            // Use requestIdleCallback when available so prefetching
+            // only runs when the browser is idle (no user interaction)
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(startPrefetch, { timeout: 30000 })
+            } else {
+                startPrefetch()
+            }
+        }, 15000)
 
         return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object

@@ -8,7 +8,10 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   // preventing critical fixes from reaching users.
   workboxOptions: {
     disableDevLogs: true,
-    skipWaiting: true,
+    // skipWaiting removed: new service workers wait until user accepts
+    // the update, preventing mid-performance page reloads. The
+    // UpdatePrompt component shows a non-intrusive toast when a new
+    // version is available.
     clientsClaim: true,
   },
 });

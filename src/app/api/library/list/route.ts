@@ -95,9 +95,11 @@ export async function GET(req: NextRequest) {
 
         const response = NextResponse.json(body)
 
-        // Cache "all" responses for 5 minutes (library changes only via admin sync)
+        // Cache "all" responses at the CDN edge for 5 min, serve stale for 1hr while revalidating.
+        // The library is the same for all authenticated users, so CDN caching is safe.
+        // Browser cache (max-age) is shorter to pick up changes on manual refresh.
         if (all) {
-            response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60')
+            response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=3600')
         }
 
         return response

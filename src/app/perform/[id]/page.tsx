@@ -47,18 +47,20 @@ export default function PerformPage() {
         }
     }, [authUser?.uid, fileId, loadAnnotations])
 
-    // Track chart view for preparation progress
+    // Track chart view for preparation progress.
+    // Debounced: only writes after 3 seconds of viewing to avoid
+    // wasting Firestore writes on accidental taps or quick scrolls.
     useEffect(() => {
-        if (authUser?.uid && fileId) {
-            (async () => {
-                try {
-                    const { doc, setDoc, serverTimestamp } = await import("firebase/firestore")
-                    const { db: clientDb } = await import("@/lib/firebase")
-                    const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
-                    await setDoc(ref, { lastViewedAt: serverTimestamp() }, { merge: true })
-                } catch { /* silent — non-critical tracking */ }
-            })()
-        }
+        if (!authUser?.uid || !fileId) return
+        const timer = setTimeout(async () => {
+            try {
+                const { doc, setDoc, serverTimestamp } = await import("firebase/firestore")
+                const { db: clientDb } = await import("@/lib/firebase")
+                const ref = doc(clientDb, 'users', authUser.uid, 'songPreferences', fileId)
+                await setDoc(ref, { lastViewedAt: serverTimestamp() }, { merge: true })
+            } catch { /* silent — non-critical tracking */ }
+        }, 3000)
+        return () => clearTimeout(timer)
     }, [authUser?.uid, fileId])
 
     // Home navigates back to origin (setlist editor, library, or home)

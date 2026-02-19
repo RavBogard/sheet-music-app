@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { doc, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useMusicStore } from "@/lib/store"
@@ -169,8 +170,8 @@ export default function SetlistPerformPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen gap-4">
                 <p className="text-zinc-400">{error}</p>
-                <Button variant="outline" onClick={() => router.push("/setlists")}>
-                    Back to Setlists
+                <Button asChild variant="outline">
+                    <Link href="/setlists">Back to Setlists</Link>
                 </Button>
             </div>
         )
@@ -180,12 +181,12 @@ export default function SetlistPerformPage() {
         <div className="flex flex-col h-[100dvh]">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
-                <button
-                    onClick={() => router.push("/setlists")}
+                <Link
+                    href="/setlists"
                     className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
                 >
                     <ArrowLeft className="h-5 w-5 text-zinc-400" />
-                </button>
+                </Link>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-lg font-bold truncate">{name}</h1>
                     <p className="text-xs text-zinc-500">
@@ -193,13 +194,13 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` · ${totalCount} items` : ""}
                     </p>
                 </div>
-                <button
-                    onClick={() => router.push(`/setlists/${setlistId}`)}
+                <Link
+                    href={`/setlists/${setlistId}`}
                     className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
                     title="Edit setlist"
                 >
                     <Pencil className="h-4 w-4 text-zinc-500" />
-                </button>
+                </Link>
             </div>
 
             {/* Track list */}
@@ -249,11 +250,13 @@ export default function SetlistPerformPage() {
                             <Music className="h-12 w-12 mb-3 opacity-30" />
                             <p className="text-lg font-medium">No tracks yet</p>
                             <Button
+                                asChild
                                 variant="outline"
                                 className="mt-4"
-                                onClick={() => router.push(`/setlists/${setlistId}`)}
                             >
-                                <Pencil className="h-4 w-4 mr-2" /> Add tracks
+                                <Link href={`/setlists/${setlistId}`}>
+                                    <Pencil className="h-4 w-4 mr-2" /> Add tracks
+                                </Link>
                             </Button>
                         </div>
                     ) : (

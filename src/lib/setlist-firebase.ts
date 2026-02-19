@@ -8,6 +8,7 @@ import {
     onSnapshot,
     query,
     orderBy,
+    limit,
     serverTimestamp,
     Timestamp,
     where,
@@ -57,7 +58,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 collection(db, COLLECTION_PATH),
                 where("ownerId", "==", userId),
                 // where("isPublic", "==", false), // Removed to include ALL my setlists (public or private)
-                orderBy("date", "desc")
+                orderBy("date", "desc"),
+                limit(50)
             );
 
             return onSnapshot(q, {
@@ -119,7 +121,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("isPublic", "==", true),
-                orderBy("date", "desc")
+                orderBy("date", "desc"),
+                limit(50)
             );
 
             return onSnapshot(q, {

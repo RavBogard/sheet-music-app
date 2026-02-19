@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { FileText, Search, Loader2 } from "lucide-react"
 
 interface ContentMatch {
@@ -27,8 +27,6 @@ export function ContentSearchResults({
     searching: boolean
     query: string
 }) {
-    const router = useRouter()
-
     if (!query || query.length < 2) return null
 
     if (searching) {
@@ -56,9 +54,9 @@ export function ContentSearchResults({
             </div>
             <div className="divide-y divide-border">
                 {results.slice(0, 10).map(result => (
-                    <button
+                    <Link
                         key={result.fileId}
-                        onClick={() => router.push(`/perform/${result.fileId}`)}
+                        href={`/perform/${result.fileId}`}
                         className="w-full flex items-start gap-3 px-4 py-3 hover:bg-accent/50 transition-colors text-left"
                     >
                         <FileText className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -75,7 +73,7 @@ export function ContentSearchResults({
                                 </div>
                             ))}
                         </div>
-                    </button>
+                    </Link>
                 ))}
             </div>
         </div>

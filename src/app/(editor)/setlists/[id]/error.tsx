@@ -1,7 +1,7 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
 
 export default function SetlistEditorError({
     _error,
@@ -10,8 +10,6 @@ export default function SetlistEditorError({
     _error: Error & { digest?: string }
     reset: () => void
 }) {
-    const router = useRouter()
-
     return (
         <div className="h-[100dvh] flex flex-col items-center justify-center gap-4 px-6 text-center">
             <div className="text-4xl">😬</div>
@@ -20,8 +18,8 @@ export default function SetlistEditorError({
                 The setlist editor ran into a problem. Your data has been auto-saved — nothing is lost.
             </p>
             <div className="flex gap-3">
-                <Button variant="outline" onClick={() => router.push("/setlists")}>
-                    Back to Dashboard
+                <Button asChild variant="outline">
+                    <Link href="/setlists">Back to Dashboard</Link>
                 </Button>
                 <Button onClick={reset}>
                     Try Again

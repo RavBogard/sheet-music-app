@@ -2,6 +2,7 @@
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
@@ -27,11 +28,12 @@ import { logger } from "@/lib/logger"
 
 interface SetlistDashboardProps {
     onBack: () => void
-    onSelect: (setlist: Setlist) => void
+    onSelect?: (setlist: Setlist) => void
     onCreateNew: () => void
 }
 
 export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
+    const router = useRouter()
     const { user, signIn, isMember } = useAuth()
     const congregation = useCongregation()
     const { downloadSetlist, isDownloading } = useOffline()
@@ -49,7 +51,11 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     // Wrap onSelect to show immediate feedback before navigation
     const handleSelect = (setlist: Setlist) => {
         setNavigatingTo(setlist.id)
-        onSelect(setlist)
+        if (onSelect) {
+            onSelect(setlist)
+        } else {
+            router.push(`/perform/setlist/${setlist.id}`)
+        }
     }
 
     // Dialog state
@@ -170,7 +176,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                 eventDate: date.toISOString(),
                 templateType: type || undefined
             })
-            onSelect({
+            handleSelect({
                 id, name, tracks: [], trackCount: 0,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
                 eventDate: date.toISOString(), ownerId: user.uid, isPublic: false
@@ -211,7 +217,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
             const total = tracks.filter(t => t.type === 'song').length
             toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
 
-            onSelect({
+            handleSelect({
                 id, name, tracks, trackCount: tracks.length,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
                 eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: false,

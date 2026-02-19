@@ -1,8 +1,6 @@
 import { Footer } from "@/components/Footer"
 import { AppNavigation } from "@/components/nav/AppNavigation"
-import { ChatPanel } from "@/components/setlist/ChatPanel"
-import { OfflineIndicator } from "@/components/offline/OfflineIndicator"
-import { BackgroundPrefetcher } from "@/components/offline/BackgroundPrefetcher"
+import { LazyClientComponents } from "@/components/layout/LazyClientComponents"
 
 export default function MainLayout({
     children,
@@ -23,9 +21,7 @@ export default function MainLayout({
             <div className="hidden md:block">
                 <Footer />
             </div>
-            <ChatPanel />
-            <OfflineIndicator />
-            <BackgroundPrefetcher />
+            <LazyClientComponents />
         </div>
     )
 }

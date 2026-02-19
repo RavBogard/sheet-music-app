@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
@@ -9,13 +10,14 @@ import { cn } from "@/lib/utils"
 
 /**
  * Upcoming timeline with day groupings and inline progress bars.
+ * Uses <Link> for automatic prefetching of setlist pages.
  */
 export function UpcomingTimeline({
     items,
     onSelect,
 }: {
     items: UpcomingSetlistWithPrep[]
-    onSelect: (s: Setlist) => void
+    onSelect?: (s: Setlist) => void
 }) {
     // Group by day
     const grouped = useMemo(() => {
@@ -76,8 +78,9 @@ export function UpcomingTimeline({
 
                                 return (
                                     <div key={s.id} className="bg-card border border-border rounded-xl overflow-hidden">
-                                        <button
-                                            onClick={() => onSelect(s)}
+                                        <Link
+                                            href={`/perform/setlist/${s.id}`}
+                                            onClick={onSelect ? () => onSelect(s) : undefined}
                                             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-accent/50 transition-colors text-left"
                                         >
                                             {/* Status dot */}
@@ -118,12 +121,12 @@ export function UpcomingTimeline({
 
                                             {/* Expand toggle */}
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
                                                 className="p-1 rounded-lg hover:bg-accent text-muted-foreground/50 shrink-0"
                                             >
                                                 <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", isExp && "rotate-90")} />
                                             </button>
-                                        </button>
+                                        </Link>
 
                                         {/* Expanded track list */}
                                         {isExp && (

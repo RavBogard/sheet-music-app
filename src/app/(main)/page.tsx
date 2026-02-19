@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
-import { useLibraryStore } from "@/lib/library-store"
 import { getContextualGreeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils"
 export default function DashboardPage() {
     const router = useRouter()
     const { user, profile, cachedUser, signIn, isMember, isBandLeader, loading: authLoading } = useAuth()
-    const { loadLibrary } = useLibraryStore()
     const congregation = useCongregation()
     const { open: openChat } = useChatStore()
     const { setQueue } = useMusicStore()
@@ -130,7 +129,6 @@ export default function DashboardPage() {
         return () => unsub()
     }, [setlistService, user?.uid, authLoading, filterUpcoming])
 
-    useEffect(() => { loadLibrary() }, [loadLibrary])
 
     // Content is ready once public setlists have loaded.
     // Personal setlists augment later — no need to wait.
@@ -267,9 +265,6 @@ export default function DashboardPage() {
                                 isMember={isMember}
                                 isBandLeader={isBandLeader}
                                 isLoggedIn={!!user}
-                                onLibrary={() => router.push('/library')}
-                                onSetlists={() => router.push('/setlists')}
-                                onNewSetlist={() => router.push('/setlists/new')}
                                 onAI={() => openChat()}
                                 className={stagger(1)}
                                 hasAI={congregation.features.ai}
@@ -284,7 +279,6 @@ export default function DashboardPage() {
                             )}>
                                 <UpcomingTimeline
                                     items={timelineItems}
-                                    onSelect={(s) => navigateToSetlist(s)}
                                 />
                             </div>
                         )}
@@ -309,9 +303,11 @@ export default function DashboardPage() {
                                 </p>
                             </div>
                         </div>
-                        <Button onClick={() => router.push("/settings")} variant="outline" className="w-full gap-2">
-                            <Music2 className="w-4 h-4" />
-                            Set Up My Instrument
+                        <Button asChild variant="outline" className="w-full gap-2">
+                            <Link href="/settings">
+                                <Music2 className="w-4 h-4" />
+                                Set Up My Instrument
+                            </Link>
                         </Button>
                     </div>
                 )}
@@ -327,9 +323,11 @@ export default function DashboardPage() {
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <Button onClick={() => router.push("/settings")} className="flex-1 gap-2">
-                                <Music2 className="w-4 h-4" />
-                                Set Up Instrument
+                            <Button asChild className="flex-1 gap-2">
+                                <Link href="/settings">
+                                    <Music2 className="w-4 h-4" />
+                                    Set Up Instrument
+                                </Link>
                             </Button>
                             <Button
                                 variant="ghost"
@@ -353,7 +351,6 @@ export default function DashboardPage() {
                     <div className={cn("md:hidden", stagger(3))}>
                         <UpcomingTimeline
                             items={timelineItems}
-                            onSelect={(s) => navigateToSetlist(s)}
                         />
                     </div>
                 )}
@@ -368,7 +365,6 @@ export default function DashboardPage() {
                             <CompactSetlistRow
                                 key={s.id}
                                 setlist={s}
-                                onClick={() => navigateToSetlist(s)}
                             />
                         ))}
                     </div>
@@ -384,7 +380,6 @@ export default function DashboardPage() {
                             <CompactSetlistRow
                                 key={s.id}
                                 setlist={s}
-                                onClick={() => navigateToSetlist(s)}
                             />
                         ))}
                     </div>
