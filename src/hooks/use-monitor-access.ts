@@ -12,7 +12,6 @@ import { MonitorConfig } from "@/types/monitor"
  * Access granted if ANY of:
  *   - User is admin
  *   - User has soundEngineer flag
- *   - User is in authorizedUsers list
  *   - User has a bus assigned to them
  *
  * Musicians don't need sound engineer access to control their own bus.
@@ -26,13 +25,11 @@ export function useMonitorAccess(): {
     loading: boolean
 } {
     const { user, isAdmin, isSoundEngineer } = useAuth()
-    const [inAuthorizedList, setInAuthorizedList] = useState(false)
     const [hasBusAssigned, setHasBusAssigned] = useState(false)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if (!user) {
-            setInAuthorizedList(false)
             setHasBusAssigned(false)
             setLoading(false)
             return
@@ -43,9 +40,6 @@ export function useMonitorAccess(): {
             (snap) => {
                 if (snap.exists()) {
                     const data = snap.data() as MonitorConfig
-                    const authorized: string[] = data.authorizedUsers || []
-                    setInAuthorizedList(authorized.includes(user.uid))
-
                     // Check if user has a bus assigned
                     const assignments = data.busAssignments || {}
                     const assigned = Object.values(assignments).some(
@@ -53,13 +47,11 @@ export function useMonitorAccess(): {
                     )
                     setHasBusAssigned(assigned)
                 } else {
-                    setInAuthorizedList(false)
                     setHasBusAssigned(false)
                 }
                 setLoading(false)
             },
             () => {
-                setInAuthorizedList(false)
                 setHasBusAssigned(false)
                 setLoading(false)
             }
@@ -69,7 +61,7 @@ export function useMonitorAccess(): {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid])
 
-    const hasAccess = isAdmin || isSoundEngineer || inAuthorizedList || hasBusAssigned
+    const hasAccess = isAdmin || isSoundEngineer || hasBusAssigned
 
     return { hasAccess, isAdmin, isSoundEngineer, hasBusAssigned, loading }
 }

@@ -8,7 +8,6 @@ export interface MonitorConfig {
     x32Port: number
     monitorBuses: number[]
     busAssignments: Record<string, BusAssignment | null>
-    authorizedUsers: string[]
     bridge?: BridgeStatus
 }
 

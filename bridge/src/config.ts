@@ -15,7 +15,6 @@ const DEFAULT_CONFIG: MonitorConfig = {
     x32Port: 10023,
     monitorBuses: [1, 2, 3, 4],
     busAssignments: {},
-    authorizedUsers: [],
 }
 
 export class ConfigManager {
@@ -55,7 +54,6 @@ export class ConfigManager {
         console.log("[Config] Loaded:", JSON.stringify({
             x32: `${this.config.x32Address}:${this.config.x32Port}`,
             buses: this.config.monitorBuses,
-            authorized: this.config.authorizedUsers.length,
         }))
         return this.config
     }
@@ -66,8 +64,7 @@ export class ConfigManager {
                 if (snap.exists) {
                     const data = snap.data() as Partial<MonitorConfig>
                     this.config = { ...DEFAULT_CONFIG, ...data }
-                    console.log("[Config] Updated live — buses:", this.config.monitorBuses,
-                        "authorized:", this.config.authorizedUsers.length)
+                    console.log("[Config] Updated live — buses:", this.config.monitorBuses)
                     this.listeners.forEach(fn => fn(this.config))
                 }
             }, (err) => {
@@ -106,11 +103,9 @@ export class ConfigManager {
 
     /**
      * Check if a user is authorized for monitor access.
-     * Authorized if ANY of: in authorizedUsers list, has soundEngineer claim,
-     * or has a bus assigned to them.
+     * Authorized if: has soundEngineer claim, or has a bus assigned.
      */
     isAuthorized(uid: string, soundEngineer?: boolean): boolean {
-        if (this.config.authorizedUsers.includes(uid)) return true
         if (soundEngineer) return true
         if (this.getUserBus(uid) !== null) return true
         return false

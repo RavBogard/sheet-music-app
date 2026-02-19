@@ -120,14 +120,13 @@ service cloud.firestore {
     }
 
     // MONITOR CONFIGURATION
-    // Read: Any signed-in user (iPad checks authorization client-side + bridge verifies)
-    // Write: Admins always; authorized users can update (for bus self-assignment)
+    // Read: Any signed-in user (bridge verifies auth via custom claims)
+    // Write: Admins or sound engineers
     // Bridge heartbeat writes server-side via admin SDK (bypasses rules)
     match /config/monitor {
       allow read: if isSignedIn();
       allow write: if isAdmin()
-                   || isSoundEngineer()
-                   || (isSignedIn() && request.auth.uid in resource.data.authorizedUsers);
+                   || isSoundEngineer();
     }
 
     // LIBRARY INDEX — server-only (admin SDK)

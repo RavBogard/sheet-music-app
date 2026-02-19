@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import {
-    Loader2, Radio, Users, CheckCircle,
+    Loader2, Radio, CheckCircle,
     Radar, Save, Settings2, Music2, Download, Copy, KeyRound,
 } from "lucide-react"
 
@@ -23,7 +23,6 @@ const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
     x32Port: 10023,
     monitorBuses: [1, 2, 3, 4],
     busAssignments: {},
-    authorizedUsers: [],
 }
 
 export function SoundSystemSection() {
@@ -37,7 +36,6 @@ export function SoundSystemSection() {
     const [x32Port, setX32Port] = useState("10023")
     const [monitorBusesStr, setMonitorBusesStr] = useState("")
     const [busAssignments, setBusAssignments] = useState<Record<string, BusAssignment | null>>({})
-    const [authorizedUsers, setAuthorizedUsers] = useState<string[]>([])
     const [scanning, setScanning] = useState(false)
     const [scanResult, setScanResult] = useState<string | null>(null)
     const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
@@ -62,7 +60,6 @@ export function SoundSystemSection() {
                 setX32Port(String(data.x32Port))
                 setMonitorBusesStr(data.monitorBuses.join(", "))
                 setBusAssignments(data.busAssignments || {})
-                setAuthorizedUsers(data.authorizedUsers || [])
 
                 const raw = configDoc.data()
                 const bridge = raw?.bridge
@@ -143,7 +140,6 @@ export function SoundSystemSection() {
             x32Port: parseInt(x32Port) || 10023,
             monitorBuses: monitorBusesStr.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 16),
             busAssignments,
-            authorizedUsers,
         }
         try {
             const ref = doc(db, "config", "monitor")
@@ -157,11 +153,7 @@ export function SoundSystemSection() {
             logger.error("Failed to save:", err)
             toast.error("Failed to save monitor config")
         } finally { setMonitorSaving(false) }
-    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr, busAssignments, authorizedUsers])
-
-    const toggleAuthorized = (uid: string) => {
-        setAuthorizedUsers(prev => prev.includes(uid) ? prev.filter(u => u !== uid) : [...prev, uid])
-    }
+    }, [bridgeUrl, x32Address, x32Port, monitorBusesStr, busAssignments])
 
     const assignBus = (busIdx: number, userId: string | null) => {
         setBusAssignments(prev => {
@@ -201,9 +193,6 @@ export function SoundSystemSection() {
                     scanResult={scanResult}
                     monitorBusesStr={monitorBusesStr}
                     setMonitorBusesStr={setMonitorBusesStr}
-                    musicians={musicians}
-                    authorizedUsers={authorizedUsers}
-                    toggleAuthorized={toggleAuthorized}
                     onComplete={() => { handleMonitorSave(); setMonitorConfigExists(true) }}
                 />
             ) : (
@@ -330,28 +319,6 @@ export function SoundSystemSection() {
                                         </div>
                                     )
                                 })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-                        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-                            <Users className="w-4 h-4 text-muted-foreground" />
-                            Monitor Access
-                        </h3>
-                        <p className="text-xs text-muted-foreground">Only checked users see the Monitor tab.</p>
-                        {musicians.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic">No musician profiles yet. Musicians set these up in Settings.</p>
-                        ) : (
-                            <div className="space-y-1">
-                                {musicians.map(m => (
-                                    <label key={m.uid} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted cursor-pointer">
-                                        <input type="checkbox" checked={authorizedUsers.includes(m.uid)} onChange={() => toggleAuthorized(m.uid)}
-                                            className="w-4 h-4 rounded border-border accent-violet-600" />
-                                        <span className="text-sm font-medium">{m.displayName}</span>
-                                        {m.profile.instrument && <span className="text-xs text-muted-foreground">({m.profile.instrument})</span>}
-                                    </label>
-                                ))}
                             </div>
                         )}
                     </div>

@@ -12,7 +12,6 @@ export interface MonitorConfig {
     x32Port: number              // 10023 (default)
     monitorBuses: number[]       // [1, 2, 3, 4] — which buses are monitor sends
     busAssignments: Record<string, BusAssignment | null>  // "1" → { userId, userName }
-    authorizedUsers: string[]    // UIDs allowed to see Monitor tab
 }
 
 export interface BusAssignment {

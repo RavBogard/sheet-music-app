@@ -1,0 +1,41 @@
+name: Build Bridge Installer
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Manual trigger for testing
+
+jobs:
+  build-bridge:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: bridge
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: bridge
+        run: npx tsc
+
+      - name: Package as exe
+        working-directory: bridge
+        run: npx @yao-pkg/pkg dist/launcher.js --target node20-win-x64 --output dist/CentralReform-Bridge.exe --compress GZip
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bridge/dist/CentralReform-Bridge.exe
+
+      - name: Upload as artifact (manual builds)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CentralReform-Bridge
+          path: bridge/dist/CentralReform-Bridge.exe

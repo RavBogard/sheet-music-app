@@ -91,17 +91,9 @@ export class BridgeWSServer {
 
         // Listen for config changes and update client assignments
         this.config.onChange((newConfig) => {
-            // Re-evaluate bus assignments and authorization
+            // Re-evaluate bus assignments
             for (const [ws, client] of this.clients) {
                 const newBus = this.config.getUserBus(client.uid)
-
-                // Check if still authorized (sound engineers always stay)
-                if (!client.isSoundEngineer && !this.config.isAuthorized(client.uid, false)) {
-                    this.sendTo(ws, { type: "error", message: "Access revoked" })
-                    ws.close()
-                    this.clients.delete(ws)
-                    continue
-                }
 
                 if (newBus !== client.busIndex) {
                     client.busIndex = newBus

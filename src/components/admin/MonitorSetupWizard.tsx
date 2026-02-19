@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Radar, CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio, Users } from "lucide-react"
+import { Loader2, Radar, CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio } from "lucide-react"
 
 interface WizardProps {
     bridgeUrl: string
@@ -15,9 +15,6 @@ interface WizardProps {
     scanResult: string | null
     monitorBusesStr: string
     setMonitorBusesStr: (v: string) => void
-    musicians: { uid: string; displayName: string; profile: { instrument?: string } }[]
-    authorizedUsers: string[]
-    toggleAuthorized: (uid: string) => void
     onComplete: () => void
 }
 
@@ -25,7 +22,6 @@ const STEPS = [
     { label: "Bridge", icon: Wifi, description: "Connect to the bridge server" },
     { label: "X32", icon: Radio, description: "Find your Behringer X32" },
     { label: "Buses", icon: Radio, description: "Choose monitor buses" },
-    { label: "Access", icon: Users, description: "Who can use the monitor?" },
 ]
 
 export function MonitorSetupWizard({
@@ -33,7 +29,6 @@ export function MonitorSetupWizard({
     x32Address, setX32Address,
     onScan, scanning, scanResult,
     monitorBusesStr, setMonitorBusesStr,
-    musicians, authorizedUsers, toggleAuthorized,
     onComplete,
 }: WizardProps) {
     const [step, setStep] = useState(0)
@@ -42,7 +37,6 @@ export function MonitorSetupWizard({
         () => bridgeUrl.trim().length > 5,           // Step 0: bridge URL
         () => x32Address.trim().length > 0,           // Step 1: X32 found
         () => monitorBusesStr.trim().length > 0,      // Step 2: buses set
-        () => true,                                    // Step 3: access (optional)
     ]
 
     return (
@@ -120,33 +114,6 @@ export function MonitorSetupWizard({
                             onChange={e => setMonitorBusesStr(e.target.value)}
                             placeholder="1, 2, 3, 4"
                         />
-                    </div>
-                )}
-
-                {step === 3 && (
-                    <div className="space-y-3">
-                        <p className="text-xs text-muted-foreground">
-                            Select which musicians should see the Monitor tab.
-                        </p>
-                        {musicians.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic py-2">
-                                No musician profiles yet. Musicians can set these up later in Settings.
-                            </p>
-                        ) : (
-                            <div className="space-y-1 max-h-48 overflow-y-auto">
-                                {musicians.map(m => (
-                                    <label key={m.uid} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={authorizedUsers.includes(m.uid)}
-                                            onChange={() => toggleAuthorized(m.uid)}
-                                            className="w-4 h-4 rounded accent-violet-600"
-                                        />
-                                        <span className="text-sm">{m.displayName}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
