@@ -60,8 +60,11 @@ export default function DashboardPage() {
     }, [user?.uid, user?.displayName])
 
     // Fetch upcoming setlists (personal or public)
+    // Wait for auth to settle before subscribing — avoids the race where anonymous
+    // subscriptions resolve fast (from Firestore cache), then auth finishes and the
+    // effect re-runs, causing a brief flash of stale empty state.
     useEffect(() => {
-        if (!setlistService) return
+        if (!setlistService || authLoading) return
 
         // Reset loaded flags when service changes (e.g., user logs in/out)
         setPersonalLoaded(false)
@@ -110,7 +113,7 @@ export default function DashboardPage() {
         })
 
         return () => { unsubPersonal?.(); unsubPublic?.() }
-    }, [setlistService, user?.uid])
+    }, [setlistService, user?.uid, authLoading])
 
     useEffect(() => { loadLibrary() }, [loadLibrary])
 
@@ -245,15 +248,11 @@ export default function DashboardPage() {
                                 />
                             )}
 
-                            {/* No upcoming → show recent or empty (only after data loaded) */}
-                            {!setlistsLoading && !tonightSetlist && (
-                                <div className="text-center py-4">
-                                    {recentPublicSetlists.length > 0 ? (
-                                        <p className="text-sm text-muted-foreground">No upcoming services this week</p>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">No setlists yet</p>
-                                    )}
-                                </div>
+                            {/* No upcoming setlists — show subtle context, not alarming "No setlists yet" */}
+                            {!setlistsLoading && !tonightSetlist && recentPublicSetlists.length > 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-2">
+                                    No upcoming services scheduled
+                                </p>
                             )}
 
                             {/* Command Row */}
@@ -288,8 +287,13 @@ export default function DashboardPage() {
 
             {/* ══════════════════════════════════════════
                 BELOW HERO — content area
+                Hidden during initial load to avoid layout shifts;
+                fades in once setlist data is ready.
                ══════════════════════════════════════════ */}
-            <div className="flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full">
+            <div className={cn(
+                "flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full transition-opacity duration-300",
+                setlistsLoading ? "opacity-0" : "opacity-100"
+            )}>
 
                 {/* ── Onboarding: Pending User ── */}
                 {user && profile?.role === "pending" && (

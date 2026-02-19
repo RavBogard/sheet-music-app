@@ -71,6 +71,14 @@ export async function markAsRead(uid: string, notificationId: string): Promise<v
  * only succeeds for the caller's own notifications regardless of uid param.
  */
 export async function markAllAsRead(uid: string): Promise<void> {
+    // Defense-in-depth: ensure uid matches the authenticated user
+    const { getAuth } = await import('firebase/auth')
+    const currentUid = getAuth().currentUser?.uid
+    if (currentUid && uid !== currentUid) {
+        logger.warn('markAllAsRead called with mismatched uid:', { uid, currentUid })
+        return
+    }
+
     const q = query(
         collection(db, 'users', uid, 'notifications'),
         where('read', '==', false)

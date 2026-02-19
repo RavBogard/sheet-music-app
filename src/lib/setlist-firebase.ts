@@ -48,7 +48,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 throw e;
             }
         },
-        subscribeToPersonalSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
+        subscribeToPersonalSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("ownerId", "==", userId),
@@ -62,7 +62,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                         id: doc.id,
                         ...doc.data()
                     })) as Setlist[];
-                    callback(setlists);
+                    callback(setlists, snapshot.metadata.fromCache);
                 },
                 error: (error) => {
                     logger.error("Error subscribing to personal setlists:", error);
@@ -111,7 +111,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // ===== PUBLIC SETLISTS =====
 
         // Subscribe to ALL public setlists
-        subscribeToPublicSetlists(callback: (setlists: Setlist[]) => void, onError?: (error: Error) => void) {
+        subscribeToPublicSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
             const q = query(
                 collection(db, COLLECTION_PATH),
                 where("isPublic", "==", true),
@@ -124,7 +124,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                         id: doc.id,
                         ...doc.data()
                     })) as Setlist[];
-                    callback(setlists);
+                    callback(setlists, snapshot.metadata.fromCache);
                 },
                 error: (error) => {
                     logger.error("Error subscribing to public setlists:", error)
