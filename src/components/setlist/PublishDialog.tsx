@@ -204,11 +204,16 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                     </label>
                                     <textarea
                                         value={note}
-                                        onChange={(e) => setNote(e.target.value)}
+                                        onChange={(e) => setNote(e.target.value.slice(0, 2000))}
                                         placeholder="e.g. Please review Lecha Dodi — new arrangement this week"
-                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        rows={2}
+                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        rows={4}
                                     />
+                                    {note.length > 0 && (
+                                        <p className={`text-[10px] text-right ${note.length > 1800 ? 'text-amber-500' : 'text-muted-foreground/40'}`}>
+                                            {note.length}/2000
+                                        </p>
+                                    )}
                                 </div>
                             )}
 

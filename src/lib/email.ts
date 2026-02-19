@@ -153,7 +153,7 @@ export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
         ${escapeHtml(params.publisherName)} just published a setlist. Here's what's on the program:
       </p>
       ${params.note ? `<div style="margin:0 0 20px;padding:12px 16px;background:#f0f7ff;border-left:3px solid #3b82f6;border-radius:4px;">
-        <p style="margin:0;color:#1e40af;font-size:14px;white-space:pre-wrap;">${escapeHtml(params.note)}</p>
+        <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.5;">${escapeHtml(params.note).replace(/\n/g, '<br>')}</p>
       </div>` : ''}
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #eee;border-radius:6px;overflow:hidden;">
         <tr><td style="background:#fafafa;padding:8px 12px;font-weight:600;font-size:12px;text-transform:uppercase;color:#888;letter-spacing:0.5px;">Songs</td></tr>

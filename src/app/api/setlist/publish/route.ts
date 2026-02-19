@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         const publisherDoc = await db.collection('users').doc(auth.uid).get()
         const publisherName = publisherDoc.data()?.displayName || auth.email?.split('@')[0] || 'A band member'
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
-        const publishNote = typeof note === 'string' ? note.trim().slice(0, 500) : undefined
+        const publishNote = typeof note === 'string' ? note.trim().slice(0, 2000) : undefined
         const publishSubject = typeof subject === 'string' ? subject.trim().slice(0, 200) : undefined
 
         // Combine publisher's custom note with service-level notes
