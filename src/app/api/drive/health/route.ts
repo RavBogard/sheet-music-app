@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 /**
  * GET /api/drive/health
@@ -10,6 +12,9 @@ export const dynamic = 'force-dynamic'
  * Helps debug "Failed to load PDF" issues.
  */
 export async function GET(request: NextRequest) {
+    const auth = await withAuth(request, 'admin')
+    if (auth instanceof NextResponse) return auth
+
     const results: Record<string, unknown> = {
         timestamp: new Date().toISOString(),
         checks: {} as Record<string, unknown>,

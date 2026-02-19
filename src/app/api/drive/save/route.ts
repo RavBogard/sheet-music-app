@@ -5,7 +5,8 @@ import { withAuth } from "@/lib/api-auth";
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
     try {

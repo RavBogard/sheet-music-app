@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
+export const maxDuration = 30
+
 export async function POST(request: NextRequest) {
     try {
         // Auth
