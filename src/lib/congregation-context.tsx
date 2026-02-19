@@ -20,6 +20,11 @@ export interface CongregationConfig {
         collaboration: boolean
     }
     printFooter: string
+    defaultMusicians?: Array<{
+        uid: string
+        name: string
+        instrument?: string
+    }>
 }
 
 const DEFAULT_CONFIG: CongregationConfig = {

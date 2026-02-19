@@ -5,9 +5,13 @@ import { SetlistMusician, UserProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
+import { useCongregation } from "@/lib/congregation-context"
+import { db } from "@/lib/firebase"
+import { doc, updateDoc } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus } from "lucide-react"
+import { toast } from "sonner"
 
 interface MusicianPickerProps {
     musicians: SetlistMusician[]
@@ -21,25 +25,25 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
 }))
 
 export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerProps) {
-    const { isAdmin, user: currentUser } = useAuth()
+    const { isAdmin, isLeader, user: currentUser } = useAuth()
+    const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
     const [showAddGuest, setShowAddGuest] = useState(false)
     const [guestName, setGuestName] = useState("")
     const [guestEmail, setGuestEmail] = useState("")
     const [guestInstrument, setGuestInstrument] = useState("")
-    // Which musician uid has instrument picker open
     const [editingInstrumentUid, setEditingInstrumentUid] = useState<string | null>(null)
     const instrumentRef = useRef<HTMLDivElement>(null)
 
-    // Subscribe to all users — filter to active members
+    const defaultMusicians = congregation.defaultMusicians || []
+    const defaultUids = new Set(defaultMusicians.map(m => m.uid))
+
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
             let active = users.filter(u =>
                 u.role === 'member' || u.role === 'leader' || u.role === 'admin'
             )
-
-            // Ensure current user is always in the list
             if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
                 active = [{
                     uid: currentUser.uid,
@@ -48,13 +52,11 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                     role: 'member' as const,
                 } as UserProfile, ...active]
             }
-
             setAllUsers(active)
         })
         return () => unsub()
     }, [currentUser])
 
-    // Close instrument picker on outside click
     useEffect(() => {
         if (!editingInstrumentUid) return
         const handler = (e: MouseEvent) => {
@@ -67,14 +69,20 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
     }, [editingInstrumentUid])
 
     const getInstrumentLabel = useCallback((user: UserProfile): string | undefined => {
-        // Check if they're already assigned with an instrument override
         const assigned = musicians.find(m => m.uid === user.uid)
         if (assigned?.instrument) return assigned.instrument
-        // Fall back to their profile instrument
         const profileKey = user.musicianProfile?.instrument
         if (profileKey) return INSTRUMENT_PRESETS[profileKey]?.label || profileKey
         return undefined
     }, [musicians])
+
+    const getLiveInstrument = useCallback((uid: string): string | undefined => {
+        const user = allUsers.find(u => u.uid === uid)
+        if (!user) return undefined
+        const profileKey = user.musicianProfile?.instrument
+        if (profileKey) return INSTRUMENT_PRESETS[profileKey]?.label || profileKey
+        return undefined
+    }, [allUsers])
 
     const isSelected = useCallback((uid: string) => {
         return musicians.some(m => m.uid === uid)
@@ -121,11 +129,41 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
         onChange(musicians.filter((_, i) => i !== index))
     }, [musicians, onChange, canEdit])
 
+    // Load default band — merge saved defaults with live user data for fresh instruments
+    const loadDefaults = useCallback(() => {
+        const loaded: SetlistMusician[] = defaultMusicians.map(dm => {
+            const liveInstrument = getLiveInstrument(dm.uid)
+            const liveUser = allUsers.find(u => u.uid === dm.uid)
+            return {
+                uid: dm.uid,
+                name: liveUser?.displayName || dm.name,
+                email: liveUser?.email || "",
+                instrument: liveInstrument || dm.instrument,
+            }
+        })
+        onChange(loaded)
+    }, [defaultMusicians, getLiveInstrument, allUsers, onChange])
+
+    // Toggle a user as default band member (persists to congregation config)
+    const toggleDefault = useCallback(async (user: UserProfile) => {
+        const ref = doc(db, "config", "congregation")
+        const isDefault = defaultUids.has(user.uid)
+        const instrument = getInstrumentLabel(user)
+        const updated = isDefault
+            ? defaultMusicians.filter(m => m.uid !== user.uid)
+            : [...defaultMusicians, { uid: user.uid, name: user.displayName || 'Unknown', instrument }]
+        try {
+            await updateDoc(ref, { defaultMusicians: updated })
+            toast.success(isDefault ? `Removed ${user.displayName} from defaults` : `Added ${user.displayName} to defaults`)
+        } catch {
+            toast.error("Failed to update defaults")
+        }
+    }, [defaultMusicians, defaultUids, getInstrumentLabel])
+
     const guests = musicians.filter(m => !m.uid)
 
     return (
         <div className="border-b border-border/50">
-            {/* Toggle header */}
             <button
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setExpanded(!expanded)}
@@ -144,7 +182,17 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
 
             {expanded && (
                 <div className="px-4 pb-3 space-y-3">
-                    {/* All active members — tap to toggle */}
+                    {/* Load Defaults button */}
+                    {canEdit && defaultMusicians.length > 0 && (
+                        <button
+                            onClick={loadDefaults}
+                            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                        >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            {musicians.length === 0 ? 'Load Default Band' : 'Reset to Defaults'}
+                        </button>
+                    )}
+
                     {allUsers.length > 0 && (
                         <div className="space-y-1.5">
                             <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Members</p>
@@ -153,6 +201,7 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                                     const selected = isSelected(user.uid)
                                     const instrument = getInstrumentLabel(user)
                                     const showInstrumentPicker = editingInstrumentUid === user.uid
+                                    const isDefault = defaultUids.has(user.uid)
 
                                     return (
                                         <div key={user.uid} className="relative">
@@ -196,9 +245,25 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                                                         + instrument
                                                     </span>
                                                 ) : null}
+                                                {/* Default star — leaders/admins only */}
+                                                {(isLeader || isAdmin) && (
+                                                    <span
+                                                        className={`ml-0.5 cursor-pointer transition-colors ${
+                                                            isDefault
+                                                                ? 'text-amber-400 hover:text-amber-300'
+                                                                : 'text-muted-foreground/20 hover:text-muted-foreground/50'
+                                                        }`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            toggleDefault(user)
+                                                        }}
+                                                        title={isDefault ? 'Remove from default band' : 'Add to default band'}
+                                                    >
+                                                        <Star className={`h-3 w-3 ${isDefault ? 'fill-current' : ''}`} />
+                                                    </span>
+                                                )}
                                             </button>
 
-                                            {/* Inline instrument picker */}
                                             {showInstrumentPicker && (
                                                 <div
                                                     ref={instrumentRef}
@@ -228,7 +293,6 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                         </p>
                     )}
 
-                    {/* Guest musicians */}
                     {guests.length > 0 && (
                         <div className="space-y-1">
                             <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Guests</p>
@@ -260,7 +324,6 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                         </div>
                     )}
 
-                    {/* Add guest form */}
                     {canEdit && !showAddGuest && (
                         <button
                             onClick={() => setShowAddGuest(true)}
