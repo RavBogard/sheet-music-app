@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -51,10 +51,23 @@ try {
             db = initializeFirestore(app, {
                 experimentalForceLongPolling: true,
                 useFetchStreams: false,
+                localCache: persistentLocalCache({
+                    tabManager: persistentMultipleTabManager(),
+                }),
             } as FirestoreSettings);
-        } catch {
-            // initializeFirestore throws if already initialized (e.g. hot reload)
-            db = getFirestore(app);
+        } catch (e1) {
+            // Persistence may fail in private browsing or restricted environments.
+            // Fall back to in-memory cache (no offline persistence).
+            try {
+                db = initializeFirestore(app, {
+                    experimentalForceLongPolling: true,
+                    useFetchStreams: false,
+                } as FirestoreSettings);
+            } catch {
+                // Already initialized (e.g. hot reload)
+                db = getFirestore(app);
+            }
+            logger.warn("Firestore offline persistence unavailable, using network-only", e1);
         }
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
