@@ -99,7 +99,8 @@ function getKey(req: NextRequest): string {
     if (auth?.startsWith('Bearer ')) {
         try {
             // JWT = header.payload.signature — decode the payload segment
-            const payload = auth.split('.')[1]
+            const token = auth.slice(7) // Strip "Bearer "
+            const payload = token.split('.')[1]
             if (payload) {
                 const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString())
                 const uid = decoded.sub || decoded.user_id

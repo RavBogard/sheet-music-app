@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -48,6 +48,11 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         ? `🔄 ${setlistName} — Setlist Updated`
         : `🎵 ${setlistName} — Setlist Published`
     const [subject, setSubject] = useState(defaultSubject)
+
+    // Sync subject default when dialog opens (useState initializer only runs once)
+    useEffect(() => {
+        if (isOpen) setSubject(defaultSubject)
+    }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- intentional: reset on open
 
     const noMusicians = musicians.length === 0
     const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
