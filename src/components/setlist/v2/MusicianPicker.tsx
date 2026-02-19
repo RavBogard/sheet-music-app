@@ -7,16 +7,23 @@ import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-context"
 import { db } from "@/lib/firebase"
-import { doc, updateDoc } from "firebase/firestore"
+import { doc, updateDoc, collection, onSnapshot } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX } from "lucide-react"
 import { toast } from "sonner"
 
 interface MusicianPickerProps {
     musicians: SetlistMusician[]
     onChange: (musicians: SetlistMusician[]) => void
     canEdit: boolean
+    setlistId?: string
+    isPublished?: boolean
+}
+
+interface EmailStatus {
+    recipientEmail: string
+    status: 'sent' | 'delivered' | 'opened' | 'bounced' | 'complained' | 'delayed'
 }
 
 const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) => ({
@@ -24,7 +31,7 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
     label: val.label,
 }))
 
-export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerProps) {
+export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPublished }: MusicianPickerProps) {
     const { isAdmin, isLeader, user: currentUser } = useAuth()
     const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
@@ -35,9 +42,33 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
     const [guestInstrument, setGuestInstrument] = useState("")
     const [editingInstrumentUid, setEditingInstrumentUid] = useState<string | null>(null)
     const instrumentRef = useRef<HTMLDivElement>(null)
+    const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailStatus>>(new Map())
 
     const defaultMusicians = congregation.defaultMusicians || []
     const defaultUids = new Set(defaultMusicians.map(m => m.uid))
+
+    // Subscribe to email delivery status after publish
+    useEffect(() => {
+        if (!setlistId || !isPublished) {
+            setEmailStatuses(new Map())
+            return
+        }
+        const unsub = onSnapshot(
+            collection(db, "setlists", setlistId, "emailEvents"),
+            (snap) => {
+                const map = new Map<string, EmailStatus>()
+                snap.docs.forEach(doc => {
+                    const data = doc.data() as EmailStatus
+                    if (data.recipientEmail) {
+                        map.set(data.recipientEmail.toLowerCase(), data)
+                    }
+                })
+                setEmailStatuses(map)
+            },
+            () => { /* Silently handle permission errors */ }
+        )
+        return () => unsub()
+    }, [setlistId, isPublished])
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
@@ -160,6 +191,12 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
         }
     }, [defaultMusicians, defaultUids, getInstrumentLabel])
 
+    // Get email delivery status for a musician
+    const getEmailStatus = useCallback((email: string | undefined): EmailStatus | null => {
+        if (!email || emailStatuses.size === 0) return null
+        return emailStatuses.get(email.toLowerCase()) || null
+    }, [emailStatuses])
+
     const guests = musicians.filter(m => !m.uid)
 
     return (
@@ -262,6 +299,24 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                                                         <Star className={`h-3 w-3 ${isDefault ? 'fill-current' : ''}`} />
                                                     </span>
                                                 )}
+                                                {/* Email delivery status */}
+                                                {selected && (() => {
+                                                    const es = getEmailStatus(user.email)
+                                                    if (!es) return null
+                                                    const StatusIcon = es.status === 'opened' ? MailOpen
+                                                        : es.status === 'delivered' ? MailCheck
+                                                        : es.status === 'bounced' || es.status === 'complained' ? MailX
+                                                        : Mail
+                                                    const color = es.status === 'opened' ? 'text-blue-400'
+                                                        : es.status === 'delivered' ? 'text-green-400'
+                                                        : es.status === 'bounced' || es.status === 'complained' ? 'text-red-400'
+                                                        : 'text-muted-foreground/40'
+                                                    return (
+                                                        <span title={`Email ${es.status}`}>
+                                                            <StatusIcon className={`h-3 w-3 ${color}`} />
+                                                        </span>
+                                                    )
+                                                })()}
                                             </button>
 
                                             {showInstrumentPicker && (
@@ -309,6 +364,19 @@ export function MusicianPicker({ musicians, onChange, canEdit }: MusicianPickerP
                                                 <span className="text-xs text-muted-foreground/60">({guest.instrument})</span>
                                             )}
                                             <span className="text-xs text-muted-foreground/40 truncate">{guest.email}</span>
+                                            {(() => {
+                                                const es = getEmailStatus(guest.email)
+                                                if (!es) return null
+                                                const StatusIcon = es.status === 'opened' ? MailOpen
+                                                    : es.status === 'delivered' ? MailCheck
+                                                    : es.status === 'bounced' || es.status === 'complained' ? MailX
+                                                    : Mail
+                                                const color = es.status === 'opened' ? 'text-blue-400'
+                                                    : es.status === 'delivered' ? 'text-green-400'
+                                                    : es.status === 'bounced' || es.status === 'complained' ? 'text-red-400'
+                                                    : 'text-muted-foreground/40'
+                                                return <span title={`Email ${es.status}`}><StatusIcon className={`h-3 w-3 shrink-0 ${color}`} /></span>
+                                            })()}
                                             {canEdit && (
                                                 <button
                                                     onClick={() => removeGuest(fullIndex)}

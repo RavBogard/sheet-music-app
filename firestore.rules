@@ -137,6 +137,12 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable once written
     }
 
+    // EMAIL DELIVERY TRACKING — server writes, leaders/admins read
+    match /setlists/{setlistId}/emailEvents/{eventId} {
+      allow read: if isLeader();
+      allow write: if false; // Server-only via admin SDK + webhooks
+    }
+
     // SONG USAGE TRACKING — server writes, members read
     match /songUsage/{fileId} {
       allow read: if isMember();

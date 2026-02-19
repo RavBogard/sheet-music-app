@@ -468,6 +468,8 @@ export function SetlistEditorV2({
                     musicians={musicians}
                     onChange={setMusicians}
                     canEdit={canEdit}
+                    setlistId={setlistId}
+                    isPublished={isPublic}
                 />
             )}
 

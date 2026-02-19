@@ -181,9 +181,9 @@ export async function POST(request: NextRequest) {
                 publisherName, songNames, origin, combinedNote, publishSubject
             ).catch(err => {
                 logger.warn('[Publish] Email sending failed:', err)
-                return { sent: 0, failed: 0, errors: [], error: err instanceof Error ? err.message : String(err) }
+                return { sent: 0, failed: 0, errors: [], messageIds: [], error: err instanceof Error ? err.message : String(err) }
             })
-            : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[] })
+            : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[], messageIds: [] as Array<{ email: string; messageId: string }> })
 
         // Step 5: Log audit entry (fire-and-forget)
         const historyRef = setlistRef.collection('history').doc()
@@ -210,6 +210,23 @@ export async function POST(request: NextRequest) {
             : 'errors' in emailResult && emailResult.errors.length > 0
                 ? `Failed for: ${emailResult.errors.join(', ')}`
                 : undefined
+
+        // Step 6: Store email delivery events for tracking (fire-and-forget)
+        const msgIds = 'messageIds' in emailResult ? emailResult.messageIds : []
+        if (msgIds.length > 0) {
+            const emailEventsRef = setlistRef.collection('emailEvents')
+            const batch = db.batch()
+            for (const { email, messageId } of msgIds) {
+                const docRef = emailEventsRef.doc(messageId)
+                batch.set(docRef, {
+                    recipientEmail: email,
+                    resendMessageId: messageId,
+                    status: 'sent',
+                    timestamp: FieldValue.serverTimestamp(),
+                })
+            }
+            batch.commit().catch(err => logger.warn('[Publish] Email events write failed:', err))
+        }
 
         return NextResponse.json({
             success: true,

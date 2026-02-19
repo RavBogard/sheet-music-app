@@ -43,14 +43,14 @@ interface SetlistEmailParams {
  * Send a setlist notification email to a single recipient.
  * Returns { ok: true } or { ok: false, reason: string }.
  */
-export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok: boolean; reason?: string }> {
+export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok: boolean; reason?: string; messageId?: string }> {
     const client = getResend()
     if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
     try {
         const html = buildSetlistEmailHtml(params)
 
-        const { error } = await client.emails.send({
+        const { data, error } = await client.emails.send({
             from: `CRC Music <${getFromEmail()}>`,
             to: params.to,
             subject: params.subject || `🎵 ${params.setlistName} — Setlist Published`,
@@ -64,7 +64,7 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok
         }
 
         logger.info(`[Email] Sent setlist notification to ${params.to}`)
-        return { ok: true }
+        return { ok: true, messageId: data?.id }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         logger.error(`[Email] Failed to send to ${params.to}: ${msg}`)
@@ -86,10 +86,11 @@ export async function emailAllMembers(
     baseUrl: string,
     note?: string,
     subject?: string
-): Promise<{ sent: number; failed: number; errors: string[] }> {
+): Promise<{ sent: number; failed: number; errors: string[]; messageIds: Array<{ email: string; messageId: string }> }> {
     let sent = 0
     let failed = 0
     const errors: string[] = []
+    const messageIds: Array<{ email: string; messageId: string }> = []
 
     for (let i = 0; i < members.length; i++) {
         const member = members[i]
@@ -112,13 +113,16 @@ export async function emailAllMembers(
         })
         if (result.ok) {
             sent++
+            if (result.messageId) {
+                messageIds.push({ email: member.email, messageId: result.messageId })
+            }
         } else {
             failed++
             errors.push(`${member.email}: ${result.reason || 'unknown error'}`)
         }
     }
 
-    return { sent, failed, errors }
+    return { sent, failed, errors, messageIds }
 }
 
 /**
