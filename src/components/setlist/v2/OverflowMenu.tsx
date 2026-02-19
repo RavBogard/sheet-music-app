@@ -28,6 +28,8 @@ import {
     Trash2,
     Clock,
     User,
+    CalendarPlus,
+    BookmarkPlus,
 } from "lucide-react"
 
 interface OverflowMenuProps {
@@ -36,6 +38,8 @@ interface OverflowMenuProps {
     onPrint: () => void
     onPublish?: () => void
     onDuplicate?: () => void
+    onCloneNextWeek?: () => void
+    onSaveAsTemplate?: () => void
     onTogglePublic: () => void
     onHistory?: () => void
     onSync?: () => void
@@ -63,6 +67,8 @@ export function OverflowMenu({
     onPrint,
     onPublish,
     onDuplicate,
+    onCloneNextWeek,
+    onSaveAsTemplate,
     onTogglePublic,
     onHistory,
     onSync,
@@ -129,6 +135,20 @@ export function OverflowMenu({
                     <DropdownMenuItem onClick={onDuplicate}>
                         <Copy className="h-4 w-4 mr-2" />
                         Duplicate Setlist
+                    </DropdownMenuItem>
+                )}
+
+                {onCloneNextWeek && canEdit && (
+                    <DropdownMenuItem onClick={onCloneNextWeek}>
+                        <CalendarPlus className="h-4 w-4 mr-2" />
+                        Clone for Next Week
+                    </DropdownMenuItem>
+                )}
+
+                {onSaveAsTemplate && canEdit && isLeader && (
+                    <DropdownMenuItem onClick={onSaveAsTemplate}>
+                        <BookmarkPlus className="h-4 w-4 mr-2" />
+                        Save as Template
                     </DropdownMenuItem>
                 )}
 

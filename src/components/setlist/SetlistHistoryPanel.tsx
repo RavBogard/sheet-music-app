@@ -45,6 +45,8 @@ const actionLabels: Record<AuditAction, string> = {
     tracks_reordered: 'Reordered',
     track_added: 'Track added',
     track_removed: 'Track removed',
+    cloned: 'Cloned for next week',
+    saved_as_template: 'Saved as template',
 }
 
 interface Props {

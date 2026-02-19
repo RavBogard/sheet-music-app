@@ -207,6 +207,31 @@ export function SetlistEditorV2({
         setShowDuplicateConfirm(false)
     }, [editorService, setlistId, name, tracks, isPublic, rabbi, router])
 
+    const handleCloneNextWeek = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        const toastId = toast.loading("Creating next week\u2019s setlist\u2026")
+        try {
+            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi, musicians, eventDate, date: eventDate } as Parameters<typeof editorService.cloneForNextWeek>[0]
+            const newId = await editorService.cloneForNextWeek(currentSetlist)
+            toast.success("Cloned for next week!", { id: toastId })
+            router.push(`/setlists/${newId}`)
+        } catch {
+            toast.error("Failed to clone setlist", { id: toastId })
+        }
+    }, [editorService, setlistId, name, tracks, isPublic, rabbi, musicians, eventDate, router])
+
+    const handleSaveAsTemplate = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        const toastId = toast.loading("Saving template\u2026")
+        try {
+            const currentSetlist = { id: setlistId, name, tracks, trackCount: tracks.length } as Parameters<typeof editorService.saveAsTemplate>[0]
+            await editorService.saveAsTemplate(currentSetlist)
+            toast.success(`Template "${name}" saved!`, { id: toastId })
+        } catch {
+            toast.error("Failed to save template", { id: toastId })
+        }
+    }, [editorService, setlistId, name, tracks])
+
     // Debounce empty state to prevent flash during AI batch edits
     const [showEmpty, setShowEmpty] = useState(tracks.length === 0)
     const emptyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -393,6 +418,8 @@ export function SetlistEditorV2({
                         onToggleLive={isLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
+                        onCloneNextWeek={setlistId ? handleCloneNextWeek : undefined}
+                        onSaveAsTemplate={setlistId ? handleSaveAsTemplate : undefined}
                         onSelectMode={canEdit && tracks.length > 0 ? () => setSelectMode(true) : undefined}
                         isPublic={isPublic}
                         isLeader={isLeader}

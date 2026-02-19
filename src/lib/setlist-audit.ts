@@ -24,6 +24,8 @@ export type AuditAction =
     | 'tracks_reordered'
     | 'track_added'
     | 'track_removed'
+    | 'cloned'
+    | 'saved_as_template'
 
 export interface AuditEntry {
     action: AuditAction

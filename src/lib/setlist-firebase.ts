@@ -9,6 +9,7 @@ import {
     query,
     orderBy,
     serverTimestamp,
+    Timestamp,
     where,
 } from "firebase/firestore";
 
@@ -20,6 +21,9 @@ export type { SetlistTrack }
 
 import { Setlist } from "@/types/api"
 import { logger } from "@/lib/logger"
+import { toDate } from "@/lib/firestore-helpers"
+import { getFullServiceContext } from "@/lib/liturgical-calendar"
+import { generateSetlistName } from "@/lib/liturgical-templates"
 export type { Setlist }
 
 // User-specific setlist service
@@ -151,6 +155,63 @@ export function createSetlistService(userId: string | null, userName?: string | 
             } catch (e) {
                 logger.error("Error copying setlist: ", e);
                 throw e;
+            }
+        },
+
+        // Clone a setlist for next week: same tracks, musicians, rabbi; date +7 days; auto-name
+        async cloneForNextWeek(source: Setlist): Promise<string> {
+            try {
+                // Compute target date: same weekday, +7 days
+                const sourceDate = toDate(source.eventDate || source.date) || new Date()
+                const targetDate = new Date(sourceDate)
+                targetDate.setDate(targetDate.getDate() + 7)
+
+                // Generate name from liturgical context (async — parasha lookup)
+                const context = await getFullServiceContext(targetDate)
+                const name = generateSetlistName(context)
+
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                    name,
+                    date: Timestamp.fromDate(targetDate),
+                    eventDate: Timestamp.fromDate(targetDate),
+                    tracks: source.tracks,
+                    trackCount: source.tracks.length,
+                    isPublic: false,
+                    ownerId: userId,
+                    ownerName: userName || "Anonymous",
+                    musicians: source.musicians || [],
+                    rabbi: source.rabbi || '',
+                    clonedFrom: source.id,
+                })
+
+                logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
+                return docRef.id
+            } catch (e) {
+                logger.error("Error cloning setlist for next week:", e)
+                throw e
+            }
+        },
+
+        // Save a setlist as a reusable template (strips date, musicians, rabbi)
+        async saveAsTemplate(source: Setlist, templateName?: string): Promise<string> {
+            try {
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                    name: templateName || `${source.name} (Template)`,
+                    date: serverTimestamp(),
+                    tracks: source.tracks,
+                    trackCount: source.tracks.length,
+                    isPublic: false,
+                    isTemplate: true,
+                    templateType: 'other',
+                    ownerId: userId,
+                    ownerName: userName || "Anonymous",
+                })
+
+                logSetlistChange(docRef.id, 'saved_as_template', userId || '', userName || 'Anonymous')
+                return docRef.id
+            } catch (e) {
+                logger.error("Error saving as template:", e)
+                throw e
             }
         },
 
