@@ -1,19 +1,20 @@
 {
   "version": "4.2.0",
-  "commit": "0d6ee4a",
+  "commit": "3368602",
   "branch": "master",
-  "buildDate": "2/18/2026",
+  "buildDate": "2/19/2026",
   "changelog": [
-    "4.2.0 - feat: auto-versioning from git tags + instant QR code generation",
-    "4.2.0 - fix: human-readable error messages in bridge setup code activation",
-    "4.2.0 - fix: harden setup code flow — transaction, crypto, http support, index",
-    "4.2.0 - feat: setup code flow eliminates Firebase Console from bridge install",
-    "4.2.0 - perf: parallel X32 sync, instant iPad reconnect, remove dead dep",
-    "4.2.0 - perf: eliminate perform redirect hop + unblock offline PDF cache from auth",
-    "4.2.0 - fix: also copy PDF worker in build script (Vercel cached install safety)",
-    "4.2.0 - perf: self-host PDF.js worker for faster chart rendering",
-    "4.2.0 - refactor: extract dashboard sub-components from page.tsx",
-    "4.2.0 - feat: QR code sign-in for shared iPads",
-    "4.2.0 - fix: SystemSection changelog type inference for production build"
+    "4.2.0 - feat: email delivery tracking with Resend webhooks",
+    "4.2.0 - feat: smart song suggestions in Add Songs modal",
+    "4.2.0 - feat: service-level notes for performers",
+    "4.2.0 - feat: Clone for Next Week + Save as Template",
+    "4.2.0 - feat: default band roster with one-tap load and star toggles",
+    "4.2.0 - feat: Rabbi Randy option + instant personalized greeting",
+    "4.2.0 - feat: editable email subject line in publish dialog",
+    "4.2.0 - feat: email opt-out per musician, custom publish note, editable name",
+    "4.2.0 - fix: throttle email sends to 600ms apart (Resend 2/sec limit)",
+    "4.2.0 - fix: surface actual Resend error messages for failed emails",
+    "4.2.0 - fix: section chips inside scroll area, current user always in picker",
+    "4.2.0 - perf: progressive dashboard loading, break auth→setlist waterfall"
   ]
 }

@@ -282,8 +282,8 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                                                         + instrument
                                                     </span>
                                                 ) : null}
-                                                {/* Default star — leaders/admins only */}
-                                                {(isLeader || isAdmin) && (
+                                                {/* Default star — admins only (config/congregation write requires admin) */}
+                                                {isAdmin && (
                                                     <span
                                                         className={`ml-0.5 cursor-pointer transition-colors ${
                                                             isDefault

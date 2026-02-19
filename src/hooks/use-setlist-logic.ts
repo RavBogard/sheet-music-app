@@ -238,7 +238,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 trackCount: t.length,
                 eventDate: ed ? ed.toISOString() : undefined,
                 rabbi: rab,
-                serviceNotes: sn || undefined,
+                serviceNotes: sn?.trim() || undefined,
                 musicians: mus.length > 0 ? mus : undefined,
             }
 
@@ -248,7 +248,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 const newId = await setlistService.createSetlist(n, t, pub, {
                     eventDate: ed ? ed.toISOString() : undefined,
                     rabbi: rab,
-                    serviceNotes: sn || undefined,
+                    serviceNotes: sn?.trim() || undefined,
                     musicians: mus.length > 0 ? mus : undefined,
                 })
                 setSetlistId(newId)
