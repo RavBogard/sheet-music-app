@@ -39,33 +39,34 @@ interface SetlistEmailParams {
 
 /**
  * Send a setlist notification email to a single recipient.
- * Returns true if sent successfully, false on failure or missing config.
+ * Returns { ok: true } or { ok: false, reason: string }.
  */
-export async function sendSetlistEmail(params: SetlistEmailParams): Promise<boolean> {
+export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok: boolean; reason?: string }> {
     const client = getResend()
-    if (!client) return false
+    if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
     try {
         const html = buildSetlistEmailHtml(params)
 
-        const result = await client.emails.send({
+        const { error } = await client.emails.send({
             from: `CRC Music <${getFromEmail()}>`,
             to: params.to,
             subject: `🎵 ${params.setlistName} — Setlist Published`,
             html,
         })
 
-        // Resend returns { id, error } — check for error
-        if ('error' in result && result.error) {
-            logger.error(`[Email] Resend error for ${params.to}:`, result.error)
-            return false
+        if (error) {
+            const msg = error.message || JSON.stringify(error)
+            logger.error(`[Email] Resend error for ${params.to}: ${msg}`)
+            return { ok: false, reason: msg }
         }
 
         logger.info(`[Email] Sent setlist notification to ${params.to}`)
-        return true
+        return { ok: true }
     } catch (err) {
-        logger.error(`[Email] Failed to send to ${params.to}:`, err)
-        return false
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.error(`[Email] Failed to send to ${params.to}: ${msg}`)
+        return { ok: false, reason: msg }
     }
 }
 
@@ -88,7 +89,7 @@ export async function emailAllMembers(
 
     for (const member of members) {
         if (!member.email) continue
-        const success = await sendSetlistEmail({
+        const result = await sendSetlistEmail({
             to: member.email,
             recipientName: member.displayName,
             setlistName,
@@ -98,11 +99,11 @@ export async function emailAllMembers(
             songs,
             publisherName,
         })
-        if (success) {
+        if (result.ok) {
             sent++
         } else {
             failed++
-            errors.push(member.email)
+            errors.push(`${member.email}: ${result.reason || 'unknown error'}`)
         }
     }
 
