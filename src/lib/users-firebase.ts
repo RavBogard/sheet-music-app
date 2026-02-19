@@ -21,12 +21,17 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     if (snap.exists()) {
         const data = snap.data() as UserProfile
         // Update last login in background — never block auth on this
-        updateDoc(ref, {
+        // Don't overwrite displayName if user has customized it
+        const updates: Record<string, unknown> = {
             lastLoginAt: Timestamp.now(),
             email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL
-        }).catch(() => { /* non-critical */ })
+            photoURL: user.photoURL,
+        }
+        // Only set displayName if user hasn't customized theirs
+        if (!data.displayName || data.displayName === user.displayName) {
+            updates.displayName = user.displayName
+        }
+        updateDoc(ref, updates).catch(() => { /* non-critical */ })
         return data
     } else {
         const newProfile: UserProfile = {

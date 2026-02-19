@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         const limited = await checkRateLimit(request, 'api')
         if (limited) return limited
 
-        const { setlistId, musicians: rawMusicians } = await request.json()
+        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note } = await request.json()
         if (!setlistId || typeof setlistId !== 'string') {
             return NextResponse.json({ error: 'setlistId is required' }, { status: 400 })
         }
@@ -118,8 +118,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 4: Build email recipient list
-        // For registered musicians: look up their email from Firestore (since client may not have it)
-        // For guests: use the email from the payload
+        // Client sends emailRecipients — the subset of musicians who should receive email.
+        // If not provided (backward compat), email all musicians.
+        const clientEmailFilter: MusicianPayload[] | undefined = Array.isArray(rawEmailRecipients) ? rawEmailRecipients : undefined
+        const emailableUids = clientEmailFilter ? new Set(clientEmailFilter.map(r => r.uid).filter(Boolean)) : null
+        const emailableEmails = clientEmailFilter ? new Set(clientEmailFilter.map(r => r.email?.toLowerCase()).filter(Boolean)) : null
+
         const emailRecipients: Array<{ email: string; displayName: string }> = []
 
         // Batch-fetch registered user docs to get emails
@@ -132,6 +136,10 @@ export async function POST(request: NextRequest) {
                 if (doc.exists) {
                     const data = doc.data()!
                     if (data.email) {
+                        // If client sent a filter, only include musicians in that filter
+                        if (emailableUids && !emailableUids.has(doc.id) && !emailableEmails?.has(data.email.toLowerCase())) {
+                            continue
+                        }
                         emailRecipients.push({
                             email: data.email,
                             displayName: data.displayName || data.email.split('@')[0],
@@ -144,6 +152,9 @@ export async function POST(request: NextRequest) {
         // Add guest musicians (no uid — email comes from payload)
         for (const m of musicians) {
             if (!m.uid && m.email) {
+                if (emailableEmails && !emailableEmails.has(m.email.toLowerCase())) {
+                    continue
+                }
                 emailRecipients.push({
                     email: m.email,
                     displayName: m.name || m.email.split('@')[0],
@@ -151,15 +162,18 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Determine base URL
+        // Determine base URL and publisher name
         const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
-        const publisherName = auth.email?.split('@')[0] || 'A band member'
+        // Use publisher's displayName from Firestore (respects custom names)
+        const publisherDoc = await db.collection('users').doc(auth.uid).get()
+        const publisherName = publisherDoc.data()?.displayName || auth.email?.split('@')[0] || 'A band member'
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
+        const publishNote = typeof note === 'string' ? note.trim().slice(0, 500) : undefined
 
         const emailPromise = emailRecipients.length > 0
             ? emailAllMembers(
                 emailRecipients, setlistId, setlistName, eventDateStr,
-                publisherName, songNames, origin
+                publisherName, songNames, origin, publishNote
             ).catch(err => {
                 logger.warn('[Publish] Email sending failed:', err)
                 return { sent: 0, failed: 0, errors: [], error: err instanceof Error ? err.message : String(err) }

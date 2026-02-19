@@ -35,6 +35,7 @@ interface SetlistEmailParams {
     packetUrl?: string
     songs: string[]
     publisherName: string
+    note?: string
 }
 
 /**
@@ -81,7 +82,8 @@ export async function emailAllMembers(
     eventDate: string,
     publisherName: string,
     songs: string[],
-    baseUrl: string
+    baseUrl: string,
+    note?: string
 ): Promise<{ sent: number; failed: number; errors: string[] }> {
     let sent = 0
     let failed = 0
@@ -103,6 +105,7 @@ export async function emailAllMembers(
             packetUrl: `${baseUrl}/api/setlist/print/public?setlistId=${setlistId}`,
             songs,
             publisherName,
+            note,
         })
         if (result.ok) {
             sent++
@@ -142,6 +145,9 @@ export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
       <p style="margin:0 0 20px;color:#333;font-size:15px;">
         ${escapeHtml(params.publisherName)} just published a setlist. Here's what's on the program:
       </p>
+      ${params.note ? `<div style="margin:0 0 20px;padding:12px 16px;background:#f0f7ff;border-left:3px solid #3b82f6;border-radius:4px;">
+        <p style="margin:0;color:#1e40af;font-size:14px;white-space:pre-wrap;">${escapeHtml(params.note)}</p>
+      </div>` : ''}
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #eee;border-radius:6px;overflow:hidden;">
         <tr><td style="background:#fafafa;padding:8px 12px;font-weight:600;font-size:12px;text-transform:uppercase;color:#888;letter-spacing:0.5px;">Songs</td></tr>
         <tr><td><table width="100%" cellpadding="0" cellspacing="0">${songList}</table></td></tr>

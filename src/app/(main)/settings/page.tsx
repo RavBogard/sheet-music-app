@@ -1,21 +1,26 @@
 "use client"
 
+import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { useTheme } from "next-themes"
 import buildInfo from "@/build-info.json"
 import AdminSections from "@/components/admin/AdminSections"
 import {
     ArrowLeft, Loader2, User, Moon, Sun, Monitor,
-    LogOut, ShieldAlert,
+    LogOut, ShieldAlert, Pencil, Check,
 } from "lucide-react"
 
 export default function SettingsPage() {
-    const { user, isAdmin, loading: authLoading, signOut } = useAuth()
+    const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
+    const [editingName, setEditingName] = useState(false)
+    const [nameValue, setNameValue] = useState("")
+    const [savingName, setSavingName] = useState(false)
 
     if (authLoading) return (
         <div className="h-screen bg-background flex items-center justify-center">
@@ -50,8 +55,45 @@ export default function SettingsPage() {
                                 <User className="w-7 h-7 text-muted-foreground" />
                             </div>
                         )}
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-foreground">{user?.displayName || "Musician"}</h3>
+                        <div className="flex-1 min-w-0">
+                            {editingName ? (
+                                <form
+                                    className="flex items-center gap-2"
+                                    onSubmit={async (e) => {
+                                        e.preventDefault()
+                                        if (!user || !nameValue.trim()) return
+                                        setSavingName(true)
+                                        try {
+                                            const { doc, updateDoc } = await import("firebase/firestore")
+                                            const { db } = await import("@/lib/firebase")
+                                            await updateDoc(doc(db, "users", user.uid), { displayName: nameValue.trim() })
+                                            setEditingName(false)
+                                        } catch { /* silent */ }
+                                        setSavingName(false)
+                                    }}
+                                >
+                                    <Input
+                                        value={nameValue}
+                                        onChange={(e) => setNameValue(e.target.value)}
+                                        className="h-8 text-sm font-semibold"
+                                        autoFocus
+                                    />
+                                    <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={savingName}>
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                </form>
+                            ) : (
+                                <button
+                                    className="flex items-center gap-1.5 group"
+                                    onClick={() => {
+                                        setNameValue(profile?.displayName || user?.displayName || "")
+                                        setEditingName(true)
+                                    }}
+                                >
+                                    <h3 className="font-semibold text-foreground">{profile?.displayName || user?.displayName || "Musician"}</h3>
+                                    <Pencil className="h-3 w-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                                </button>
+                            )}
                             <p className="text-muted-foreground text-sm">{user?.email}</p>
                         </div>
                         <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">

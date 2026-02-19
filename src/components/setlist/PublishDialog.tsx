@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Check, Mail, Music, AlertTriangle, Users } from "lucide-react"
+import { Loader2, Check, Mail, Music, AlertTriangle, Users, MailX } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { SetlistMusician } from "@/types/models"
@@ -40,16 +40,39 @@ interface PublishResult {
 export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], onPublished }: PublishDialogProps) {
     const [publishing, setPublishing] = useState(false)
     const [result, setResult] = useState<PublishResult | null>(null)
+    // Per-musician email opt-out: set of indices that should NOT receive email
+    const [emailOptOut, setEmailOptOut] = useState<Set<number>>(new Set())
+    const [note, setNote] = useState("")
 
     const noMusicians = musicians.length === 0
+    const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
+
+    const toggleEmail = useCallback((index: number) => {
+        setEmailOptOut(prev => {
+            const next = new Set(prev)
+            if (next.has(index)) next.delete(index)
+            else next.add(index)
+            return next
+        })
+    }, [])
 
     const handlePublish = async () => {
         if (noMusicians) return
         setPublishing(true)
         try {
+            // Build email recipients list (musicians minus opt-outs)
+            const emailRecipients = musicians
+                .filter((_, i) => !emailOptOut.has(i))
+                .map(m => ({ name: m.name, email: m.email, uid: m.uid }))
+
             const response = await apiFetch('/api/setlist/publish', {
                 method: 'POST',
-                body: JSON.stringify({ setlistId, musicians }),
+                body: JSON.stringify({
+                    setlistId,
+                    musicians,
+                    emailRecipients,
+                    note: note.trim() || undefined,
+                }),
             })
 
             if (!response.ok) {
@@ -77,12 +100,14 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
 
     const handleClose = () => {
         setResult(null)
+        setEmailOptOut(new Set())
+        setNote("")
         onClose()
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto">
                 {!result ? (
                     <>
                         <DialogHeader>
@@ -92,13 +117,13 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="space-y-3 py-4">
+                        <div className="space-y-4 py-4">
                             <div className="flex items-center gap-3 text-sm">
                                 <Check className="h-4 w-4 text-green-500 shrink-0" />
                                 <span>Make visible to all members</span>
                             </div>
 
-                            {/* Musician list */}
+                            {/* Musician list with email toggles */}
                             {noMusicians ? (
                                 <div className="flex items-start gap-3 text-sm p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
                                     <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
@@ -110,26 +135,65 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-start gap-3 text-sm">
-                                    <Users className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                                    <div>
-                                        <span>Notify {musicians.length} musician{musicians.length !== 1 ? 's' : ''}:</span>
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                            {musicians.map((m, i) => (
-                                                <span key={i} className="inline-flex items-center gap-1 text-xs bg-muted/50 px-2 py-0.5 rounded-full">
-                                                    {m.name}
-                                                    {m.instrument && <span className="text-muted-foreground/60">· {m.instrument}</span>}
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Users className="h-4 w-4 text-blue-500 shrink-0" />
+                                        <span className="font-medium">{musicians.length} musician{musicians.length !== 1 ? 's' : ''}</span>
+                                        <span className="text-xs text-muted-foreground ml-auto">
+                                            {emailCount > 0 ? (
+                                                <span className="flex items-center gap-1">
+                                                    <Mail className="h-3 w-3" /> {emailCount} will be emailed
                                                 </span>
-                                            ))}
-                                        </div>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-amber-500">
+                                                    <MailX className="h-3 w-3" /> No emails
+                                                </span>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-0.5 pl-1">
+                                        {musicians.map((m, i) => {
+                                            const willEmail = !emailOptOut.has(i)
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => toggleEmail(i)}
+                                                    className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-sm"
+                                                >
+                                                    <div className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                                                        willEmail
+                                                            ? 'bg-primary border-primary'
+                                                            : 'border-muted-foreground/30'
+                                                    }`}>
+                                                        {willEmail && <Mail className="h-2.5 w-2.5 text-primary-foreground" />}
+                                                    </div>
+                                                    <span className={willEmail ? '' : 'text-muted-foreground'}>{m.name}</span>
+                                                    {m.instrument && (
+                                                        <span className="text-xs text-muted-foreground/60">· {m.instrument}</span>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-3 text-sm">
-                                <Mail className="h-4 w-4 text-green-500 shrink-0" />
-                                <span>Email charts &amp; links to assigned musicians</span>
-                            </div>
+                            {/* Custom note */}
+                            {!noMusicians && (
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                        Add a note to the email <span className="text-muted-foreground/50">(optional)</span>
+                                    </label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        placeholder="e.g. Please review Lecha Dodi — new arrangement this week"
+                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        rows={2}
+                                    />
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-3 text-sm">
                                 <Music className="h-4 w-4 text-violet-500 shrink-0" />
                                 <span>Index {songCount} song{songCount !== 1 ? 's' : ''} in usage history</span>
