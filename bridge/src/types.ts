@@ -1,6 +1,9 @@
 /**
  * Shared types between bridge server and web app.
- * 
+ *
+ * ⚠️  MIRROR — canonical source is src/types/monitor.ts in the main app.
+ * Run `npm run check:types` from the repo root to verify sync.
+ *
  * These types define the WebSocket protocol and Firestore config shape.
  */
 

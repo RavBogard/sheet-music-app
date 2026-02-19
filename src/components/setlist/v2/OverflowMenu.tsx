@@ -44,6 +44,7 @@ interface OverflowMenuProps {
     onHistory?: () => void
     onSync?: () => void
     onOpenAI: () => void
+    onCheckFlow?: () => void
     onToggleLive?: () => void
     onDelete?: () => void
     onSelectMode?: () => void
@@ -73,6 +74,7 @@ export function OverflowMenu({
     onHistory,
     onSync,
     onOpenAI,
+    onCheckFlow,
     onToggleLive,
     onDelete,
     onSelectMode,
@@ -127,7 +129,7 @@ export function OverflowMenu({
                 {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
-                        Publish & Notify
+                        {isPublic ? "Update & Notify" : "Publish & Notify"}
                     </DropdownMenuItem>
                 )}
 
@@ -215,6 +217,13 @@ export function OverflowMenu({
                     <Sparkles className="h-4 w-4 mr-2" />
                     AI Assistant
                 </DropdownMenuItem>
+
+                {onCheckFlow && isBandLeader && (
+                    <DropdownMenuItem onClick={onCheckFlow}>
+                        <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
+                        Check Service Flow
+                    </DropdownMenuItem>
+                )}
 
                 {isBandLeader && onToggleLive && (
                     <DropdownMenuItem onClick={onToggleLive}>

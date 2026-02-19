@@ -23,6 +23,7 @@ interface PublishDialogProps {
     setlistName: string
     songCount: number
     musicians?: SetlistMusician[]
+    isPublished?: boolean
     onPublished?: () => void
 }
 
@@ -37,13 +38,16 @@ interface PublishResult {
     usageRecorded: number
 }
 
-export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], onPublished }: PublishDialogProps) {
+export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], isPublished, onPublished }: PublishDialogProps) {
     const [publishing, setPublishing] = useState(false)
     const [result, setResult] = useState<PublishResult | null>(null)
     // Per-musician email opt-out: set of indices that should NOT receive email
     const [emailOptOut, setEmailOptOut] = useState<Set<number>>(new Set())
     const [note, setNote] = useState("")
-    const [subject, setSubject] = useState(`🎵 ${setlistName} — Setlist Published`)
+    const defaultSubject = isPublished
+        ? `🔄 ${setlistName} — Setlist Updated`
+        : `🎵 ${setlistName} — Setlist Published`
+    const [subject, setSubject] = useState(defaultSubject)
 
     const noMusicians = musicians.length === 0
     const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
@@ -104,7 +108,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         setResult(null)
         setEmailOptOut(new Set())
         setNote("")
-        setSubject(`🎵 ${setlistName} — Setlist Published`)
+        setSubject(defaultSubject)
         onClose()
     }
 
@@ -114,16 +118,20 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                 {!result ? (
                     <>
                         <DialogHeader>
-                            <DialogTitle>Publish &amp; Notify</DialogTitle>
+                            <DialogTitle>{isPublished ? 'Update & Notify' : 'Publish & Notify'}</DialogTitle>
                             <DialogDescription className="text-base pt-2">
-                                Publish <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span>
+                                {isPublished ? (
+                                    <>Re-notify band about <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
+                                ) : (
+                                    <>Publish <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
+                                )}
                             </DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-4 py-4">
                             <div className="flex items-center gap-3 text-sm">
                                 <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                <span>Make visible to all members</span>
+                                <span>{isPublished ? 'Already visible to all members' : 'Make visible to all members'}</span>
                             </div>
 
                             {/* Musician list with email toggles */}
@@ -235,6 +243,8 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                     </>
                                 ) : noMusicians ? (
                                     'Assign Musicians First'
+                                ) : isPublished ? (
+                                    'Update & Notify'
                                 ) : (
                                     'Publish & Notify'
                                 )}

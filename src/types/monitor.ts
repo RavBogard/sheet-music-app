@@ -1,5 +1,8 @@
 /**
  * Monitor system types — shared between web app and bridge server.
+ *
+ * ⚠️  CANONICAL SOURCE — bridge/src/types.ts mirrors this file.
+ * Run `npm run check:types` to verify sync, or `npm run check:types -- --fix` to copy.
  */
 
 export interface MonitorConfig {

@@ -40,6 +40,8 @@ export default function SetlistPerformPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [tappedIndex, setTappedIndex] = useState<number | null>(null)
+    const [changesSummary, setChangesSummary] = useState<string | null>(null)
+    const [showChangeBanner, setShowChangeBanner] = useState(true)
 
     // Real-time subscription to setlist
     useEffect(() => {
@@ -53,6 +55,25 @@ export default function SetlistPerformPage() {
                     setName(data.name || "Untitled")
                     setTracks(data.tracks || [])
                     setServiceNotes(data.serviceNotes || null)
+
+                    // Compute diff against last published snapshot
+                    const snapshot = data.publishedSnapshot as Array<{ title: string }> | undefined
+                    if (snapshot && data.isPublic) {
+                        const currentSongs = (data.tracks || [])
+                            .filter((t: SetlistTrack) => !t.type || t.type === 'song')
+                            .map((t: SetlistTrack) => t.title)
+                        const snapshotSongs = snapshot.map(s => s.title)
+                        const added = currentSongs.filter((t: string) => !snapshotSongs.includes(t))
+                        const removed = snapshotSongs.filter(t => !currentSongs.includes(t))
+                        if (added.length > 0 || removed.length > 0) {
+                            const parts: string[] = []
+                            if (added.length) parts.push(`+${added.join(', +')}`)
+                            if (removed.length) parts.push(`−${removed.join(', −')}`)
+                            setChangesSummary(parts.join(' · '))
+                        } else {
+                            setChangesSummary(null)
+                        }
+                    }
                 } else {
                     setError("Setlist not found")
                 }
@@ -60,7 +81,15 @@ export default function SetlistPerformPage() {
             },
             (err) => {
                 console.error("[SetlistPerform]", err)
-                setError("Failed to load setlist")
+                // Distinguish error types for clear user messaging
+                const code = (err as { code?: string })?.code
+                if (code === 'permission-denied') {
+                    setError("This setlist hasn't been published yet, or you don't have access.")
+                } else if (code === 'not-found') {
+                    setError("Setlist not found — it may have been deleted.")
+                } else {
+                    setError("Couldn't load setlist — check your connection and try again.")
+                }
                 setLoading(false)
             }
         )
@@ -181,6 +210,20 @@ export default function SetlistPerformPage() {
                     {serviceNotes && (
                         <div className="mx-1 mb-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                             <p className="text-sm text-blue-200 whitespace-pre-wrap">{serviceNotes}</p>
+                        </div>
+                    )}
+
+                    {/* Changes since last notification */}
+                    {changesSummary && showChangeBanner && (
+                        <div className="mx-1 mb-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+                            <span className="text-amber-400 text-xs font-semibold whitespace-nowrap mt-0.5">UPDATED</span>
+                            <p className="text-xs text-amber-200/80 flex-1">{changesSummary}</p>
+                            <button
+                                onClick={() => setShowChangeBanner(false)}
+                                className="text-amber-400/50 hover:text-amber-400 text-xs shrink-0"
+                            >
+                                ✕
+                            </button>
                         </div>
                     )}
 

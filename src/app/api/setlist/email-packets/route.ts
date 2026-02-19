@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
         // Load band members (musicians and above — not plain community members)
         const usersSnap = await db.collection('users')
-            .where('role', 'in', ['admin', 'band_leader', 'musician', 'leader', 'member'])
+            .where('role', 'in', ['admin', 'band_leader', 'musician', 'leader'])
             .get()
 
         interface MemberData { uid: string; email?: string; displayName?: string }

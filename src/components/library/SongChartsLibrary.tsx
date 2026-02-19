@@ -193,9 +193,9 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             .map(f => f.id)
         if (fileIds.length === 0) return
 
-        // Fetch in batches of 100
+        // Fetch in batches of 100 (uses apiFetch for auth header)
         const batchIds = fileIds.slice(0, 100)
-        fetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
+        apiFetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
             .then(r => r.ok ? r.json() : {})
             .then(data => setUsageMap(data))
             .catch(() => {}) // Silent — usage badges are non-critical

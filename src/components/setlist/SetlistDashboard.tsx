@@ -32,7 +32,7 @@ interface SetlistDashboardProps {
 }
 
 export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
-    const { user, signIn } = useAuth()
+    const { user, signIn, isMember } = useAuth()
     const congregation = useCongregation()
     const { downloadSetlist, isDownloading } = useOffline()
 
@@ -246,10 +246,23 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         let filtered = allSetlists
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
-            filtered = filtered.filter(s =>
-                s.name.toLowerCase().includes(q) ||
-                s.tracks?.some(t => t.title?.toLowerCase().includes(q))
-            )
+            filtered = filtered.filter(s => {
+                // Match name
+                if (s.name.toLowerCase().includes(q)) return true
+                // Match song titles
+                if (s.tracks?.some(t => t.title?.toLowerCase().includes(q))) return true
+                // Match formatted event date (e.g., "february 7", "feb 7", "2/7")
+                if (s.eventDate) {
+                    const d = toDateHelper(s.eventDate)
+                    if (d) {
+                        const long = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toLowerCase()
+                        const short = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase()
+                        const numeric = d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })
+                        if (long.includes(q) || short.includes(q) || numeric.includes(q)) return true
+                    }
+                }
+                return false
+            })
         }
         if (rabbiFilter) {
             filtered = filtered.filter(s => s.rabbi === rabbiFilter)
@@ -298,7 +311,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                     <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-border object-cover" />
                     <h1 className="text-2xl font-bold">My Setlists</h1>
                 </div>
-                {user ? (
+                {user && isMember ? (
                     <div className="flex items-center gap-2">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -323,6 +336,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                             <Plus className="h-5 w-5" /> New
                         </Button>
                     </div>
+                ) : user ? (
+                    <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1.5 rounded-lg">Account pending</span>
                 ) : (
                     <Button onClick={signIn} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-500">
                         <LogIn className="h-4 w-4" /> Sign In

@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:ci": "vitest run && playwright test",
+    "check:types": "node scripts/check-types-sync.js",
     "postinstall": "node scripts/copy-pdf-worker.js"
   },
   "dependencies": {

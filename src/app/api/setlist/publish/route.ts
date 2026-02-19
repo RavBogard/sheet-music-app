@@ -60,12 +60,8 @@ export async function POST(request: NextRequest) {
 
         // Auth check: owner, band leader, or admin
         const isOwner = setlist.ownerId === auth.uid
-        if (!isOwner && !auth.isAdmin) {
-            const userDoc = await db.collection('users').doc(auth.uid).get()
-            const role = userDoc.data()?.role
-            if (role !== 'band_leader' && role !== 'leader' && role !== 'admin') {
-                return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
-            }
+        if (!isOwner && !auth.isBandLeader) {
+            return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
         }
 
         // Validate: must have at least one song
@@ -75,12 +71,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
         }
 
-        // Step 1: Publish (set isPublic + publishedAt)
+        // Step 1: Publish (set isPublic + publishedAt + snapshot for change detection)
+        const songTracks = tracks.filter((t: { type?: string }) => !t.type || t.type === 'song')
+        const publishedSnapshot = songTracks.map((t: { title: string; key?: string; fileId?: string }) => ({
+            title: t.title, key: t.key || '', fileId: t.fileId || ''
+        }))
         const wasPublic = setlist.isPublic === true
         if (!wasPublic) {
             await setlistRef.update({
                 isPublic: true,
                 publishedAt: FieldValue.serverTimestamp(),
+                publishedSnapshot,
+                lastNotifiedAt: FieldValue.serverTimestamp(),
+            })
+        } else {
+            // Re-notify: update snapshot and timestamp
+            await setlistRef.update({
+                publishedSnapshot,
+                lastNotifiedAt: FieldValue.serverTimestamp(),
             })
         }
 

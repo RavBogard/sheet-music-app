@@ -217,6 +217,21 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                         </span>
                     )}
                 </span>
+                {/* Email delivery summary for published setlists */}
+                {isPublished && emailStatuses.size > 0 && (
+                    <span className="text-[10px] text-muted-foreground/60 ml-1 flex items-center gap-1.5">
+                        <Mail className="h-3 w-3" />
+                        {(() => {
+                            const statuses = Array.from(emailStatuses.values())
+                            const opened = statuses.filter(s => s.status === 'opened').length
+                            const delivered = statuses.filter(s => s.status === 'delivered').length
+                            const total = statuses.length
+                            if (opened > 0) return `${opened}/${total} opened`
+                            if (delivered > 0) return `${delivered}/${total} delivered`
+                            return `${total} sent`
+                        })()}
+                    </span>
+                )}
                 {expanded ? <ChevronUp className="h-3.5 w-3.5 ml-auto" /> : <ChevronDown className="h-3.5 w-3.5 ml-auto" />}
             </button>
 

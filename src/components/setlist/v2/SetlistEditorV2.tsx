@@ -218,8 +218,17 @@ export function SetlistEditorV2({
         try {
             const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi, musicians, eventDate, date: eventDate } as Parameters<typeof editorService.cloneForNextWeek>[0]
             const newId = await editorService.cloneForNextWeek(currentSetlist)
-            toast.success("Cloned for next week!", { id: toastId })
+            toast.success("Cloned for next week!", { id: toastId, description: "Check AI for rotation suggestions" })
             router.push(`/setlists/${newId}`)
+
+            // Open AI chat with a rotation-check prompt (fires after navigation)
+            setTimeout(() => {
+                const store = useChatStore.getState()
+                store.setPendingPrompt(
+                    'I just cloned last week\'s setlist for next week. Review the songs and suggest any that should be rotated based on recent usage. Which songs have been repeated most often? Suggest alternatives from the library for variety.'
+                )
+                if (!store.isOpen) store.toggle()
+            }, 1500)
         } catch {
             toast.error("Failed to clone setlist", { id: toastId })
         }
@@ -421,6 +430,11 @@ export function SetlistEditorV2({
                             }
                         }}
                         onOpenAI={() => useChatStore.getState().toggle()}
+                        onCheckFlow={() => {
+                            const store = useChatStore.getState()
+                            store.setPendingPrompt('Check the liturgical flow of this setlist. Flag any ordering issues, missing elements, or suggestions for improvement.')
+                            if (!store.isOpen) store.toggle()
+                        }}
                         onToggleLive={isBandLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
@@ -588,6 +602,7 @@ export function SetlistEditorV2({
                     setlistName={name}
                     songCount={songCount}
                     musicians={musicians}
+                    isPublished={isPublic}
                     onPublished={() => setIsPublic(true)}
                 />
             )}

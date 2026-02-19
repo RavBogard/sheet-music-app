@@ -86,13 +86,26 @@ const limiters = {
 export type LimiterName = keyof typeof limiters
 
 /**
- * Extract a rate limit key from the request.
- * Uses auth token prefix (per-user) or IP (per-anon).
+ * Extract a per-user rate limit key from the request.
+ * Decodes the JWT payload to get the user's `sub` claim (Firebase UID).
+ * Falls back to IP for unauthenticated requests.
+ *
+ * NOTE: The old implementation used the first 16 chars of the Bearer token,
+ * which is the JWT header — identical for all Firebase tokens from the same
+ * project. That made the rate limit global instead of per-user.
  */
 function getKey(req: NextRequest): string {
     const auth = req.headers.get('Authorization')
     if (auth?.startsWith('Bearer ')) {
-        return `u:${auth.slice(7, 23)}` // First 16 chars of token
+        try {
+            // JWT = header.payload.signature — decode the payload segment
+            const payload = auth.split('.')[1]
+            if (payload) {
+                const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString())
+                const uid = decoded.sub || decoded.user_id
+                if (uid) return `u:${uid}`
+            }
+        } catch { /* malformed token — fall through to IP */ }
     }
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || req.headers.get('x-real-ip')

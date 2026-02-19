@@ -86,6 +86,16 @@ export function MusicianProfileSettings() {
                 </div>
             </div>
 
+            {/* Nudge: no instrument configured yet */}
+            {!profile.instrument && (
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <span className="text-lg mt-0.5">🎵</span>
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                        Set your instrument below to get <strong>automatically transposed charts</strong> in your key and personalized gig packet PDFs.
+                    </p>
+                </div>
+            )}
+
             {/* Instrument Selection */}
             <div className="space-y-3">
                 <label className="text-sm font-medium text-foreground">Instrument</label>

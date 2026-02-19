@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { withAuth } from "@/lib/api-auth"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 
@@ -27,12 +28,50 @@ function getAllowedOrigin(request: NextRequest): string {
     return 'https://centralreform.live'
 }
 
+/**
+ * Check if request is from a trusted browser context (same-origin navigation/embed).
+ * Modern browsers send Sec-Fetch-Site on all requests. This can't be forged
+ * by curl/scripts since browsers control the header.
+ *
+ * Fallback: also accept requests with a valid Referer from our domain.
+ */
+function isTrustedBrowserRequest(req: NextRequest): boolean {
+    const secFetchSite = req.headers.get('sec-fetch-site')
+    if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true
+
+    const referer = req.headers.get('referer')
+    if (referer) {
+        try {
+            const url = new URL(referer)
+            return url.hostname === 'centralreform.live' ||
+                url.hostname === 'www.centralreform.live' ||
+                url.hostname === 'localhost' ||
+                url.hostname.endsWith('.vercel.app')
+        } catch { /* invalid referer */ }
+    }
+    return false
+}
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
     const limited = await checkRateLimit(request, 'api')
     if (limited) return limited
+
+    // Auth: Accept Bearer token (API calls) OR same-origin browser requests
+    // (chart embeds, prefetches, audio elements — can't attach Bearer headers).
+    // Direct curl/script access without either is blocked.
+    const hasAuthHeader = request.headers.get('Authorization')?.startsWith('Bearer ')
+    if (hasAuthHeader) {
+        const auth = await withAuth(request)
+        if (auth instanceof NextResponse) return auth
+    } else if (!isTrustedBrowserRequest(request)) {
+        return NextResponse.json(
+            { error: "Authentication required" },
+            { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request) } }
+        )
+    }
 
     const { fileId } = await params
 
