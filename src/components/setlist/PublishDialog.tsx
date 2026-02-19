@@ -43,6 +43,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
     // Per-musician email opt-out: set of indices that should NOT receive email
     const [emailOptOut, setEmailOptOut] = useState<Set<number>>(new Set())
     const [note, setNote] = useState("")
+    const [subject, setSubject] = useState(`🎵 ${setlistName} — Setlist Published`)
 
     const noMusicians = musicians.length === 0
     const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
@@ -72,6 +73,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                     musicians,
                     emailRecipients,
                     note: note.trim() || undefined,
+                    subject: subject.trim() || undefined,
                 }),
             })
 
@@ -102,6 +104,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         setResult(null)
         setEmailOptOut(new Set())
         setNote("")
+        setSubject(`🎵 ${setlistName} — Setlist Published`)
         onClose()
     }
 
@@ -175,6 +178,21 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                             )
                                         })}
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Email subject */}
+                            {!noMusicians && (
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                        Email subject
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={subject}
+                                        onChange={(e) => setSubject(e.target.value)}
+                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
                                 </div>
                             )}
 

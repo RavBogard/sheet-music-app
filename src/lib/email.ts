@@ -36,6 +36,7 @@ interface SetlistEmailParams {
     songs: string[]
     publisherName: string
     note?: string
+    subject?: string
 }
 
 /**
@@ -52,7 +53,7 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok
         const { error } = await client.emails.send({
             from: `CRC Music <${getFromEmail()}>`,
             to: params.to,
-            subject: `🎵 ${params.setlistName} — Setlist Published`,
+            subject: params.subject || `🎵 ${params.setlistName} — Setlist Published`,
             html,
         })
 
@@ -83,7 +84,8 @@ export async function emailAllMembers(
     publisherName: string,
     songs: string[],
     baseUrl: string,
-    note?: string
+    note?: string,
+    subject?: string
 ): Promise<{ sent: number; failed: number; errors: string[] }> {
     let sent = 0
     let failed = 0
@@ -106,6 +108,7 @@ export async function emailAllMembers(
             songs,
             publisherName,
             note,
+            subject,
         })
         if (result.ok) {
             sent++

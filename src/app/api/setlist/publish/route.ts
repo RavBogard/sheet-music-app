@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         const limited = await checkRateLimit(request, 'api')
         if (limited) return limited
 
-        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note } = await request.json()
+        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note, subject } = await request.json()
         if (!setlistId || typeof setlistId !== 'string') {
             return NextResponse.json({ error: 'setlistId is required' }, { status: 400 })
         }
@@ -169,11 +169,12 @@ export async function POST(request: NextRequest) {
         const publisherName = publisherDoc.data()?.displayName || auth.email?.split('@')[0] || 'A band member'
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
         const publishNote = typeof note === 'string' ? note.trim().slice(0, 500) : undefined
+        const publishSubject = typeof subject === 'string' ? subject.trim().slice(0, 200) : undefined
 
         const emailPromise = emailRecipients.length > 0
             ? emailAllMembers(
                 emailRecipients, setlistId, setlistName, eventDateStr,
-                publisherName, songNames, origin, publishNote
+                publisherName, songNames, origin, publishNote, publishSubject
             ).catch(err => {
                 logger.warn('[Publish] Email sending failed:', err)
                 return { sent: 0, failed: 0, errors: [], error: err instanceof Error ? err.message : String(err) }
