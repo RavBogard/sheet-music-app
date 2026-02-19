@@ -117,7 +117,7 @@ export function PeopleSection() {
                     )}
                     {users.map((u) => (
                         <div key={u.uid} className="flex items-center gap-2">
-                            {pendingCount > 0 && (
+                            {u.role === 'pending' && (
                                 <input
                                     type="checkbox"
                                     checked={selectedUsers.has(u.uid)}
@@ -125,7 +125,7 @@ export function PeopleSection() {
                                     className="h-4 w-4 rounded border-border accent-violet-600 shrink-0"
                                 />
                             )}
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <UserRow user={u} currentUserUid={user?.uid || ""} currentUserRole={currentUserRole} />
                             </div>
                         </div>
