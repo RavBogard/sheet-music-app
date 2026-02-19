@@ -7,6 +7,8 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   aggressiveFrontEndNavCaching: true,
   workboxOptions: {
     disableDevLogs: true,
+    skipWaiting: true,    // New SW activates immediately (don't wait for old tabs to close)
+    clientsClaim: true,   // New SW takes over existing clients right away
     // PDF caching handled by IndexedDB (offline-store.ts) — no runtimeCaching needed
   },
 });
