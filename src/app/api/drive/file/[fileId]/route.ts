@@ -56,7 +56,9 @@ export async function GET(
         let fileData: ArrayBuffer;
         let contentType = 'application/pdf';
 
-        if (metadata.mimeType?.startsWith('application/vnd.google-apps.')) {
+        if (metadata.mimeType === 'application/vnd.google-apps.document' ||
+            metadata.mimeType === 'application/vnd.google-apps.spreadsheet' ||
+            metadata.mimeType === 'application/vnd.google-apps.presentation') {
             // Google Doc/Sheet/Slide → Export as PDF
             fileData = await drive.exportDoc(fileId, 'application/pdf') as ArrayBuffer
         } else {

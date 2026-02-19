@@ -23,6 +23,13 @@ export const maxDuration = 300
 const DEFAULT_BATCH_SIZE = 20
 const MAX_BATCH_SIZE = 50
 
+// Google types that can be exported as PDF — excludes folders, forms, etc.
+const EXPORTABLE_GOOGLE_TYPES = [
+    'application/vnd.google-apps.document',
+    'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.presentation',
+]
+
 export async function POST(req: NextRequest) {
     try {
         const auth = await withAuth(req, 'admin')
@@ -42,12 +49,13 @@ export async function POST(req: NextRequest) {
         const snapshot = await db.collection('library_index').get()
         const allFiles = snapshot.docs.map(doc => doc.data())
 
-        // Filter to migratable types (PDFs, audio, XML, Google Docs → PDF)
+        // Filter to migratable types (PDFs, audio, XML, exportable Google Docs)
+        // IMPORTANT: Exclude folders and other non-exportable Google types
         const migratable = allFiles.filter(f =>
             f.mimeType === 'application/pdf' ||
             f.mimeType?.includes('audio') ||
             f.mimeType?.includes('xml') ||
-            f.mimeType?.startsWith('application/vnd.google-apps.')
+            EXPORTABLE_GOOGLE_TYPES.includes(f.mimeType)
         )
 
         // Categorize by status
@@ -94,7 +102,7 @@ export async function POST(req: NextRequest) {
                 let fileData: ArrayBuffer
                 let contentType = file.mimeType || 'application/pdf'
 
-                if (file.mimeType?.startsWith('application/vnd.google-apps.')) {
+                if (EXPORTABLE_GOOGLE_TYPES.includes(file.mimeType)) {
                     fileData = await drive.exportDoc(file.id, 'application/pdf') as unknown as ArrayBuffer
                     contentType = 'application/pdf'
                 } else {
@@ -211,7 +219,7 @@ export async function GET(req: NextRequest) {
             f.mimeType === 'application/pdf' ||
             f.mimeType?.includes('audio') ||
             f.mimeType?.includes('xml') ||
-            f.mimeType?.startsWith('application/vnd.google-apps.')
+            EXPORTABLE_GOOGLE_TYPES.includes(f.mimeType)
         )
 
         const inStorage = migratable.filter(f => f.storageCopiedAt && !f.storageFailed)
