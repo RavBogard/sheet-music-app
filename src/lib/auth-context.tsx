@@ -81,14 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setUser(currentUser)
             if (currentUser) {
-                // Sync session cookie for SSR — fire-and-forget, don't block UI
-                currentUser.getIdToken().then((idToken) => {
+                // Sync session cookie for SSR — force refresh (true) to prevent 401s on stale cached tokens
+                currentUser.getIdToken(true).then((idToken) => {
                     fetch("/api/auth/session", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ idToken }),
-                    }).catch(() => {/* non-critical: SSR just won't have auth */})
-                }).catch(() => {})
+                    }).catch(() => {/* non-critical: SSR just won't have auth */ })
+                }).catch(() => { })
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Force-refresh the ID token so new custom claims take effect immediately
                     const claimsTs = p?.claimsUpdatedAt?.toString() || null
                     if (claimsTs && lastClaimsUpdate.current && claimsTs !== lastClaimsUpdate.current) {
-                        currentUser.getIdToken(true).catch(() => {})
+                        currentUser.getIdToken(true).catch(() => { })
                     }
                     lastClaimsUpdate.current = claimsTs
 
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             localStorage.removeItem('crc_cached_user')
             // Clear server session cookie
-            fetch("/api/auth/session", { method: "DELETE" }).catch(() => {})
+            fetch("/api/auth/session", { method: "DELETE" }).catch(() => { })
             await firebaseSignOut(auth)
         } catch (error) {
             logger.error("Sign out error:", error)

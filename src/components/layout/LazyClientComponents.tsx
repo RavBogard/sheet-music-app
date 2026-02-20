@@ -20,18 +20,12 @@ const BackgroundPrefetcher = dynamic(
     { ssr: false }
 )
 
-const UpdatePrompt = dynamic(
-    () => import("@/components/offline/UpdatePrompt").then(m => m.UpdatePrompt),
-    { ssr: false }
-)
-
 export function LazyClientComponents() {
     return (
         <>
             <ChatPanel />
             <OfflineIndicator />
             <BackgroundPrefetcher />
-            <UpdatePrompt />
         </>
     )
 }
