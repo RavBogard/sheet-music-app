@@ -62,7 +62,7 @@ export class BridgeWSServer {
                 }
             }, 10000)
 
-            ws.on("message", async (data) => {
+            ws.on("message", async (data: import("ws").Data) => {
                 try {
                     const msg: ClientMessage = JSON.parse(data.toString())
                     await this.handleMessage(ws, msg, authTimeout)
@@ -80,7 +80,7 @@ export class BridgeWSServer {
                 this.clients.delete(ws)
             })
 
-            ws.on("error", (err) => {
+            ws.on("error", (err: Error) => {
                 console.error("[WS] Client error:", err.message)
                 this.clients.delete(ws)
             })
