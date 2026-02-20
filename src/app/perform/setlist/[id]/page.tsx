@@ -180,18 +180,18 @@ export default function SetlistPerformPage() {
     }
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-zinc-950 text-zinc-200 overflow-hidden">
+        <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden">
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
                 <Link
                     href="/setlists"
-                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
+                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
                 >
-                    <ArrowLeft className="h-5 w-5 text-zinc-400" />
+                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-lg font-bold truncate">{name}</h1>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                         {songCount} song{songCount !== 1 ? "s" : ""}
                         {totalCount > songCount ? ` · ${totalCount} items` : ""}
                     </p>
@@ -199,23 +199,23 @@ export default function SetlistPerformPage() {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setShowPrintModal(true)}
-                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
+                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
                         title="Print gig packet"
                     >
-                        <Printer className="h-4 w-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
+                        <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                     </button>
                     <Link
                         href={`/setlists/${setlistId}`}
-                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
+                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
                         title="Edit setlist"
                     >
-                        <Pencil className="h-4 w-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
+                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                     </Link>
                 </div>
             </div>
 
             {/* Track list */}
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto w-full">
                 <div className="flex flex-col p-2 pb-24 gap-0.5">
 
                     {/* Service notes banner */}
@@ -239,25 +239,8 @@ export default function SetlistPerformPage() {
                         </div>
                     )}
 
-                    {/* Section quick-jump chips — inside scroll area */}
-                    {sectionLabels.length > 1 && (
-                        <div className="flex gap-2 px-2 py-2 mb-1 overflow-x-auto">
-                            {sectionLabels.map((label) => (
-                                <button
-                                    key={label}
-                                    onClick={() => scrollToSection(label)}
-                                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold
-                                        bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white
-                                        border border-zinc-700/50 transition-colors"
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
                     {tracks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                             <Music className="h-12 w-12 mb-3 opacity-30" />
                             <p className="text-lg font-medium">No tracks yet</p>
                             <Button
@@ -280,8 +263,8 @@ export default function SetlistPerformPage() {
                             >
                                 {/* Section header */}
                                 {section.label && (
-                                    <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-sm px-4 py-2 mt-3 first:mt-0
-                                        text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 border-b border-zinc-800/50">
+                                    <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm px-4 py-2 mt-3 first:mt-0
+                                        text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50">
                                         {section.label}
                                     </div>
                                 )}
@@ -302,8 +285,8 @@ export default function SetlistPerformPage() {
                                             className={cn(
                                                 "flex items-center gap-4 p-4 rounded-xl transition-all text-left w-full",
                                                 isTapped
-                                                    ? "bg-blue-600 text-white"
-                                                    : "hover:bg-zinc-900",
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "hover:bg-muted",
                                                 isFlowItem && !isTapped && "opacity-60",
                                                 tappedIndex !== null && !isTapped && "opacity-40 pointer-events-none"
                                             )}
@@ -314,8 +297,8 @@ export default function SetlistPerformPage() {
                                                 isTapped
                                                     ? "bg-white/20 text-white"
                                                     : isFlowItem
-                                                        ? "bg-transparent text-zinc-600"
-                                                        : "bg-zinc-800 text-zinc-400"
+                                                        ? "bg-transparent text-muted-foreground"
+                                                        : "bg-muted border border-border text-muted-foreground"
                                             )}>
                                                 {isTapped ? (
                                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -340,7 +323,7 @@ export default function SetlistPerformPage() {
                                                             "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
                                                             isTapped
                                                                 ? "bg-white/20 border-white/30 text-white"
-                                                                : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                                                                : "bg-muted border-border text-muted-foreground"
                                                         )}>
                                                             {track.key}
                                                         </span>
@@ -354,10 +337,10 @@ export default function SetlistPerformPage() {
                                                         </span>
                                                     )}
                                                     {track.performer && (
-                                                        <span className="text-xs text-zinc-500">{track.performer}</span>
+                                                        <span className="text-xs text-muted-foreground">{track.performer}</span>
                                                     )}
                                                     {rawTrack.notes && !isFlowItem && (
-                                                        <span className="text-xs text-zinc-600 truncate">{rawTrack.notes}</span>
+                                                        <span className="text-xs text-muted-foreground/80 truncate">{rawTrack.notes}</span>
                                                     )}
                                                     {rawTrack.referenceLink && !isFlowItem && (
                                                         <a
@@ -368,8 +351,8 @@ export default function SetlistPerformPage() {
                                                             className={cn(
                                                                 "inline-flex items-center gap-1 text-[10px] font-semibold border rounded px-1.5 py-0.5 ml-1 transition-colors",
                                                                 isTapped
-                                                                    ? "border-blue-300 text-blue-200 hover:bg-blue-500 hover:text-white"
-                                                                    : "border-zinc-700 text-zinc-400 hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-300"
+                                                                    ? "border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20"
+                                                                    : "border-border text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                                                             )}
                                                         >
                                                             Reference Auth <ExternalLink className="h-3 w-3" />
@@ -380,10 +363,10 @@ export default function SetlistPerformPage() {
 
                                             {/* Chevron / play indicator */}
                                             {hasChart && !isTapped && (
-                                                <ChevronRight className="h-5 w-5 text-zinc-700 shrink-0" />
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" />
                                             )}
                                             {isTapped && (
-                                                <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />
+                                                <PlayCircle className="h-6 w-6 fill-white text-primary shrink-0" />
                                             )}
                                         </div>
                                     )
@@ -392,13 +375,13 @@ export default function SetlistPerformPage() {
                         ))
                     )}
                 </div>
-            </ScrollArea>
+            </div>
 
             {/* Bottom action bar */}
             {tracks.length > 0 && (
-                <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
+                <div className="px-4 py-3 border-t border-border bg-background/80 backdrop-blur-sm">
                     <Button
-                        className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-500 text-white gap-2"
+                        className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                         onClick={() => {
                             const firstSongIdx = queue.findIndex((q) => !q.fileId.startsWith("flow-"))
                             if (firstSongIdx >= 0) handleTrackTap(firstSongIdx)

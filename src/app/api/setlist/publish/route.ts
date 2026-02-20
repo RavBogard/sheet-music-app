@@ -16,6 +16,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { recordSongUsage } from '@/lib/song-usage'
 import { emailAllMembers } from '@/lib/email'
 import { logger } from '@/lib/logger'
+import { revalidatePath } from 'next/cache'
 
 interface MusicianPayload {
     uid?: string
@@ -234,6 +235,15 @@ export async function POST(request: NextRequest) {
                 })
             }
             batch.commit().catch(err => logger.warn('[Publish] Email events write failed:', err))
+        }
+
+        // Bust Next.js aggressive cache so it stops serving initialIsPublic: false on hard reloads
+        try {
+            revalidatePath('/setlists')
+            revalidatePath(`/setlists/${setlistId}`)
+            revalidatePath(`/perform/setlist/${setlistId}`)
+        } catch (e) {
+            logger.warn('[Publish] Cache revalidation failed (non-critical)', e)
         }
 
         return NextResponse.json({
