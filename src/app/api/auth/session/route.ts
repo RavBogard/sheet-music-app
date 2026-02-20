@@ -18,7 +18,9 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 14 // 14 days in seconds
  */
 export async function POST(req: NextRequest) {
     try {
-        const { idToken } = await req.json()
+        const body = await req.json()
+        const idToken = body.idToken
+
         if (!idToken || typeof idToken !== "string") {
             return NextResponse.json({ error: "Missing idToken" }, { status: 400 })
         }
