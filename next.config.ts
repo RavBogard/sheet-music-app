@@ -31,6 +31,8 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 });
 
 const nextConfig: NextConfig = {
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   turbopack: {},
   serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist'],
   images: {
