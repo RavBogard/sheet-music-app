@@ -208,6 +208,13 @@ export function SetlistEditorV2({
         }
     }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
+    // Bust Next.js aggressive Server Component cache when client-side togglePublic mutates Firestore
+    useEffect(() => {
+        if (isPublic !== initialIsPublic) {
+            router.refresh()
+        }
+    }, [isPublic, initialIsPublic, router])
+
     // Play a track (with live broadcast)
     const handlePlayTrackLive = useCallback(
         (fileId: string, fileName: string) => {
