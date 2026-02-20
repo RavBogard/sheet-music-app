@@ -201,9 +201,9 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                     {step === 'processing' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[400px]">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
-                            <h3 className="text-lg font-bold mb-2">Analyzing Rows</h3>
-                            <p className="text-sm text-muted-foreground text-center max-w-sm">
-                                Passing data to OpenAI to map dynamic columns, extract performer names, and verify Google Drive linkage permissions...
+                            <h3 className="font-semibold text-lg text-foreground mt-4">Analyzing Rows</h3>
+                            <p className="text-sm text-muted-foreground w-64">
+                                Passing data to Gemini to map dynamic columns, extract performer names, and verify Google Drive linkage permissions...
                             </p>
                         </div>
                     )}
