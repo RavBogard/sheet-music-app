@@ -126,7 +126,16 @@ ${contextStr}`
         const content = resultObj.response.text()
         if (!content) throw new Error("No content from Gemini")
 
-        const result = JSON.parse(content)
+        let result
+        try {
+            // Sometimes Gemini wraps JSON in markdown block ticks, so we strip them
+            const cleanedContent = content.replace(/```json/g, '').replace(/```/g, '').trim()
+            result = JSON.parse(cleanedContent)
+        } catch (parseErr) {
+            logger.error(`[Setlist Importer] Gemini returned invalid JSON. Raw output: ${content.substring(0, 500)}...`)
+            throw new Error("Gemini returned an invalid format. Please try again or simplify the spreadsheet.")
+        }
+
         const items = result.items || []
 
         // 4. Run extracted items against the library using Levenshtein distance
