@@ -258,6 +258,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 rabbi: rab,
                 serviceNotes: sn?.trim() || undefined,
                 musicians: mus.length > 0 ? mus : undefined,
+                isPublic: pub,
             }
 
             if (id) {
