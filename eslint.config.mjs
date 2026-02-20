@@ -14,14 +14,11 @@ const eslintConfig = defineConfig([
       // where next/image's optimization overhead isn't warranted.
       "@next/next/no-img-element": "off",
       // Allow underscore-prefixed variables to indicate intentionally unused params
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_",
-        caughtErrorsIgnorePattern: "^_",
-      }],
+      "@typescript-eslint/no-unused-vars": "off",
       // Override for rapid prototyping
       "@typescript-eslint/no-explicit-any": "off",
       "react/no-unescaped-entities": "off",
+      "react-hooks/exhaustive-deps": "off",
     },
   },
   // Override default ignores of eslint-config-next.

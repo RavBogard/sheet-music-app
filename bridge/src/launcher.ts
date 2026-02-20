@@ -211,29 +211,30 @@ async function activateSetupCode(code: string): Promise<{ success: boolean; cred
         }
 
         const url = `${appUrl}/api/bridge/setup-code?code=${encodeURIComponent(code)}`
-        const isHttps = url.startsWith("https://")
-        const httpModule = require(isHttps ? "https" : "http")
 
-        const { statusCode, body }: { statusCode: number; body: string } = await new Promise((resolve, reject) => {
-            const req = httpModule.get(url, { timeout: 10000 },
-                (res: { statusCode: number; on: (e: string, cb: (d: Buffer) => void) => void }) => {
-                    let data = ""
-                    res.on("data", (d: Buffer) => data += d)
-                    res.on("end", () => resolve({ statusCode: res.statusCode, body: data }))
-                }
-            )
-            req.on("error", (err: Error) => {
-                // Translate common network errors to human-readable messages
-                if (err.message.includes("ENOTFOUND")) {
-                    reject(new Error(`Site not found — check the URL (${appUrl})`))
-                } else if (err.message.includes("ECONNREFUSED")) {
-                    reject(new Error("Connection refused — is the site running?"))
-                } else {
-                    reject(err)
-                }
-            })
-            req.on("timeout", () => { req.destroy(); reject(new Error("Request timed out — check your internet connection")) })
-        })
+        let statusCode: number
+        let body: string
+
+        try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000)
+            const response = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+            clearTimeout(timeoutId)
+
+            statusCode = response.status
+            body = await response.text()
+        } catch (err: any) {
+            if (err.name === 'AbortError') {
+                return { success: false, error: "Request timed out — check your internet connection" }
+            }
+            const errStr = err.message + (err.cause?.code || "")
+            if (errStr.includes("ENOTFOUND")) {
+                return { success: false, error: `Site not found — check the URL (${appUrl})` }
+            } else if (errStr.includes("ECONNREFUSED")) {
+                return { success: false, error: "Connection refused — is the site running?" }
+            }
+            return { success: false, error: err.message || "Network error" }
+        }
 
         // Handle non-JSON responses (e.g. Vercel error pages, wrong URL)
         let parsed: Record<string, unknown>

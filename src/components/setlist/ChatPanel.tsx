@@ -57,7 +57,7 @@ export function ChatPanel() {
                 setTimeout(() => handleSend(pendingPrompt), 100)
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once when panel opens with pending prompt
+         
     }, [isOpen, pendingPrompt])
 
     const handleSend = async (overrideInput?: string) => {

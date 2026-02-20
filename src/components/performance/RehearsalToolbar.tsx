@@ -110,7 +110,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 onPracticeTime(Math.round(totalPracticed.current))
             }
         }
-    }, [audioUrl]) // eslint-disable-line react-hooks/exhaustive-deps -- audio init only on URL change; onPracticeTime is a stable callback ref
+    }, [audioUrl])  
 
     // Handle A-B loop
     useEffect(() => {

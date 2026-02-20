@@ -57,7 +57,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             if (!menuOpen) setBarsVisible(false)
         }, 8000)
         return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount auto-hide only
+         
     }, [])
 
     // ── Keyboard shortcuts ──

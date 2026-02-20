@@ -134,7 +134,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         if (preset?.label) parts.push(preset.label)
         if (myProfile.preferredCapoFret) parts.push(`Capo ${myProfile.preferredCapoFret}`)
         return parts.join(" — ")
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+     
     }, [myProfile, user?.uid])
 
     // ── PDF Generation ──

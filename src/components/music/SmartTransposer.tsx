@@ -187,7 +187,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [aiState.isEnabled, isRendered, pageData, hasScanned])
 
     // Write native key when we have enough data (once per file)

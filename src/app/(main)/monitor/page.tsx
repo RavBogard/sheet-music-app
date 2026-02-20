@@ -51,8 +51,8 @@ export default function MonitorPage() {
             logger.error("Failed to self-assign bus:", err)
             toast.error("Can't self-assign — ask a sound engineer to assign you")
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid, config])
+
+    }, [user, config])
 
     // Fader handlers — own bus
     const handleBusMaster = useCallback((value: number) => {

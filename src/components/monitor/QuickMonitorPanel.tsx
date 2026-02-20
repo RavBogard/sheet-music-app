@@ -63,9 +63,9 @@ export function QuickMonitorPanel() {
         if (!user) return
         getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
             if (snap.exists()) setPinnedChannels(snap.data().pinnedChannels || [])
-        }).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid])
+        }).catch(() => { })
+
+    }, [user])
 
     // Save pinned channels
     const togglePin = useCallback(async (channelIndex: number) => {
@@ -74,11 +74,11 @@ export function QuickMonitorPanel() {
             const next = prev.includes(channelIndex)
                 ? prev.filter(c => c !== channelIndex)
                 : [...prev, channelIndex]
-            setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => {})
+            setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => { })
             return next
         })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid])
+
+    }, [user])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {
@@ -199,9 +199,8 @@ export function QuickMonitorPanel() {
                             <div key={send.channelIndex} className="flex items-center gap-1">
                                 <button
                                     onClick={() => togglePin(send.channelIndex)}
-                                    className={`shrink-0 p-1 rounded transition-colors ${
-                                        isPinned ? "text-yellow-500" : "text-zinc-700 hover:text-zinc-500"
-                                    }`}
+                                    className={`shrink-0 p-1 rounded transition-colors ${isPinned ? "text-yellow-500" : "text-zinc-700 hover:text-zinc-500"
+                                        }`}
                                     title={isPinned ? "Unpin" : "Pin (always show)"}
                                 >
                                     <Star className="w-3 h-3" fill={isPinned ? "currentColor" : "none"} />

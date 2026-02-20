@@ -52,7 +52,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
     // Sync subject default when dialog opens (useState initializer only runs once)
     useEffect(() => {
         if (isOpen) setSubject(defaultSubject)
-    }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- intentional: reset on open
+    }, [isOpen])  
 
     const noMusicians = musicians.length === 0
     const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length

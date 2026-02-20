@@ -195,7 +195,7 @@ export function SetlistEditorV2({
                 useChatStore.getState().open()
             }
         }
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
+    }, [])  
 
     // Bust Next.js aggressive Server Component cache when client-side togglePublic mutates Firestore
     useEffect(() => {

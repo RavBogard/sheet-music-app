@@ -59,7 +59,7 @@ export function useContentSearch() {
         } finally {
             setSearching(false)
         }
-    }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps -- user ref is stable after auth, only uid matters
+    }, [user?.uid])  
 
     const clear = useCallback(() => {
         setResults([])

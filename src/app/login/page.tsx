@@ -29,7 +29,7 @@ export default function LoginPage() {
         if (!loading && user) {
             router.replace("/")
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+         
     }, [user?.uid, loading, router])
 
     const handleSignIn = async () => {

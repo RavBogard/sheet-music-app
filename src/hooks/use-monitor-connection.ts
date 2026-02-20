@@ -139,7 +139,7 @@ export function useMonitorConnection(): { client: X32WSClient | null } {
                 teardown()
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [user?.uid, hasAccess])
 
     // Keep ref current

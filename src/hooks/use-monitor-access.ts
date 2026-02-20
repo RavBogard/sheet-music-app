@@ -58,7 +58,7 @@ export function useMonitorAccess(): {
         )
 
         return unsub
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+     
     }, [user?.uid])
 
     const hasAccess = isAdmin || isSoundEngineer || hasBusAssigned

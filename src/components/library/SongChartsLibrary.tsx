@@ -239,7 +239,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             .then(r => r.ok ? r.json() : {})
             .then(data => setUsageMap(data))
             .catch(() => { }) // Silent — usage badges are non-critical
-    }, [combinedItems.map(i => i.id).join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [combinedItems.map(i => i.id).join(',')])  
 
     const itemCount = tab === "audio" ? audioFiles.length : files.length
     const hasAudio = audioFiles.length > 0
