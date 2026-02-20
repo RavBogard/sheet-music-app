@@ -3,7 +3,7 @@
 import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Music } from "lucide-react"
+import { GripVertical, Music, ExternalLink } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 
 interface SongRowProps {
@@ -84,18 +84,32 @@ export const SongRow = memo(function SongRow({ track, canEdit, onTap, onPlayFile
                 </div>
 
                 {/* Line 2: Linked file or hint */}
-                <div className="text-xs text-muted-foreground/60 truncate mt-0.5">
-                    {hasFile ? (
-                        <button
-                            className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:underline"
-                            onClick={handleFileClick}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground/60 mt-0.5">
+                    <span className="truncate">
+                        {hasFile ? (
+                            <button
+                                className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:underline"
+                                onClick={handleFileClick}
+                            >
+                                {track.fileName || "Linked chart"}
+                            </button>
+                        ) : canEdit ? (
+                            "Tap to link a chart"
+                        ) : (
+                            "No chart linked"
+                        )}
+                    </span>
+
+                    {track.referenceLink && (
+                        <a
+                            href={track.referenceLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-500 dark:text-violet-400 border border-violet-500/30 bg-violet-500/10 rounded px-1.5 py-0.5 hover:bg-violet-500 hover:text-white transition-colors"
                         >
-                            {track.fileName || "Linked chart"}
-                        </button>
-                    ) : canEdit ? (
-                        "Tap to link a chart"
-                    ) : (
-                        "No chart linked"
+                            Ref <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
                     )}
                 </div>
             </div>

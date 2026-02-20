@@ -19,7 +19,7 @@ import { useMusicStore } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer } from "lucide-react"
+import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink } from "lucide-react"
 import { PrintModal } from "@/components/setlist/PrintModal"
 import { SetlistTrack } from "@/types/models"
 import { QueueItem } from "@/lib/store"
@@ -293,15 +293,17 @@ export default function SetlistPerformPage() {
                                     const hasChart = !track.fileId.startsWith("flow-")
 
                                     return (
-                                        <button
+                                        <div
                                             key={`${track.fileId}-${globalIndex}`}
+                                            role="button"
+                                            tabIndex={0}
                                             onClick={() => handleTrackTap(globalIndex)}
-                                            disabled={tappedIndex !== null}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTrackTap(globalIndex) }}
                                             className={cn(
                                                 "flex items-center gap-4 p-4 rounded-xl transition-all text-left w-full",
                                                 isTapped
                                                     ? "bg-blue-600 text-white"
-                                                    : "hover:bg-zinc-900 active:bg-zinc-800",
+                                                    : "hover:bg-zinc-900",
                                                 isFlowItem && !isTapped && "opacity-60",
                                                 tappedIndex !== null && !isTapped && "opacity-40 pointer-events-none"
                                             )}
@@ -357,6 +359,22 @@ export default function SetlistPerformPage() {
                                                     {rawTrack.notes && !isFlowItem && (
                                                         <span className="text-xs text-zinc-600 truncate">{rawTrack.notes}</span>
                                                     )}
+                                                    {rawTrack.referenceLink && !isFlowItem && (
+                                                        <a
+                                                            href={rawTrack.referenceLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className={cn(
+                                                                "inline-flex items-center gap-1 text-[10px] font-semibold border rounded px-1.5 py-0.5 ml-1 transition-colors",
+                                                                isTapped
+                                                                    ? "border-blue-300 text-blue-200 hover:bg-blue-500 hover:text-white"
+                                                                    : "border-zinc-700 text-zinc-400 hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-300"
+                                                            )}
+                                                        >
+                                                            Reference Auth <ExternalLink className="h-3 w-3" />
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -367,7 +385,7 @@ export default function SetlistPerformPage() {
                                             {isTapped && (
                                                 <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />
                                             )}
-                                        </button>
+                                        </div>
                                     )
                                 })}
                             </div>

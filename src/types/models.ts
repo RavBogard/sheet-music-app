@@ -40,6 +40,7 @@ export interface SetlistTrack {
     audioFileName?: string // Cached Audio File Name
     key?: string
     notes?: string
+    referenceLink?: string // Link to YouTube/Spotify reference audio
     type?: TrackType // Default: 'song' (backward compatible)
     duration?: string // "3:30" for songs, "~5 min" for liturgical items
     bpm?: number

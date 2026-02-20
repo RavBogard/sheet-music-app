@@ -58,6 +58,7 @@ export function TrackSheet({
     const [performer, setPerformer] = useState("")
     const [estimatedMinutes, setEstimatedMinutes] = useState("")
     const [description, setDescription] = useState("")
+    const [referenceLink, setReferenceLink] = useState("")
 
     // Native key from library
     const [nativeKey, setNativeKey] = useState<string | null>(null)
@@ -79,6 +80,7 @@ export function TrackSheet({
             setPerformer(track.performer || "")
             setEstimatedMinutes(track.estimatedMinutes?.toString() || "")
             setDescription(track.description || "")
+            setReferenceLink(track.referenceLink || "")
         }
     }, [track])
 
@@ -94,7 +96,7 @@ export function TrackSheet({
                 setNativeKey(meta.nativeKey)
                 setNativeKeySource(meta.nativeKeySource || 'auto')
             }
-        }).catch(() => {})
+        }).catch(() => { })
     }, [track?.fileId])
 
     // When user picks a "Play In" key, calculate transposition from native key
@@ -148,6 +150,7 @@ export function TrackSheet({
             data.bpm = bpm ? parseInt(bpm) : undefined
             data.leadMusician = leadMusician || undefined
             data.notes = notes || undefined
+            data.referenceLink = referenceLink || undefined
             data.transposition = transposition || undefined
         }
 
@@ -163,7 +166,7 @@ export function TrackSheet({
         setSaved(true)
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
         saveTimerRef.current = setTimeout(() => setSaved(false), 1500)
-    }, [track, title, trackType, isSong, isFlowItem, key, bpm, leadMusician, notes, transposition, performer, estimatedMinutes, description, onUpdate])
+    }, [track, title, trackType, isSong, isFlowItem, key, bpm, leadMusician, notes, referenceLink, transposition, performer, estimatedMinutes, description, onUpdate])
 
     // Auto-save when any field loses focus
     const handleBlur = useCallback(() => {
@@ -350,6 +353,21 @@ export function TrackSheet({
                             onBlur={handleBlur}
                             className="bg-muted/50 border-0 min-h-[60px] resize-none"
                             placeholder="Performance notes..."
+                        />
+                    </div>
+
+                    {/* Reference Link */}
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                            Reference Video/Audio
+                        </Label>
+                        <Input
+                            type="url"
+                            value={referenceLink}
+                            onChange={(e) => setReferenceLink(e.target.value)}
+                            onBlur={handleBlur}
+                            className="bg-muted/50 border-0"
+                            placeholder="https://youtube.com/..."
                         />
                     </div>
 

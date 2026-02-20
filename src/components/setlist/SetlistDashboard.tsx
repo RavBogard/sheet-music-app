@@ -8,7 +8,7 @@ import buildInfo from "@/build-info.json"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
-import { ChevronLeft, Plus, LogIn, Calendar, Sparkles } from "lucide-react"
+import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ErrorState } from "@/components/ui/error-state"
@@ -26,6 +26,7 @@ import { toast } from "sonner"
 
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
+import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistToolbar } from "./SetlistToolbar"
 import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
@@ -73,6 +74,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
     const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false)
     const [setlistToDuplicate, setSetlistToDuplicate] = useState<Setlist | null>(null)
     const [showTransferDialog, setShowTransferDialog] = useState(false)
+    const [showImporterModal, setShowImporterModal] = useState(false)
     const [selectedSetlistForTransfer, setSelectedSetlistForTransfer] = useState<Setlist | null>(null)
     const [transferEmail, setTransferEmail] = useState("")
 
@@ -334,6 +336,13 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
                 </div>
                 {user && isMember ? (
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            className="gap-2 hidden md:flex hover:bg-muted"
+                            onClick={() => setShowImporterModal(true)}
+                        >
+                            <FolderUp className="h-4 w-4" /> Import Setlist
+                        </Button>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10">
@@ -346,6 +355,9 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleCreateFromTemplate('shabbat_morning')}>
                                     <span className="font-medium">This Shabbat Morning</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setShowImporterModal(true)} className="md:hidden">
+                                    <FolderUp className="h-4 w-4 mr-2" /> Import Setlist
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={onCreateNew || (() => router.push('/setlists/new'))} className="text-muted-foreground">
@@ -367,6 +379,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
             </div>
 
             {/* Dialogs */}
+            <ImporterModal open={showImporterModal} onOpenChange={setShowImporterModal} onComplete={(id) => router.push(`/setlists/${id}`)} />
             <DeleteSetlistDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} setlistName={setlistToDelete?.name} onConfirm={confirmDelete} />
             <DuplicateSetlistDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen} setlistName={setlistToDuplicate?.name} onConfirm={confirmDuplicate} />
             <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} />
