@@ -1,129 +1,70 @@
-"use client"
+import { getServerUser, serializeSetlist } from "@/lib/server-auth"
+import { getFirestore, initAdmin } from "@/lib/firebase-admin"
+import { Setlist } from "@/lib/setlist-firebase"
+import { notFound, redirect } from "next/navigation"
+import { SetlistEditorV2 } from "@/components/setlist/v2/SetlistEditorV2"
 
-import { useEffect, useState } from "react"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
-import { useLibraryStore } from "@/lib/library-store"
-import { useSetlistStore } from "@/lib/setlist-store"
-import { useMusicStore, FileType } from "@/lib/store"
-import dynamic from "next/dynamic"
+// Note for Next.js 15: params/searchParams must be strings/Promises depending on exact Next.js versions.
+// We are on Next.js 16.1.4, so we MUST await `params` and `searchParams`.
+export default async function SetlistEditorPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<{ id: string }>
+    searchParams: Promise<{ public?: string }>
+}) {
+    const { id } = await params
+    const resolvedParams = await searchParams
+    const isPublic = resolvedParams.public === "true"
 
-// Lazy-load the editor (625+ lines + heavy sub-components like TrackSheet,
-// MusicianPicker, EmailPanel). This keeps the editor bundle out of the
-// shared chunk, so other pages load faster.
-const SetlistEditorV2 = dynamic(
-    () => import("@/components/setlist/v2/SetlistEditorV2").then(m => m.SetlistEditorV2),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="h-[100dvh] flex items-center justify-center text-muted-foreground">
-                <div className="animate-pulse">Loading editor...</div>
-            </div>
-        ),
-    }
-)
-import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
-import { useAuth } from "@/lib/auth-context"
-import { SetlistTrack } from "@/types/models"
-import { toDate } from "@/lib/firestore-helpers"
-
-export default function SetlistEditorPage() {
-    const router = useRouter()
-    const params = useParams()
-    const searchParams = useSearchParams()
-    const id = params?.id as string
-    const isPublic = searchParams?.get("public") === "true"
-
-    const { loadLibrary } = useLibraryStore()
-    const { items: pendingItems, clear: clearPending } = useSetlistStore()
-    const { setQueue } = useMusicStore()
-    const { user } = useAuth()
-    const uid = user?.uid || null
-    const displayName = user?.displayName || null
-
-    const [existingSetlist, setExistingSetlist] = useState<Setlist | null>(null)
-    const [loading, setLoading] = useState(id !== "new")
-
-    useEffect(() => {
-        if (uid) loadLibrary()
-    }, [loadLibrary, uid])
-
-    // Fetch existing setlist — depend on uid (stable string), not user object
-    useEffect(() => {
-        if (id && id !== "new") {
-            const service = createSetlistService(uid, displayName)
-            const unsubscribe = service.subscribeToSetlist(id, isPublic, (data: Setlist | null) => {
-                if (data) setExistingSetlist(data)
-                setLoading(false)
-            })
-            return () => unsubscribe()
-        }
-    }, [id, uid, displayName, isPublic])
-
-    if (loading) {
-        return (
-            <div className="h-[100dvh] flex items-center justify-center text-muted-foreground">
-                <div className="animate-pulse">Loading setlist...</div>
-            </div>
-        )
-    }
-
+    const user = await getServerUser()
     const isNew = id === "new"
-    const tracks = isNew
-        ? pendingItems.map((item) => ({
-              id: item.id,
-              title: item.name,
-              fileId: item.fileId,
-              transposition: item.transposition,
-          } as SetlistTrack))
-        : existingSetlist?.tracks || []
+
+    if (!user && !isPublic) {
+        // Can't edit without login, but can view public (though this is an editor page!)
+        redirect("/login")
+    }
+
+    let existingSetlist: Setlist | null = null
+
+    if (!isNew) {
+        initAdmin()
+        const db = getFirestore()
+
+        const doc = await db.collection("setlists").doc(id).get()
+        if (!doc.exists) notFound()
+
+        const data = doc.data() as any
+
+        if (isPublic) {
+            if (!data.isPublic && data.ownerId !== user?.uid && !user?.isAdmin) {
+                // Unauthorized for public view if it's not actually public and we don't own it
+                redirect("/setlists")
+            }
+        } else {
+            // Personal setlist
+            if (!user) redirect("/login")
+            if (data.ownerId !== user.uid && !user.isAdmin) {
+                redirect("/setlists")
+            }
+        }
+
+        existingSetlist = serializeSetlist(doc.id, data) as unknown as Setlist
+    }
 
     return (
         <SetlistEditorV2
             key={id}
             setlistId={isNew ? undefined : id}
-            initialTracks={tracks}
+            initialTracks={isNew ? [] : (existingSetlist?.tracks || [])}
             initialName={isNew ? "" : existingSetlist?.name}
             initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
-            initialEventDate={existingSetlist?.eventDate ? toDate(existingSetlist.eventDate) : undefined}
+            initialEventDate={existingSetlist?.eventDate}
             initialRabbi={existingSetlist?.rabbi}
             initialServiceNotes={existingSetlist?.serviceNotes}
             initialMusicians={existingSetlist?.musicians}
-            onBack={() => {
-                clearPending()
-                // Existing setlists: back to perform view. New: back to dashboard.
-                router.push(isNew ? "/setlists" : `/perform/setlist/${id}`)
-            }}
-            onSave={() => {
-                clearPending()
-                router.push("/setlists")
-            }}
-            onPlayTrack={(fileId) => {
-                const queue = tracks
-                    .filter((t: SetlistTrack) => t.fileId)
-                    .map((t: SetlistTrack) => {
-                        const type: FileType =
-                            t.fileId?.startsWith("db-") || t.fileId?.endsWith(".musicxml") || t.fileId?.endsWith(".xml") || t.fileId?.endsWith(".mxl")
-                                ? "musicxml"
-                                : t.fileId?.endsWith(".chordpro")
-                                  ? "chordpro"
-                                  : "pdf"
-                        return {
-                            name: t.title,
-                            fileId: t.fileId as string,
-                            type,
-                            audioFileId: t.audioFileId,
-                            bpm: t.bpm,
-                            key: t.key,
-                        }
-                    })
-
-                const clickedIdx = queue.findIndex((q) => q.fileId === fileId)
-                if (clickedIdx !== -1) {
-                    setQueue(queue, clickedIdx, `/setlists/${id}`, id)
-                    router.push(`/perform/${fileId}`)
-                }
-            }}
+            isNew={isNew}
         />
     )
 }

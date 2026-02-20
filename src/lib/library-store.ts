@@ -29,6 +29,7 @@ interface LibraryState {
 
     loadLibrary: (force?: boolean) => Promise<void>
     setFilter: (folderId: string | null, query: string) => void
+    hydrate: (files: DriveFile[]) => void
     reset: () => void
 }
 
@@ -100,7 +101,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            const res = await fetch('/api/library/list?all=true', { headers })
+            // Bypass browser and CDN cache if force is true
+            const endpoint = force
+                ? `/api/library/list?all=true&t=${Date.now()}`
+                : '/api/library/list?all=true'
+
+            const res = await fetch(endpoint, { headers })
             if (!res.ok) throw new Error("Failed to load library")
 
             const data = await res.json()
@@ -112,7 +118,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             if (!isSame || force) {
                 set(applyFiles(files, false))
                 // Update IndexedDB in background
-                setCachedLibrary(files, lastModified).catch(() => {})
+                setCachedLibrary(files, lastModified).catch(() => { })
             } else {
                 // Cache is current — just mark as verified
                 set({ fromCache: false })

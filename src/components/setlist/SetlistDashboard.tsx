@@ -34,20 +34,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { logger } from "@/lib/logger"
 
 interface SetlistDashboardProps {
-    onBack: () => void
+    onBack?: () => void
     onSelect?: (setlist: Setlist) => void
-    onCreateNew: () => void
+    onCreateNew?: () => void
+    initialPersonalSetlists?: Setlist[]
+    initialPublicSetlists?: Setlist[]
 }
 
-export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashboardProps) {
+export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersonalSetlists = [], initialPublicSetlists = [] }: SetlistDashboardProps) {
     const router = useRouter()
     const { user, signIn, isMember } = useAuth()
     const congregation = useCongregation()
     const { downloadSetlist, isDownloading } = useOffline()
 
-    const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
-    const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
-    const [loading, setLoading] = useState(true)
+    const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>(initialPersonalSetlists)
+    const [publicSetlists, setPublicSetlists] = useState<Setlist[]>(initialPublicSetlists)
+    const [loading, setLoading] = useState(initialPersonalSetlists.length === 0 && initialPublicSetlists.length === 0)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar'>('list')
@@ -111,6 +113,12 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     useEffect(() => {
         if (!user?.uid) setActiveTab('public')
     }, [user?.uid])
+
+    // Load library in background for the setlist builder/template generators
+    const { loadLibrary } = useLibraryStore()
+    useEffect(() => {
+        loadLibrary()
+    }, [loadLibrary])
 
     /* ─── Handlers ─── */
 
@@ -248,9 +256,9 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
     // Compute available rabbis from all setlists
     const availableRabbis = useMemo(() => {
         const rabbis = new Set<string>()
-        ;[...personalSetlists, ...publicSetlists].forEach(s => {
-            if (s.rabbi) rabbis.add(s.rabbi)
-        })
+            ;[...personalSetlists, ...publicSetlists].forEach(s => {
+                if (s.rabbi) rabbis.add(s.rabbi)
+            })
         return Array.from(rabbis).sort()
     }, [personalSetlists, publicSetlists])
 
@@ -317,7 +325,7 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
         <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
             <div className="h-20 border-b border-border flex items-center px-4 gap-4 shrink-0">
-                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
+                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack || (() => router.back())}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
@@ -340,12 +348,12 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew }: SetlistDashb
                                     <span className="font-medium">This Shabbat Morning</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={onCreateNew} className="text-muted-foreground">
+                                <DropdownMenuItem onClick={onCreateNew || (() => router.push('/setlists/new'))} className="text-muted-foreground">
                                     Blank Setlist
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button onClick={onCreateNew} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
+                        <Button onClick={onCreateNew || (() => router.push('/setlists/new'))} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
                             <Plus className="h-5 w-5" /> New
                         </Button>
                     </div>

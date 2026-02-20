@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useRouter } from "next/navigation"
+import { useMusicStore, FileType } from "@/lib/store"
 import { NoResultsIllustration, EmptyFolderIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
@@ -39,11 +41,15 @@ function isChartFile(f: DriveFile) {
 }
 
 interface SongChartsLibraryProps {
-    onBack: () => void
-    onSelectFile: (file: DriveFile) => void
+    onBack?: () => void
+    onSelectFile?: (file: DriveFile) => void
+    initialLibrary?: DriveFile[]
 }
 
-export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryProps) {
+export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }: SongChartsLibraryProps) {
+    const router = useRouter()
+    const { setFile } = useMusicStore()
+
     const {
         displayedFiles,
         loading,
@@ -51,8 +57,39 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         setFilter,
         initialized,
         error,
-        reset
+        reset,
+        hydrate
     } = useLibraryStore()
+
+    const handleBack = () => {
+        if (onBack) return onBack()
+        router.back()
+    }
+
+    const handleSelectFile = (file: DriveFile) => {
+        if (onSelectFile) {
+            onSelectFile(file)
+            return
+        }
+
+        const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
+        const type: FileType = isXml ? 'musicxml' : 'pdf'
+        setFile(`/api/drive/file/${file.id}`, type, '/library')
+        router.push(`/perform/${file.id}`)
+    }
+
+    const storeHydrated = useRef(false)
+    if (!storeHydrated.current && initialLibrary.length > 0) {
+        hydrate(initialLibrary)
+        storeHydrated.current = true
+    }
+
+    // Automatically load the library on mount if needed
+    useEffect(() => {
+        if (!initialized && initialLibrary.length === 0) {
+            loadLibrary()
+        }
+    }, [initialized, loadLibrary, initialLibrary.length])
 
     const [searchQuery, setSearchQuery] = useState("")
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
@@ -118,7 +155,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
             setPlayingFile(item)
             setAudioUrl(`/api/drive/file/${item.id}`)
         } else {
-            onSelectFile(item)
+            handleSelectFile(item)
         }
     }
 
@@ -198,7 +235,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         apiFetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
             .then(r => r.ok ? r.json() : {})
             .then(data => setUsageMap(data))
-            .catch(() => {}) // Silent — usage badges are non-critical
+            .catch(() => { }) // Silent — usage badges are non-critical
     }, [combinedItems.map(i => i.id).join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const itemCount = tab === "audio" ? audioFiles.length : files.length
@@ -208,7 +245,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
         <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
             <div className="h-20 border-b border-border flex items-center px-4 gap-4">
-                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack}>
+                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={handleBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
@@ -219,7 +256,8 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                 {(isBandLeader || isAdmin) && (
                     <UploadDialog onUploadComplete={() => {
                         // Trigger a re-fetch of the library
-                        toast.success("Reload the library to see your upload")
+                        loadLibrary(true)
+                        toast.success("Library updated with your upload")
                     }} />
                 )}
                 <Button
@@ -263,21 +301,19 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     <div className="flex gap-2 max-w-xl mx-auto">
                         <button
                             onClick={() => setTab("charts")}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                tab === "charts"
-                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
-                                    : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
-                            }`}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "charts"
+                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
+                                : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
+                                }`}
                         >
                             Charts ({files.length})
                         </button>
                         <button
                             onClick={() => setTab("audio")}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                                tab === "audio"
-                                    ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/30"
-                                    : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
-                            }`}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${tab === "audio"
+                                ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/30"
+                                : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
+                                }`}
                         >
                             <Music className="w-3.5 h-3.5" />
                             Audio ({audioFiles.length})
@@ -296,6 +332,7 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                     results={contentSearch.results}
                     searching={contentSearch.searching}
                     query={contentSearch.query}
+                    onSelectFile={handleSelectFile}
                 />
             )}
 
@@ -325,29 +362,32 @@ export function SongChartsLibrary({ onBack, onSelectFile }: SongChartsLibraryPro
                             />
                         )}
 
-                        {combinedItems.map(item => (
-                            <LibraryFileRow
-                                key={item.id}
-                                item={item}
-                                onClick={() => handleItemClick(item)}
-                                isDigitizing={digitizing === item.id}
-                                isAdmin={!!isAdmin}
-                                onDigitize={() => handleDigitize(item)}
-                                getCleanName={getCleanName}
-                                isPlaying={playingFile?.id === item.id}
-                                selectMode={selectMode}
-                                isSelected={selectedIds.has(item.id)}
-                                onToggleSelect={(id) => {
-                                    setSelectedIds(prev => {
-                                        const next = new Set(prev)
-                                        if (next.has(id)) next.delete(id)
-                                        else next.add(id)
-                                        return next
-                                    })
-                                }}
-                                usageInfo={usageMap[item.id] ?? undefined}
-                            />
-                        ))}
+                        {combinedItems.map(item => {
+                            const isAudio = isAudioFile(item)
+                            return (
+                                <LibraryFileRow
+                                    key={item.id}
+                                    item={item}
+                                    onClick={() => isAudio ? setPlayingFile(item) : handleSelectFile(item)}
+                                    isDigitizing={digitizing === item.id}
+                                    isAdmin={!!isAdmin}
+                                    onDigitize={() => handleDigitize(item)}
+                                    getCleanName={getCleanName}
+                                    isPlaying={playingFile?.id === item.id}
+                                    selectMode={selectMode}
+                                    isSelected={selectedIds.has(item.id)}
+                                    onToggleSelect={(id) => {
+                                        setSelectedIds(prev => {
+                                            const next = new Set(prev)
+                                            if (next.has(id)) next.delete(id)
+                                            else next.add(id)
+                                            return next
+                                        })
+                                    }}
+                                    usageInfo={usageMap[item.id] ?? undefined}
+                                />
+                            )
+                        })}
 
                         <div className="h-20" />
                     </div>

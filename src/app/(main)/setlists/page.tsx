@@ -1,36 +1,21 @@
-"use client"
+import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
+import { getServerUser, getPersonalSetlists, getAllPublicSetlists } from "@/lib/server-auth"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useLibraryStore } from "@/lib/library-store"
-import dynamic from "next/dynamic"
+export default async function SetlistsPage() {
+    // 1. Fetch user to know if we need personal setlists
+    const user = await getServerUser()
 
-const SetlistDashboard = dynamic(
-    () => import("@/components/setlist/SetlistDashboard").then(m => m.SetlistDashboard),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-                <div className="animate-pulse text-muted-foreground">Loading setlists...</div>
-            </div>
-        ),
-    }
-)
-
-export default function SetlistsPage() {
-    const router = useRouter()
-    const { loadLibrary } = useLibraryStore()
-
-    useEffect(() => {
-        loadLibrary()
-    }, [loadLibrary])
+    // 2. Fetch data server-side
+    // We can fetch concurrently for speed
+    const [publicSetlists, personalSetlists] = await Promise.all([
+        getAllPublicSetlists(),
+        user ? getPersonalSetlists(user.uid) : Promise.resolve([])
+    ])
 
     return (
-        <>
-            <SetlistDashboard
-                onBack={() => router.back()}
-                onCreateNew={() => router.push('/setlists/new')}
-            />
-        </>
+        <SetlistDashboard
+            initialPersonalSetlists={personalSetlists as any}
+            initialPublicSetlists={publicSetlists as any}
+        />
     )
 }

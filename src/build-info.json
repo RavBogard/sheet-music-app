@@ -1,22 +1,9 @@
 {
-  "version": "4.3.0",
-  "commit": "ac28a2d",
-  "branch": "master",
-  "buildDate": "2/19/2026",
+  "version": "dev",
+  "commit": "unknown",
+  "branch": "unknown",
+  "buildDate": "2/20/2026",
   "changelog": [
-    "Performance: Remove Firestore long-polling for ~200-500ms faster reads",
-    "Performance: Lazy-load ChatPanel, OfflineIndicator, BackgroundPrefetcher",
-    "Performance: Replace framer-motion with CSS transitions (SwipeToDelete)",
-    "Performance: Remove jsPDF from client bundle",
-    "Performance: Cache congregation config in localStorage (1hr TTL)",
-    "Performance: Cache-first song preference reads (skip network on hit)",
-    "Performance: Add limit(50) to setlist queries",
-    "Performance: CDN caching for library API (s-maxage=300)",
-    "Performance: Lazy-load Sentry SDK",
-    "Performance: Defer BackgroundPrefetcher to 15s + requestIdleCallback",
-    "Performance: Debounce chart view tracking (3s delay)",
-    "Performance: Remove skipWaiting, add UpdatePrompt component",
-    "Performance: Remove dashboard loadLibrary() eagerness",
-    "Navigation: Convert high-traffic buttons to Link for prefetching"
+    "Build info unavailable"
   ]
 }

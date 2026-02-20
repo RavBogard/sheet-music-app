@@ -61,6 +61,19 @@ export async function getServerUser(): Promise<ServerUser | null> {
 }
 
 /**
+ * Helper to serialize Firestore Timestamps to format safe for Next.js Client Boundaries
+ */
+export function serializeSetlist(id: string, data: any) {
+    return {
+        id,
+        ...data,
+        date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+        eventDate: data.eventDate?.toDate ? data.eventDate.toDate().toISOString() : data.eventDate,
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+    }
+}
+
+/**
  * Fetch public setlists server-side for instant SSR.
  * Returns the next 5 upcoming public setlists.
  */
@@ -80,10 +93,7 @@ export async function getUpcomingPublicSetlists() {
             .limit(5)
             .get()
 
-        return snap.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-        }))
+        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
     } catch (error) {
         logger.warn("Server setlist fetch failed:", error)
         return []
@@ -105,12 +115,53 @@ export async function getRecentPublicSetlists() {
             .limit(5)
             .get()
 
-        return snap.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-        }))
+        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
     } catch (error) {
         logger.warn("Server recent setlist fetch failed:", error)
+        return []
+    }
+}
+
+/**
+ * Fetch a user's personal setlists server-side.
+ */
+export async function getPersonalSetlists(userId: string) {
+    try {
+        initAdmin()
+        const db = getFirestore()
+
+        const snap = await db
+            .collection("setlists")
+            .where("ownerId", "==", userId)
+            .orderBy("date", "desc")
+            .limit(50)
+            .get()
+
+        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
+    } catch (error) {
+        logger.warn("Server personal setlist fetch failed:", error)
+        return []
+    }
+}
+
+/**
+ * Fetch all recent public setlists server-side for the dashboard.
+ */
+export async function getAllPublicSetlists() {
+    try {
+        initAdmin()
+        const db = getFirestore()
+
+        const snap = await db
+            .collection("setlists")
+            .where("isPublic", "==", true)
+            .orderBy("date", "desc")
+            .limit(50)
+            .get()
+
+        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
+    } catch (error) {
+        logger.warn("Server all public setlist fetch failed:", error)
         return []
     }
 }

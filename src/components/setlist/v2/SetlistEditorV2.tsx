@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useSetlistStore } from "@/lib/setlist-store"
+import { useMusicStore, FileType } from "@/lib/store"
 import {
     DndContext,
     closestCenter,
@@ -59,7 +61,8 @@ interface SetlistEditorV2Props {
     initialRabbi?: string
     initialServiceNotes?: string
     initialMusicians?: SetlistMusician[]
-    onBack: () => void
+    isNew?: boolean
+    onBack?: () => void
     onSave?: (id: string) => void
     onPlayTrack?: (fileId: string, fileName: string) => void
 }
@@ -75,12 +78,65 @@ export function SetlistEditorV2({
     initialRabbi,
     initialServiceNotes,
     initialMusicians,
+    isNew = false,
     onBack,
     onSave,
     onPlayTrack,
 }: SetlistEditorV2Props) {
     const { user } = useAuth()
     const router = useRouter()
+    const { items: pendingItems, clear: clearPending } = useSetlistStore()
+    const { setQueue } = useMusicStore()
+
+    const tracksToUse = isNew
+        ? pendingItems.map((item) => ({
+            id: item.id,
+            title: item.name,
+            fileId: item.fileId,
+            transposition: item.transposition,
+        } as SetlistTrack))
+        : initialTracks
+
+    const handleBack = () => {
+        if (onBack) return onBack()
+        clearPending()
+        router.push(initialSetlistId ? `/perform/setlist/${initialSetlistId}` : "/setlists")
+    }
+
+    const handleSave = (id: string) => {
+        if (onSave) return onSave(id)
+        clearPending()
+        router.push("/setlists")
+    }
+
+    const handlePlayTrack = (fileId: string, fileName: string) => {
+        if (onPlayTrack) return onPlayTrack(fileId, fileName)
+
+        const queue = tracks
+            .filter((t: SetlistTrack) => t.fileId)
+            .map((t: SetlistTrack) => {
+                const type: FileType =
+                    t.fileId?.startsWith("db-") || t.fileId?.endsWith(".musicxml") || t.fileId?.endsWith(".xml") || t.fileId?.endsWith(".mxl")
+                        ? "musicxml"
+                        : t.fileId?.endsWith(".chordpro")
+                            ? "chordpro"
+                            : "pdf"
+                return {
+                    name: t.title,
+                    fileId: t.fileId as string,
+                    type,
+                    audioFileId: t.audioFileId,
+                    bpm: t.bpm,
+                    key: t.key,
+                }
+            })
+
+        const clickedIdx = queue.findIndex((q) => q.fileId === fileId)
+        if (clickedIdx !== -1) {
+            setQueue(queue, clickedIdx, setlistId ? `/setlists/${setlistId}` : '/setlists', setlistId)
+            router.push(`/perform/${fileId}`)
+        }
+    }
 
     // Core logic hook (unchanged from v1)
     const {
@@ -111,6 +167,7 @@ export function SetlistEditorV2({
         matchFile,
         addSongsFromLibrary,
         addServiceItem,
+        duplicateTrack,
         togglePublic,
         undo,
         redo,
@@ -121,7 +178,7 @@ export function SetlistEditorV2({
         restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
-        initialTracks,
+        initialTracks: tracksToUse,
         initialName,
         suggestedName,
         initialIsPublic,
@@ -130,7 +187,7 @@ export function SetlistEditorV2({
         initialRabbi,
         initialServiceNotes,
         initialMusicians,
-        onSave,
+        onSave: handleSave,
     })
 
     // Presence & Live
@@ -152,7 +209,7 @@ export function SetlistEditorV2({
     }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
     // Play a track (with live broadcast)
-    const handlePlayTrack = useCallback(
+    const handlePlayTrackLive = useCallback(
         (fileId: string, fileName: string) => {
             if (liveState?.enabled && setlistId && user) {
                 const trackIdx = tracks.findIndex((t) => t.fileId === fileId)
@@ -160,9 +217,9 @@ export function SetlistEditorV2({
                     updateLiveTrack(setlistId, trackIdx, user.uid, user.displayName || "Leader")
                 }
             }
-            onPlayTrack?.(fileId, fileName)
+            handlePlayTrack(fileId, fileName)
         },
-        [liveState, setlistId, user, tracks, onPlayTrack]
+        [liveState, setlistId, user, tracks, handlePlayTrack]
     )
 
     // ── UI State ──
@@ -193,12 +250,12 @@ export function SetlistEditorV2({
         try {
             await editorService.deleteSetlist(setlistId, isPublic)
             toast.success("Setlist deleted")
-            onBack()
+            handleBack()
         } catch {
             toast.error("Failed to delete setlist")
         }
         setShowDeleteConfirm(false)
-    }, [editorService, setlistId, isPublic, onBack])
+    }, [editorService, setlistId, isPublic, handleBack])
 
     const handleDuplicateSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
@@ -340,7 +397,7 @@ export function SetlistEditorV2({
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
         const tapHandler = selectMode ? () => { } : setEditingTrack
-        const playHandler = selectMode ? undefined : handlePlayTrack
+        const playHandler = selectMode ? undefined : handlePlayTrackLive
 
         const row = (() => {
             if (track.type === "header") {
@@ -409,7 +466,7 @@ export function SetlistEditorV2({
             <SetlistTopBar
                 name={name}
                 onNameChange={setName}
-                onBack={onBack}
+                onBack={handleBack}
                 canEdit={canEdit}
                 saving={saving}
                 lastSaved={lastSaved}
@@ -571,7 +628,7 @@ export function SetlistEditorV2({
                     setEditingTrack(null)
                     setMatchingTrackId(tid)
                 }}
-                onPlayFile={handlePlayTrack}
+                onPlayFile={handlePlayTrackLive}
             />
 
             {/* Shared modals */}

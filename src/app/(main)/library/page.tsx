@@ -1,46 +1,20 @@
-"use client"
+import { getServerUser } from "@/lib/server-auth"
+import { getServerLibrary } from "@/lib/server-library"
+import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
 
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { DriveFile } from "@/types/models"
-import { useLibraryStore } from "@/lib/library-store"
-import { useMusicStore, FileType } from "@/lib/store"
-import dynamic from "next/dynamic"
+export default async function LibraryPage() {
+    const user = await getServerUser()
 
-// Lazy-load the library component (420+ lines, Fuse.js search, file grid).
-// The library page is already behind auth, so the brief loading state
-// is masked by the auth check.
-const SongChartsLibrary = dynamic(
-    () => import("@/components/library/SongChartsLibrary").then(m => m.SongChartsLibrary),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-                <div className="animate-pulse text-muted-foreground">Loading library...</div>
-            </div>
-        ),
-    }
-)
-
-export default function LibraryPage() {
-    const router = useRouter()
-    const { user, signIn, isMember } = useAuth()
-    const { loading } = useLibraryStore()
-    const { setFile } = useMusicStore()
-
-    if (!loading && !user) {
+    if (!user) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-80px)] text-center p-6">
                 <h2 className="text-xl font-semibold mb-3 text-foreground">Restricted Access</h2>
                 <p className="text-muted-foreground mb-6 max-w-md text-sm">The full song library is available only to signed-in users.</p>
-                <button onClick={signIn} className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
-                    Sign In to Access
-                </button>
             </div>
         )
     }
 
-    if (!loading && user && !isMember) {
+    if (!user.isMember) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-80px)] text-center p-6">
                 <h2 className="text-xl font-semibold mb-3 text-yellow-600 dark:text-yellow-500">Account Pending</h2>
@@ -54,17 +28,7 @@ export default function LibraryPage() {
         )
     }
 
-    const handleSelectFile = (file: DriveFile) => {
-        const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
-        const type: FileType = isXml ? 'musicxml' : 'pdf'
-        setFile(`/api/drive/file/${file.id}`, type, '/library')
-        router.push(`/perform/${file.id}`)
-    }
+    const { files } = await getServerLibrary()
 
-    return (
-        <SongChartsLibrary
-            onBack={() => router.back()}
-            onSelectFile={handleSelectFile}
-        />
-    )
+    return <SongChartsLibrary initialLibrary={files as any} />
 }
