@@ -43,16 +43,22 @@ export async function POST(req: NextRequest) {
         // 1. Fetch CSV if URL provided
         if (url) {
             let fetchUrl = url
-            // Convert Google Sheets URL to CSV export if applicable
+            // Convert Google Sheets URL to CSV export if applicable (respecting gid for specific tabs)
             if (url.includes("docs.google.com/spreadsheets")) {
-                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/)
-                if (match) {
-                    fetchUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`
+                const docMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/)
+                const gidMatch = url.match(/gid=([0-9]+)/)
+
+                if (docMatch) {
+                    fetchUrl = `https://docs.google.com/spreadsheets/d/${docMatch[1]}/export?format=csv`
+                    if (gidMatch) {
+                        fetchUrl += `&gid=${gidMatch[1]}`
+                    }
                 }
             }
 
             try {
-                const res = await fetch(fetchUrl)
+                logger.info(`[Setlist Importer] Fetching Google Sheet URL: ${fetchUrl}`)
+                const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(10000) })
                 if (!res.ok) {
                     throw new Error(`Failed to fetch URL: ${res.statusText}`)
                 }
@@ -64,6 +70,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Parse CSV to ensure it's not astronomically large
+        logger.info("[Setlist Importer] Papa Parsing CSV...")
         const parsed = Papa.parse(rawCsv, { header: true, skipEmptyLines: true })
         if (parsed.data.length === 0) {
             return NextResponse.json({ error: "Spreadsheet appears to be empty." }, { status: 400 })
@@ -104,9 +111,10 @@ Rules for "song" items:
 
 Make educated guesses on column mapping based on standard terms.
 
-Here is the JSON array:
+        Here is the JSON array:
 ${contextStr}`
 
+        logger.info("[Setlist Importer] Sending prompt to Gemini...")
         const resultObj = await geminiFlash.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
@@ -141,6 +149,7 @@ ${contextStr}`
             logger.warn("Could not fetch library_index for importer matching", err)
         }
 
+        logger.info(`[Setlist Importer] Processing ${items.length} items from Gemini...`)
         const processedItems = await Promise.all(items.map(async (item: ParsedItem) => {
             if (item.type !== 'song') return item
 
@@ -150,8 +159,8 @@ ${contextStr}`
             // Check Chart Drive Link Permissions
             if (out.chartUrl && out.chartUrl.includes('drive.google.com')) {
                 try {
-                    // Fast HEAD request to check permissions
-                    const driveRes = await fetch(out.chartUrl, { method: 'HEAD' })
+                    // Fast HEAD request to check permissions, abort after 4 seconds
+                    const driveRes = await fetch(out.chartUrl, { method: 'HEAD', signal: AbortSignal.timeout(4000) })
                     // If it redirects to an accounts.google.com signin, it's private
                     if (driveRes.url.includes('accounts.google.com') || driveRes.status === 403 || driveRes.status === 401) {
                         out.chartError = "Private Link"
