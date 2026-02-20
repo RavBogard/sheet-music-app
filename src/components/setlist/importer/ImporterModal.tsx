@@ -222,7 +222,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
                     {step === 'review' && (
                         <>
-                            <ScrollArea className="flex-1 bg-muted/10">
+                            <div className="flex-1 overflow-y-auto bg-muted/10">
                                 <div className="p-0">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-muted/50 sticky top-0 z-10 text-xs uppercase text-muted-foreground shadow-sm">
@@ -318,7 +318,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                         </tbody>
                                     </table>
                                 </div>
-                            </ScrollArea>
+                            </div>
 
                             {/* Review Action Footer */}
                             <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
