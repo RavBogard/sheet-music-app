@@ -66,15 +66,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     fromCache: false,
     _fuseIndex: null,
 
-    reset: () => set({
-        allFiles: [],
-        displayedFiles: [],
+    reset: () => set((state) => ({
+        displayedFiles: state.allFiles, // Reset view back to root
         currentFolderId: null,
         searchQuery: "",
-        initialized: false,
-        _fuseIndex: null,
-        fromCache: false,
-    }),
+        fromCache: state.fromCache,
+    })),
 
     hydrate: (files: DriveFile[]) => set(applyFiles(files, false)),
 

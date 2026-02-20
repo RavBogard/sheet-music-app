@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
@@ -19,16 +19,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CentralReform.live",
-  description: "Digital Sheet Music Library for Central Reform Congregation",
-  icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg"
+  title: {
+    template: "%s | CRC Music",
+    default: "CRC Music | Digital Sheet Library",
   },
+  description: "Digital Sheet Music Library for Central Reform Congregation",
   robots: {
     index: false,
     follow: false
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CRC Music",
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfbfb" },
+    { media: "(prefers-color-scheme: dark)", color: "#303030" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

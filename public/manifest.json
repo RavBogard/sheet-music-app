@@ -1,23 +1,19 @@
 {
-    "name": "CentralReform.live",
+    "name": "Central Reform Congregation Music",
     "short_name": "CRC Music",
     "description": "Digital Sheet Music Library for Central Reform Congregation",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#fafafa",
-    "theme_color": "#ffffff",
+    "background_color": "#fbfbfb",
+    "theme_color": "#fbfbfb",
     "orientation": "any",
     "categories": ["music", "productivity"],
     "icons": [
         {
-            "src": "/logo.jpg",
-            "sizes": "192x192",
-            "type": "image/jpeg"
-        },
-        {
-            "src": "/logo.jpg",
-            "sizes": "512x512",
-            "type": "image/jpeg"
+            "src": "/icon.svg",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
         }
     ]
 }

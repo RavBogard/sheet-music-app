@@ -62,12 +62,15 @@ export default function DashboardClient({ serverGreeting: _serverGreeting, serve
 
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
     // On the server, this is pre-computed with the user's name from the session cookie.
-    // Client-side: recalculated whenever profile changes (e.g., after sign-in).
-    const greeting = useMemo(() => {
+    // Client-side: recalculated in useEffect to avoid Hydration mismatches (Error #418).
+    const initialGreeting = _serverGreeting || getContextualGreeting(null, undefined, serverShortName || 'CRC Music')
+    const [greeting, setGreeting] = useState<Greeting>(initialGreeting)
+
+    useEffect(() => {
         const displayName = profile?.displayName || user?.displayName || cachedUser?.displayName
         const firstName = displayName?.split(' ')[0] || null
         const shortName = congregation.shortName || serverShortName || 'CRC Music'
-        return getContextualGreeting(firstName, undefined, shortName)
+        setGreeting(getContextualGreeting(firstName, undefined, shortName))
     }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName, serverShortName])
 
     // Prep data for upcoming setlists (members only)

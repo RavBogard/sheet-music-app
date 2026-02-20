@@ -20,7 +20,7 @@ export default function PerformError({
                 There was a problem rendering this chart. Try reloading, or skip to the next one.
             </p>
             <div className="flex gap-3">
-                <Button variant="outline" onClick={() => router.back()} className="border-gray-600 text-white hover:bg-gray-800">
+                <Button variant="outline" onClick={() => router.back()} className="border-gray-600 bg-transparent text-white hover:bg-gray-800">
                     Go Back
                 </Button>
                 <Button onClick={reset} className="bg-white text-black hover:bg-gray-200">

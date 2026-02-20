@@ -69,12 +69,16 @@ export default function PerformPage() {
     // Sync URL with Store
     useEffect(() => {
         if (fileId && !fileId.startsWith('flow-')) {
-            const { apiUrl, defaultType } = parseFileId(fileId)
-
-            // CRITICAL: Only update the store if the URL actually represents a different file
-            // than what is currently loaded.
-            if (!fileUrl?.includes(fileId)) {
-                setFile(apiUrl, defaultType as FileType)
+            if (fileId === 'undefined' || fileId === 'null') {
+                if (fileUrl !== null) {
+                    setFile(null, null)
+                }
+            } else {
+                const { apiUrl, defaultType } = parseFileId(fileId)
+                // CRITICAL: Only update the store if the URL actually represents a different file
+                if (!fileUrl?.includes(fileId)) {
+                    setFile(apiUrl, defaultType as FileType)
+                }
             }
         }
     }, [fileId, fileUrl, setFile])

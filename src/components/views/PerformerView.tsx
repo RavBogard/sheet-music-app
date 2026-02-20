@@ -10,6 +10,7 @@ import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 import { FileType } from "@/lib/store"
+import { useAuth } from "@/lib/auth-context"
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
@@ -22,6 +23,7 @@ interface PerformerViewProps {
 
 export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
+    const { isAdmin, isBandLeader } = useAuth()
     const isAnnotating = useAnnotationStore(s => s.isAnnotating)
     const [barsVisible, setBarsVisible] = useState(true)
     const router = useRouter()
@@ -212,20 +214,22 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                                 </>
                             ) : (
                                 <>
-                                    <p className="text-xl font-semibold">No Chart Available</p>
-                                    <p className="text-sm">This track doesn&apos;t have a linked file.</p>
+                                    <p className="text-xl font-semibold">There's no chart set for this song.</p>
+                                    <p className="text-sm">You can still use the Next/Prev arrows to continue the service.</p>
                                     <div className="flex gap-4 mt-6">
-                                        <button
-                                            onClick={() => router.push('/library')}
-                                            className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
-                                        >
-                                            Search Library
-                                        </button>
+                                        {(isAdmin || isBandLeader) && (
+                                            <button
+                                                onClick={() => router.push('/library')}
+                                                className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
+                                            >
+                                                Assign a chart
+                                            </button>
+                                        )}
                                         <button
                                             onClick={onHome}
                                             className="px-6 py-2 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors border border-zinc-700"
                                         >
-                                            Back to Setlist
+                                            Go Back
                                         </button>
                                     </div>
                                 </>

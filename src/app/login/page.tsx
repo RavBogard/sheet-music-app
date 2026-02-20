@@ -29,7 +29,7 @@ export default function LoginPage() {
         if (!loading && user) {
             router.replace("/")
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depend on uid, not user object
     }, [user?.uid, loading, router])
 
     const handleSignIn = async () => {
@@ -59,7 +59,7 @@ export default function LoginPage() {
                         className="h-20 w-20 rounded-full border border-border object-cover shadow-sm"
                     />
                     <div>
-                        <h1 className="text-2xl font-semibold text-foreground">CentralReform.live</h1>
+                        <h1 className="text-2xl font-semibold text-foreground">{congregation.shortName}</h1>
                         <p className="text-muted-foreground text-sm mt-1">
                             Sign in to access the music library
                         </p>

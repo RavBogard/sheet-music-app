@@ -66,7 +66,7 @@ export interface MusicState {
     capoFret: number | null
     setCapoFret: (fret: number | null) => void
 
-    setFile: (url: string, type: FileType, returnPath?: string) => void
+    setFile: (url: string | null, type: FileType | null, returnPath?: string) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
     setCurrentVisiblePage: (page: number) => void
