@@ -4,8 +4,10 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { levenshteinDistance } from "@/lib/string-utils"
-import { geminiFlash } from "@/lib/gemini"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 import Papa from "papaparse"
+
+export const maxDuration = 60 // Allow up to 60s for Vercel/Gemini
 
 interface ParsedItem {
     type: string
@@ -72,6 +74,14 @@ export async function POST(req: NextRequest) {
 
         // Convert the parsed data back to a clean JSON string context for OpenAI
         const contextStr = JSON.stringify(parsed.data, null, 2)
+
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
+        if (!apiKey) {
+            return NextResponse.json({ error: "Gemini API Key is not configured on the server." }, { status: 500 })
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey)
+        const geminiFlash = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
         // 3. Prompt Gemini for strictly typed extraction
         const prompt = `You are an expert musical setlist parser. Your job is to take a raw JSON array representing rows from a spreadsheet and extract a clean list of setlist items.

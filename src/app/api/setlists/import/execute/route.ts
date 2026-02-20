@@ -18,6 +18,8 @@ interface ParsedItem {
     libraryMatchName?: string
 }
 
+export const maxDuration = 60 // Allow up to 60s for Vercel downloads
+
 export async function POST(req: NextRequest) {
     try {
         const limited = await checkRateLimit(req, 'upload')

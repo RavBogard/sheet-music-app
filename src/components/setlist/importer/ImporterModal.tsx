@@ -76,8 +76,14 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
 
             if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.error || "Failed to parse data.")
+                let errorMsg = "Failed to parse data."
+                try {
+                    const data = await res.json()
+                    errorMsg = data.error || errorMsg
+                } catch {
+                    errorMsg = `Server error ${res.status}: ${res.statusText}. The request may have timed out.`
+                }
+                throw new Error(errorMsg)
             }
 
             const data = await res.json()
@@ -104,8 +110,14 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             })
 
             if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.error || "Execution failed.")
+                let errorMsg = "Execution failed."
+                try {
+                    const data = await res.json()
+                    errorMsg = data.error || errorMsg
+                } catch {
+                    errorMsg = `Server error ${res.status}: ${res.statusText}. The upload may have timed out.`
+                }
+                throw new Error(errorMsg)
             }
 
             const data = await res.json()
