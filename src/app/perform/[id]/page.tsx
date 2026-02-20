@@ -11,7 +11,6 @@ import { useAnnotationStore } from "@/lib/annotation-store"
 import { useAuth } from "@/lib/auth-context"
 
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
-import { LiveNotification } from "@/components/performance/LiveNotification"
 import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
 import { FlowItemView } from "@/components/performance/FlowItemView"
 
@@ -103,7 +102,6 @@ export default function PerformPage() {
     return (
         <>
             {showIntro && <PerformanceIntro onDismiss={dismissIntro} />}
-            <LiveNotification setlistId={currentSetlistId} />
             {isFlowItem && currentTrack ? (
                 <FlowItemView
                     onHome={handleHome}
