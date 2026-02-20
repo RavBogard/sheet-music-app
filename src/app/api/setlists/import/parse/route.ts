@@ -165,20 +165,6 @@ ${contextStr}`
             // Default response structure
             const out = { ...item }
 
-            // Check Chart Drive Link Permissions
-            if (out.chartUrl && out.chartUrl.includes('drive.google.com')) {
-                try {
-                    // Fast HEAD request to check permissions, abort after 4 seconds
-                    const driveRes = await fetch(out.chartUrl, { method: 'HEAD', signal: AbortSignal.timeout(4000) })
-                    // If it redirects to an accounts.google.com signin, it's private
-                    if (driveRes.url.includes('accounts.google.com') || driveRes.status === 403 || driveRes.status === 401) {
-                        out.chartError = "Private Link"
-                    }
-                } catch {
-                    out.chartError = "Invalid Link"
-                }
-            }
-
             // Fuzzy Match to Library
             if (out.title) {
                 const normalizedNewTitle = out.title.toLowerCase().replace(/[^a-z0-9]/g, '')
