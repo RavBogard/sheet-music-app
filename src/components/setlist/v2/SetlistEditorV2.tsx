@@ -21,8 +21,6 @@ import {
 } from "@dnd-kit/sortable"
 import { SetlistTrack, TrackType, SetlistMusician } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
-import { useSetlistPresence, useLiveState } from "@/hooks/use-setlist-presence"
-import { enableLiveMode, updateLiveTrack } from "@/lib/setlist-live"
 import { useAuth } from "@/lib/auth-context"
 import { useChatStore } from "@/lib/chat-store"
 import { SERVICE_FLOW_TYPES } from "@/lib/validations"
@@ -190,15 +188,6 @@ export function SetlistEditorV2({
         onSave: handleSave,
     })
 
-    // Presence & Live
-    const presence = useSetlistPresence(setlistId || null, "editing")
-    const liveState = useLiveState(setlistId || null)
-
-    const handleToggleLive = useCallback(() => {
-        if (!setlistId) return
-        enableLiveMode(setlistId, !liveState?.enabled)
-    }, [setlistId, liveState])
-
     // Chat - auto-open only on new empty setlists
     useEffect(() => {
         if (!initialSetlistId && tracks.length === 0) {
@@ -215,19 +204,12 @@ export function SetlistEditorV2({
         }
     }, [isPublic, initialIsPublic, router])
 
-    // Play a track (with live broadcast)
-    const handlePlayTrackLive = useCallback(
-        (fileId: string, fileName: string) => {
-            if (liveState?.enabled && setlistId && user) {
-                const trackIdx = tracks.findIndex((t) => t.fileId === fileId)
-                if (trackIdx >= 0) {
-                    updateLiveTrack(setlistId, trackIdx, user.uid, user.displayName || "Leader")
-                }
-            }
-            handlePlayTrack(fileId, fileName)
-        },
-        [liveState, setlistId, user, tracks, handlePlayTrack]
-    )
+    // Background offline syncing
+    useEffect(() => {
+        if (tracks.length > 0) {
+            syncSetlist(tracks).catch(console.error)
+        }
+    }, [tracks])
 
     // ── UI State ──
 
@@ -404,7 +386,7 @@ export function SetlistEditorV2({
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
         const tapHandler = selectMode ? () => { } : setEditingTrack
-        const playHandler = selectMode ? undefined : handlePlayTrackLive
+        const playHandler = selectMode ? undefined : handlePlayTrack
 
         const row = (() => {
             if (track.type === "header") {
@@ -482,56 +464,28 @@ export function SetlistEditorV2({
                 canUndo={canUndo}
                 canRedo={canRedo}
                 onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
+                onPrint={() => setShowPrintModal(true)}
                 overflowTrigger={
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
-                        onPrint={() => setShowPrintModal(true)}
                         onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
                         onTogglePublic={togglePublic}
                         onSetRabbi={canEdit ? setRabbi : undefined}
-                        onHistory={setlistId ? () => setShowHistory(!showHistory) : undefined}
-                        onSync={async () => {
-                            const toastId = toast.loading('Downloading charts for offline…')
-                            try {
-                                await syncSetlist(tracks)
-                                toast.success('All charts cached — ready for offline', { id: toastId })
-                            } catch {
-                                toast.error('Some charts failed to download', { id: toastId })
-                            }
-                        }}
                         onOpenAI={() => useChatStore.getState().toggle()}
-                        onCheckFlow={() => {
-                            const store = useChatStore.getState()
-                            store.setPendingPrompt('Check the liturgical flow of this setlist. Flag any ordering issues, missing elements, or suggestions for improvement.')
-                            if (!store.isOpen) store.toggle()
-                        }}
-                        onToggleLive={isBandLeader ? handleToggleLive : undefined}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
-                        onDuplicate={setlistId ? () => setShowDuplicateConfirm(true) : undefined}
-                        onCloneNextWeek={setlistId ? handleCloneNextWeek : undefined}
-                        onSaveAsTemplate={setlistId ? handleSaveAsTemplate : undefined}
-                        onSelectMode={canEdit && tracks.length > 0 ? () => setSelectMode(true) : undefined}
                         onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
                         isPublic={isPublic}
                         isBandLeader={isBandLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
                         rabbi={rabbi}
-                        liveEnabled={liveState?.enabled}
-                        isSyncing={isSyncing}
-                        isFullyOffline={isFullyOffline}
                         estimatedMinutes={estimatedMinutes}
                         songCount={songCount}
                     />
                 }
             />
 
-            {/* Presence line */}
-            {presence.length > 0 && (
-                <div className="px-4 py-1 text-xs text-muted-foreground/60 border-b border-border/50">
-                    {presence.map((p) => p.displayName).join(", ")} {presence.length === 1 ? "is" : "are"} viewing
-                </div>
-            )}
+
 
             {/* History panel */}
             {showHistory && setlistId && (
@@ -636,7 +590,7 @@ export function SetlistEditorV2({
                     setEditingTrack(null)
                     setMatchingTrackId(tid)
                 }}
-                onPlayFile={handlePlayTrackLive}
+                onPlayFile={handlePlayTrack}
             />
 
             {/* Shared modals */}

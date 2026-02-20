@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink } from "lucide-react"
 import { PrintModal } from "@/components/setlist/PrintModal"
+import { Metronome } from "@/components/performance/Metronome"
 import { SetlistTrack } from "@/types/models"
 import { QueueItem } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -283,25 +284,25 @@ export default function SetlistPerformPage() {
                                             onClick={() => handleTrackTap(globalIndex)}
                                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTrackTap(globalIndex) }}
                                             className={cn(
-                                                "flex items-center gap-4 p-4 rounded-xl transition-all text-left w-full",
+                                                "flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all text-left w-full border border-transparent",
                                                 isTapped
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "hover:bg-muted",
-                                                isFlowItem && !isTapped && "opacity-60",
-                                                tappedIndex !== null && !isTapped && "opacity-40 pointer-events-none"
+                                                    ? "bg-primary text-primary-foreground shadow-sm bg-blue-600 border-blue-500"
+                                                    : "hover:bg-muted active:scale-[0.99]",
+                                                isFlowItem && !isTapped && "opacity-70",
+                                                tappedIndex !== null && !isTapped && "opacity-50 pointer-events-none"
                                             )}
                                         >
                                             {/* Track number / icon */}
                                             <div className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                                                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 shadow-sm transition-colors",
                                                 isTapped
                                                     ? "bg-white/20 text-white"
                                                     : isFlowItem
                                                         ? "bg-transparent text-muted-foreground"
-                                                        : "bg-muted border border-border text-muted-foreground"
+                                                        : "bg-background border border-border text-foreground"
                                             )}>
                                                 {isTapped ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
                                                 ) : isFlowItem ? (
                                                     trackIcon(track.trackType)
                                                 ) : (
@@ -310,63 +311,83 @@ export default function SetlistPerformPage() {
                                             </div>
 
                                             {/* Track info */}
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn(
-                                                        "font-bold truncate",
-                                                        isFlowItem ? "text-sm" : "text-base"
+                                                        "font-medium truncate",
+                                                        isFlowItem ? "text-sm text-muted-foreground" : "text-base text-foreground",
+                                                        isTapped && "text-white font-semibold"
                                                     )}>
                                                         {track.name}
                                                     </div>
+
+                                                    {/* Key Badge */}
                                                     {track.key && (
                                                         <span className={cn(
-                                                            "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
+                                                            "px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 shadow-sm",
                                                             isTapped
-                                                                ? "bg-white/20 border-white/30 text-white"
-                                                                : "bg-muted border-border text-muted-foreground"
+                                                                ? "bg-white/20 text-white border border-white/10"
+                                                                : "bg-muted text-muted-foreground border border-border/50"
                                                         )}>
                                                             {track.key}
                                                         </span>
                                                     )}
-                                                </div>
-                                                {/* Subtitle info */}
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    {isFlowItem && track.trackType && (
-                                                        <span className="text-[10px] opacity-70 uppercase tracking-wider">
-                                                            {track.trackType}
+
+                                                    {/* BPM Metronome Badge */}
+                                                    {rawTrack.bpm && (
+                                                        <Metronome bpm={rawTrack.bpm} />
+                                                    )}
+
+                                                    {/* Lead Musician Badge */}
+                                                    {(rawTrack.leadMusician || rawTrack.performer) && (
+                                                        <span className={cn(
+                                                            "px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 max-w-[80px] truncate",
+                                                            isTapped
+                                                                ? "bg-white/10 text-white/90"
+                                                                : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                                        )}>
+                                                            {rawTrack.leadMusician || rawTrack.performer}
                                                         </span>
                                                     )}
-                                                    {track.performer && (
-                                                        <span className="text-xs text-muted-foreground">{track.performer}</span>
-                                                    )}
-                                                    {rawTrack.notes && !isFlowItem && (
-                                                        <span className="text-xs text-muted-foreground/80 truncate">{rawTrack.notes}</span>
-                                                    )}
-                                                    {rawTrack.referenceLink && !isFlowItem && (
-                                                        <a
-                                                            href={rawTrack.referenceLink}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className={cn(
-                                                                "inline-flex items-center gap-1 text-[10px] font-semibold border rounded px-1.5 py-0.5 ml-1 transition-colors",
-                                                                isTapped
-                                                                    ? "border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20"
-                                                                    : "border-border text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
-                                                            )}
-                                                        >
-                                                            Reference Auth <ExternalLink className="h-3 w-3" />
-                                                        </a>
-                                                    )}
                                                 </div>
+
+                                                {/* Subtitle info / Notes */}
+                                                {(rawTrack.notes || rawTrack.referenceLink || isFlowItem) && (
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        {isFlowItem && track.trackType && (
+                                                            <span className={cn("text-[10px] uppercase font-medium tracking-wide", isTapped ? "text-white/70" : "text-muted-foreground/60")}>
+                                                                {track.trackType}
+                                                            </span>
+                                                        )}
+                                                        {rawTrack.notes && !isFlowItem && (
+                                                            <span className={cn("text-xs truncate", isTapped ? "text-white/80" : "text-muted-foreground")}>{rawTrack.notes}</span>
+                                                        )}
+                                                        {rawTrack.referenceLink && !isFlowItem && (
+                                                            <a
+                                                                href={rawTrack.referenceLink}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className={cn(
+                                                                    "inline-flex items-center gap-1 text-[10px] font-medium rounded px-1.5 py-0.5 ml-1 transition-colors shadow-sm",
+                                                                    isTapped
+                                                                        ? "bg-white/20 text-white hover:bg-white/30"
+                                                                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50"
+                                                                )}
+                                                            >
+                                                                Ref Audio <ExternalLink className="h-2.5 w-2.5" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* Chevron / play indicator */}
+                                            {/* Right Chevron */}
                                             {hasChart && !isTapped && (
-                                                <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" />
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                                             )}
                                             {isTapped && (
-                                                <PlayCircle className="h-6 w-6 fill-white text-primary shrink-0" />
+                                                <PlayCircle className="h-5 w-5 fill-white text-blue-600 shrink-0 shadow-sm rounded-full" />
                                             )}
                                         </div>
                                     )

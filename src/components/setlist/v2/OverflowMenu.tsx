@@ -35,19 +35,10 @@ import {
 interface OverflowMenuProps {
     // Actions
     onPerform?: () => void
-    onPrint: () => void
     onPublish?: () => void
-    onDuplicate?: () => void
-    onCloneNextWeek?: () => void
-    onSaveAsTemplate?: () => void
     onTogglePublic: () => void
-    onHistory?: () => void
-    onSync?: () => void
     onOpenAI: () => void
-    onCheckFlow?: () => void
-    onToggleLive?: () => void
     onDelete?: () => void
-    onSelectMode?: () => void
     onEditDetails?: () => void
     onSetRabbi?: (rabbi: string) => void
 
@@ -57,28 +48,16 @@ interface OverflowMenuProps {
     canEdit: boolean
     setlistId?: string
     rabbi?: string
-    liveEnabled?: boolean
-    isSyncing?: boolean
-    isFullyOffline?: boolean
     estimatedMinutes?: number
     songCount?: number
 }
 
 export function OverflowMenu({
     onPerform,
-    onPrint,
     onPublish,
-    onDuplicate,
-    onCloneNextWeek,
-    onSaveAsTemplate,
     onTogglePublic,
-    onHistory,
-    onSync,
     onOpenAI,
-    onCheckFlow,
-    onToggleLive,
     onDelete,
-    onSelectMode,
     onEditDetails,
     onSetRabbi,
     isPublic,
@@ -86,9 +65,6 @@ export function OverflowMenu({
     canEdit,
     setlistId,
     rabbi,
-    liveEnabled,
-    isSyncing,
-    isFullyOffline,
     estimatedMinutes,
     songCount,
 }: OverflowMenuProps) {
@@ -122,44 +98,10 @@ export function OverflowMenu({
                     </>
                 )}
 
-                {/* Sharing & Publishing */}
-                <DropdownMenuItem onClick={onPrint}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print Gig Packets
-                </DropdownMenuItem>
-
                 {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
                         {isPublic ? "Update & Notify" : "Publish & Notify"}
-                    </DropdownMenuItem>
-                )}
-
-                {onDuplicate && (
-                    <DropdownMenuItem onClick={onDuplicate}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Duplicate Setlist
-                    </DropdownMenuItem>
-                )}
-
-                {onCloneNextWeek && canEdit && (
-                    <DropdownMenuItem onClick={onCloneNextWeek}>
-                        <CalendarPlus className="h-4 w-4 mr-2" />
-                        Clone for Next Week
-                    </DropdownMenuItem>
-                )}
-
-                {onSaveAsTemplate && canEdit && isBandLeader && (
-                    <DropdownMenuItem onClick={onSaveAsTemplate}>
-                        <BookmarkPlus className="h-4 w-4 mr-2" />
-                        Save as Template
-                    </DropdownMenuItem>
-                )}
-
-                {canEdit && onSelectMode && (
-                    <DropdownMenuItem onClick={onSelectMode}>
-                        <ListChecks className="h-4 w-4 mr-2" />
-                        Select Items
                     </DropdownMenuItem>
                 )}
 
@@ -201,24 +143,6 @@ export function OverflowMenu({
                     </DropdownMenuItem>
                 )}
 
-                {isBandLeader && setlistId && onHistory && (
-                    <DropdownMenuItem onClick={onHistory}>
-                        <History className="h-4 w-4 mr-2" />
-                        Version History
-                    </DropdownMenuItem>
-                )}
-
-                {canEdit && onSync && (
-                    <DropdownMenuItem onClick={onSync} disabled={isSyncing || isFullyOffline}>
-                        {isFullyOffline ? (
-                            <Check className="h-4 w-4 mr-2 text-green-500" />
-                        ) : (
-                            <Download className="h-4 w-4 mr-2" />
-                        )}
-                        {isSyncing ? "Syncing..." : isFullyOffline ? "Offline Ready" : "Download for Offline"}
-                    </DropdownMenuItem>
-                )}
-
                 <DropdownMenuSeparator />
 
                 {/* Tools */}
@@ -226,20 +150,6 @@ export function OverflowMenu({
                     <Sparkles className="h-4 w-4 mr-2" />
                     AI Assistant
                 </DropdownMenuItem>
-
-                {onCheckFlow && isBandLeader && (
-                    <DropdownMenuItem onClick={onCheckFlow}>
-                        <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
-                        Check Service Flow
-                    </DropdownMenuItem>
-                )}
-
-                {isBandLeader && onToggleLive && (
-                    <DropdownMenuItem onClick={onToggleLive}>
-                        <Radio className={`h-4 w-4 mr-2 ${liveEnabled ? "text-red-500" : ""}`} />
-                        {liveEnabled ? "Stop Live Sync" : "Go Live"}
-                    </DropdownMenuItem>
-                )}
 
                 {/* Danger zone */}
                 {canEdit && onDelete && (

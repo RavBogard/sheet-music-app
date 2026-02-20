@@ -165,6 +165,32 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
         setSetlistToDuplicate(null)
     }
 
+    const handleCloneNextWeekClick = async (setlist: Setlist, e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!setlistService || !user) return
+        const toastId = toast.loading("Creating next week’s setlist…")
+        try {
+            const currentSetlist = { ...setlist, date: setlist.eventDate } as unknown as Parameters<typeof setlistService.cloneForNextWeek>[0]
+            const newId = await setlistService.cloneForNextWeek(currentSetlist)
+            toast.success("Cloned for next week!", { id: toastId })
+            router.push(`/setlists/${newId}`)
+        } catch {
+            toast.error("Failed to clone setlist", { id: toastId })
+        }
+    }
+
+    const handleSaveAsTemplateClick = async (setlist: Setlist, e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!setlistService || !user) return
+        const toastId = toast.loading("Saving template…")
+        try {
+            await setlistService.saveAsTemplate(setlist)
+            toast.success(`Template "${setlist.name}" saved!`, { id: toastId })
+        } catch {
+            toast.error("Failed to save template", { id: toastId })
+        }
+    }
+
     const handleTransfer = async () => {
         if (!selectedSetlistForTransfer || !transferEmail) return
         try {
@@ -421,7 +447,20 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {upcoming.map(setlist => (
-                                            <UpcomingSetlistCard key={setlist.id} setlist={setlist} onClick={() => handleSelect(setlist)} navigatingTo={navigatingTo} onDownload={handleDownload} isDownloading={isDownloading} />
+                                            <UpcomingSetlistCard
+                                                key={setlist.id}
+                                                setlist={setlist}
+                                                onClick={() => handleSelect(setlist)}
+                                                navigatingTo={navigatingTo}
+                                                onDownload={handleDownload}
+                                                isDownloading={isDownloading}
+                                                onDuplicate={handleDuplicateClick}
+                                                onCloneNextWeek={handleCloneNextWeekClick}
+                                                onSaveAsTemplate={handleSaveAsTemplateClick}
+                                                onDelete={handleDeleteClick}
+                                                canDuplicate={!!user}
+                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid}
+                                            />
                                         ))}
                                         {placeholders.map((p, idx) => (
                                             <PlaceholderCard key={idx} date={p.date} onCreate={handleCreateFromCalendar} />
@@ -447,6 +486,8 @@ export function SetlistDashboard({ onBack, onSelect, onCreateNew, initialPersona
                                                 onClick={() => handleSelect(setlist)}
                                                 navigatingTo={navigatingTo}
                                                 onDuplicate={handleDuplicateClick}
+                                                onCloneNextWeek={handleCloneNextWeekClick}
+                                                onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
                                                 canDelete={!setlist.isPublic || setlist.ownerId === user?.uid}

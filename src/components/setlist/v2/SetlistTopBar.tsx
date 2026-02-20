@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, Undo2, Redo2, Play } from "lucide-react"
+import { ChevronLeft, Undo2, Redo2, Play, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState, useRef, useEffect } from "react"
@@ -17,6 +17,7 @@ interface SetlistTopBarProps {
     canUndo?: boolean
     canRedo?: boolean
     onPerform?: () => void
+    onPrint?: () => void
     overflowTrigger: React.ReactNode
 }
 
@@ -32,6 +33,7 @@ export function SetlistTopBar({
     canUndo,
     canRedo,
     onPerform,
+    onPrint,
     overflowTrigger,
 }: SetlistTopBarProps) {
     const [editing, setEditing] = useState(false)
@@ -110,6 +112,19 @@ export function SetlistTopBar({
                     </Button>
                 )}
             </div>
+
+            {/* Print action */}
+            {onPrint && (
+                <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={onPrint}
+                    title="Print Gig Packets"
+                >
+                    <Printer className="h-4 w-4" />
+                </Button>
+            )}
 
             {/* Perform action */}
             {onPerform && (

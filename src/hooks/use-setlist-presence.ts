@@ -7,10 +7,7 @@ import {
     writePresence,
     removePresence,
     subscribeToPresence,
-    LiveState,
 } from "@/lib/setlist-live"
-import { onSnapshot, doc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 
 const HEARTBEAT_MS = 30_000
 
@@ -93,25 +90,3 @@ export function useSetlistPresence(
     return others
 }
 
-/**
- * Subscribe to a setlist's liveState field for real-time "go to song" commands.
- */
-export function useLiveState(setlistId: string | null) {
-    const [liveState, setLiveState] = useState<LiveState | null>(null)
-
-    useEffect(() => {
-        if (!setlistId) return
-        const ref = doc(db, "setlists", setlistId)
-        const unsub = onSnapshot(ref, (snap) => {
-            const data = snap.data()
-            if (data?.liveState?.enabled) {
-                setLiveState(data.liveState as LiveState)
-            } else {
-                setLiveState(null)
-            }
-        })
-        return unsub
-    }, [setlistId])
-
-    return liveState
-}

@@ -2,9 +2,15 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Copy, Trash2, Download, Plus, CloudOff, CheckCircle2, Loader2 } from "lucide-react"
+import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2 } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileOffline } from "@/lib/offline-store"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 /* ─── Upcoming Service Card ─── */
 
@@ -14,9 +20,15 @@ interface UpcomingCardProps {
     navigatingTo?: string | null
     onDownload: (setlist: Setlist) => void
     isDownloading: boolean
+    onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
+    onCloneNextWeek: (setlist: Setlist, e: React.MouseEvent) => void
+    onSaveAsTemplate: (setlist: Setlist, e: React.MouseEvent) => void
+    onDelete: (setlist: Setlist, e: React.MouseEvent) => void
+    canDelete: boolean
+    canDuplicate: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload, isDownloading }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
@@ -48,15 +60,54 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
                         {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onDownload(setlist)
-                        }}
-                        className="p-2 -mr-2 -mt-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
-                        title="Download for Offline"
-                    >
-                        <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
+                    <div className="flex gap-1 items-center">
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onDownload(setlist)
+                            }}
+                            className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
+                            title="Download for Offline"
+                        >
+                            <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
+                        </div>
+
+                        {/* Overflow Menu */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <div className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer -mr-2 text-muted-foreground hover:text-foreground">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    {canDuplicate && (
+                                        <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>
+                                            <Copy className="h-4 w-4 mr-2" />
+                                            Duplicate Setlist
+                                        </DropdownMenuItem>
+                                    )}
+                                    {canDuplicate && (
+                                        <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
+                                            <PlusSquare className="h-4 w-4 mr-2" />
+                                            Clone for Next Week
+                                        </DropdownMenuItem>
+                                    )}
+                                    {canDuplicate && (
+                                        <DropdownMenuItem onClick={(e) => onSaveAsTemplate(setlist, e)}>
+                                            <BookmarkPlus className="h-4 w-4 mr-2" />
+                                            Save as Template
+                                        </DropdownMenuItem>
+                                    )}
+                                    {canDelete && (
+                                        <DropdownMenuItem onClick={(e) => onDelete(setlist, e)} className="text-red-500 focus:text-red-500">
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Setlist
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-blue-500 dark:group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
@@ -89,12 +140,14 @@ interface PastCardProps {
     onClick: () => void
     navigatingTo?: string | null
     onDuplicate?: (setlist: Setlist, e: React.MouseEvent) => void
+    onCloneNextWeek?: (setlist: Setlist, e: React.MouseEvent) => void
+    onSaveAsTemplate?: (setlist: Setlist, e: React.MouseEvent) => void
     onDelete?: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
 }
 
-export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
 
     return (
@@ -125,25 +178,40 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onDel
                     </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {canDuplicate && (
-                        <div
-                            className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground"
-                            onClick={(e) => onDuplicate?.(setlist, e)}
-                            title="Duplicate"
-                        >
-                            <Copy className="h-4 w-4" />
-                        </div>
-                    )}
-                    {canDelete && (
-                        <div
-                            className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-red-400"
-                            onClick={(e) => onDelete?.(setlist, e)}
-                            title="Delete"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </div>
+                {/* Action Menu (MoreVertical) */}
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    {(canDuplicate || canDelete) && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <div className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground cursor-pointer">
+                                    <MoreVertical className="h-4 w-4" />
+                                </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                {canDuplicate && (
+                                    <>
+                                        <DropdownMenuItem onClick={(e) => onDuplicate?.(setlist, e)}>
+                                            <Copy className="h-4 w-4 mr-2" />
+                                            Duplicate Setlist
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => onCloneNextWeek?.(setlist, e)}>
+                                            <PlusSquare className="h-4 w-4 mr-2" />
+                                            Clone for Next Week
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => onSaveAsTemplate?.(setlist, e)}>
+                                            <BookmarkPlus className="h-4 w-4 mr-2" />
+                                            Save as Template
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                                {canDelete && (
+                                    <DropdownMenuItem onClick={(e) => onDelete?.(setlist, e)} className="text-red-500 focus:text-red-500">
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Setlist
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </div>
             </div>
