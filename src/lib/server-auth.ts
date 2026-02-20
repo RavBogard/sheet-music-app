@@ -61,15 +61,30 @@ export async function getServerUser(): Promise<ServerUser | null> {
 }
 
 /**
- * Helper to serialize Firestore Timestamps to format safe for Next.js Client Boundaries
+ * Helper to deeply serialize Firestore Timestamps to format safe for Next.js Client Boundaries
  */
+function isFirestoreTimestamp(val: any): boolean {
+    return val && typeof val === 'object' && typeof val.toDate === 'function'
+}
+
+function deepSerialize(obj: any): any {
+    if (obj === null || obj === undefined) return obj
+    if (isFirestoreTimestamp(obj)) return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(deepSerialize)
+    if (typeof obj === 'object') {
+        const res: any = {}
+        for (const key of Object.keys(obj)) {
+            res[key] = deepSerialize(obj[key])
+        }
+        return res
+    }
+    return obj
+}
+
 export function serializeSetlist(id: string, data: any) {
     return {
         id,
-        ...data,
-        date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
-        eventDate: data.eventDate?.toDate ? data.eventDate.toDate().toISOString() : data.eventDate,
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        ...deepSerialize(data)
     }
 }
 
