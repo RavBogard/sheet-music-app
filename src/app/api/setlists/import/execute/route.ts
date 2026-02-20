@@ -58,10 +58,11 @@ export async function POST(req: NextRequest) {
                     id: trackId,
                     type: 'song',
                     title: item.title || `Song ${trackCounter}`,
-                    key: item.key || undefined,
-                    leadMusician: item.performer || undefined,
-                    referenceLink: item.referenceLink || undefined,
                 }
+
+                if (item.key) trackPayload.key = item.key
+                if (item.performer) trackPayload.leadMusician = item.performer
+                if (item.referenceLink) trackPayload.referenceLink = item.referenceLink
 
                 // If user mapped it to an existing library item
                 if (item.libraryMatchId) {
