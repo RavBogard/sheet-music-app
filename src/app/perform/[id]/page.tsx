@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context"
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
 import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
 import { FlowItemView } from "@/components/performance/FlowItemView"
+import { SwipeOverlay } from "@/components/performance/SwipeOverlay"
 
 import { parseFileId } from "@/lib/utils"
 
@@ -137,6 +138,7 @@ export default function PerformPage() {
                     }}
                 />
             )}
+            <SwipeOverlay />
         </>
     )
 }

@@ -6,7 +6,7 @@ import { Home, Library, ListMusic, Settings, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAuth } from "@/lib/auth-context"
-import { useCongregation } from "@/lib/congregation-context"
+import { useCongregation } from "@/lib/congregation-store"
 
 interface NavItem {
     label: string

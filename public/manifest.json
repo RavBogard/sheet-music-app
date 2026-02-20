@@ -7,13 +7,22 @@
     "background_color": "#fbfbfb",
     "theme_color": "#fbfbfb",
     "orientation": "any",
-    "categories": ["music", "productivity"],
+    "categories": [
+        "music",
+        "productivity"
+    ],
     "icons": [
         {
-            "src": "/icon.svg",
-            "sizes": "192x192 512x512",
-            "type": "image/svg+xml",
+            "src": "/icon",
+            "sizes": "512x512",
+            "type": "image/png",
             "purpose": "any maskable"
+        },
+        {
+            "src": "/apple-icon",
+            "sizes": "180x180",
+            "type": "image/png",
+            "purpose": "any"
         }
     ]
 }

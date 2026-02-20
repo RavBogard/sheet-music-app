@@ -8,12 +8,13 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { getContextualGreeting, Greeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
+import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { Button } from "@/components/ui/button"
 import { Music2 } from "lucide-react"
 import { useChatStore } from "@/lib/chat-store"
 import { useMusicStore } from "@/lib/store"
 import { buildPerformQueue } from "@/lib/queue-utils"
-import { useCongregation } from "@/lib/congregation-context"
+import { useCongregation } from "@/lib/congregation-store"
 import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { HeroCard, CommandRow, UpcomingTimeline, CompactSetlistRow } from "@/components/dashboard"
@@ -315,12 +316,15 @@ export default function DashboardClient({ serverGreeting: _serverGreeting, serve
                                 </p>
                             </div>
                         </div>
-                        <Button asChild variant="outline" className="w-full gap-2">
-                            <Link href="/settings">
-                                <Music2 className="w-4 h-4" />
-                                Set Up My Instrument
-                            </Link>
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            <Button asChild variant="outline" className="w-full gap-2">
+                                <Link href="/settings">
+                                    <Music2 className="w-4 h-4" />
+                                    Set Up My Instrument
+                                </Link>
+                            </Button>
+                            <NudgeAdminButton />
+                        </div>
                     </div>
                 )}
 
@@ -346,9 +350,8 @@ export default function DashboardClient({ serverGreeting: _serverGreeting, serve
                                 className="text-muted-foreground"
                                 onClick={async () => {
                                     if (user) {
-                                        const { doc, updateDoc } = await import("firebase/firestore")
-                                        const { db } = await import("@/lib/firebase")
-                                        await updateDoc(doc(db, "users", user.uid), { viewedWelcomeModal: true })
+                                        const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
+                                        await markWelcomeModalViewed(user.uid)
                                     }
                                 }}
                             >

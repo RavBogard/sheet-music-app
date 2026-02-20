@@ -18,7 +18,7 @@ import { DriveFile } from "@/types/models"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { useCongregation } from "@/lib/congregation-context"
+import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { useSetlistStore } from "@/lib/setlist-store"
@@ -239,7 +239,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             .then(r => r.ok ? r.json() : {})
             .then(data => setUsageMap(data))
             .catch(() => { }) // Silent — usage badges are non-critical
-    }, [combinedItems.map(i => i.id).join(',')])  
+    }, [combinedItems.map(i => i.id).join(',')])
 
     const itemCount = tab === "audio" ? audioFiles.length : files.length
     const hasAudio = audioFiles.length > 0
@@ -404,6 +404,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                             else next.add(id)
                                             return next
                                         })
+                                    }}
+                                    onLongPress={(id) => {
+                                        setSelectMode(true)
+                                        setSelectedIds(new Set([id]))
                                     }}
                                     usageInfo={usageMap[item.id] ?? undefined}
                                 />

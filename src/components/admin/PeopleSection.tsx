@@ -54,7 +54,7 @@ export function PeopleSection() {
         for (const uid of uids) {
             try {
                 await updateUserRole(uid, role as UserRole)
-                notifyRoleChanged(uid, role).catch(() => {})
+                notifyRoleChanged(uid, role).catch(() => { })
                 success++
             } catch { /* skip failures */ }
         }
@@ -111,6 +111,12 @@ export function PeopleSection() {
                                             Approve as Band Leader
                                         </button>
                                     )}
+                                    <button
+                                        onClick={() => bulkSetRole('denied')}
+                                        className="text-xs bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 px-2.5 py-1 rounded-md font-medium transition-colors border border-red-500/20 ml-auto"
+                                    >
+                                        Reject
+                                    </button>
                                 </>
                             )}
                         </div>

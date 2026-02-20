@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { useCongregation } from "@/lib/congregation-context"
+import { useCongregation } from "@/lib/congregation-store"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 

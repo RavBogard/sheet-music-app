@@ -1,5 +1,18 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
+
+const LibraryFileSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    mimeType: z.string(),
+    parents: z.array(z.string()).default([]),
+    modifiedTime: z.string().nullable().optional(),
+    webViewLink: z.string().nullable().optional(),
+    metadata: z.record(z.string(), z.any()).nullable().optional()
+})
+
+export type LibraryFile = z.infer<typeof LibraryFileSchema>
 
 /**
  * Fetch the entire library index server-side.
@@ -12,7 +25,7 @@ export async function getServerLibrary() {
         const limit = 500
         let lastVisible = null
         let maxModified = ''
-        const files: any[] = []
+        const files: LibraryFile[] = []
 
         while (true) {
             let query = db.collection('library_index')
@@ -33,7 +46,8 @@ export async function getServerLibrary() {
                 if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
                     maxModified = data.lastSyncedAt
                 }
-                files.push({
+
+                const parsed = LibraryFileSchema.safeParse({
                     id: doc.id,
                     name: data.name,
                     mimeType: data.mimeType,
@@ -42,6 +56,12 @@ export async function getServerLibrary() {
                     webViewLink: data.webViewLink || null,
                     metadata: data.metadata || null
                 })
+
+                if (parsed.success) {
+                    files.push(parsed.data)
+                } else {
+                    logger.warn(`Skipping malformed library document: ${doc.id}`, parsed.error.issues)
+                }
             })
 
             lastVisible = snapshot.docs[snapshot.docs.length - 1]

@@ -8,12 +8,12 @@ import { Check, ChevronLeft, Music, Folder, Lightbulb, Flame, Sparkles } from "l
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter
-} from "@/components/ui/dialog"
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetFooter
+} from "@/components/ui/sheet"
 import { useLibraryStore } from "@/lib/library-store"
 import { fetchUsageData, getSuggestions, SongSuggestion, UsageInfo } from "@/lib/song-suggestions"
 
@@ -151,11 +151,11 @@ export function AddSongsModal({
     const showSuggestions = !searchQuery && suggestions.length > 0 && !currentFolderId
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-card border-border text-foreground max-w-2xl h-[80vh] flex flex-col p-6">
-                <DialogHeader className="shrink-0 flex-row items-center justify-between space-y-0">
-                    <DialogTitle className="text-xl font-bold">Add Songs ({selectedFiles.size} selected)</DialogTitle>
-                </DialogHeader>
+        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <SheetContent side="right" className="bg-card border-l border-border text-foreground w-full sm:max-w-md xl:max-w-lg h-full flex flex-col p-6">
+                <SheetHeader className="shrink-0 flex-row items-center justify-between space-y-0">
+                    <SheetTitle className="text-xl font-bold">Add Songs ({selectedFiles.size} selected)</SheetTitle>
+                </SheetHeader>
 
                 <div className="flex flex-col flex-1 min-h-0 mt-4">
                     {/* Breadcrumbs for Navigation */}
@@ -282,7 +282,7 @@ export function AddSongsModal({
                     </div>
                 </div>
 
-                <DialogFooter className="mt-4 shrink-0">
+                <SheetFooter className="mt-4 shrink-0">
                     <Button
                         onClick={handleConfirm}
                         disabled={selectedFiles.size === 0}
@@ -290,8 +290,8 @@ export function AddSongsModal({
                     >
                         Add {selectedFiles.size} Song{selectedFiles.size !== 1 ? 's' : ''}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
     )
 }

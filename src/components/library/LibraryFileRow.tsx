@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { toast } from "sonner"
@@ -20,6 +20,7 @@ interface LibraryFileRowProps {
     selectMode?: boolean
     isSelected?: boolean
     onToggleSelect?: (id: string) => void
+    onLongPress?: (id: string) => void
     usageInfo?: { lastUsedDate: string; totalUses: number } | null
 }
 
@@ -35,7 +36,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, usageInfo }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
     const isFolder = item.mimeType.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -59,11 +60,39 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
         }
     }
 
+    const touchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const handleTouchStart = () => {
+        if (!isFolder && onLongPress && !selectMode) {
+            touchTimeout.current = setTimeout(() => {
+                onLongPress(item.id)
+                if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50)
+            }, 500)
+        }
+    }
+
+    const handleTouchEndOrMove = () => {
+        if (touchTimeout.current) {
+            clearTimeout(touchTimeout.current)
+            touchTimeout.current = null
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (touchTimeout.current) clearTimeout(touchTimeout.current)
+        }
+    }, [])
+
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
                 <button
                     onClick={handleClick}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEndOrMove}
+                    onTouchMove={handleTouchEndOrMove}
+                    onTouchCancel={handleTouchEndOrMove}
                     className={`w-full text-left p-3 sm:p-5 rounded-xl sm:rounded-2xl transition-all flex items-center gap-3 sm:gap-5 group ${isSelected
                         ? 'bg-blue-500/10 border-2 border-blue-500/50'
                         : isFolder
@@ -129,8 +158,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             )}
 
                             {isCached && !isFolder && (
-                                <span className="text-xs text-green-500/70" title="Available offline">
-                                    <CloudOff className="w-3 h-3" />
+                                <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title="This file is downloaded and available offline">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Cached
                                 </span>
                             )}
 

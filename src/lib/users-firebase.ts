@@ -127,3 +127,19 @@ export async function updateUserRole(targetUid: string, newRole: UserRole) {
     // The API handles the Firestore update too, so we don't need to do it here.
     // Client snapshot listeners will update the UI automatically.
 }
+
+/**
+ * Update user's profile display name
+ */
+export async function updateUserDisplayName(uid: string, displayName: string) {
+    if (!db || Object.keys(db).length === 0) return
+    await updateDoc(doc(db, "users", uid), { displayName })
+}
+
+/**
+ * Mark that the user has seen the welcome modal
+ */
+export async function markWelcomeModalViewed(uid: string) {
+    if (!db || Object.keys(db).length === 0) return
+    await updateDoc(doc(db, "users", uid), { viewedWelcomeModal: true })
+}

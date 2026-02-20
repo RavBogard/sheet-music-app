@@ -63,9 +63,8 @@ export default function SettingsPage() {
                                         if (!user || !nameValue.trim()) return
                                         setSavingName(true)
                                         try {
-                                            const { doc, updateDoc } = await import("firebase/firestore")
-                                            const { db } = await import("@/lib/firebase")
-                                            await updateDoc(doc(db, "users", user.uid), { displayName: nameValue.trim() })
+                                            const { updateUserDisplayName } = await import("@/lib/users-firebase")
+                                            await updateUserDisplayName(user.uid, nameValue.trim())
                                             setEditingName(false)
                                         } catch { /* silent */ }
                                         setSavingName(false)

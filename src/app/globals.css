@@ -33,6 +33,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -79,6 +81,8 @@
   --accent-foreground: oklch(0.205 0 0);
 
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.623 0.169 150.36);
+  --success-foreground: oklch(0.985 0 0);
 
   /* Border: Increased contrast from 0.922 to 0.87 */
   --border: oklch(0.87 0 0);
@@ -126,6 +130,9 @@
   --accent-foreground: oklch(0.985 0 0);
 
   --destructive: oklch(0.6 0.25 25);
+  --success: oklch(0.536 0.138 148.91);
+  --success-foreground: oklch(0.985 0 0);
+
   --border: oklch(0.35 0 0);
   --input: oklch(0.35 0 0);
   --ring: oklch(0.6 0.18 250);
@@ -165,7 +172,9 @@
     opacity: 0;
   }
 
-  :is(.dark *).bg-noise, .dark > .bg-noise, .dark .bg-noise {
+  :is(.dark *).bg-noise,
+  .dark>.bg-noise,
+  .dark .bg-noise {
     opacity: 0.04;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   }
@@ -177,6 +186,14 @@
   .glass-card {
     @apply bg-card/80 backdrop-blur-md border border-border shadow-md;
   }
+
+  .text-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  .animate-spring {
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
 }
 
 /* ── Dashboard Stagger Animations ── */
@@ -185,6 +202,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -192,12 +210,21 @@
 }
 
 @keyframes dash-progress-fill {
-  from { width: 0%; }
+  from {
+    width: 0%;
+  }
 }
 
 @keyframes dash-pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .dash-stagger {
@@ -206,12 +233,29 @@
 }
 
 /* Stagger delays: each child gets progressively later start */
-.dash-stagger-0 { animation-delay: 0ms; }
-.dash-stagger-1 { animation-delay: 60ms; }
-.dash-stagger-2 { animation-delay: 120ms; }
-.dash-stagger-3 { animation-delay: 180ms; }
-.dash-stagger-4 { animation-delay: 240ms; }
-.dash-stagger-5 { animation-delay: 300ms; }
+.dash-stagger-0 {
+  animation-delay: 0ms;
+}
+
+.dash-stagger-1 {
+  animation-delay: 60ms;
+}
+
+.dash-stagger-2 {
+  animation-delay: 120ms;
+}
+
+.dash-stagger-3 {
+  animation-delay: 180ms;
+}
+
+.dash-stagger-4 {
+  animation-delay: 240ms;
+}
+
+.dash-stagger-5 {
+  animation-delay: 300ms;
+}
 
 /* Skip animations on return visits / fast nav */
 .dash-no-animate .dash-stagger {
@@ -225,4 +269,44 @@
 
 .dash-pulse {
   animation: dash-pulse-soft 2s ease-in-out infinite;
+}
+
+/* ── Print Styles ── */
+@media print {
+
+  /* Hide UI elements */
+  nav,
+  header,
+  footer,
+  .no-print,
+  [data-radix-popper-content-wrapper],
+  [role="dialog"],
+  button {
+    display: none !important;
+  }
+
+  /* Reset backgrounds for clean ink */
+  body,
+  main,
+  article,
+  section,
+  .print-container {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove scrollbars to print all content */
+  * {
+    overflow: visible !important;
+  }
+
+  /* Force page breaks */
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid;
+  }
 }

@@ -80,7 +80,7 @@ export interface Setlist {
     previousOwnerId?: string
 }
 
-export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending'
+export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'
 
 export interface UserProfile {
     uid: string
