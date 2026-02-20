@@ -4,18 +4,33 @@ import Link from "next/link"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { Music2, ChevronRight } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 /**
  * Compact setlist row for non-prep-tracked lists.
  * Uses <Link> for automatic prefetching of the destination page.
  */
-export function CompactSetlistRow({ setlist, onClick }: { setlist: Setlist; onClick?: () => void }) {
+export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onSelect?: (setlist: Setlist) => void }) {
+    const router = useRouter()
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+
     const eventDate = toDate(setlist.eventDate)
     const dateStr = eventDate
         ? eventDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
         : ''
 
-    const href = `/perform/setlist/${setlist.id}`
+    // Wrap onSelect to show immediate feedback before navigation
+    const handleSelect = () => {
+        setNavigatingTo(setlist.id)
+        if (onSelect) {
+            onSelect(setlist)
+        } else {
+            router.push(`/setlists/${setlist.id}`)
+        }
+    }
+
+    const href = `/setlists/${setlist.id}`
 
     const content = (
         <>
@@ -33,11 +48,11 @@ export function CompactSetlistRow({ setlist, onClick }: { setlist: Setlist; onCl
         </>
     )
 
-    if (onClick) {
+    if (onSelect) {
         return (
             <button
-                onClick={onClick}
-                className="w-full flex items-center gap-3 bg-card hover:bg-accent rounded-xl px-3 py-2.5 transition-colors text-left group border border-border"
+                onClick={handleSelect}
+                className={`w-full flex items-center gap-3 bg-card hover:bg-accent rounded-xl px-3 py-2.5 transition-colors text-left group border border-border ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
             </button>

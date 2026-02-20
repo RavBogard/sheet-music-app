@@ -178,7 +178,7 @@ export default function SetlistPerformPage() {
     }
 
     return (
-        <div className="flex flex-col h-[100dvh]">
+        <div className="flex flex-col h-[100dvh] bg-zinc-950 text-zinc-200">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
                 <Link

@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, Undo2, Redo2 } from "lucide-react"
+import { ChevronLeft, Undo2, Redo2, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState, useRef, useEffect } from "react"
@@ -16,6 +16,7 @@ interface SetlistTopBarProps {
     onRedo?: () => void
     canUndo?: boolean
     canRedo?: boolean
+    onPerform?: () => void
     overflowTrigger: React.ReactNode
 }
 
@@ -30,6 +31,7 @@ export function SetlistTopBar({
     onRedo,
     canUndo,
     canRedo,
+    onPerform,
     overflowTrigger,
 }: SetlistTopBarProps) {
     const [editing, setEditing] = useState(false)
@@ -108,6 +110,19 @@ export function SetlistTopBar({
                     </Button>
                 )}
             </div>
+
+            {/* Perform action */}
+            {onPerform && (
+                <Button
+                    size="sm"
+                    variant="default"
+                    className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+                    onClick={onPerform}
+                >
+                    <Play className="h-4 w-4 fill-white" />
+                    <span className="hidden sm:inline">Perform</span>
+                </Button>
+            )}
 
             {/* Overflow menu trigger */}
             {overflowTrigger}

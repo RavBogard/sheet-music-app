@@ -474,6 +474,7 @@ export function SetlistEditorV2({
                 onRedo={redo}
                 canUndo={canUndo}
                 canRedo={canRedo}
+                onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
                 overflowTrigger={
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
