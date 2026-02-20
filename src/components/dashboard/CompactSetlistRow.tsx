@@ -26,11 +26,11 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
         if (onSelect) {
             onSelect(setlist)
         } else {
-            router.push(`/setlists/${setlist.id}`)
+            router.push(`/perform/setlist/${setlist.id}`)
         }
     }
 
-    const href = `/setlists/${setlist.id}`
+    const href = `/perform/setlist/${setlist.id}`
 
     const content = (
         <>

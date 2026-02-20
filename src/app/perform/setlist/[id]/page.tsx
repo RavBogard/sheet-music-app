@@ -19,7 +19,8 @@ import { useMusicStore } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight } from "lucide-react"
+import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer } from "lucide-react"
+import { PrintModal } from "@/components/setlist/PrintModal"
 import { SetlistTrack } from "@/types/models"
 import { QueueItem } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -43,6 +44,7 @@ export default function SetlistPerformPage() {
     const [tappedIndex, setTappedIndex] = useState<number | null>(null)
     const [changesSummary, setChangesSummary] = useState<string | null>(null)
     const [showChangeBanner, setShowChangeBanner] = useState(true)
+    const [showPrintModal, setShowPrintModal] = useState(false)
 
     // Real-time subscription to setlist
     useEffect(() => {
@@ -178,7 +180,7 @@ export default function SetlistPerformPage() {
     }
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-zinc-950 text-zinc-200">
+        <div className="flex flex-col h-[100dvh] bg-zinc-950 text-zinc-200 overflow-hidden">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
                 <Link
@@ -194,13 +196,22 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` · ${totalCount} items` : ""}
                     </p>
                 </div>
-                <Link
-                    href={`/setlists/${setlistId}`}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
-                    title="Edit setlist"
-                >
-                    <Pencil className="h-4 w-4 text-zinc-500" />
-                </Link>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setShowPrintModal(true)}
+                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
+                        title="Print gig packet"
+                    >
+                        <Printer className="h-4 w-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
+                    </button>
+                    <Link
+                        href={`/setlists/${setlistId}`}
+                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-zinc-800 transition-colors"
+                        title="Edit setlist"
+                    >
+                        <Pencil className="h-4 w-4 text-zinc-500 hover:text-zinc-300 transition-colors" />
+                    </Link>
+                </div>
             </div>
 
             {/* Track list */}
@@ -380,6 +391,16 @@ export default function SetlistPerformPage() {
                         Play from start
                     </Button>
                 </div>
+            )}
+
+            {/* Print Modal Overlay */}
+            {showPrintModal && (
+                <PrintModal
+                    setlistName={name}
+                    tracks={tracks}
+                    setlistId={setlistId}
+                    onClose={() => setShowPrintModal(false)}
+                />
             )}
         </div>
     )
