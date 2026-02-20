@@ -72,7 +72,7 @@ ${contextStr}`
         const resultObj = await Promise.race([
             geminiFlash.generateContent({
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+                generationConfig: { temperature: 0.1 }
             }),
             timeoutPromise(25000, "Gemini GenerateContent")
         ]) as any

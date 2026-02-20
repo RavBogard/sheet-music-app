@@ -118,7 +118,6 @@ ${contextStr}`
         const resultObj = await geminiFlash.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
-                responseMimeType: "application/json",
                 temperature: 0.1,
             }
         })
