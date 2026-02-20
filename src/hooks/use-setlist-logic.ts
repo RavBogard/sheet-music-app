@@ -232,11 +232,29 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
         setSaving(true)
         try {
+            const serializeDate = (d?: Date | null) => {
+                if (!d) return undefined
+                // User requested Central time default
+                // Format the local date as a YYYY-MM-DD string
+                const year = d.getFullYear()
+                const month = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+
+                // Store it as Noon in US Central Time (UTC-6 or UTC-5 depending on DST)
+                // The easiest way is to construct a string that gets parsed in Central Time
+                // However, since we want a stable ISO string to store in Firebase, we can
+                // use Noon UTC as before which works universally for dates, OR we can
+                // format the string in the browser's timezone but shifted to represent 12:00 PM Central time.
+                // Best approach: Store it as 12:00 PM UTC-06:00 (which is 18:00 UTC) 
+                // That way when people read it in Central time, it falls squarely on the same day.
+                return `${year}-${month}-${day}T12:00:00.000-06:00`
+            }
+
             const dataToSave = {
                 name: n,
                 tracks: t,
                 trackCount: t.length,
-                eventDate: ed ? ed.toISOString() : undefined,
+                eventDate: serializeDate(ed),
                 rabbi: rab,
                 serviceNotes: sn?.trim() || undefined,
                 musicians: mus.length > 0 ? mus : undefined,
@@ -246,7 +264,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 await setlistService.updateSetlist(id, pub, dataToSave)
             } else {
                 const newId = await setlistService.createSetlist(n, t, pub, {
-                    eventDate: ed ? ed.toISOString() : undefined,
+                    eventDate: serializeDate(ed),
                     rabbi: rab,
                     serviceNotes: sn?.trim() || undefined,
                     musicians: mus.length > 0 ? mus : undefined,
@@ -261,8 +279,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             const description = msg.includes("permission")
                 ? "You may not have permission to edit this setlist."
                 : msg.includes("not-found")
-                ? "This setlist may have been deleted."
-                : "Please check your internet connection and try again."
+                    ? "This setlist may have been deleted."
+                    : "Please check your internet connection and try again."
             toast.error("Failed to save changes", { description, duration: 5000 })
         }
         setSaving(false)

@@ -58,6 +58,8 @@ You must return a JSON object with this structure:
 - If asked to "Make Bob an admin", look up Bob in the USERS context, get his ID, and issue an ADMIN_ACTION command.
 - If asked to "Create a setlist", issue a CREATE_SETLIST command.
 - **Cross-setlist operations**: If asked to "add everything from [setlist name]" or "copy songs from [setlist name]", look up that setlist in the ALL SETLISTS context, find matching tracks, and issue ADD_TO_SETLIST commands for each song. When referencing another setlist, match by name (case-insensitive, partial match OK).
+- NEVER use PUBLISH_SETLIST on an existing setlist from the "ALL SETLISTS" context. Updating the date on an old setlist destroys historical records! 
+- If asked to schedule or reuse a **past setlist** for a new date, FIRST use CREATE_SETLIST with the tracks from that past setlist, then use PUBLISH_SETLIST to set the new date on the newly created setlist.
 - If asked to build a setlist for a specific service (e.g., "Build me a setlist for this Friday", "Shabbat morning setlist"), create a CREATE_SETLIST with pre-populated tracks matched from the library. Follow the standard Reform liturgical order. Include section headers as tracks with type "header".
 - When building liturgical setlists, generate a FULL SERVICE FLOW — not just songs. Include non-song liturgical moments as tracks with these types:
   * 'song': A musical piece linked to a chart in the library (must include fileId if found)
@@ -94,13 +96,13 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null)
     if (!body) {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
     }
 
     const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi } = body
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages[messages.length - 1]?.content) {
-        return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })
+      return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })
     }
 
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
@@ -110,14 +112,14 @@ export async function POST(request: NextRequest) {
     let userContext = ""
 
     try {
-        if (auth.isAdmin || auth.isBandLeader) {
-          const usersSnap = await getFirestore().collection('users').limit(50).get()
-          const users = usersSnap.docs.map(d => {
-            const data = d.data()
-            return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]${data.soundEngineer ? ' [Sound Engineer]' : ''}`
-          }).join('\n')
-          userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
-        }
+      if (auth.isAdmin || auth.isBandLeader) {
+        const usersSnap = await getFirestore().collection('users').limit(50).get()
+        const users = usersSnap.docs.map(d => {
+          const data = d.data()
+          return `${data.displayName} (${data.email}) [ID: ${d.id}] [Role: ${data.role || 'member'}]${data.soundEngineer ? ' [Sound Engineer]' : ''}`
+        }).join('\n')
+        userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
+      }
     } catch (e) {
       logger.warn("Admin context fetch failed:", e)
     }
@@ -139,89 +141,89 @@ export async function POST(request: NextRequest) {
     // Fetch ALL setlists so the AI can reference them by name
     let allSetlistsContext = ""
     try {
-        const firestore = getFirestore()
-        // Only include public setlists + the requesting user's own setlists (privacy)
-        const [publicSnap, ownSnap] = await Promise.all([
-            firestore.collection('setlists')
-                .where('isPublic', '==', true)
-                .orderBy('date', 'desc')
-                .limit(80)
-                .get(),
-            firestore.collection('setlists')
-                .where('ownerId', '==', auth.uid)
-                .orderBy('date', 'desc')
-                .limit(20)
-                .get(),
-        ])
+      const firestore = getFirestore()
+      // Only include public setlists + the requesting user's own setlists (privacy)
+      const [publicSnap, ownSnap] = await Promise.all([
+        firestore.collection('setlists')
+          .where('isPublic', '==', true)
+          .orderBy('date', 'desc')
+          .limit(80)
+          .get(),
+        firestore.collection('setlists')
+          .where('ownerId', '==', auth.uid)
+          .orderBy('date', 'desc')
+          .limit(20)
+          .get(),
+      ])
 
-        // Merge and deduplicate
-        const seen = new Set<string>()
-        const allDocs = [...publicSnap.docs, ...ownSnap.docs].filter(doc => {
-            if (seen.has(doc.id)) return false
-            seen.add(doc.id)
-            return true
-        })
+      // Merge and deduplicate
+      const seen = new Set<string>()
+      const allDocs = [...publicSnap.docs, ...ownSnap.docs].filter(doc => {
+        if (seen.has(doc.id)) return false
+        seen.add(doc.id)
+        return true
+      })
 
-        if (allDocs.length > 0) {
-            const setlistLines = allDocs.map(doc => {
-                const data = doc.data()
-                const rabbiTag = data.rabbi ? ` [Rabbi: ${data.rabbi}]` : ''
-                const trackList = (data.tracks || [])
-                    .filter((t: { type?: string }) => !t.type || t.type === 'song')
-                    .map((t: { title: string; fileId?: string }, i: number) =>
-                        `  ${i + 1}. ${t.title}${t.fileId ? ` (fileId: ${t.fileId})` : ''}`
-                    )
-                    .join('\n')
-                return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks${rabbiTag})\n${trackList}`
-            }).join('\n\n')
-            allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
-        }
+      if (allDocs.length > 0) {
+        const setlistLines = allDocs.map(doc => {
+          const data = doc.data()
+          const rabbiTag = data.rabbi ? ` [Rabbi: ${data.rabbi}]` : ''
+          const trackList = (data.tracks || [])
+            .filter((t: { type?: string }) => !t.type || t.type === 'song')
+            .map((t: { title: string; fileId?: string }, i: number) =>
+              `  ${i + 1}. ${t.title}${t.fileId ? ` (fileId: ${t.fileId})` : ''}`
+            )
+            .join('\n')
+          return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks${rabbiTag})\n${trackList}`
+        }).join('\n\n')
+        allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
+      }
     } catch (e) {
-        logger.warn("Failed to fetch setlists for AI context:", e)
-        // Best-effort — continue without setlist context
+      logger.warn("Failed to fetch setlists for AI context:", e)
+      // Best-effort — continue without setlist context
     }
 
     // Add liturgical calendar context
     let liturgicalContext = ""
     try {
-        const nextFri = getNextFriday()
-        const nextSat = getNextSaturday()
-        const friCtx = await getFullServiceContext(nextFri)
-        const satCtx = await getFullServiceContext(nextSat)
-        const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+      const nextFri = getNextFriday()
+      const nextSat = getNextSaturday()
+      const friCtx = await getFullServiceContext(nextFri)
+      const satCtx = await getFullServiceContext(nextSat)
+      const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-        liturgicalContext = `\n--- JEWISH CALENDAR CONTEXT ---
+      liturgicalContext = `\n--- JEWISH CALENDAR CONTEXT ---
 Today: ${todayStr}
 Next Friday (${nextFri.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}): ${friCtx.holiday || 'Regular Shabbat'}${friCtx.parasha ? `, Parashat ${friCtx.parasha}` : ''}
 Next Saturday (${nextSat.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}): ${satCtx.holiday || 'Regular Shabbat'}${satCtx.parasha ? `, Parashat ${satCtx.parasha}` : ''}
 Hebrew Date: ${friCtx.hebrewDate.display}
 -------------------------------\n`
     } catch {
-        // Liturgical context is best-effort
+      // Liturgical context is best-effort
     }
 
     // Song usage context — helps AI avoid repeating songs too often
     let usageContext = ""
     try {
-        const setlistFileIds = currentSetlist
-            .filter((t: { fileId?: string }) => t.fileId)
-            .map((t: { fileId: string }) => t.fileId)
-        if (setlistFileIds.length > 0) {
-            const summaries = await getUsageSummaries(setlistFileIds)
-            if (summaries.size > 0) {
-                const lines: string[] = []
-                for (const [fileId, summary] of summaries) {
-                    const track = currentSetlist.find((t: { fileId?: string }) => t.fileId === fileId)
-                    const dateStr = summary.lastUsedDate instanceof Date
-                        ? summary.lastUsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        : 'unknown'
-                    lines.push(`${track?.title || fileId}: last used ${dateStr}, total ${summary.totalUses}×`)
-                }
-                usageContext = `\n--- SONG USAGE HISTORY ---\n${lines.join('\n')}\n--------------------------\n`
-            }
+      const setlistFileIds = currentSetlist
+        .filter((t: { fileId?: string }) => t.fileId)
+        .map((t: { fileId: string }) => t.fileId)
+      if (setlistFileIds.length > 0) {
+        const summaries = await getUsageSummaries(setlistFileIds)
+        if (summaries.size > 0) {
+          const lines: string[] = []
+          for (const [fileId, summary] of summaries) {
+            const track = currentSetlist.find((t: { fileId?: string }) => t.fileId === fileId)
+            const dateStr = summary.lastUsedDate instanceof Date
+              ? summary.lastUsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : 'unknown'
+            lines.push(`${track?.title || fileId}: last used ${dateStr}, total ${summary.totalUses}×`)
+          }
+          usageContext = `\n--- SONG USAGE HISTORY ---\n${lines.join('\n')}\n--------------------------\n`
         }
+      }
     } catch {
-        // Usage context is best-effort
+      // Usage context is best-effort
     }
 
     const prompt = `

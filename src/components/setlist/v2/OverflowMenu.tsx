@@ -48,6 +48,7 @@ interface OverflowMenuProps {
     onToggleLive?: () => void
     onDelete?: () => void
     onSelectMode?: () => void
+    onEditDetails?: () => void
     onSetRabbi?: (rabbi: string) => void
 
     // State
@@ -78,6 +79,7 @@ export function OverflowMenu({
     onToggleLive,
     onDelete,
     onSelectMode,
+    onEditDetails,
     onSetRabbi,
     isPublic,
     isBandLeader,
@@ -158,6 +160,13 @@ export function OverflowMenu({
                     <DropdownMenuItem onClick={onSelectMode}>
                         <ListChecks className="h-4 w-4 mr-2" />
                         Select Items
+                    </DropdownMenuItem>
+                )}
+
+                {canEdit && onEditDetails && (
+                    <DropdownMenuItem onClick={onEditDetails}>
+                        <MoreVertical className="h-4 w-4 mr-2" />
+                        Edit Details
                     </DropdownMenuItem>
                 )}
 

@@ -168,6 +168,7 @@ export function SetlistEditorV2({
     // ── UI State ──
 
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
+    const [showEditDetails, setShowEditDetails] = useState(false)
     const [showAddSongs, setShowAddSongs] = useState(false)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
@@ -338,7 +339,7 @@ export function SetlistEditorV2({
 
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
-        const tapHandler = selectMode ? () => {} : setEditingTrack
+        const tapHandler = selectMode ? () => { } : setEditingTrack
         const playHandler = selectMode ? undefined : handlePlayTrack
 
         const row = (() => {
@@ -386,8 +387,11 @@ export function SetlistEditorV2({
         <div className="h-[100dvh] flex flex-col bg-background text-foreground">
             {/* Name prompt for new setlists */}
             <NamePrompt
-                isOpen={showNamePrompt && canEdit}
-                onClose={() => setShowNamePrompt(false)}
+                isOpen={showNamePrompt || showEditDetails}
+                onClose={() => {
+                    setShowNamePrompt(false)
+                    setShowEditDetails(false)
+                }}
                 initialName={name}
                 initialIsPublic={isPublic}
                 initialDate={eventDate ? new Date(eventDate) : null}
@@ -397,6 +401,7 @@ export function SetlistEditorV2({
                     setIsPublic(newIsPublic)
                     setEventDate(newDate)
                     setShowNamePrompt(false)
+                    setShowEditDetails(false)
                 }}
             />
 
@@ -441,6 +446,7 @@ export function SetlistEditorV2({
                         onCloneNextWeek={setlistId ? handleCloneNextWeek : undefined}
                         onSaveAsTemplate={setlistId ? handleSaveAsTemplate : undefined}
                         onSelectMode={canEdit && tracks.length > 0 ? () => setSelectMode(true) : undefined}
+                        onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
                         isPublic={isPublic}
                         isBandLeader={isBandLeader}
                         canEdit={canEdit}
