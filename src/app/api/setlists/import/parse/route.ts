@@ -4,7 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { levenshteinDistance } from "@/lib/string-utils"
-import OpenAI from "openai"
+import { geminiFlash } from "@/lib/gemini"
 import Papa from "papaparse"
 
 interface ParsedItem {
@@ -19,10 +19,6 @@ interface ParsedItem {
     libraryMatchName?: string
     similarityScore?: number
 }
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || "",
-})
 
 export async function POST(req: NextRequest) {
     try {
@@ -77,18 +73,8 @@ export async function POST(req: NextRequest) {
         // Convert the parsed data back to a clean JSON string context for OpenAI
         const contextStr = JSON.stringify(parsed.data, null, 2)
 
-        // 3. Prompt OpenAI for strictly typed extraction
-        if (!process.env.OPENAI_API_KEY) {
-            return NextResponse.json({ error: "OpenAI API Key is not configured." }, { status: 500 })
-        }
-
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            response_format: { type: "json_object" },
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an expert musical setlist parser. Your job is to take a raw JSON array representing rows from a spreadsheet and extract a clean list of setlist items.
+        // 3. Prompt Gemini for strictly typed extraction
+        const prompt = `You are an expert musical setlist parser. Your job is to take a raw JSON array representing rows from a spreadsheet and extract a clean list of setlist items.
                     
 Return a JSON object with a single root key 'items' containing an array of objects.
 Each item must have a 'type' of either "header" or "song".
@@ -106,18 +92,21 @@ Rules for "song" items:
 - Set 'referenceLink' to any YouTube/Spotify links found in the row.
 - Ignore blank/empty rows.
 
-Make educated guesses on column mapping based on standard terms.`
-                },
-                {
-                    role: "user",
-                    content: contextStr
-                }
-            ],
-            temperature: 0.1,
+Make educated guesses on column mapping based on standard terms.
+
+Here is the JSON array:
+${contextStr}`
+
+        const resultObj = await geminiFlash.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1,
+            }
         })
 
-        const content = completion.choices[0]?.message?.content
-        if (!content) throw new Error("No content from OpenAI")
+        const content = resultObj.response.text()
+        if (!content) throw new Error("No content from Gemini")
 
         const result = JSON.parse(content)
         const items = result.items || []
