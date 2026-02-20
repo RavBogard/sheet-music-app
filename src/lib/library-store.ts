@@ -76,6 +76,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         fromCache: false,
     }),
 
+    hydrate: (files: DriveFile[]) => set(applyFiles(files, false)),
+
     loadLibrary: async (force = false) => {
         if (get().initialized && !force && get().allFiles.length > 0) return
 
@@ -101,12 +103,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 headers['Authorization'] = `Bearer ${token}`
             }
 
-            // Bypass browser and CDN cache if force is true
-            const endpoint = force
-                ? `/api/library/list?all=true&t=${Date.now()}`
-                : '/api/library/list?all=true'
+            // Bypass browser cache if force is true. CDN is purged via revalidatePath on mutations.
+            const endpoint = '/api/library/list?all=true'
+            const options: RequestInit = { headers }
+            if (force) {
+                options.cache = 'no-store'
+            }
 
-            const res = await fetch(endpoint, { headers })
+            const res = await fetch(endpoint, options)
             if (!res.ok) throw new Error("Failed to load library")
 
             const data = await res.json()

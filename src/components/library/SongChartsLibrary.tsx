@@ -21,6 +21,7 @@ import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-context"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
+import { useSetlistStore } from "@/lib/setlist-store"
 
 import { UploadDialog } from "./UploadDialog"
 import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
@@ -60,6 +61,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         reset,
         hydrate
     } = useLibraryStore()
+
+    const { addItem } = useSetlistStore()
 
     const handleBack = () => {
         if (onBack) return onBack()
@@ -372,6 +375,24 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                     isDigitizing={digitizing === item.id}
                                     isAdmin={!!isAdmin}
                                     onDigitize={() => handleDigitize(item)}
+                                    onArchive={() => {
+                                        if (confirm(`Are you sure you want to archive "${getCleanName(item.name)}"? It will be hidden from the main library.`)) {
+                                            toast.promise(
+                                                apiFetch(`/api/library/archive`, {
+                                                    method: 'PATCH',
+                                                    body: JSON.stringify({ fileId: item.id, archive: true })
+                                                }).then(res => {
+                                                    if (!res.ok) throw new Error("Failed to archive chart")
+                                                    loadLibrary(true)
+                                                }),
+                                                {
+                                                    loading: 'Archiving chart...',
+                                                    success: 'Chart archived successfully',
+                                                    error: 'Failed to archive chart'
+                                                }
+                                            )
+                                        }
+                                    }}
                                     getCleanName={getCleanName}
                                     isPlaying={playingFile?.id === item.id}
                                     selectMode={selectMode}
@@ -437,6 +458,26 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 }}
                             >
                                 Copy Names
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => {
+                                    const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
+                                    selectedItems.forEach(item => {
+                                        const isXml = item.mimeType.includes('xml') || item.name.endsWith('.xml') || item.name.endsWith('.musicxml')
+                                        addItem({
+                                            fileId: item.id,
+                                            name: getCleanName(item.name),
+                                            type: isXml ? 'musicxml' : 'pdf'
+                                        })
+                                    })
+                                    toast.success(`Added ${selectedItems.length} songs to setlist`)
+                                    handleBack()
+                                }}
+                            >
+                                Add {selectedIds.size} to Setlist
                             </Button>
                         </div>
                     </div>

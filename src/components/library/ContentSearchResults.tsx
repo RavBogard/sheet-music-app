@@ -14,6 +14,8 @@ interface ContentSearchResult {
     matches: ContentMatch[]
 }
 
+import { DriveFile } from "@/types/models"
+
 /**
  * Displays results from searching within song content.
  * Shows which songs contain the search term and where.
@@ -22,10 +24,12 @@ export function ContentSearchResults({
     results,
     searching,
     query,
+    onSelectFile,
 }: {
     results: ContentSearchResult[]
     searching: boolean
     query: string
+    onSelectFile?: (file: DriveFile) => void
 }) {
     if (!query || query.length < 2) return null
 

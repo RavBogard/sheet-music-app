@@ -1,9 +1,20 @@
 {
-  "version": "dev",
-  "commit": "unknown",
-  "branch": "unknown",
+  "version": "4.3.0",
+  "commit": "6ed4f03",
+  "branch": "master",
   "buildDate": "2/20/2026",
   "changelog": [
-    "Build info unavailable"
+    "4.3.0 - feat: complete SSR migration for setlists, library, and editor",
+    "4.3.0 - fix: transposer popup not reopening after first use",
+    "4.3.0 - fix: resolve all ESLint warnings for CI",
+    "4.3.0 - feat: SSR dashboard with session cookies (Phase 4)",
+    "4.3.0 - perf: code splitting, batched queries, lazy-load heavy components",
+    "4.3.0 - perf: comprehensive performance overhaul (v4.3.0)",
+    "4.3.0 - fix: two bugs found during audit",
+    "4.3.0 - feat: bridge v2.0.0 — matrix output control + sound engineer auth",
+    "4.3.0 - fix: version display 0.0.0 on Vercel — handle shallow clones",
+    "4.3.0 - feat: sound engineer monitor controls — matrix outputs, bus assignment, auto-access",
+    "4.3.0 - fix: mobile-friendly People section — stacked layout, delete, self-display",
+    "4.3.0 - feat: new role hierarchy — admin, band leader, musician, member, pending"
   ]
 }

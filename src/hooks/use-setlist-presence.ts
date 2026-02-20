@@ -64,10 +64,29 @@ export function useSetlistPresence(
             )
         })
 
+        const handleUnload = () => {
+            removePresence(setlistId, uid)
+        }
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "hidden") {
+                removePresence(setlistId, uid)
+            } else {
+                write()
+            }
+        }
+
+        window.addEventListener("beforeunload", handleUnload)
+        window.addEventListener("pagehide", handleUnload)
+        document.addEventListener("visibilitychange", handleVisibilityChange)
+
         return () => {
+            window.removeEventListener("beforeunload", handleUnload)
+            window.removeEventListener("pagehide", handleUnload)
+            document.removeEventListener("visibilitychange", handleVisibilityChange)
             if (intervalRef.current) clearInterval(intervalRef.current)
             unsub()
-            removePresence(setlistId, uid)
+            handleUnload()
         }
     }, [setlistId, uid, write])
 

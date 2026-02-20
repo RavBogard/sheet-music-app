@@ -4,6 +4,7 @@ import { create } from "zustand"
 import { db } from "@/lib/firebase"
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 import { logger } from "@/lib/logger"
+import { saveOfflineAnnotation, getOfflineAnnotation } from "@/lib/offline-store"
 import type { Annotation, PageAnnotations, AnnotationTool, AnnotationColor } from "@/types/annotations"
 
 interface AnnotationState {
@@ -47,14 +48,38 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     loadAnnotations: async (uid, fileId) => {
         set({ loading: true, fileId, uid, pageAnnotations: {} })
         try {
+            let localData: any = null
+            try {
+                localData = await getOfflineAnnotation(uid, fileId)
+            } catch (e) {
+                logger.warn("[Annotations] IDB read failed:", e)
+            }
+
+            // Apply local data immediately for fast visual response
+            if (localData?.pageAnnotations) {
+                set({ pageAnnotations: localData.pageAnnotations })
+            }
+
+            // Attempt network fetch
             const ref = doc(db, "users", uid, "annotations", fileId)
             const snap = await getDoc(ref)
             if (snap.exists()) {
                 const data = snap.data()
-                set({ pageAnnotations: data.pageAnnotations || {} })
+
+                // Very simple conflict resolution: If network has annotations and local doesn't,
+                // or if we just want to trust the network as the source of truth, we overwrite.
+                // For a true sync queue, we would compare timestamps. For now, if we have local,
+                // we assume we might have unsynced edits. Let's merge or use local if it's newer.
+                // We'll prefer local for now if it exists, otherwise use network.
+
+                if (!localData || data.updatedAt?.toMillis?.() > (localData.updatedAt || 0)) {
+                    set({ pageAnnotations: data.pageAnnotations || {} })
+                    // Cache the newly fetched network data
+                    saveOfflineAnnotation(uid, fileId, data.pageAnnotations || {}).catch(e => logger.warn(e))
+                }
             }
         } catch (e) {
-            logger.warn("[Annotations] Failed to load:", e)
+            logger.warn("[Annotations] Failed to load from network, using local:", e)
         } finally {
             set({ loading: false })
         }
@@ -102,6 +127,15 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     save: async () => {
         const { uid, fileId, pageAnnotations } = get()
         if (!uid || !fileId) return
+
+        // 1. Buffer locally in IndexedDB first
+        try {
+            await saveOfflineAnnotation(uid, fileId, pageAnnotations)
+        } catch (e) {
+            logger.warn("[Annotations] Failed to buffer offline:", e)
+        }
+
+        // 2. Dispatch to Firestore
         try {
             const ref = doc(db, "users", uid, "annotations", fileId)
             await setDoc(ref, {
@@ -110,7 +144,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
                 updatedAt: serverTimestamp(),
             })
         } catch (e) {
-            logger.error("[Annotations] Save failed:", e)
+            logger.warn("[Annotations] Network save failed, buffered for later:", e)
         }
     },
 

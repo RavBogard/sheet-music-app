@@ -90,7 +90,18 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
 
             try {
                 setLoading(true)
+
+                // Yield the main thread so React can paint the Loader2 spinner and empty Card.
+                // OSMD does not support true background Web Workers because it requires synchronous 
+                // SVGElement.getBBox() measurements on attached DOM nodes. 
+                // Yielding is the only way to prevent application lockup during parsing.
+                await new Promise(resolve => setTimeout(resolve, 50))
+
                 await osmdRef.current.load(contentToLoad)
+
+                // Yield again before the heavy render loop
+                await new Promise(resolve => setTimeout(resolve, 50))
+
                 osmdRef.current.render()
                 setLoading(false)
             } catch (err) {

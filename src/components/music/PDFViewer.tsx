@@ -16,8 +16,6 @@ import { logger } from "@/lib/logger"
 // Using unpkg CDN with pinned version guarantees version match and eliminates
 // the worker/library mismatch that caused AbortErrors.
 const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
-pdfjs.GlobalWorkerOptions.workerSrc =
-    `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
 
 interface PDFViewerProps {
     url: string
@@ -29,6 +27,11 @@ export function PDFViewer({ url }: PDFViewerProps) {
     const [source, setSource] = useState<{ data: Uint8Array } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+
+    // Sandbox PDF Worker init to prevent main-thread execution on non-perform routes
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
+    }
 
     // Track which URL we've resolved to avoid re-running
     const resolvedUrlRef = useRef<string | null>(null)

@@ -124,7 +124,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const addToHistory = useCallback((currentTracks: SetlistTrack[]) => {
         setPast(prev => {
             const newPast = [...prev, currentTracks]
-            if (newPast.length > 50) return newPast.slice(newPast.length - 50)
+            if (newPast.length > 20) return newPast.slice(newPast.length - 20)
             return newPast
         })
         setFuture([])

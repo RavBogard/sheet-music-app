@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
+import { toast } from "sonner"
 import { DriveFile } from "@/types/models"
 import { isFileOffline } from "@/lib/offline-store"
+import { useSetlistStore } from "@/lib/setlist-store"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -12,6 +14,7 @@ interface LibraryFileRowProps {
     isDigitizing: boolean
     isAdmin: boolean
     onDigitize?: () => void
+    onArchive?: () => void
     getCleanName: (name: string) => string
     isPlaying?: boolean
     selectMode?: boolean
@@ -32,14 +35,14 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, usageInfo }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, usageInfo }: LibraryFileRowProps) {
     const isFolder = item.mimeType.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
 
     useEffect(() => {
         if (isFolder || !item.id) return
-        isFileOffline(item.id).then(setIsCached).catch(() => {})
+        isFileOffline(item.id).then(setIsCached).catch(() => { })
     }, [item.id, isFolder])
 
     const displayName = isFolder
@@ -61,10 +64,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
             <ContextMenuTrigger asChild>
                 <button
                     onClick={handleClick}
-                    className={`w-full text-left p-3 sm:p-5 rounded-xl sm:rounded-2xl transition-all flex items-center gap-3 sm:gap-5 group ${
-                        isSelected
-                            ? 'bg-blue-500/10 border-2 border-blue-500/50'
-                            : isFolder
+                    className={`w-full text-left p-3 sm:p-5 rounded-xl sm:rounded-2xl transition-all flex items-center gap-3 sm:gap-5 group ${isSelected
+                        ? 'bg-blue-500/10 border-2 border-blue-500/50'
+                        : isFolder
                             ? 'bg-card border border-border hover:border-yellow-500/50 hover:bg-muted'
                             : isAudio
                                 ? isPlaying
@@ -73,13 +75,12 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 : isDigitizing
                                     ? 'bg-purple-900/20 border border-purple-500/50 cursor-wait'
                                     : 'bg-card border border-border hover:border-blue-500/50 hover:bg-muted'
-                    }`}
+                        }`}
                 >
                     {/* Select mode checkbox */}
                     {selectMode && !isFolder && (
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected ? 'bg-blue-500 border-blue-500' : 'border-muted-foreground/40'
-                        }`}>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-muted-foreground/40'
+                            }`}>
                             {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                         </div>
                     )}
@@ -167,8 +168,18 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
                 {!isFolder && !isAudio && (
                     <>
-                        <ContextMenuItem disabled>
-                            Add to Setlist (Coming Soon)
+                        <ContextMenuItem onClick={() => {
+                            const isXml = item.mimeType.includes('xml') || item.name.endsWith('.xml') || item.name.endsWith('.musicxml')
+                            useSetlistStore.getState().addItem({
+                                fileId: item.id,
+                                name: getCleanName(item.name),
+                                type: isXml ? 'musicxml' : 'pdf'
+                            })
+                            toast.success(`Added ${getCleanName(item.name)} to setlist`)
+                            // Optional: auto-return
+                            // onClick() 
+                        }}>
+                            Add to Setlist
                         </ContextMenuItem>
 
                         {isAdmin && item.mimeType.includes("pdf") && onDigitize && (
@@ -186,6 +197,17 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                         <Wand2 className="h-4 w-4" /> Digitize (AI)
                                     </span>
                                 )}
+                            </ContextMenuItem>
+                        )}
+
+                        {isAdmin && onArchive && (
+                            <ContextMenuItem
+                                onClick={onArchive}
+                                className="text-red-400 focus:text-red-300 focus:bg-red-900/50"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <CloudOff className="h-4 w-4" /> Archive Chart
+                                </span>
                             </ContextMenuItem>
                         )}
                     </>

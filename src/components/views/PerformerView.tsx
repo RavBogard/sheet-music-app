@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAnnotationStore } from '@/lib/annotation-store'
@@ -54,7 +55,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             if (!menuOpen) setBarsVisible(false)
         }, 8000)
         return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount auto-hide only
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount auto-hide only
     }, [])
 
     // ── Keyboard shortcuts ──
@@ -142,75 +143,32 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [playbackQueue, nextSong, prevSong, router, onHome, toggleBars])
 
-    // ── Swipe navigation — anywhere on the page ──
-    const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
-    const didSwipeRef = useRef(false)
-
-    const handleSwipeStart = useCallback((e: React.TouchEvent) => {
-        if (isAnnotating) return // Let annotation layer handle touches
-        const touch = e.touches[0]
-        swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
-        didSwipeRef.current = false
-    }, [isAnnotating])
-
-    const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
-        if (isAnnotating) return
-        if (!swipeStartRef.current) return
-        const touch = e.changedTouches[0]
-
-        const dx = touch.clientX - swipeStartRef.current.x
-        const dy = touch.clientY - swipeStartRef.current.y
-        const dt = Date.now() - swipeStartRef.current.time
-        swipeStartRef.current = null
-
-        // Must be horizontal, fast enough, and far enough
-        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2 || dt > 800) return
-
-        // Don't navigate if zoomed in
-        if (zoom > 1.1) return
-
-        // Mark that this touch was a swipe (so tap handler ignores it)
-        didSwipeRef.current = true
-
-        if (dx < 0) {
-            // Swiped left → next song
-            const next = nextSong()
-            if (next) {
-                if (viewRef.current) {
-                    viewRef.current.style.transform = 'translateX(-100%)'
-                    viewRef.current.style.transition = 'transform 0.25s ease-out'
-                }
-                setTimeout(() => router.push(`/perform/${next.fileId}`), 200)
-            }
-        } else {
-            // Swiped right → prev song
-            const prev = prevSong()
-            if (prev) {
-                if (viewRef.current) {
-                    viewRef.current.style.transform = 'translateX(100%)'
-                    viewRef.current.style.transition = 'transform 0.25s ease-out'
-                }
-                setTimeout(() => router.push(`/perform/${prev.fileId}`), 200)
-            }
-        }
-    }, [isAnnotating, zoom, nextSong, prevSong, router])
-
     // ── Tap anywhere to toggle bars ──
-    // Distinguished from swipes by checking didSwipeRef
     const handleContentTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        if (isAnnotating) return // Let annotation layer handle taps
+        if (isAnnotating) return
         const target = e.target as HTMLElement
-        // Ignore taps on interactive elements
         if (target.closest('button') || target.closest('.performance-toolbar') || target.closest('[role="dialog"]')) return
-
-        // If this was a swipe, don't toggle
-        if (didSwipeRef.current) {
-            didSwipeRef.current = false
-            return
-        }
 
         toggleBars()
     }, [isAnnotating, toggleBars])
+
+    // ── Framer Motion Drag Handlers ──
+    const handleDragEnd = (event: any, info: any) => {
+        if (isAnnotating || zoom > 1.1) return
+
+        const swipeThreshold = 50
+        const velocityThreshold = 500
+
+        if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+            // Swiped left → next song
+            const next = nextSong()
+            if (next) router.push(`/perform/${next.fileId}`)
+        } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+            // Swiped right → prev song
+            const prev = prevSong()
+            if (prev) router.push(`/perform/${prev.fileId}`)
+        }
+    }
 
     return (
         <div className="h-[100dvh] flex flex-col bg-black text-white relative">
@@ -218,44 +176,64 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             {/* Always-visible song position — persists even when toolbar is hidden */}
             <PerformanceStatusStrip />
 
-            {/* Main Content Area — swipe anywhere + tap anywhere */}
-            <div
-                ref={viewRef}
-                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative"
-                onClick={handleContentTap}
-                onTouchStart={handleSwipeStart}
-                onTouchEnd={handleSwipeEnd}
-            >
-                {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
-                {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
+            {/* Main Content Area — Swipe via Framer Motion */}
+            <AnimatePresence initial={false} mode="wait">
+                <motion.div
+                    key={fileUrl || 'empty'}
+                    ref={viewRef as any}
+                    className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative cursor-grab active:cursor-grabbing"
+                    onClick={handleContentTap}
+                    drag={!isAnnotating && zoom <= 1.1 ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={handleDragEnd}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                >
+                    {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
+                    {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
 
-                {!fileUrl && (
-                    <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
-                        {playbackQueue.length > 0 && queueIndex >= 0 ? (
-                            <>
-                                <div className="animate-pulse flex flex-col items-center gap-3">
-                                    <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-                                    <p className="text-lg font-medium text-zinc-400">Loading</p>
-                                    <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
-                                </div>
-                                <div className="w-64 space-y-3 mt-4">
-                                    <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
-                                    <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
-                                    <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <p className="text-xl font-semibold">No Chart Available</p>
-                                <p className="text-sm">This track doesn&apos;t have a linked file.</p>
-                                <button onClick={onHome} className="mt-4 px-6 py-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
-                                    Go Home
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
-            </div>
+                    {!fileUrl && (
+                        <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
+                            {playbackQueue.length > 0 && queueIndex >= 0 ? (
+                                <>
+                                    <div className="animate-pulse flex flex-col items-center gap-3">
+                                        <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
+                                        <p className="text-lg font-medium text-zinc-400">Loading</p>
+                                        <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
+                                    </div>
+                                    <div className="w-64 space-y-3 mt-4">
+                                        <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
+                                        <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
+                                        <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xl font-semibold">No Chart Available</p>
+                                    <p className="text-sm">This track doesn&apos;t have a linked file.</p>
+                                    <div className="flex gap-4 mt-6">
+                                        <button
+                                            onClick={() => router.push('/library')}
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
+                                        >
+                                            Search Library
+                                        </button>
+                                        <button
+                                            onClick={onHome}
+                                            className="px-6 py-2 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors border border-zinc-700"
+                                        >
+                                            Back to Setlist
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
 
             {/* Performance Toolbar — single visibility source */}
             <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${barsVisible ? 'translate-y-0' : 'translate-y-full'}`}>

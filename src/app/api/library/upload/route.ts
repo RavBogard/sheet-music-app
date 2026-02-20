@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { withAuth } from "@/lib/api-auth"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
@@ -8,6 +9,31 @@ import crypto from "crypto"
 
 // Max file size: 25MB
 const MAX_FILE_SIZE = 25 * 1024 * 1024
+
+function levenshteinDistance(a: string, b: string): number {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix = [];
+    let i, j;
+    for (i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+    for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    Math.min(matrix[i][j - 1] + 1, // insertion
+                        matrix[i - 1][j] + 1) // deletion
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
 
 const ALLOWED_TYPES: Record<string, string> = {
     'application/pdf': '.pdf',
@@ -81,15 +107,37 @@ export async function POST(req: NextRequest) {
         // Determine content type for storage
         const contentType = mimeType.includes('pdf') ? 'application/pdf'
             : mimeType.includes('xml') ? 'application/xml'
-            : mimeType
+                : mimeType
 
-        // 1. Upload to Firebase Storage
-        logger.info(`[Upload] Uploading ${file.name} (${(file.size / 1024).toFixed(1)}KB) as ${fileId}`)
-        await uploadToStorage(fileId, buffer, contentType)
-
-        // 2. Create library_index entry in Firestore
         initAdmin()
         const db = getFirestore()
+
+        // 1. Duplicate Prevention Check
+        const librarySnapshot = await db.collection('library_index').where('status', '==', 'active').select('name').get();
+        const existingTitles = librarySnapshot.docs.map((doc: any) => doc.data().name as string);
+        const normalizedNewTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        for (const existing of existingTitles) {
+            const normalizedExisting = existing.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalizedNewTitle.length < 3 || normalizedExisting.length < 3) {
+                if (normalizedNewTitle === normalizedExisting) {
+                    return NextResponse.json({ error: `A chart with a very similar name ("${existing}") already exists.` }, { status: 409 });
+                }
+                continue;
+            }
+
+            const distance = levenshteinDistance(normalizedNewTitle, normalizedExisting);
+            const maxLength = Math.max(normalizedNewTitle.length, normalizedExisting.length);
+            const similarity = 1 - (distance / maxLength);
+
+            if (similarity > 0.85) {
+                return NextResponse.json({ error: `A chart with a similar name ("${existing}") already exists in the library.` }, { status: 409 });
+            }
+        }
+
+        // 2. Upload to Firebase Storage
+        logger.info(`[Upload] Uploading ${file.name} (${(file.size / 1024).toFixed(1)}KB) as ${fileId}`)
+        await uploadToStorage(fileId, buffer, contentType)
 
         const indexEntry = {
             name: title,
@@ -114,6 +162,10 @@ export async function POST(req: NextRequest) {
         await db.collection('library_index').doc(fileId).set(indexEntry)
 
         logger.info(`[Upload] ✅ ${title} uploaded successfully as ${fileId}`)
+
+        // Purge CDN and Next.js data caches so the next library fetch sees the upload
+        revalidatePath('/api/library/list')
+        revalidatePath('/(main)/library', 'page')
 
         return NextResponse.json({
             success: true,

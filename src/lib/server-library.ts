@@ -9,28 +9,46 @@ export async function getServerLibrary() {
         initAdmin()
         const db = getFirestore()
 
-        const snapshot = await db.collection('library_index')
-            .orderBy('name')
-            .limit(5000)
-            .get()
-
+        const limit = 500
+        let lastVisible = null
         let maxModified = ''
+        const files: any[] = []
 
-        const files = snapshot.docs.map(doc => {
-            const data = doc.data()
-            if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
-                maxModified = data.lastSyncedAt
+        while (true) {
+            let query = db.collection('library_index')
+                .orderBy('name')
+                .limit(limit)
+
+            if (lastVisible) {
+                query = query.startAfter(lastVisible)
             }
-            return {
-                id: doc.id,
-                name: data.name,
-                mimeType: data.mimeType,
-                parents: data.parents || [],
-                modifiedTime: data.modifiedTime || null,
-                webViewLink: data.webViewLink || null,
-                metadata: data.metadata || null
+
+            const snapshot = await query.get()
+            if (snapshot.empty) {
+                break
             }
-        })
+
+            snapshot.docs.forEach(doc => {
+                const data = doc.data()
+                if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
+                    maxModified = data.lastSyncedAt
+                }
+                files.push({
+                    id: doc.id,
+                    name: data.name,
+                    mimeType: data.mimeType,
+                    parents: data.parents || [],
+                    modifiedTime: data.modifiedTime || null,
+                    webViewLink: data.webViewLink || null,
+                    metadata: data.metadata || null
+                })
+            })
+
+            lastVisible = snapshot.docs[snapshot.docs.length - 1]
+            if (snapshot.docs.length < limit) {
+                break
+            }
+        }
 
         return {
             files,

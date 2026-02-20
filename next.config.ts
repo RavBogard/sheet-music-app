@@ -13,7 +13,21 @@ const withPWA = require("@ducanh2912/next-pwa").default({
     // UpdatePrompt component shows a non-intrusive toast when a new
     // version is available.
     clientsClaim: true,
+    runtimeCaching: [
+      {
+        urlPattern: /\/api\/library\/list(.*)/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'library-api-swr-cache',
+          expiration: {
+            maxEntries: 4,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+          },
+        },
+      },
+    ],
   },
+  extendDefaultRuntimeCaching: true,
 });
 
 const nextConfig: NextConfig = {

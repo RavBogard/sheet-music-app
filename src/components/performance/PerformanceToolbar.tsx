@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Home, Sparkles, Loader2, Speaker, Pencil } from "lucide-react"
+import { Home, Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut } from "lucide-react"
 import { TransposerMenu, ChordEditBar } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -22,7 +22,7 @@ interface PerformanceToolbarProps {
 }
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
-    const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage } = useMusicStore()
+    const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
 
@@ -168,6 +168,30 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     >
                         <Pencil className="h-5 w-5" />
                     </Button>
+
+                    {/* Scale Controls */}
+                    <div className="flex items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 gap-1 h-11">
+                        <Button
+                            variant="ghost" size="icon"
+                            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                            className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                            title="Zoom Out"
+                        >
+                            <ZoomOut className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xs font-medium text-zinc-300 w-10 text-center">
+                            {Math.round(zoom * 100)}%
+                        </span>
+                        <Button
+                            variant="ghost" size="icon"
+                            onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+                            className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                            title="Zoom In"
+                        >
+                            <ZoomIn className="h-4 w-4" />
+                        </Button>
+                    </div>
+
                     <SetlistDrawer />
                 </div>
 

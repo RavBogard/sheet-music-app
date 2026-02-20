@@ -21,6 +21,16 @@ interface OfflineDB extends DBSchema {
         key: string;
         value: unknown;
     };
+    annotations: {
+        key: string; // Composite key: `${uid}_${fileId}`
+        value: {
+            key: string;
+            fileId: string;
+            uid: string;
+            pageAnnotations: any; // Type defined in annotation store
+            updatedAt: number;
+        };
+    };
 }
 
 const DB_NAME = 'sheet-music-offline-db';
@@ -37,6 +47,9 @@ export const initDB = async () => {
             }
             if (!db.objectStoreNames.contains('settings')) {
                 db.createObjectStore('settings', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('annotations')) {
+                db.createObjectStore('annotations', { keyPath: 'key' });
             }
         },
     });
@@ -79,7 +92,7 @@ export const getOfflineFile = async (id: string) => {
     const file = await db.get('files', id);
     // Touch lastAccessedAt on read (fire-and-forget)
     if (file) {
-        db.put('files', { ...file, lastAccessedAt: Date.now() }).catch(() => {});
+        db.put('files', { ...file, lastAccessedAt: Date.now() }).catch(() => { });
     }
     return file;
 };
@@ -124,4 +137,34 @@ export const evictStaleFiles = async (maxAgeDays = 60): Promise<number> => {
     }
 
     return evicted;
+};
+
+// --- Annotations Offline Queue ---
+export const saveOfflineAnnotation = async (uid: string, fileId: string, pageAnnotations: any) => {
+    const db = await initDB();
+    const key = `${uid}_${fileId}`;
+    await db.put('annotations', {
+        key,
+        fileId,
+        uid,
+        pageAnnotations,
+        updatedAt: Date.now(),
+    });
+};
+
+export const getOfflineAnnotation = async (uid: string, fileId: string) => {
+    const db = await initDB();
+    const key = `${uid}_${fileId}`;
+    return db.get('annotations', key);
+};
+
+export const getAllOfflineAnnotations = async () => {
+    const db = await initDB();
+    return db.getAll('annotations');
+};
+
+export const deleteOfflineAnnotation = async (uid: string, fileId: string) => {
+    const db = await initDB();
+    const key = `${uid}_${fileId}`;
+    await db.delete('annotations', key);
 };

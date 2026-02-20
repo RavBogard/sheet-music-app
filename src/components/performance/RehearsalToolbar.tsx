@@ -67,7 +67,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                             sessions: data.practiceSessionCount || 0,
                         })
                     }
-                }).catch(() => {})
+                }).catch(() => { })
             })
         })
     }, [fileId])
@@ -138,7 +138,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 practiceStart.current = null
             }
         } else {
-            audio.play().catch(() => {})
+            audio.play().catch(() => { })
             practiceStart.current = Date.now()
         }
         setPlaying(!playing)
@@ -163,7 +163,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 if (!uid) return
                 import("firebase/firestore").then(({ doc, setDoc }) => {
                     const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
-                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(() => {})
+                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(() => { })
                 })
             })
         }
@@ -194,26 +194,46 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         seek(loopA ?? 0)
     }, [seek, loopA])
 
+    const [toolbarVisible, setToolbarVisible] = useState(false)
+    const toggleToolbar = () => setToolbarVisible(!toolbarVisible)
+
+    if (!toolbarVisible) {
+        return (
+            <button
+                onClick={toggleToolbar}
+                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full bg-violet-600 shadow-[0_0_20px_rgba(124,58,237,0.4)] text-white hover:bg-violet-500 transition-all hover:scale-105 flex items-center justify-center border border-violet-400/20"
+                title="Open Rehearsal Audio"
+            >
+                {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+            </button>
+        )
+    }
+
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-lg">
+        <div className="fixed bottom-24 right-4 left-4 md:left-auto md:bottom-20 md:w-80 md:min-w-[320px] z-40 bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl overflow-hidden ring-1 ring-black/50">
+            {/* Header / Collapse */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-white/5">
+                <span className="text-[10px] font-bold tracking-wider uppercase text-zinc-400">Rehearsal Audio</span>
+                <button onClick={toggleToolbar} className="p-1 text-zinc-500 hover:text-white rounded-md hover:bg-white/10 transition-colors">
+                    <ChevronDown className="w-4 h-4" />
+                </button>
+            </div>
+
             {/* Compact bar */}
-            <div className="flex items-center gap-2 px-3 py-2">
+            <div className="flex items-center gap-2 px-3 py-3">
                 {/* Play/Pause */}
-                <button onClick={togglePlay} className="p-2 rounded-full bg-violet-600 hover:bg-violet-500 text-white transition-colors shrink-0">
+                <button onClick={togglePlay} className="p-2.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white transition-colors shrink-0 shadow-lg shadow-violet-900/40">
                     {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
                 </button>
 
                 {/* Restart */}
-                <button onClick={resetToStart} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                    <SkipBack className="w-3.5 h-3.5" />
+                <button onClick={resetToStart} className="p-1.5 text-zinc-400 hover:text-white transition-colors">
+                    <SkipBack className="w-4 h-4" />
                 </button>
 
                 {/* Progress bar */}
-                <div className="flex-1 flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground tabular-nums w-8 text-right">
-                        {formatPlaybackTime(currentTime)}
-                    </span>
-                    <div className="relative flex-1 h-6 flex items-center group cursor-pointer"
+                <div className="flex-1 flex flex-col gap-1.5">
+                    <div className="relative w-full h-5 flex items-center group cursor-pointer"
                         onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect()
                             const pct = (e.clientX - rect.left) / rect.width
@@ -221,7 +241,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         }}
                     >
                         <div className="absolute inset-y-0 left-0 right-0 flex items-center">
-                            <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-violet-500 rounded-full transition-all"
                                     style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
@@ -243,7 +263,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         )}
                         {loopActive && (
                             <div
-                                className="absolute top-1/2 -translate-y-1/2 h-1 bg-amber-500/20 rounded"
+                                className="absolute top-1/2 -translate-y-1/2 h-1.5 bg-amber-500/30 rounded"
                                 style={{
                                     left: `${(loopA! / duration) * 100}%`,
                                     width: `${((loopB! - loopA!) / duration) * 100}%`
@@ -251,66 +271,64 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                             />
                         )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground tabular-nums w-8">
-                        {formatPlaybackTime(duration)}
-                    </span>
+                    <div className="flex items-center justify-between text-[10px] text-zinc-500 tabular-nums">
+                        <span>{formatPlaybackTime(currentTime)}</span>
+                        <span>{formatPlaybackTime(duration)}</span>
+                    </div>
                 </div>
 
-                {/* Speed badge */}
+                {/* Expand controls */}
                 <button
                     onClick={() => setExpanded(!expanded)}
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${speed !== 1.0 ? 'bg-violet-500/20 text-violet-400' : 'text-muted-foreground'}`}
+                    className={`text-[10px] font-bold px-2 py-1 rounded-md transition-colors ${expanded ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
                 >
-                    {speed}x
-                </button>
-
-                {/* Loop toggle */}
-                <button
-                    onClick={handleLoopToggle}
-                    className={`p-1.5 rounded transition-colors ${loopActive ? 'text-amber-500' : loopA !== null ? 'text-amber-500/60' : 'text-muted-foreground hover:text-foreground'}`}
-                    title={loopActive ? 'Clear loop' : loopA !== null ? 'Set loop end (B)' : 'Set loop start (A)'}
-                >
-                    <Repeat className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Expand button */}
-                <button
-                    onClick={() => setExpanded(!expanded)}
-                    className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                    {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                    {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </button>
             </div>
 
             {/* Expanded controls */}
             {expanded && (
-                <div className="px-4 pb-3 space-y-3 border-t border-border pt-3">
-                    {/* Speed */}
-                    <div className="flex items-center gap-3">
-                        <Gauge className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground w-12">Speed</span>
-                        <div className="flex gap-1 flex-1">
-                            {SPEED_OPTIONS.map(s => (
-                                <button
-                                    key={s}
-                                    onClick={() => changeSpeed(s)}
-                                    className={`flex-1 text-[10px] font-medium py-1 rounded transition-colors ${speed === s
-                                        ? 'bg-violet-600 text-white'
-                                        : 'bg-muted text-muted-foreground hover:text-foreground'
-                                        }`}
-                                >
-                                    {s}x
-                                </button>
-                            ))}
-                        </div>
+                <div className="px-4 pb-4 space-y-3 pt-1 border-t border-white/5">
+                    {/* Speed options grid */}
+                    <div className="flex gap-1">
+                        {SPEED_OPTIONS.map(s => (
+                            <button
+                                key={s}
+                                onClick={() => changeSpeed(s)}
+                                className={`flex-1 text-[10px] font-bold py-1.5 rounded-md transition-colors ${speed === s
+                                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                                    : 'bg-zinc-900 border border-transparent text-zinc-500 hover:text-white hover:bg-zinc-800'
+                                    }`}
+                            >
+                                {s}x
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Volume */}
-                    <div className="flex items-center gap-3">
-                        <button onClick={toggleMute} className="text-muted-foreground hover:text-foreground">
-                            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Loop toggle */}
+                        <button
+                            onClick={handleLoopToggle}
+                            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-colors border ${loopActive ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : loopA !== null ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/60' : 'bg-zinc-900 border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                            title={loopActive ? 'Clear loop' : loopA !== null ? 'Set loop end (B)' : 'Set loop start (A)'}
+                        >
+                            <Repeat className="w-3.5 h-3.5" />
+                            {loopActive ? 'Clear Loop' : loopA !== null ? 'Set Point B' : 'A/B Loop'}
                         </button>
-                        <span className="text-xs text-muted-foreground w-12">Volume</span>
+
+                        {/* Mute toggle */}
+                        <button
+                            onClick={toggleMute}
+                            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-colors border ${muted ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-zinc-900 border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                        >
+                            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                            {muted ? "Muted" : "Mute"}
+                        </button>
+                    </div>
+
+                    {/* Volume slider */}
+                    <div className="flex items-center gap-3 bg-zinc-900/50 p-2 rounded-lg">
+                        <Volume2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                         <input
                             type="range"
                             min={0} max={1} step={0.05}
@@ -321,38 +339,27 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                                 if (audioRef.current) audioRef.current.volume = v
                                 if (muted) setMuted(false)
                             }}
-                            className="flex-1 accent-violet-500 h-1"
+                            className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-500 cursor-pointer"
                         />
                     </div>
 
-                    {/* Loop info */}
-                    {loopA !== null && (
-                        <div className="flex items-center gap-3">
-                            <Repeat className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground">
-                                Loop: {formatPlaybackTime(loopA)}{loopB !== null ? ` → ${formatPlaybackTime(loopB)}` : ' → tap loop again for B'}
-                            </span>
-                            <button
-                                onClick={() => { setLoopA(null); setLoopB(null) }}
-                                className="text-xs text-muted-foreground hover:text-foreground ml-auto"
-                            >
-                                Clear
-                            </button>
+                    {/* Stats & Info */}
+                    {(loopA !== null || cumulativeStats) && (
+                        <div className="space-y-1.5 pt-2">
+                            {loopA !== null && (
+                                <div className="text-[10px] flex items-center justify-between text-amber-500/80 bg-amber-500/5 px-2 py-1 rounded">
+                                    <span>Looping: {formatPlaybackTime(loopA)} → {loopB !== null ? formatPlaybackTime(loopB) : '...'}</span>
+                                    <button onClick={() => { setLoopA(null); setLoopB(null) }} className="hover:text-amber-400 underline">Clear</button>
+                                </div>
+                            )}
+                            {cumulativeStats && cumulativeStats.seconds > 0 && (
+                                <div className="text-[10px] flex items-center gap-1.5 text-zinc-500 px-1">
+                                    <Timer className="w-3 h-3" />
+                                    <span>{formatPlaybackTime(cumulativeStats.seconds)} total practice</span>
+                                </div>
+                            )}
                         </div>
                     )}
-
-                    {/* Practice time */}
-                    <div className="flex items-center gap-3">
-                        <Timer className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground">
-                            This session: {formatPlaybackTime(totalPracticed.current + (practiceStart.current ? (Date.now() - practiceStart.current) / 1000 : 0))}
-                            {cumulativeStats && cumulativeStats.seconds > 0 && (
-                                <span className="ml-2 text-muted-foreground/70">
-                                    · Total: {formatPlaybackTime(cumulativeStats.seconds)} across {cumulativeStats.sessions} session{cumulativeStats.sessions !== 1 ? 's' : ''}
-                                </span>
-                            )}
-                        </span>
-                    </div>
                 </div>
             )}
         </div>

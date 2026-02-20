@@ -24,10 +24,37 @@ export async function POST(request: Request) {
         // Update Firestore for UI consistency
         // claimsUpdatedAt signals the client to force-refresh their ID token
         const { FieldValue } = await import('firebase-admin/firestore')
-        await getFirestore().collection("users").doc(targetUserId).update({
+        const db = getFirestore()
+
+        await db.collection("users").doc(targetUserId).update({
             role: newRole,
             claimsUpdatedAt: FieldValue.serverTimestamp(),
         })
+
+        // Leader Demotion Guard: Lock public setlists if demoted to member
+        if (newRole === 'member' || newRole === 'pending') {
+            try {
+                const publicSetlists = await db.collection("setlists")
+                    .where("createdBy.uid", "==", targetUserId)
+                    .where("isPublic", "==", true)
+                    .get()
+
+                if (!publicSetlists.empty) {
+                    const batch = db.batch()
+                    publicSetlists.docs.forEach(doc => {
+                        batch.update(doc.ref, {
+                            isPublic: false,
+                            updatedAt: FieldValue.serverTimestamp()
+                        })
+                    })
+                    await batch.commit()
+                    logger.info(`[Demotion Guard] Locked ${publicSetlists.size} public setlists for demoted user ${targetUserId}`)
+                }
+            } catch (e) {
+                logger.error("[Demotion Guard] Failed to lock setlists:", e)
+                // We don't fail the whole request if this fails, but it's logged
+            }
+        }
 
         return NextResponse.json({ success: true, role: newRole })
 
