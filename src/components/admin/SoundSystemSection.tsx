@@ -34,6 +34,7 @@ export function SoundSystemSection() {
     const [monitorBusesStr, setMonitorBusesStr] = useState("")
     const [scanning, setScanning] = useState(false)
     const [scanResult, setScanResult] = useState<string | null>(null)
+    const [trustUrl, setTrustUrl] = useState<string | null>(null)
     const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
     const [setupCode, setSetupCode] = useState<string | null>(null)
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
@@ -79,14 +80,22 @@ export function SoundSystemSection() {
 
     const handleScan = useCallback(async () => {
         if (!bridgeUrl) { setScanResult("Set the bridge URL first"); return }
-        setScanning(true); setScanResult(null)
+        setScanning(true); setScanResult(null); setTrustUrl(null)
+
+        let wsUrl: URL;
         try {
-            const wsUrl = new URL(bridgeUrl)
-            // WSS bridge: HTTPS API is on the same port as WebSocket
-            // WS bridge (legacy): HTTP API is on port+1
-            const isSecure = bridgeUrl.startsWith("wss://")
-            const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
-            const apiProto = isSecure ? "https" : "http"
+            wsUrl = new URL(bridgeUrl)
+        } catch {
+            setScanResult("Invalid Bridge URL format")
+            setScanning(false)
+            return
+        }
+
+        const isSecure = bridgeUrl.startsWith("wss://")
+        const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
+        const apiProto = isSecure ? "https" : "http"
+
+        try {
             const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal: AbortSignal.timeout(8000) })
             const data = await res.json()
             if (data.found) {
@@ -96,7 +105,10 @@ export function SoundSystemSection() {
                 setScanResult("No X32 found on the network")
             }
         } catch {
-            setScanResult("Could not reach bridge server — is it running?")
+            setScanResult("Could not reach bridge server. If it's running, you may need to accept its local security certificate.")
+            if (isSecure) {
+                setTrustUrl(`${apiProto}://${wsUrl.hostname}:${apiPort}/trust`)
+            }
         } finally { setScanning(false) }
     }, [bridgeUrl])
 
@@ -223,15 +235,13 @@ export function SoundSystemSection() {
                         </div>
 
                         {bridgeStatus && (
-                            <div className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${
-                                bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                            <div className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
                                     ? "bg-green-500/10 border border-green-500/20"
                                     : "bg-red-500/10 border border-red-500/20"
-                            }`}>
-                                <div className={`w-2 h-2 rounded-full ${
-                                    bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                }`}>
+                                <div className={`w-2 h-2 rounded-full ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
                                         ? "bg-green-500 animate-pulse" : "bg-red-500"
-                                }`} />
+                                    }`} />
                                 <div className="flex-1 min-w-0">
                                     <span className="font-medium">
                                         {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
@@ -260,7 +270,14 @@ export function SoundSystemSection() {
                                     </Button>
                                 </div>
                                 {scanResult && (
-                                    <p className={`text-xs mt-1 ${scanResult.includes("Found") ? "text-green-500" : "text-yellow-500"}`}>{scanResult}</p>
+                                    <div className="mt-1">
+                                        <p className={`text-xs ${scanResult.includes("Found") ? "text-green-500" : "text-yellow-500"}`}>{scanResult}</p>
+                                        {trustUrl && (
+                                            <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block">
+                                                Trust Bridge Certificate &rarr;
+                                            </a>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             <div>
