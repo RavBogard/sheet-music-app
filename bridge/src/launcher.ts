@@ -549,7 +549,9 @@ async function runSetup(): Promise<BridgeConfig> {
     console.log("    1. Open the CentralReform admin panel → Sound System")
     console.log("    2. The Bridge URL is auto-detected — no need to enter it")
     console.log("    3. Assign monitor buses to your musicians")
-    console.log("    4. Test from an iPad!\n")
+    console.log("    4. On each iPad, visit the cert trust URL (shown below)")
+    console.log("       in Safari and tap 'Advanced → Proceed' to trust it")
+    console.log("    5. Test from an iPad!\n")
 
     // Show this PC's IP addresses
     try {
@@ -568,6 +570,9 @@ async function runSetup(): Promise<BridgeConfig> {
             for (const ip of ips) {
                 console.log(`    • ${ip}`)
             }
+            console.log()
+            console.log(`  Certificate trust URL (open on each iPad once):`)
+            console.log(`    https://${ips[0].split(" ")[0]}:${config.httpPort}`)
             console.log()
         }
     } catch { /* os module not available */ }

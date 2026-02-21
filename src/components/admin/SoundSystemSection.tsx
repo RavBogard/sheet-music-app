@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
-    bridgeUrl: "ws://192.168.1.50:9000",
+    bridgeUrl: "wss://192.168.1.50:9001",
     x32Address: "192.168.1.100",
     x32Port: 10023,
     monitorBuses: [1, 2, 3, 4],
@@ -82,8 +82,12 @@ export function SoundSystemSection() {
         setScanning(true); setScanResult(null)
         try {
             const wsUrl = new URL(bridgeUrl)
-            const httpPort = parseInt(wsUrl.port) + 1
-            const res = await fetch(`http://${wsUrl.hostname}:${httpPort}/scan`, { signal: AbortSignal.timeout(8000) })
+            // WSS bridge: HTTPS API is on the same port as WebSocket
+            // WS bridge (legacy): HTTP API is on port+1
+            const isSecure = bridgeUrl.startsWith("wss://")
+            const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
+            const apiProto = isSecure ? "https" : "http"
+            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal: AbortSignal.timeout(8000) })
             const data = await res.json()
             if (data.found) {
                 setX32Address(data.address)
@@ -214,7 +218,7 @@ export function SoundSystemSection() {
                         </h3>
                         <div>
                             <label className="text-sm text-muted-foreground mb-1 block">Bridge WebSocket URL</label>
-                            <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="ws://192.168.1.50:9000" />
+                            <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="wss://192.168.1.50:9001" />
                             <p className="text-xs text-muted-foreground mt-1">Auto-detected by the bridge on startup</p>
                         </div>
 

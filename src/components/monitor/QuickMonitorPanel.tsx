@@ -133,10 +133,32 @@ export function QuickMonitorPanel() {
     }
 
     if (status === "error" || status === "disconnected") {
+        // Extract HTTPS trust URL from the bridge's wss:// URL for cert trust
+        const bridgeUrl = config?.bridgeUrl
+        let trustUrl: string | null = null
+        if (bridgeUrl?.startsWith("wss://")) {
+            try {
+                const u = new URL(bridgeUrl.replace("wss://", "https://"))
+                trustUrl = u.toString().replace(/\/$/, "")
+            } catch { /* invalid URL */ }
+        }
+
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
-                <WifiOff className="w-4 h-4" />
-                <span className="text-xs">Mixer offline</span>
+            <div className="flex flex-col items-center justify-center gap-2 py-6 text-zinc-500">
+                <div className="flex items-center gap-2">
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-xs">Mixer offline</span>
+                </div>
+                {trustUrl && (
+                    <a
+                        href={trustUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-violet-400 underline underline-offset-2"
+                    >
+                        Trust bridge certificate
+                    </a>
+                )}
             </div>
         )
     }

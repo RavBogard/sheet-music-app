@@ -48,6 +48,8 @@ bridge/node_modules/
 bridge/dist/
 bridge/.env
 bridge/service-account-key.json
+bridge/certs/
+bridge/bridge-config.json
 
 # PDF.js worker — copied from node_modules by postinstall
 public/pdf.worker.min.mjs

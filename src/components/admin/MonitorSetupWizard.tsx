@@ -74,7 +74,7 @@ export function MonitorSetupWizard({
                         <Input
                             value={bridgeUrl}
                             onChange={e => setBridgeUrl(e.target.value)}
-                            placeholder="ws://192.168.1.50:9000"
+                            placeholder="wss://192.168.1.50:9001"
                         />
                     </div>
                 )}

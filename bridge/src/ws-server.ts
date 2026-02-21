@@ -18,6 +18,7 @@
 
 import { WebSocketServer, WebSocket } from "ws"
 import { IncomingMessage } from "http"
+import type { Server as HTTPSServer } from "https"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
 import {
@@ -39,16 +40,35 @@ export class BridgeWSServer {
     private x32: X32Client
     private config: ConfigManager
 
-    constructor(port: number, x32: X32Client, config: ConfigManager) {
+    /**
+     * @param options.port — standalone port (plain ws://, used as fallback)
+     * @param options.server — attach to an existing HTTPS server for wss://
+     */
+    constructor(
+        options: { port?: number; server?: HTTPSServer },
+        x32: X32Client,
+        config: ConfigManager,
+    ) {
         this.x32 = x32
         this.config = config
 
-        this.wss = new WebSocketServer({
-            port,
-            perMessageDeflate: false,  // Reduce latency
-        })
-
-        console.log(`[WS] Server listening on port ${port}`)
+        if (options.server) {
+            // Attach to HTTPS server → wss://
+            this.wss = new WebSocketServer({
+                server: options.server,
+                perMessageDeflate: false,
+            })
+            console.log(`[WS] Secure WebSocket (wss://) attached to HTTPS server`)
+        } else if (options.port) {
+            // Standalone plain WS (fallback / development)
+            this.wss = new WebSocketServer({
+                port: options.port,
+                perMessageDeflate: false,
+            })
+            console.log(`[WS] Server listening on port ${options.port} (ws://)`)
+        } else {
+            throw new Error("BridgeWSServer requires either a port or an HTTPS server")
+        }
 
         this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
             const ip = req.socket.remoteAddress || "unknown"

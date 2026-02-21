@@ -10,7 +10,7 @@ import * as admin from "firebase-admin"
 import { MonitorConfig } from "./types"
 
 const DEFAULT_CONFIG: MonitorConfig = {
-    bridgeUrl: "ws://localhost:9000",
+    bridgeUrl: "wss://localhost:9001",
     x32Address: "192.168.1.100",
     x32Port: 10023,
     monitorBuses: [1, 2, 3, 4],

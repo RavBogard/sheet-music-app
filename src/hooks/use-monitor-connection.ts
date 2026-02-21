@@ -75,11 +75,15 @@ export function useMonitorConnection(): { client: X32WSClient | null } {
                     activeClient.disconnect()
                     activeClient = null
                 }
-                currentBridgeUrl = config.bridgeUrl
 
-                // Check bridge heartbeat before connecting
+                // Check bridge heartbeat before connecting — but don't consume the URL yet.
+                // If the bridge is offline, we leave currentBridgeUrl unchanged so the
+                // next onSnapshot (when bridge comes online) will still trigger a connection.
                 const bridge = config.bridge
-                if (bridge?.status === "offline") return
+                if (bridge?.status === "offline") {
+                    logger.info("[MonitorConn] Bridge reports offline — waiting for it to come online")
+                    return
+                }
                 if (bridge?.lastSeen) {
                     try {
                         const ts = bridge.lastSeen as { toDate?: () => Date; seconds?: number }
@@ -87,9 +91,15 @@ export function useMonitorConnection(): { client: X32WSClient | null } {
                         if (ts.toDate) lastSeen = ts.toDate()
                         else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
                         else lastSeen = new Date(bridge.lastSeen as string)
-                        if (Date.now() - lastSeen.getTime() > 120_000) return
+                        if (Date.now() - lastSeen.getTime() > 120_000) {
+                            logger.info("[MonitorConn] Bridge heartbeat stale — waiting")
+                            return
+                        }
                     } catch { /* can't parse, try anyway */ }
                 }
+
+                // All checks passed — NOW consume the URL and connect
+                currentBridgeUrl = config.bridgeUrl
 
                 const client = new X32WSClient({
                     onStateUpdate: (snapshot) => {
