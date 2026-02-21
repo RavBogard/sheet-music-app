@@ -16,7 +16,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import * as os from "os"
-import { execSync } from "child_process"
+import * as selfsigned from "selfsigned"
 
 const CERT_DIR = path.join(
     process.env.BRIDGE_DATA_DIR || process.cwd(),
@@ -47,115 +47,63 @@ function getLanIps(): string[] {
 }
 
 /**
- * Generate a self-signed certificate using Node's built-in crypto.
- * Falls back to OpenSSL CLI if the node:crypto X509 API isn't available.
+ * Generate a self-signed certificate using pure JS (selfsigned).
+ * This elegantly avoids any OpenSSL or OS-specific binary dependencies.
  */
-function generateCert(): TLSFiles {
+async function generateCert(): Promise<TLSFiles> {
     fs.mkdirSync(CERT_DIR, { recursive: true })
 
     const lanIps = getLanIps()
-    const sans = [
-        "DNS:localhost",
-        "IP:127.0.0.1",
-        ...lanIps.map(ip => `IP:${ip}`),
-    ].join(",")
 
-    console.log(`[Cert] Generating self-signed certificate...`)
-    console.log(`[Cert] SANs: ${sans}`)
+    // Create Subject Alternative Names array
+    // type 2 is DNS, type 7 is IP
+    const altNames: { type: number; value?: string; ip?: string }[] = [
+        { type: 2 as const, value: "localhost" },         // DNS name
+        { type: 7 as const, ip: "127.0.0.1" }            // IP address
+    ]
 
-    // Use OpenSSL (available on Windows via Git, or system openssl)
-    try {
-        const opensslCmd = process.platform === "win32" ? findOpenSSL() : "openssl"
-
-        execSync(
-            `"${opensslCmd}" req -x509 -newkey rsa:2048 -nodes ` +
-            `-keyout "${KEY_FILE}" -out "${CERT_FILE}" ` +
-            `-days 3650 -subj "/CN=CentralReform Bridge" ` +
-            `-addext "subjectAltName=${sans}"`,
-            { stdio: "pipe" }
-        )
-
-        console.log(`[Cert] ✓ Certificate generated at ${CERT_DIR}`)
-        return {
-            cert: fs.readFileSync(CERT_FILE, "utf-8"),
-            key: fs.readFileSync(KEY_FILE, "utf-8"),
-        }
-    } catch (err) {
-        // Fallback: generate using Node.js crypto (Node 19+)
-        return generateCertNodeCrypto(lanIps)
+    // Add all LAN IPs to the SAN list
+    for (const ip of lanIps) {
+        altNames.push({ type: 7 as const, ip })
     }
-}
 
-/**
- * Attempt Node.js native cert generation (available in Node 19+ with
- * the X509Certificate and generateKeyPairSync APIs).
- */
-function generateCertNodeCrypto(lanIps: string[]): TLSFiles {
+    console.log(`[Cert] Generating pure-JS self-signed certificate...`)
+    console.log(`[Cert] Covered IPs: ${lanIps.join(", ")}`)
+
     try {
-        const crypto = require("crypto")
-
-        const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
-            modulusLength: 2048,
-            publicKeyEncoding: { type: "spki", format: "pem" },
-            privateKeyEncoding: { type: "pkcs8", format: "pem" },
+        const attrs = [{ name: "commonName", value: "CentralReform Bridge" }]
+        // The @types/selfsigned definitions are famously inaccurate.
+        // We cast to any to bypass the faulty types while keeping the logic correct.
+        const pems = await (selfsigned.generate as any)(attrs, {
+            keySize: 2048,
+            days: 3650, // 10 years
+            algorithm: "sha256",
+            extensions: [
+                { name: "basicConstraints", cA: true },
+                { name: "subjectAltName", altNames }
+            ]
         })
 
-        // If generateCertificate is available (Node 21+)
-        if (typeof crypto.X509Certificate !== "undefined") {
-            // Fall through to openssl error handling
-            throw new Error("X509Certificate doesn't support cert generation")
+        fs.writeFileSync(CERT_FILE, pems.cert)
+        fs.writeFileSync(KEY_FILE, pems.private)
+
+        console.log(`[Cert] ✓ Certificate generated at ${CERT_DIR}`)
+
+        return {
+            cert: pems.cert,
+            key: pems.private
         }
-
-        throw new Error("Node crypto cert generation not available")
-    } catch {
-        // Last resort: create a minimal self-signed cert using just key generation
-        // and provide instructions for manual cert creation
-        console.error("[Cert] ✗ Could not generate certificate automatically.")
-        console.error("[Cert]   Install OpenSSL or use Node.js 21+")
-        console.error("[Cert]   On Windows: install Git for Windows (includes OpenSSL)")
-        throw new Error("Certificate generation failed — install OpenSSL")
+    } catch (err) {
+        console.error("[Cert] ✗ Fatal error generating certificate:", err)
+        throw new Error("Certificate generation failed")
     }
-}
-
-/**
- * Find OpenSSL on Windows. Common locations:
- *   - Git for Windows: C:\Program Files\Git\usr\bin\openssl.exe
- *   - Standalone: C:\OpenSSL-Win64\bin\openssl.exe
- *   - PATH
- */
-function findOpenSSL(): string {
-    // Try PATH first
-    try {
-        execSync("openssl version", { stdio: "pipe" })
-        return "openssl"
-    } catch { /* not on PATH */ }
-
-    // Git for Windows
-    const gitPaths = [
-        "C:\\Program Files\\Git\\usr\\bin\\openssl.exe",
-        "C:\\Program Files (x86)\\Git\\usr\\bin\\openssl.exe",
-    ]
-    for (const p of gitPaths) {
-        if (fs.existsSync(p)) return p
-    }
-
-    // Standalone OpenSSL
-    const sslPaths = [
-        "C:\\OpenSSL-Win64\\bin\\openssl.exe",
-        "C:\\OpenSSL-Win32\\bin\\openssl.exe",
-    ]
-    for (const p of sslPaths) {
-        if (fs.existsSync(p)) return p
-    }
-
-    throw new Error("OpenSSL not found — install Git for Windows")
 }
 
 /**
  * Load existing cert or generate a new one.
  * Regenerates if the cert doesn't cover the current LAN IP.
  */
-export function loadOrGenerateCert(): TLSFiles {
+export async function loadOrGenerateCert(): Promise<TLSFiles> {
     if (fs.existsSync(CERT_FILE) && fs.existsSync(KEY_FILE)) {
         const cert = fs.readFileSync(CERT_FILE, "utf-8")
         const key = fs.readFileSync(KEY_FILE, "utf-8")
@@ -168,9 +116,6 @@ export function loadOrGenerateCert(): TLSFiles {
             // Quick check: see if any current IP appears in the cert text
             for (const ip of currentIps) {
                 if (!cert.includes(ip) && !cert.includes("IP Address:" + ip)) {
-                    // The cert might not cover this IP — check more carefully
-                    // For PEM certs, the SAN is in the DER-encoded data, not plaintext
-                    // Just regenerate to be safe if the IP changed
                     needsRegen = true
                     break
                 }

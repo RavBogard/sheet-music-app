@@ -20,10 +20,12 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "firebase-admin": "^12.0.0",
+    "selfsigned": "^5.5.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/selfsigned": "^2.0.4",
     "@types/ws": "^8.18.1",
     "@yao-pkg/pkg": "^5.11.0",
     "tsx": "^4.7.0",

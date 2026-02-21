@@ -123,7 +123,7 @@ async function main() {
     //    Browsers block ws:// from https:// pages (mixed content).
     let tlsCert: TLSFiles | null = null
     try {
-        tlsCert = loadOrGenerateCert()
+        tlsCert = await loadOrGenerateCert()
     } catch (err) {
         console.warn("[Bridge] ⚠ Could not load/generate TLS certificate:", (err as Error).message)
         console.warn("[Bridge]   Falling back to plain ws:// — may not work from HTTPS pages")
