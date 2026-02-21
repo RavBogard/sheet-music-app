@@ -45,15 +45,6 @@ export function SwipeOverlay() {
                     Got it
                 </button>
             </div>
-            <style jsx global>{`
-                @keyframes swipe-anim {
-                    0% { transform: translateX(40px) rotate(-15deg); opacity: 0; }
-                    20% { opacity: 1; }
-                    60% { transform: translateX(-40px) rotate(15deg); opacity: 1; }
-                    80% { opacity: 0; transform: translateX(-50px) rotate(15deg); }
-                    100% { opacity: 0; }
-                }
-            `}</style>
         </div>
     )
 }

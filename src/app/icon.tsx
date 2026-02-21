@@ -24,7 +24,7 @@ export default function Icon() {
                         backgroundColor: 'transparent',
                     }}
                 >
-                    <img src={base64Logo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={base64Logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
             ),
             { ...size }

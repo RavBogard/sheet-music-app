@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         })
 
         // Library stats
-        const filesSnap = await db.collection("drive_files").get()
+        const filesSnap = await db.collection("library_index").get()
         const totalFiles = filesSnap.size
 
         // Setlists

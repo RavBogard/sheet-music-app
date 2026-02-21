@@ -27,7 +27,7 @@ export interface DashboardServerProps {
     serverShortName: string | null
 }
 
-export default function DashboardClient({ serverGreeting: _serverGreeting, serverShortName }: DashboardServerProps) {
+export default function DashboardClient({ serverGreeting, serverShortName }: DashboardServerProps) {
     const router = useRouter()
     const { user, profile, cachedUser, signIn, isMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
@@ -64,7 +64,7 @@ export default function DashboardClient({ serverGreeting: _serverGreeting, serve
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
     // On the server, this is pre-computed with the user's name from the session cookie.
     // Client-side: recalculated in useEffect to avoid Hydration mismatches (Error #418).
-    const initialGreeting = _serverGreeting || getContextualGreeting(null, undefined, serverShortName || 'CRC Music')
+    const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || 'CRC Music')
     const [greeting, setGreeting] = useState<Greeting>(initialGreeting)
 
     useEffect(() => {

@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger"
 /**
  * Sweeps all setlists, verifying each track's fileId and audioFileId against the current Library cache.
  * If a track references a file that is no longer in the DB cache, it unlinks it.
- * Note: Assumes `drive_files` is relatively synchronized.
+ * Note: Assumes `library_index` is relatively synchronized.
  */
 export async function POST(request: Request) {
     try {
@@ -15,10 +15,10 @@ export async function POST(request: Request) {
 
         const db = getFirestore()
 
-        // 1. Fetch all known file IDs from `drive_files` mapping or similar cache
+        // 1. Fetch all known file IDs from `library_index` (the canonical library collection).
         // Instead of querying Google Drive individually (which would hit API rate limits),
         // we use the local Firestore cache of library items.
-        const filesSnap = await db.collection("drive_files").get()
+        const filesSnap = await db.collection("library_index").get()
         const validFileIds = new Set<string>()
         filesSnap.docs.forEach(d => validFileIds.add(d.id))
 

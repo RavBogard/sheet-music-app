@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
+import { logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
     try {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, message: "Admin notified" })
     } catch (error) {
-        console.error("Nudge admin error:", error)
+        logger.error("Nudge admin error:", error)
         return new NextResponse("Internal Server Error", { status: 500 })
     }
 }

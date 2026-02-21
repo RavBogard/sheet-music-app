@@ -4,11 +4,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import Papa from "papaparse"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getFirestore } from "firebase-admin/firestore"
+import { withAuth } from "@/lib/api-auth"
 
 const timeoutPromise = (ms: number, name: string) =>
     new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} TIMED OUT after ${ms}ms`)), ms));
 
-export async function GET() {
+export async function GET(request: Request) {
+    const auth = await withAuth(request, 'admin')
+    if (auth instanceof NextResponse) return auth
+
     const traces: Record<string, any> = {
         start: Date.now()
     }

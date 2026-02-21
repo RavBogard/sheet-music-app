@@ -7,12 +7,10 @@ import { DataIntegrityCard } from "./developer/DataIntegrityCard"
 import { useAuth } from "@/lib/auth-context"
 
 export function DeveloperToolsSection() {
-    // Hidden section — usually restricted to highest tier admins
-    const { profile } = useAuth()
+    // Hidden section — only visible to band leaders and admins
+    const { isBandLeader } = useAuth()
 
-    // Only show to band leaders or higher, or we could just hide it altogether
-    // But for now, we leave it in the Admin Panel
-    if (profile?.role !== "band_leader" && profile?.role !== "admin") return null
+    if (!isBandLeader) return null
 
     return (
         <CollapsibleSection

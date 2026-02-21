@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { Loader2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAnnotationStore } from '@/lib/annotation-store'
@@ -30,6 +29,21 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
     const viewRef = useRef<HTMLDivElement>(null)
     const autoHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
+
+    // ── CSS transition state for page changes ──
+    const [animState, setAnimState] = useState<'enter' | 'visible'>('visible')
+    const prevFileUrl = useRef(fileUrl)
+
+    useEffect(() => {
+        if (fileUrl !== prevFileUrl.current) {
+            setAnimState('enter')
+            prevFileUrl.current = fileUrl
+            // Trigger reflow then animate in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => setAnimState('visible'))
+            })
+        }
+    }, [fileUrl])
 
     // ── Single source of truth for toolbar visibility ──
     const toggleBars = useCallback(() => {
@@ -76,7 +90,6 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                             const next = nextSong()
                             if (next) router.push(`/perform/${next.fileId}`)
                         } else {
-                            // Snap to next page boundary for instant, readable page turns
                             const pages = el.querySelectorAll('.pdf-page, [data-page-number]')
                             if (pages.length > 0) {
                                 let snapped = false
@@ -88,7 +101,6 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                                         break
                                     }
                                 }
-                                // Fallback: if no page boundary found, scroll by viewport
                                 if (!snapped) {
                                     el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'instant' })
                                 }
@@ -109,7 +121,6 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                             const prev = prevSong()
                             if (prev) router.push(`/perform/${prev.fileId}`)
                         } else {
-                            // Snap to previous page boundary
                             const pages = el.querySelectorAll('.pdf-page, [data-page-number]')
                             if (pages.length > 0) {
                                 let snapped = false
@@ -154,23 +165,34 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
         toggleBars()
     }, [isAnnotating, toggleBars])
 
-    // ── Framer Motion Drag Handlers ──
-    const handleDragEnd = (event: any, info: any) => {
+    // ── Touch-based swipe detection (replaces framer-motion drag) ──
+    const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (isAnnotating || zoom > 1.1) return
+        const touch = e.touches[0]
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() }
+    }, [isAnnotating, zoom])
 
-        const swipeThreshold = 50
-        const velocityThreshold = 500
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (!touchStartRef.current || isAnnotating || zoom > 1.1) return
+        const touch = e.changedTouches[0]
+        const dx = touch.clientX - touchStartRef.current.x
+        const dy = touch.clientY - touchStartRef.current.y
+        const dt = Date.now() - touchStartRef.current.t
+        touchStartRef.current = null
 
-        if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
-            // Swiped left → next song
+        // Only trigger if horizontal swipe is dominant and fast enough
+        if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.7 || dt > 500) return
+
+        if (dx < -50) {
             const next = nextSong()
             if (next) router.push(`/perform/${next.fileId}`)
-        } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
-            // Swiped right → prev song
+        } else if (dx > 50) {
             const prev = prevSong()
             if (prev) router.push(`/perform/${prev.fileId}`)
         }
-    }
+    }, [isAnnotating, zoom, nextSong, prevSong, router])
 
     return (
         <div className="h-[100dvh] flex flex-col bg-black text-white relative">
@@ -178,66 +200,63 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             {/* Always-visible song position — persists even when toolbar is hidden */}
             <PerformanceStatusStrip />
 
-            {/* Main Content Area — Swipe via Framer Motion */}
-            <AnimatePresence initial={false} mode="wait">
-                <motion.div
-                    key={fileUrl || 'empty'}
-                    ref={viewRef as any}
-                    className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative cursor-grab active:cursor-grabbing"
-                    onClick={handleContentTap}
-                    drag={!isAnnotating && zoom <= 1.1 ? "x" : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.2}
-                    onDragEnd={handleDragEnd}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-                >
-                    {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
-                    {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
+            {/* Main Content Area — CSS transition + touch swipe */}
+            <div
+                key={fileUrl || 'empty'}
+                ref={viewRef}
+                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative"
+                style={{
+                    opacity: animState === 'enter' ? 0 : 1,
+                    transform: animState === 'enter' ? 'translateX(30px)' : 'translateX(0)',
+                    transition: 'opacity 0.25s ease-out, transform 0.25s ease-out',
+                }}
+                onClick={handleContentTap}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
+                {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
 
-                    {!fileUrl && (
-                        <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
-                            {playbackQueue.length > 0 && queueIndex >= 0 ? (
-                                <>
-                                    <div className="animate-pulse flex flex-col items-center gap-3">
-                                        <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-                                        <p className="text-lg font-medium text-zinc-400">Loading</p>
-                                        <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
-                                    </div>
-                                    <div className="w-64 space-y-3 mt-4">
-                                        <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
-                                        <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
-                                        <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-xl font-semibold">There's no chart set for this song.</p>
-                                    <p className="text-sm">You can still use the Next/Prev arrows to continue the service.</p>
-                                    <div className="flex gap-4 mt-6">
-                                        {(isAdmin || isBandLeader) && (
-                                            <button
-                                                onClick={() => router.push('/library')}
-                                                className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
-                                            >
-                                                Assign a chart
-                                            </button>
-                                        )}
+                {!fileUrl && (
+                    <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
+                        {playbackQueue.length > 0 && queueIndex >= 0 ? (
+                            <>
+                                <div className="animate-pulse flex flex-col items-center gap-3">
+                                    <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
+                                    <p className="text-lg font-medium text-zinc-400">Loading</p>
+                                    <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
+                                </div>
+                                <div className="w-64 space-y-3 mt-4">
+                                    <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
+                                    <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
+                                    <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xl font-semibold">There's no chart set for this song.</p>
+                                <p className="text-sm">You can still use the Next/Prev arrows to continue the service.</p>
+                                <div className="flex gap-4 mt-6">
+                                    {(isAdmin || isBandLeader) && (
                                         <button
-                                            onClick={onHome}
-                                            className="px-6 py-2 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors border border-zinc-700"
+                                            onClick={() => router.push('/library')}
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
                                         >
-                                            Go Back
+                                            Assign a chart
                                         </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </motion.div>
-            </AnimatePresence>
+                                    )}
+                                    <button
+                                        onClick={onHome}
+                                        className="px-6 py-2 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors border border-zinc-700"
+                                    >
+                                        Go Back
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Performance Toolbar — single visibility source */}
             <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${barsVisible ? 'translate-y-0' : 'translate-y-full'}`}>

@@ -18,16 +18,24 @@ function decodeJwtPayload(token: string) {
     }
 }
 
-// These are public routes that don't require authentication
-const publicRoutes = ['/login', '/']
+// Exact-match public routes
+const publicExactRoutes = ['/login', '/']
+
+// Prefix-match public routes — these serve public/unauthenticated content
+// /perform/* — musicians view shared setlists (may not be signed in)
+// /qr/*     — QR code sign-in flow (used *before* having a session)
+const publicPrefixes = ['/perform', '/qr']
 
 export function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl
     const session = request.cookies.get('__session')?.value
     const decodedSession = session ? decodeJwtPayload(session) : null
 
-    const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname)
-    const isApiRoute = request.nextUrl.pathname.startsWith('/api')
-    const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+    const isPublicRoute =
+        publicExactRoutes.includes(pathname) ||
+        publicPrefixes.some(p => pathname.startsWith(p))
+    const isApiRoute = pathname.startsWith('/api')
+    const isAdminRoute = pathname.startsWith('/admin')
 
     // We do not want to block API routes here; let them handle their own auth
     if (isApiRoute) {
@@ -40,7 +48,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
-    if (session && request.nextUrl.pathname === '/login') {
+    if (session && pathname === '/login') {
         // User is logged in but going to the login page -> send to dashboard
         const redirectUrl = new URL('/setlists', request.url)
         return NextResponse.redirect(redirectUrl)
@@ -49,8 +57,9 @@ export function middleware(request: NextRequest) {
     // Role Verification via Claims
     if (isAdminRoute && session) {
         // Check if the user possesses the admin or leader role
+        // Backward compat: 'leader' is the legacy name for 'band_leader'
         const role = decodedSession?.role
-        if (role !== 'admin' && role !== 'leader') {
+        if (role !== 'admin' && role !== 'band_leader' && role !== 'leader') {
             // Unprivileged user trying to access admin
             const redirectUrl = new URL('/setlists', request.url)
             return NextResponse.redirect(redirectUrl)
