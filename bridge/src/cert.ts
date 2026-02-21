@@ -19,7 +19,7 @@ import * as os from "os"
 import { execSync } from "child_process"
 
 const CERT_DIR = path.join(
-    process.env.BRIDGE_DATA_DIR || path.dirname(process.execPath || __dirname),
+    process.env.BRIDGE_DATA_DIR || process.cwd(),
     "certs"
 )
 const CERT_FILE = path.join(CERT_DIR, "bridge.crt")
