@@ -27,7 +27,7 @@ const mockLibrary: DriveFile[] = [
 
 const mockContext: ServiceContext = {
     type: 'friday_night',
-    date: new Date('2026-02-20'),
+    date: new Date(2026, 1, 20), // Feb 20, 2026 local time to avoid timezone shift
     hebrewDate: { day: 28, month: 'Shevat', year: '5786', display: '28 Shevat 5786' },
     parasha: 'Mishpatim',
     holiday: null,

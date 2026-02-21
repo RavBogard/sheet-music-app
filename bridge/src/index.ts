@@ -76,7 +76,7 @@ async function main() {
 
     // 2. Discover or use configured X32 address
     let x32Address = monitorConfig.x32Address
-    let x32Port = monitorConfig.x32Port
+    const x32Port = monitorConfig.x32Port
 
     console.log("[X32] Scanning network for X32 mixer...")
     const discovered = await X32Client.discover(5000, x32Port)
