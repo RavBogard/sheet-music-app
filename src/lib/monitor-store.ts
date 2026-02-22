@@ -6,7 +6,7 @@
  */
 
 import { create } from "zustand"
-import { ConnectionStatus } from "./x32-ws-client"
+import { ConnectionStatus } from "@/lib/firestore-monitor-client"
 import {
     MonitorConfig,
     ChannelInfo,

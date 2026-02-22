@@ -176,5 +176,22 @@ service cloud.firestore {
     match /bridge-setup-codes/{code} {
       allow read, write: if false;
     }
+
+    // MONITOR LIVE STATE — Firestore transport for mixer control
+    // Bridge writes state via Admin SDK (bypasses rules).
+    // Clients read state and write commands.
+    match /monitor-live/state {
+      allow read: if isSignedIn();
+      allow write: if false; // Bridge writes via Admin SDK only
+    }
+
+    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK
+    match /monitor-live/commands/pending/{commandId} {
+      allow read: if false; // Bridge reads via Admin SDK
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.createdAt is number;
+      allow update, delete: if false; // Bridge deletes via Admin SDK
+    }
   }
 }

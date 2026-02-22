@@ -25,6 +25,7 @@ import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
 import { BridgeWSServer } from "./ws-server"
 import { loadOrGenerateCert, TLSFiles } from "./cert"
+import { FirestoreTransport } from "./firestore-transport"
 
 const WS_PORT = parseInt(process.env.WS_PORT || "9000")
 
@@ -118,6 +119,14 @@ async function main() {
     // 4. Sync full mixer state
     if (x32.isConnected()) {
         await x32.syncFullState(monitorConfig.monitorBuses)
+    }
+
+    // 4b. Start Firestore transport (replaces WebSocket for iPad communication)
+    //     iPads read state from and write commands to Firestore — zero config on devices
+    const transport = new FirestoreTransport(x32, config)
+    transport.start()
+    if (x32.isConnected()) {
+        await transport.writeFullState()
     }
 
     // 5. Load TLS certificate for secure WebSocket (wss://)
@@ -290,6 +299,9 @@ You can close this tab and return to the app — monitor controls will connect a
             clients: ws.getConnectedCount(),
             localIp: currentIp,
         })
+
+        // Clean up stale commands (safety net)
+        await transport.cleanupStaleCommands()
     }
 
     // First heartbeat immediately
@@ -320,6 +332,7 @@ You can close this tab and return to the app — monitor controls will connect a
     const shutdown = async () => {
         console.log("\n[Bridge] Shutting down...")
         clearInterval(heartbeatInterval)
+        transport.stop()
         await config.writeOffline()
         config.stopWatching()
         x32.disconnect()
@@ -342,8 +355,9 @@ You can close this tab and return to the app — monitor controls will connect a
     console.log(`  DHCP Guard: Monitoring IP changes`)
     if (currentIp) {
         console.log(`  Published: iPads will auto-connect via Firestore`)
+        console.log(`  Transport: Firestore (zero iPad config required)`)
         if (tlsCert) {
-            console.log(`  Cert trust: https://${currentIp}:${HTTP_PORT}/trust`)
+            console.log(`  Cert trust: https://${currentIp}:${HTTP_PORT}/trust (legacy WSS)`)
         }
     }
     console.log()

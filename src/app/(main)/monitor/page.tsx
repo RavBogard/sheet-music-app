@@ -84,7 +84,7 @@ export default function MonitorPage() {
     }
 
     // ── Connecting / Error ──
-    if (status === "disconnected" || status === "connecting" || status === "authenticating") {
+    if (status === "disconnected" || status === "connecting") {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
                 <Radio className="w-8 h-8 text-violet-500 animate-pulse" />
