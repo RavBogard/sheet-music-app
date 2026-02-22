@@ -175,7 +175,7 @@
   }
 
   .glass {
-    @apply bg-background/65 backdrop-blur-2xl border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)];
+    @apply bg-background/65 backdrop-blur-2xl border border-border/60 shadow-[0_8px_32px_rgba(0, 0, 0, 0.04)] dark:shadow-[0_8px_32px_rgba(0, 0, 0, 0.2)];
   }
 
   .glass-card {
@@ -183,7 +183,7 @@
   }
 
   .fluid-interaction {
-    @apply transition-all duration-400 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98];
+    @apply transition-all duration-400 ease-[cubic-bezier(0.16, 1, 0.3, 1)] active:scale-[0.98];
   }
 
   .text-eyebrow {

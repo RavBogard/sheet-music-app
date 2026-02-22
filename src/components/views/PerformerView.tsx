@@ -259,7 +259,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             </div>
 
             {/* Performance Toolbar — single visibility source */}
-            <div className={`performance-toolbar pb-safe fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${barsVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
+            <div className={`performance-toolbar pb-safe fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${barsVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
                 <PerformanceToolbar
                     onHome={onHome}
                     onMenuOpenChange={setMenuOpen}
