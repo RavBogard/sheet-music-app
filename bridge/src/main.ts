@@ -1,19 +1,28 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, shell } from 'electron';
+/**
+ * CentralReform Bridge — Electron Main Process
+ *
+ * Runs the X32 monitor bridge with a GUI dashboard.
+ * Lives in the system tray when not actively viewing.
+ * Auto-updates from GitHub releases.
+ */
+
+import { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
-import { main as startBridge, getBridgeStatus } from './index'; // We will update index.ts to export getBridgeStatus
+import { main as startBridge, getBridgeStatus } from './index';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let bridgeStarted = false;
 
-// Ensure single instance lock
+// ─── Single Instance Lock ───
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     app.quit();
 } else {
     app.on('second-instance', () => {
-        // Someone tried to run a second instance, we should focus our window.
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.show();
@@ -23,6 +32,8 @@ if (!gotTheLock) {
 
     app.whenReady().then(createWindow);
 }
+
+// ─── Window ───
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -34,7 +45,8 @@ function createWindow() {
             contextIsolation: false
         },
         autoHideMenuBar: true,
-        show: false // Wait for ready-to-show
+        show: false,
+        skipTaskbar: false,
     });
 
     mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -42,11 +54,12 @@ function createWindow() {
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show();
         startBackgroundBridge();
+        checkForUpdates();
     });
 
     // Minimize to tray instead of closing
     mainWindow.on('close', (event) => {
-        if (!app.isQuiting) {
+        if (!(app as any).isQuiting) {
             event.preventDefault();
             mainWindow?.hide();
         }
@@ -56,19 +69,75 @@ function createWindow() {
     createTray();
 }
 
-function createTray() {
+// ─── System Tray ───
+
+function createTrayIcon() {
+    // Try loading icon file first
     const iconPath = path.join(__dirname, '../ui/icon.png');
-    tray = new Tray(iconPath);
+    if (fs.existsSync(iconPath)) {
+        return nativeImage.createFromPath(iconPath);
+    }
+
+    // Generate a simple 16x16 tray icon programmatically
+    // Purple/violet circle on transparent background (matches the app's violet theme)
+    const size = 16;
+    const canvas = Buffer.alloc(size * size * 4); // RGBA
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const cx = x - size / 2 + 0.5;
+            const cy = y - size / 2 + 0.5;
+            const dist = Math.sqrt(cx * cx + cy * cy);
+            const offset = (y * size + x) * 4;
+
+            if (dist < size / 2 - 0.5) {
+                // Violet fill: #8b5cf6
+                canvas[offset] = 0x8b;     // R
+                canvas[offset + 1] = 0x5c; // G
+                canvas[offset + 2] = 0xf6; // B
+                canvas[offset + 3] = 0xff; // A
+            } else if (dist < size / 2 + 0.5) {
+                // Anti-aliased edge
+                const alpha = Math.round((size / 2 + 0.5 - dist) * 255);
+                canvas[offset] = 0x8b;
+                canvas[offset + 1] = 0x5c;
+                canvas[offset + 2] = 0xf6;
+                canvas[offset + 3] = Math.max(0, Math.min(255, alpha));
+            }
+            // else: transparent (already zeroed)
+        }
+    }
+
+    return nativeImage.createFromBuffer(canvas, { width: size, height: size });
+}
+
+function createTray() {
+    const icon = createTrayIcon();
+    tray = new Tray(icon);
+
     const contextMenu = Menu.buildFromTemplate([
-        { label: 'Show Dashboard', click: () => mainWindow?.show() },
+        {
+            label: 'Show Dashboard',
+            click: () => {
+                mainWindow?.show();
+                mainWindow?.focus();
+            }
+        },
         { type: 'separator' },
         {
-            label: 'Quit Bridge', click: () => {
-                app.isQuiting = true;
+            label: 'Check for Updates',
+            click: () => checkForUpdates()
+        },
+        { type: 'separator' },
+        {
+            label: 'Quit Bridge',
+            click: () => {
+                (app as any).isQuiting = true;
                 app.quit();
             }
         }
     ]);
+
     tray.setToolTip('CentralReform Bridge');
     tray.setContextMenu(contextMenu);
 
@@ -82,30 +151,73 @@ function createTray() {
     });
 }
 
+// ─── Auto-Updates ───
+
+function checkForUpdates() {
+    try {
+        autoUpdater.autoDownload = true;
+        autoUpdater.autoInstallOnAppQuit = true;
+
+        autoUpdater.on('update-available', (info) => {
+            console.log(`[Update] New version available: ${info.version}`);
+            mainWindow?.webContents.send('log', {
+                level: 'info',
+                message: `🔄 Update available: v${info.version} — downloading...`
+            });
+        });
+
+        autoUpdater.on('update-downloaded', (info) => {
+            console.log(`[Update] v${info.version} downloaded — will install on next restart`);
+            mainWindow?.webContents.send('log', {
+                level: 'info',
+                message: `✅ Update v${info.version} downloaded — will install on next restart`
+            });
+            mainWindow?.webContents.send('update-ready', info.version);
+        });
+
+        autoUpdater.on('update-not-available', () => {
+            console.log('[Update] Already on latest version');
+        });
+
+        autoUpdater.on('error', (err) => {
+            console.warn('[Update] Auto-update check failed:', err.message);
+            // Don't spam the user with update errors — it's not critical
+        });
+
+        autoUpdater.checkForUpdates().catch(() => {
+            // Silently fail — updates are best-effort
+        });
+    } catch {
+        // Auto-update not available in dev mode — that's fine
+    }
+}
+
+// ─── Bridge Startup ───
+
 async function startBackgroundBridge() {
     if (bridgeStarted) return;
     bridgeStarted = true;
 
     try {
-        // Redirect console.log to our frontend
+        // Redirect console output to the Electron UI
         const originalLog = console.log;
         const originalError = console.error;
         const originalWarn = console.warn;
 
-        console.log = (...args) => {
+        console.log = (...args: unknown[]) => {
             originalLog(...args);
             mainWindow?.webContents.send('log', { level: 'info', message: args.join(' ') });
         };
-        console.error = (...args) => {
+        console.error = (...args: unknown[]) => {
             originalError(...args);
             mainWindow?.webContents.send('log', { level: 'error', message: args.join(' ') });
         };
-        console.warn = (...args) => {
+        console.warn = (...args: unknown[]) => {
             originalWarn(...args);
             mainWindow?.webContents.send('log', { level: 'warn', message: args.join(' ') });
         };
 
-        // Load config and set environment variables
+        // Resolve paths relative to exe location (not asar)
         const isPackaged = app.isPackaged;
         const exeDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
 
@@ -113,6 +225,7 @@ async function startBackgroundBridge() {
         process.env.HTTP_PORT = "9001";
         process.env.NODE_ENV = "production";
 
+        // Load bridge config
         const configFile = path.join(exeDir, "bridge-config.json");
         let keyPathFromConfig: string | null = null;
         if (fs.existsSync(configFile)) {
@@ -126,6 +239,7 @@ async function startBackgroundBridge() {
             }
         }
 
+        // Find Firebase credentials
         const possibleKeys = [
             keyPathFromConfig,
             path.join(exeDir, "service-account-key.json"),
@@ -137,7 +251,6 @@ async function startBackgroundBridge() {
         if (foundKey) {
             process.env.FIREBASE_SA_KEY_PATH = foundKey;
             console.log("Found Firebase credentials at:", foundKey);
-            // Run the bridge backend!
             await startBridge();
         } else {
             console.error(`MISSING FIREBASE CREDENTIALS`);
@@ -145,7 +258,7 @@ async function startBackgroundBridge() {
             mainWindow?.webContents.send('require-setup');
         }
 
-        // Polling loop to send stats to UI
+        // Status polling for UI
         setInterval(() => {
             const status = typeof getBridgeStatus === 'function' ? getBridgeStatus() : {};
             mainWindow?.webContents.send('status', status);
@@ -156,12 +269,13 @@ async function startBackgroundBridge() {
     }
 }
 
-// IPC Handlers for UI actions
-ipcMain.on('open-external', (event, url) => {
+// ─── IPC Handlers ───
+
+ipcMain.on('open-external', (_event: Electron.IpcMainEvent, url: string) => {
     shell.openExternal(url);
 });
 
-ipcMain.handle('submit-setup-code', async (event, { appUrl, code }) => {
+ipcMain.handle('submit-setup-code', async (_event: Electron.IpcMainInvokeEvent, { appUrl, code }: { appUrl: string; code: string }) => {
     try {
         const url = `${appUrl}/api/bridge/setup-code?code=${encodeURIComponent(code)}`;
         const response = await fetch(url);
@@ -169,26 +283,24 @@ ipcMain.handle('submit-setup-code', async (event, { appUrl, code }) => {
         if (!response.ok) {
             let errorText = `HTTP ${response.status}`;
             try {
-                const errJson = await response.json() as any;
+                const errJson = await response.json() as { error?: string };
                 errorText = errJson.error || errorText;
-            } catch (e) { }
+            } catch { /* ignore */ }
             return { success: false, error: errorText };
         }
 
-        const data = await response.json() as any;
+        const data = await response.json() as { credentials?: Record<string, unknown>; error?: string };
         if (data.credentials) {
             const isPackaged = app.isPackaged;
             const exeDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
 
-            // Save Key
             const keyPath = path.join(exeDir, "service-account-key.json");
             fs.writeFileSync(keyPath, JSON.stringify(data.credentials, null, 2));
 
-            // Save Config
             const configPath = path.join(exeDir, "bridge-config.json");
-            let cfg: any = {};
+            let cfg: Record<string, unknown> = {};
             if (fs.existsSync(configPath)) {
-                try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (e) { }
+                try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch { /* ignore */ }
             }
             cfg.appUrl = appUrl;
             fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
@@ -196,7 +308,6 @@ ipcMain.handle('submit-setup-code', async (event, { appUrl, code }) => {
             process.env.FIREBASE_SA_KEY_PATH = keyPath;
             console.log("✅ Credentials downloaded and saved successfully!");
 
-            // Boot Bridge
             startBridge().catch(err => {
                 console.error("Bridge startup failed after setup:", err);
             });
@@ -204,27 +315,22 @@ ipcMain.handle('submit-setup-code', async (event, { appUrl, code }) => {
             return { success: true };
         }
         return { success: false, error: data.error || "Invalid response from server" };
-    } catch (err: any) {
-        return { success: false, error: err.message };
+    } catch (err: unknown) {
+        return { success: false, error: (err as Error).message };
     }
 });
 
-// App lifecycle
+ipcMain.handle('install-update', () => {
+    (app as any).isQuiting = true;
+    autoUpdater.quitAndInstall();
+});
+
+// ─── App Lifecycle ───
+
 app.on('window-all-closed', () => {
-    // We prevent this by trapping the close event above, 
-    // but just in case, on Windows closing all windows closes the app.
     if (process.platform !== 'darwin') {
         app.quit();
     }
 });
 
-// Hack to attach custom property for close event prevention
-declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
-    namespace Electron {
-        interface App {
-            isQuiting: boolean;
-        }
-    }
-}
-app.isQuiting = false;
+(app as any).isQuiting = false;

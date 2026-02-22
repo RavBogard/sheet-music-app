@@ -1,5 +1,5 @@
 #define MyAppName "CentralReform Bridge"
-#define MyAppVersion "2.4.0"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "CentralReform"
 #define MyAppExeName "CentralReform Bridge.exe"
 
@@ -26,8 +26,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startup"; Description: "Run CentralReform Bridge automatically when Windows starts"; GroupDescription: "Auto-Start Options:"; Flags: unchecked
 
 [Files]
-Source: "release\CentralReform Bridge-win32-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "release\CentralReform Bridge-win32-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "release\win-unpacked\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "release\win-unpacked\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Note: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

@@ -1,16 +1,18 @@
 {
   "name": "centralreform-bridge",
-  "version": "2.4.0",
-  "description": "CentralReform X32 Monitor Bridge — connects iPads to the Behringer X32 via OSC",
+  "version": "3.0.0",
+  "description": "CentralReform X32 Monitor Bridge \u2014 connects iPads to the Behringer X32 via OSC",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "electron dist/main.js",
     "dev": "tsc && electron dist/main.js",
-    "build-exe": "tsc && npx @electron/packager . \"CentralReform Bridge\" --platform=win32 --arch=x64 --out=release --overwrite"
+    "build-exe": "tsc && npx @electron/packager . \"CentralReform Bridge\" --platform=win32 --arch=x64 --out=release --overwrite",
+    "dist": "tsc && npx electron-builder --win"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "electron-updater": "^6.3.9",
     "firebase-admin": "^12.0.0",
     "selfsigned": "^5.5.0",
     "ws": "^8.16.0"
@@ -24,5 +26,40 @@
     "electron-builder": "^26.8.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
+  },
+  "build": {
+    "appId": "com.centralreform.bridge",
+    "productName": "CentralReform Bridge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "ui/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CentralReform Bridge"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "RavBogard",
+      "repo": "sheet-music-app"
+    }
   }
 }
