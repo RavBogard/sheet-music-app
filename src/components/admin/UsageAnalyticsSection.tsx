@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
+
 import { BarChart3, Users, FileMusic, ListMusic, Loader2 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 
@@ -25,11 +25,13 @@ export function UsageAnalyticsSection() {
     }, [])
 
     return (
-        <CollapsibleSection
-            icon={<BarChart3 className="w-4 h-4 text-emerald-500" />}
-            title="Usage Analytics"
-            defaultOpen={false}
-        >
+        <section className="space-y-4">
+            <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-emerald-500" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Usage Analytics
+                </h2>
+            </div>
             <div className="bg-card border border-border p-5 rounded-xl">
                 {loading ? (
                     <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -67,7 +69,7 @@ export function UsageAnalyticsSection() {
                     </div>
                 )}
             </div>
-        </CollapsibleSection>
+        </section>
     )
 }
 

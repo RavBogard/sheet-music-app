@@ -85,6 +85,7 @@ async function main() {
         console.log(`[X32] ✓ Found ${discovered.name} (${discovered.model}) at ${discovered.address}`)
         console.log(`[X32]   Firmware: ${discovered.firmware}`)
         x32Address = discovered.address
+        internalStatus.x32Address = x32Address;
 
         // Update Firestore config if address changed
         if (discovered.address !== monitorConfig.x32Address) {
@@ -227,6 +228,7 @@ You can close this tab and return to the app — monitor controls will connect a
         const protocol = tlsCert ? "wss" : "ws"
         const port = tlsCert ? HTTP_PORT : WS_PORT
         const bridgeUrl = `${protocol}://${currentIp}:${port}`
+        internalStatus.bridgeUrl = bridgeUrl
         await config.updateBridgeUrl(bridgeUrl)
     } else {
         console.warn("[Bridge] ⚠ Could not detect local IP — iPads will use the last saved bridge URL")
@@ -277,6 +279,10 @@ You can close this tab and return to the app — monitor controls will connect a
             const port = tlsCert ? HTTP_PORT : WS_PORT
             await config.updateBridgeUrl(`${protocol}://${currentIp}:${port}`)
         }
+
+        // Update internal status for Electron UI
+        internalStatus.x32Connected = x32.isConnected()
+        internalStatus.connectedClients = ws.getConnectedCount()
 
         // Heartbeat: write status to Firestore
         await config.writeHeartbeat({
@@ -343,9 +349,27 @@ You can close this tab and return to the app — monitor controls will connect a
     console.log()
 }
 
+export interface BridgeInternalStatus {
+    x32Connected: boolean;
+    x32Address: string;
+    connectedClients: number;
+    bridgeUrl: string | null;
+}
+
+let internalStatus: BridgeInternalStatus = {
+    x32Connected: false,
+    x32Address: 'Not Scanned',
+    connectedClients: 0,
+    bridgeUrl: null
+};
+
+export function getBridgeStatus() {
+    return internalStatus;
+}
+
 export { main }
 
-// Auto-run when executed directly (not when required by launcher)
+// Auto-run when executed directly (not when required by launcher or electron)
 if (require.main === module) {
     main().catch((err) => {
         console.error("Fatal error:", err)

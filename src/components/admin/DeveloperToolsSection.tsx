@@ -1,6 +1,6 @@
 "use client"
 
-import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
+
 import { TerminalSquare } from "lucide-react"
 import { FirebaseMigrationCard } from "./developer/FirebaseMigrationCard"
 import { DataIntegrityCard } from "./developer/DataIntegrityCard"
@@ -13,14 +13,17 @@ export function DeveloperToolsSection() {
     if (!isBandLeader) return null
 
     return (
-        <CollapsibleSection
-            icon={<TerminalSquare className="w-4 h-4 text-zinc-500" />}
-            title="Developer Tools"
-        >
+        <section className="space-y-4">
+            <div className="flex items-center gap-2">
+                <TerminalSquare className="w-5 h-5 text-zinc-500" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Developer Tools
+                </h2>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FirebaseMigrationCard />
                 <DataIntegrityCard />
             </div>
-        </CollapsibleSection>
+        </section>
     )
 }

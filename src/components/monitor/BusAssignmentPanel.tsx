@@ -29,9 +29,9 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((all) => {
-            // Show musicians, band leaders, admins (not plain members or pending)
+            // Show musicians, band leaders, admins, and explicitly marked sound engineers
             const bandRoles = new Set(["musician", "band_leader", "leader", "admin"])
-            setUsers(all.filter(u => u.role && bandRoles.has(u.role)))
+            setUsers(all.filter(u => u.soundEngineer || (u.role && bandRoles.has(u.role))))
         })
         return unsub
     }, [])

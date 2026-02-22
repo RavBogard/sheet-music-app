@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { UserProfile, subscribeToAllUsers, updateUserRole, UserRole } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
-import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { notifyRoleChanged } from "@/lib/notification-store"
 import { toast } from "sonner"
 import { Loader2, Users } from "lucide-react"
@@ -64,16 +63,18 @@ export function PeopleSection() {
     }
 
     return (
-        <CollapsibleSection
-            icon={<Users className="w-4 h-4 text-violet-500" />}
-            title="People"
-            badge={pendingCount > 0 ? (
-                <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full">
-                    {pendingCount} pending
-                </span>
-            ) : undefined}
-            defaultOpen={pendingCount > 0}
-        >
+        <section className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-violet-500" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    People
+                </h2>
+                {pendingCount > 0 && (
+                    <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full ml-2">
+                        {pendingCount} pending
+                    </span>
+                )}
+            </div>
             {usersLoading ? (
                 <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
@@ -139,6 +140,6 @@ export function PeopleSection() {
                     {users.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No registered users yet.</p>}
                 </div>
             )}
-        </CollapsibleSection>
+        </section>
     )
 }

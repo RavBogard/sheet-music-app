@@ -12,6 +12,7 @@ import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useAnnotationStore } from "@/lib/annotation-store"
 import { AnnotationToolbar } from "@/components/music/AnnotationToolbar"
 import { cn } from "@/lib/utils"
@@ -25,6 +26,10 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
+
+    // Establish WebSocket connection immediately so the bridge is 
+    // ready *before* the user opens the Audio popover (zero latency).
+    useMonitorConnection()
 
     // Track which popovers are open to keep bars visible
     const [openPopovers, setOpenPopovers] = useState<Set<string>>(new Set())

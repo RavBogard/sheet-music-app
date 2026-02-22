@@ -38,7 +38,7 @@ export function MatrixPanel({ matrices, onFaderChange, onToggle }: MatrixPanelPr
                         value={mtx.fader}
                         on={mtx.on}
                         onChange={(val) => onFaderChange(mtx.index, val)}
-                        onToggle={(on) => onToggle(mtx.index, on)}
+                        onUnmuteCheck={() => onToggle(mtx.index, true)}
                     />
                 ))}
             </div>

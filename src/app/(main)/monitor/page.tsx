@@ -5,16 +5,11 @@ import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useMonitorStore } from "@/lib/monitor-store"
-import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
-import { BusSelector } from "@/components/monitor/BusSelector"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { Loader2, Radio, ChevronDown, ChevronUp } from "lucide-react"
-import { toast } from "sonner"
-import { logger } from "@/lib/logger"
 
 export default function MonitorPage() {
     const { user, loading: authLoading, isAdmin } = useAuth()
@@ -26,33 +21,12 @@ export default function MonitorPage() {
     const { client } = useMonitorConnection()
 
     const {
-        status, error, channels, buses, matrices, config, myBusIndex, userId,
+        status, error, channels, buses, matrices, config, myBusIndex,
         updateBusFader, updateSendLevel, updateSendOn, updateMatrixFader, updateMatrixOn,
     } = useMonitorStore()
 
     // Admins or sound engineers get full controls
     const hasEngineerAccess = isSoundEngineer || isAdmin
-
-    // Fix #2: Self-assign with error handling
-    const handleSelectBus = useCallback(async (busIndex: number) => {
-        if (!user || !config) return
-        const newAssignments = { ...config.busAssignments }
-        newAssignments[String(busIndex)] = {
-            userId: user.uid,
-            userName: user.displayName || user.email || "Unknown",
-        }
-
-        try {
-            await updateDoc(doc(db, "config", "monitor"), {
-                busAssignments: newAssignments,
-            })
-            toast.success(`Assigned to Bus ${busIndex}`)
-        } catch (err) {
-            logger.error("Failed to self-assign bus:", err)
-            toast.error("Can't self-assign — ask a sound engineer to assign you")
-        }
-
-    }, [user, config])
 
     // Fader handlers — own bus
     const handleBusMaster = useCallback((value: number) => {
@@ -131,7 +105,7 @@ export default function MonitorPage() {
         )
     }
 
-    // ── Fix #3: Engineer without a bus → engineer dashboard (not "pick your bus") ──
+    // ── Engineer without a bus → engineer dashboard ──
     if (config && myBusIndex === null && hasEngineerAccess) {
         return (
             <div className="max-w-lg mx-auto p-4 space-y-6">
@@ -149,35 +123,6 @@ export default function MonitorPage() {
                         onToggle={handleMatrixOn}
                     />
                 )}
-
-                {/* Subtle option to self-assign a personal bus */}
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                    Need a personal monitor mix?{" "}
-                    <button
-                        onClick={() => {
-                            // Find first unassigned bus
-                            const available = config.monitorBuses.find(b => !config.busAssignments[String(b)])
-                            if (available) handleSelectBus(available)
-                            else toast.error("No buses available")
-                        }}
-                        className="text-violet-400 hover:text-violet-300 underline"
-                    >
-                        Assign yourself a bus
-                    </button>
-                </p>
-            </div>
-        )
-    }
-
-    // ── Musician without a bus → bus selector ──
-    if (config && myBusIndex === null) {
-        return (
-            <div className="max-w-lg mx-auto p-4 space-y-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold">Monitor</h1>
-                    <ConnectionIndicator status={status} error={error} />
-                </div>
-                <BusSelector config={config} userId={userId || ""} onSelect={handleSelectBus} />
             </div>
         )
     }
@@ -232,7 +177,7 @@ export default function MonitorPage() {
                                 value={send.level}
                                 on={send.on}
                                 onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                onToggle={(on) => handleSendOn(send.channelIndex, on)}
+                                onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
                             />
                         )
                     })}

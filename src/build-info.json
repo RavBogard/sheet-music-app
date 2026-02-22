@@ -1,20 +1,15 @@
 {
   "version": "4.3.0",
-  "commit": "6ed4f03",
+  "commit": "cba25fa",
   "branch": "master",
-  "buildDate": "2/20/2026",
+  "buildDate": "2/21/2026",
   "changelog": [
-    "4.3.0 - feat: complete SSR migration for setlists, library, and editor",
-    "4.3.0 - fix: transposer popup not reopening after first use",
-    "4.3.0 - fix: resolve all ESLint warnings for CI",
-    "4.3.0 - feat: SSR dashboard with session cookies (Phase 4)",
-    "4.3.0 - perf: code splitting, batched queries, lazy-load heavy components",
-    "4.3.0 - perf: comprehensive performance overhaul (v4.3.0)",
-    "4.3.0 - fix: two bugs found during audit",
-    "4.3.0 - feat: bridge v2.0.0 — matrix output control + sound engineer auth",
-    "4.3.0 - fix: version display 0.0.0 on Vercel — handle shallow clones",
-    "4.3.0 - feat: sound engineer monitor controls — matrix outputs, bus assignment, auto-access",
-    "4.3.0 - fix: mobile-friendly People section — stacked layout, delete, self-display",
-    "4.3.0 - feat: new role hierarchy — admin, band leader, musician, member, pending"
+    "4.3.0 - fix: bridge→app connection — WSS support + connection race condition",
+    "4.3.0 - fix: post-Gemini session audit — 17 issues resolved",
+    "4.3.0 - feat: implement phase 1-5 master refactor (ui, state, admin panel, pwa icons)",
+    "4.3.0 - fix: resolve React Compiler memoization errors and unused eslint directives introduced by strict config overrides",
+    "4.3.0 - fix: resolve Vercel build errors by relaxing NextConfig types and removing deprecated LiveNotification imports",
+    "4.3.0 - fix: resolve homescreen hydration, library loading, and empty chart UI bugs, add custom transparent favicon",
+    "4.3.0 - feat: Setlist UX overhaul, performance view restyling, and background offline sync"
   ]
 }

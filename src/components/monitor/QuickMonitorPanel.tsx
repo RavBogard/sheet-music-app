@@ -4,7 +4,7 @@ import { useEffect, useCallback, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
-import { useMonitorConnection } from "@/hooks/use-monitor-connection"
+import { getMonitorClient } from "@/hooks/use-monitor-connection"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -50,9 +50,6 @@ export function QuickMonitorPanel() {
     const { hasAccess } = useMonitorAccess()
     const [pinnedChannels, setPinnedChannels] = useState<number[]>([])
 
-    // Fix #9: Singleton connection — no duplicate WebSockets
-    const { client } = useMonitorConnection()
-
     const {
         status, channels, buses, config, myBusIndex,
         updateBusFader, updateSendLevel, updateSendOn,
@@ -84,20 +81,20 @@ export function QuickMonitorPanel() {
     const handleBusMaster = useCallback((value: number) => {
         if (!myBusIndex) return
         updateBusFader(myBusIndex, value)
-        client?.setBusMaster(myBusIndex, value)
-    }, [myBusIndex, updateBusFader, client])
+        getMonitorClient()?.setBusMaster(myBusIndex, value)
+    }, [myBusIndex, updateBusFader])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
         if (!myBusIndex) return
         updateSendLevel(myBusIndex, channelIndex, value)
-        client?.setSendLevel(myBusIndex, channelIndex, value)
-    }, [myBusIndex, updateSendLevel, client])
+        getMonitorClient()?.setSendLevel(myBusIndex, channelIndex, value)
+    }, [myBusIndex, updateSendLevel])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
         if (!myBusIndex) return
         updateSendOn(myBusIndex, channelIndex, on)
-        client?.setSendOn(myBusIndex, channelIndex, on)
-    }, [myBusIndex, updateSendOn, client])
+        getMonitorClient()?.setSendOn(myBusIndex, channelIndex, on)
+    }, [myBusIndex, updateSendOn])
 
     // Derived state
     const myBus = buses.find(b => b.index === myBusIndex)
@@ -233,7 +230,7 @@ export function QuickMonitorPanel() {
                                         value={send.level}
                                         on={send.on}
                                         onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                        onToggle={(on) => handleSendOn(send.channelIndex, on)}
+                                        onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
                                     />
                                 </div>
                             </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
+
 import buildInfo from "@/build-info.json"
 import { Wrench, Tag, GitCommit } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
@@ -12,10 +12,13 @@ export function SystemSection() {
     const { user } = useAuth()
 
     return (
-        <CollapsibleSection
-            icon={<Wrench className="w-4 h-4 text-muted-foreground" />}
-            title="System"
-        >
+        <section className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    System
+                </h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <GlobalAlertCard />
                 <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -42,6 +45,6 @@ export function SystemSection() {
 
                 </div>
             </div>
-        </CollapsibleSection>
+        </section>
     )
 }

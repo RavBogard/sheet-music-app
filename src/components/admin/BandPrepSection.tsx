@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { Music, CheckCircle2, Clock, Loader2 } from "lucide-react"
 
 interface MemberPrep {
@@ -46,21 +45,24 @@ export function BandPrepSection() {
             }
         }
         load()
-     
+
     }, [user?.uid, isBandLeader])
 
     if (!isBandLeader) return null
 
     return (
-        <CollapsibleSection
-            icon={<Music className="w-4 h-4 text-blue-500" />}
-            title="Band Preparation"
-            badge={data.length > 0 ? (
-                <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-1.5 py-0.5 rounded-full">
-                    {data.length} upcoming
-                </span>
-            ) : null}
-        >
+        <section className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Music className="w-5 h-5 text-blue-500" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Band Preparation
+                </h2>
+                {data.length > 0 && (
+                    <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-1.5 py-0.5 rounded-full ml-2">
+                        {data.length} upcoming
+                    </span>
+                )}
+            </div>
             {loading ? (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -104,11 +106,10 @@ export function BandPrepSection() {
                                             {/* Progress bar */}
                                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-32">
                                                 <div
-                                                    className={`h-full rounded-full transition-all ${
-                                                        isComplete ? 'bg-green-500' :
-                                                        pct > 50 ? 'bg-blue-500' :
-                                                        pct > 0 ? 'bg-amber-500' : 'bg-muted-foreground/20'
-                                                    }`}
+                                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' :
+                                                            pct > 50 ? 'bg-blue-500' :
+                                                                pct > 0 ? 'bg-amber-500' : 'bg-muted-foreground/20'
+                                                        }`}
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
@@ -137,6 +138,6 @@ export function BandPrepSection() {
                     ))}
                 </div>
             )}
-        </CollapsibleSection>
+        </section>
     )
 }

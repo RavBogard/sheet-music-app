@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CentralReform Bridge</title>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --surface: #313244;
+            --text: #cdd6f4;
+            --subtext: #a6adc8;
+            --accent: #cba6f7;
+            --green: #a6e3a1;
+            --red: #f38ba8;
+            --yellow: #f9e2af;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            -webkit-user-select: none;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 600;
+            background: var(--surface);
+            color: var(--subtext);
+        }
+
+        .status-badge.online {
+            background: rgba(166, 227, 161, 0.15);
+            color: var(--green);
+        }
+
+        .status-badge.offline {
+            background: rgba(243, 139, 168, 0.15);
+            color: var(--red);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .card-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--subtext);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .card-value {
+            font-size: 18px;
+            font-family: monospace;
+            color: var(--text);
+        }
+        
+        .card-link {
+            color: var(--accent);
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .logs {
+            background: #11111b;
+            border-radius: 12px;
+            padding: 16px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .log-line {
+            margin: 0;
+            padding: 2px 0;
+            word-break: break-all;
+        }
+
+        .log-line.info { color: var(--text); }
+        .log-line.warn { color: var(--yellow); }
+        .log-line.error { color: var(--red); }
+        
+        .empty-logs {
+            color: var(--subtext);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CentralReform Bridge</h1>
+        <div id="connection-status" class="status-badge offline">X32 Offline</div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-label">Mixer Address</div>
+            <div id="x32-address" class="card-value">Scanning...</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Connected iPads</div>
+            <div id="client-count" class="card-value">0</div>
+        </div>
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-label">Certificate Trust URL</div>
+            <div id="trust-url" class="card-value" style="color: var(--subtext); font-size: 14px;">Waiting for network...</div>
+            <div class="card-link" id="trust-link" style="display: none;" onclick="openTrustUrl()">Open Locally</div>
+        </div>
+    </div>
+
+    <div class="card-label">Live Logs</div>
+    <div class="logs" id="logs-container">
+        <div class="empty-logs">Bridge is starting up...</div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        const logsContainer = document.getElementById('logs-container');
+        const statusBadge = document.getElementById('connection-status');
+        const x32Address = document.getElementById('x32-address');
+        const clientCount = document.getElementById('client-count');
+        const trustUrl = document.getElementById('trust-url');
+        const trustLink = document.getElementById('trust-link');
+        
+        let currentTrustHref = "";
+
+        ipcRenderer.on('log', (event, { level, message }) => {
+            if (logsContainer.querySelector('.empty-logs')) {
+                logsContainer.innerHTML = '';
+            }
+            
+            const div = document.createElement('div');
+            div.className = `log-line ${level}`;
+            
+            // Format time
+            const time = new Date().toLocaleTimeString([], { hour12: false });
+            div.textContent = `[${time}] ${message}`;
+            
+            logsContainer.appendChild(div);
+            
+            // Auto-scroll
+            if (logsContainer.scrollHeight - logsContainer.scrollTop < 350) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        });
+
+        ipcRenderer.on('status', (event, status) => {
+            if (!status) return;
+
+            // X32 Connection Status
+            if (status.x32Connected !== undefined) {
+                if (status.x32Connected) {
+                    statusBadge.textContent = 'X32 Connected';
+                    statusBadge.className = 'status-badge online';
+                } else {
+                    statusBadge.textContent = 'X32 Offline';
+                    statusBadge.className = 'status-badge offline';
+                }
+            }
+
+            // Addresses
+            if (status.x32Address) {
+                x32Address.textContent = status.x32Address;
+            }
+            
+            if (status.connectedClients !== undefined) {
+                clientCount.textContent = status.connectedClients;
+            }
+
+            if (status.bridgeUrl) {
+                const u = new URL(status.bridgeUrl.replace('wss://', 'https://').replace('ws://', 'http://'));
+                const urlStr = u.toString().replace(/\/$/, "");
+                trustUrl.textContent = urlStr;
+                trustUrl.style.color = "var(--text)";
+                currentTrustHref = urlStr;
+                trustLink.style.display = "inline-block";
+            }
+        });
+
+        function openTrustUrl() {
+            if (currentTrustHref) {
+                ipcRenderer.send('open-external', currentTrustHref + "/trust");
+            }
+        }
+    </script>
+</body>
+</html>
