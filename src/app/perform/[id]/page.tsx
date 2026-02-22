@@ -146,26 +146,24 @@ export default function PerformPage() {
                         ? "opacity-0 -z-10 -translate-x-full pointer-events-none"
                         : "opacity-0 -z-10 translate-x-full pointer-events-none"
 
-                const Wrapper = ({ children }: { children: React.ReactNode }) => (
-                    <div
-                        key={`wrapper-${idx}-${data.id}`}
-                        className={`absolute inset-0 transition-opacity duration-0 ${posClass}`}
-                        style={{ display: isCurrent ? 'block' : 'none' }} // Actually hide to prevent interference, react-pdf still renders canvas when display: none
-                    >
-                        {children}
-                    </div>
-                )
-
                 if (data.isFlowItem && data.track) {
                     return (
-                        <Wrapper key={`flow-${idx}-${data.id}`}>
+                        <div
+                            key={`flow-${idx}-${data.id}`}
+                            className={`absolute inset-0 transition-opacity duration-0 ${posClass}`}
+                            style={{ display: isCurrent ? 'block' : 'none' }}
+                        >
                             <FlowItemView onHome={handleHome} />
-                        </Wrapper>
+                        </div>
                     )
                 }
 
                 return (
-                    <Wrapper key={`perf-${idx}-${data.id}`}>
+                    <div
+                        key={`perf-${idx}-${data.id}`}
+                        className={`absolute inset-0 transition-opacity duration-0 ${posClass}`}
+                        style={{ display: isCurrent ? 'block' : 'none' }}
+                    >
                         <PerformerView
                             fileUrl={data.url}
                             fileType={data.type as FileType}
@@ -179,7 +177,7 @@ export default function PerformPage() {
                                 onPracticeTime={() => { }}
                             />
                         )}
-                    </Wrapper>
+                    </div>
                 )
             })}
 
