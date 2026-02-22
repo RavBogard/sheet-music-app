@@ -29,8 +29,8 @@ function getBucket() {
 function getStoragePath(fileId: string, mimeType?: string): string {
     const ext = mimeType?.includes('pdf') ? '.pdf'
         : mimeType?.includes('xml') ? '.xml'
-        : mimeType?.includes('audio') ? '.mp3'
-        : ''
+            : mimeType?.includes('audio') ? '.mp3'
+                : ''
     return `library/${fileId}${ext}`
 }
 
@@ -40,9 +40,20 @@ function getStoragePath(fileId: string, mimeType?: string): string {
 export async function fileExistsInStorage(fileId: string, mimeType?: string): Promise<boolean> {
     try {
         const bucket = getBucket()
-        const paths = mimeType
-            ? [getStoragePath(fileId, mimeType)]
-            : [getStoragePath(fileId), getStoragePath(fileId, 'pdf'), getStoragePath(fileId, 'xml'), getStoragePath(fileId, 'audio')]
+        const altFileId = fileId.replace(/_/g, '-')
+        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
+
+        let paths: string[] = []
+        for (const id of fileIdsToTry) {
+            if (mimeType) {
+                paths.push(getStoragePath(id, mimeType))
+            } else {
+                paths.push(getStoragePath(id))
+                paths.push(getStoragePath(id, 'pdf'))
+                paths.push(getStoragePath(id, 'xml'))
+                paths.push(getStoragePath(id, 'audio'))
+            }
+        }
 
         for (const path of paths) {
             const [exists] = await bucket.file(path).exists()
@@ -89,11 +100,26 @@ export async function uploadToStorage(
 export async function getStorageUrl(fileId: string, mimeType?: string): Promise<string | null> {
     try {
         const bucket = getBucket()
-        const path = getStoragePath(fileId, mimeType)
-        const file = bucket.file(path)
-        const [exists] = await file.exists()
-        if (!exists) return null
-        return `gs://${BUCKET_NAME}/${path}`
+        const altFileId = fileId.replace(/_/g, '-')
+        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
+
+        let paths: string[] = []
+        for (const id of fileIdsToTry) {
+            paths.push(getStoragePath(id, mimeType))
+            if (!mimeType) {
+                paths.push(getStoragePath(id, 'pdf'))
+                paths.push(getStoragePath(id, 'xml'))
+                paths.push(getStoragePath(id, 'audio'))
+            }
+        }
+
+        for (const path of paths) {
+            const file = bucket.file(path)
+            const [exists] = await file.exists()
+            if (exists) return `gs://${BUCKET_NAME}/${path}`
+        }
+
+        return null
     } catch {
         return null
     }
@@ -108,15 +134,22 @@ export async function downloadFromStorage(fileId: string, mimeType?: string): Pr
     try {
         const bucket = getBucket()
 
-        // Build list of paths to try
-        const paths = mimeType
-            ? [getStoragePath(fileId, mimeType)]
-            : [
-                getStoragePath(fileId),           // no extension
-                getStoragePath(fileId, 'pdf'),     // .pdf
-                getStoragePath(fileId, 'xml'),     // .xml
-                getStoragePath(fileId, 'audio'),   // .mp3
-            ]
+        // Some external migration scripts incorrectly saved UUIDs with underscores instead of hyphens.
+        // As a resilient fallback, we test both variants of the fileId.
+        const altFileId = fileId.replace(/_/g, '-')
+        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
+
+        let paths: string[] = []
+        for (const id of fileIdsToTry) {
+            if (mimeType) {
+                paths.push(getStoragePath(id, mimeType))
+            } else {
+                paths.push(getStoragePath(id))
+                paths.push(getStoragePath(id, 'pdf'))
+                paths.push(getStoragePath(id, 'xml'))
+                paths.push(getStoragePath(id, 'audio'))
+            }
+        }
 
         for (const path of paths) {
             const file = bucket.file(path)
