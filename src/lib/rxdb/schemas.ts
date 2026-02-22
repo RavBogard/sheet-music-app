@@ -72,7 +72,7 @@ export const setlistSchema: RxJsonSchema<RxSetlistDocType> = setlistSchemaLitera
 
 const fileMetaSchemaLiteral = {
     title: 'file meta schema',
-    version: 0,
+    version: 1,
     primaryKey: 'id',
     type: 'object',
     properties: {

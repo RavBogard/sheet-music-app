@@ -50,6 +50,11 @@ export const initRxDB = async (): Promise<MyDatabase> => {
             },
             files: {
                 schema: fileMetaSchema,
+                migrationStrategies: {
+                    // We simply drop the old cached file metadata (return null).
+                    // The app will automatically re-fetch the file from Google Drive if needed.
+                    1: () => null
+                }
             },
             settings: {
                 schema: settingsSchema,
