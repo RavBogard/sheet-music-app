@@ -29,7 +29,7 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
     handler: (ctx: ProtectedApiContext<TParams, z.infer<TBody>>) => Promise<NextResponse> | NextResponse,
     options?: ApiOptions<TBody>
 ) {
-    return async (req: NextRequest, context?: ApiHandlerContext<TParams>): Promise<NextResponse> => {
+    return async (req: NextRequest, context?: any): Promise<NextResponse> => {
         try {
             // 1. Authenticate Request
             const authResponse = await withAuth(req, options?.role)
@@ -59,11 +59,14 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
                 }
             }
 
+            // params is a Promise in Next.js 15+
+            const resolvedParams = context?.params ? await context.params : undefined;
+
             // 3. Execute Handler
             const ctx: ProtectedApiContext<TParams, z.infer<TBody>> = {
                 req,
                 auth: authResponse,
-                params: context?.params,
+                params: resolvedParams,
                 body: parsedBody
             }
 
