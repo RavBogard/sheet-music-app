@@ -173,6 +173,7 @@ app.on('window-all-closed', () => {
 
 // Hack to attach custom property for close event prevention
 declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace Electron {
         interface App {
             isQuiting: boolean;

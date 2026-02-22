@@ -356,7 +356,7 @@ export interface BridgeInternalStatus {
     bridgeUrl: string | null;
 }
 
-let internalStatus: BridgeInternalStatus = {
+const internalStatus: BridgeInternalStatus = {
     x32Connected: false,
     x32Address: 'Not Scanned',
     connectedClients: 0,
