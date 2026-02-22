@@ -50,7 +50,7 @@ export function FirebaseMigrationCard() {
 
             let remaining = Infinity, rounds = 0
             const maxRounds = 50
-            const params = retryFailed || fullReset ? '?retryFailed=true&verify=true' : '?verify=true'
+            const params = retryFailed || fullReset ? '?retryFailed=true&verify=true&batchSize=5' : '?verify=true&batchSize=5'
 
             while (remaining > 0 && rounds < maxRounds) {
                 rounds++
