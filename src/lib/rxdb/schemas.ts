@@ -79,10 +79,10 @@ const fileMetaSchemaLiteral = {
         id: { type: 'string', maxLength: 100 },
         name: { type: 'string' },
         mimeType: { type: 'string' },
-        updatedAt: { type: 'number' },
-        lastAccessedAt: { type: 'number' }
+        updatedAt: { type: 'number', minimum: 0, maximum: 1000000000000000, multipleOf: 1 },
+        lastAccessedAt: { type: 'number', minimum: 0, maximum: 1000000000000000, multipleOf: 1 }
     },
-    required: ['id', 'name', 'mimeType'],
+    required: ['id', 'name', 'mimeType', 'updatedAt', 'lastAccessedAt'],
     indexes: ['lastAccessedAt', 'updatedAt']
 } as const;
 

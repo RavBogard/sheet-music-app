@@ -15,6 +15,12 @@ const withPWA = require("@ducanh2912/next-pwa").default({
     clientsClaim: true,
     runtimeCaching: [
       {
+        // Must bypass Service Worker for PDF/Audio Range Requests (206 Partial Content)
+        // Otherwise, Workbox intercepts with no-response or ERR_FAILED
+        urlPattern: /\/api\/(drive|library)\/file(.*)/i,
+        handler: 'NetworkOnly',
+      },
+      {
         urlPattern: /\/api\/library\/list(.*)/i,
         handler: 'StaleWhileRevalidate',
         options: {
