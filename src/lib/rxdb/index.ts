@@ -42,7 +42,7 @@ export const initRxDB = async (): Promise<MyDatabase> => {
 
     dbPromise = (async () => {
         const db = await createRxDatabase<MyDatabaseCollections>({
-            name: 'sheet-music-rxdb',
+            name: 'sheet-music-db-v2',
             storage: getRxStorageDexie(),
             multiInstance: true, // synchronize data between multiple tabs
         });
