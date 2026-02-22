@@ -23,6 +23,9 @@ addRxPlugin(RxDBQueryBuilderPlugin);
 import { RxDBAttachmentsPlugin } from 'rxdb/plugins/attachments';
 addRxPlugin(RxDBAttachmentsPlugin);
 
+import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
+addRxPlugin(RxDBMigrationSchemaPlugin);
+
 export type MyDatabaseCollections = {
     setlists: import('rxdb').RxCollection<RxSetlistDocType>;
     files: import('rxdb').RxCollection<RxFileMetaDocType>;
