@@ -78,7 +78,8 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         * - manifest.json, sw.js, workbox-* (PWA configurations)
          */
-        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|.*\\.png$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|manifest.json|sw.js|workbox-.*|.*\\.png$).*)',
     ],
 }
