@@ -7,6 +7,7 @@ import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Users } from "lucide-react"
+import { useMonitorStore } from "@/lib/monitor-store"
 
 interface BusAssignmentPanelProps {
     config: MonitorConfig
@@ -26,6 +27,8 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
         toId: string
         toName: string
     } | null>(null)
+
+    const buses = useMonitorStore(state => state.buses)
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((all) => {
@@ -94,9 +97,15 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
             <div className="space-y-2">
                 {parsedBuses.map(busIdx => {
                     const assignment = config.busAssignments?.[String(busIdx)]
+                    const busName = buses.find(b => b.index === busIdx)?.name
                     return (
-                        <div key={busIdx} className="flex items-center gap-3">
-                            <span className="text-sm font-medium w-14 shrink-0 text-muted-foreground">Bus {busIdx}</span>
+                        <div key={busIdx} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 py-1">
+                            <div className="flex flex-col shrink-0 sm:w-28 text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                                <span className="font-medium text-foreground">Bus {busIdx}</span>
+                                {busName && busName !== `Bus ${busIdx}` && (
+                                    <span className="text-xs text-muted-foreground">{busName}</span>
+                                )}
+                            </div>
                             <select
                                 value={assignment?.userId || ""}
                                 onChange={e => handleAssign(busIdx, e.target.value || null)}

@@ -173,8 +173,12 @@ export function QuickMonitorPanel() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div>
-                    <div className="text-sm font-semibold text-zinc-200">My Monitor</div>
-                    <div className="text-[10px] text-zinc-500">{myBus.name} — Bus {myBusIndex}</div>
+                    <div className="text-sm font-semibold text-zinc-200 truncate pr-2 max-w-[180px]">
+                        {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
+                    </div>
+                    <div className="text-[10px] text-zinc-500">
+                        Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `— ${myBus.name}`}
+                    </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                     {config?.bridge?.x32Connected === false ? (
@@ -194,7 +198,7 @@ export function QuickMonitorPanel() {
             {/* Master */}
             <div className="px-3 pb-1">
                 <FaderStrip
-                    label="🔊 Master"
+                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `🔊 ${myBus.name} Master` : "🔊 Master"}
                     value={myBus.fader}
                     on={true}
                     isMaster

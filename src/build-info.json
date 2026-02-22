@@ -1,9 +1,10 @@
 {
   "version": "4.3.0",
-  "commit": "cba25fa",
+  "commit": "f6a3d11",
   "branch": "master",
   "buildDate": "2/21/2026",
   "changelog": [
+    "4.3.0 - feat: complete monitor ui overhaul and admin panel flattening",
     "4.3.0 - fix: bridge→app connection — WSS support + connection race condition",
     "4.3.0 - fix: post-Gemini session audit — 17 issues resolved",
     "4.3.0 - feat: implement phase 1-5 master refactor (ui, state, admin panel, pwa icons)",

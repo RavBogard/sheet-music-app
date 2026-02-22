@@ -145,17 +145,19 @@ export default function MonitorPage() {
         <div className="max-w-lg mx-auto p-4 pb-24">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-bold">My Monitor</h1>
+                <h1 className="text-2xl font-bold truncate pr-4">
+                    {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
+                </h1>
                 <ConnectionIndicator status={status} error={error} />
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-                Bus {myBusIndex} — {myBus.name}
+                Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `— ${myBus.name}`}
             </p>
 
             {/* Master fader */}
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <FaderStrip
-                    label="🔊 Master"
+                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `🔊 ${myBus.name} Master` : "🔊 Master"}
                     value={myBus.fader}
                     on={true}
                     isMaster
