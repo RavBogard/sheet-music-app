@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ListMusic, PlayCircle, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
@@ -48,24 +49,63 @@ export function SetlistDrawer() {
 
     const sectionLabels = sections.filter(s => s.label).map(s => s.label!)
 
-    // Auto-scroll to current song when drawer opens
-    useEffect(() => {
-        if (open && currentSongRef.current) {
-            // Brief delay to let the sheet animation start
-            const timer = setTimeout(() => {
-                currentSongRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-            }, 150)
-            return () => clearTimeout(timer)
-        }
-    }, [open])
+    // --- Flatten for Virtualization ---
+    // We create a 1D array where each item is either a "header" or a "track"
+    const virtualItemsData = useMemo(() => {
+        const flat: { type: 'header' | 'track'; label?: string; track?: QueueItem; globalIndex?: number }[] = []
+        sections.forEach(sec => {
+            if (sec.label) {
+                flat.push({ type: 'header', label: sec.label })
+            }
+            sec.tracks.forEach(t => {
+                flat.push({ type: 'track', track: t.item, globalIndex: t.globalIndex })
+            })
+        })
+        return flat
+    }, [sections])
 
-    const scrollToSection = (label: string) => {
-        const el = sectionRefs.current.get(label)
-        if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' })
-    }
+    const parentRef = useRef<HTMLDivElement>(null)
+
+    // eslint-disable-next-line react-hooks/incompatible-library
+    const rowVirtualizer = useVirtualizer({
+        count: virtualItemsData.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: (index) => {
+            return virtualItemsData[index].type === 'header' ? 36 : 80 // Base estimates
+        },
+        overscan: 5
+    })
 
     // Calculate if we should show the empty state (Public Setlists)
     const showPublicPicker = playbackQueue.length === 0
+
+    // Auto-scroll to current song when drawer opens
+    useEffect(() => {
+        if (open && !showPublicPicker) {
+            // Find index in 1D array
+            const targetVirtualIdx = virtualItemsData.findIndex(
+                v => v.type === 'track' && v.globalIndex === queueIndex
+            )
+
+            if (targetVirtualIdx !== -1) {
+                // Brief delay to let the sheet animation start
+                const timer = setTimeout(() => {
+                    rowVirtualizer.scrollToIndex(targetVirtualIdx, { align: 'center', behavior: 'smooth' })
+                }, 150)
+                return () => clearTimeout(timer)
+            }
+        }
+    }, [open, showPublicPicker, queueIndex, virtualItemsData, rowVirtualizer])
+
+    const scrollToSection = (label: string) => {
+        const targetVirtualIdx = virtualItemsData.findIndex(
+            v => v.type === 'header' && v.label === label
+        )
+
+        if (targetVirtualIdx !== -1) {
+            rowVirtualizer.scrollToIndex(targetVirtualIdx, { align: 'start', behavior: 'smooth' })
+        }
+    }
 
     useEffect(() => {
         if (open && showPublicPicker) {
@@ -194,54 +234,84 @@ export function SetlistDrawer() {
                                 </div>
                             )}
 
-                            <div className="flex flex-col p-2 gap-0.5">
-                                {sections.map((section, sectionIdx) => (
-                                    <div
-                                        key={`section-${sectionIdx}`}
-                                        ref={(el) => {
-                                            if (el && section.label) sectionRefs.current.set(section.label, el)
-                                        }}
-                                    >
-                                        {/* Section header */}
-                                        {section.label && (
-                                            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm px-4 py-2 mt-2 first:mt-0
-                                                text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50">
-                                                {section.label}
-                                            </div>
-                                        )}
+                            <div
+                                className="flex-1 overflow-auto"
+                                ref={parentRef}
+                            >
+                                <div
+                                    style={{
+                                        height: `${rowVirtualizer.getTotalSize()}px`,
+                                        width: '100%',
+                                        position: 'relative',
+                                    }}
+                                >
+                                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                        const item = virtualItemsData[virtualRow.index]
 
-                                        {/* Tracks in section */}
-                                        {section.tracks.map(({ item: track, globalIndex }) => {
-                                            const isCurrent = globalIndex === queueIndex
-                                            const isFlowItem = track.trackType && track.trackType !== 'song'
-
+                                        if (item.type === 'header') {
                                             return (
+                                                <div
+                                                    key={virtualRow.index}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: `${virtualRow.size}px`,
+                                                        transform: `translateY(${virtualRow.start}px)`,
+                                                    }}
+                                                    className="bg-background/90 backdrop-blur-sm px-4 flex items-center
+                                                        text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50"
+                                                >
+                                                    {item.label}
+                                                </div>
+                                            )
+                                        }
+
+                                        // Track row
+                                        const track = item.track!
+                                        const globalIndex = item.globalIndex!
+                                        const isCurrent = globalIndex === queueIndex
+                                        const isFlowItem = track.trackType && track.trackType !== 'song'
+
+                                        return (
+                                            <div
+                                                key={virtualRow.index}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${virtualRow.size}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                    padding: '4px 8px', // Outer spacing
+                                                }}
+                                            >
                                                 <button
-                                                    key={`${track.fileId}-${globalIndex}`}
-                                                    ref={isCurrent ? currentSongRef : undefined}
                                                     onClick={() => {
                                                         router.push(`/perform/${track.fileId}`)
                                                         setOpen(false)
                                                     }}
                                                     className={cn(
-                                                        "flex items-center gap-4 p-4 rounded-xl transition-all text-left w-full",
+                                                        "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-left w-full",
                                                         isCurrent
-                                                            ? "bg-blue-600 text-foreground shadow-lg"
+                                                            ? "bg-blue-600 text-white shadow-lg"
                                                             : "hover:bg-card text-muted-foreground hover:text-foreground",
                                                         isFlowItem && !isCurrent && "opacity-60"
                                                     )}
                                                 >
                                                     <div className={cn(
                                                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                                                        isCurrent ? "bg-white/20 text-foreground" : "bg-muted text-muted-foreground"
+                                                        isCurrent ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                                                     )}>
                                                         {globalIndex + 1}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
+                                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                         <div className="flex items-center gap-2">
                                                             <div className={cn(
                                                                 "font-bold truncate",
-                                                                isFlowItem ? "text-base" : "text-lg"
+                                                                isFlowItem ? "text-base" : "text-lg",
+                                                                isCurrent && "text-white"
                                                             )}>
                                                                 {track.name}
                                                             </div>
@@ -249,7 +319,7 @@ export function SetlistDrawer() {
                                                                 <span className={cn(
                                                                     "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
                                                                     isCurrent
-                                                                        ? "bg-white/20 border-white/30 text-foreground"
+                                                                        ? "bg-transparent border-white/30 text-white"
                                                                         : "bg-muted border-border text-muted-foreground"
                                                                 )}>
                                                                     {track.key}
@@ -257,17 +327,20 @@ export function SetlistDrawer() {
                                                             )}
                                                         </div>
                                                         {isFlowItem && track.trackType && (
-                                                            <div className="text-xs opacity-70 uppercase tracking-wider mt-0.5">
+                                                            <div className={cn(
+                                                                "text-xs uppercase tracking-wider mt-0.5",
+                                                                isCurrent ? "opacity-90 text-blue-100" : "opacity-70"
+                                                            )}>
                                                                 {track.trackType}
                                                             </div>
                                                         )}
                                                     </div>
                                                     {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />}
                                                 </button>
-                                            )
-                                        })}
-                                    </div>
-                                ))}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
                         </div>
                     )}

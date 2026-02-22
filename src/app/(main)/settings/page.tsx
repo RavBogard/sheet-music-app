@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { useTheme } from "next-themes"
+import { useMusicStore } from "@/lib/store"
+import { Switch } from "@/components/ui/switch"
 import buildInfo from "@/build-info.json"
 import {
     ArrowLeft, Loader2, User, Moon, Sun, Monitor,
@@ -20,6 +22,8 @@ export default function SettingsPage() {
     const [editingName, setEditingName] = useState(false)
     const [nameValue, setNameValue] = useState("")
     const [savingName, setSavingName] = useState(false)
+    const gigModeActive = useMusicStore(s => s.gigModeActive)
+    const setGigModeActive = useMusicStore(s => s.setGigModeActive)
 
     if (authLoading) return (
         <div className="h-screen bg-background flex items-center justify-center">
@@ -127,6 +131,19 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground mt-3">
                             Performance mode always uses dark theme for stage visibility.
                         </p>
+                    </div>
+
+                    {/* Performance Modes */}
+                    <div className="bg-card border border-border p-5 rounded-2xl">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 className="font-semibold text-foreground">Live Gig Mode</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Disables background syncing and analytics for bulletproof stability on stage.
+                                </p>
+                            </div>
+                            <Switch checked={gigModeActive} onCheckedChange={setGigModeActive} />
+                        </div>
                     </div>
                 </section>
 

@@ -62,15 +62,7 @@ export interface MixerSnapshot {
     config: MonitorConfig
 }
 
-/** Messages from bridge to iPad */
-export type ServerMessage =
-    | { type: "state"; data: MixerSnapshot }
-    | { type: "fader_update"; busIndex: number; field: "master"; value: number }
-    | { type: "send_update"; busIndex: number; channelIndex: number; field: "level" | "on"; value: number | boolean }
-    | { type: "matrix_update"; matrixIndex: number; field: "fader" | "on"; value: number | boolean }
-    | { type: "config_update"; config: MonitorConfig }
-    | { type: "error"; message: string }
-    | { type: "auth_ok"; userId: string }
+
 
 /** Messages from iPad to bridge */
 export type ClientMessage =

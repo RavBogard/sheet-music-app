@@ -23,7 +23,7 @@ export const migrations: MigrationDef[] = [
         description: "Initial migration to stamp congregation config with schema version 1",
         up: async () => {
             initAdmin()
-            const configRef = firestore.collection("config").doc("congregation")
+            const configRef = getFirestore().collection("config").doc("congregation")
             await configRef.set({ schemaVersion: 1 }, { merge: true })
             return 1
         }

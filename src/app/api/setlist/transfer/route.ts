@@ -10,7 +10,7 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(req, 'api')
         if (limited) return limited
 
-        const { setlistId, newOwnerEmail } = body
+        const { setlistId, newOwnerEmail } = body!
         const db = getFirestore()
 
         // Get Setlist

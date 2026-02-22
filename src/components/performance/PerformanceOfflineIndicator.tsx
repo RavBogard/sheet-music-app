@@ -37,7 +37,6 @@ export function PerformanceOfflineIndicator() {
     if (isOnline && !showReconnected) return null
 
     return (
-    return (
         <div className="fixed top-safe pt-2 left-0 right-0 z-[100] flex justify-center pointer-events-none">
             <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-500 shadow-xl
                 ${!isOnline
@@ -58,6 +57,5 @@ export function PerformanceOfflineIndicator() {
                 )}
             </div>
         </div>
-    )
     )
 }

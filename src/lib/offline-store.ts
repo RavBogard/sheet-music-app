@@ -1,121 +1,97 @@
-import { openDB, DBSchema } from 'idb';
+import { getDB } from './rxdb';
 import { Setlist } from './setlist-firebase';
 
-interface OfflineDB extends DBSchema {
-    files: {
-        key: string;
-        value: {
-            id: string;
-            blob: Blob;
-            name: string;
-            mimeType: string;
-            updatedAt: number;
-            lastAccessedAt: number;
-        };
-    };
-    setlists: {
-        key: string;
-        value: Setlist;
-    };
-    settings: {
-        key: string;
-        value: unknown;
-    };
-    annotations: {
-        key: string; // Composite key: `${uid}_${fileId}`
-        value: {
-            key: string;
-            fileId: string;
-            uid: string;
-            pageAnnotations: any; // Type defined in annotation store
-            updatedAt: number;
-        };
-    };
-}
-
-const DB_NAME = 'sheet-music-offline-db';
-const DB_VERSION = 2;
-
 export const initDB = async () => {
-    return openDB<OfflineDB>(DB_NAME, DB_VERSION, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('files')) {
-                db.createObjectStore('files', { keyPath: 'id' });
-            }
-            if (!db.objectStoreNames.contains('setlists')) {
-                db.createObjectStore('setlists', { keyPath: 'id' });
-            }
-            if (!db.objectStoreNames.contains('settings')) {
-                db.createObjectStore('settings', { keyPath: 'key' });
-            }
-            if (!db.objectStoreNames.contains('annotations')) {
-                db.createObjectStore('annotations', { keyPath: 'key' });
-            }
-        },
-    });
+    return getDB();
 };
 
 export const saveOfflineFile = async (id: string, blob: Blob, name: string, mimeType: string) => {
-    const db = await initDB();
+    const db = await getDB();
     try {
-        await db.put('files', {
+        const doc = await db.files.upsert({
             id,
-            blob,
             name,
             mimeType,
             updatedAt: Date.now(),
             lastAccessedAt: Date.now(),
+        });
+        await doc.putAttachment({
+            id: 'blob',
+            data: blob,
+            type: mimeType
         });
     } catch (err: unknown) {
         // On QuotaExceededError, evict stale files and retry once
         if (err instanceof DOMException && err.name === 'QuotaExceededError') {
             const evicted = await evictStaleFiles(14); // Evict files not accessed in 14 days
             if (evicted > 0) {
-                // Retry after eviction
-                await db.put('files', {
+                const docRetry = await db.files.upsert({
                     id,
-                    blob,
                     name,
                     mimeType,
                     updatedAt: Date.now(),
                     lastAccessedAt: Date.now(),
                 });
+                await docRetry.putAttachment({
+                    id: 'blob',
+                    data: blob,
+                    type: mimeType
+                });
                 return;
             }
         }
-        throw err; // Re-throw if not quota or eviction didn't help
+        throw err;
     }
 };
 
 export const getOfflineFile = async (id: string) => {
-    const db = await initDB();
-    const file = await db.get('files', id);
-    // Touch lastAccessedAt on read (fire-and-forget)
-    if (file) {
-        db.put('files', { ...file, lastAccessedAt: Date.now() }).catch(() => { });
+    const db = await getDB();
+    const doc = await db.files.findOne({ selector: { id } }).exec();
+
+    if (doc) {
+        // Touch lastAccessedAt on read (fire-and-forget)
+        doc.incrementalPatch({ lastAccessedAt: Date.now() }).catch(() => { });
+
+        const attachment = doc.getAttachment('blob');
+        if (attachment) {
+            const blobData = await attachment.getData();
+            return {
+                id: doc.id,
+                name: doc.name,
+                mimeType: doc.mimeType,
+                updatedAt: doc.updatedAt,
+                lastAccessedAt: doc.lastAccessedAt,
+                blob: blobData as Blob
+            };
+        }
     }
-    return file;
+    return undefined;
 };
 
 export const deleteOfflineFile = async (id: string) => {
-    const db = await initDB();
-    await db.delete('files', id);
+    const db = await getDB();
+    const doc = await db.files.findOne({ selector: { id } }).exec();
+    if (doc) {
+        await doc.remove();
+    }
 };
 
 export const saveOfflineSetlist = async (setlist: Setlist) => {
-    const db = await initDB();
-    await db.put('setlists', setlist);
+    const db = await getDB();
+    const cleanSetlist = JSON.parse(JSON.stringify(setlist)); // Clear any undefined properties for JSONSchema
+    await db.setlists.upsert(cleanSetlist);
 };
 
 export const getOfflineSetlists = async () => {
-    const db = await initDB();
-    return db.getAll('setlists');
+    const db = await getDB();
+    const docs = await db.setlists.find().exec();
+    return docs.map(d => d.toJSON()) as unknown as Setlist[];
 };
 
 export const isFileOffline = async (id: string) => {
-    const db = await initDB();
-    const result = await db.getKey('files', id);
-    return !!result;
+    const db = await getDB();
+    const doc = await db.files.findOne({ selector: { id } }).exec();
+    return !!doc;
 };
 
 /**
@@ -123,15 +99,16 @@ export const isFileOffline = async (id: string) => {
  * Returns the count of evicted files.
  */
 export const evictStaleFiles = async (maxAgeDays = 60): Promise<number> => {
-    const db = await initDB();
+    const db = await getDB();
     const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
-    const all = await db.getAll('files');
+
+    const allFiles = await db.files.find().exec();
     let evicted = 0;
 
-    for (const file of all) {
-        const lastAccess = file.lastAccessedAt || file.updatedAt || 0;
+    for (const doc of allFiles) {
+        const lastAccess = doc.lastAccessedAt || doc.updatedAt || 0;
         if (lastAccess < cutoff) {
-            await db.delete('files', file.id);
+            await doc.remove();
             evicted++;
         }
     }
@@ -141,9 +118,9 @@ export const evictStaleFiles = async (maxAgeDays = 60): Promise<number> => {
 
 // --- Annotations Offline Queue ---
 export const saveOfflineAnnotation = async (uid: string, fileId: string, pageAnnotations: any) => {
-    const db = await initDB();
+    const db = await getDB();
     const key = `${uid}_${fileId}`;
-    await db.put('annotations', {
+    await db.annotations.upsert({
         key,
         fileId,
         uid,
@@ -153,18 +130,23 @@ export const saveOfflineAnnotation = async (uid: string, fileId: string, pageAnn
 };
 
 export const getOfflineAnnotation = async (uid: string, fileId: string) => {
-    const db = await initDB();
+    const db = await getDB();
     const key = `${uid}_${fileId}`;
-    return db.get('annotations', key);
+    const doc = await db.annotations.findOne({ selector: { key } }).exec();
+    return doc ? doc.toJSON() : undefined;
 };
 
 export const getAllOfflineAnnotations = async () => {
-    const db = await initDB();
-    return db.getAll('annotations');
+    const db = await getDB();
+    const docs = await db.annotations.find().exec();
+    return docs.map(d => d.toJSON());
 };
 
 export const deleteOfflineAnnotation = async (uid: string, fileId: string) => {
-    const db = await initDB();
+    const db = await getDB();
     const key = `${uid}_${fileId}`;
-    await db.delete('annotations', key);
+    const doc = await db.annotations.findOne({ selector: { key } }).exec();
+    if (doc) {
+        await doc.remove();
+    }
 };

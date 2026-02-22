@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react"
+import React, { useEffect, useState, useCallback, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
@@ -147,13 +147,37 @@ function mergeAiResults(
 /**
  * Capture a page canvas as a JPEG base64 string for AI validation.
  */
-function capturePageImage(pageEl: HTMLElement): string | null {
+async function capturePageImage(pageEl: HTMLElement): Promise<string | null> {
     const canvas = pageEl.querySelector('canvas') as HTMLCanvasElement
     if (!canvas) return null
 
     // Create a smaller canvas for the API (1200px wide max)
     const maxWidth = 1200
     const scale = canvas.width > maxWidth ? maxWidth / canvas.width : 1
+
+    if (typeof OffscreenCanvas !== 'undefined') {
+        // OffscreenCanvas is non-blocking for blob conversion
+        const offscreen = new OffscreenCanvas(canvas.width * scale, canvas.height * scale)
+        const ctx = offscreen.getContext('2d')
+        if (!ctx) return null
+        ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height)
+
+        try {
+            const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.7 })
+            return new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => {
+                    const result = reader.result as string
+                    resolve(result ? result.split(',')[1] : null)
+                }
+                reader.readAsDataURL(blob)
+            })
+        } catch (e) {
+            // fallback if convertToBlob fails
+        }
+    }
+
+    // Fallback for older Safari
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = canvas.width * scale
     tempCanvas.height = canvas.height * scale
@@ -187,7 +211,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
-     
+
     }, [aiState.isEnabled, isRendered, pageData, hasScanned])
 
     // Write native key when we have enough data (once per file)
@@ -284,7 +308,15 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             setPageScanning(pageNumber, false)
 
             // ── Step 3: AI Validation (async, non-blocking) ──
-            runAiValidation(pageEl, mappedChords, userOverrides)
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => {
+                    runAiValidation(pageEl, mappedChords, userOverrides)
+                }, { timeout: 2000 })
+            } else {
+                setTimeout(() => {
+                    runAiValidation(pageEl, mappedChords, userOverrides)
+                }, 100)
+            }
 
         } catch (err: unknown) {
             logger.error("Scan Error:", err)
@@ -303,7 +335,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         try {
             await acquireAiSlot()
 
-            const image = capturePageImage(pageEl)
+            const image = await capturePageImage(pageEl)
             if (!image) {
                 releaseAiSlot()
                 return
@@ -386,11 +418,11 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         }
     }, [pageData, pageNumber, fileId, setPageData])
 
-    // ── Long-press to add chord ──
-    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    // ── Long-press to add new chord (background) ──
+    const bgLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [addingChord, setAddingChord] = useState<{ x: number; y: number } | null>(null)
 
-    const handleLongPressStart = useCallback((e: React.PointerEvent) => {
+    const handleBgLongPressStart = useCallback((e: React.PointerEvent) => {
         if (!isEditingChords || !pageRef.current) return
 
         const pageEl = pageRef.current
@@ -398,7 +430,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         const xPct = ((e.clientX - rect.left) / rect.width) * 100
         const yPct = ((e.clientY - rect.top) / rect.height) * 100
 
-        longPressTimer.current = setTimeout(async () => {
+        bgLongPressTimer.current = setTimeout(async () => {
             setAddingChord({ x: xPct, y: yPct })
 
             // Crop region and send to AI
@@ -421,7 +453,6 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const aiChords = json.chords as { text: string; x: number; y: number }[]
 
                 if (aiChords && aiChords.length > 0) {
-                    // Find the closest chord to where the user tapped
                     let closest = aiChords[0]
                     let closestDist = Infinity
                     for (const c of aiChords) {
@@ -459,12 +490,37 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         }, 500)
     }, [isEditingChords, pageRef, pageData, pageNumber, fileId, setPageData])
 
-    const handleLongPressEnd = useCallback(() => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current)
-            longPressTimer.current = null
+    const handleBgLongPressEnd = useCallback(() => {
+        if (bgLongPressTimer.current) {
+            clearTimeout(bgLongPressTimer.current)
+            bgLongPressTimer.current = null
         }
     }, [])
+
+    // ── Long-press to edit existing chord ──
+    const chordPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const handleChordPointerDown = useCallback((e: React.PointerEvent, i: number, chord: ChordOverlay) => {
+        e.stopPropagation() // Prevent background long-press
+
+        // Rapid response if already editing chords
+        if (isEditingChords) {
+            setEditPopover(editPopover?.index === i ? null : { index: i, x: chord.x, y: chord.y })
+            return
+        }
+
+        // Otherwise, require long press
+        chordPressTimer.current = setTimeout(() => {
+            setEditPopover({ index: i, x: chord.x, y: chord.y })
+        }, 500)
+    }, [isEditingChords, editPopover])
+
+    const handleChordPointerUpOrCancel = useCallback((e: React.PointerEvent) => {
+        if (chordPressTimer.current) {
+            clearTimeout(chordPressTimer.current)
+            chordPressTimer.current = null
+        }
+    }, [])
+
 
     // ── Render ──
     if (!aiState.isEnabled || !pageData) {
@@ -481,27 +537,67 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         : detectedKey
     const preferFlats = keyUsesFlats(targetKey)
 
-    // Common correction suggestions for edit mode
-    const getSuggestions = (chord: ChordOverlay): string[] => {
-        const root = chord.text.match(/^([A-G][#b]?)/)?.[1] || ''
-        if (!root) return []
+    // Contextual chord suggestions based on Diatonic Theory + Enharmonics
+    const getSuggestions = (chord: ChordOverlay, detKey: string | null): string[] => {
+        const rootMatch = chord.text.match(/^([A-G][#b]?)/)
+        if (!rootMatch) return []
+        const root = rootMatch[1]
+        const isMinor = chord.text.includes('m') && !chord.text.includes('maj')
         const suggestions = new Set<string>()
-        // Common corrections: add/remove minor, add 7, major variants
-        if (!chord.text.includes('m')) suggestions.add(root + 'm')
-        if (chord.text.includes('m') && !chord.text.includes('maj')) suggestions.add(root)
-        suggestions.add(root + '7')
-        suggestions.add(root + 'm7')
-        suggestions.add(root + 'maj7')
-        suggestions.delete(chord.text) // Don't suggest current value
-        return Array.from(suggestions).slice(0, 4)
+
+        // 1. Flip Quality (e.g. Dm <-> D)
+        if (isMinor) {
+            suggestions.add(chord.text.replace('m', ''))
+        } else {
+            suggestions.add(root + 'm' + chord.text.slice(root.length))
+        }
+
+        // 2. Add/Remove Dominant 7th
+        if (chord.text.includes('7')) {
+            suggestions.add(chord.text.replace('7', ''))
+        } else {
+            suggestions.add(chord.text + '7')
+        }
+
+        // 3. Enharmonic swap (if it's an accidental, flip it - e.g. G# -> Ab)
+        if (root.includes('#')) {
+            suggestions.add(transposeChord(root, 0, true) + chord.text.slice(root.length))
+        } else if (root.includes('b')) {
+            suggestions.add(transposeChord(root, 0, false) + chord.text.slice(root.length))
+        }
+
+        // 4. Diatonic chords in the detected key
+        if (detKey) {
+            const prefer = keyUsesFlats(detKey)
+            const keyIsMinor = detKey.endsWith('m') && !detKey.endsWith('maj')
+            const keyRoot = detKey.replace(/m$/, '')
+
+            if (keyIsMinor) {
+                suggestions.add(transposeChord(keyRoot, 0, prefer) + 'm') // i
+                suggestions.add(transposeChord(keyRoot, 3, prefer))       // III
+                suggestions.add(transposeChord(keyRoot, 5, prefer) + 'm') // iv
+                suggestions.add(transposeChord(keyRoot, 7, prefer) + 'm') // v
+                suggestions.add(transposeChord(keyRoot, 8, prefer))       // VI
+                suggestions.add(transposeChord(keyRoot, 10, prefer))      // VII
+            } else {
+                suggestions.add(transposeChord(keyRoot, 0, prefer))       // I
+                suggestions.add(transposeChord(keyRoot, 5, prefer))       // IV
+                suggestions.add(transposeChord(keyRoot, 7, prefer))       // V
+                suggestions.add(transposeChord(keyRoot, 9, prefer) + 'm') // vi
+                suggestions.add(transposeChord(keyRoot, 2, prefer) + 'm') // ii
+            }
+        }
+
+        suggestions.delete(chord.text)
+        return Array.from(suggestions).slice(0, 3) // Return top 3 alternatives
     }
 
     return (
         <div
             className="absolute inset-0 z-10 pointer-events-none"
-            onPointerDown={isEditingChords ? handleLongPressStart : undefined}
-            onPointerUp={isEditingChords ? handleLongPressEnd : undefined}
-            onPointerCancel={isEditingChords ? handleLongPressEnd : undefined}
+            onPointerDown={isEditingChords ? handleBgLongPressStart : undefined}
+            onPointerUp={isEditingChords ? handleBgLongPressEnd : undefined}
+            onPointerCancel={isEditingChords ? handleBgLongPressEnd : undefined}
             style={isEditingChords ? { pointerEvents: 'auto' } : undefined}
         >
             {/* Adding chord indicator */}
@@ -537,60 +633,78 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 const padV = 0
                 const padH = 2
 
+                const showPopover = editPopover?.index === i
+
                 return (
                     <div key={i} className="absolute" style={{ left: `${chord.x}%`, top: `${chord.y}%` }}>
                         <div
-                            className={isEditingChords ? "cursor-pointer" : ""}
-                            onClick={isEditingChords ? (e) => {
-                                e.stopPropagation()
-                                setEditPopover(editPopover?.index === i ? null : { index: i, x: chord.x, y: chord.y })
-                            } : undefined}
+                            className={isEditingChords ? "cursor-pointer" : "cursor-pointer touch-action-none"}
+                            onPointerDown={e => handleChordPointerDown(e, i, chord)}
+                            onPointerUp={handleChordPointerUpOrCancel}
+                            onPointerCancel={handleChordPointerUpOrCancel}
                             style={{
                                 margin: `-${padV}px 0 0 -${padH}px`,
                                 padding: `${padV}px ${padH + 2}px ${padV}px ${padH}px`,
                                 minWidth: chordWidth > 0 ? `${chordWidth}%` : undefined,
 
-                                backgroundColor: (needsOverlay || isEditingChords) ? 'rgba(255, 255, 255, 0.97)' : 'transparent',
+                                backgroundColor: (needsOverlay || isEditingChords || showPopover) ? 'rgba(255, 255, 255, 0.97)' : 'transparent',
                                 borderRadius: '1px',
 
                                 // Edit mode: dotted border on all chords
-                                border: isEditingChords ? '1px dashed rgba(139, 92, 246, 0.5)' : 'none',
+                                border: (isEditingChords || showPopover) ? '1px dashed rgba(139, 92, 246, 0.5)' : 'none',
 
-                                color: (needsOverlay || isEditingChords) ? '#6d28d9' : 'transparent',
+                                color: (needsOverlay || isEditingChords || showPopover) ? '#6d28d9' : 'transparent',
                                 fontSize: `${fontSize}px`,
                                 fontWeight: 700,
                                 fontFamily: "'Times New Roman', 'Georgia', serif",
                                 lineHeight: 1.1,
                                 whiteSpace: 'nowrap',
-                                zIndex: 100,
-                                pointerEvents: isEditingChords ? 'auto' : 'none',
+                                zIndex: showPopover ? 150 : 100,
+                                pointerEvents: 'auto', // Always allow interaction for long-press
                             }}
                         >
                             {displayText}
                         </div>
 
                         {/* Edit popover */}
-                        {isEditingChords && editPopover?.index === i && (
+                        {showPopover && (
                             <div
-                                className="absolute z-[200] bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-2 flex flex-wrap gap-1"
-                                style={{ top: '100%', left: '0', marginTop: '4px', minWidth: '180px' }}
+                                className="absolute z-[200] bg-zinc-900/95 backdrop-blur-md border border-zinc-700 rounded-lg shadow-2xl p-2 flex flex-col gap-1.5"
+                                style={{ top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '6px', minWidth: '180px' }}
                                 onClick={e => e.stopPropagation()}
                             >
-                                {getSuggestions(chord).map(suggestion => (
+                                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-1 pb-1 border-b border-zinc-500/30">
+                                    Quick Fix
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                    {getSuggestions(chord, detectedKey).map(suggestion => (
+                                        <button
+                                            key={suggestion}
+                                            className="px-2.5 py-1.5 bg-zinc-800 hover:bg-violet-600 active:bg-violet-700 text-white text-sm font-mono rounded transition-colors flex-1 min-w-[30%]"
+                                            onClick={() => handleChordCorrection(i, suggestion)}
+                                        >
+                                            {transposeChord(suggestion, transposition, preferFlats)}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-sm text-white font-mono placeholder:text-zinc-600 focus:outline-none focus:border-violet-500 transition-colors"
+                                        placeholder="Or type..."
+                                        defaultValue={chord.text}
+                                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                                            if (e.key === 'Enter') handleChordCorrection(i, e.currentTarget.value)
+                                        }}
+                                        autoFocus
+                                    />
                                     <button
-                                        key={suggestion}
-                                        className="px-2.5 py-1.5 bg-zinc-800 hover:bg-violet-600/30 text-white text-sm font-mono rounded transition-colors"
-                                        onClick={() => handleChordCorrection(i, suggestion)}
+                                        className="px-2.5 py-1 text-zinc-400 hover:text-white hover:bg-zinc-800 text-xs rounded transition-colors"
+                                        onClick={() => setEditPopover(null)}
                                     >
-                                        {suggestion}
+                                        Esc
                                     </button>
-                                ))}
-                                <button
-                                    className="px-2.5 py-1.5 text-zinc-500 hover:text-white text-xs rounded transition-colors"
-                                    onClick={() => setEditPopover(null)}
-                                >
-                                    ✕
-                                </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -599,3 +713,4 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
         </div>
     )
 }
+

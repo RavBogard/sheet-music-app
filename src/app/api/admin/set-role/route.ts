@@ -11,7 +11,7 @@ const setRoleSchema = z.object({
 
 export const POST = createApiHandler(
     async ({ body }) => {
-        const { targetUserId, newRole } = body
+        const { targetUserId, newRole } = body!
 
         // Set Custom Claims — preserve existing claims (like soundEngineer)
         const fbAuth = getAuth()

@@ -8,6 +8,7 @@ import {
     removePresence,
     subscribeToPresence,
 } from "@/lib/setlist-live"
+import { useMusicStore } from "@/lib/store"
 
 const HEARTBEAT_MS = 30_000
 
@@ -27,8 +28,10 @@ export function useSetlistPresence(
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     // Write presence
+    const gigModeActive = useMusicStore(s => s.gigModeActive)
+
     const write = useCallback(() => {
-        if (!setlistId || !uid) return
+        if (!setlistId || !uid || gigModeActive) return
         writePresence(setlistId, uid, {
             uid,
             displayName,
@@ -36,10 +39,16 @@ export function useSetlistPresence(
             status,
             currentSongIndex: null,
         })
-    }, [setlistId, uid, displayName, photoURL, status])
+    }, [setlistId, uid, displayName, photoURL, status, gigModeActive])
 
     useEffect(() => {
         if (!setlistId || !uid) return
+
+        if (gigModeActive) {
+            // Unmount/cleanup presence when entering gig mode
+            removePresence(setlistId, uid)
+            return
+        }
 
         // Initial write
         write()
@@ -82,10 +91,10 @@ export function useSetlistPresence(
             window.removeEventListener("pagehide", handleUnload)
             document.removeEventListener("visibilitychange", handleVisibilityChange)
             if (intervalRef.current) clearInterval(intervalRef.current)
-            unsub()
+            if (unsub) unsub()
             handleUnload()
         }
-    }, [setlistId, uid, write])
+    }, [setlistId, uid, write, gigModeActive])
 
     return others
 }

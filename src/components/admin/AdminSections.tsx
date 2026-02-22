@@ -7,11 +7,12 @@ import { BandPrepSection } from "@/components/admin/BandPrepSection"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { SystemSection } from "@/components/admin/SystemSection"
+import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 import { DeveloperToolsSection } from "@/components/admin/DeveloperToolsSection"
 import { UsageAnalyticsSection } from "@/components/admin/UsageAnalyticsSection"
-import { Loader2, Users, Music2, Volume2, Database, Settings, TerminalSquare, BarChart3 } from "lucide-react"
+import { Loader2, Users, Music2, Volume2, Database, Settings, TerminalSquare, BarChart3, Activity } from "lucide-react"
 
-type AdminTab = 'people' | 'band-prep' | 'sound' | 'library' | 'analytics' | 'system' | 'dev'
+type AdminTab = 'people' | 'live' | 'band-prep' | 'sound' | 'library' | 'analytics' | 'system' | 'dev'
 
 export default function AdminSections() {
     const { isAdmin, isBandLeader, loading: authLoading } = useAuth()
@@ -26,6 +27,7 @@ export default function AdminSections() {
 
     const tabs = [
         { id: 'people', label: 'People & Roles', icon: Users, show: isBandLeader },
+        { id: 'live', label: 'Live Service', icon: Activity, show: isBandLeader },
         { id: 'band-prep', label: 'Band Prep', icon: Music2, show: isAdmin },
         { id: 'sound', label: 'Sound System', icon: Volume2, show: isAdmin },
         { id: 'library', label: 'Library Data', icon: Database, show: isAdmin },
@@ -64,6 +66,7 @@ export default function AdminSections() {
             {/* Content Area */}
             <div className="flex-1 min-w-0">
                 {activeTab === 'people' && <PeopleSection />}
+                {activeTab === 'live' && <LiveServiceSection />}
                 {activeTab === 'band-prep' && isAdmin && <BandPrepSection />}
                 {activeTab === 'sound' && isAdmin && <SoundSystemSection />}
                 {activeTab === 'library' && isAdmin && <LibraryDataSection />}

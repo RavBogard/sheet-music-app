@@ -9,6 +9,7 @@ import {
     markAsRead,
     markAllAsRead,
 } from "@/lib/notification-store"
+import { useMusicStore } from "@/lib/store"
 import { Bell, ListMusic, Upload, Shield } from "lucide-react"
 
 const ICON_MAP: Record<string, typeof Bell> = {
@@ -28,11 +29,13 @@ export function NotificationBell() {
 
     const unreadCount = notifications.filter(n => !n.read).length
 
+    const gigModeActive = useMusicStore(s => s.gigModeActive)
+
     // Subscribe to notifications
     useEffect(() => {
-        if (!user?.uid) return
+        if (!user?.uid || gigModeActive) return
         return subscribeToNotifications(user.uid, setNotifications)
-    }, [user?.uid])
+    }, [user?.uid, gigModeActive])
 
     // Close on outside click
     useEffect(() => {
@@ -50,7 +53,7 @@ export function NotificationBell() {
 
     const handleClick = async (notif: Notification) => {
         if (!notif.read) {
-            await markAsRead(user.uid, notif.id).catch(() => {})
+            await markAsRead(user.uid, notif.id).catch(() => { })
         }
         if (notif.link) {
             router.push(notif.link)
@@ -59,7 +62,7 @@ export function NotificationBell() {
     }
 
     const handleMarkAllRead = async () => {
-        await markAllAsRead(user.uid).catch(() => {})
+        await markAllAsRead(user.uid).catch(() => { })
     }
 
     return (

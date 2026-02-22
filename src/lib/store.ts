@@ -63,6 +63,10 @@ export interface MusicState {
     isEditingChords: boolean
     setEditingChords: (editing: boolean) => void
 
+    // Gig Mode (Performance)
+    gigModeActive: boolean
+    setGigModeActive: (active: boolean) => void
+
     capoFret: number | null
     setCapoFret: (fret: number | null) => void
 
@@ -128,6 +132,7 @@ export const useMusicStore = create<MusicState>()(
                 fret: 0
             },
             isEditingChords: false,
+            gigModeActive: false,
             capoFret: null,
 
             audio: {
@@ -231,6 +236,7 @@ export const useMusicStore = create<MusicState>()(
             setCapoFret: (fret) => set({ capoFret: fret }),
 
             setEditingChords: (editing) => set({ isEditingChords: editing }),
+            setGigModeActive: (active) => set({ gigModeActive: active }),
 
             reset: () => set({
                 fileType: null,
