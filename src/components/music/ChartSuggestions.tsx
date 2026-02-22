@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useLibraryStore } from '@/lib/library-store'
+import { useLibrary } from '@/hooks/use-library'
 import { DriveFile } from '@/types/models'
 import { FileText, Music, PlusCircle } from 'lucide-react'
 import { useSetlistStore } from '@/lib/setlist-store'
@@ -15,16 +16,9 @@ interface ChartSuggestionsProps {
 }
 
 export function ChartSuggestions({ trackName, currentFileId, isReplaceMode }: ChartSuggestionsProps) {
-    const { allFiles, loadLibrary, initialized } = useLibraryStore()
-    const [searching, setSearching] = useState(false)
+    const { allFiles, initialized } = useLibraryStore()
+    const { isLoading: searching } = useLibrary()
     const router = useRouter()
-
-    useEffect(() => {
-        if (!initialized) {
-            setSearching(true)
-            loadLibrary().finally(() => setSearching(false))
-        }
-    }, [initialized, loadLibrary])
 
     // Simple fuzzy match algorithm (since fuse might not be initialized cleanly if allFiles is fresh)
     const suggestions = useMemo(() => {

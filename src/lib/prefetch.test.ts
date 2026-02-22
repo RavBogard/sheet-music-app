@@ -3,22 +3,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { prefetchUpcoming, isFilePrefetched } from './prefetch'
 import { QueueItem } from './store'
 
-// Mock offline-store
-vi.mock('./offline-store', () => ({
-    isFileOffline: vi.fn(),
-    saveOfflineFile: vi.fn(),
+// Mock cache-utils
+vi.mock('./cache-utils', () => ({
+    isFileCached: vi.fn(),
 }))
 
-import { isFileOffline, saveOfflineFile } from './offline-store'
+import { isFileCached } from './cache-utils'
 
-const mockIsFileOffline = isFileOffline as ReturnType<typeof vi.fn>
-const mockSaveOfflineFile = saveOfflineFile as ReturnType<typeof vi.fn>
+const mockIsFileCached = isFileCached as ReturnType<typeof vi.fn>
 
 describe('prefetchUpcoming', () => {
     beforeEach(() => {
         vi.stubGlobal('fetch', vi.fn())
-        mockIsFileOffline.mockReset()
-        mockSaveOfflineFile.mockReset()
+        mockIsFileCached.mockReset()
     })
 
     afterEach(() => {
@@ -30,13 +27,13 @@ describe('prefetchUpcoming', () => {
 
     it('prefetches next 3 files by default', async () => {
         const queue = makeQueue(['a', 'b', 'c', 'd', 'e'])
-        mockIsFileOffline.mockResolvedValue(false) // Not cached
-        ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
-            Promise.resolve(new Response('pdf-data', {
-                status: 200,
-                headers: { 'content-type': 'application/pdf' },
-            }))
-        )
+        mockIsFileCached.mockResolvedValue(false) // Not cached
+            ; (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+                Promise.resolve(new Response('pdf-data', {
+                    status: 200,
+                    headers: { 'content-type': 'application/pdf' },
+                }))
+            )
 
         await prefetchUpcoming(queue, 0)
 
@@ -45,20 +42,19 @@ describe('prefetchUpcoming', () => {
         expect(globalThis.fetch).toHaveBeenCalledWith('/api/drive/file/b')
         expect(globalThis.fetch).toHaveBeenCalledWith('/api/drive/file/c')
         expect(globalThis.fetch).toHaveBeenCalledWith('/api/drive/file/d')
-        expect(mockSaveOfflineFile).toHaveBeenCalledTimes(3)
     })
 
     it('skips already cached files', async () => {
         const queue = makeQueue(['a', 'b', 'c'])
-        mockIsFileOffline
+        mockIsFileCached
             .mockResolvedValueOnce(true) // b is cached
             .mockResolvedValueOnce(false) // c is not
-        ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
-            Promise.resolve(new Response('pdf-data', {
-                status: 200,
-                headers: { 'content-type': 'application/pdf' },
-            }))
-        )
+            ; (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+                Promise.resolve(new Response('pdf-data', {
+                    status: 200,
+                    headers: { 'content-type': 'application/pdf' },
+                }))
+            )
 
         await prefetchUpcoming(queue, 0)
 
@@ -68,7 +64,7 @@ describe('prefetchUpcoming', () => {
 
     it('does nothing for empty queue', async () => {
         await prefetchUpcoming([], 0)
-        expect(mockIsFileOffline).not.toHaveBeenCalled()
+        expect(mockIsFileCached).not.toHaveBeenCalled()
     })
 
     it('does nothing when at end of queue', async () => {
@@ -79,8 +75,8 @@ describe('prefetchUpcoming', () => {
 
     it('handles fetch errors silently', async () => {
         const queue = makeQueue(['a', 'b'])
-        mockIsFileOffline.mockResolvedValue(false)
-        ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+        mockIsFileCached.mockResolvedValue(false)
+            ; (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
 
         // Should not throw
         await expect(prefetchUpcoming(queue, 0)).resolves.toBeUndefined()
@@ -88,13 +84,13 @@ describe('prefetchUpcoming', () => {
 
     it('respects custom lookahead', async () => {
         const queue = makeQueue(['a', 'b', 'c', 'd', 'e'])
-        mockIsFileOffline.mockResolvedValue(false)
-        ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
-            Promise.resolve(new Response('data', {
-                status: 200,
-                headers: { 'content-type': 'application/pdf' },
-            }))
-        )
+        mockIsFileCached.mockResolvedValue(false)
+            ; (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+                Promise.resolve(new Response('data', {
+                    status: 200,
+                    headers: { 'content-type': 'application/pdf' },
+                }))
+            )
 
         await prefetchUpcoming(queue, 0, 1) // Only 1 ahead
 
@@ -105,21 +101,21 @@ describe('prefetchUpcoming', () => {
 
 describe('isFilePrefetched', () => {
     beforeEach(() => {
-        mockIsFileOffline.mockReset()
+        mockIsFileCached.mockReset()
     })
 
     it('returns true when file is cached', async () => {
-        mockIsFileOffline.mockResolvedValue(true)
+        mockIsFileCached.mockResolvedValue(true)
         expect(await isFilePrefetched('abc')).toBe(true)
     })
 
     it('returns false when file is not cached', async () => {
-        mockIsFileOffline.mockResolvedValue(false)
+        mockIsFileCached.mockResolvedValue(false)
         expect(await isFilePrefetched('abc')).toBe(false)
     })
 
     it('returns false on error', async () => {
-        mockIsFileOffline.mockRejectedValue(new Error('DB error'))
+        mockIsFileCached.mockRejectedValue(new Error('DB error'))
         expect(await isFilePrefetched('abc')).toBe(false)
     })
 })

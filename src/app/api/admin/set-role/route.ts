@@ -10,8 +10,8 @@ const setRoleSchema = z.object({
 })
 
 export const POST = createApiHandler(
-    async ({ body }) => {
-        const { targetUserId, newRole } = body!
+    async (ctx) => {
+        const { targetUserId, newRole } = ctx.body!
 
         // Set Custom Claims — preserve existing claims (like soundEngineer)
         const fbAuth = getAuth()
@@ -27,6 +27,21 @@ export const POST = createApiHandler(
             role: newRole,
             claimsUpdatedAt: FieldValue.serverTimestamp(),
         })
+
+        // Audit Log
+        try {
+            await db.collection("auditLogs").add({
+                action: "ROLE_CHANGE",
+                targetUserId,
+                newRole,
+                previousRole: existingClaims.role || "pending",
+                actorUid: ctx.auth.uid,
+                actorEmail: ctx.auth.email || "unknown",
+                timestamp: FieldValue.serverTimestamp()
+            })
+        } catch (e) {
+            logger.error("Failed to write audit log:", e)
+        }
 
         // Leader Demotion Guard: Lock public setlists
         if (newRole === 'member' || newRole === 'pending') {

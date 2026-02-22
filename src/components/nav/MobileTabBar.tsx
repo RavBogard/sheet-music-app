@@ -68,7 +68,7 @@ export function MobileTabBar() {
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border" />
+            <div className="absolute inset-0 material-thick" />
 
             <div className="relative flex items-center justify-around h-16 sm:h-20 px-2">
                 {navItems.map((item) => {
@@ -78,22 +78,22 @@ export function MobileTabBar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 transition-all active:scale-95 group",
-                                item.active ? "text-blue-400" : "text-muted-foreground hover:text-foreground"
+                                "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
+                                item.active ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
                             )}
                         >
-                            <div className="relative">
+                            <div className={cn(
+                                "relative flex items-center justify-center w-12 h-8 rounded-full transition-colors duration-300",
+                                item.active ? "bg-accent" : "bg-transparent"
+                            )}>
                                 <Icon className={cn(
-                                    "w-6 h-6 transition-all duration-300",
-                                    item.active && "fill-blue-400/20 stroke-[2.5px]"
+                                    "w-5 h-5 transition-all duration-300",
+                                    item.active ? "fill-foreground/20 stroke-[2.5px]" : "stroke-2"
                                 )} />
-                                {item.active && (
-                                    <div className="absolute -inset-2 blur-lg rounded-full opacity-50 bg-blue-500/20" />
-                                )}
                             </div>
                             <span className={cn(
                                 "text-[10px] font-medium transition-colors",
-                                item.active ? "text-blue-400" : "text-muted-foreground"
+                                item.active ? "text-foreground font-semibold" : "text-muted-foreground"
                             )}>
                                 {item.label}
                             </span>

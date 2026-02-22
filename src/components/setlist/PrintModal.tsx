@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
+import { db } from "@/lib/firebase"
+import { doc, onSnapshot } from "firebase/firestore"
 import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
 import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
@@ -48,6 +50,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
     }))
     const [eventName, setEventName] = useState("")
     const [generating, setGenerating] = useState(false)
+    const [progressMsg, setProgressMsg] = useState("")
+    const [progressPct, setProgressPct] = useState(0)
     const [error, setError] = useState<string | null>(null)
 
     // Musicians
@@ -134,12 +138,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         if (preset?.label) parts.push(preset.label)
         if (myProfile.preferredCapoFret) parts.push(`Capo ${myProfile.preferredCapoFret}`)
         return parts.join(" — ")
-     
+
     }, [myProfile, user?.uid])
 
     // ── PDF Generation ──
     const generateForMusician = async (
         name: string, transposition: number, preferFlats: boolean, capoFret: number,
+        onProgress?: (msg: string, pct: number) => void
     ): Promise<Blob> => {
         const response = await apiFetch('/api/setlist/print', {
             method: 'POST',
@@ -156,7 +161,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
                         transposition: tp ? tp.transposition : transposition,
                         preferFlats: tp ? tp.preferFlats : preferFlats,
                         capoFret: tp ? tp.capoFret : capoFret,
-                        // Service flow fields
                         type: t.type,
                         performer: t.performer,
                         estimatedMinutes: t.estimatedMinutes,
@@ -165,11 +169,39 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
                 })
             })
         })
+
         if (!response.ok) {
             const err = await response.json()
-            throw new Error(err.error || 'Failed to generate PDF')
+            throw new Error(err.error || 'Failed to start PDF generation')
         }
-        return response.blob()
+
+        const { jobId } = await response.json()
+
+        return new Promise((resolve, reject) => {
+            const unsub = onSnapshot(doc(db, "print_jobs", jobId), async (snap) => {
+                const data = snap.data()
+                if (!data) return
+
+                if (data.status === 'error') {
+                    unsub()
+                    reject(new Error(data.message || 'Generation failed'))
+                } else if (data.status === 'complete') {
+                    unsub()
+                    try {
+                        onProgress?.('Downloading PDF...', 100)
+                        const pdfRes = await fetch(data.downloadUrl)
+                        resolve(await pdfRes.blob())
+                    } catch (e) {
+                        reject(new Error('Failed to download generated PDF'))
+                    }
+                } else {
+                    onProgress?.(data.message || 'Processing...', data.progress || 0)
+                }
+            }, (err) => {
+                unsub()
+                reject(err)
+            })
+        })
     }
 
     const handleEmailPackets = async () => {
@@ -204,23 +236,41 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         setError(null)
 
         try {
+            setProgressMsg("Starting background jobs...")
+            setProgressPct(0)
+
             if (printMode === "select-musicians" && selectedUids.length > 1) {
                 const JSZip = (await import("jszip")).default
                 const zip = new JSZip()
 
-                for (const uid of selectedUids) {
+                let completed = 0
+                const total = selectedUids.length
+
+                // Run jobs concurrently
+                const promises = selectedUids.map(async (uid) => {
                     const m = musicians.find(x => x.uid === uid)
-                    if (!m) continue
+                    if (!m) return
                     const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null
                     const label = preset?.label || ''
                     const name = `${m.displayName}${label ? ` - ${label}` : ''}`
+
                     const blob = await generateForMusician(
                         name, m.profile.defaultTransposition || 0,
                         m.profile.preferFlats || false, m.profile.preferredCapoFret || 0,
+                        (msg, pct) => {
+                            // Only update UI with overall progress in batch mode
+                            setProgressMsg(`Processing packets... (${completed}/${total})`)
+                        }
                     )
-                    zip.file(`${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`, blob)
-                }
 
+                    zip.file(`${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`, blob)
+                    completed++
+                    setProgressPct(Math.round((completed / total) * 100))
+                })
+
+                await Promise.all(promises)
+
+                setProgressMsg("Zipping files...")
                 const zipBlob = await zip.generateAsync({ type: 'blob' })
                 const url = URL.createObjectURL(zipBlob)
                 const a = document.createElement('a')
@@ -254,7 +304,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
                 }
             }
 
-            const blob = await generateForMusician(name, transposition, preferFlats, capoFret)
+            const blob = await generateForMusician(name, transposition, preferFlats, capoFret, (msg, pct) => {
+                setProgressMsg(msg)
+                setProgressPct(pct)
+            })
+
+            setProgressMsg("Ready!")
+            setProgressPct(100)
             const url = URL.createObjectURL(blob)
 
             if (mode === 'download') {
@@ -292,55 +348,74 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
 
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 p-6 space-y-5">
-                    {/* Basic Fields */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="col-span-2">
-                            <label className="text-sm text-muted-foreground mb-1 block">Title</label>
-                            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" />
+                    {generating ? (
+                        <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                            <div className="text-center space-y-2 w-full max-w-xs">
+                                <h3 className="font-semibold text-lg">Generating PDF...</h3>
+                                <p className="text-sm text-muted-foreground">{progressMsg || 'Processing...'}</p>
+                                <div className="h-2 w-full bg-muted rounded-full overflow-hidden mt-4">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-300 ease-out"
+                                        style={{ width: `${progressPct}%` }}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="text-sm text-muted-foreground mb-1 block">Date</label>
-                            <Input value={date} onChange={e => setDate(e.target.value)} />
-                        </div>
-                        <div>
-                            <label className="text-sm text-muted-foreground mb-1 block">Event (optional)</label>
-                            <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="e.g., Shabbat Morning" />
-                        </div>
-                    </div>
+                    ) : (
+                        <>
+                            {/* Basic Fields */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="col-span-2">
+                                    <label className="text-sm text-muted-foreground mb-1 block">Title</label>
+                                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-1 block">Date</label>
+                                    <Input value={date} onChange={e => setDate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground mb-1 block">Event (optional)</label>
+                                    <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="e.g., Shabbat Morning" />
+                                </div>
+                            </div>
 
-                    <PrintModeSelector
-                        printMode={printMode}
-                        setPrintMode={setPrintMode}
-                        hasMyProfile={hasMyProfile}
-                        myLabel={myLabel}
-                        musicians={musicians}
-                        selectedUids={selectedUids}
-                        setSelectedUids={setSelectedUids}
-                        toggleMusician={toggleMusician}
-                    />
+                            <PrintModeSelector
+                                printMode={printMode}
+                                setPrintMode={setPrintMode}
+                                hasMyProfile={hasMyProfile}
+                                myLabel={myLabel}
+                                musicians={musicians}
+                                selectedUids={selectedUids}
+                                setSelectedUids={setSelectedUids}
+                                toggleMusician={toggleMusician}
+                            />
 
-                    {/* Transposition Details (just-me mode) */}
-                    {printMode === "just-me" && activeTranspositions > 0 && (
-                        <TransposeTrackList
-                            tracks={tracks}
-                            trackTranspositions={trackTranspositions}
-                            onUpdateTrack={updateTrackTranspose}
-                            onApplyGlobal={(s) => applyGlobalTranspose(s)}
-                            activeTranspositions={activeTranspositions}
-                        />
-                    )}
+                            {/* Transposition Details (just-me mode) */}
+                            {printMode === "just-me" && activeTranspositions > 0 && (
+                                <TransposeTrackList
+                                    tracks={tracks}
+                                    trackTranspositions={trackTranspositions}
+                                    onUpdateTrack={updateTrackTranspose}
+                                    onApplyGlobal={(s) => applyGlobalTranspose(s)}
+                                    activeTranspositions={activeTranspositions}
+                                />
+                            )}
 
-                    <PrintStats
-                        totalTracks={tracks.length}
-                        linkedPdfCount={linkedPdfTracks.length}
-                        activeTranspositions={activeTranspositions}
-                        showTranspositions={printMode !== "standard"}
-                    />
+                            <PrintStats
+                                totalTracks={tracks.length}
+                                linkedPdfCount={linkedPdfTracks.length}
+                                activeTranspositions={activeTranspositions}
+                                showTranspositions={printMode !== "standard"}
+                            />
 
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
-                            {error}
-                        </div>
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                        </>
                     )}
                 </div>
 

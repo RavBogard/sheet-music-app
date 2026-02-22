@@ -12,6 +12,7 @@ import { useMusicStore, FileType } from "@/lib/store"
 import { NoResultsIllustration, EmptyFolderIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
+import { useLibrary } from "@/hooks/use-library"
 import { useContentSearch } from "@/hooks/use-content-search"
 import { ContentSearchResults } from "@/components/library/ContentSearchResults"
 import { DriveFile } from "@/types/models"
@@ -53,11 +54,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     const {
         displayedFiles,
-        loading,
-        loadLibrary,
+        loading: filtering,
         setFilter,
         initialized,
-        error,
         reset,
         hydrate
     } = useLibraryStore()
@@ -88,11 +87,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     }
 
     // Automatically load the library on mount if needed
-    useEffect(() => {
-        if (!initialized && initialLibrary.length === 0) {
-            loadLibrary()
-        }
-    }, [initialized, loadLibrary, initialLibrary.length])
+    const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary()
+    const loading = filtering || queryLoading
+    const error = queryError ? queryError.message : null
 
     const [searchQuery, setSearchQuery] = useState("")
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
@@ -123,7 +120,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
-    useEffect(() => { loadLibrary() }, [loadLibrary])
     useEffect(() => { setFilter(currentFolderId, searchQuery) }, [currentFolderId, searchQuery, setFilter])
     useEffect(() => { return () => { reset() } }, [reset])
 
@@ -205,7 +201,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             }
 
             toast.success("Saved! The MusicXML file is now in this folder.")
-            loadLibrary(true)
+            loadLibrary()
         } catch (e: unknown) {
             logger.error("Digitize Error:", e)
             toast.error(e instanceof Error ? e.message : "Digitize failed")
@@ -259,7 +255,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 {(isBandLeader || isAdmin) && (
                     <UploadDialog onUploadComplete={() => {
                         // Trigger a re-fetch of the library
-                        loadLibrary(true)
+                        loadLibrary()
                         toast.success("Library updated with your upload")
                     }} />
                 )}
@@ -345,7 +341,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <LibrarySkeleton />
                 ) : !initialized && error ? (
                     <div className="max-w-md mx-auto mt-20">
-                        <ErrorState title="Library Error" description={error || "Failed to load files"} onRetry={() => loadLibrary(true)} />
+                        <ErrorState title="Library Error" description={error || "Failed to load files"} onRetry={() => loadLibrary()} />
                     </div>
                 ) : (
                     <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2 pb-10">
@@ -383,7 +379,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                                     body: JSON.stringify({ fileId: item.id, archive: true })
                                                 }).then(res => {
                                                     if (!res.ok) throw new Error("Failed to archive chart")
-                                                    loadLibrary(true)
+                                                    loadLibrary()
                                                 }),
                                                 {
                                                     loading: 'Archiving chart...',

@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
-import { getOfflineFile } from '@/lib/offline-store'
 import { PDFPageWrapper } from './PDFPageWrapper'
 import { ChartSuggestions } from './ChartSuggestions'
 
@@ -50,22 +49,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         const fileIdMatch = fetchUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
         const fileId = fileIdMatch ? fileIdMatch[1] : null
 
-        // Try offline cache first — instant, no network
-        if (fileId) {
-            try {
-                const offlineFile = await getOfflineFile(fileId)
-                if (offlineFile) {
-                    logger.info("Serving offline file for:", fileId)
-                    const arrayBuffer = await offlineFile.blob.arrayBuffer()
-                    setSource({ data: new Uint8Array(arrayBuffer) })
-                    setLoading(false)
-                    return
-                }
-            } catch {
-                // IndexedDB may fail — fall through to network
-            }
-        }
-
+        // Rely on standard ServiceWorker caching instead of IndexedDB.
         // Fetch the PDF ourselves so we can diagnose failures
         try {
             const res = await fetch(fetchUrl)

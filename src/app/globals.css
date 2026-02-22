@@ -81,9 +81,9 @@
   --success-foreground: oklch(0.985 0 0);
 
   /* Softer, translucent borders */
-  --border: oklch(0.85 0.01 260 / 0.4);
-  --input: oklch(0.85 0.01 260 / 0.5);
-  --ring: oklch(0.60 0.01 260 / 0.4);
+  --border: oklch(0.85 0.005 260 / 0.5);
+  --input: oklch(0.85 0.005 260 / 0.5);
+  --ring: oklch(0.60 0.005 260 / 0.3);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -130,7 +130,7 @@
 
   --border: oklch(0.35 0.015 260 / 0.4);
   --input: oklch(0.35 0.015 260 / 0.5);
-  --ring: oklch(0.50 0.015 260 / 0.5);
+  --ring: oklch(0.50 0.015 260 / 0.4);
 
   --sidebar: oklch(0.16 0.015 260 / 0.8);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -155,51 +155,77 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@layer utilities {
-  .bg-noise {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 50;
-    opacity: 0;
-  }
+@utility bg-noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+}
 
-  :is(.dark *).bg-noise,
-  .dark>.bg-noise,
-  .dark .bg-noise {
-    opacity: 0.04;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  }
+:is(.dark *).bg-noise,
+.dark>.bg-noise,
+.dark .bg-noise {
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
 
-  .glass {
-    @apply bg-background/65 backdrop-blur-2xl border border-border/60;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-  }
+@utility glass {
+  @apply bg-background/65 backdrop-blur-2xl border border-border/60;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+}
 
-  :is(.dark *).glass,
-  .dark .glass {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  }
+:is(.dark *).glass,
+.dark .glass {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
 
-  .glass-card {
-    @apply bg-card/70 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-lg shadow-black/5 dark:shadow-black/20;
-  }
+@utility glass-card {
+  @apply bg-card/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5;
+}
 
-  .fluid-interaction {
-    @apply transition-all duration-400 active:scale-[0.98];
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
+:is(.dark *).glass-card,
+.dark .glass-card {
+  @apply border-white/5 shadow-black/20;
+}
 
-  .text-eyebrow {
-    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
-  }
+@utility fluid-interaction {
+  @apply transition-all duration-400 active:scale-[0.98];
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-  .animate-spring {
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
+@utility text-eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-widest text-muted-foreground;
+}
+
+@utility text-title {
+  @apply text-2xl font-semibold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+@utility text-title-large {
+  @apply text-4xl font-bold tracking-tighter;
+  letter-spacing: -0.04em;
+}
+
+@utility animate-spring {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Apple-style Material Classes */
+@utility material-thick {
+  @apply bg-background/85 backdrop-blur-2xl border-b border-border/50;
+}
+
+@utility material-thin {
+  @apply bg-popover/75 backdrop-blur-xl border border-border shadow-xl;
+}
+
+@utility list-cell {
+  @apply flex items-center px-4 py-3 bg-card transition-colors hover:bg-accent/50 fluid-interaction border-b border-border/40;
 }
 
 /* ── Dashboard Stagger Animations ── */

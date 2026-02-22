@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
+import { useLibrary } from "@/hooks/use-library"
 import { useChatStore } from "@/lib/chat-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import {
@@ -24,8 +25,10 @@ import { NotificationBell } from "@/components/nav/NotificationBell"
 export function DesktopHeader() {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, profile, isMember, signIn, signOut } = useAuth()
-    const { allFiles, loadLibrary } = useLibraryStore()
+    const { user, profile, isMember, isBandLeader, signIn, signOut } = useAuth()
+    const { allFiles } = useLibraryStore()
+    // Start background sync if logged in
+    useLibrary()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
@@ -40,6 +43,7 @@ export function DesktopHeader() {
         { label: "Home", href: "/", show: true },
         { label: "Setlists", href: "/setlists", show: true },
         { label: "Library", href: "/library", show: isMember },
+        { label: "Leader", href: "/leader", show: isBandLeader },
         { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },
     ]
 
@@ -57,10 +61,6 @@ export function DesktopHeader() {
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
-
-    useEffect(() => {
-        if (user?.uid) loadLibrary()
-    }, [user?.uid, loadLibrary])
 
     const handleSelectSong = (file: DriveFile) => {
         const type = file.name.endsWith(".xml") || file.name.endsWith(".musicxml") ? "musicxml" : "pdf"
@@ -81,7 +81,7 @@ export function DesktopHeader() {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-md border-b border-border overflow-hidden">
+        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick overflow-hidden">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
@@ -95,8 +95,8 @@ export function DesktopHeader() {
                         return (
                             <Link key={link.href} href={link.href}
                                 className={cn(
-                                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                    "px-4 py-1.5 rounded-full text-sm font-medium transition-all fluid-interaction",
+                                    isActive ? "bg-accent text-foreground shadow-sm border border-border/50" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                                 )}>
                                 {link.label}
                             </Link>
@@ -117,30 +117,30 @@ export function DesktopHeader() {
 
                         {/* AI Chat */}
                         {congregation.features.ai && (
-                        <Button
-                            variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
-                            className={cn(
-                                "gap-2 rounded-full transition-colors",
-                                isChatOpen ? "bg-purple-600 hover:bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                            )}
-                        >
-                            <Sparkles className="h-4 w-4" />
-                            <span className="hidden lg:inline">AI Assistant</span>
-                        </Button>
+                            <Button
+                                variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
+                                className={cn(
+                                    "gap-2 rounded-full transition-colors",
+                                    isChatOpen ? "bg-foreground text-background hover:bg-foreground/90 shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                                )}
+                            >
+                                <Sparkles className="h-4 w-4" />
+                                <span className="hidden lg:inline">AI Assistant</span>
+                            </Button>
                         )}
 
                         {/* Search */}
                         <div className="relative group" ref={searchRef}>
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
                             <Input
                                 placeholder="Search songs..."
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-48 lg:w-64 bg-muted border-border rounded-full pl-9 h-9 text-sm focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                className="w-48 lg:w-64 bg-input/30 border-border/50 rounded-full pl-9 h-9 text-sm focus:ring-foreground/10 focus:bg-background focus:border-foreground/20 transition-all fluid-interaction shadow-inner"
                             />
                             {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full mt-2 left-0 right-0 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-50">
+                                <div className="absolute top-full mt-2 left-0 right-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
                                             <button key={file.id} onClick={() => handleSelectSong(file)}
@@ -194,7 +194,7 @@ export function DesktopHeader() {
                         </DropdownMenu>
                     </>
                 ) : (
-                    <Button onClick={async () => { try { await signIn() } catch {} }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
+                    <Button onClick={async () => { try { await signIn() } catch { } }} variant="outline" className="border-border hover:bg-accent hover:text-foreground">
                         Sign In
                     </Button>
                 )}

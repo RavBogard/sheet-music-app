@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, onSnapshot, doc, getDocs } from "firebase/firestore"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
+import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
 
 export function LiveServiceSection() {
     const { isAdmin, isBandLeader } = useAuth()
@@ -168,6 +169,13 @@ export function LiveServiceSection() {
                     </div>
                 </div>
             </div>
+
+            {/* Featured Setlist Control (Admins Only) */}
+            {isAdmin && (
+                <div className="mt-6">
+                    <FeaturedSetlistCard activeSetlists={activeSetlists} />
+                </div>
+            )}
 
             {/* Active Sessions Detail */}
             <div className="mt-6">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
-import { isFileOffline } from "@/lib/offline-store"
+import { isFileCached } from "@/lib/cache-utils"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { PlayCircle, ArrowRight, CheckCircle2, Circle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -50,10 +50,10 @@ export function HeroCard({
     useEffect(() => {
         const fileIds = (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!)
         if (fileIds.length === 0) return
-        Promise.all(fileIds.map(id => isFileOffline(id))).then(results => {
+        Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
             const cached = results.filter(Boolean).length
             setOfflineStatus({ cached, total: fileIds.length })
-        }).catch(() => {/* silent */})
+        }).catch(() => {/* silent */ })
     }, [setlist.tracks])
 
     const urgencyLabel = prep?.urgencyLabel || (() => {

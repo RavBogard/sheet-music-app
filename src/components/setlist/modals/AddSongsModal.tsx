@@ -15,6 +15,7 @@ import {
     SheetFooter
 } from "@/components/ui/sheet"
 import { useLibraryStore } from "@/lib/library-store"
+import { useLibrary } from "@/hooks/use-library"
 import { fetchUsageData, getSuggestions, SongSuggestion, UsageInfo } from "@/lib/song-suggestions"
 
 interface AddSongsModalProps {
@@ -32,9 +33,10 @@ export function AddSongsModal({
 }: AddSongsModalProps) {
     const {
         displayedFiles,
-        loadLibrary,
         setFilter,
     } = useLibraryStore()
+
+    const { isLoading: libraryLoading } = useLibrary()
 
     const [selectedFiles, setSelectedFiles] = useState<Map<string, DriveFile>>(new Map())
     const [searchQuery, setSearchQuery] = useState("")
@@ -52,13 +54,11 @@ export function AddSongsModal({
 
     // Fetch on mount/change
     useEffect(() => {
-        if (isOpen) {
-            loadLibrary()
-        } else {
+        if (!isOpen) {
             // Reset on close
             usageFetchedRef.current = false
         }
-    }, [isOpen, loadLibrary])
+    }, [isOpen])
 
     useEffect(() => {
         if (isOpen) {

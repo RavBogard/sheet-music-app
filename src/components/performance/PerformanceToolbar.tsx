@@ -74,7 +74,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
     return (
-        <div className="glass border-t-0 shrink-0 pb-safe">
+        <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
 
             {/* ── MOBILE/TABLET: Two-row layout ── */}
             <div className="lg:hidden w-full">

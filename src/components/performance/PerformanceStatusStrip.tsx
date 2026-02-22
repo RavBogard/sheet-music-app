@@ -19,9 +19,9 @@ export function PerformanceStatusStrip() {
     return (
         <div
             className="fixed top-3 right-3 z-40 pointer-events-none
-                bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5
-                flex items-center gap-2 text-white/70 text-xs font-medium
-                select-none shadow-sm border border-white/5"
+                material-thin !bg-black/40 rounded-full px-3 py-1.5
+                flex items-center gap-2 text-white/80 text-xs font-medium
+                select-none shadow-lg border-white/10"
             aria-label={`Song ${queueIndex + 1} of ${playbackQueue.length}: ${current.name}`}
             role="status"
         >

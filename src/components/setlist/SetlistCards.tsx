@@ -4,7 +4,7 @@ import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2 } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
-import { isFileOffline } from "@/lib/offline-store"
+import { isFileCached } from "@/lib/cache-utils"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -35,7 +35,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
     useEffect(() => {
         const fileIds = (setlist.tracks || []).map(t => t.fileId).filter(Boolean) as string[]
         if (fileIds.length === 0) { setOfflineStatus('none'); return }
-        Promise.all(fileIds.map(id => isFileOffline(id))).then(results => {
+        Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
             const cached = results.filter(Boolean).length
             setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
         }).catch(() => setOfflineStatus('none'))
@@ -44,7 +44,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
         <button
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card hover:bg-muted border-l-4 border-l-blue-500 border-y border-r border-border rounded-r-xl p-6 text-left transition-all group relative overflow-hidden ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border-l-4 border-l-blue-500 border border-border rounded-2xl p-6 text-left fluid-interaction group relative overflow-hidden shadow-sm ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
@@ -154,7 +154,7 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
         <button
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card hover:bg-muted border border-border rounded-xl p-6 text-left transition-all group relative ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border border-border rounded-2xl p-6 text-left fluid-interaction group relative shadow-sm ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
@@ -239,7 +239,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
     return (
         <button
             onClick={() => onCreate(date)}
-            className="border border-dashed border-border hover:border-muted-foreground hover:bg-card rounded-xl p-6 text-left transition-all flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
+            className="border-2 border-dashed border-border/80 hover:border-blue-500/50 hover:bg-blue-500/5 rounded-2xl p-6 text-left fluid-interaction flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
         >
             <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-colors">
                 <Plus className="h-6 w-6" />

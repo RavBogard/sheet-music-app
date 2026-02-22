@@ -13,6 +13,9 @@ export async function POST(request: Request) {
         const auth = await withAuth(request, 'admin')
         if (auth instanceof NextResponse) return auth
 
+        const { searchParams } = new URL(request.url)
+        const isDryRun = searchParams.get('dryRun') === 'true'
+
         const db = getFirestore()
 
         // 1. Fetch all known file IDs from `library_index` (the canonical library collection).
@@ -62,9 +65,11 @@ export async function POST(request: Request) {
             }
         }
 
-        if (setlistsModified > 0) {
+        if (setlistsModified > 0 && !isDryRun) {
             await batch.commit()
             logger.info(`Pruned orphans: updated ${setlistsModified} setlists, scrubbed ${tracksPruned} missing file references.`)
+        } else if (setlistsModified > 0 && isDryRun) {
+            logger.info(`Prune dry-run: found ${tracksPruned} missing file references across ${setlistsModified} setlists.`)
         }
 
         return NextResponse.json({

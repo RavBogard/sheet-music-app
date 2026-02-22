@@ -1,9 +1,9 @@
 import { QueueItem } from "@/lib/store"
-import { isFileOffline, saveOfflineFile } from "@/lib/offline-store"
+import { isFileCached } from "@/lib/cache-utils"
 
 /**
  * Prefetch upcoming files in the setlist queue for instant page turns.
- * Uses IndexedDB (via offline-store) for consistent offline storage.
+ * Uses ServiceWorker / Cache API for consistent offline storage.
  *
  * Called when entering performance mode or advancing to a new song.
  */
@@ -21,22 +21,14 @@ export async function prefetchUpcoming(
         if (!item.fileId || item.fileId.startsWith('flow-')) continue
 
         // Skip if already cached
-        const cached = await isFileOffline(item.fileId)
+        const cached = await isFileCached(item.fileId)
         if (cached) continue
 
         // Prefetch in background — don't block UI
         try {
             const url = `/api/drive/file/${item.fileId}`
-            const response = await fetch(url)
-            if (response.ok) {
-                const blob = await response.blob()
-                await saveOfflineFile(
-                    item.fileId,
-                    blob,
-                    item.name || item.fileId,
-                    response.headers.get('content-type') || 'application/pdf'
-                )
-            }
+            // Browser service worker captures this automatically
+            await fetch(url)
         } catch {
             // Silent fail — prefetch is best-effort
         }
@@ -48,7 +40,7 @@ export async function prefetchUpcoming(
  */
 export async function isFilePrefetched(fileId: string): Promise<boolean> {
     try {
-        return await isFileOffline(fileId)
+        return await isFileCached(fileId)
     } catch {
         return false
     }
@@ -79,7 +71,7 @@ export async function prefetchSetlistPDFs(
         }
 
         // Skip if already cached
-        const cached = await isFileOffline(fileId)
+        const cached = await isFileCached(fileId)
         if (cached) {
             onProgress?.(i + 1, unique.length)
             continue
@@ -88,16 +80,7 @@ export async function prefetchSetlistPDFs(
         try {
             const url = `/api/drive/file/${fileId}`
             const response = await fetch(url)
-            if (response.ok) {
-                const blob = await response.blob()
-                await saveOfflineFile(
-                    fileId,
-                    blob,
-                    fileId,
-                    response.headers.get('content-type') || 'application/pdf'
-                )
-                newlyCached++
-            }
+            if (response.ok) newlyCached++
         } catch {
             // Silent fail — best-effort
         }

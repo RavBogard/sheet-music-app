@@ -137,7 +137,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[900px] gap-0 p-0 overflow-hidden flex flex-col max-h-[90vh]">
                 <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30 shrink-0">
-                    <DialogTitle className="text-xl">Import Setlist AI</DialogTitle>
+                    <DialogTitle className="text-title">Import Setlist AI</DialogTitle>
                     <DialogDescription>
                         {step === 'input' && "Provide a spreadsheet to instantly build your setlist and download charts."}
                         {step === 'processing' && "Our AI is reading your spreadsheet headers automatically..."}
@@ -213,7 +213,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                     {step === 'processing' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[400px]">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
-                            <h3 className="font-semibold text-lg text-foreground mt-4">Analyzing Rows</h3>
+                            <h3 className="text-title text-foreground mt-4">Analyzing Rows</h3>
                             <p className="text-sm text-muted-foreground w-64">
                                 Passing data to Gemini to map dynamic columns, extract performer names, and verify Google Drive linkage permissions...
                             </p>

@@ -5,7 +5,6 @@ import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 import { Loader2, Music2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { Card } from '@/components/ui/card'
-import { getOfflineFile } from '@/lib/offline-store'
 import { logger } from "@/lib/logger"
 
 interface SmartScoreViewerProps {
@@ -26,26 +25,10 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
         let objectUrl: string | null = null
 
         const loadOffline = async () => {
-            // Extract File ID from URL: /api/drive/file/[FILE_ID]
-            const fileIdMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
-            const fileId = fileIdMatch ? fileIdMatch[1] : null
-
-            if (fileId) {
-                const offlineFile = await getOfflineFile(fileId)
-                if (active && offlineFile) {
-                    logger.info("Serving offline file for:", fileId)
-                    objectUrl = URL.createObjectURL(offlineFile.blob)
-                    setSourceUrl(objectUrl)
-                } else if (active) {
-                    // Cache-bust v2: bypass stale CDN-cached errors
-                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-                    setSourceUrl(bustUrl)
-                }
-            } else {
-                if (active) {
-                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-                    setSourceUrl(bustUrl)
-                }
+            if (active) {
+                // We rely on standard browser ServiceWorker caching now. No IndexedDB.
+                const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
+                setSourceUrl(bustUrl)
             }
         }
         loadOffline()

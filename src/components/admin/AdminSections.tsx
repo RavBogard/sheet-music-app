@@ -3,20 +3,20 @@
 import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { PeopleSection } from "@/components/admin/PeopleSection"
-import { BandPrepSection } from "@/components/admin/BandPrepSection"
+import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { SystemSection } from "@/components/admin/SystemSection"
 import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 import { DeveloperToolsSection } from "@/components/admin/DeveloperToolsSection"
-import { UsageAnalyticsSection } from "@/components/admin/UsageAnalyticsSection"
-import { Loader2, Users, Music2, Volume2, Database, Settings, TerminalSquare, BarChart3, Activity } from "lucide-react"
+import { Loader2, Users, Radio, Wrench, ShieldAlert, ChevronDown } from "lucide-react"
 
-type AdminTab = 'people' | 'live' | 'band-prep' | 'sound' | 'library' | 'analytics' | 'system' | 'dev'
+type AdminTab = 'people' | 'production' | 'advanced'
 
 export default function AdminSections() {
     const { isAdmin, isBandLeader, loading: authLoading } = useAuth()
     const [activeTab, setActiveTab] = useState<AdminTab>('people')
+    const [advancedOpen, setAdvancedOpen] = useState(false)
 
     if (authLoading) return (
         <div className="flex justify-center py-8">
@@ -26,20 +26,15 @@ export default function AdminSections() {
     if (!isBandLeader) return null
 
     const tabs = [
-        { id: 'people', label: 'People & Roles', icon: Users, show: isBandLeader },
-        { id: 'live', label: 'Live Service', icon: Activity, show: isBandLeader },
-        { id: 'band-prep', label: 'Band Prep', icon: Music2, show: isAdmin },
-        { id: 'sound', label: 'Sound System', icon: Volume2, show: isAdmin },
-        { id: 'library', label: 'Library Data', icon: Database, show: isAdmin },
-        { id: 'analytics', label: 'Usage Analytics', icon: BarChart3, show: isAdmin },
-        { id: 'system', label: 'System Settings', icon: Settings, show: isAdmin },
-        { id: 'dev', label: 'Developer Tools', icon: TerminalSquare, show: isAdmin },
+        { id: 'people', label: 'People & Access', icon: Users, show: isBandLeader },
+        { id: 'production', label: 'Live Production', icon: Radio, show: isBandLeader },
+        { id: 'advanced', label: 'Advanced Settings', icon: Wrench, show: isAdmin },
     ].filter(t => t.show)
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
             {/* Sidebar Navigation */}
-            <div className="flex-[0_0_200px] flex flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 shrink-0 border-b md:border-b-0 md:border-r border-border pr-0 md:pr-4">
+            <div className="flex-[0_0_220px] flex flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 shrink-0 border-b md:border-b-0 md:border-r border-border pr-0 md:pr-4">
                 <div className="flex md:flex-col gap-1 w-max md:w-full p-1">
                     {tabs.map(tab => {
                         const Icon = tab.icon
@@ -48,14 +43,14 @@ export default function AdminSections() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as AdminTab)}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left
+                                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors text-left
                                     ${isActive
                                         ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }
                                 `}
                             >
-                                <Icon className="w-4 h-4 shrink-0" />
+                                <Icon className="w-5 h-5 shrink-0" />
                                 <span className="whitespace-nowrap md:whitespace-normal">{tab.label}</span>
                             </button>
                         )
@@ -65,14 +60,57 @@ export default function AdminSections() {
 
             {/* Content Area */}
             <div className="flex-1 min-w-0">
-                {activeTab === 'people' && <PeopleSection />}
-                {activeTab === 'live' && <LiveServiceSection />}
-                {activeTab === 'band-prep' && isAdmin && <BandPrepSection />}
-                {activeTab === 'sound' && isAdmin && <SoundSystemSection />}
-                {activeTab === 'library' && isAdmin && <LibraryDataSection />}
-                {activeTab === 'analytics' && isAdmin && <UsageAnalyticsSection />}
-                {activeTab === 'system' && isAdmin && <SystemSection />}
-                {activeTab === 'dev' && isAdmin && <DeveloperToolsSection />}
+                {activeTab === 'people' && (
+                    <div className="space-y-8 animate-in fade-in duration-300">
+                        <PeopleSection />
+                        {isAdmin && <AccessAuditLog />}
+                    </div>
+                )}
+
+                {activeTab === 'production' && (
+                    <div className="space-y-12 animate-in fade-in duration-300">
+                        <LiveServiceSection />
+                        {isAdmin && (
+                            <>
+                                <hr className="border-border" />
+                                <SoundSystemSection />
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'advanced' && isAdmin && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                            <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">Danger Zone</h3>
+                                <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                                    These settings affect application stability, core configuration, and raw data integrity.
+                                    Do not modify unless you know what you are doing.
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setAdvancedOpen(!advancedOpen)}
+                            className="w-full flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl hover:bg-muted/50 transition-colors"
+                        >
+                            <span className="font-semibold text-sm">Reveal Advanced Tools</span>
+                            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {advancedOpen && (
+                            <div className="space-y-12 pt-4 px-1 animate-in slide-in-from-top-4 fade-in duration-300">
+                                <SystemSection />
+                                <hr className="border-border" />
+                                <LibraryDataSection />
+                                <hr className="border-border" />
+                                <DeveloperToolsSection />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )

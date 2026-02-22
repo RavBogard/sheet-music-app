@@ -13,6 +13,7 @@ import {
     DialogTitle
 } from "@/components/ui/dialog"
 import { useLibraryStore } from "@/lib/library-store"
+import { useLibrary } from "@/hooks/use-library"
 
 interface MatchFileModalProps {
     isOpen: boolean
@@ -27,9 +28,10 @@ export function MatchFileModal({
 }: MatchFileModalProps) {
     const {
         displayedFiles,
-        loadLibrary,
         setFilter
     } = useLibraryStore()
+
+    useLibrary()
 
     const [searchQuery, setSearchQuery] = useState("")
 
@@ -40,11 +42,7 @@ export function MatchFileModal({
     const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
 
     // Fetch on mount/change
-    useEffect(() => {
-        if (isOpen) {
-            loadLibrary()
-        }
-    }, [isOpen, loadLibrary])
+    // The query automatically refetches/initializes on mount via useLibrary hook
 
     useEffect(() => {
         if (isOpen) {

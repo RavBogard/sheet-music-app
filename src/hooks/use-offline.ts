@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from 'react'
-import { saveOfflineFile, isFileOffline, getOfflineFile } from '@/lib/offline-store'
+import { isFileCached } from '@/lib/cache-utils'
 import { SetlistTrack } from '@/types/models'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger'
  * Unified offline hook.
  * 
  * Combines the old useOfflineManager (bulk download) and useOfflineSync
- * (per-track status) into a single hook backed by IndexedDB.
+ * (per-track status) into a single hook backed by the Browser Cache API.
  */
 export function useOffline() {
     const [downloading, setDownloading] = useState<Record<string, boolean>>({})
@@ -22,10 +22,10 @@ export function useOffline() {
         const status: Record<string, boolean> = {}
         for (const track of tracks) {
             if (track.fileId) {
-                status[track.fileId] = await isFileOffline(track.fileId)
+                status[track.fileId] = await isFileCached(track.fileId)
             }
             if (track.audioFileId) {
-                status[track.audioFileId] = await isFileOffline(track.audioFileId)
+                status[track.audioFileId] = await isFileCached(track.audioFileId)
             }
         }
         setOfflineStatus(status)
@@ -41,10 +41,7 @@ export function useOffline() {
             const res = await fetch(`/api/drive/file/${fileId}`)
             if (!res.ok) throw new Error('Download failed')
 
-            const blob = await res.blob()
-            const mimeType = res.headers.get('Content-Type') || 'application/pdf'
-
-            await saveOfflineFile(fileId, blob, fileName, mimeType)
+            // Fetch caching saves this transparently in the background
             setOfflineStatus(prev => ({ ...prev, [fileId]: true }))
         } catch (error) {
             logger.error(`Failed to download ${fileName}:`, error)
@@ -58,10 +55,10 @@ export function useOffline() {
         const filesToDownload: Array<{ id: string; name: string }> = []
 
         for (const track of tracks) {
-            if (track.fileId && !(await isFileOffline(track.fileId))) {
+            if (track.fileId && !(await isFileCached(track.fileId))) {
                 filesToDownload.push({ id: track.fileId, name: track.title })
             }
-            if (track.audioFileId && !(await isFileOffline(track.audioFileId))) {
+            if (track.audioFileId && !(await isFileCached(track.audioFileId))) {
                 filesToDownload.push({ id: track.audioFileId, name: `${track.title} (Audio)` })
             }
         }
@@ -78,9 +75,6 @@ export function useOffline() {
             try {
                 const res = await fetch(`/api/drive/file/${file.id}`)
                 if (res.ok) {
-                    const blob = await res.blob()
-                    const mimeType = res.headers.get('Content-Type') || 'application/pdf'
-                    await saveOfflineFile(file.id, blob, file.name, mimeType)
                     setOfflineStatus(prev => ({ ...prev, [file.id]: true }))
                 }
             } catch (e) {
@@ -96,8 +90,11 @@ export function useOffline() {
 
     /** Get a cached file blob (returns null if not cached) */
     const getCachedFile = useCallback(async (fileId: string) => {
-        const file = await getOfflineFile(fileId)
-        return file?.blob || null
+        try {
+            const res = await fetch(`/api/drive/file/${fileId}`, { cache: "only-if-cached" })
+            if (res.ok) return await res.blob()
+        } catch { }
+        return null
     }, [])
 
     // Computed

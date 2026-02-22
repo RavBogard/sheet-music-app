@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore"
-import { isFileOffline, saveOfflineFile, evictStaleFiles } from "@/lib/offline-store"
+import { isFileCached } from "@/lib/cache-utils"
 import { logger } from "@/lib/logger"
 
 /**
@@ -33,9 +33,7 @@ export function BackgroundPrefetcher() {
             if (conn && (conn.saveData || conn.effectiveType === '2g')) return
 
             const startPrefetch = () => {
-                prefetchUpcomingSetlists()
-                    .then(() => evictStaleFiles(60))
-                    .catch(() => {/* silent */})
+                prefetchUpcomingSetlists().catch(() => {/* silent */ })
             }
 
             // Use requestIdleCallback when available so prefetching
@@ -48,7 +46,7 @@ export function BackgroundPrefetcher() {
         }, 15000)
 
         return () => clearTimeout(timer)
-     
+
     }, [user?.uid, isMember])
 
     return null // No UI
@@ -76,15 +74,13 @@ async function prefetchUpcomingSetlists() {
             for (const track of tracks) {
                 if (!track.fileId) continue
 
-                const alreadyCached = await isFileOffline(track.fileId)
+                const alreadyCached = await isFileCached(track.fileId)
                 if (alreadyCached) continue
 
                 try {
+                    // Browser ServiceWorker handles the heavy lifting
                     const res = await fetch(`/api/drive/file/${track.fileId}`)
                     if (res.ok) {
-                        const blob = await res.blob()
-                        const mimeType = res.headers.get('Content-Type') || 'application/pdf'
-                        await saveOfflineFile(track.fileId, blob, track.title || 'chart', mimeType)
                         cached++
                     }
                 } catch {
