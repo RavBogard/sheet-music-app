@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>CentralReform Bridge</title>
     <style>
@@ -21,6 +22,7 @@
             background-color: var(--bg);
             color: var(--text);
             -webkit-user-select: none;
+            user-select: none;
         }
 
         .header {
@@ -82,7 +84,7 @@
             font-family: monospace;
             color: var(--text);
         }
-        
+
         .card-link {
             color: var(--accent);
             text-decoration: underline;
@@ -109,16 +111,127 @@
             word-break: break-all;
         }
 
-        .log-line.info { color: var(--text); }
-        .log-line.warn { color: var(--yellow); }
-        .log-line.error { color: var(--red); }
-        
+        .log-line.info {
+            color: var(--text);
+        }
+
+        .log-line.warn {
+            color: var(--yellow);
+        }
+
+        .log-line.error {
+            color: var(--red);
+        }
+
         .empty-logs {
             color: var(--subtext);
             font-style: italic;
         }
+
+        /* Setup Overlay */
+        .setup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(30, 30, 46, 0.95);
+            backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .setup-overlay.active {
+            display: flex;
+        }
+
+        .setup-card {
+            background: var(--surface);
+            padding: 32px;
+            border-radius: 16px;
+            width: 320px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .setup-card h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .setup-card p {
+            color: var(--subtext);
+            font-size: 13px;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--subtext);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: #181825;
+            border: 1px solid #45475a;
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .setup-btn {
+            background: var(--accent);
+            color: #11111b;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+
+        .setup-btn:hover {
+            opacity: 0.9;
+        }
+
+        .setup-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .setup-error {
+            color: var(--red);
+            font-size: 13px;
+            margin-top: 12px;
+            min-height: 20px;
+        }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>CentralReform Bridge</h1>
@@ -136,7 +249,8 @@
         </div>
         <div class="card" style="grid-column: span 2;">
             <div class="card-label">Certificate Trust URL</div>
-            <div id="trust-url" class="card-value" style="color: var(--subtext); font-size: 14px;">Waiting for network...</div>
+            <div id="trust-url" class="card-value" style="color: var(--subtext); font-size: 14px;">Waiting for
+                network...</div>
             <div class="card-link" id="trust-link" style="display: none;" onclick="openTrustUrl()">Open Locally</div>
         </div>
     </div>
@@ -144,6 +258,29 @@
     <div class="card-label">Live Logs</div>
     <div class="logs" id="logs-container">
         <div class="empty-logs">Bridge is starting up...</div>
+    </div>
+
+    <!-- Setup Overlay -->
+    <div id="setup-overlay" class="setup-overlay">
+        <div class="setup-card">
+            <h2>Bridge Setup</h2>
+            <p>Connect this bridge to your CentralReform cloud account via a 6-digit setup code.</p>
+
+            <div class="input-group">
+                <label>App URL</label>
+                <input type="url" id="setup-url" placeholder="https://..."
+                    value="https://centralreform.firebaseapp.com" />
+            </div>
+
+            <div class="input-group">
+                <label>6-Digit Code</label>
+                <input type="text" id="setup-code" placeholder="123456" maxlength="6"
+                    style="letter-spacing: 2px; text-align: center; font-size: 18px;" />
+            </div>
+
+            <button id="setup-btn" class="setup-btn" onclick="submitSetup()">Connect Bridge</button>
+            <div id="setup-error" class="setup-error"></div>
+        </div>
     </div>
 
     <script>
@@ -155,23 +292,23 @@
         const clientCount = document.getElementById('client-count');
         const trustUrl = document.getElementById('trust-url');
         const trustLink = document.getElementById('trust-link');
-        
+
         let currentTrustHref = "";
 
         ipcRenderer.on('log', (event, { level, message }) => {
             if (logsContainer.querySelector('.empty-logs')) {
                 logsContainer.innerHTML = '';
             }
-            
+
             const div = document.createElement('div');
             div.className = `log-line ${level}`;
-            
+
             // Format time
             const time = new Date().toLocaleTimeString([], { hour12: false });
             div.textContent = `[${time}] ${message}`;
-            
+
             logsContainer.appendChild(div);
-            
+
             // Auto-scroll
             if (logsContainer.scrollHeight - logsContainer.scrollTop < 350) {
                 logsContainer.scrollTop = logsContainer.scrollHeight;
@@ -196,7 +333,7 @@
             if (status.x32Address) {
                 x32Address.textContent = status.x32Address;
             }
-            
+
             if (status.connectedClients !== undefined) {
                 clientCount.textContent = status.connectedClients;
             }
@@ -216,6 +353,48 @@
                 ipcRenderer.send('open-external', currentTrustHref + "/trust");
             }
         }
+
+        // Setup Overlay Logic
+        const setupOverlay = document.getElementById('setup-overlay');
+        const setupUrlBtn = document.getElementById('setup-url');
+        const setupCodeBtn = document.getElementById('setup-code');
+        const setupBtn = document.getElementById('setup-btn');
+        const setupError = document.getElementById('setup-error');
+
+        ipcRenderer.on('require-setup', () => {
+            setupOverlay.classList.add('active');
+            setupCodeBtn.focus();
+        });
+
+        async function submitSetup() {
+            const appUrl = setupUrlBtn.value.trim().replace(/\/$/, "");
+            const code = setupCodeBtn.value.trim();
+
+            if (!appUrl || !code) {
+                setupError.textContent = "Please enter both URL and Code";
+                return;
+            }
+
+            setupBtn.disabled = true;
+            setupBtn.textContent = "Connecting...";
+            setupError.textContent = "";
+
+            try {
+                const response = await ipcRenderer.invoke('submit-setup-code', { appUrl, code });
+                if (response.success) {
+                    setupOverlay.classList.remove('active');
+                } else {
+                    setupError.textContent = response.error || "Failed to verify setup code.";
+                    setupBtn.disabled = false;
+                    setupBtn.textContent = "Connect Bridge";
+                }
+            } catch (err) {
+                setupError.textContent = "Connection error. Check app URL.";
+                setupBtn.disabled = false;
+                setupBtn.textContent = "Connect Bridge";
+            }
+        }
     </script>
 </body>
+
 </html>

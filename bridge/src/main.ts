@@ -137,14 +137,13 @@ async function startBackgroundBridge() {
         if (foundKey) {
             process.env.FIREBASE_SA_KEY_PATH = foundKey;
             console.log("Found Firebase credentials at:", foundKey);
+            // Run the bridge backend!
+            await startBridge();
         } else {
-            console.error(`MISSING FIREBASE CREDENTIALS:`);
-            console.error(`Please place 'service-account-key.json' in the installation folder:`);
-            console.error(exeDir);
+            console.error(`MISSING FIREBASE CREDENTIALS`);
+            console.error(`Please provide a setup code to download the key or place 'service-account-key.json' in the installation folder manually.`);
+            mainWindow?.webContents.send('require-setup');
         }
-
-        // Run the bridge backend!
-        await startBridge();
 
         // Polling loop to send stats to UI
         setInterval(() => {
@@ -160,6 +159,54 @@ async function startBackgroundBridge() {
 // IPC Handlers for UI actions
 ipcMain.on('open-external', (event, url) => {
     shell.openExternal(url);
+});
+
+ipcMain.handle('submit-setup-code', async (event, { appUrl, code }) => {
+    try {
+        const url = `${appUrl}/api/bridge/setup-code?code=${encodeURIComponent(code)}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            let errorText = `HTTP ${response.status}`;
+            try {
+                const errJson = await response.json() as any;
+                errorText = errJson.error || errorText;
+            } catch (e) { }
+            return { success: false, error: errorText };
+        }
+
+        const data = await response.json() as any;
+        if (data.credentials) {
+            const isPackaged = app.isPackaged;
+            const exeDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+
+            // Save Key
+            const keyPath = path.join(exeDir, "service-account-key.json");
+            fs.writeFileSync(keyPath, JSON.stringify(data.credentials, null, 2));
+
+            // Save Config
+            const configPath = path.join(exeDir, "bridge-config.json");
+            let cfg: any = {};
+            if (fs.existsSync(configPath)) {
+                try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (e) { }
+            }
+            cfg.appUrl = appUrl;
+            fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
+
+            process.env.FIREBASE_SA_KEY_PATH = keyPath;
+            console.log("✅ Credentials downloaded and saved successfully!");
+
+            // Boot Bridge
+            startBridge().catch(err => {
+                console.error("Bridge startup failed after setup:", err);
+            });
+
+            return { success: true };
+        }
+        return { success: false, error: data.error || "Invalid response from server" };
+    } catch (err: any) {
+        return { success: false, error: err.message };
+    }
 });
 
 // App lifecycle
