@@ -6,14 +6,14 @@ import { logger } from "@/lib/logger"
 
 export { getAuth, getFirestore, getStorage };
 
-const serviceAccount = {
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
 
 export function initAdmin() {
     if (getApps().length === 0) {
+        const serviceAccount = {
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        };
         const { projectId, clientEmail, privateKey } = serviceAccount;
         if (!projectId || !clientEmail || !privateKey) {
             logger.warn("Firebase Admin credentials missing (Build/Dev). Skipping initialization.");

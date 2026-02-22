@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { getOfflineFile } from '@/lib/offline-store'
 import { PDFPageWrapper } from './PDFPageWrapper'
+import { ChartSuggestions } from './ChartSuggestions'
 
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -19,9 +20,10 @@ const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
 
 interface PDFViewerProps {
     url: string
+    trackName?: string
 }
 
-export function PDFViewer({ url }: PDFViewerProps) {
+export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
     const [source, setSource] = useState<{ data: Uint8Array } | null>(null)
@@ -181,6 +183,11 @@ export function PDFViewer({ url }: PDFViewerProps) {
                                 <RefreshCw className="h-4 w-4" />
                                 Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current})` : ''}
                             </button>
+                            <ChartSuggestions
+                                trackName={trackName}
+                                currentFileId={url.split('/').pop()}
+                                isReplaceMode
+                            />
                         </div>
                     )}
 

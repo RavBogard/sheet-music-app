@@ -9,6 +9,7 @@ import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 import { FileType } from "@/lib/store"
+import { ChartSuggestions } from "@/components/music/ChartSuggestions"
 import { useAuth } from "@/lib/auth-context"
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
@@ -215,7 +216,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                 onTouchEnd={handleTouchEnd}
             >
                 {(fileType === 'musicxml' || aiXmlContent) && fileUrl && <SmartScoreViewer key={aiXmlContent ? 'ai-content' : fileUrl} url={fileUrl || ''} />}
-                {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} />}
+                {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} trackName={playbackQueue[queueIndex]?.name} />}
 
                 {!fileUrl && (
                     <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
@@ -252,6 +253,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                                         Go Back
                                     </button>
                                 </div>
+                                <ChartSuggestions trackName={playbackQueue[queueIndex]?.name} />
                             </>
                         )}
                     </div>

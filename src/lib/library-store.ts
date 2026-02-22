@@ -49,6 +49,7 @@ function applyFiles(files: DriveFile[], fromCache: boolean) {
         allFiles: files,
         displayedFiles: sortFoldersFirst(files),
         initialized: true,
+        loading: false,
         _fuseIndex: fuseIndex,
         fromCache,
     }
@@ -71,6 +72,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         currentFolderId: null,
         searchQuery: "",
         fromCache: state.fromCache,
+        loading: false,
     })),
 
     hydrate: (files: DriveFile[]) => set(applyFiles(files, false)),
