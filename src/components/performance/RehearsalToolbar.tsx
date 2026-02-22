@@ -110,7 +110,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 onPracticeTime(Math.round(totalPracticed.current))
             }
         }
-    }, [audioUrl])  
+    }, [audioUrl])
 
     // Handle A-B loop
     useEffect(() => {
@@ -201,7 +201,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         return (
             <button
                 onClick={toggleToolbar}
-                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full bg-violet-600 shadow-[0_0_20px_rgba(124,58,237,0.4)] text-white hover:bg-violet-500 transition-all hover:scale-105 flex items-center justify-center border border-violet-400/20"
+                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full bg-violet-600 shadow-[0_0_20px_#7c3aed66] text-white hover:bg-violet-500 transition-all hover:scale-105 flex items-center justify-center border border-violet-400/20"
                 title="Open Rehearsal Audio"
             >
                 {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}

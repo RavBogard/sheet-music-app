@@ -80,7 +80,7 @@ export function Metronome({ bpm, className }: MetronomeProps) {
             <span className="relative z-10 flex items-center gap-1">
                 <span className={cn(
                     "w-1.5 h-1.5 rounded-full transition-colors",
-                    isActive ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" : "bg-muted-foreground/30"
+                    isActive ? "bg-green-400 shadow-[0_0_4px_#4ade80cc]" : "bg-muted-foreground/30"
                 )} />
                 {bpm} BPM
             </span>

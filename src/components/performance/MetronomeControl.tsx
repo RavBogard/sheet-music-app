@@ -46,7 +46,7 @@ export function MetronomeControl() {
                 <div className={cn(
                     "rounded-full transition-all duration-75 shrink-0",
                     isPlaying && isBeat
-                        ? "h-4 w-4 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] scale-110"
+                        ? "h-4 w-4 bg-red-500 shadow-[0_0_10px_#ef4444] scale-110"
                         : isPlaying
                             ? "h-2.5 w-2.5 bg-red-800"
                             : "h-2 w-2 bg-zinc-700"

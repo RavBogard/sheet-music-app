@@ -321,7 +321,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             </div>
 
                             {/* Review Action Footer */}
-                            <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
+                            <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_#00000033]">
                                 <div className="text-xs text-muted-foreground flex flex-col">
                                     <span><strong>{items.filter(i => i.type === 'song').length}</strong> songs found</span>
                                     <span><strong>{items.filter(i => i.chartUrl && !i.chartError && !i.libraryMatchId).length}</strong> new Drive PDFs will be downloaded</span>
