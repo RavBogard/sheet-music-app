@@ -175,7 +175,7 @@
   }
 
   .glass {
-    @apply bg-background/65 backdrop-blur-2xl border border-border/60 shadow-[0_8px_32px_rgba(0, 0, 0, 0.04)] dark:shadow-[0_8px_32px_rgba(0, 0, 0, 0.2)];
+    @apply bg-background/65 backdrop-blur-2xl border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)];
   }
 
   .glass-card {
