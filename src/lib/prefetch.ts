@@ -18,7 +18,7 @@ export async function prefetchUpcoming(
     if (!upcoming.length) return
 
     for (const item of upcoming) {
-        if (!item.fileId) continue
+        if (!item.fileId || item.fileId.startsWith('flow-')) continue
 
         // Skip if already cached
         const cached = await isFileOffline(item.fileId)
@@ -71,6 +71,12 @@ export async function prefetchSetlistPDFs(
 
     for (let i = 0; i < unique.length; i++) {
         const fileId = unique[i]
+
+        // Flow items are synthetic non-song elements, not valid drive IDs
+        if (fileId.startsWith('flow-')) {
+            onProgress?.(i + 1, unique.length)
+            continue
+        }
 
         // Skip if already cached
         const cached = await isFileOffline(fileId)

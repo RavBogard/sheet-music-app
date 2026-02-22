@@ -61,7 +61,7 @@ export default function PerformPage() {
         let url = null
         let isFlowItem = false
 
-        if (track.trackType && track.trackType !== 'song') {
+        if (track.fileId?.startsWith('flow-') || (track.trackType && track.trackType !== 'song')) {
             isFlowItem = true
         } else {
             url = `/api/drive/file/${track.fileId}`
