@@ -1,4 +1,4 @@
-import { createRxDatabase, RxDatabase, addRxPlugin } from 'rxdb';
+import { createRxDatabase, RxDatabase, addRxPlugin, removeRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import {
     setlistSchema, fileMetaSchema, settingsSchema, annotationsSchema,
@@ -47,25 +47,33 @@ export const initRxDB = async (): Promise<MyDatabase> => {
             multiInstance: true, // synchronize data between multiple tabs
         });
 
-        await db.addCollections({
-            setlists: {
-                schema: setlistSchema,
-            },
-            files: {
-                schema: fileMetaSchema,
-                migrationStrategies: {
-                    // We simply drop the old cached file metadata (return null).
-                    // The app will automatically re-fetch the file from Google Drive if needed.
-                    1: () => null
+        try {
+            await db.addCollections({
+                setlists: {
+                    schema: setlistSchema,
+                },
+                files: {
+                    schema: fileMetaSchema,
+                    migrationStrategies: {
+                        // We simply drop the old cached file metadata (return null).
+                        // The app will automatically re-fetch the file from Google Drive if needed.
+                        1: () => null
+                    }
+                },
+                settings: {
+                    schema: settingsSchema,
+                },
+                annotations: {
+                    schema: annotationsSchema,
                 }
-            },
-            settings: {
-                schema: settingsSchema,
-            },
-            annotations: {
-                schema: annotationsSchema,
-            }
-        });
+            });
+        } catch (error: any) {
+            console.error('RxDB initialization/migration failed. Wiping corrupted local DB and retrying...', error);
+            try { await db.remove(); } catch (e) { /* ignore */ }
+            await removeRxDatabase('sheet-music-rxdb', getRxStorageDexie());
+            dbPromise = null;
+            return initRxDB(); // Re-initialize with a completely fresh slate
+        }
 
         return db;
     })();
