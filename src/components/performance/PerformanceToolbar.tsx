@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Home, Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut } from "lucide-react"
+import { Home, Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X } from "lucide-react"
 import { TransposerMenu, ChordEditBar } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -74,13 +74,13 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
     return (
-        <div className="bg-zinc-950 border-t border-zinc-900 shadow-2xl shrink-0">
+        <div className="glass border-t-0 shrink-0 pb-safe">
 
             {/* ── MOBILE/TABLET: Two-row layout ── */}
             <div className="lg:hidden w-full">
 
                 {/* Row 1 (top): Annotate | Metronome | Audio | Transposer — evenly spread */}
-                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-zinc-900/50">
+                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-border/30">
 
                     {/* Annotate */}
                     <Button
@@ -97,7 +97,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-9 px-3 rounded-lg bg-zinc-900/80 border border-white/10 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5" aria-label="Audio monitor mix">
+                            <button className="h-9 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 <span>Audio</span>
                             </button>
@@ -123,10 +123,10 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <PopoverTrigger asChild>
                             <button
                                 className={cn(
-                                    "h-9 px-3 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5",
+                                    "h-9 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
                                     aiState.isEnabled
-                                        ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]"
-                                        : "bg-zinc-900/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                                        ? "bg-blue-600 border border-blue-500/50 text-white shadow-lg shadow-blue-900/20"
+                                        : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
@@ -145,8 +145,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                 {/* Row 2 (bottom): Home + Song Navigation (centered) + Setlist */}
                 <div className="w-full h-14 flex items-center px-2">
-                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-400 hover:text-white h-12 w-12 hover:bg-zinc-800 rounded-xl shrink-0">
-                        <Home className="h-6 w-6" />
+                    <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl shrink-0 flex items-center gap-2">
+                        <X className="h-5 w-5" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
                     <div className="flex-1 flex justify-center min-w-0">
                         <SongNavigation />
@@ -162,8 +163,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                 {/* LEFT: System & Navigation */}
                 <div className="flex items-center gap-3 z-10 w-1/4">
-                    <Button variant="ghost" size="icon" onClick={onHome} className="text-zinc-500 hover:text-white h-11 w-11 hover:bg-zinc-800 rounded-xl transition-all hover:scale-105" title="Home">
-                        <Home className="h-6 w-6" />
+                    <Button variant="ghost" onClick={onHome} className="h-11 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2" title="Exit Gig Mode">
+                        <X className="h-5 w-5" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
                     <Button
                         variant="ghost" size="icon"
@@ -213,7 +215,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-10 px-4 rounded-xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-800 hover:border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2 group" aria-label="Audio monitor mix">
+                            <button className="h-10 px-4 rounded-xl glass-card fluid-interaction text-xs font-bold text-foreground/80 hover:text-foreground flex items-center gap-2 group" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 AUDIO
                             </button>
@@ -246,10 +248,10 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <PopoverTrigger asChild>
                             <button
                                 className={cn(
-                                    "h-10 px-4 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 min-w-[100px] justify-center",
+                                    "h-10 px-4 rounded-xl text-xs font-bold fluid-interaction flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
-                                        ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:bg-purple-500"
-                                        : "bg-zinc-900/50 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-white/10"
+                                        ? "bg-blue-600 border border-blue-500/50 text-white shadow-lg shadow-blue-900/20"
+                                        : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (

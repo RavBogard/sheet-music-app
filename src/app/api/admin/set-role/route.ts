@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
+import { createApiHandler } from "@/lib/api-wrapper"
+import { z } from "zod"
 
-export async function POST(request: Request) {
-    try {
-        const auth = await withAuth(request, 'admin')
-        if (auth instanceof NextResponse) return auth
+const setRoleSchema = z.object({
+    targetUserId: z.string().min(1),
+    newRole: z.enum(['admin', 'band_leader', 'leader', 'musician', 'member', 'pending'])
+})
 
-        const body = await request.json()
+export const POST = createApiHandler(
+    async ({ body }) => {
         const { targetUserId, newRole } = body
-
-        if (!targetUserId || !newRole) {
-            return new NextResponse("Missing targetUserId or newRole", { status: 400 })
-        }
 
         // Set Custom Claims — preserve existing claims (like soundEngineer)
         const fbAuth = getAuth()
@@ -22,7 +20,6 @@ export async function POST(request: Request) {
         await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
 
         // Update Firestore for UI consistency
-        // claimsUpdatedAt signals the client to force-refresh their ID token
         const { FieldValue } = await import('firebase-admin/firestore')
         const db = getFirestore()
 
@@ -31,7 +28,7 @@ export async function POST(request: Request) {
             claimsUpdatedAt: FieldValue.serverTimestamp(),
         })
 
-        // Leader Demotion Guard: Lock public setlists if demoted to member
+        // Leader Demotion Guard: Lock public setlists
         if (newRole === 'member' || newRole === 'pending') {
             try {
                 const publicSetlists = await db.collection("setlists")
@@ -52,15 +49,10 @@ export async function POST(request: Request) {
                 }
             } catch (e) {
                 logger.error("[Demotion Guard] Failed to lock setlists:", e)
-                // We don't fail the whole request if this fails, but it's logged
             }
         }
 
         return NextResponse.json({ success: true, role: newRole })
-
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("Set Role Error:", error)
-        return new NextResponse("Internal Server Error", { status: 500 })
-    }
-}
+    },
+    { role: 'admin', schema: setRoleSchema }
+)

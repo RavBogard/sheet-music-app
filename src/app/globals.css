@@ -49,45 +49,41 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* Apple-like rounded corners */
+  --radius: 1rem;
 
-  /* REFINED LIGHT MODE */
-  /* Background: Subtle off-white for reduced harshness */
-  --background: oklch(0.985 0 0);
-  /* Foreground: Softer charcoal, less stark than pure black */
-  --foreground: oklch(0.20 0 0);
+  /* PREMIUM LIGHT MODE */
+  /* Subtle, cool off-white background */
+  --background: oklch(0.985 0.005 260);
+  --foreground: oklch(0.18 0.01 260);
 
-  /* Card: Pure white for "pop" against background */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0 0);
+  /* Translucent pure white cards for depth */
+  --card: oklch(1 0 0 / 0.7);
+  --card-foreground: oklch(0.18 0.01 260);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0 0);
+  --popover: oklch(1 0 0 / 0.85);
+  --popover-foreground: oklch(0.18 0.01 260);
 
-  /* Primary: Deep Zinc/Slate */
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.20 0.01 260);
   --primary-foreground: oklch(0.985 0 0);
 
-  /* Secondary: Light grey for distinct buttons */
-  --secondary: oklch(0.95 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.95 0.01 260 / 0.8);
+  --secondary-foreground: oklch(0.20 0.01 260);
 
-  /* Muted: Subtle backgrounds */
-  --muted: oklch(0.95 0 0);
-  --muted-foreground: oklch(0.55 0 0);
+  --muted: oklch(0.95 0.01 260 / 0.5);
+  --muted-foreground: oklch(0.55 0.01 260);
 
-  /* Accent: Hover states */
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.95 0.01 260);
+  --accent-foreground: oklch(0.20 0.01 260);
 
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.623 0.169 150.36);
   --success-foreground: oklch(0.985 0 0);
 
-  /* Border: Increased contrast from 0.922 to 0.87 */
-  --border: oklch(0.87 0 0);
-  --input: oklch(0.87 0 0);
-  --ring: oklch(0.70 0 0);
+  /* Softer, translucent borders */
+  --border: oklch(0.85 0.01 260 / 0.4);
+  --input: oklch(0.85 0.01 260 / 0.5);
+  --ring: oklch(0.60 0.01 260 / 0.4);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -95,55 +91,54 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.20 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar: oklch(0.985 0.005 260 / 0.8);
+  --sidebar-foreground: oklch(0.18 0.01 260);
+  --sidebar-primary: oklch(0.20 0.01 260);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.95 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.87 0 0);
-  --sidebar-ring: oklch(0.70 0 0);
+  --sidebar-accent: oklch(0.95 0.01 260);
+  --sidebar-accent-foreground: oklch(0.20 0.01 260);
+  --sidebar-border: oklch(0.85 0.01 260 / 0.3);
+  --sidebar-ring: oklch(0.60 0.01 260 / 0.4);
 }
 
 .dark {
-  /* Lighter Dark Backgrounds (Fixed: actually lighter now) */
-  --background: oklch(0.19 0 0);
+  /* PREMIUM DARK MODE (Deep space grey, highly translucent) */
+  --background: oklch(0.14 0.015 260);
   --foreground: oklch(0.985 0 0);
 
-  --card: oklch(0.23 0 0);
-  /* Lighter than background */
+  --card: oklch(0.20 0.015 260 / 0.45);
   --card-foreground: oklch(0.985 0 0);
 
-  --popover: oklch(0.23 0 0);
+  --popover: oklch(0.20 0.015 260 / 0.7);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.65 0.18 250);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.14 0.015 260);
 
-  --secondary: oklch(0.28 0 0);
+  --secondary: oklch(0.25 0.015 260 / 0.6);
   --secondary-foreground: oklch(0.985 0 0);
 
-  --muted: oklch(0.28 0 0);
-  --muted-foreground: oklch(0.70 0 0);
+  --muted: oklch(0.22 0.015 260 / 0.5);
+  --muted-foreground: oklch(0.70 0.01 260);
 
-  --accent: oklch(0.28 0 0);
+  --accent: oklch(0.25 0.015 260);
   --accent-foreground: oklch(0.985 0 0);
 
   --destructive: oklch(0.6 0.25 25);
   --success: oklch(0.536 0.138 148.91);
   --success-foreground: oklch(0.985 0 0);
 
-  --border: oklch(0.35 0 0);
-  --input: oklch(0.35 0 0);
-  --ring: oklch(0.6 0.18 250);
+  --border: oklch(0.35 0.015 260 / 0.4);
+  --input: oklch(0.35 0.015 260 / 0.5);
+  --ring: oklch(0.50 0.015 260 / 0.5);
 
-  --sidebar: oklch(0.21 0 0);
+  --sidebar: oklch(0.16 0.015 260 / 0.8);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.18 250);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.28 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.14 0.015 260);
+  --sidebar-accent: oklch(0.25 0.015 260);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.35 0 0);
+  --sidebar-border: oklch(0.35 0.015 260 / 0.3);
 }
 
 @layer base {
@@ -180,11 +175,15 @@
   }
 
   .glass {
-    @apply bg-background/90 backdrop-blur-xl border-b border-border shadow-sm;
+    @apply bg-background/65 backdrop-blur-2xl border border-border/60 shadow-[0_8px_32px_rgba(0, 0, 0, 0.04)] dark:shadow-[0_8px_32px_rgba(0, 0, 0, 0.2)];
   }
 
   .glass-card {
-    @apply bg-card/80 backdrop-blur-md border border-border shadow-md;
+    @apply bg-card/70 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-lg shadow-black/5 dark:shadow-black/20;
+  }
+
+  .fluid-interaction {
+    @apply transition-all duration-400 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98];
   }
 
   .text-eyebrow {
@@ -310,11 +309,29 @@
     page-break-inside: avoid;
   }
 }
+
 /* SwipeOverlay onboarding animation */
 @keyframes swipe-anim {
-  0% { transform: translateX(40px) rotate(-15deg); opacity: 0; }
-  20% { opacity: 1; }
-  60% { transform: translateX(-40px) rotate(15deg); opacity: 1; }
-  80% { opacity: 0; transform: translateX(-50px) rotate(15deg); }
-  100% { opacity: 0; }
+  0% {
+    transform: translateX(40px) rotate(-15deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  60% {
+    transform: translateX(-40px) rotate(15deg);
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 0;
+    transform: translateX(-50px) rotate(15deg);
+  }
+
+  100% {
+    opacity: 0;
+  }
 }

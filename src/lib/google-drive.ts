@@ -2,6 +2,31 @@ import { drive } from "@googleapis/drive"
 import { GoogleAuth } from "google-auth-library"
 import { logger } from "@/lib/logger"
 
+/**
+ * Exponential backoff wrapper for Google Drive API calls
+ * Retries on 429 (Rate Limit) and 50x (Transient Server Errors)
+ */
+async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3, baseDelayMs = 1500): Promise<T> {
+    let attempt = 0;
+    while (true) {
+        try {
+            return await operation();
+        } catch (error: any) {
+            attempt++;
+            if (attempt > maxRetries) throw error;
+
+            const status = error?.status || error?.code;
+            if (status !== 429 && status !== 500 && status !== 502 && status !== 503 && status !== 504) {
+                throw error; // Let other errors bubble up
+            }
+
+            const delay = baseDelayMs * Math.pow(2, attempt - 1);
+            logger.warn(`[Drive API Retry] Attempt ${attempt} failed with ${status}. Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
 interface DriveFileResult {
     id: string
     name: string
@@ -76,14 +101,14 @@ export class DriveClient {
             let nextPageToken: string | undefined = undefined;
 
             do {
-                const res = await this.drive.files.list({
+                const res = await withRetry(() => this.drive.files.list({
                     pageSize: 100,
                     fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents)',
                     q,
                     pageToken: nextPageToken,
                     supportsAllDrives: true,
                     includeItemsFromAllDrives: true
-                }) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
+                })) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
 
                 if (res.data.files) {
                     allFiles.push(...res.data.files)
@@ -136,7 +161,7 @@ export class DriveClient {
 
             logger.info(`[Drive] Fetching page. Token: ${!!pageToken}, Limit: ${pageSize}, Q: ${q}`)
 
-            const res = await this.drive.files.list({
+            const res = await withRetry(() => this.drive.files.list({
                 pageSize,
                 fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents)',
                 q,
@@ -144,7 +169,7 @@ export class DriveClient {
                 supportsAllDrives: true,
                 includeItemsFromAllDrives: true,
                 orderBy: 'folder,name' // Folders first, then name
-            }) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
+            })) as { data: { files?: DriveFileResult[]; nextPageToken?: string } }
 
             return {
                 files: res.data.files || [],
@@ -159,14 +184,14 @@ export class DriveClient {
 
     async getFile(fileId: string) {
         try {
-            const res = await this.drive.files.get({
+            const res = await withRetry(() => this.drive.files.get({
                 fileId,
                 alt: 'media',
                 supportsAllDrives: true,
                 acknowledgeAbuse: true
             }, {
                 responseType: 'arraybuffer'
-            } as { responseType: 'arraybuffer' })
+            } as { responseType: 'arraybuffer' }))
 
             return res.data
         } catch (error: unknown) {
@@ -177,11 +202,11 @@ export class DriveClient {
 
     async getFileMetadata(fileId: string) {
         try {
-            const res = await this.drive.files.get({
+            const res = await withRetry(() => this.drive.files.get({
                 fileId,
                 fields: 'id, name, mimeType, parents',
                 supportsAllDrives: true
-            })
+            }))
             return res.data
         } catch (error: unknown) {
             logger.error(`[Drive] Error getting file metadata ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
@@ -191,12 +216,12 @@ export class DriveClient {
 
     async exportDoc(fileId: string, mimeType = 'application/pdf') {
         try {
-            const res = await this.drive.files.export({
+            const res = await withRetry(() => this.drive.files.export({
                 fileId,
                 mimeType,
             }, {
                 responseType: 'arraybuffer',
-            } as { responseType: 'arraybuffer' })
+            } as { responseType: 'arraybuffer' }))
 
             return res.data
         } catch (error: unknown) {
@@ -223,12 +248,12 @@ export class DriveClient {
                 fileMetadata.parents = parents
             }
 
-            const res = await this.drive.files.create({
+            const res = await withRetry(() => this.drive.files.create({
                 requestBody: fileMetadata,
                 media: media,
                 fields: 'id, name, webContentLink',
                 supportsAllDrives: true
-            })
+            }))
 
             logger.info(`[Drive] Created file: ${res.data.id}`)
             return res.data

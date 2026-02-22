@@ -37,24 +37,27 @@ export function PerformanceOfflineIndicator() {
     if (isOnline && !showReconnected) return null
 
     return (
-        <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2
-            py-1 text-xs font-medium transition-colors duration-300
-            ${!isOnline
-                ? "bg-amber-600/80 text-white backdrop-blur-sm"
-                : "bg-green-600/80 text-white backdrop-blur-sm"
-            }`}
-        >
-            {!isOnline ? (
-                <>
-                    <WifiOff className="h-3 w-3" />
-                    <span>Offline · charts from cache</span>
-                </>
-            ) : (
-                <>
-                    <Wifi className="h-3 w-3" />
-                    <span>Back online</span>
-                </>
-            )}
+    return (
+        <div className="fixed top-safe pt-2 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+            <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all duration-500 shadow-xl
+                ${!isOnline
+                    ? "glass border-amber-500/30 text-amber-200"
+                    : "glass border-green-500/30 text-green-200"
+                }`}
+            >
+                {!isOnline ? (
+                    <>
+                        <WifiOff className="h-3.5 w-3.5" />
+                        <span>OFFLINE MODE</span>
+                    </>
+                ) : (
+                    <>
+                        <Wifi className="h-3.5 w-3.5" />
+                        <span>RECONNECTED</span>
+                    </>
+                )}
+            </div>
         </div>
+    )
     )
 }

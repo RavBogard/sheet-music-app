@@ -71,7 +71,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             if (!menuOpen) setBarsVisible(false)
         }, 8000)
         return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
-         
+
     }, [])
 
     // ── Keyboard shortcuts ──
@@ -195,7 +195,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
     }, [isAnnotating, zoom, nextSong, prevSong, router])
 
     return (
-        <div className="h-[100dvh] flex flex-col bg-black text-white relative">
+        <div className="h-[100dvh] flex flex-col bg-background text-foreground relative">
 
             {/* Always-visible song position — persists even when toolbar is hidden */}
             <PerformanceStatusStrip />
@@ -204,7 +204,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             <div
                 key={fileUrl || 'empty'}
                 ref={viewRef}
-                className="flex-1 w-full h-full bg-zinc-900 overflow-hidden relative"
+                className="flex-1 w-full h-full bg-background overflow-hidden relative"
                 style={{
                     opacity: animState === 'enter' ? 0 : 1,
                     transform: animState === 'enter' ? 'translateX(30px)' : 'translateX(0)',
@@ -259,7 +259,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             </div>
 
             {/* Performance Toolbar — single visibility source */}
-            <div className={`performance-toolbar fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${barsVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`performance-toolbar pb-safe fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${barsVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
                 <PerformanceToolbar
                     onHome={onHome}
                     onMenuOpenChange={setMenuOpen}

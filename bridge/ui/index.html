@@ -248,10 +248,8 @@
             <div id="client-count" class="card-value">0</div>
         </div>
         <div class="card" style="grid-column: span 2;">
-            <div class="card-label">Certificate Trust URL</div>
-            <div id="trust-url" class="card-value" style="color: var(--subtext); font-size: 14px;">Waiting for
-                network...</div>
-            <div class="card-link" id="trust-link" style="display: none;" onclick="openTrustUrl()">Open Locally</div>
+            <div class="card-label">Transport Mechanism</div>
+            <div id="trust-url" class="card-value" style="color: var(--subtext); font-size: 14px;">Firestore Sync Active</div>
         </div>
     </div>
 
@@ -339,20 +337,11 @@
             }
 
             if (status.bridgeUrl) {
-                const u = new URL(status.bridgeUrl.replace('wss://', 'https://').replace('ws://', 'http://'));
-                const urlStr = u.toString().replace(/\/$/, "");
-                trustUrl.textContent = urlStr;
-                trustUrl.style.color = "var(--text)";
-                currentTrustHref = urlStr;
-                trustLink.style.display = "inline-block";
+                // We use firestore transport so display that
+                trustUrl.textContent = "Firestore Active";
+                trustUrl.style.color = "var(--green)";
             }
         });
-
-        function openTrustUrl() {
-            if (currentTrustHref) {
-                ipcRenderer.send('open-external', currentTrustHref + "/trust");
-            }
-        }
 
         // Setup Overlay Logic
         const setupOverlay = document.getElementById('setup-overlay');

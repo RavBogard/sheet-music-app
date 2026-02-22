@@ -52,7 +52,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
 
     mainWindow.once('ready-to-show', () => {
-        mainWindow?.show();
+        // Do NOT show window on startup, stay minimized in system tray
         startBackgroundBridge();
         checkForUpdates();
     });

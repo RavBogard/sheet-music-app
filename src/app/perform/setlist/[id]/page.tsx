@@ -183,7 +183,7 @@ export default function SetlistPerformPage() {
     return (
         <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden">
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
+            <div className="flex items-center gap-3 px-4 py-3 glass border-b-0 z-20 relative">
                 <Link
                     href="/setlists"
                     className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
@@ -284,22 +284,21 @@ export default function SetlistPerformPage() {
                                             onClick={() => handleTrackTap(globalIndex)}
                                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTrackTap(globalIndex) }}
                                             className={cn(
-                                                "flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all text-left w-full border border-transparent",
+                                                "flex items-center gap-3 py-3 px-4 rounded-2xl fluid-interaction text-left w-full glass-card",
                                                 isTapped
-                                                    ? "bg-primary text-primary-foreground shadow-sm bg-blue-600 border-blue-500"
-                                                    : "hover:bg-muted active:scale-[0.99]",
+                                                    ? "bg-blue-600/90 border-blue-400/50 shadow-blue-900/20 text-white"
+                                                    : "hover:bg-card/90",
                                                 isFlowItem && !isTapped && "opacity-70",
                                                 tappedIndex !== null && !isTapped && "opacity-50 pointer-events-none"
                                             )}
                                         >
-                                            {/* Track number / icon */}
                                             <div className={cn(
-                                                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 shadow-sm transition-colors",
+                                                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm transition-colors",
                                                 isTapped
-                                                    ? "bg-white/20 text-white"
+                                                    ? "bg-white text-blue-600 shadow-md"
                                                     : isFlowItem
                                                         ? "bg-transparent text-muted-foreground"
-                                                        : "bg-background border border-border text-foreground"
+                                                        : "glass border border-white/10 text-foreground"
                                             )}>
                                                 {isTapped ? (
                                                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -400,7 +399,7 @@ export default function SetlistPerformPage() {
 
             {/* Bottom action bar */}
             {tracks.length > 0 && (
-                <div className="px-4 py-3 border-t border-border bg-background/80 backdrop-blur-sm">
+                <div className="px-4 py-3 glass border-t-0 z-20 pb-safe">
                     <Button
                         className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                         onClick={() => {

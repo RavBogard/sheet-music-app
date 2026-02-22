@@ -1,0 +1,455 @@
+﻿  ΓÇó electron-builder  version=26.8.1 os=10.0.26200
+  ΓÇó loaded configuration  file=package.json ("build" field)
+  ΓÇó effective config  config=directories:
+  output: release
+  buildResources: build
+appId: com.centralreform.bridge
+productName: CentralReform Bridge
+files:
+  - filter:
+      - dist/**/*
+      - ui/**/*
+      - node_modules/**/*
+extraResources: []
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: CentralReform Bridge
+publish:
+  provider: github
+  owner: RavBogard
+  repo: sheet-music-app
+
+  ΓÇó author is missed in the package.json  appPackageFile=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\package.json
+  ΓÇó no event listeners found  event=beforePack
+  ΓÇó spawning        command=npm prefix -w cwd=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge
+  ΓÇó exited          command=npm code=1 pid=25784
+  ΓÇó executing @electron/rebuild  electronVersion=40.6.0 arch=x64 buildFromSource=false workspaceRoot=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge projectDir=./ appDir=./
+  ΓÇó installing native dependencies  arch=x64
+  ΓÇó completed installing native dependencies
+  ΓÇó packaging       platform=win32 arch=x64 electron=40.6.0 appOutDir=release\win-unpacked
+  ΓÇó no custom electronDist provided, unpacking default Electron distribution
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe unpack-electron --configuration [{"platform":"win32","arch":"x64","version":"40.6.0"}] --output C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\release\win-unpacked --distMacOsAppName Electron.app
+  ΓÇó map async       taskCount=2
+  ΓÇó map async       taskCount=1
+  ΓÇó map async       taskCount=75
+  ΓÇó exited          command=app-builder.exe code=0 pid=21424
+  ΓÇó no event listeners found  event=afterExtract
+  ΓÇó searching for node modules  pm=npm searchDir=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge
+node.exe : 
+(node:32548) [DEP0190] 
+DeprecationWarning: 
+Passing args to a 
+child process with 
+shell option true can 
+lead to security 
+vulnerabilities, as 
+the arguments are not 
+escaped, only 
+concatenated.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: ((node:32548)    
+ [D...y concatenate    
+d.:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+(Use `node 
+--trace-deprecation 
+...` to show where the 
+warning was created)
+  ΓÇó node modules collection complete  packageName=centralreform-bridge depCount=192
+  ΓÇó collected node modules  pm=npm nodeModules=[{"name":"@fastify/busboy","version":"3.2.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@fastify\\busboy"},{"name":"@firebase/app-check-interop-types","version":"0.3.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\app-check-interop-types"},{"name":"@firebase/app-types","version":"0.9.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\app-types"},{"name":"@firebase/auth-interop-types","version":"0.2.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\auth-interop-types"},{"name":"@firebase/component","version":"0.6.9","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\component"},{"name":"@firebase/database","version":"1.0.8","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\database"},{"name":"@firebase/database-compat","version":"1.0.8","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\database-compat"},{"name":"@firebase/database-types","version":"1.0.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\database-types"},{"name":"@firebase/logger","version":"0.4.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\logger"},{"name":"@firebase/util","version":"1.10.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@firebase\\util"},{"name":"@google-cloud/firestore","version":"7.11.6","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\firestore"},{"name":"@google-cloud/paginator","version":"5.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\paginator"},{"name":"@google-cloud/projectify","version":"4.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\projectify"},{"name":"@google-cloud/promisify","version":"4.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\promisify"},{"name":"@google-cloud/storage","version":"7.19.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\storage","dependencies":[{"name":"uuid","version":"8.3.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@google-cloud\\storage\\node_modules\\uuid"}]},{"name":"@grpc/grpc-js","version":"1.14.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\grpc-js"},{"name":"@grpc/proto-loader","version":"0.8.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\grpc-js\\node_modules\\@grpc\\proto-loader"},{"name":"@js-sdsl/ordered-map","version":"4.4.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@js-sdsl\\ordered-map"},{"name":"@noble/hashes","version":"1.4.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@noble\\hashes"},{"name":"@opentelemetry/api","version":"1.9.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@opentelemetry\\api"},{"name":"@peculiar/asn1-cms","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-cms"},{"name":"@peculiar/asn1-csr","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-csr"},{"name":"@peculiar/asn1-ecc","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-ecc"},{"name":"@peculiar/asn1-pfx","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-pfx"},{"name":"@peculiar/asn1-pkcs8","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-pkcs8"},{"name":"@peculiar/asn1-pkcs9","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-pkcs9"},{"name":"@peculiar/asn1-rsa","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-rsa"},{"name":"@peculiar/asn1-schema","version":"2.6.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-schema"},{"name":"@peculiar/asn1-x509","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-x509"},{"name":"@peculiar/asn1-x509-attr","version":"2.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\asn1-x509-attr"},{"name":"@peculiar/x509","version":"1.14.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@peculiar\\x509"},{"name":"@protobufjs/aspromise","version":"1.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\aspromise"},{"name":"@protobufjs/base64","version":"1.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\base64"},{"name":"@protobufjs/codegen","version":"2.0.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\codegen"},{"name":"@protobufjs/eventemitter","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\eventemitter"},{"name":"@protobufjs/fetch","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\fetch"},{"name":"@protobufjs/float","version":"1.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\float"},{"name":"@protobufjs/inquire","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\inquire"},{"name":"@protobufjs/path","version":"1.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\path"},{"name":"@protobufjs/pool","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\pool"},{"name":"@protobufjs/utf8","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@protobufjs\\utf8"},{"name":"@tootallnate/once","version":"2.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@tootallnate\\once"},{"name":"@types/caseless","version":"0.12.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\caseless"},{"name":"@types/jsonwebtoken","version":"9.0.10","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\jsonwebtoken"},{"name":"@types/long","version":"4.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\long"},{"name":"@types/ms","version":"2.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\ms"},{"name":"@types/node","version":"20.19.33","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\node"},{"name":"@types/request","version":"2.48.13","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\request"},{"name":"@types/selfsigned","version":"2.0.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\selfsigned"},{"name":"@types/tough-cookie","version":"4.0.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\tough-cookie"},{"name":"@types/ws","version":"8.18.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@types\\ws"},{"name":"abort-controller","version":"3.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\abort-controller"},{"name":"agent-base","version":"6.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\agent-base"},{"name":"ansi-regex","version":"5.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\ansi-regex"},{"name":"ansi-styles","version":"4.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\ansi-styles"},{"name":"argparse","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\argparse"},{"name":"arrify","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\arrify"},{"name":"asn1js","version":"3.0.7","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\asn1js"},{"name":"async-retry","version":"1.3.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\async-retry"},{"name":"asynckit","version":"0.4.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\asynckit"},{"name":"base64-js","version":"1.5.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\base64-js"},{"name":"bignumber.js","version":"9.3.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\bignumber.js"},{"name":"buffer-equal-constant-time","version":"1.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\buffer-equal-constant-time"},{"name":"builder-util-runtime","version":"9.5.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\builder-util-runtime"},{"name":"bytestreamjs","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\bytestreamjs"},{"name":"call-bind-apply-helpers","version":"1.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\call-bind-apply-helpers"},{"name":"cliui","version":"8.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\proto-loader\\node_modules\\cliui"},{"name":"color-convert","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\color-convert"},{"name":"color-name","version":"1.1.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\color-name"},{"name":"combined-stream","version":"1.0.8","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\combined-stream"},{"name":"debug","version":"4.4.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\debug"},{"name":"delayed-stream","version":"1.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\delayed-stream"},{"name":"dotenv","version":"16.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\dotenv"},{"name":"dunder-proto","version":"1.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\dunder-proto"},{"name":"duplexify","version":"4.1.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\duplexify"},{"name":"ecdsa-sig-formatter","version":"1.0.11","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\ecdsa-sig-formatter"},{"name":"electron-updater","version":"6.8.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\electron-updater"},{"name":"emoji-regex","version":"8.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\emoji-regex"},{"name":"end-of-stream","version":"1.4.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\end-of-stream"},{"name":"es-define-property","version":"1.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\es-define-property"},{"name":"es-errors","version":"1.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\es-errors"},{"name":"es-object-atoms","version":"1.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\es-object-atoms"},{"name":"es-set-tostringtag","version":"2.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\es-set-tostringtag"},{"name":"escalade","version":"3.2.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\escalade"},{"name":"event-target-shim","version":"5.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\event-target-shim"},{"name":"extend","version":"3.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\extend"},{"name":"farmhash-modern","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\farmhash-modern"},{"name":"fast-deep-equal","version":"3.1.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\fast-deep-equal"},{"name":"fast-xml-parser","version":"5.3.6","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\fast-xml-parser"},{"name":"faye-websocket","version":"0.11.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\faye-websocket"},{"name":"firebase-admin","version":"12.7.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\firebase-admin","dependencies":[{"name":"@types/node","version":"22.19.11","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\firebase-admin\\node_modules\\@types\\node"},{"name":"uuid","version":"10.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\uuid"}]},{"name":"form-data","version":"2.5.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\form-data"},{"name":"fs-extra","version":"10.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\electron-updater\\node_modules\\fs-extra"},{"name":"function-bind","version":"1.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\function-bind"},{"name":"functional-red-black-tree","version":"1.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\functional-red-black-tree"},{"name":"gaxios","version":"6.7.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gaxios"},{"name":"gcp-metadata","version":"6.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gcp-metadata"},{"name":"get-caller-file","version":"2.0.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\get-caller-file"},{"name":"get-intrinsic","version":"1.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\get-intrinsic"},{"name":"get-proto","version":"1.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\get-proto"},{"name":"google-auth-library","version":"9.15.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\google-auth-library"},{"name":"google-gax","version":"4.6.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\google-gax","dependencies":[{"name":"@grpc/proto-loader","version":"0.7.15","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\proto-loader"}]},{"name":"google-logging-utils","version":"0.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\google-logging-utils"},{"name":"gopd","version":"1.2.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gopd"},{"name":"graceful-fs","version":"4.2.11","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\graceful-fs"},{"name":"gtoken","version":"7.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gtoken"},{"name":"has-symbols","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\has-symbols"},{"name":"has-tostringtag","version":"1.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\has-tostringtag"},{"name":"hasown","version":"2.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\hasown"},{"name":"html-entities","version":"2.6.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\html-entities"},{"name":"http-parser-js","version":"0.5.10","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\http-parser-js"},{"name":"http-proxy-agent","version":"5.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\http-proxy-agent"},{"name":"https-proxy-agent","version":"7.0.6","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gaxios\\node_modules\\https-proxy-agent","dependencies":[{"name":"agent-base","version":"7.1.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\gaxios\\node_modules\\agent-base"}]},{"name":"inherits","version":"2.0.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\inherits"},{"name":"is-fullwidth-code-point","version":"3.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\is-fullwidth-code-point"},{"name":"is-stream","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\is-stream"},{"name":"jose","version":"4.15.9","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\jose"},{"name":"js-yaml","version":"4.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\js-yaml"},{"name":"json-bigint","version":"1.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\json-bigint"},{"name":"jsonfile","version":"6.2.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\electron-updater\\node_modules\\jsonfile"},{"name":"jsonwebtoken","version":"9.0.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\jsonwebtoken"},{"name":"jwa","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\jwa"},{"name":"jwks-rsa","version":"3.2.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\jwks-rsa"},{"name":"jws","version":"4.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\jws"},{"name":"lazy-val","version":"1.0.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lazy-val"},{"name":"limiter","version":"1.1.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\limiter"},{"name":"lodash.camelcase","version":"4.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.camelcase"},{"name":"lodash.clonedeep","version":"4.5.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.clonedeep"},{"name":"lodash.escaperegexp","version":"4.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.escaperegexp"},{"name":"lodash.includes","version":"4.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.includes"},{"name":"lodash.isboolean","version":"3.0.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isboolean"},{"name":"lodash.isequal","version":"4.5.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isequal"},{"name":"lodash.isinteger","version":"4.0.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isinteger"},{"name":"lodash.isnumber","version":"3.0.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isnumber"},{"name":"lodash.isplainobject","version":"4.0.6","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isplainobject"},{"name":"lodash.isstring","version":"4.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.isstring"},{"name":"lodash.once","version":"4.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lodash.once"},{"name":"long","version":"5.3.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\long"},{"name":"lru-cache","version":"6.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lru-cache"},{"name":"lru-memoizer","version":"2.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\lru-memoizer"},{"name":"math-intrinsics","version":"1.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\math-intrinsics"},{"name":"mime","version":"3.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\mime"},{"name":"mime-db","version":"1.52.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\mime-db"},{"name":"mime-types","version":"2.1.35","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\mime-types"},{"name":"ms","version":"2.1.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\ms"},{"name":"node-fetch","version":"2.7.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\node-fetch"},{"name":"node-forge","version":"1.3.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\node-forge"},{"name":"object-hash","version":"3.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\object-hash"},{"name":"once","version":"1.4.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\once"},{"name":"p-limit","version":"3.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\p-limit"},{"name":"pkijs","version":"3.3.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\pkijs"},{"name":"proto3-json-serializer","version":"2.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\proto3-json-serializer"},{"name":"protobufjs","version":"7.5.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\protobufjs"},{"name":"pvtsutils","version":"1.3.6","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\pvtsutils"},{"name":"pvutils","version":"1.1.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\pvutils"},{"name":"readable-stream","version":"3.6.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\readable-stream"},{"name":"reflect-metadata","version":"0.2.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\reflect-metadata"},{"name":"require-directory","version":"2.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\require-directory"},{"name":"retry","version":"0.13.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\retry"},{"name":"retry-request","version":"7.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\retry-request"},{"name":"safe-buffer","version":"5.2.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\safe-buffer"},{"name":"sax","version":"1.4.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\sax"},{"name":"selfsigned","version":"5.5.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\selfsigned"},{"name":"semver","version":"7.7.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\semver"},{"name":"stream-events","version":"1.0.5","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\stream-events"},{"name":"stream-shift","version":"1.0.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\stream-shift"},{"name":"string_decoder","version":"1.3.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\string_decoder"},{"name":"string-width","version":"4.2.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\string-width"},{"name":"strip-ansi","version":"6.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\strip-ansi"},{"name":"strnum","version":"2.1.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\strnum"},{"name":"stubs","version":"3.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\stubs"},{"name":"teeny-request","version":"9.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\teeny-request","dependencies":[{"name":"https-proxy-agent","version":"5.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\https-proxy-agent"}]},{"name":"tiny-typed-emitter","version":"2.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\tiny-typed-emitter"},{"name":"tr46","version":"0.0.3","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\tr46"},{"name":"tslib","version":"2.8.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\tslib"},{"name":"tsyringe","version":"4.10.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\tsyringe","dependencies":[{"name":"tslib","version":"1.14.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\tsyringe\\node_modules\\tslib"}]},{"name":"undici-types","version":"6.21.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\undici-types"},{"name":"universalify","version":"2.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\electron-updater\\node_modules\\universalify"},{"name":"util-deprecate","version":"1.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\util-deprecate"},{"name":"uuid","version":"9.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\teeny-request\\node_modules\\uuid"},{"name":"webidl-conversions","version":"3.0.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\webidl-conversions"},{"name":"websocket-driver","version":"0.7.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\websocket-driver"},{"name":"websocket-extensions","version":"0.1.4","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\websocket-extensions"},{"name":"whatwg-url","version":"5.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\whatwg-url"},{"name":"wrap-ansi","version":"7.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\wrap-ansi"},{"name":"wrappy","version":"1.0.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\wrappy"},{"name":"ws","version":"8.19.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\ws"},{"name":"y18n","version":"5.0.8","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\y18n"},{"name":"yallist","version":"4.0.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\yallist"},{"name":"yargs","version":"17.7.2","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\proto-loader\\node_modules\\yargs"},{"name":"yargs-parser","version":"21.1.1","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\@grpc\\proto-loader\\node_modules\\yargs-parser"},{"name":"yocto-queue","version":"0.1.0","dir":"C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\node_modules\\yocto-queue"}]
+  ΓÇó duplicate dependency references  dependencies=["@firebase/util@1.10.0","@firebase/database-types@1.0.5","@firebase/component@0.6.9","@firebase/logger@0.4.2","@firebase/util@1.10.0","@firebase/util@1.10.0","protobufjs@7.5.4","string-width@4.2.3","strip-ansi@6.0.1","wrap-ansi@7.0.0","string-width@4.2.3","protobufjs@7.5.4","string-width@4.2.3","string-width@4.2.3","strip-ansi@6.0.1","strip-ansi@6.0.1","abort-controller@3.0.0","duplexify@4.1.3","google-auth-library@9.15.1","protobufjs@7.5.4","protobufjs@7.5.4","retry-request@7.0.2","@types/node@20.19.33","debug@4.4.3","node-fetch@2.7.0","gaxios@6.7.1","gaxios@6.7.1","gaxios@6.7.1","jws@4.0.1","jws@4.0.1","@types/node@20.19.33","call-bind-apply-helpers@1.0.2","es-object-atoms@1.1.1","hasown@2.0.2","hasown@2.0.2","teeny-request@9.0.0","debug@4.4.3","debug@4.4.3","agent-base@6.0.2","debug@4.4.3","node-fetch@2.7.0","ecdsa-sig-formatter@1.0.11","@types/node@20.19.33","debug@4.4.3","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-cms@2.6.1","@peculiar/asn1-cms@2.6.1","@peculiar/asn1-pkcs8@2.6.1","@peculiar/asn1-rsa@2.6.1","@peculiar/asn1-schema@2.6.0","asn1js@3.0.7","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509-attr@2.6.1","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","@peculiar/asn1-schema@2.6.0","@peculiar/asn1-x509@2.6.1","asn1js@3.0.7","asn1js@3.0.7","pvtsutils@1.3.6","@peculiar/asn1-schema@2.6.0","asn1js@3.0.7","pvtsutils@1.3.6","pvtsutils@1.3.6","pvtsutils@1.3.6"]
+  ΓÇó identified module  dep=@fastify/busboy from=node_modules\@fastify\busboy to=release\win-unpacked\resources\app\node_modules\@fastify\busboy filesCount=15
+  ΓÇó identified module  dep=@firebase/app-check-interop-types from=node_modules\@firebase\app-check-interop-types to=release\win-unpacked\resources\app\node_modules\@firebase\app-check-interop-types filesCount=1
+  ΓÇó identified module  dep=@firebase/app-types from=node_modules\@firebase\app-types to=release\win-unpacked\resources\app\node_modules\@firebase\app-types filesCount=1
+  ΓÇó identified module  dep=@firebase/auth-interop-types from=node_modules\@firebase\auth-interop-types to=release\win-unpacked\resources\app\node_modules\@firebase\auth-interop-types filesCount=1
+  ΓÇó identified module  dep=@firebase/component from=node_modules\@firebase\component to=release\win-unpacked\resources\app\node_modules\@firebase\component filesCount=8
+  ΓÇó identified module  dep=@firebase/database from=node_modules\@firebase\database to=release\win-unpacked\resources\app\node_modules\@firebase\database filesCount=15
+  ΓÇó identified module  dep=@firebase/database-compat from=node_modules\@firebase\database-compat to=release\win-unpacked\resources\app\node_modules\@firebase\database-compat filesCount=13
+  ΓÇó identified module  dep=@firebase/database-types from=node_modules\@firebase\database-types to=release\win-unpacked\resources\app\node_modules\@firebase\database-types filesCount=1
+  ΓÇó identified module  dep=@firebase/logger from=node_modules\@firebase\logger to=release\win-unpacked\resources\app\node_modules\@firebase\logger filesCount=8
+  ΓÇó identified module  dep=@firebase/util from=node_modules\@firebase\util to=release\win-unpacked\resources\app\node_modules\@firebase\util filesCount=13
+  ΓÇó identified module  dep=@google-cloud/firestore from=node_modules\@google-cloud\firestore to=release\win-unpacked\resources\app\node_modules\@google-cloud\firestore filesCount=116
+  ΓÇó identified module  dep=@google-cloud/paginator from=node_modules\@google-cloud\paginator to=release\win-unpacked\resources\app\node_modules\@google-cloud\paginator filesCount=4
+  ΓÇó identified module  dep=@google-cloud/projectify from=node_modules\@google-cloud\projectify to=release\win-unpacked\resources\app\node_modules\@google-cloud\projectify filesCount=3
+  ΓÇó identified module  dep=@google-cloud/promisify from=node_modules\@google-cloud\promisify to=release\win-unpacked\resources\app\node_modules\@google-cloud\promisify filesCount=3
+  ΓÇó identified module  dep=@google-cloud/storage from=node_modules\@google-cloud\storage to=release\win-unpacked\resources\app\node_modules\@google-cloud\storage filesCount=43
+  ΓÇó identified module  dep=uuid from=node_modules\@google-cloud\storage\node_modules\uuid to=release\win-unpacked\resources\app\node_modules\@google-cloud\storage\node_modules\uuid filesCount=64
+  ΓÇó identified module  dep=@grpc/grpc-js from=node_modules\@grpc\grpc-js to=release\win-unpacked\resources\app\node_modules\@grpc\grpc-js filesCount=512
+  ΓÇó identified module  dep=@grpc/proto-loader from=node_modules\@grpc\grpc-js\node_modules\@grpc\proto-loader to=release\win-unpacked\resources\app\node_modules\@grpc\proto-loader filesCount=8
+  ΓÇó identified module  dep=@js-sdsl/ordered-map from=node_modules\@js-sdsl\ordered-map to=release\win-unpacked\resources\app\node_modules\@js-sdsl\ordered-map filesCount=10
+  ΓÇó identified module  dep=@noble/hashes from=node_modules\@noble\hashes to=release\win-unpacked\resources\app\node_modules\@noble\hashes filesCount=123
+  ΓÇó identified module  dep=@opentelemetry/api from=node_modules\@opentelemetry\api to=release\win-unpacked\resources\app\node_modules\@opentelemetry\api filesCount=428
+  ΓÇó identified module  dep=@peculiar/asn1-cms from=node_modules\@peculiar\asn1-cms to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-cms filesCount=54
+  ΓÇó identified module  dep=@peculiar/asn1-csr from=node_modules\@peculiar\asn1-csr to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-csr filesCount=10
+  ΓÇó identified module  dep=@peculiar/asn1-ecc from=node_modules\@peculiar\asn1-ecc to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-ecc filesCount=16
+  ΓÇó identified module  dep=@peculiar/asn1-pfx from=node_modules\@peculiar\asn1-pfx to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-pfx filesCount=30
+  ΓÇó identified module  dep=@peculiar/asn1-pkcs8 from=node_modules\@peculiar\asn1-pkcs8 to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-pkcs8 filesCount=8
+  ΓÇó identified module  dep=@peculiar/asn1-pkcs9 from=node_modules\@peculiar\asn1-pkcs9 to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-pkcs9 filesCount=4
+  ΓÇó identified module  dep=@peculiar/asn1-rsa from=node_modules\@peculiar\asn1-rsa to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-rsa filesCount=22
+  ΓÇó identified module  dep=@peculiar/asn1-schema from=node_modules\@peculiar\asn1-schema to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-schema filesCount=40
+  ΓÇó identified module  dep=@peculiar/asn1-x509 from=node_modules\@peculiar\asn1-x509 to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-x509 filesCount=88
+  ΓÇó identified module  dep=@peculiar/asn1-x509-attr from=node_modules\@peculiar\asn1-x509-attr to=release\win-unpacked\resources\app\node_modules\@peculiar\asn1-x509-attr filesCount=44
+  ΓÇó identified module  dep=@peculiar/x509 from=node_modules\@peculiar\x509 to=release\win-unpacked\resources\app\node_modules\@peculiar\x509 filesCount=5
+  ΓÇó identified module  dep=@protobufjs/aspromise from=node_modules\@protobufjs\aspromise to=release\win-unpacked\resources\app\node_modules\@protobufjs\aspromise filesCount=3
+  ΓÇó identified module  dep=@protobufjs/base64 from=node_modules\@protobufjs\base64 to=release\win-unpacked\resources\app\node_modules\@protobufjs\base64 filesCount=3
+  ΓÇó identified module  dep=@protobufjs/codegen from=node_modules\@protobufjs\codegen to=release\win-unpacked\resources\app\node_modules\@protobufjs\codegen filesCount=3
+  ΓÇó identified module  dep=@protobufjs/eventemitter from=node_modules\@protobufjs\eventemitter to=release\win-unpacked\resources\app\node_modules\@protobufjs\eventemitter filesCount=3
+  ΓÇó identified module  dep=@protobufjs/fetch from=node_modules\@protobufjs\fetch to=release\win-unpacked\resources\app\node_modules\@protobufjs\fetch filesCount=3
+  ΓÇó identified module  dep=@protobufjs/float from=node_modules\@protobufjs\float to=release\win-unpacked\resources\app\node_modules\@protobufjs\float filesCount=5
+  ΓÇó identified module  dep=@protobufjs/inquire from=node_modules\@protobufjs\inquire to=release\win-unpacked\resources\app\node_modules\@protobufjs\inquire filesCount=3
+  ΓÇó identified module  dep=@protobufjs/path from=node_modules\@protobufjs\path to=release\win-unpacked\resources\app\node_modules\@protobufjs\path filesCount=3
+  ΓÇó identified module  dep=@protobufjs/pool from=node_modules\@protobufjs\pool to=release\win-unpacked\resources\app\node_modules\@protobufjs\pool filesCount=3
+  ΓÇó identified module  dep=@protobufjs/utf8 from=node_modules\@protobufjs\utf8 to=release\win-unpacked\resources\app\node_modules\@protobufjs\utf8 filesCount=3
+  ΓÇó identified module  dep=@tootallnate/once from=node_modules\@tootallnate\once to=release\win-unpacked\resources\app\node_modules\@tootallnate\once filesCount=8
+  ΓÇó identified module  dep=@types/caseless from=node_modules\@types\caseless to=release\win-unpacked\resources\app\node_modules\@types\caseless filesCount=2
+  ΓÇó identified module  dep=@types/jsonwebtoken from=node_modules\@types\jsonwebtoken to=release\win-unpacked\resources\app\node_modules\@types\jsonwebtoken filesCount=2
+  ΓÇó identified module  dep=@types/long from=node_modules\@types\long to=release\win-unpacked\resources\app\node_modules\@types\long filesCount=2
+  ΓÇó identified module  dep=@types/ms from=node_modules\@types\ms to=release\win-unpacked\resources\app\node_modules\@types\ms filesCount=2
+  ΓÇó identified module  dep=@types/node from=node_modules\@types\node to=release\win-unpacked\resources\app\node_modules\@types\node filesCount=2
+  ΓÇó identified module  dep=@types/request from=node_modules\@types\request to=release\win-unpacked\resources\app\node_modules\@types\request filesCount=2
+  ΓÇó identified module  dep=@types/selfsigned from=node_modules\@types\selfsigned to=release\win-unpacked\resources\app\node_modules\@types\selfsigned filesCount=2
+  ΓÇó identified module  dep=@types/tough-cookie from=node_modules\@types\tough-cookie to=release\win-unpacked\resources\app\node_modules\@types\tough-cookie filesCount=2
+  ΓÇó identified module  dep=@types/ws from=node_modules\@types\ws to=release\win-unpacked\resources\app\node_modules\@types\ws filesCount=3
+  ΓÇó identified module  dep=abort-controller from=node_modules\abort-controller to=release\win-unpacked\resources\app\node_modules\abort-controller filesCount=12
+  ΓÇó identified module  dep=agent-base from=node_modules\agent-base to=release\win-unpacked\resources\app\node_modules\agent-base filesCount=7
+  ΓÇó identified module  dep=ansi-regex from=node_modules\ansi-regex to=release\win-unpacked\resources\app\node_modules\ansi-regex filesCount=3
+  ΓÇó identified module  dep=ansi-styles from=node_modules\ansi-styles to=release\win-unpacked\resources\app\node_modules\ansi-styles filesCount=3
+  ΓÇó identified module  dep=argparse from=node_modules\argparse to=release\win-unpacked\resources\app\node_modules\argparse filesCount=5
+  ΓÇó identified module  dep=arrify from=node_modules\arrify to=release\win-unpacked\resources\app\node_modules\arrify filesCount=3
+  ΓÇó identified module  dep=asn1js from=node_modules\asn1js to=release\win-unpacked\resources\app\node_modules\asn1js filesCount=4
+  ΓÇó identified module  dep=async-retry from=node_modules\async-retry to=release\win-unpacked\resources\app\node_modules\async-retry filesCount=3
+  ΓÇó identified module  dep=asynckit from=node_modules\asynckit to=release\win-unpacked\resources\app\node_modules\asynckit filesCount=19
+  ΓÇó identified module  dep=base64-js from=node_modules\base64-js to=release\win-unpacked\resources\app\node_modules\base64-js filesCount=4
+  ΓÇó identified module  dep=bignumber.js from=node_modules\bignumber.js to=release\win-unpacked\resources\app\node_modules\bignumber.js filesCount=6
+  ΓÇó identified module  dep=buffer-equal-constant-time from=node_modules\buffer-equal-constant-time to=release\win-unpacked\resources\app\node_modules\buffer-equal-constant-time filesCount=4
+  ΓÇó identified module  dep=builder-util-runtime from=node_modules\builder-util-runtime to=release\win-unpacked\resources\app\node_modules\builder-util-runtime filesCount=28
+  ΓÇó identified module  dep=bytestreamjs from=node_modules\bytestreamjs to=release\win-unpacked\resources\app\node_modules\bytestreamjs filesCount=17
+  ΓÇó identified module  dep=call-bind-apply-helpers from=node_modules\call-bind-apply-helpers to=release\win-unpacked\resources\app\node_modules\call-bind-apply-helpers filesCount=10
+  ΓÇó identified module  dep=cliui from=node_modules\@grpc\proto-loader\node_modules\cliui to=release\win-unpacked\resources\app\node_modules\cliui filesCount=7
+  ΓÇó identified module  dep=color-convert from=node_modules\color-convert to=release\win-unpacked\resources\app\node_modules\color-convert filesCount=5
+  ΓÇó identified module  dep=color-name from=node_modules\color-name to=release\win-unpacked\resources\app\node_modules\color-name filesCount=3
+  ΓÇó identified module  dep=combined-stream from=node_modules\combined-stream to=release\win-unpacked\resources\app\node_modules\combined-stream filesCount=3
+  ΓÇó identified module  dep=debug from=node_modules\debug to=release\win-unpacked\resources\app\node_modules\debug filesCount=6
+  ΓÇó identified module  dep=delayed-stream from=node_modules\delayed-stream to=release\win-unpacked\resources\app\node_modules\delayed-stream filesCount=4
+  ΓÇó identified module  dep=dotenv from=node_modules\dotenv to=release\win-unpacked\resources\app\node_modules\dotenv filesCount=8
+  ΓÇó identified module  dep=dunder-proto from=node_modules\dunder-proto to=release\win-unpacked\resources\app\node_modules\dunder-proto filesCount=6
+  ΓÇó identified module  dep=duplexify from=node_modules\duplexify to=release\win-unpacked\resources\app\node_modules\duplexify filesCount=5
+  ΓÇó identified module  dep=ecdsa-sig-formatter from=node_modules\ecdsa-sig-formatter to=release\win-unpacked\resources\app\node_modules\ecdsa-sig-formatter filesCount=5
+  ΓÇó identified module  dep=electron-updater from=node_modules\electron-updater to=release\win-unpacked\resources\app\node_modules\electron-updater filesCount=66
+  ΓÇó identified module  dep=emoji-regex from=node_modules\emoji-regex to=release\win-unpacked\resources\app\node_modules\emoji-regex filesCount=6
+  ΓÇó identified module  dep=end-of-stream from=node_modules\end-of-stream to=release\win-unpacked\resources\app\node_modules\end-of-stream filesCount=3
+  ΓÇó identified module  dep=es-define-property from=node_modules\es-define-property to=release\win-unpacked\resources\app\node_modules\es-define-property filesCount=5
+  ΓÇó identified module  dep=es-errors from=node_modules\es-errors to=release\win-unpacked\resources\app\node_modules\es-errors filesCount=10
+  ΓÇó identified module  dep=es-object-atoms from=node_modules\es-object-atoms to=release\win-unpacked\resources\app\node_modules\es-object-atoms filesCount=7
+  ΓÇó identified module  dep=es-set-tostringtag from=node_modules\es-set-tostringtag to=release\win-unpacked\resources\app\node_modules\es-set-tostringtag filesCount=5
+  ΓÇó identified module  dep=escalade from=node_modules\escalade to=release\win-unpacked\resources\app\node_modules\escalade filesCount=8
+  ΓÇó identified module  dep=event-target-shim from=node_modules\event-target-shim to=release\win-unpacked\resources\app\node_modules\event-target-shim filesCount=8
+  ΓÇó identified module  dep=extend from=node_modules\extend to=release\win-unpacked\resources\app\node_modules\extend filesCount=6
+  ΓÇó identified module  dep=farmhash-modern from=node_modules\farmhash-modern to=release\win-unpacked\resources\app\node_modules\farmhash-modern filesCount=14
+  ΓÇó identified module  dep=fast-deep-equal from=node_modules\fast-deep-equal to=release\win-unpacked\resources\app\node_modules\fast-deep-equal filesCount=6
+  ΓÇó identified module  dep=fast-xml-parser from=node_modules\fast-xml-parser to=release\win-unpacked\resources\app\node_modules\fast-xml-parser filesCount=52
+  ΓÇó identified module  dep=faye-websocket from=node_modules\faye-websocket to=release\win-unpacked\resources\app\node_modules\faye-websocket filesCount=8
+  ΓÇó identified module  dep=firebase-admin from=node_modules\firebase-admin to=release\win-unpacked\resources\app\node_modules\firebase-admin filesCount=128
+  ΓÇó identified module  dep=@types/node from=node_modules\firebase-admin\node_modules\@types\node to=release\win-unpacked\resources\app\node_modules\firebase-admin\node_modules\@types\node filesCount=2
+  ΓÇó identified module  dep=uuid from=node_modules\uuid to=release\win-unpacked\resources\app\node_modules\firebase-admin\node_modules\uuid filesCount=94
+  ΓÇó identified module  dep=form-data from=node_modules\form-data to=release\win-unpacked\resources\app\node_modules\form-data filesCount=5
+  ΓÇó identified module  dep=fs-extra from=node_modules\electron-updater\node_modules\fs-extra to=release\win-unpacked\resources\app\node_modules\fs-extra filesCount=30
+  ΓÇó identified module  dep=function-bind from=node_modules\function-bind to=release\win-unpacked\resources\app\node_modules\function-bind filesCount=5
+  ΓÇó identified module  dep=functional-red-black-tree from=node_modules\functional-red-black-tree to=release\win-unpacked\resources\app\node_modules\functional-red-black-tree filesCount=4
+  ΓÇó identified module  dep=gaxios from=node_modules\gaxios to=release\win-unpacked\resources\app\node_modules\gaxios filesCount=14
+  ΓÇó identified module  dep=gcp-metadata from=node_modules\gcp-metadata to=release\win-unpacked\resources\app\node_modules\gcp-metadata filesCount=6
+  ΓÇó identified module  dep=get-caller-file from=node_modules\get-caller-file to=release\win-unpacked\resources\app\node_modules\get-caller-file filesCount=4
+  ΓÇó identified module  dep=get-intrinsic from=node_modules\get-intrinsic to=release\win-unpacked\resources\app\node_modules\get-intrinsic filesCount=4
+  ΓÇó identified module  dep=get-proto from=node_modules\get-proto to=release\win-unpacked\resources\app\node_modules\get-proto filesCount=7
+  ΓÇó identified module  dep=google-auth-library from=node_modules\google-auth-library to=release\win-unpacked\resources\app\node_modules\google-auth-library filesCount=39
+  ΓÇó identified module  dep=google-gax from=node_modules\google-gax to=release\win-unpacked\resources\app\node_modules\google-gax filesCount=268
+  ΓÇó identified module  dep=@grpc/proto-loader from=node_modules\@grpc\proto-loader to=release\win-unpacked\resources\app\node_modules\google-gax\node_modules\@grpc\proto-loader filesCount=8
+  ΓÇó identified module  dep=google-logging-utils from=node_modules\google-logging-utils to=release\win-unpacked\resources\app\node_modules\google-logging-utils filesCount=10
+  ΓÇó identified module  dep=gopd from=node_modules\gopd to=release\win-unpacked\resources\app\node_modules\gopd filesCount=5
+  ΓÇó identified module  dep=graceful-fs from=node_modules\graceful-fs to=release\win-unpacked\resources\app\node_modules\graceful-fs filesCount=6
+  ΓÇó identified module  dep=gtoken from=node_modules\gtoken to=release\win-unpacked\resources\app\node_modules\gtoken filesCount=3
+  ΓÇó identified module  dep=has-symbols from=node_modules\has-symbols to=release\win-unpacked\resources\app\node_modules\has-symbols filesCount=6
+  ΓÇó identified module  dep=has-tostringtag from=node_modules\has-tostringtag to=release\win-unpacked\resources\app\node_modules\has-tostringtag filesCount=6
+  ΓÇó identified module  dep=hasown from=node_modules\hasown to=release\win-unpacked\resources\app\node_modules\hasown filesCount=5
+  ΓÇó identified module  dep=html-entities from=node_modules\html-entities to=release\win-unpacked\resources\app\node_modules\html-entities filesCount=25
+  ΓÇó identified module  dep=http-parser-js from=node_modules\http-parser-js to=release\win-unpacked\resources\app\node_modules\http-parser-js filesCount=3
+  ΓÇó identified module  dep=http-proxy-agent from=node_modules\http-proxy-agent to=release\win-unpacked\resources\app\node_modules\http-proxy-agent filesCount=5
+  ΓÇó identified module  dep=https-proxy-agent from=node_modules\gaxios\node_modules\https-proxy-agent to=release\win-unpacked\resources\app\node_modules\https-proxy-agent filesCount=8
+  ΓÇó identified module  dep=agent-base from=node_modules\gaxios\node_modules\agent-base to=release\win-unpacked\resources\app\node_modules\https-proxy-agent\node_modules\agent-base filesCount=8
+  ΓÇó identified module  dep=inherits from=node_modules\inherits to=release\win-unpacked\resources\app\node_modules\inherits filesCount=4
+  ΓÇó identified module  dep=is-fullwidth-code-point from=node_modules\is-fullwidth-code-point to=release\win-unpacked\resources\app\node_modules\is-fullwidth-code-point filesCount=3
+  ΓÇó identified module  dep=is-stream from=node_modules\is-stream to=release\win-unpacked\resources\app\node_modules\is-stream filesCount=3
+  ΓÇó identified module  dep=jose from=node_modules\jose to=release\win-unpacked\resources\app\node_modules\jose filesCount=250
+  ΓÇó identified module  dep=js-yaml from=node_modules\js-yaml to=release\win-unpacked\resources\app\node_modules\js-yaml filesCount=31
+  ΓÇó identified module  dep=json-bigint from=node_modules\json-bigint to=release\win-unpacked\resources\app\node_modules\json-bigint filesCount=5
+  ΓÇó identified module  dep=jsonfile from=node_modules\electron-updater\node_modules\jsonfile to=release\win-unpacked\resources\app\node_modules\jsonfile filesCount=4
+  ΓÇó identified module  dep=jsonwebtoken from=node_modules\jsonwebtoken to=release\win-unpacked\resources\app\node_modules\jsonwebtoken filesCount=14
+  ΓÇó identified module  dep=jwa from=node_modules\jwa to=release\win-unpacked\resources\app\node_modules\jwa filesCount=4
+  ΓÇó identified module  dep=jwks-rsa from=node_modules\jwks-rsa to=release\win-unpacked\resources\app\node_modules\jwks-rsa filesCount=21
+  ΓÇó identified module  dep=jws from=node_modules\jws to=release\win-unpacked\resources\app\node_modules\jws filesCount=8
+  ΓÇó identified module  dep=lazy-val from=node_modules\lazy-val to=release\win-unpacked\resources\app\node_modules\lazy-val filesCount=3
+  ΓÇó identified module  dep=limiter from=node_modules\limiter to=release\win-unpacked\resources\app\node_modules\limiter filesCount=7
+  ΓÇó identified module  dep=lodash.camelcase from=node_modules\lodash.camelcase to=release\win-unpacked\resources\app\node_modules\lodash.camelcase filesCount=3
+  ΓÇó identified module  dep=lodash.clonedeep from=node_modules\lodash.clonedeep to=release\win-unpacked\resources\app\node_modules\lodash.clonedeep filesCount=3
+  ΓÇó identified module  dep=lodash.escaperegexp from=node_modules\lodash.escaperegexp to=release\win-unpacked\resources\app\node_modules\lodash.escaperegexp filesCount=3
+  ΓÇó identified module  dep=lodash.includes from=node_modules\lodash.includes to=release\win-unpacked\resources\app\node_modules\lodash.includes filesCount=3
+  ΓÇó identified module  dep=lodash.isboolean from=node_modules\lodash.isboolean to=release\win-unpacked\resources\app\node_modules\lodash.isboolean filesCount=3
+  ΓÇó identified module  dep=lodash.isequal from=node_modules\lodash.isequal to=release\win-unpacked\resources\app\node_modules\lodash.isequal filesCount=3
+  ΓÇó identified module  dep=lodash.isinteger from=node_modules\lodash.isinteger to=release\win-unpacked\resources\app\node_modules\lodash.isinteger filesCount=3
+  ΓÇó identified module  dep=lodash.isnumber from=node_modules\lodash.isnumber to=release\win-unpacked\resources\app\node_modules\lodash.isnumber filesCount=3
+  ΓÇó identified module  dep=lodash.isplainobject from=node_modules\lodash.isplainobject to=release\win-unpacked\resources\app\node_modules\lodash.isplainobject filesCount=3
+  ΓÇó identified module  dep=lodash.isstring from=node_modules\lodash.isstring to=release\win-unpacked\resources\app\node_modules\lodash.isstring filesCount=3
+  ΓÇó identified module  dep=lodash.once from=node_modules\lodash.once to=release\win-unpacked\resources\app\node_modules\lodash.once filesCount=3
+  ΓÇó identified module  dep=long from=node_modules\long to=release\win-unpacked\resources\app\node_modules\long filesCount=5
+  ΓÇó identified module  dep=lru-cache from=node_modules\lru-cache to=release\win-unpacked\resources\app\node_modules\lru-cache filesCount=3
+  ΓÇó identified module  dep=lru-memoizer from=node_modules\lru-memoizer to=release\win-unpacked\resources\app\node_modules\lru-memoizer filesCount=8
+  ΓÇó identified module  dep=math-intrinsics from=node_modules\math-intrinsics to=release\win-unpacked\resources\app\node_modules\math-intrinsics filesCount=18
+  ΓÇó identified module  dep=mime from=node_modules\mime to=release\win-unpacked\resources\app\node_modules\mime filesCount=8
+  ΓÇó identified module  dep=mime-db from=node_modules\mime-db to=release\win-unpacked\resources\app\node_modules\mime-db filesCount=5
+  ΓÇó identified module  dep=mime-types from=node_modules\mime-types to=release\win-unpacked\resources\app\node_modules\mime-types filesCount=4
+  ΓÇó identified module  dep=ms from=node_modules\ms to=release\win-unpacked\resources\app\node_modules\ms filesCount=3
+  ΓÇó identified module  dep=node-fetch from=node_modules\node-fetch to=release\win-unpacked\resources\app\node_modules\node-fetch filesCount=6
+  ΓÇó identified module  dep=node-forge from=node_modules\node-forge to=release\win-unpacked\resources\app\node_modules\node-forge filesCount=58
+  ΓÇó identified module  dep=object-hash from=node_modules\object-hash to=release\win-unpacked\resources\app\node_modules\object-hash filesCount=4
+  ΓÇó identified module  dep=once from=node_modules\once to=release\win-unpacked\resources\app\node_modules\once filesCount=3
+  ΓÇó identified module  dep=p-limit from=node_modules\p-limit to=release\win-unpacked\resources\app\node_modules\p-limit filesCount=3
+  ΓÇó identified module  dep=pkijs from=node_modules\pkijs to=release\win-unpacked\resources\app\node_modules\pkijs filesCount=4
+  ΓÇó identified module  dep=proto3-json-serializer from=node_modules\proto3-json-serializer to=release\win-unpacked\resources\app\node_modules\proto3-json-serializer filesCount=28
+  ΓÇó identified module  dep=protobufjs from=node_modules\protobufjs to=release\win-unpacked\resources\app\node_modules\protobufjs filesCount=72
+  ΓÇó identified module  dep=pvtsutils from=node_modules\pvtsutils to=release\win-unpacked\resources\app\node_modules\pvtsutils filesCount=4
+  ΓÇó identified module  dep=pvutils from=node_modules\pvutils to=release\win-unpacked\resources\app\node_modules\pvutils filesCount=4
+  ΓÇó identified module  dep=readable-stream from=node_modules\readable-stream to=release\win-unpacked\resources\app\node_modules\readable-stream filesCount=24
+  ΓÇó identified module  dep=reflect-metadata from=node_modules\reflect-metadata to=release\win-unpacked\resources\app\node_modules\reflect-metadata filesCount=7
+  ΓÇó identified module  dep=require-directory from=node_modules\require-directory to=release\win-unpacked\resources\app\node_modules\require-directory filesCount=4
+  ΓÇó identified module  dep=retry from=node_modules\retry to=release\win-unpacked\resources\app\node_modules\retry filesCount=5
+  ΓÇó identified module  dep=retry-request from=node_modules\retry-request to=release\win-unpacked\resources\app\node_modules\retry-request filesCount=3
+  ΓÇó identified module  dep=safe-buffer from=node_modules\safe-buffer to=release\win-unpacked\resources\app\node_modules\safe-buffer filesCount=3
+  ΓÇó identified module  dep=sax from=node_modules\sax to=release\win-unpacked\resources\app\node_modules\sax filesCount=3
+  ΓÇó identified module  dep=selfsigned from=node_modules\selfsigned to=release\win-unpacked\resources\app\node_modules\selfsigned filesCount=6
+  ΓÇó identified module  dep=semver from=node_modules\semver to=release\win-unpacked\resources\app\node_modules\semver filesCount=51
+  ΓÇó identified module  dep=stream-events from=node_modules\stream-events to=release\win-unpacked\resources\app\node_modules\stream-events filesCount=2
+  ΓÇó identified module  dep=stream-shift from=node_modules\stream-shift to=release\win-unpacked\resources\app\node_modules\stream-shift filesCount=4
+  ΓÇó identified module  dep=string_decoder from=node_modules\string_decoder to=release\win-unpacked\resources\app\node_modules\string_decoder filesCount=3
+  ΓÇó identified module  dep=string-width from=node_modules\string-width to=release\win-unpacked\resources\app\node_modules\string-width filesCount=3
+  ΓÇó identified module  dep=strip-ansi from=node_modules\strip-ansi to=release\win-unpacked\resources\app\node_modules\strip-ansi filesCount=3
+  ΓÇó identified module  dep=strnum from=node_modules\strnum to=release\win-unpacked\resources\app\node_modules\strnum filesCount=7
+  ΓÇó identified module  dep=stubs from=node_modules\stubs to=release\win-unpacked\resources\app\node_modules\stubs filesCount=3
+  ΓÇó identified module  dep=teeny-request from=node_modules\teeny-request to=release\win-unpacked\resources\app\node_modules\teeny-request filesCount=8
+  ΓÇó identified module  dep=https-proxy-agent from=node_modules\https-proxy-agent to=release\win-unpacked\resources\app\node_modules\teeny-request\node_modules\https-proxy-agent filesCount=7
+  ΓÇó identified module  dep=tiny-typed-emitter from=node_modules\tiny-typed-emitter to=release\win-unpacked\resources\app\node_modules\tiny-typed-emitter filesCount=3
+  ΓÇó identified module  dep=tr46 from=node_modules\tr46 to=release\win-unpacked\resources\app\node_modules\tr46 filesCount=3
+  ΓÇó identified module  dep=tslib from=node_modules\tslib to=release\win-unpacked\resources\app\node_modules\tslib filesCount=11
+  ΓÇó identified module  dep=tsyringe from=node_modules\tsyringe to=release\win-unpacked\resources\app\node_modules\tsyringe filesCount=126
+  ΓÇó identified module  dep=tslib from=node_modules\tsyringe\node_modules\tslib to=release\win-unpacked\resources\app\node_modules\tsyringe\node_modules\tslib filesCount=9
+  ΓÇó identified module  dep=undici-types from=node_modules\undici-types to=release\win-unpacked\resources\app\node_modules\undici-types filesCount=2
+  ΓÇó identified module  dep=universalify from=node_modules\electron-updater\node_modules\universalify to=release\win-unpacked\resources\app\node_modules\universalify filesCount=3
+  ΓÇó identified module  dep=util-deprecate from=node_modules\util-deprecate to=release\win-unpacked\resources\app\node_modules\util-deprecate filesCount=5
+  ΓÇó identified module  dep=uuid from=node_modules\teeny-request\node_modules\uuid to=release\win-unpacked\resources\app\node_modules\uuid filesCount=74
+  ΓÇó identified module  dep=webidl-conversions from=node_modules\webidl-conversions to=release\win-unpacked\resources\app\node_modules\webidl-conversions filesCount=3
+  ΓÇó identified module  dep=websocket-driver from=node_modules\websocket-driver to=release\win-unpacked\resources\app\node_modules\websocket-driver filesCount=16
+  ΓÇó identified module  dep=websocket-extensions from=node_modules\websocket-extensions to=release\win-unpacked\resources\app\node_modules\websocket-extensions filesCount=10
+  ΓÇó identified module  dep=whatwg-url from=node_modules\whatwg-url to=release\win-unpacked\resources\app\node_modules\whatwg-url filesCount=7
+  ΓÇó identified module  dep=wrap-ansi from=node_modules\wrap-ansi to=release\win-unpacked\resources\app\node_modules\wrap-ansi filesCount=3
+  ΓÇó identified module  dep=wrappy from=node_modules\wrappy to=release\win-unpacked\resources\app\node_modules\wrappy filesCount=3
+  ΓÇó identified module  dep=ws from=node_modules\ws to=release\win-unpacked\resources\app\node_modules\ws filesCount=18
+  ΓÇó identified module  dep=y18n from=node_modules\y18n to=release\win-unpacked\resources\app\node_modules\y18n filesCount=7
+  ΓÇó identified module  dep=yallist from=node_modules\yallist to=release\win-unpacked\resources\app\node_modules\yallist filesCount=4
+  ΓÇó identified module  dep=yargs from=node_modules\@grpc\proto-loader\node_modules\yargs to=release\win-unpacked\resources\app\node_modules\yargs filesCount=60
+  ΓÇó identified module  dep=yargs-parser from=node_modules\@grpc\proto-loader\node_modules\yargs-parser to=release\win-unpacked\resources\app\node_modules\yargs-parser filesCount=9
+  ΓÇó identified module  dep=yocto-queue from=node_modules\yocto-queue to=release\win-unpacked\resources\app\node_modules\yocto-queue filesCount=3
+  ΓÇó updating asar integrity executable resource  executablePath=release\win-unpacked\CentralReform Bridge.exe
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe icon --format ico --root C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\build --root C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge --out C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\release\.icon-ico
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\build\icon.ico
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\icon.ico
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\build\icons
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\icons
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\build\icon.png
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\icon.png
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\build\icon.icns
+  ΓÇó path doesn't exist  path=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\icon.icns
+  ΓÇó no icons found, using provided fallback sources  
+  ΓÇó exited          command=app-builder.exe code=0 pid=11572 out={"icons":null,"isFallback":true}
+  ΓÇó default Electron icon is used  reason=application icon is not set
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe rcedit --args ["C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\release\\win-unpacked\\CentralReform Bridge.exe","--set-version-string","FileDescription","CentralReform Bridge","--set-version-string","ProductName","CentralReform Bridge","--set-version-string","LegalCopyright","Copyright ┬⌐ 2026 CentralReform Bridge","--set-file-version","3.0.0","--set-p 7c9600d8245829266822339f1603e37417cefd605bb81a5df286e2bcebbb72d2 (sha256 hash) (sha256 hash) Bridge","--set-version-string","OriginalFilename",""]
+  ΓÇó computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/f73f2200-5d53-11ea-8264-ddd345f11ee4?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-22T21%3A01%3A23Z&rscd=attachment%3B+filename%3DwinCodeSign-2.6.0.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-22T20%3A00%3A50Z&ske=2026-02-22T21%3A01%3A23Z&sks=b&skv=2018-11-09&sig=PbLqW36LIeUHrie%2F5CXu0VCfFviVHXBIpvvdhr5OVM4%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTc5MDkzNSwibmJmIjoxNzcxNzkwNjM1LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.tWcsYGQbo7UPXHs2Uv6m7ZzbCEjg7V6dImJPirmUxp4&response-content-disposition=attachment%3B%20filename%3DwinCodeSign-2.6.0.7z&response-content-type=application%2Foctet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z length=5635384 contentType=application/octet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  ΓÇó map async       taskCount=1
+  ΓÇó download part   range=bytes=0-5635383 index=0
+  ΓÇó downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=1.199s
+  ΓÇó execute command  command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791'
+                     workingDirectory=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  Γ¿» cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791.7z
+    --
+    Path = C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\834322791'
+                    workingDir=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  ΓÇó exited          command=app-builder.exe code=2 pid=26936
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe rcedit --args ["C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\release\\win-unpacked\\CentralReform Bridge.exe","--set-version-string","FileDescription","CentralReform Bridge","--set-version-string","ProductName","CentralReform Bridge","--set-version-string","LegalCopyright","Copyright ┬⌐ 2026 CentralReform Bridge","--set-file-version","3.0.0","--set-p 7c9600d8245829266822339f1603e37417cefd605bb81a5df286e2bcebbb72d2 (sha256 hash) (sha256 hash) Bridge","--set-version-string","OriginalFilename",""]
+  ΓÇó computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/f73f2200-5d53-11ea-8264-ddd345f11ee4?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-22T21%3A01%3A23Z&rscd=attachment%3B+filename%3DwinCodeSign-2.6.0.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-22T20%3A00%3A50Z&ske=2026-02-22T21%3A01%3A23Z&sks=b&skv=2018-11-09&sig=PbLqW36LIeUHrie%2F5CXu0VCfFviVHXBIpvvdhr5OVM4%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTc5MDkzNSwibmJmIjoxNzcxNzkwNjM1LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.tWcsYGQbo7UPXHs2Uv6m7ZzbCEjg7V6dImJPirmUxp4&response-content-disposition=attachment%3B%20filename%3DwinCodeSign-2.6.0.7z&response-content-type=application%2Foctet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z length=5635384 contentType=application/octet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  ΓÇó map async       taskCount=1
+  ΓÇó download part   range=bytes=0-5635383 index=0
+  ΓÇó downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=1.151s
+  ΓÇó execute command  command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795'
+                     workingDirectory=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  Γ¿» cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795.7z
+    --
+    Path = C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\767592795'
+                    workingDir=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  ΓÇó exited          command=app-builder.exe code=2 pid=27416
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe rcedit --args ["C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\release\\win-unpacked\\CentralReform Bridge.exe","--set-version-string","FileDescription","CentralReform Bridge","--set-version-string","ProductName","CentralReform Bridge","--set-version-string","LegalCopyright","Copyright ┬⌐ 2026 CentralReform Bridge","--set-file-version","3.0.0","--set-p 7c9600d8245829266822339f1603e37417cefd605bb81a5df286e2bcebbb72d2 (sha256 hash) (sha256 hash) Bridge","--set-version-string","OriginalFilename",""]
+  ΓÇó computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/f73f2200-5d53-11ea-8264-ddd345f11ee4?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-22T21%3A01%3A23Z&rscd=attachment%3B+filename%3DwinCodeSign-2.6.0.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-22T20%3A00%3A50Z&ske=2026-02-22T21%3A01%3A23Z&sks=b&skv=2018-11-09&sig=PbLqW36LIeUHrie%2F5CXu0VCfFviVHXBIpvvdhr5OVM4%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTc5MDkzNSwibmJmIjoxNzcxNzkwNjM1LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.tWcsYGQbo7UPXHs2Uv6m7ZzbCEjg7V6dImJPirmUxp4&response-content-disposition=attachment%3B%20filename%3DwinCodeSign-2.6.0.7z&response-content-type=application%2Foctet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z length=5635384 contentType=application/octet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  ΓÇó map async       taskCount=1
+  ΓÇó download part   range=bytes=0-5635383 index=0
+  ΓÇó downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=1.358s
+  ΓÇó execute command  command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859'
+                     workingDirectory=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  Γ¿» cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859.7z
+    --
+    Path = C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\192897859'
+                    workingDir=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  ΓÇó exited          command=app-builder.exe code=2 pid=30740
+  ΓÇó spawning        command=C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\app-builder-bin\win\x64\app-builder.exe rcedit --args ["C:\\Users\\dsbog\\CentralReform.live\\sheet-music-app\\bridge\\release\\win-unpacked\\CentralReform Bridge.exe","--set-version-string","FileDescription","CentralReform Bridge","--set-version-string","ProductName","CentralReform Bridge","--set-version-string","LegalCopyright","Copyright ┬⌐ 2026 CentralReform Bridge","--set-file-version","3.0.0","--set-p 7c9600d8245829266822339f1603e37417cefd605bb81a5df286e2bcebbb72d2 (sha256 hash) (sha256 hash) Bridge","--set-version-string","OriginalFilename",""]
+  ΓÇó computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/f73f2200-5d53-11ea-8264-ddd345f11ee4?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-22T21%3A01%3A23Z&rscd=attachment%3B+filename%3DwinCodeSign-2.6.0.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-22T20%3A00%3A50Z&ske=2026-02-22T21%3A01%3A23Z&sks=b&skv=2018-11-09&sig=PbLqW36LIeUHrie%2F5CXu0VCfFviVHXBIpvvdhr5OVM4%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTc5MDkzNSwibmJmIjoxNzcxNzkwNjM1LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.tWcsYGQbo7UPXHs2Uv6m7ZzbCEjg7V6dImJPirmUxp4&response-content-disposition=attachment%3B%20filename%3DwinCodeSign-2.6.0.7z&response-content-type=application%2Foctet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z length=5635384 contentType=application/octet-stream
+  ΓÇó downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  ΓÇó map async       taskCount=1
+  ΓÇó download part   range=bytes=0-5635383 index=0
+  ΓÇó downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=1.508s
+  ΓÇó execute command  command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995'
+                     workingDirectory=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  Γ¿» cannot execute  cause=exit status 2
+                    out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995.7z
+    --
+    Path = C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    
+    Sub items Errors: 2
+    
+    Archives with Errors: 1
+    
+    Sub items Errors: 2
+    
+                    errorOut=ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995\darwin\10.12\lib\libcrypto.dylib
+    ERROR: Cannot create symbolic link : A required privilege is not held by the client. : C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995\darwin\10.12\lib\libssl.dylib
+    
+                    command='C:\Users\dsbog\CentralReform.live\sheet-music-app\bridge\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995.7z' '-oC:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign\115170995'
+                    workingDir=C:\Users\dsbog\AppData\Local\electron-builder\Cache\winCodeSign
+  ΓÇó exited          command=app-builder.exe code=2 pid=7376

@@ -39,6 +39,9 @@ export class FirestoreTransport {
     private commandUnsub: (() => void) | null = null
     private stateThrottleTimer: ReturnType<typeof setTimeout> | null = null
     private stateDirty = false
+    private fullSyncPending = false
+    private pendingDeltas: Record<string, any> = {}
+    private lastSnapshot: MixerSnapshot | null = null
     private lastStateWrite = 0
     private readonly STATE_WRITE_INTERVAL = 100 // Max 10 writes/sec
 
@@ -80,11 +83,20 @@ export class FirestoreTransport {
     }
 
     /**
+     * Mark a specific field as dirty to be written in the next throttled batch.
+     * Uses dot notation compatible with Firestore updates.
+     */
+    private scheduleDeltaWrite(field: string, value: any): void {
+        this.pendingDeltas[field] = value
+        this.stateDirty = true
+        this.scheduleStateWrite()
+    }
+
+    /**
      * Throttled state write — batches rapid X32 changes into a single
      * Firestore write at most every STATE_WRITE_INTERVAL ms.
      */
     private scheduleStateWrite(): void {
-        this.stateDirty = true
         const now = Date.now()
         const elapsed = now - this.lastStateWrite
 
@@ -99,15 +111,49 @@ export class FirestoreTransport {
         }
     }
 
-    private flushState(): void {
+    private async flushState(): Promise<void> {
         if (this.stateThrottleTimer) {
             clearTimeout(this.stateThrottleTimer)
             this.stateThrottleTimer = null
         }
+
+        if (this.fullSyncPending) {
+            this.fullSyncPending = false
+            this.stateDirty = false
+            this.pendingDeltas = {}
+            this.lastStateWrite = Date.now()
+            await this.writeFullState()
+            return
+        }
+
         if (!this.stateDirty) return
+
+        const deltas = { ...this.pendingDeltas }
         this.stateDirty = false
+        this.pendingDeltas = {}
         this.lastStateWrite = Date.now()
-        this.writeFullState().catch(() => {})
+
+        // Apply deltas to our local cached snapshot if it exists
+        if (this.lastSnapshot) {
+            // We just let the next full sync fix any drift
+            // The local cache isn't strictly necessary to maintain perfectly right now
+        }
+
+        try {
+            // Use update for deltas so we don't overwrite the whole document
+            await this.db.doc("monitor-live/state").update({
+                ...deltas,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            })
+        } catch (err: any) {
+            // If update fails (e.g. document doesn't exist yet), fall back to a full write
+            if (err.code === 5 || err.message.includes("NOT_FOUND")) {
+                console.log("[Transport] State doc missing, falling back to full sync")
+                await this.writeFullState()
+            } else {
+                console.error("[Transport] Failed to write state deltas:", err.message)
+            }
+        }
     }
 
     /**
@@ -148,13 +194,14 @@ export class FirestoreTransport {
             // Verify authorization
             if (!this.isCommandAuthorized(cmd)) {
                 console.warn(`[Transport] Unauthorized command from ${cmd.uid}: ${cmd.type}`)
-                await ref.delete()
+                // Update with error instead of deleting immediately so the client sees it failed
+                await ref.update({ error: "Unauthorized", processedAt: Date.now() })
                 return
             }
 
             // Discard stale commands (older than 10 seconds)
             if (Date.now() - cmd.createdAt > 10_000) {
-                await ref.delete()
+                await ref.update({ error: "Timeout", processedAt: Date.now() })
                 return
             }
 
@@ -193,11 +240,12 @@ export class FirestoreTransport {
                 default:
                     console.warn(`[Transport] Unknown command type: ${cmd.type}`)
             }
+
+            // Delete command after successful execution
+            try { await ref.delete() } catch { /* best effort */ }
         } catch (err) {
             console.error(`[Transport] Command error:`, (err as Error).message)
-        } finally {
-            // Always delete the command after processing
-            try { await ref.delete() } catch { /* best effort */ }
+            try { await ref.update({ error: (err as Error).message, processedAt: Date.now() }) } catch { /* best effort */ }
         }
     }
 
@@ -226,18 +274,72 @@ export class FirestoreTransport {
      * Listen for X32 state changes and push to Firestore.
      */
     private setupX32Listeners(): void {
-        // Any fader/send/matrix change triggers a throttled state write
-        this.x32.on("bus_fader", () => this.scheduleStateWrite())
-        this.x32.on("send_level", () => this.scheduleStateWrite())
-        this.x32.on("send_on", () => this.scheduleStateWrite())
-        this.x32.on("matrix_fader", () => this.scheduleStateWrite())
-        this.x32.on("matrix_on", () => this.scheduleStateWrite())
+        // Any fader/send/matrix change triggers a throttled delta write
+        this.x32.on("bus_fader", (busIndex, value) => {
+            // Assuming buses array is index 0-based in snapshot but 1-based in X32, usually handled in X32Client
+            // The array index matches the bus order
+            // Find the array index for this bus
+            const arrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
+            if (arrayIndex >= 0) {
+                this.scheduleDeltaWrite(`buses.${arrayIndex}.fader`, value)
+            } else {
+                this.fullSyncPending = true; this.scheduleStateWrite();
+            }
+        })
+
+        this.x32.on("send_level", (busIndex, channelIndex, value) => {
+            const busArrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
+            if (busArrayIndex >= 0) {
+                const sendArrayIndex = this.x32.buses[busArrayIndex].sends.findIndex(s => s.channelIndex === channelIndex)
+                if (sendArrayIndex >= 0) {
+                    this.scheduleDeltaWrite(`buses.${busArrayIndex}.sends.${sendArrayIndex}.level`, value)
+                } else {
+                    this.fullSyncPending = true; this.scheduleStateWrite();
+                }
+            }
+        })
+
+        this.x32.on("send_on", (busIndex, channelIndex, on) => {
+            const busArrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
+            if (busArrayIndex >= 0) {
+                const sendArrayIndex = this.x32.buses[busArrayIndex].sends.findIndex(s => s.channelIndex === channelIndex)
+                if (sendArrayIndex >= 0) {
+                    this.scheduleDeltaWrite(`buses.${busArrayIndex}.sends.${sendArrayIndex}.on`, on)
+                } else {
+                    this.fullSyncPending = true; this.scheduleStateWrite();
+                }
+            }
+        })
+
+        this.x32.on("matrix_fader", (matrixIndex, value) => {
+            const arrayIndex = this.x32.matrices?.findIndex(m => m.index === matrixIndex) ?? -1
+            if (arrayIndex >= 0) {
+                this.scheduleDeltaWrite(`matrices.${arrayIndex}.fader`, value)
+            } else {
+                this.fullSyncPending = true; this.scheduleStateWrite();
+            }
+        })
+
+        this.x32.on("matrix_on", (matrixIndex, on) => {
+            const arrayIndex = this.x32.matrices?.findIndex(m => m.index === matrixIndex) ?? -1
+            if (arrayIndex >= 0) {
+                this.scheduleDeltaWrite(`matrices.${arrayIndex}.on`, on)
+            } else {
+                this.fullSyncPending = true; this.scheduleStateWrite();
+            }
+        })
 
         // Full state sync events
-        this.x32.on("state_synced", () => this.writeFullState())
+        this.x32.on("state_synced", () => {
+            this.fullSyncPending = true
+            this.scheduleStateWrite()
+        })
         this.x32.on("reconnected", () => {
             // Small delay to let state populate
-            setTimeout(() => this.writeFullState(), 500)
+            setTimeout(() => {
+                this.fullSyncPending = true
+                this.scheduleStateWrite()
+            }, 500)
         })
     }
 
@@ -247,6 +349,7 @@ export class FirestoreTransport {
      */
     async cleanupStaleCommands(): Promise<void> {
         try {
+            // Clean up old commands (both unprocessed and processed errors)
             const stale = await this.db
                 .collection("monitor-live/commands/pending")
                 .where("createdAt", "<", Date.now() - 30_000)

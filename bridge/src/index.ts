@@ -20,14 +20,9 @@ import * as dotenv from "dotenv"
 dotenv.config()
 
 import * as os from "os"
-import * as https from "https"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
-import { BridgeWSServer } from "./ws-server"
-import { loadOrGenerateCert, TLSFiles } from "./cert"
 import { FirestoreTransport } from "./firestore-transport"
-
-const WS_PORT = parseInt(process.env.WS_PORT || "9000")
 
 /**
  * Detect this machine's LAN IP address.
@@ -129,121 +124,18 @@ async function main() {
         await transport.writeFullState()
     }
 
-    // 5. Load TLS certificate for secure WebSocket (wss://)
-    //    Browsers block ws:// from https:// pages (mixed content).
-    let tlsCert: TLSFiles | null = null
-    try {
-        tlsCert = await loadOrGenerateCert()
-    } catch (err) {
-        console.warn("[Bridge] ⚠ Could not load/generate TLS certificate:", (err as Error).message)
-        console.warn("[Bridge]   Falling back to plain ws:// — may not work from HTTPS pages")
-    }
-
-    // 6. Start HTTPS server (serves both WSS and the status/cert-trust API)
-    const HTTP_PORT = parseInt(process.env.HTTP_PORT || "9001")
-    let httpsServer: https.Server | null = null
-
-    if (tlsCert) {
-        httpsServer = https.createServer(
-            { cert: tlsCert.cert, key: tlsCert.key },
-            (req, res) => {
-                // CORS for admin panel
-                res.setHeader("Access-Control-Allow-Origin", "*")
-                res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
-
-                if (req.method === "OPTIONS") {
-                    res.writeHead(200)
-                    res.end("")
-                    return
-                }
-
-                // Cert trust landing page — users visit this URL to accept the self-signed cert
-                if (req.url === "/" || req.url === "/trust") {
-                    res.writeHead(200, { "Content-Type": "text/html" })
-                    res.end(`<!DOCTYPE html>
-<html><head><title>CentralReform Bridge</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font-family:system-ui;max-width:480px;margin:40px auto;padding:20px;background:#111;color:#eee}
-h1{color:#8b5cf6}code{background:#333;padding:2px 6px;border-radius:4px}
-.ok{color:#22c55e;font-size:2em}</style></head>
-<body>
-<h1>CentralReform Bridge</h1>
-<p class="ok">✓ Connection Secure</p>
-<p>Your device now trusts the bridge certificate.
-You can close this tab and return to the app — monitor controls will connect automatically.</p>
-<p><small>Bridge v${version} | ${x32.isConnected() ? "X32 connected" : "X32 not connected"}</small></p>
-</body></html>`)
-                    return
-                }
-
-                res.setHeader("Content-Type", "application/json")
-
-                if (req.url === "/scan") {
-                    console.log("[HTTPS] Scan requested from admin panel")
-                    X32Client.discover(5000).then(result => {
-                        if (result) {
-                            console.log(`[HTTPS] Found: ${result.name} at ${result.address}`)
-                            res.end(JSON.stringify({ found: true, ...result }))
-                        } else {
-                            res.end(JSON.stringify({ found: false }))
-                        }
-                    }).catch(() => res.end(JSON.stringify({ found: false })))
-                    return
-                }
-
-                if (req.url === "/health") {
-                    res.writeHead(200)
-                    res.end(JSON.stringify({
-                        status: "ok",
-                        version: process.env.BRIDGE_VERSION || "2.0.0",
-                        uptime: Math.round(process.uptime()),
-                        x32Connected: x32.isConnected(),
-                        clients: ws.getConnectedCount(),
-                        ip: currentIp,
-                    }))
-                    return
-                }
-
-                if (req.url === "/status") {
-                    res.writeHead(200)
-                    res.end(JSON.stringify({
-                        x32Connected: x32.isConnected(),
-                        x32Address,
-                        connectedClients: ws.getConnectedCount(),
-                        monitorBuses: monitorConfig.monitorBuses,
-                    }))
-                    return
-                }
-
-                res.writeHead(404)
-                res.end(JSON.stringify({ error: "Not found" }))
-            }
-        )
-
-        httpsServer.listen(HTTP_PORT, () => {
-            console.log(`[HTTPS] API on port ${HTTP_PORT} (https://0.0.0.0:${HTTP_PORT})`)
-        })
-    }
-
-    // 7. Start WebSocket server — secure (wss://) if cert available, plain (ws://) as fallback
-    const ws = tlsCert && httpsServer
-        ? new BridgeWSServer({ server: httpsServer }, x32, config)
-        : new BridgeWSServer({ port: WS_PORT }, x32, config)
-
-    // 7b. Publish this bridge's URL to Firestore so iPads find it automatically
+    // Publish this bridge's URL to Firestore so iPads find it automatically
     let currentIp = getLocalIp()
     if (currentIp) {
-        // Use wss:// when TLS is available (required for HTTPS-served web apps)
-        const protocol = tlsCert ? "wss" : "ws"
-        const port = tlsCert ? HTTP_PORT : WS_PORT
-        const bridgeUrl = `${protocol}://${currentIp}:${port}`
+        // Since we no longer use WSS, we'll establish a pseudo-url to identify this instance
+        const bridgeUrl = `firestore://${currentIp}`
         internalStatus.bridgeUrl = bridgeUrl
         await config.updateBridgeUrl(bridgeUrl)
     } else {
         console.warn("[Bridge] ⚠ Could not detect local IP — iPads will use the last saved bridge URL")
     }
 
-    // 7c. X32 reconnect handling — re-sync state when mixer comes back
+    // 5. X32 reconnect handling — re-sync state when mixer comes back
     x32.on("disconnected", () => {
         console.warn("[Bridge] X32 connection lost — fader changes will not work until reconnected")
     })
@@ -269,9 +161,7 @@ You can close this tab and return to the app — monitor controls will connect a
             const newIp = getLocalIp()
             if (newIp && newIp !== currentIp) {
                 currentIp = newIp
-                const protocol = tlsCert ? "wss" : "ws"
-                const port = tlsCert ? HTTP_PORT : WS_PORT
-                await config.updateBridgeUrl(`${protocol}://${currentIp}:${port}`)
+                await config.updateBridgeUrl(`firestore://${currentIp}`)
                 console.log(`[Bridge] IP changed after wake: ${currentIp}`)
             }
 
@@ -284,19 +174,17 @@ You can close this tab and return to the app — monitor controls will connect a
         if (newIp && newIp !== currentIp) {
             console.log(`[Bridge] 🔄 IP changed: ${currentIp} → ${newIp}`)
             currentIp = newIp
-            const protocol = tlsCert ? "wss" : "ws"
-            const port = tlsCert ? HTTP_PORT : WS_PORT
-            await config.updateBridgeUrl(`${protocol}://${currentIp}:${port}`)
+            await config.updateBridgeUrl(`firestore://${currentIp}`)
         }
 
         // Update internal status for Electron UI
         internalStatus.x32Connected = x32.isConnected()
-        internalStatus.connectedClients = ws.getConnectedCount()
+        internalStatus.connectedClients = 0
 
         // Heartbeat: write status to Firestore
         await config.writeHeartbeat({
             x32Connected: x32.isConnected(),
-            clients: ws.getConnectedCount(),
+            clients: 0,
             localIp: currentIp,
         })
 
@@ -322,11 +210,8 @@ You can close this tab and return to the app — monitor controls will connect a
 
     // Status logging
     setInterval(() => {
-        const connected = ws.getConnectedCount()
-        if (connected > 0) {
-            console.log(`[Bridge] ${connected} iPad(s) connected | X32: ${x32.isConnected() ? "✓" : "✗"}`)
-        }
-    }, 30000)
+        console.log(`[Bridge] Monitor Active | X32: ${x32.isConnected() ? "✓" : "✗"}`)
+    }, 60000)
 
     // Graceful shutdown
     const shutdown = async () => {
@@ -336,19 +221,13 @@ You can close this tab and return to the app — monitor controls will connect a
         await config.writeOffline()
         config.stopWatching()
         x32.disconnect()
-        ws.close()
-        if (httpsServer) httpsServer.close()
         process.exit(0)
     }
     process.on("SIGINT", shutdown)
     process.on("SIGTERM", shutdown)
 
-    const protocol = tlsCert ? "wss" : "ws"
-    const wsPort = tlsCert ? HTTP_PORT : WS_PORT
     console.log()
     console.log(`[Bridge] Ready!`)
-    console.log(`  WebSocket: ${protocol}://${currentIp || "0.0.0.0"}:${wsPort}`)
-    console.log(`  HTTPS API: https://${currentIp || "0.0.0.0"}:${HTTP_PORT}`)
     console.log(`  X32:       ${x32Address}:${x32Port}`)
     console.log(`  Buses:     ${monitorConfig.monitorBuses.join(", ")}`)
     console.log(`  Heartbeat: Every 60s → Firestore`)
@@ -356,9 +235,6 @@ You can close this tab and return to the app — monitor controls will connect a
     if (currentIp) {
         console.log(`  Published: iPads will auto-connect via Firestore`)
         console.log(`  Transport: Firestore (zero iPad config required)`)
-        if (tlsCert) {
-            console.log(`  Cert trust: https://${currentIp}:${HTTP_PORT}/trust (legacy WSS)`)
-        }
     }
     console.log()
 }

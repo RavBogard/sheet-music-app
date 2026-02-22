@@ -1,30 +1,16 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { transferSetlistSchema } from "@/lib/validations"
 import { logger } from "@/lib/logger"
+import { createApiHandler } from "@/lib/api-wrapper"
 
-export async function POST(request: NextRequest) {
-    try {
-        const auth = await withAuth(request, 'admin')
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(request, 'api')
+export const POST = createApiHandler(
+    async ({ req, auth, body }) => {
+        const limited = await checkRateLimit(req, 'api')
         if (limited) return limited
 
-        // Parse Body
-        const body = await request.json()
-        const validationResult = transferSetlistSchema.safeParse(body)
-
-        if (!validationResult.success) {
-            return new NextResponse(JSON.stringify({
-                error: "Validation failed",
-                details: validationResult.error.format()
-            }), { status: 400 })
-        }
-
-        const { setlistId, newOwnerEmail } = validationResult.data
+        const { setlistId, newOwnerEmail } = body
         const db = getFirestore()
 
         // Get Setlist
@@ -61,10 +47,6 @@ export async function POST(request: NextRequest) {
             success: true,
             message: `Transferred "${setlistData?.name}" to ${targetUser.email}`
         })
-
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("Transfer Error:", error)
-        return new NextResponse(`Error: ${(error instanceof Error ? error.message : "Unknown error")}`, { status: 500 })
-    }
-}
+    },
+    { role: 'admin', schema: transferSetlistSchema }
+)
