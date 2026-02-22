@@ -23,9 +23,13 @@ export function useWakeLock() {
                 setIsLocked(false)
                 setWakeLock(null)
             })
-        } catch (err) {
+        } catch (err: any) {
             // Expected: low battery, background tab, or system restriction
-            logger.error('Failed to acquire Wake Lock:', err)
+            if (err?.name === 'NotAllowedError') {
+                logger.debug('Wake lock request denied (expected in background tab)')
+            } else {
+                logger.error('Failed to acquire Wake Lock:', err)
+            }
         }
     }, [])
 
