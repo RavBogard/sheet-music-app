@@ -47,6 +47,9 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
     // Cumulative practice stats from Firestore
     const [cumulativeStats, setCumulativeStats] = useState<{ seconds: number; sessions: number } | null>(null)
 
+    // Error state if audio 404s
+    const [hasError, setHasError] = useState(false)
+
     // Load preferred speed and cumulative stats from Firestore
     useEffect(() => {
         if (!fileId) return
@@ -79,8 +82,12 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         audio.crossOrigin = 'anonymous'
         audioRef.current = audio
 
-        const onLoadedMetadata = () => setDuration(audio.duration)
+        const onLoadedMetadata = () => {
+            setDuration(audio.duration)
+            setHasError(false)
+        }
         const onTimeUpdate = () => setCurrentTime(audio.currentTime)
+        const onError = () => setHasError(true)
         const onEnded = () => {
             setPlaying(false)
             if (practiceStart.current) {
@@ -92,6 +99,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         audio.addEventListener('loadedmetadata', onLoadedMetadata)
         audio.addEventListener('timeupdate', onTimeUpdate)
         audio.addEventListener('ended', onEnded)
+        audio.addEventListener('error', onError)
 
         audio.src = audioUrl
         audio.volume = 0.8
@@ -100,6 +108,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
             audio.removeEventListener('loadedmetadata', onLoadedMetadata)
             audio.removeEventListener('timeupdate', onTimeUpdate)
             audio.removeEventListener('ended', onEnded)
+            audio.removeEventListener('error', onError)
             audio.pause()
             audio.src = ''
             // Report practice time
@@ -196,6 +205,8 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
 
     const [toolbarVisible, setToolbarVisible] = useState(false)
     const toggleToolbar = () => setToolbarVisible(!toolbarVisible)
+
+    if (hasError) return null
 
     if (!toolbarVisible) {
         return (
