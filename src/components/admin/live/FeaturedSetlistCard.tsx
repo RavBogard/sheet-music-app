@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Star, Loader2, X } from "lucide-react"
@@ -13,7 +13,7 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
-    const featuredRef = doc(db, "config", "featured")
+    const featuredRef = useMemo(() => doc(db, "config", "featured"), [])
     const { data: featuredData, loading: isFeaturedLoading } = useSafeFirestoreSync<{ setlistId: string }>(featuredRef as any)
 
     useEffect(() => {

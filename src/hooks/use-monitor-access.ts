@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -29,7 +29,7 @@ export function useMonitorAccess(): {
     const [hasBusAssigned, setHasBusAssigned] = useState(false)
     const [loading, setLoading] = useState(true)
 
-    const ref = user ? doc(db, "config", "monitor") : null
+    const ref = useMemo(() => user ? doc(db, "config", "monitor") : null, [user])
     const { data: configData, loading: configLoading } = useSafeFirestoreSync<MonitorConfig>(ref as any)
 
     useEffect(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
@@ -40,7 +40,7 @@ export function SoundSystemSection() {
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
 
-    const configRef = doc(db, "config", "monitor")
+    const configRef = useMemo(() => doc(db, "config", "monitor"), [])
     const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef as any)
 
     useEffect(() => {

@@ -49,7 +49,7 @@ export default function SetlistPerformPage() {
     const [showPrintModal, setShowPrintModal] = useState(false)
 
     // Real-time subscription to setlist
-    const setlistRef = setlistId ? doc(db, "setlists", setlistId) : null
+    const setlistRef = useMemo(() => setlistId ? doc(db, "setlists", setlistId) : null, [setlistId])
     const { data: setlistData, loading: setlistLoading, error: setlistError } = useSafeFirestoreSync<any>(setlistRef as any)
 
     useEffect(() => {
