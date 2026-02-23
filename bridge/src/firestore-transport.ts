@@ -45,6 +45,14 @@ export class FirestoreTransport {
     private lastStateWrite = 0
     private readonly STATE_WRITE_INTERVAL = 100 // Max 10 writes/sec
 
+    // Track the latest command timestamp for each target to discard obsolete delayed commands
+    // Key format: "bus_master:1" or "send_level:1:5" or "matrix_fader:2"
+    private latestCommandTimestamps: Map<string, number> = new Map();
+    // Batch processing state
+    private pendingCommandQueue: { cmd: PendingCommand, ref: admin.firestore.DocumentReference }[] = [];
+    private commandBatchTimer: ReturnType<typeof setTimeout> | null = null;
+    private readonly COMMAND_BATCH_WINDOW = 20; // ms to accumulate commands before processing
+
     constructor(x32: X32Client, config: ConfigManager) {
         this.x32 = x32
         this.config = config
@@ -169,7 +177,7 @@ export class FirestoreTransport {
                     for (const change of snap.docChanges()) {
                         if (change.type === "added") {
                             const data = change.doc.data() as PendingCommand
-                            this.processCommand(data, change.doc.ref)
+                            this.queueCommand(data, change.doc.ref)
                         }
                     }
                 },
@@ -183,27 +191,84 @@ export class FirestoreTransport {
         console.log("[Transport] Listening for iPad commands")
     }
 
+    private queueCommand(cmd: PendingCommand, ref: admin.firestore.DocumentReference): void {
+        this.pendingCommandQueue.push({ cmd, ref });
+        if (!this.commandBatchTimer) {
+            this.commandBatchTimer = setTimeout(() => this.processCommandBatch(), this.COMMAND_BATCH_WINDOW);
+        }
+    }
+
+    private async processCommandBatch(): Promise<void> {
+        this.commandBatchTimer = null;
+        if (this.pendingCommandQueue.length === 0) return;
+
+        const batchToProcess = [...this.pendingCommandQueue];
+        this.pendingCommandQueue = [];
+
+        // Sort by creation time to ensure chronological processing within the batch
+        batchToProcess.sort((a, b) => a.cmd.createdAt - b.cmd.createdAt);
+
+        const firestoreBatch = this.db.batch();
+        let batchCount = 0;
+
+        for (const { cmd, ref } of batchToProcess) {
+            await this.processCommand(cmd, ref, firestoreBatch);
+            batchCount++;
+
+            // Firestore batches have a limit of 500 operations. 
+            // We do 1 delete/update per command, so commit at 400 for safety.
+            if (batchCount >= 400) {
+                try { await firestoreBatch.commit(); } catch (e) { console.error("[Transport] Batch commit error", e); }
+                batchCount = 0;
+            }
+        }
+
+        if (batchCount > 0) {
+            try { await firestoreBatch.commit(); } catch (e) { console.error("[Transport] Batch commit error", e); }
+        }
+    }
+
     /**
-     * Process a single command from an iPad, then delete it.
+     * Process a single command from an iPad. Does not delete immediately; adds delete to a batch.
      */
     private async processCommand(
         cmd: PendingCommand,
-        ref: admin.firestore.DocumentReference
+        ref: admin.firestore.DocumentReference,
+        batch: admin.firestore.WriteBatch
     ): Promise<void> {
         try {
             // Verify authorization
-            if (!this.isCommandAuthorized(cmd)) {
+            const authorized = await this.isCommandAuthorized(cmd);
+            if (!authorized) {
                 console.warn(`[Transport] Unauthorized command from ${cmd.uid}: ${cmd.type}`)
-                // Update with error instead of deleting immediately so the client sees it failed
-                await ref.update({ error: "Unauthorized", processedAt: Date.now() })
+                batch.update(ref, { error: "Unauthorized", processedAt: Date.now() })
                 return
             }
 
             // Discard stale commands (older than 10 seconds)
             if (Date.now() - cmd.createdAt > 10_000) {
-                await ref.update({ error: "Timeout", processedAt: Date.now() })
+                batch.update(ref, { error: "Timeout", processedAt: Date.now() })
                 return
             }
+
+            // Generate a target key to track command freshness
+            let targetKey = cmd.type;
+            if (cmd.busIndex !== undefined) targetKey += `:${cmd.busIndex}`;
+            if (cmd.channelIndex !== undefined) targetKey += `:${cmd.channelIndex}`;
+            if (cmd.matrixIndex !== undefined) targetKey += `:${cmd.matrixIndex}`;
+
+            const lastCmdTime = this.latestCommandTimestamps.get(targetKey) || 0;
+
+            // If we've already processed a NEWER command for this exact target, 
+            // discard this older one as obsolete (can happen due to Firestore latency/reordering jitter)
+            if (cmd.createdAt < lastCmdTime) {
+                // Obsolete
+                batch.delete(ref)
+                return
+            }
+
+            // Record this as the latest command for this target
+            this.latestCommandTimestamps.set(targetKey, cmd.createdAt);
 
             // Execute the command on the X32
             switch (cmd.type) {
@@ -241,23 +306,36 @@ export class FirestoreTransport {
                     console.warn(`[Transport] Unknown command type: ${cmd.type}`)
             }
 
-            // Delete command after successful execution
-            try { await ref.delete() } catch { /* best effort */ }
+            // Mark for deletion after successful execution
+            batch.delete(ref)
         } catch (err) {
             console.error(`[Transport] Command error:`, (err as Error).message)
-            try { await ref.update({ error: (err as Error).message, processedAt: Date.now() }) } catch { /* best effort */ }
+            batch.update(ref, { error: (err as Error).message, processedAt: Date.now() })
         }
     }
 
     /**
      * Check if a user is authorized to execute this command.
      */
-    private isCommandAuthorized(cmd: PendingCommand): boolean {
+    private async isCommandAuthorized(cmd: PendingCommand): Promise<boolean> {
         // Need to verify the uid has access to the bus they're controlling.
         // For now, we trust that the Firestore security rules enforce this.
         // The bridge-side check is a defense-in-depth measure.
         const userBus = this.config.getUserBus(cmd.uid)
-        const isEngineer = this.config.isAuthorized(cmd.uid, "admin", true)
+
+        // Fetch user document to check if they are an admin or sound engineer
+        let isEngineer = false;
+        try {
+            const userDoc = await this.db.collection("users").doc(cmd.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                if (userData?.role === "admin" || userData?.soundEngineer === true) {
+                    isEngineer = true;
+                }
+            }
+        } catch (e) {
+            console.error("[Transport] Failed to fetch user role for auth check:", e);
+        }
 
         if (cmd.type === "set_matrix_fader" || cmd.type === "set_matrix_on") {
             return isEngineer

@@ -13,7 +13,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { doc, onSnapshot } from "firebase/firestore"
+import { doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useMusicStore } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
@@ -25,6 +25,7 @@ import { Metronome } from "@/components/performance/Metronome"
 import { SetlistTrack } from "@/types/models"
 import { QueueItem } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 type Section = {
     label: string | null
@@ -48,57 +49,55 @@ export default function SetlistPerformPage() {
     const [showPrintModal, setShowPrintModal] = useState(false)
 
     // Real-time subscription to setlist
+    const setlistRef = setlistId ? doc(db, "setlists", setlistId) : null
+    const { data: setlistData, loading: setlistLoading, error: setlistError } = useSafeFirestoreSync<any>(setlistRef as any)
+
     useEffect(() => {
-        if (!setlistId) return
+        setLoading(setlistLoading)
+        if (setlistLoading) return
 
-        const unsub = onSnapshot(
-            doc(db, "setlists", setlistId),
-            (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data()
-                    setName(data.name || "Untitled")
-                    setTracks(data.tracks || [])
-                    setServiceNotes(data.serviceNotes || null)
-
-                    // Compute diff against last published snapshot
-                    const snapshot = data.publishedSnapshot as Array<{ title: string }> | undefined
-                    if (snapshot && data.isPublic) {
-                        const currentSongs = (data.tracks || [])
-                            .filter((t: SetlistTrack) => !t.type || t.type === 'song')
-                            .map((t: SetlistTrack) => t.title)
-                        const snapshotSongs = snapshot.map(s => s.title)
-                        const added = currentSongs.filter((t: string) => !snapshotSongs.includes(t))
-                        const removed = snapshotSongs.filter(t => !currentSongs.includes(t))
-                        if (added.length > 0 || removed.length > 0) {
-                            const parts: string[] = []
-                            if (added.length) parts.push(`+${added.join(', +')}`)
-                            if (removed.length) parts.push(`−${removed.join(', −')}`)
-                            setChangesSummary(parts.join(' · '))
-                        } else {
-                            setChangesSummary(null)
-                        }
-                    }
-                } else {
-                    setError("Setlist not found")
-                }
-                setLoading(false)
-            },
-            (err) => {
-                console.error("[SetlistPerform]", err)
-                // Distinguish error types for clear user messaging
-                const code = (err as { code?: string })?.code
-                if (code === 'permission-denied') {
-                    setError("This setlist hasn't been published yet, or you don't have access.")
-                } else if (code === 'not-found') {
-                    setError("Setlist not found — it may have been deleted.")
-                } else {
-                    setError("Couldn't load setlist — check your connection and try again.")
-                }
-                setLoading(false)
+        if (setlistError) {
+            console.error("[SetlistPerform]", setlistError)
+            // Distinguish error types for clear user messaging
+            const code = (setlistError as { code?: string })?.code
+            if (code === 'permission-denied') {
+                setError("This setlist hasn't been published yet, or you don't have access.")
+            } else if (code === 'not-found') {
+                setError("Setlist not found — it may have been deleted.")
+            } else {
+                setError("Couldn't load setlist — check your connection and try again.")
             }
-        )
-        return () => unsub()
-    }, [setlistId])
+            return
+        }
+
+        if (setlistData) {
+            const data = setlistData
+            setName(data.name || "Untitled")
+            setTracks(data.tracks || [])
+            setServiceNotes(data.serviceNotes || null)
+
+            // Compute diff against last published snapshot
+            const snapshot = data.publishedSnapshot as Array<{ title: string }> | undefined
+            if (snapshot && data.isPublic) {
+                const currentSongs = (data.tracks || [])
+                    .filter((t: SetlistTrack) => !t.type || t.type === 'song')
+                    .map((t: SetlistTrack) => t.title)
+                const snapshotSongs = snapshot.map((s: { title: string }) => s.title)
+                const added = currentSongs.filter((t: string) => !snapshotSongs.includes(t))
+                const removed = snapshotSongs.filter((t: string) => !currentSongs.includes(t))
+                if (added.length > 0 || removed.length > 0) {
+                    const parts: string[] = []
+                    if (added.length) parts.push(`+${added.join(', +')}`)
+                    if (removed.length) parts.push(`−${removed.join(', −')}`)
+                    setChangesSummary(parts.join(' · '))
+                } else {
+                    setChangesSummary(null)
+                }
+            }
+        } else if (!setlistLoading) {
+            setError("Setlist not found")
+        }
+    }, [setlistData, setlistLoading, setlistError])
 
     // Build queue items from tracks
     const queue = useMemo(() => tracks.map(toQueueItem), [tracks])

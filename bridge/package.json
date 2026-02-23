@@ -1,13 +1,12 @@
 {
   "name": "centralreform-bridge",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "CentralReform X32 Monitor Bridge — connects iPads to the Behringer X32 via OSC",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "electron dist/main.js",
     "dev": "tsc && electron dist/main.js",
-    "build-exe": "tsc && npx @electron/packager . \"CentralReform Bridge\" --platform=win32 --arch=x64 --out=release --overwrite",
     "dist": "tsc && npx electron-builder --win"
   },
   "dependencies": {
@@ -21,7 +20,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@yao-pkg/pkg": "^5.11.0",
     "electron": "^40.6.0",
     "electron-builder": "^26.8.1",
     "tsx": "^4.7.0",
@@ -40,21 +38,17 @@
     ],
     "extraResources": [],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
+      "target": "nsis"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": false,
       "createStartMenuShortcut": true,
-      "shortcutName": "CentralReform Bridge"
+      "shortcutName": "CR Bridge",
+      "runAfterFinish": true,
+      "include": "build/installer.nsh"
     },
     "publish": {
       "provider": "github",

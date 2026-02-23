@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy,
 import { User } from "firebase/auth"
 import { UserProfile, UserRole } from "@/types/models"
 import { logger } from "@/lib/logger"
+import { userProfileConverter } from "@/types/schemas"
 
 export type { UserProfile, UserRole }
 
@@ -15,11 +16,12 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     if (!db || Object.keys(db).length === 0) {
         return { uid: user.uid, role: "pending" } as UserProfile
     }
-    const ref = doc(db, "users", user.uid)
+    const ref = doc(db, "users", user.uid).withConverter(userProfileConverter)
     const snap = await getDoc(ref)
 
     if (snap.exists()) {
-        const data = snap.data() as UserProfile
+        const data = snap.data()
+        if (!data) throw new Error("User profile corrupted or invalid")
         // Update last login in background — never block auth on this
         // Don't overwrite displayName if user has customized it
         const updates: Record<string, unknown> = {
@@ -44,7 +46,7 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
             lastLoginAt: Timestamp.now()
         }
 
-        await setDoc(ref, newProfile)
+        await setDoc(ref, newProfile as any)
         return newProfile
     }
 }
@@ -58,12 +60,13 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
  */
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
     if (!db || Object.keys(db).length === 0) return () => { }
-    const ref = doc(db, "users", uid)
+    const ref = doc(db, "users", uid).withConverter(userProfileConverter)
     let lastProfile: string | null = null
 
     return onSnapshot(ref, (snap) => {
         if (snap.exists()) {
-            const profile = snap.data() as UserProfile
+            const profile = snap.data()
+            if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
             // Compare meaningful fields only (skip lastLoginAt which changes every session)
             const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
             if (key !== lastProfile) {
@@ -89,9 +92,10 @@ export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, on
     // Build safety
     if (!db || Object.keys(db).length === 0) return () => { }
 
-    const q = query(collection(db, "users"), orderBy("createdAt", "desc"))
+    const collectionRef = collection(db, "users").withConverter(userProfileConverter)
+    const q = query(collectionRef, orderBy("createdAt", "desc"))
     return onSnapshot(q, (snap) => {
-        const users = snap.docs.map(d => d.data() as UserProfile)
+        const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
         callback(users)
     }, (error) => {
         if (onError) onError(error)

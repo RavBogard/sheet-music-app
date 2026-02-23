@@ -7,13 +7,14 @@ import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
 import { db } from "@/lib/firebase"
-import { doc, updateDoc, collection, onSnapshot } from "firebase/firestore"
+import { doc, updateDoc, collection } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX } from "lucide-react"
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 interface MusicianPickerProps {
     musicians: SetlistMusician[]
@@ -50,27 +51,24 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
     const defaultUids = useMemo(() => new Set(defaultMusicians.map(m => m.uid)), [defaultMusicians])
 
     // Subscribe to email delivery status after publish
+    const emailEventsRef = setlistId && isPublished ? collection(db, "setlists", setlistId, "emailEvents") : null
+    const { data: emailEventsData } = useSafeFirestoreSync(emailEventsRef as any)
+
     useEffect(() => {
-        if (!setlistId || !isPublished) {
+        if (!emailEventsData) {
             setEmailStatuses(new Map())
             return
         }
-        const unsub = onSnapshot(
-            collection(db, "setlists", setlistId, "emailEvents"),
-            (snap) => {
-                const map = new Map<string, EmailStatus>()
-                snap.docs.forEach(doc => {
-                    const data = doc.data() as EmailStatus
-                    if (data.recipientEmail) {
-                        map.set(data.recipientEmail.toLowerCase(), data)
-                    }
-                })
-                setEmailStatuses(map)
-            },
-            () => { /* Silently handle permission errors */ }
-        )
-        return () => unsub()
-    }, [setlistId, isPublished])
+
+        const map = new Map<string, EmailStatus>()
+        const eventsArray = emailEventsData as EmailStatus[]
+        eventsArray.forEach(data => {
+            if (data.recipientEmail) {
+                map.set(data.recipientEmail.toLowerCase(), data)
+            }
+        })
+        setEmailStatuses(map)
+    }, [emailEventsData])
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {

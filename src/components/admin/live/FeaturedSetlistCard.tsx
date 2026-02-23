@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Star, Loader2, X } from "lucide-react"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -12,17 +13,18 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
+    const featuredRef = doc(db, "config", "featured")
+    const { data: featuredData, loading: isFeaturedLoading } = useSafeFirestoreSync<{ setlistId: string }>(featuredRef as any)
+
     useEffect(() => {
-        const unsub = onSnapshot(doc(db, "config", "featured"), (snap) => {
-            if (snap.exists()) {
-                setFeaturedId(snap.data()?.setlistId || null)
-            } else {
-                setFeaturedId(null)
-            }
-            setLoading(false)
-        })
-        return unsub
-    }, [])
+        if (isFeaturedLoading) return
+        if (featuredData) {
+            setFeaturedId(featuredData.setlistId || null)
+        } else {
+            setFeaturedId(null)
+        }
+        setLoading(false)
+    }, [featuredData, isFeaturedLoading])
 
     const handleSetFeatured = async (id: string | null) => {
         setSaving(true)

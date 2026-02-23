@@ -16,6 +16,7 @@ import {
 
 import { SetlistTrack } from "@/types/api"
 import { logSetlistChange } from "@/lib/setlist-audit"
+import { setlistConverter } from "@/types/schemas"
 
 // export interface SetlistTrack { ... } // Removed local definition
 export type { SetlistTrack }
@@ -54,8 +55,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
         subscribeToPersonalSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
+            const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
             const q = query(
-                collection(db, COLLECTION_PATH),
+                collectionRef,
                 where("ownerId", "==", userId),
                 // where("isPublic", "==", false), // Removed to include ALL my setlists (public or private)
                 orderBy("date", "desc"),
@@ -64,10 +66,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
             return onSnapshot(q, {
                 next: (snapshot) => {
-                    const setlists = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })) as Setlist[];
+                    const setlists = snapshot.docs
+                        .map(doc => doc.data())
+                        .filter(Boolean) as Setlist[];
                     callback(setlists, snapshot.metadata.fromCache);
                 },
                 error: (error) => {
@@ -79,10 +80,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         // Subscribe to a single setlist by ID
         subscribeToSetlist(id: string, _isPublic: boolean, callback: (setlist: Setlist | null) => void) {
-            const docRef = doc(db, COLLECTION_PATH, id);
+            const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
             return onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
-                    callback({ id: snap.id, ...snap.data() } as Setlist);
+                    callback(snap.data() as Setlist);
                 } else {
                     callback(null);
                 }
@@ -99,7 +100,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             // Determine what changed for audit
             const action = data.name !== undefined ? 'renamed'
                 : data.tracks !== undefined ? 'tracks_updated'
-                : 'tracks_updated'
+                    : 'tracks_updated'
             logSetlistChange(id, action, userId || '', userName || 'Anonymous', {
                 ...(data.name !== undefined && { newName: data.name }),
                 ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
@@ -118,8 +119,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         // Subscribe to ALL public setlists
         subscribeToPublicSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
+            const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
             const q = query(
-                collection(db, COLLECTION_PATH),
+                collectionRef,
                 where("isPublic", "==", true),
                 orderBy("date", "desc"),
                 limit(50)
@@ -127,10 +129,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
             return onSnapshot(q, {
                 next: (snapshot) => {
-                    const setlists = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })) as Setlist[];
+                    const setlists = snapshot.docs
+                        .map(doc => doc.data())
+                        .filter(Boolean) as Setlist[];
                     callback(setlists, snapshot.metadata.fromCache);
                 },
                 error: (error) => {

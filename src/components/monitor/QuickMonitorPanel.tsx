@@ -9,7 +9,7 @@ import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { BridgeStatus } from "@/types/monitor"
-import { Loader2, Star, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
+import { Loader2, Star, Wifi, WifiOff, Server, ServerOff, PlusCircle } from "lucide-react"
 
 /**
  * Check if the bridge heartbeat indicates it's online.
@@ -100,6 +100,38 @@ export function QuickMonitorPanel() {
     const myBus = buses.find(b => b.index === myBusIndex)
     const channelMap = new Map(channels.map(c => [c.index, c]))
 
+    // Find "Me" channel - simple heuristic: channel name matches bus name, or bus name matches part of channel name
+    const myChannelSend = myBus?.sends.find(s => {
+        const ch = channelMap.get(s.channelIndex);
+        if (!ch || !ch.name || !myBus.name) return false;
+        const busName = myBus.name.toLowerCase();
+        const chName = ch.name.toLowerCase();
+        return chName === busName ||
+            chName.includes(busName) ||
+            (busName.includes("vox") && chName.includes("vox") && busName.split(' ')[0] === chName.split(' ')[0]);
+    });
+
+    // "More Me" Macro: Increases my channel up to 10% (max 100%), lowers all other active sends by 5%
+    const handleMoreMe = useCallback(() => {
+        if (!myBusIndex || !myBus || !myChannelSend) return;
+
+        const currentMeLevel = myChannelSend.level;
+        const newMeLevel = Math.min(1.0, currentMeLevel + 0.10);
+
+        // Optimistically apply local, then send
+        updateSendLevel(myBusIndex, myChannelSend.channelIndex, newMeLevel);
+        getMonitorClient()?.setSendLevel(myBusIndex, myChannelSend.channelIndex, newMeLevel);
+
+        // Lower everything else slightly to create space
+        myBus.sends.forEach(send => {
+            if (send.channelIndex !== myChannelSend.channelIndex && send.level > 0.05) {
+                const newLevel = Math.max(0.01, send.level - 0.05);
+                updateSendLevel(myBusIndex, send.channelIndex, newLevel);
+                getMonitorClient()?.setSendLevel(myBusIndex, send.channelIndex, newLevel);
+            }
+        });
+    }, [myBusIndex, myBus, myChannelSend, updateSendLevel]);
+
     // Show active channels (non-zero level) + pinned channels
     const visibleSends = myBus?.sends.filter(s =>
         s.on || s.level > 0.001 || pinnedChannels.includes(s.channelIndex)
@@ -183,6 +215,19 @@ export function QuickMonitorPanel() {
                     onChange={handleBusMaster}
                 />
             </div>
+
+            {/* "More Me" Macro Button (only if we found a matching channel) */}
+            {myChannelSend && (
+                <div className="px-3 py-1">
+                    <button
+                        onClick={handleMoreMe}
+                        className="w-full py-2 bg-violet-900/40 hover:bg-violet-800/60 border border-violet-500/30 rounded-lg flex items-center justify-center gap-2 text-violet-200 text-xs font-semibold transition-colors active:scale-[0.98]"
+                    >
+                        <PlusCircle className="w-4 h-4" />
+                        More Me!
+                    </button>
+                </div>
+            )}
 
             {/* Divider */}
             <div className="border-t border-zinc-800 mx-3 my-1" />

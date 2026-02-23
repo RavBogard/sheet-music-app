@@ -195,12 +195,13 @@ export function TrackSheet({
         <div className="space-y-5 py-2">
             {/* Title */}
             <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Title</Label>
+                <Label variant="setlist">Title</Label>
                 <Input
+                    variant="setlist"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onBlur={handleBlur}
-                    className="text-lg font-medium bg-muted/50 border-0 focus-visible:ring-1"
+                    className="text-lg font-medium focus-visible:ring-1"
                     placeholder={isHeader ? "SECTION NAME" : "Track title"}
                 />
             </div>
@@ -208,9 +209,9 @@ export function TrackSheet({
             {/* Type selector (for non-song items or to change type) */}
             {!isSong && (
                 <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Type</Label>
+                    <Label variant="setlist">Type</Label>
                     <Select value={trackType} onValueChange={(v) => setTrackType(v as TrackType)}>
-                        <SelectTrigger className="bg-muted/50 border-0">
+                        <SelectTrigger className="">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -229,7 +230,7 @@ export function TrackSheet({
                     <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Key</Label>
+                                <Label variant="setlist">Key</Label>
                                 <KeyPicker
                                     value={key}
                                     onChange={handleSetlistKeyChange}
@@ -237,12 +238,13 @@ export function TrackSheet({
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Lead</Label>
+                                <Label variant="setlist">Lead</Label>
                                 <Input
+                                    variant="setlist"
                                     value={leadMusician}
                                     onChange={(e) => setLeadMusician(e.target.value)}
                                     onBlur={handleBlur}
-                                    className="bg-muted/50 border-0"
+                                    className=""
                                     placeholder="Karen"
                                 />
                             </div>
@@ -272,7 +274,7 @@ export function TrackSheet({
                                 {/* Native key override */}
                                 {track?.fileId && (
                                     <div className="flex items-center gap-2">
-                                        <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Chart Key</Label>
+                                        <Label variant="setlist" className="min-w-[70px]">Chart Key</Label>
                                         <KeyPicker
                                             value={nativeKey || ""}
                                             onChange={handleNativeKeyOverride}
@@ -283,7 +285,7 @@ export function TrackSheet({
 
                                 {/* Semitone stepper */}
                                 <div className="flex items-center gap-2">
-                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide min-w-[70px]">Semitones</Label>
+                                    <Label variant="setlist" className="min-w-[70px]">Semitones</Label>
                                     <div className="flex items-center gap-1 bg-muted/50 rounded-md">
                                         <Button
                                             type="button"
@@ -327,15 +329,16 @@ export function TrackSheet({
 
                     {/* BPM */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">BPM</Label>
+                        <Label variant="setlist">BPM</Label>
                         <div className="flex gap-3">
                             <Input
+                                variant="setlist"
                                 type="number"
                                 value={bpm}
                                 onChange={(e) => setBpm(e.target.value)}
                                 onBlur={handleBlur}
                                 placeholder="120"
-                                className="bg-muted/50 border-0 w-24"
+                                className="w-24"
                             />
                             <TapTempoButton
                                 currentBpm={bpm ? parseInt(bpm) : undefined}
@@ -346,34 +349,36 @@ export function TrackSheet({
 
                     {/* Notes */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Notes</Label>
+                        <Label variant="setlist">Notes</Label>
                         <Textarea
+                            variant="setlist"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             onBlur={handleBlur}
-                            className="bg-muted/50 border-0 min-h-[60px] resize-none"
+                            className="min-h-[60px] resize-none"
                             placeholder="Performance notes..."
                         />
                     </div>
 
                     {/* Reference Link */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                        <Label variant="setlist" className="flex items-center gap-1">
                             Reference Video/Audio
                         </Label>
                         <Input
+                            variant="setlist"
                             type="url"
                             value={referenceLink}
                             onChange={(e) => setReferenceLink(e.target.value)}
                             onBlur={handleBlur}
-                            className="bg-muted/50 border-0"
+                            className=""
                             placeholder="https://youtube.com/..."
                         />
                     </div>
 
                     {/* File management */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Files</Label>
+                        <Label variant="setlist">Files</Label>
                         <div className="flex flex-wrap gap-2">
                             <Button
                                 size="sm"
@@ -422,24 +427,26 @@ export function TrackSheet({
                     <div className="grid grid-cols-2 gap-3">
                         {trackType !== "note" && (
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Performer</Label>
+                                <Label variant="setlist">Performer</Label>
                                 <Input
+                                    variant="setlist"
                                     value={performer}
                                     onChange={(e) => setPerformer(e.target.value)}
                                     onBlur={handleBlur}
-                                    className="bg-muted/50 border-0"
+                                    className=""
                                     placeholder="Rabbi, Cantor..."
                                 />
                             </div>
                         )}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Duration (min)</Label>
+                            <Label variant="setlist">Duration (min)</Label>
                             <Input
+                                variant="setlist"
                                 type="number"
                                 value={estimatedMinutes}
                                 onChange={(e) => setEstimatedMinutes(e.target.value)}
                                 onBlur={handleBlur}
-                                className="bg-muted/50 border-0"
+                                className=""
                                 placeholder="5"
                             />
                         </div>
@@ -447,8 +454,9 @@ export function TrackSheet({
 
                     {(trackType === "reading" || trackType === "prayer" || trackType === "note") && (
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Description</Label>
+                            <Label variant="setlist">Description</Label>
                             <Textarea
+                                variant="setlist"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 onBlur={handleBlur}

@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useRef } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
+import { Loader2 } from "lucide-react"
 
 interface FaderStripProps {
     label: string
@@ -14,22 +15,94 @@ interface FaderStripProps {
 export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck }: FaderStripProps) {
     const isDragging = useRef(false)
     const sliderRef = useRef<HTMLDivElement>(null)
+    const lastWriteTime = useRef<number>(0)
+    const pendingValue = useRef<number | null>(null)
+    const rafRef = useRef<number | null>(null)
+    const lastTapTime = useRef<number>(0)
+
+    // UI state for optimistic updates and latency feedback
+    const [displayValue, setDisplayValue] = useState(value)
+    const [isPending, setIsPending] = useState(false)
+
+    // Sync display value with actual value when not dragging and no pending writes
+    useEffect(() => {
+        if (!isDragging.current && !isPending) {
+            setDisplayValue(value)
+        }
+    }, [value, isPending])
+
+    // Clear pending state if the value catches up to what we expect
+    useEffect(() => {
+        if (isPending && pendingValue.current !== null && Math.abs(value - pendingValue.current) < 0.01) {
+            setIsPending(false)
+            pendingValue.current = null
+        }
+    }, [value, isPending])
+
+    // Safety timeout to clear pending state if Firestore takes too long (or drops it)
+    useEffect(() => {
+        if (isPending) {
+            const timer = setTimeout(() => {
+                setIsPending(false)
+                setDisplayValue(value) // snap back
+            }, 2000)
+            return () => clearTimeout(timer)
+        }
+    }, [isPending, value])
+
+    // Throttle writes to parent (and therefore to Firestore)
+    const throttledOnChange = useCallback((val: number) => {
+        const now = Date.now()
+        // Rate limit to max 10 updates per second (100ms)
+        if (now - lastWriteTime.current > 100) {
+            lastWriteTime.current = now
+            pendingValue.current = val
+            setIsPending(true)
+            onChange(val)
+        } else {
+            // Schedule the final value if they stop dragging between ticks
+            if (rafRef.current) cancelAnimationFrame(rafRef.current)
+            rafRef.current = requestAnimationFrame(() => {
+                lastWriteTime.current = Date.now()
+                pendingValue.current = val
+                setIsPending(true)
+                onChange(val)
+            })
+        }
+    }, [onChange])
 
     const updateFromPointer = useCallback((clientX: number) => {
         if (!sliderRef.current) return
         const rect = sliderRef.current.getBoundingClientRect()
         const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-        onChange(ratio)
+
+        setDisplayValue(ratio) // Instant optimistic UI update
+        throttledOnChange(ratio)
+
         if (onUnmuteCheck && !on) {
             onUnmuteCheck() // Auto-unmute if fader is grabbed but channel is muted
         }
-    }, [onChange, onUnmuteCheck, on])
+    }, [throttledOnChange, onUnmuteCheck, on])
 
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
+        const now = Date.now()
+        // Double tap detection (within 300ms)
+        if (now - lastTapTime.current < 300) {
+            // Reset to 0dB (Unity is typically ~0.75 in Behringer float terms, letting 0.75 represent 0dB)
+            // Or we can reset to 0% if it's currently > 0, and unity if it's 0.
+            // A common "reset" for monitors is muting, but "unity" is also useful.
+            // Let's implement reset to 0 as a quick kill, or if already 0, reset to 0.75 (unity)
+            const resetVal = displayValue > 0.1 ? 0.0 : 0.75
+            updateFromPointer(sliderRef.current ? sliderRef.current.getBoundingClientRect().left + (sliderRef.current.getBoundingClientRect().width * resetVal) : e.clientX)
+            isDragging.current = false
+            return;
+        }
+        lastTapTime.current = now
+
         isDragging.current = true
             ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
         updateFromPointer(e.clientX)
-    }, [updateFromPointer])
+    }, [updateFromPointer, displayValue])
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!isDragging.current) return
@@ -38,15 +111,20 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
 
     const handlePointerUp = useCallback(() => {
         isDragging.current = false
-    }, [])
+        // Trigger one final write to ensure the exact drop position is recorded
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        throttledOnChange(displayValue)
+    }, [displayValue, throttledOnChange])
 
-    const percentage = Math.round(value * 100)
+    const percentage = Math.round(displayValue * 100)
+    // If pending, slightly dim the bar to indicate latency taking effect
+    const barOpacity = isDragging.current ? "opacity-100" : (isPending ? "opacity-70" : "opacity-100")
 
     return (
         <div className={`w-full py-1.5 transition-opacity ${!on ? "opacity-50 grayscale" : ""}`}>
             <div
                 ref={sliderRef}
-                className="relative h-12 w-full rounded-xl bg-zinc-900/80 border border-white/5 overflow-hidden cursor-pointer touch-none select-none"
+                className="relative h-14 w-full rounded-xl bg-zinc-900/80 border border-white/5 overflow-hidden cursor-pointer touch-none select-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -54,9 +132,9 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
             >
                 {/* Fill bar */}
                 <div
-                    className={`absolute inset-y-0 left-0 transition-[width] duration-75 ${isMaster
-                            ? "bg-violet-600/60"
-                            : "bg-blue-600/50"
+                    className={`absolute inset-y-0 left-0 transition-all duration-75 ${barOpacity} ${isMaster
+                        ? "bg-violet-600/60"
+                        : "bg-blue-600/50"
                         }`}
                     style={{ width: `${percentage}%` }}
                 />
@@ -66,11 +144,17 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                     <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-violet-100" : "text-zinc-200"}`}>
                         {label}
                     </span>
-                    <span className="text-xs font-mono font-bold text-zinc-400 shrink-0">
-                        {percentage}%
-                    </span>
+                    <div className="flex items-center gap-2">
+                        {isPending && !isDragging.current && (
+                            <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
+                        )}
+                        <span className="text-xs font-mono font-bold text-zinc-400 shrink-0">
+                            {percentage}%
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     )
 }
+

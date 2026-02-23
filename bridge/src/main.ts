@@ -30,7 +30,20 @@ if (!gotTheLock) {
         }
     });
 
-    app.whenReady().then(createWindow);
+    app.whenReady().then(() => {
+        // Enforce auto-start on Windows login (hidden in tray)
+        if (app.isPackaged) {
+            app.setLoginItemSettings({
+                openAtLogin: true,
+                path: process.execPath,
+                args: [
+                    '--processStart', `"${process.execPath}"`,
+                    '--process-start-args', `"--hidden"`
+                ]
+            });
+        }
+        createWindow();
+    });
 }
 
 // ─── Window ───
@@ -167,12 +180,18 @@ function checkForUpdates() {
         });
 
         autoUpdater.on('update-downloaded', (info) => {
-            console.log(`[Update] v${info.version} downloaded — will install on next restart`);
+            console.log(`[Update] v${info.version} downloaded — installing silently in background...`);
             mainWindow?.webContents.send('log', {
                 level: 'info',
-                message: `✅ Update v${info.version} downloaded — will install on next restart`
+                message: `✅ Update v${info.version} downloaded — restarting to apply update`
             });
-            mainWindow?.webContents.send('update-ready', info.version);
+
+            // Wait 3 seconds to let the UI log appear, then forcefully restart and update
+            setTimeout(() => {
+                (app as any).isQuiting = true;
+                // isSilent = true, isForceRunAfter = true
+                autoUpdater.quitAndInstall(true, true);
+            }, 3000);
         });
 
         autoUpdater.on('update-not-available', () => {

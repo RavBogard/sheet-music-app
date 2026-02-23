@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore"
+import { collection, query, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { History, Shield, ArrowRight, Loader2 } from "lucide-react"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 interface AuditLog {
     id: string
@@ -20,24 +21,29 @@ export function AccessAuditLog() {
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
 
+    const q = query(
+        collection(db, "auditLogs"),
+        orderBy("timestamp", "desc"),
+        limit(20) // Only show the last 20 actions
+    )
+
+    const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q as any)
+
     useEffect(() => {
-        const q = query(
-            collection(db, "auditLogs"),
-            orderBy("timestamp", "desc"),
-            limit(20) // Only show the last 20 actions
-        )
+        if (isLogsLoading) return
 
-        const unsub = onSnapshot(q, (snap) => {
-            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditLog))
+        if (logsError) {
+            console.error("Audit log error:", logsError)
+            setLoading(false)
+            return
+        }
+
+        if (rawLogs) {
+            const data = (rawLogs as any[]).map((doc: any) => ({ ...doc } as AuditLog))
             setLogs(data)
-            setLoading(false)
-        }, (error) => {
-            console.error("Audit log error:", error)
-            setLoading(false)
-        })
-
-        return unsub
-    }, [])
+        }
+        setLoading(false)
+    }, [rawLogs, isLogsLoading, logsError])
 
     if (loading) return (
         <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>

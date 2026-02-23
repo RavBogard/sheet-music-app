@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }
@@ -55,20 +56,20 @@ export function useUpcomingPrep() {
             const ts = snap.data()?.lastVisitedAt
             if (ts?.toDate) setLastVisitedAt(ts.toDate())
             else if (ts) setLastVisitedAt(new Date(ts))
-            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => {})
-        }).catch(() => {})
+            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => { })
+        }).catch(() => { })
     }, [user])
 
     // Subscribe to upcoming public setlists (next 7 days)
-    useEffect(() => {
-        if (!user || !isMember) return
+    const q = useMemo(() => {
+        if (!user || !isMember) return null
 
         const now = new Date()
         now.setHours(0, 0, 0, 0)
         const nextWeek = new Date(now)
         nextWeek.setDate(nextWeek.getDate() + 7)
 
-        const q = query(
+        return query(
             collection(db, 'setlists'),
             where('isPublic', '==', true),
             where('eventDate', '>=', Timestamp.fromDate(now)),
@@ -76,12 +77,17 @@ export function useUpcomingPrep() {
             orderBy('eventDate', 'asc'),
             limit(5)
         )
-
-        return onSnapshot(q, (snap) => {
-            const results = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Setlist)
-            setSetlists(results)
-        }, () => {/* silent */})
     }, [user, isMember])
+
+    const { data } = useSafeFirestoreSync<Setlist>(q as any)
+
+    useEffect(() => {
+        if (data) {
+            setSetlists(data as unknown as Setlist[])
+        } else {
+            setSetlists([])
+        }
+    }, [data])
 
     // Load user's song preferences — batched query instead of N individual reads.
     // Firestore `in` queries support up to 30 items per batch, so we chunk if needed.
@@ -116,7 +122,7 @@ export function useUpcomingPrep() {
                             const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
                             const snap = await getDocFromCache(ref).catch(() => getDoc(ref))
                             if (snap.exists()) prefs[fileId] = snap.data() as SongPref
-                        } catch {/* silent */}
+                        } catch {/* silent */ }
                     }
                 }
             }

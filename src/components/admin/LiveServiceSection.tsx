@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Activity, Radio, Users, Settings2, Loader2, Music2 } from "lucide-react"
 import { db } from "@/lib/firebase"
-import { collection, query, where, onSnapshot, doc, getDocs } from "firebase/firestore"
+import { collection, query, where, doc, getDocs } from "firebase/firestore"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
 import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 export function LiveServiceSection() {
     const { isAdmin, isBandLeader } = useAuth()
@@ -20,23 +21,25 @@ export function LiveServiceSection() {
 
     const canSeeLive = isAdmin || isBandLeader
 
+    // 1. Watch Monitor Config (Bridge Status)
+    const monitorConfigRef = doc(db, "config", "monitor")
+    const { data: configData } = useSafeFirestoreSync<MonitorConfig>(monitorConfigRef as any)
+
     useEffect(() => {
-        if (!canSeeLive) return
+        if (configData) {
+            setBridgeConfig(configData)
+        }
+    }, [configData])
 
-        // 1. Watch Monitor Config (Bridge Status)
-        const unsubConfig = onSnapshot(doc(db, "config", "monitor"), (snap) => {
-            if (snap.exists()) {
-                setBridgeConfig(snap.data() as MonitorConfig)
-            }
-        })
+    // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
+    const setlistsQuery = query(collection(db, "setlists"), where("isPublic", "==", true))
+    const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
 
-        // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
-        // Since we want to know what's live right now, we can check setlists that have users in the presence collection.
-        // For efficiency in a real app, you might have an 'activeSessions' root collection.
-        // Here, we'll watch all public setlists and then fetch their presence counts.
-        const q = query(collection(db, "setlists"), where("isPublic", "==", true))
-        const unsubSetlists = onSnapshot(q, async (snap) => {
-            const lists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    useEffect(() => {
+        if (!canSeeLive || !setlistsData) return
+
+        const fetchPresence = async () => {
+            const lists = setlistsData as any[]
             setActiveSetlists(lists)
 
             // For each setlist, fetch presence to see if it's "active"
@@ -52,17 +55,11 @@ export function LiveServiceSection() {
             }
             setPresenceCounts(counts)
             setLoading(false)
-        })
-
-        return () => {
-            unsubConfig()
-            unsubSetlists()
         }
-    }, [canSeeLive])
 
+        fetchPresence()
+    }, [setlistsData, canSeeLive])
 
-
-    // Determine Bridge State
     const bridgeStatus = bridgeConfig?.bridge as BridgeStatus | undefined
 
     const [isBridgeOnline, setIsBridgeOnline] = useState(false)

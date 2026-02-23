@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { doc, getDoc, onSnapshot, updateDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
 import { MonitorConfig } from "@/types/monitor"
+import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -39,43 +40,46 @@ export function SoundSystemSection() {
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
 
-    useEffect(() => {
-        const unsub = onSnapshot(doc(db, "config", "monitor"), (configDoc) => {
-            try {
-                const data = configDoc.exists()
-                    ? { ...DEFAULT_MONITOR_CONFIG, ...configDoc.data() as Partial<MonitorConfig> }
-                    : DEFAULT_MONITOR_CONFIG
-                setMonitorConfigExists(configDoc.exists())
-                setBridgeUrl(data.bridgeUrl)
-                setX32Address(data.x32Address)
-                setX32Port(String(data.x32Port))
-                setMonitorBusesStr(data.monitorBuses.join(", "))
+    const configRef = doc(db, "config", "monitor")
+    const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef as any)
 
-                const raw = configDoc.data()
-                const bridge = raw?.bridge
-                if (bridge?.lastSeen) {
-                    const ts = bridge.lastSeen
-                    let lastSeen: Date | null = null
-                    try {
-                        if (ts.toDate) lastSeen = ts.toDate()
-                        else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
-                    } catch { /* ignore */ }
-                    setBridgeStatus({
-                        status: bridge.status || "unknown",
-                        lastSeen,
-                        x32Connected: bridge.x32Connected ?? false,
-                        clients: bridge.clients ?? 0,
-                        version: bridge.version || "?",
-                    })
-                }
-            } catch (err) {
-                logger.error("Failed to load monitor config:", err)
-            } finally {
-                setMonitorLoading(false)
+    useEffect(() => {
+        if (configLoading) return
+
+        try {
+            const data = configData
+                ? { ...DEFAULT_MONITOR_CONFIG, ...configData }
+                : DEFAULT_MONITOR_CONFIG
+
+            setMonitorConfigExists(!!configData)
+            setBridgeUrl(data.bridgeUrl)
+            setX32Address(data.x32Address)
+            setX32Port(String(data.x32Port))
+            setMonitorBusesStr(data.monitorBuses.join(", "))
+
+            const raw: any = configData || {}
+            const bridge = raw?.bridge
+            if (bridge?.lastSeen) {
+                const ts = bridge.lastSeen
+                let lastSeen: Date | null = null
+                try {
+                    if (ts.toDate) lastSeen = ts.toDate()
+                    else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
+                } catch { /* ignore */ }
+                setBridgeStatus({
+                    status: bridge.status || "unknown",
+                    lastSeen,
+                    x32Connected: bridge.x32Connected ?? false,
+                    clients: bridge.clients ?? 0,
+                    version: bridge.version || "?",
+                })
             }
-        })
-        return unsub
-    }, [])
+        } catch (err) {
+            logger.error("Failed to load monitor config:", err)
+        } finally {
+            setMonitorLoading(false)
+        }
+    }, [configData, configLoading])
 
     const handleScan = useCallback(async () => {
         if (!bridgeUrl) { setScanResult("Set the bridge URL first"); return }

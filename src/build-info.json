@@ -1,9 +1,11 @@
 {
   "version": "0.1.0",
-  "commit": "6712c2e",
+  "commit": "b30d773",
   "branch": "master",
   "buildDate": "2/22/2026",
   "changelog": [
+    "0.1.0 - feat: phase 1 - error boundaries and legacy v1 component excision",
+    "0.1.0 - refactor: library sync optimizations, UI/UX polish, and offline improvements",
     "0.1.0 - fix: correctly identify synthetic queue IDs starting with flow- and route them to FlowItemView instead of attempting to fetch a missing PDF",
     "0.1.0 - fix: make fetchFileById resilient to UUID database string corruption where hyphens are replaced by underscores",
     "0.1.0 - fix: extract inline Wrapper component in PerformPage to prevent continuous React unmount/remount destruction loops on PDFViewer",
@@ -13,8 +15,6 @@
     "0.1.0 - fix: import RxDBMigrationsSchemaPlugin required for version migrations",
     "0.1.0 - fix: bump rxdb schema version to 1 and add cache-dropping migration strategy to fix DB6 mismatch",
     "0.1.0 - fix: resolve RxDB DXE1 strict schema error and PWA service-worker range request no-response crashes",
-    "0.1.0 - fix: relax Next.js 15 route handler parameter typings in custom api-wrapper",
-    "0.1.0 - feat: Zero-latency Gig Mode optimizations, RxDB cache migration, and strict TS/ESLint fixes",
-    "0.1.0 - feat: aesthetic overhaul and backend stability improvements"
+    "0.1.0 - fix: relax Next.js 15 route handler parameter typings in custom api-wrapper"
   ]
 }

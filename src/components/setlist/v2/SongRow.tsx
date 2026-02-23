@@ -4,6 +4,7 @@ import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Music, ExternalLink } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { SetlistTrack } from "@/types/models"
 
 interface SongRowProps {
@@ -101,15 +102,16 @@ export const SongRow = memo(function SongRow({ track, canEdit, onTap, onPlayFile
                     </span>
 
                     {track.referenceLink && (
-                        <a
-                            href={track.referenceLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-500 dark:text-violet-400 border border-violet-500/30 bg-violet-500/10 rounded px-1.5 py-0.5 hover:bg-violet-500 hover:text-white transition-colors"
-                        >
-                            Ref <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
+                        <Badge asChild variant="violet" className="text-[10px] px-1.5 py-0.5 cursor-pointer">
+                            <a
+                                href={track.referenceLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                Ref <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                        </Badge>
                     )}
                 </div>
             </div>

@@ -114,6 +114,11 @@ export default function MonitorPage() {
                     <ConnectionIndicator status={status} error={error} />
                 </div>
 
+                <p className="text-sm text-muted-foreground">
+                    You do not have a personal monitor bus assigned to you.
+                    Use the tools below to manage the monitor system for the band.
+                </p>
+
                 <BusAssignmentPanel config={config} />
 
                 {matrices.length > 0 && (
