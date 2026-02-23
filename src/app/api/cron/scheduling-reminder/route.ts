@@ -52,12 +52,36 @@ export async function GET(req: Request) {
             const hoursAway = (eventDateMs - now) / (1000 * 60 * 60)
             if (hoursAway <= 0 || hoursAway > 48) continue
 
+            // Skip if already reminded within the last 20 hours (prevents duplicate daily cron sends)
+            if (a.lastRemindedAt) {
+                const lastRemindedMs = typeof a.lastRemindedAt === 'object' && a.lastRemindedAt.seconds
+                    ? a.lastRemindedAt.seconds * 1000
+                    : new Date(a.lastRemindedAt).getTime()
+                if (now - lastRemindedMs < 20 * 60 * 60 * 1000) continue
+            }
+
             const eventDateStr = new Date(eventDateMs).toLocaleDateString('en-US', {
                 weekday: 'long', month: 'long', day: 'numeric',
             })
 
-            // Send email
+            // Check musician's notification preferences
+            let emailEnabled = true
+            let smsEnabled = false
+            let pushEnabled = true
             try {
+                const musicianDoc = await db.collection('users').doc(a.musicianUid).get()
+                const prefs = musicianDoc.data()?.musicianProfile?.notificationPreferences
+                if (prefs) {
+                    emailEnabled = prefs.email !== false
+                    smsEnabled = prefs.sms === true
+                    pushEnabled = prefs.push !== false
+                }
+            } catch {
+                // If can't fetch prefs, use defaults
+            }
+
+            // Send email
+            if (emailEnabled) try {
                 const result = await sendSchedulingEmail({
                     to: a.musicianEmail,
                     recipientName: a.musicianName,
@@ -73,8 +97,8 @@ export async function GET(req: Request) {
                 logger.warn(`[Cron/Reminder] Email failed for ${a.musicianEmail}`, e)
             }
 
-            // Send SMS if phone available
-            if (a.musicianPhone) {
+            // Send SMS if phone available and enabled
+            if (a.musicianPhone && smsEnabled) {
                 try {
                     const result = await sendSchedulingReminderSMS({
                         to: a.musicianPhone,
@@ -91,18 +115,27 @@ export async function GET(req: Request) {
             }
 
             // In-app notification
+            if (pushEnabled) {
+                try {
+                    await db.collection('users').doc(a.musicianUid).collection('notifications').add({
+                        type: 'scheduling_reminder',
+                        title: 'Service coming up!',
+                        body: `Reminder: "${a.setlistName}" is ${hoursAway < 24 ? 'tomorrow' : 'in 2 days'}. Please confirm your attendance.`,
+                        link: '/schedule',
+                        entityId: doc.id,
+                        read: false,
+                        createdAt: FieldValue.serverTimestamp(),
+                    })
+                } catch (e) {
+                    logger.warn(`[Cron/Reminder] Notification failed for ${a.musicianUid}`, e)
+                }
+            }
+
+            // Mark this assignment as reminded so cron doesn't re-send
             try {
-                await db.collection('users').doc(a.musicianUid).collection('notifications').add({
-                    type: 'scheduling_reminder',
-                    title: 'Service coming up!',
-                    body: `Reminder: "${a.setlistName}" is ${hoursAway < 24 ? 'tomorrow' : 'in 2 days'}. Please confirm your attendance.`,
-                    link: '/schedule',
-                    entityId: doc.id,
-                    read: false,
-                    createdAt: FieldValue.serverTimestamp(),
-                })
+                await doc.ref.update({ lastRemindedAt: FieldValue.serverTimestamp() })
             } catch (e) {
-                logger.warn(`[Cron/Reminder] Notification failed for ${a.musicianUid}`, e)
+                logger.warn(`[Cron/Reminder] Failed to update lastRemindedAt for ${doc.id}:`, e)
             }
 
             reminded++

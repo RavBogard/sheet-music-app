@@ -165,33 +165,35 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
     }
 
     return (
-        <div className={cn("space-y-4", className)}>
+        <div className={cn("space-y-5", className)}>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h3 className={cn("font-semibold text-foreground flex items-center gap-2", compact ? "text-sm" : "text-base")}>
-                    <Ban className="h-4 w-4 text-red-500" />
+                    <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center">
+                        <Ban className="h-3.5 w-3.5 text-red-500" />
+                    </div>
                     My Blockout Dates
                 </h3>
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
+                    <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm font-medium text-foreground min-w-[140px] text-center">{monthLabel}</span>
-                    <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
+                    <span className="text-sm font-semibold text-foreground min-w-[140px] text-center">{monthLabel}</span>
+                    <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-                Click dates when you're <strong>unavailable</strong>. Band leaders will see these when scheduling.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+                Click dates when you are <strong className="text-foreground">unavailable</strong>. Band leaders will see these when scheduling.
             </p>
 
             {/* Calendar Grid */}
-            <div className="border border-border rounded-xl overflow-hidden bg-card">
-                <div className="grid grid-cols-7 bg-muted">
+            <div className="border border-border/60 rounded-xl overflow-hidden bg-card/70 backdrop-blur-sm shadow-sm">
+                <div className="grid grid-cols-7 bg-muted/60">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                        <div key={`${d}-${i}`} className="p-2 text-xs font-medium text-center text-muted-foreground">
+                        <div key={`${d}-${i}`} className="p-2 text-xs font-semibold text-center text-muted-foreground">
                             {d}
                         </div>
                     ))}
@@ -199,7 +201,7 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
                 <div className="grid grid-cols-7">
                     {days.map((date, i) => {
                         if (!date) {
-                            return <div key={`empty-${i}`} className="aspect-square bg-background/30 border-t border-r border-border/30" />
+                            return <div key={`empty-${i}`} className="aspect-square bg-background/20 border-t border-r border-border/20" />
                         }
 
                         const ds = dateStr(date)
@@ -216,22 +218,22 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
                                 onMouseEnter={() => handleDayHover(date)}
                                 disabled={isPast}
                                 className={cn(
-                                    "aspect-square flex items-center justify-center text-sm border-t border-r border-border/30 transition-all relative",
+                                    "aspect-square flex items-center justify-center text-sm border-t border-r border-border/20 transition-all duration-200 relative",
                                     isPast && "opacity-30 cursor-not-allowed",
                                     isToday && "font-bold",
-                                    blockout && "bg-red-500/20 text-red-700 dark:text-red-300 cursor-default",
-                                    inSelection && !blockout && "bg-red-500/30 text-red-800 dark:text-red-200",
-                                    !isPast && !blockout && !inSelection && "hover:bg-muted cursor-pointer",
+                                    blockout && "bg-red-500/15 text-red-700 dark:text-red-300 cursor-default",
+                                    inSelection && !blockout && "bg-red-500/25 text-red-800 dark:text-red-200",
+                                    !isPast && !blockout && !inSelection && "hover:bg-accent/50 cursor-pointer active:scale-95",
                                 )}
                             >
                                 <span className={cn(
-                                    "w-7 h-7 flex items-center justify-center rounded-full",
-                                    isToday && "ring-2 ring-foreground/20",
+                                    "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
+                                    isToday && "bg-brand text-brand-foreground ring-2 ring-brand/20",
                                 )}>
                                     {date.getDate()}
                                 </span>
                                 {blockout && (
-                                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500" />
+                                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-500" />
                                 )}
                             </button>
                         )
@@ -241,25 +243,25 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
 
             {/* Selection confirmation */}
             {selecting && selectionStart && (
-                <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-3">
+                <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-3 animate-spring">
                     <p className="text-sm font-medium text-foreground">
-                        Mark as unavailable: {formatDateRange(
+                        Mark as unavailable: <span className="text-red-600 dark:text-red-400">{formatDateRange(
                             selectionStart < (selectionEnd || selectionStart) ? selectionStart : (selectionEnd || selectionStart),
                             selectionStart > (selectionEnd || selectionStart) ? selectionStart : (selectionEnd || selectionStart),
-                        )}
+                        )}</span>
                     </p>
                     <Input
-                        placeholder="Reason (optional) — e.g., vacation, out of town"
+                        placeholder="Reason (optional) -- e.g., vacation, out of town"
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-9 text-sm rounded-lg"
                     />
                     <div className="flex gap-2">
                         <Button
                             size="sm"
                             variant="ghost"
                             onClick={cancelSelection}
-                            className="text-xs"
+                            className="text-xs rounded-lg"
                         >
                             Cancel
                         </Button>
@@ -267,7 +269,7 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
                             size="sm"
                             onClick={handleCreateBlockout}
                             disabled={saving}
-                            className="text-xs bg-red-600 hover:bg-red-700 text-white gap-1.5"
+                            className="text-xs bg-red-600 hover:bg-red-700 text-white gap-1.5 rounded-lg fluid-interaction"
                         >
                             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ban className="h-3 w-3" />}
                             {saving ? 'Saving...' : 'Block These Dates'}
@@ -278,26 +280,26 @@ export function AvailabilityManager({ className, compact }: AvailabilityManagerP
 
             {/* Existing blockouts list */}
             {blockouts.length > 0 && (
-                <div className="space-y-2">
-                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Blockouts</h4>
-                    <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                    <h4 className="text-eyebrow">Active Blockouts</h4>
+                    <div className="space-y-2">
                         {blockouts
                             .filter(b => b.endDate >= dateStr(new Date())) // Only future/current
                             .map(b => (
-                                <div key={b.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-red-500/5 border border-red-500/20">
-                                    <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                                <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-card/70 border border-red-500/15 transition-all duration-200 hover:border-red-500/30 hover:shadow-sm">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/20 shrink-0" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-foreground">
                                             {formatDateRange(b.startDate, b.endDate)}
                                         </p>
                                         {b.reason && (
-                                            <p className="text-xs text-muted-foreground truncate">{b.reason}</p>
+                                            <p className="text-xs text-muted-foreground truncate mt-0.5">{b.reason}</p>
                                         )}
                                     </div>
                                     <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-7 w-7 text-muted-foreground hover:text-red-500 shrink-0"
+                                        className="h-7 w-7 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0 transition-colors duration-200"
                                         onClick={() => handleDeleteBlockout(b.id)}
                                     >
                                         <X className="h-3.5 w-3.5" />

@@ -69,8 +69,16 @@ export const POST = createApiHandler(
                 const ref = await db.collection('scheduling_assignments').add(assignmentData)
                 created.push(musician.uid)
 
-                // Send email notification (fire-and-forget)
-                sendSchedulingEmail({
+                // Check musician's notification preferences
+                const musicianDoc = await db.collection('users').doc(musician.uid).get()
+                const musicianData = musicianDoc.data()
+                const notifPrefs = musicianData?.musicianProfile?.notificationPreferences || {}
+                const emailEnabled = notifPrefs.email !== false // default true
+                const smsEnabled = notifPrefs.sms === true // default false
+                const pushEnabled = notifPrefs.push !== false // default true
+
+                // Send email notification (fire-and-forget) — only if enabled
+                if (emailEnabled) { sendSchedulingEmail({
                     to: musician.email,
                     recipientName: musician.name,
                     setlistName,
@@ -88,10 +96,10 @@ export const POST = createApiHandler(
                     }
                 }).catch(e => {
                     logger.warn(`[Scheduling] Email failed for ${musician.email}:`, e)
-                })
+                }) }
 
-                // Send SMS notification if phone provided (fire-and-forget)
-                if (musician.phone) {
+                // Send SMS notification if phone provided and enabled (fire-and-forget)
+                if (musician.phone && smsEnabled) {
                     sendSchedulingAssignmentSMS({
                         to: musician.phone,
                         musicianName: musician.name,
@@ -111,25 +119,27 @@ export const POST = createApiHandler(
                     })
                 }
 
-                // Create in-app notification (fire-and-forget)
-                try {
-                    const notifRef = db.collection('users').doc(musician.uid).collection('notifications')
-                    const instrumentText = musician.instrument ? ` on ${musician.instrument}` : ''
-                    await notifRef.add({
-                        type: isCore ? 'scheduling_confirmed' : 'scheduling_request',
-                        title: isCore ? 'You\'re confirmed to play' : 'You\'re scheduled to play',
-                        body: `You've been assigned${instrumentText} for "${setlistName}"`,
-                        link: '/schedule',
-                        entityId: ref.id,
-                        read: false,
-                        createdAt: FieldValue.serverTimestamp(),
-                    })
-                    // Update notifiedVia
-                    await db.collection('scheduling_assignments').doc(ref.id).update({
-                        notifiedVia: FieldValue.arrayUnion('in_app')
-                    })
-                } catch (e) {
-                    logger.warn(`[Scheduling] In-app notification failed for ${musician.uid}:`, e)
+                // Create in-app notification (fire-and-forget) — only if enabled
+                if (pushEnabled) {
+                    try {
+                        const notifRef = db.collection('users').doc(musician.uid).collection('notifications')
+                        const instrumentText = musician.instrument ? ` on ${musician.instrument}` : ''
+                        await notifRef.add({
+                            type: isCore ? 'scheduling_confirmed' : 'scheduling_request',
+                            title: isCore ? 'You\'re confirmed to play' : 'You\'re scheduled to play',
+                            body: `You've been assigned${instrumentText} for "${setlistName}"`,
+                            link: '/schedule',
+                            entityId: ref.id,
+                            read: false,
+                            createdAt: FieldValue.serverTimestamp(),
+                        })
+                        // Update notifiedVia
+                        await db.collection('scheduling_assignments').doc(ref.id).update({
+                            notifiedVia: FieldValue.arrayUnion('in_app')
+                        })
+                    } catch (e) {
+                        logger.warn(`[Scheduling] In-app notification failed for ${musician.uid}:`, e)
+                    }
                 }
             } catch (e) {
                 logger.error(`[Scheduling] Failed to assign ${musician.name}:`, e)

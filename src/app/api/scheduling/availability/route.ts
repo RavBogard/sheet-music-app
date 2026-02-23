@@ -53,26 +53,25 @@ export const GET = createApiHandler(
             .filter((b: any) => b.endDate >= startDate!)
 
         // 3. Get existing assignments for the date range
-        // We check by setlistId via eventDate matching — assignments have eventDate
-        const assignmentsSnap = await db.collection('scheduling_assignments')
-            .where('status', 'in', ['pending', 'confirmed'])
+        // Query with eventDate bounds to avoid fetching all assignments
+        const effectiveEnd = endDate || startDate!
+
+        // Query pending assignments in the date range
+        const pendingSnap = await db.collection('scheduling_assignments')
+            .where('status', '==', 'pending')
+            .where('eventDate', '>=', startDate)
+            .where('eventDate', '<=', effectiveEnd + 'T23:59:59')
             .get()
 
-        const assignmentsInRange = assignmentsSnap.docs
+        // Query confirmed assignments in the date range
+        const confirmedSnap = await db.collection('scheduling_assignments')
+            .where('status', '==', 'confirmed')
+            .where('eventDate', '>=', startDate)
+            .where('eventDate', '<=', effectiveEnd + 'T23:59:59')
+            .get()
+
+        const assignmentsInRange = [...pendingSnap.docs, ...confirmedSnap.docs]
             .map(d => ({ id: d.id, ...d.data() }))
-            .filter((a: any) => {
-                if (!a.eventDate) return false
-                // eventDate could be ISO string or Firestore Timestamp
-                let dateStr: string
-                if (typeof a.eventDate === 'string') {
-                    dateStr = a.eventDate.split('T')[0]
-                } else if (a.eventDate?.seconds) {
-                    dateStr = new Date(a.eventDate.seconds * 1000).toISOString().split('T')[0]
-                } else {
-                    return false
-                }
-                return dateStr >= startDate! && dateStr <= (endDate || startDate!)
-            })
 
         // 4. Build availability map
         const availability = musicians.map(musician => {

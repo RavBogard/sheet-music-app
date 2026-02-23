@@ -417,7 +417,7 @@ export function ChatPanel() {
 
             {/* Panel — full-screen bottom sheet on mobile, side panel on desktop */}
             <div className={cn(
-                "fixed z-50 flex flex-col bg-card shadow-2xl animate-in",
+                "fixed z-50 flex flex-col bg-background shadow-2xl animate-in",
                 // Mobile: bottom sheet covering most of the screen
                 "inset-x-0 bottom-0 top-12 rounded-t-2xl sm:rounded-t-none",
                 // Desktop: side panel
@@ -441,7 +441,7 @@ export function ChatPanel() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea className="flex-1 overflow-hidden p-4">
                     <div className="space-y-4 pb-4">
                         {messages.length === 0 && (
                             <div className="text-center text-muted-foreground mt-10 space-y-2">
@@ -520,7 +520,7 @@ export function ChatPanel() {
                 </ScrollArea>
 
                 {/* Input */}
-                <div className="p-4 border-t border-border bg-card pb-safe">
+                <div className="p-4 border-t border-border bg-background pb-safe">
                     <div className="flex gap-2">
                         <Input
                             ref={inputRef}

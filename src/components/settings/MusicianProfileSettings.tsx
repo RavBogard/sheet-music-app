@@ -77,8 +77,8 @@ export function MusicianProfileSettings() {
         <div className="space-y-6">
             {/* Section Header */}
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                    <Guitar className="w-5 h-5 text-violet-500" />
+                <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                    <Guitar className="w-5 h-5 text-brand" />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-foreground">Musician Profile</h3>
@@ -107,9 +107,9 @@ export function MusicianProfileSettings() {
                             key={key}
                             onClick={() => selectInstrument(key)}
                             className={`
-                                relative px-3 py-2.5 rounded-xl text-left transition-all text-sm
+                                relative px-3 py-2.5 rounded-xl text-left transition-all duration-200 text-sm
                                 ${profile.instrument === key
-                                    ? 'bg-violet-500/10 border-violet-500/50 text-foreground ring-1 ring-violet-500/30'
+                                    ? 'bg-brand/10 border-brand/50 text-foreground ring-1 ring-brand/30'
                                     : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                                 }
                                 border
@@ -122,7 +122,7 @@ export function MusicianProfileSettings() {
                                 </div>
                             )}
                             {profile.instrument === key && (
-                                <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-violet-500" />
+                                <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-brand" />
                             )}
                         </button>
                     ))}
@@ -168,12 +168,12 @@ export function MusicianProfileSettings() {
                                 <button
                                     onClick={() => updateField('preferCapo', !profile.preferCapo)}
                                     className={`
-                                        w-11 h-6 rounded-full transition-colors relative
-                                        ${profile.preferCapo ? 'bg-violet-500' : 'bg-muted border border-border'}
+                                        w-11 h-6 rounded-full transition-all duration-200 relative
+                                        ${profile.preferCapo ? 'bg-brand' : 'bg-muted border border-border'}
                                     `}
                                 >
                                     <div className={`
-                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform
+                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
                                         ${profile.preferCapo ? 'translate-x-5' : 'translate-x-0.5'}
                                     `} />
                                 </button>
@@ -189,9 +189,9 @@ export function MusicianProfileSettings() {
                                                 key={fret}
                                                 onClick={() => updateField('preferredCapoFret', fret)}
                                                 className={`
-                                                    w-9 h-9 rounded-lg text-sm font-medium transition-all
+                                                    w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200
                                                     ${profile.preferredCapoFret === fret
-                                                        ? 'bg-violet-500 text-white'
+                                                        ? 'bg-brand text-brand-foreground'
                                                         : 'bg-muted border border-border text-muted-foreground hover:text-foreground'
                                                     }
                                                 `}
@@ -213,12 +213,12 @@ export function MusicianProfileSettings() {
                         <button
                             onClick={() => updateField('preferFlats', !profile.preferFlats)}
                             className={`
-                                w-11 h-6 rounded-full transition-colors relative
-                                ${profile.preferFlats ? 'bg-violet-500' : 'bg-muted border border-border'}
+                                w-11 h-6 rounded-full transition-all duration-200 relative
+                                ${profile.preferFlats ? 'bg-brand' : 'bg-muted border border-border'}
                             `}
                         >
                             <div className={`
-                                w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform
+                                w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
                                 ${profile.preferFlats ? 'translate-x-5' : 'translate-x-0.5'}
                             `} />
                         </button>
@@ -227,19 +227,19 @@ export function MusicianProfileSettings() {
             )}
 
             {/* ─── Scheduling Settings ─── */}
-            <div className="space-y-4 pt-4 border-t border-border">
+            <div className="space-y-5 pt-6 border-t border-border/60">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <CalendarDays className="w-4 h-4 text-blue-500" />
+                    <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                        <CalendarDays className="w-5 h-5 text-brand" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-semibold text-foreground">Scheduling</h4>
-                        <p className="text-xs text-muted-foreground">Phone, availability, and notification preferences</p>
+                        <h4 className="text-base font-semibold text-foreground">Scheduling</h4>
+                        <p className="text-sm text-muted-foreground">Phone, availability, and notification preferences</p>
                     </div>
                 </div>
 
                 {/* Phone Number */}
-                <div className="space-y-2">
+                <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         Phone Number
@@ -249,26 +249,26 @@ export function MusicianProfileSettings() {
                         placeholder="(555) 123-4567"
                         value={profile.phone || ''}
                         onChange={(e) => updateField('phone', e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-10 text-sm rounded-lg"
                     />
                     <p className="text-xs text-muted-foreground">For SMS scheduling notifications (optional)</p>
                 </div>
 
                 {/* Notification Preferences */}
-                <div className="space-y-3">
+                <div className="space-y-3 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <Bell className="h-3.5 w-3.5 text-muted-foreground" />
                         Scheduling Notifications
                     </label>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {([
                             { key: 'email' as const, label: 'Email', desc: 'Assignment and reminder emails' },
                             { key: 'sms' as const, label: 'SMS', desc: 'Text message notifications' },
                             { key: 'push' as const, label: 'Push', desc: 'Browser push notifications' },
                         ]).map(({ key, label, desc }) => (
-                            <div key={key} className="flex items-center justify-between">
+                            <div key={key} className="flex items-center justify-between py-1">
                                 <div>
-                                    <span className="text-sm text-foreground">{label}</span>
+                                    <span className="text-sm font-medium text-foreground">{label}</span>
                                     <p className="text-xs text-muted-foreground">{desc}</p>
                                 </div>
                                 <button
@@ -280,13 +280,13 @@ export function MusicianProfileSettings() {
                                         })
                                     }}
                                     className={`
-                                        w-11 h-6 rounded-full transition-colors relative
+                                        w-11 h-6 rounded-full transition-all duration-200 relative
                                         ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
-                                            ? 'bg-blue-500' : 'bg-muted border border-border'}
+                                            ? 'bg-brand' : 'bg-muted border border-border'}
                                     `}
                                 >
                                     <div className={`
-                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform
+                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all duration-200
                                         ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
                                             ? 'translate-x-5' : 'translate-x-0.5'}
                                     `} />
@@ -297,7 +297,7 @@ export function MusicianProfileSettings() {
                 </div>
 
                 {/* Calendar Feed URL */}
-                <div className="space-y-2">
+                <div className="space-y-2 p-4 rounded-xl bg-muted/20 border border-border/40">
                     <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                         Calendar Subscription
@@ -308,12 +308,12 @@ export function MusicianProfileSettings() {
                                 <Input
                                     readOnly
                                     value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`}
-                                    className="h-9 text-xs font-mono bg-muted"
+                                    className="h-9 text-xs font-mono bg-muted rounded-lg"
                                 />
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-9 shrink-0 text-xs"
+                                    className="h-9 shrink-0 text-xs rounded-lg"
                                     onClick={() => {
                                         const url = `${window.location.origin}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`
                                         navigator.clipboard.writeText(url)
@@ -332,7 +332,7 @@ export function MusicianProfileSettings() {
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-xs gap-1.5"
+                                className="text-xs gap-1.5 rounded-lg fluid-interaction"
                                 onClick={async () => {
                                     if (!user) return
                                     try {
@@ -358,13 +358,15 @@ export function MusicianProfileSettings() {
 
             {/* Save Button */}
             {hasChanges && (
-                <Button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="w-full h-11 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold"
-                >
-                    {saving ? "Saving..." : "Save Profile"}
-                </Button>
+                <div className="animate-spring">
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="w-full h-11 rounded-xl bg-brand hover:bg-brand/90 text-brand-foreground font-semibold fluid-interaction shadow-sm shadow-brand/20"
+                    >
+                        {saving ? "Saving..." : "Save Profile"}
+                    </Button>
+                </div>
             )}
         </div>
     )

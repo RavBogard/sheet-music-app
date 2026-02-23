@@ -43,7 +43,7 @@ interface SchedulingEmailParams {
     setlistName: string
     eventDate: string
     instrument?: string
-    status: 'pending' | 'confirmed'
+    status: 'pending' | 'confirmed' | 'cancelled'
     scheduleUrl: string
     assignmentId: string
 }
@@ -58,14 +58,19 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
     try {
         const instrumentText = params.instrument ? ` on <strong>${escapeHtml(params.instrument)}</strong>` : ''
         const isAutoConfirmed = params.status === 'confirmed'
+        const isCancelled = params.status === 'cancelled'
 
-        const actionButtons = isAutoConfirmed
-            ? `<a href="${escapeHtml(params.scheduleUrl)}" style="display:inline-block;padding:12px 24px;background:#10b981;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Schedule</a>`
-            : `<a href="${escapeHtml(params.scheduleUrl)}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Accept or Decline</a>`
+        const actionButtons = isCancelled
+            ? `<a href="${escapeHtml(params.scheduleUrl)}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Schedule</a>`
+            : isAutoConfirmed
+                ? `<a href="${escapeHtml(params.scheduleUrl)}" style="display:inline-block;padding:12px 24px;background:#10b981;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Schedule</a>`
+                : `<a href="${escapeHtml(params.scheduleUrl)}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Accept or Decline</a>`
 
-        const statusBadge = isAutoConfirmed
-            ? '<span style="display:inline-block;padding:4px 12px;background:#10b981;color:#ffffff;border-radius:12px;font-size:12px;font-weight:600;">Confirmed</span>'
-            : '<span style="display:inline-block;padding:4px 12px;background:#f59e0b;color:#ffffff;border-radius:12px;font-size:12px;font-weight:600;">Awaiting Response</span>'
+        const statusBadge = isCancelled
+            ? '<span style="display:inline-block;padding:4px 12px;background:#ef4444;color:#ffffff;border-radius:12px;font-size:12px;font-weight:600;">Cancelled</span>'
+            : isAutoConfirmed
+                ? '<span style="display:inline-block;padding:4px 12px;background:#10b981;color:#ffffff;border-radius:12px;font-size:12px;font-weight:600;">Confirmed</span>'
+                : '<span style="display:inline-block;padding:4px 12px;background:#f59e0b;color:#ffffff;border-radius:12px;font-size:12px;font-weight:600;">Awaiting Response</span>'
 
         const html = `<!DOCTYPE html>
 <html>
@@ -74,7 +79,7 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:20px auto;background:#ffffff;border-radius:8px;overflow:hidden;">
   <tr>
     <td style="background:#1a1a2e;padding:24px 32px;">
-      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">🎵 You're Scheduled to Play</h1>
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">${isCancelled ? '📋 Assignment Cancelled' : '🎵 You\'re Scheduled to Play'}</h1>
       <p style="margin:4px 0 0;color:#a0a0c0;font-size:14px;">${escapeHtml(params.setlistName)}</p>
     </td>
   </tr>
@@ -82,7 +87,9 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
     <td style="padding:24px 32px;">
       <p style="margin:0 0 16px;color:#333;font-size:15px;">Hi ${escapeHtml(params.recipientName)},</p>
       <p style="margin:0 0 20px;color:#333;font-size:15px;">
-        You've been scheduled${instrumentText} for an upcoming service at Central Reform Congregation.
+        ${isCancelled
+            ? `Your assignment${instrumentText} for an upcoming service at Central Reform Congregation has been cancelled.`
+            : `You've been scheduled${instrumentText} for an upcoming service at Central Reform Congregation.`}
       </p>
 
       <div style="margin:0 0 24px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
@@ -127,9 +134,11 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
         const { error } = await client.emails.send({
             from: `CRC Music <${getFromEmail()}>`,
             to: params.to,
-            subject: isAutoConfirmed
-                ? `You're confirmed: ${params.setlistName}`
-                : `You're scheduled to play: ${params.setlistName}`,
+            subject: isCancelled
+                ? `Assignment cancelled: ${params.setlistName}`
+                : isAutoConfirmed
+                    ? `You're confirmed: ${params.setlistName}`
+                    : `You're scheduled to play: ${params.setlistName}`,
             html,
         })
 

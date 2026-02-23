@@ -49,7 +49,7 @@ export async function GET(
         const now = new Date()
         const dtstamp = formatICalDate(now)
 
-        let ical = [
+        const ical = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             'PRODID:-//CRC Music//Musician Schedule//EN',

@@ -201,10 +201,10 @@ export function SetlistEditorV2({
         }
     }, [isPublic, initialIsPublic, router])
 
-    // Background offline syncing
+    // Background offline syncing — silent to avoid toast spam on every track change
     useEffect(() => {
         if (tracks.length > 0) {
-            syncSetlist(tracks).catch(console.error)
+            syncSetlist(tracks, { silent: true }).catch(console.error)
         }
     }, [tracks])
 

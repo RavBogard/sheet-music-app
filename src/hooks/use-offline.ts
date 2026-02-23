@@ -50,8 +50,10 @@ export function useOffline() {
         }
     }, [downloading])
 
-    /** Bulk download all files in a setlist to IndexedDB */
-    const downloadSetlist = useCallback(async (tracks: SetlistTrack[]) => {
+    /** Bulk download all files in a setlist to cache.
+     *  Pass `silent: true` to suppress toast notifications (e.g., for background sync). */
+    const downloadSetlist = useCallback(async (tracks: SetlistTrack[], options?: { silent?: boolean }) => {
+        const silent = options?.silent ?? false
         const filesToDownload: Array<{ id: string; name: string }> = []
 
         for (const track of tracks) {
@@ -64,11 +66,11 @@ export function useOffline() {
         }
 
         if (filesToDownload.length === 0) {
-            toast.success('Already available offline')
+            if (!silent) toast.success('Already available offline')
             return
         }
 
-        setBulkProgress({ current: 0, total: filesToDownload.length })
+        if (!silent) setBulkProgress({ current: 0, total: filesToDownload.length })
 
         let completed = 0
         for (const file of filesToDownload) {
@@ -81,11 +83,13 @@ export function useOffline() {
                 logger.error(`[Offline] Failed to cache ${file.name}:`, e)
             }
             completed++
-            setBulkProgress({ current: completed, total: filesToDownload.length })
+            if (!silent) setBulkProgress({ current: completed, total: filesToDownload.length })
         }
 
-        setBulkProgress(null)
-        toast.success(`${completed} files saved for offline use`)
+        if (!silent) {
+            setBulkProgress(null)
+            toast.success(`${completed} files saved for offline use`)
+        }
     }, [])
 
     /** Get a cached file blob (returns null if not cached) */

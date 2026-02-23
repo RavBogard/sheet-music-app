@@ -137,47 +137,50 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
     const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
 
     return (
-        <div className={cn("flex flex-col bg-card rounded-xl overflow-hidden border border-border", className)}>
+        <div className={cn("flex flex-col glass-card rounded-xl overflow-hidden", className)}>
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <CalendarIcon className="h-5 w-5 text-brand" />
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/50">
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center">
+                        <CalendarIcon className="h-4.5 w-4.5 text-brand" />
+                    </div>
                     {monthLabel}
                 </h2>
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
+                    <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
+                    <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 px-4 py-2 border-b border-border/50 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 sm:px-5 py-2.5 border-b border-border/40 text-xs text-muted-foreground bg-muted/20">
                 <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Fully staffed
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" /> Fully staffed
                 </span>
                 <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" /> Needs attention
+                    <span className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20" /> Needs attention
                 </span>
                 <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500" /> No musicians
+                    <span className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20" /> No musicians
                 </span>
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-brand/60" />
+                    <p className="text-xs text-muted-foreground">Loading schedule...</p>
                 </div>
             ) : (
                 <>
                     {/* Day headers */}
-                    <div className="grid grid-cols-7 bg-muted border-b border-border">
+                    <div className="grid grid-cols-7 bg-muted/50 border-b border-border/40">
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
                             <div key={day} className={cn(
-                                "p-2 text-xs font-medium text-center",
+                                "p-2 text-xs font-semibold text-center",
                                 (i === 5 || i === 6) ? 'text-brand' : 'text-muted-foreground'
                             )}>
                                 {day}
@@ -189,7 +192,7 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
                     <div className="grid grid-cols-7 auto-rows-fr">
                         {days.map((date, i) => {
                             if (!date) {
-                                return <div key={`empty-${i}`} className="min-h-[100px] bg-background/30 border-b border-r border-border/30" />
+                                return <div key={`empty-${i}`} className="min-h-[100px] bg-background/20 border-b border-r border-border/20" />
                             }
 
                             const ds = dateStr(date)
@@ -203,21 +206,22 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
                                 <div
                                     key={ds}
                                     className={cn(
-                                        "min-h-[100px] p-1.5 border-b border-r border-border/30 group transition-colors",
-                                        isToday && "bg-brand/5",
-                                        (isFriday || isSaturday) && !isToday && "bg-muted/20",
+                                        "min-h-[100px] p-1.5 border-b border-r border-border/20 group transition-all duration-200",
+                                        isToday && "bg-brand/5 ring-1 ring-inset ring-brand/10",
+                                        (isFriday || isSaturday) && !isToday && "bg-brand/[0.02]",
+                                        "hover:bg-accent/30",
                                     )}
                                 >
                                     {/* Date header */}
                                     <div className="flex items-center justify-between mb-1">
                                         <span className={cn(
-                                            "text-xs font-medium h-6 w-6 flex items-center justify-center rounded-full",
-                                            isToday ? "bg-brand text-white" : "text-muted-foreground",
+                                            "text-xs font-medium h-6 w-6 flex items-center justify-center rounded-full transition-all duration-200",
+                                            isToday ? "bg-brand text-brand-foreground shadow-sm shadow-brand/30" : "text-muted-foreground",
                                         )}>
                                             {date.getDate()}
                                         </span>
                                         {blockedCount > 0 && (
-                                            <span className="text-[10px] text-red-500 flex items-center gap-0.5" title={`${blockedCount} musician(s) unavailable`}>
+                                            <span className="text-[10px] text-red-500 flex items-center gap-0.5 bg-red-500/10 px-1 py-0.5 rounded-full" title={`${blockedCount} musician(s) unavailable`}>
                                                 <AlertCircle className="h-2.5 w-2.5" />
                                                 {blockedCount}
                                             </span>
@@ -240,10 +244,10 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
                                                         else router.push(`/setlists/${setlist.id}`)
                                                     }}
                                                     className={cn(
-                                                        "w-full text-left p-1.5 rounded-md text-[11px] border transition-all",
-                                                        coverage === 'full' && "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20",
-                                                        coverage === 'partial' && "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20",
-                                                        coverage === 'empty' && "bg-red-500/10 border-red-500/30 hover:bg-red-500/20",
+                                                        "w-full text-left p-1.5 rounded-lg text-[11px] border transition-all duration-200 active:scale-[0.97]",
+                                                        coverage === 'full' && "bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40",
+                                                        coverage === 'partial' && "bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-500/40",
+                                                        coverage === 'empty' && "bg-red-500/10 border-red-500/25 hover:bg-red-500/20 hover:border-red-500/40",
                                                     )}
                                                 >
                                                     <p className="font-medium truncate text-foreground">{setlist.name}</p>
@@ -262,7 +266,7 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
                                                             </span>
                                                         )}
                                                         {setlistAssignments.length === 0 && (
-                                                            <span className="text-red-500">none</span>
+                                                            <span className="text-red-500 italic">none</span>
                                                         )}
                                                     </div>
                                                 </button>
@@ -271,10 +275,10 @@ export function SchedulingCalendar({ setlists = [], onSelectSetlist, className }
 
                                         {/* Add setlist prompt for Shabbat dates with no setlists */}
                                         {daySetlists.length === 0 && (isFriday || isSaturday) && (
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                 <button
                                                     onClick={() => router.push(`/setlists`)}
-                                                    className="w-full text-left p-1 rounded text-[10px] text-muted-foreground/50 hover:text-muted-foreground border border-dashed border-border/50 flex items-center gap-1"
+                                                    className="w-full text-left p-1 rounded-md text-[10px] text-muted-foreground/40 hover:text-muted-foreground border border-dashed border-border/40 hover:border-brand/30 hover:bg-brand/5 flex items-center gap-1 transition-all duration-200"
                                                 >
                                                     <Plus className="h-2.5 w-2.5" />
                                                     {isSaturday ? 'Shabbat AM' : 'Friday Eve'}

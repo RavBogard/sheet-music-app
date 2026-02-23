@@ -3,6 +3,8 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { z } from "zod"
+import { sendSchedulingEmail } from "@/lib/email-scheduling"
+import { sendSchedulingCancellationSMS } from "@/lib/sms"
 
 const unassignSchema = z.object({
     assignmentId: z.string().min(1),
@@ -30,10 +32,63 @@ export const POST = createApiHandler(
             respondedAt: FieldValue.serverTimestamp(),
         })
 
-        // Notify the musician about cancellation
-        try {
-            const musicianUid = assignment.musicianUid
-            if (musicianUid) {
+        // Check musician's notification preferences
+        const musicianUid = assignment.musicianUid
+        let emailEnabled = true
+        let smsEnabled = false
+        let pushEnabled = true
+        if (musicianUid) {
+            try {
+                const musicianDoc = await db.collection('users').doc(musicianUid).get()
+                const prefs = musicianDoc.data()?.musicianProfile?.notificationPreferences
+                if (prefs) {
+                    emailEnabled = prefs.email !== false
+                    smsEnabled = prefs.sms === true
+                    pushEnabled = prefs.push !== false
+                }
+            } catch { /* use defaults */ }
+        }
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+        const eventDateStr = assignment.eventDate
+            ? (typeof assignment.eventDate === 'string'
+                ? new Date(assignment.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                : assignment.eventDate?.seconds
+                    ? new Date(assignment.eventDate.seconds * 1000).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                    : 'TBD')
+            : 'TBD'
+
+        // Send cancellation email (fire-and-forget)
+        if (emailEnabled && assignment.musicianEmail) {
+            sendSchedulingEmail({
+                to: assignment.musicianEmail,
+                recipientName: assignment.musicianName || 'Musician',
+                setlistName: assignment.setlistName || 'a service',
+                eventDate: eventDateStr,
+                instrument: assignment.instrument,
+                status: 'cancelled',
+                scheduleUrl: `${baseUrl}/schedule`,
+                assignmentId,
+            }).catch(e => {
+                logger.warn(`[Scheduling] Cancellation email failed for ${assignment.musicianEmail}:`, e)
+            })
+        }
+
+        // Send cancellation SMS (fire-and-forget)
+        if (smsEnabled && assignment.musicianPhone) {
+            sendSchedulingCancellationSMS({
+                to: assignment.musicianPhone,
+                musicianName: assignment.musicianName || 'Musician',
+                setlistName: assignment.setlistName || 'a service',
+                eventDate: eventDateStr,
+            }).catch(e => {
+                logger.warn(`[Scheduling] Cancellation SMS failed for ${assignment.musicianPhone}:`, e)
+            })
+        }
+
+        // In-app notification
+        if (pushEnabled && musicianUid) {
+            try {
                 const notifRef = db.collection('users').doc(musicianUid).collection('notifications')
                 await notifRef.add({
                     type: 'scheduling_cancelled',
@@ -44,9 +99,9 @@ export const POST = createApiHandler(
                     read: false,
                     createdAt: FieldValue.serverTimestamp(),
                 })
+            } catch (e) {
+                logger.warn('[Scheduling] Failed to notify musician of cancellation:', e)
             }
-        } catch (e) {
-            logger.warn('[Scheduling] Failed to notify musician of cancellation:', e)
         }
 
         // Remove from the setlist's musicians array
