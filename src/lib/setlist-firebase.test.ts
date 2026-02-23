@@ -6,6 +6,9 @@ const mockDeleteDoc = vi.fn().mockResolvedValue(undefined)
 const mockGetDoc = vi.fn()
 const mockOnSnapshot = vi.fn()
 
+const mockBatchDelete = vi.fn()
+const mockBatchCommit = vi.fn().mockResolvedValue(undefined)
+
 vi.mock('./firebase', () => ({ db: {} }))
 vi.mock('firebase/firestore', () => ({
     collection: vi.fn((_db: unknown, path: string) => ({ path })),
@@ -19,10 +22,14 @@ vi.mock('firebase/firestore', () => ({
     where: vi.fn(),
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
     getDoc: (...args: unknown[]) => mockGetDoc(...args),
-    getDocs: vi.fn().mockResolvedValue({ docs: [] }),
+    getDocs: vi.fn().mockResolvedValue({
+        docs: [
+            { id: 'task1', ref: { path: 'tasks/task1' }, data: () => ({}) },
+        ]
+    }),
     writeBatch: vi.fn(() => ({
-        delete: vi.fn(),
-        commit: vi.fn().mockResolvedValue(undefined),
+        delete: mockBatchDelete,
+        commit: mockBatchCommit,
     })),
 }))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
@@ -83,10 +90,11 @@ describe('createSetlistService', () => {
     })
 
     describe('deleteSetlist', () => {
-        it('deletes a setlist document', async () => {
+        it('deletes a setlist document and its tasks via batch', async () => {
             await service.deleteSetlist('setlist-abc', false)
 
-            expect(mockDeleteDoc).toHaveBeenCalledTimes(1)
+            expect(mockBatchDelete).toHaveBeenCalledTimes(2) // 1 setlist doc + 1 mocked task
+            expect(mockBatchCommit).toHaveBeenCalledTimes(1)
         })
     })
 
