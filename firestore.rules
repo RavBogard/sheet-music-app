@@ -149,6 +149,14 @@ service cloud.firestore {
                    || isSoundEngineer();
     }
 
+    // FEATURED SETLIST CONFIGURATION
+    // Read: Any signed-in user (everyone can see what's featured)
+    // Write: Admins and band leaders (they set the featured setlist)
+    match /config/featured {
+      allow read: if isSignedIn();
+      allow write: if isBandLeader();
+    }
+
     // LIBRARY INDEX — server-only (admin SDK)
     // Sync engine, enrichment cron, and upload API all write via admin SDK.
     // No client should read/write directly.
