@@ -10,7 +10,12 @@ import { auth } from "@/lib/firebase"
  */
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
     const user = auth.currentUser
-    const token = user ? await user.getIdToken() : null
+    let token: string | null = null
+    try {
+        token = user ? await user.getIdToken() : null
+    } catch {
+        // Token refresh failed (expired session, network issue) — proceed without auth
+    }
 
     const headers = new Headers(options?.headers)
     if (!headers.has('Content-Type') && options?.body && typeof options.body === 'string') {

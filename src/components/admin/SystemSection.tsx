@@ -3,13 +3,11 @@
 
 import buildInfo from "@/build-info.json"
 import { Wrench, Tag, GitCommit } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
+
 import { GlobalAlertCard } from "./system/GlobalAlertCard"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { BackupCard } from "./system/BackupCard"
 
 export function SystemSection() {
-    const { user } = useAuth()
 
     return (
         <section className="space-y-4">
@@ -21,6 +19,7 @@ export function SystemSection() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <GlobalAlertCard />
+                <BackupCard />
                 <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                     <div className="flex items-center gap-3">
                         <Tag className="h-4 w-4 text-blue-400" />

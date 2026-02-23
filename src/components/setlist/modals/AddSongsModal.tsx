@@ -36,7 +36,7 @@ export function AddSongsModal({
         setFilter,
     } = useLibraryStore()
 
-    const { isLoading: libraryLoading } = useLibrary()
+    useLibrary()
 
     const [selectedFiles, setSelectedFiles] = useState<Map<string, DriveFile>>(new Map())
     const [searchQuery, setSearchQuery] = useState("")

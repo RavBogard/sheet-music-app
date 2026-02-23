@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { formatPlaybackTime } from "@/lib/format-utils"
 import {
     Play, Pause, SkipBack, Volume2, VolumeX,
-    Gauge, Repeat, Timer, ChevronDown, ChevronUp,
+    Repeat, Timer, ChevronDown, ChevronUp,
 } from "lucide-react"
 
 interface RehearsalToolbarProps {

@@ -18,7 +18,6 @@ import { db } from "@/lib/firebase"
 import { useMusicStore } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink, ListTodo } from "lucide-react"
 import { PrintModal } from "@/components/setlist/PrintModal"
 import { TaskSheet } from "@/components/setlist/tasks/TaskSheet"
@@ -125,13 +124,7 @@ export default function SetlistPerformPage() {
         return result
     }, [queue, tracks])
 
-    const sectionLabels = sections.filter((s) => s.label).map((s) => s.label!)
-
     const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map())
-    const scrollToSection = useCallback((label: string) => {
-        const el = sectionRefs.current.get(label)
-        if (el) el.scrollIntoView({ block: "start", behavior: "smooth" })
-    }, [])
 
     // Navigate to a track
     const handleTrackTap = useCallback((globalIndex: number) => {

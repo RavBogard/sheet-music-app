@@ -156,8 +156,6 @@ export function SetlistEditorV2({
         setMusicians,
         saving,
         lastSaved,
-        isSyncing,
-        isFullyOffline,
         syncSetlist,
         moveTrack,
         updateTrack,
@@ -165,7 +163,6 @@ export function SetlistEditorV2({
         matchFile,
         addSongsFromLibrary,
         addServiceItem,
-        duplicateTrack,
         togglePublic,
         undo,
         redo,
@@ -258,40 +255,6 @@ export function SetlistEditorV2({
         }
         setShowDuplicateConfirm(false)
     }, [editorService, setlistId, name, tracks, isPublic, rabbi, router])
-
-    const handleCloneNextWeek = useCallback(async () => {
-        if (!editorService || !setlistId) return
-        const toastId = toast.loading("Creating next week\u2019s setlist\u2026")
-        try {
-            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi, musicians, eventDate, date: eventDate } as Parameters<typeof editorService.cloneForNextWeek>[0]
-            const newId = await editorService.cloneForNextWeek(currentSetlist)
-            toast.success("Cloned for next week!", { id: toastId, description: "Check AI for rotation suggestions" })
-            router.push(`/setlists/${newId}`)
-
-            // Open AI chat with a rotation-check prompt (fires after navigation)
-            setTimeout(() => {
-                const store = useChatStore.getState()
-                store.setPendingPrompt(
-                    'I just cloned last week\'s setlist for next week. Review the songs and suggest any that should be rotated based on recent usage. Which songs have been repeated most often? Suggest alternatives from the library for variety.'
-                )
-                if (!store.isOpen) store.toggle()
-            }, 1500)
-        } catch {
-            toast.error("Failed to clone setlist", { id: toastId })
-        }
-    }, [editorService, setlistId, name, tracks, isPublic, rabbi, musicians, eventDate, router])
-
-    const handleSaveAsTemplate = useCallback(async () => {
-        if (!editorService || !setlistId) return
-        const toastId = toast.loading("Saving template\u2026")
-        try {
-            const currentSetlist = { id: setlistId, name, tracks, trackCount: tracks.length } as Parameters<typeof editorService.saveAsTemplate>[0]
-            await editorService.saveAsTemplate(currentSetlist)
-            toast.success(`Template "${name}" saved!`, { id: toastId })
-        } catch {
-            toast.error("Failed to save template", { id: toastId })
-        }
-    }, [editorService, setlistId, name, tracks])
 
     // Debounce empty state to prevent flash during AI batch edits
     const currentTrackFileIds = useMemo(() => new Set(tracks.filter(t => t.fileId).map(t => t.fileId!)), [tracks])

@@ -21,7 +21,7 @@ export default function PerformPage() {
     const router = useRouter()
     const params = useParams()
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
-    const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath, currentSetlistId } = useMusicStore()
+    const { fileUrl, fileType, setFile, playbackQueue, queueIndex, returnPath } = useMusicStore()
     const [showIntro, dismissIntro] = usePerformanceIntro()
 
     // Auto-apply musician profile transposition
@@ -137,8 +137,6 @@ export default function PerformPage() {
 
                 const isCurrent = idx === queueIndex || (idx === -1 && fileId)
                 const isPrev = idx === queueIndex - 1
-                const isNext = idx === queueIndex + 1
-
                 // Position logic: hide non-current elements but keep them in DOM
                 const posClass = isCurrent
                     ? "opacity-100 z-10 translate-x-0"

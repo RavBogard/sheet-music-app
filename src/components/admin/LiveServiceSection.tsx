@@ -33,7 +33,7 @@ export function LiveServiceSection() {
 
     // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
     const setlistsQuery = useMemo(() => query(collection(db, "setlists"), where("isPublic", "==", true)), [])
-    const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
+    const { data: setlistsData } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
 
     useEffect(() => {
         if (!canSeeLive || !setlistsData) return

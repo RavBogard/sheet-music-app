@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { transferSetlistSchema } from "@/lib/validations"
-import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 
 export const POST = createApiHandler(

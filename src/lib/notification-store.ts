@@ -91,11 +91,15 @@ export async function markAllAsRead(uid: string): Promise<void> {
     const snap = await getDocs(q)
     if (snap.empty) return
 
-    const batch = writeBatch(db)
-    snap.docs.forEach(d => {
-        batch.update(d.ref, { read: true })
-    })
-    await batch.commit()
+    // M3 fix: Chunk batches to stay under Firestore's 500 operations limit
+    const BATCH_LIMIT = 450
+    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+        const batch = writeBatch(db)
+        snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => {
+            batch.update(d.ref, { read: true })
+        })
+        await batch.commit()
+    }
 }
 
 /**
@@ -118,6 +122,7 @@ export async function createNotification(
  * Broadcast a notification to all members.
  * Typically called when a public setlist is published.
  * Uses a Firestore transaction to batch-create across user docs.
+ * Also dispatches push notifications via FCM for offline delivery.
  */
 export async function broadcastNotification(
     memberUids: string[],
@@ -140,17 +145,50 @@ export async function broadcastNotification(
 
         await batch.commit()
     }
+
+    // Fire-and-forget: also send push notifications for offline delivery
+    sendPushForBroadcast(memberUids, notification).catch(() => {
+        // Push is best-effort — don't fail the in-app notification flow
+    })
+}
+
+/**
+ * Send push notifications alongside in-app notifications.
+ * Best-effort — errors are swallowed to avoid breaking the in-app flow.
+ */
+async function sendPushForBroadcast(
+    targetUids: string[],
+    notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
+): Promise<void> {
+    try {
+        const { apiFetch } = await import('@/lib/api-client')
+        await apiFetch('/api/push/send', {
+            method: 'POST',
+            body: JSON.stringify({
+                targetUids,
+                title: notification.title,
+                body: notification.body,
+                link: notification.link,
+            }),
+        })
+    } catch {
+        // Silent — push is supplementary to in-app notifications
+    }
 }
 
 /**
  * Get all active member UIDs (role != 'pending' and not null).
  */
 async function getActiveMemberUids(excludeUid?: string): Promise<string[]> {
-    const snap = await getDocs(collection(db, 'users'))
+    // M2 fix: Use filtered query instead of fetching all users
+    const q = query(
+        collection(db, 'users'),
+        where('role', 'in', ['admin', 'band_leader', 'leader', 'musician', 'member'])
+    )
+    const snap = await getDocs(q)
     const uids: string[] = []
     snap.docs.forEach(d => {
-        const role = d.data().role
-        if (role && role !== 'pending' && d.id !== excludeUid) {
+        if (d.id !== excludeUid) {
             uids.push(d.id)
         }
     })

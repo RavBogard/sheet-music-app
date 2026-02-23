@@ -35,7 +35,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         duplicateConfirmOpen, setDuplicateConfirmOpen, setlistToDuplicate,
         showTransferDialog, setShowTransferDialog,
         showImporterModal, setShowImporterModal,
-        selectedSetlistForTransfer, setSelectedSetlistForTransfer,
+        selectedSetlistForTransfer,
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,

@@ -119,7 +119,7 @@ export function SetlistMatrixView() {
                     </div>
 
                     {/* Body Rows */}
-                    {data.rows.map((row, rowIdx) => {
+                    {data.rows.map((row) => {
                         // Let's calculate repetition threshold (e.g., if >3 times in last 4 weeks)
                         return (
                             <div key={row.id} className="flex border-b last:border-b-0 group">

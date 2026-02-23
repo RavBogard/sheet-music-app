@@ -148,18 +148,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const getCleanName = (name: string) =>
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
-    const handleItemClick = (item: DriveFile) => {
-        if (item.mimeType.includes('folder')) {
-            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name }])
-            setSearchQuery(""); contentSearch.clear()
-        } else if (isAudioFile(item)) {
-            setPlayingFile(item)
-            setAudioUrl(`/api/drive/file/${item.id}`)
-        } else {
-            handleSelectFile(item)
-        }
-    }
-
     const handleBreadcrumbClick = (index: number) => {
         setBreadcrumbs(prev => prev.slice(0, index + 1))
         setSearchQuery(""); contentSearch.clear()

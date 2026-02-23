@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useLibraryStore } from '@/lib/library-store'
 import { useLibrary } from '@/hooks/use-library'
 import { DriveFile } from '@/types/models'
 import { FileText, Music, PlusCircle } from 'lucide-react'
-import { useSetlistStore } from '@/lib/setlist-store'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
@@ -15,7 +14,7 @@ interface ChartSuggestionsProps {
     isReplaceMode?: boolean
 }
 
-export function ChartSuggestions({ trackName, currentFileId, isReplaceMode }: ChartSuggestionsProps) {
+export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsProps) {
     const { allFiles, initialized } = useLibraryStore()
     const { isLoading: searching } = useLibrary()
     const router = useRouter()

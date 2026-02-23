@@ -17,7 +17,7 @@ import { buildPerformQueue } from "@/lib/queue-utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 import { QRSignIn } from "@/components/auth/QRSignIn"
-import { HeroCard, CommandRow, UpcomingTimeline, CompactSetlistRow } from "@/components/dashboard"
+import { HeroCard, CommandRow, UpcomingTimeline, CompactSetlistRow, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
 import { cn } from "@/lib/utils"
 
 export interface DashboardServerProps {
@@ -196,6 +196,8 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                         <img
                             src="/logo.jpg"
                             alt={congregation.shortName}
+                            width={32}
+                            height={32}
                             className="w-8 h-8 rounded-full border border-border/50"
                         />
                         <span className="text-xs font-semibold text-muted-foreground/70 tracking-wider uppercase">
@@ -303,6 +305,21 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                 BELOW HERO — content area
                ══════════════════════════════════════════ */}
             <div className="flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full">
+
+                {/* ── What's Changed Banner ── */}
+                {hasWeekData && upcomingWithPrep.length > 0 && (
+                    <WhatsChangedBanner items={upcomingWithPrep} />
+                )}
+
+                {/* ── Practice Recommendations ── */}
+                {hasWeekData && upcomingWithPrep.length > 0 && (
+                    <PrepRecommendations items={upcomingWithPrep} />
+                )}
+
+                {/* ── Your Tasks ── */}
+                {user && isMember && (
+                    <TaskCards />
+                )}
 
                 {/* ── Onboarding: Pending User ── */}
                 {user && profile?.role === "pending" && (

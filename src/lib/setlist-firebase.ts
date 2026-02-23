@@ -3,7 +3,6 @@ import {
     collection,
     addDoc,
     updateDoc,
-    deleteDoc,
     doc,
     onSnapshot,
     query,
@@ -93,7 +92,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Update a setlist (sanitize undefined → null for Firestore)
-        async updateSetlist(id: string, isPublic: boolean, data: Partial<Setlist>) {
+        async updateSetlist(id: string, _isPublic: boolean, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = JSON.parse(JSON.stringify(data));
             cleanData.updatedAt = serverTimestamp();

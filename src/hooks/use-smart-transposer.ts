@@ -162,7 +162,7 @@ export async function capturePageImage(pageEl: HTMLElement): Promise<string | nu
                 }
                 reader.readAsDataURL(blob)
             })
-        } catch (e) {
+        } catch {
             // fallback if convertToBlob fails
         }
     }
@@ -309,7 +309,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 }, 100)
             }
 
-        } catch (err: unknown) {
+        } catch (err) {
             logger.error("Scan Error:", err)
             setLocalError(err instanceof Error ? err.message : "Scan failed")
             setAiError(err instanceof Error ? err.message : "Scan failed")

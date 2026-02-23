@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
-import { isFileCached } from "@/lib/cache-utils"
+import { isFileCached, cacheSetlistFiles } from "@/lib/cache-utils"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
-import { PlayCircle, ArrowRight, CheckCircle2, Circle, Clock } from "lucide-react"
+import { PlayCircle, ArrowRight, CheckCircle2, Circle, Clock, Download, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -25,6 +25,7 @@ export function HeroCard({
 }) {
     const [countdown, setCountdown] = useState<string | null>(null)
     const [offlineStatus, setOfflineStatus] = useState<{ cached: number; total: number } | null>(null)
+    const [downloading, setDownloading] = useState(false)
     const eventDate = toDate(setlist.eventDate)
 
     // Live countdown when event is within 4 hours
@@ -61,6 +62,20 @@ export function HeroCard({
         }).catch(() => {/* non-critical: offline indicator just won't show */ })
     }, [fileIds])
 
+    const handleDownloadForOffline = useCallback(async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (downloading || fileIds.length === 0) return
+
+        setDownloading(true)
+        try {
+            await cacheSetlistFiles(fileIds, (cached, total) => {
+                setOfflineStatus({ cached, total })
+            })
+        } finally {
+            setDownloading(false)
+        }
+    }, [downloading, fileIds])
+
     const urgencyLabel = prep?.urgencyLabel || (() => {
         if (!eventDate) return 'Upcoming'
         const now = new Date()
@@ -76,6 +91,7 @@ export function HeroCard({
     const isImminent = countdown !== null
     const trackCount = setlist.tracks?.length || 0
     const prepData = prep?.prep
+    const allCached = offlineStatus && offlineStatus.cached === offlineStatus.total
 
     return (
         <button
@@ -136,19 +152,37 @@ export function HeroCard({
                 </div>
             )}
 
-            {/* CTA */}
+            {/* Offline status + download button */}
             {offlineStatus && offlineStatus.total > 0 && (
-                <div className="flex items-center gap-1.5 mb-3 text-xs font-medium">
-                    {offlineStatus.cached === offlineStatus.total ? (
-                        <span className="text-green-300/80 flex items-center gap-1">
+                <div className="flex items-center gap-2 mb-3">
+                    {allCached ? (
+                        <span className="text-green-300/80 flex items-center gap-1 text-xs font-medium">
                             <CheckCircle2 className="w-3 h-3" />
                             All {offlineStatus.total} charts cached
                         </span>
                     ) : (
-                        <span className="text-amber-300/80 flex items-center gap-1">
-                            <Circle className="w-3 h-3" />
-                            {offlineStatus.cached}/{offlineStatus.total} charts cached
-                        </span>
+                        <>
+                            <span className="text-amber-300/80 flex items-center gap-1 text-xs font-medium">
+                                <Circle className="w-3 h-3" />
+                                {offlineStatus.cached}/{offlineStatus.total} cached
+                            </span>
+                            <span
+                                role="button"
+                                onClick={handleDownloadForOffline}
+                                className={cn(
+                                    "inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                    downloading
+                                        ? "bg-white/10 text-white/60 cursor-wait"
+                                        : "bg-white/20 text-white hover:bg-white/30 cursor-pointer"
+                                )}
+                            >
+                                {downloading ? (
+                                    <><Loader2 className="w-3 h-3 animate-spin" /> Downloading...</>
+                                ) : (
+                                    <><Download className="w-3 h-3" /> Download all</>
+                                )}
+                            </span>
+                        </>
                     )}
                 </div>
             )}

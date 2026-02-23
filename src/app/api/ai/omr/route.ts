@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         - If you cannot transcribe it, return "ERROR: Unreadable".
         `;
 
-        const result = await geminiProVision.generateContent([
+        const result = await geminiProVision().generateContent([
             prompt,
             {
                 inlineData: {

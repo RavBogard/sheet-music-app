@@ -3,10 +3,6 @@ import { z } from "zod"
 import { AuthRole, AuthResult, withAuth } from "./api-auth"
 import { logger } from "./logger"
 
-type ApiHandlerContext<T> = {
-    params: T
-}
-
 export interface ProtectedApiContext<P = any, B = any> {
     req: NextRequest
     auth: AuthResult

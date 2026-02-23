@@ -53,7 +53,7 @@ export async function enrichFile(fileId: string): Promise<EnrichedMetadata> {
     `
 
     logger.info(`[Enrichment] Sending to Gemini...`)
-    const result = await geminiFlash.generateContent([
+    const result = await geminiFlash().generateContent([
         prompt,
         {
             inlineData: {

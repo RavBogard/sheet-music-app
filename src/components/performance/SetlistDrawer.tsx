@@ -16,13 +16,11 @@ import { logger } from "@/lib/logger"
 
 export function SetlistDrawer() {
     const router = useRouter()
-    const { playbackQueue, queueIndex, setQueue, currentSetlistId } = useMusicStore()
+    const { playbackQueue, queueIndex, setQueue } = useMusicStore()
     const { user } = useAuth()
     const [open, setOpen] = useState(false)
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(false)
-    const currentSongRef = useRef<HTMLButtonElement>(null)
-    const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
     // Group queue items by section headers
     const sections = useMemo(() => {

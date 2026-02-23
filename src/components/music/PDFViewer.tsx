@@ -45,10 +45,6 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         setError(null)
         resolvedUrlRef.current = fetchUrl
 
-        // Extract fileId from Drive API URL
-        const fileIdMatch = fetchUrl.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/)
-        const fileId = fileIdMatch ? fileIdMatch[1] : null
-
         // Rely on standard ServiceWorker caching instead of IndexedDB.
         // Fetch the PDF ourselves so we can diagnose failures
         try {

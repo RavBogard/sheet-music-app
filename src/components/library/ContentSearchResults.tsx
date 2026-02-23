@@ -24,7 +24,6 @@ export function ContentSearchResults({
     results,
     searching,
     query,
-    onSelectFile,
 }: {
     results: ContentSearchResult[]
     searching: boolean

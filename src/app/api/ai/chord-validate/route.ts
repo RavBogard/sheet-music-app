@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
         logger.info(`[AI Chord Validate] Sending full-page image with ${existingChords?.length || 0} existing chords`)
 
-        const result = await geminiFlash.generateContent(parts)
+        const result = await geminiFlash().generateContent(parts)
         const responseText = result.response.text()
 
         logger.info("[AI Chord Validate] Response:", responseText.substring(0, 200) + "...")

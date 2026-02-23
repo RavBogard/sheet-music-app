@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Call Gemini
         logger.info(`[AI Transposer] Sending ${strips.length} strips to Gemini 3 Flash Preview...`);
-        const result = await geminiFlash.generateContent(parts);
+        const result = await geminiFlash().generateContent(parts);
         const responseText = result.response.text();
 
         logger.info("[AI Transposer] Raw Response:", responseText.substring(0, 100) + "...");

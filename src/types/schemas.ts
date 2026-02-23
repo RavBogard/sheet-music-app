@@ -1,7 +1,5 @@
 import { z } from "zod"
 import { DocumentData, QueryDocumentSnapshot, SnapshotOptions } from "firebase/firestore"
-import { Setlist, SetlistTrack, UserProfile, UserRole } from "./models"
-
 // Reusable date schema (Firebase Timestamps can be complex, so we accept 'any' and parse later, or define strictly)
 // In Firebase, Timestamps have { seconds, nanoseconds }
 const firestoreTimestampSchema = z.custom<any>((val: any) => {

@@ -257,7 +257,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
                     const blob = await generateForMusician(
                         name, m.profile.defaultTransposition || 0,
                         m.profile.preferFlats || false, m.profile.preferredCapoFret || 0,
-                        (msg, pct) => {
+                        () => {
                             // Only update UI with overall progress in batch mode
                             setProgressMsg(`Processing packets... (${completed}/${total})`)
                         }

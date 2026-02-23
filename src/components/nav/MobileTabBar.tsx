@@ -87,6 +87,7 @@ export function MobileTabBar() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            aria-label={item.label}
                             className={cn(
                                 "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
                                 item.active ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"

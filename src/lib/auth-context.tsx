@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
     const lastClaimsUpdate = useRef<string | null>(null)
+    const pushRegistered = useRef(false) // M5: prevent re-registration on every auth state change
 
     // Read cached user from localStorage for instant greeting (before Firebase Auth resolves)
     const [cachedUser] = useState<CachedUser | null>(() => {
@@ -122,6 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ensureUserProfile(currentUser).catch((e) => {
                     logger.error("Error ensuring user profile", e)
                 })
+
+                // Re-register push token if user previously opted in (once per session, M5 fix)
+                if (!pushRegistered.current && typeof window !== 'undefined' && localStorage.getItem('crc_push_token')) {
+                    pushRegistered.current = true
+                    import('./push-notifications').then(({ registerPushNotifications }) => {
+                        registerPushNotifications(currentUser.uid).catch(() => {})
+                    }).catch(() => {})
+                }
             } else {
                 setProfile(null)
                 setLoading(false)

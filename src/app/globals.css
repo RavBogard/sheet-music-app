@@ -71,7 +71,7 @@
   --secondary-foreground: oklch(0.20 0.01 260);
 
   --muted: oklch(0.95 0.01 260 / 0.5);
-  --muted-foreground: oklch(0.55 0.01 260);
+  --muted-foreground: oklch(0.45 0.01 260);
 
   --accent: oklch(0.95 0.01 260);
   --accent-foreground: oklch(0.20 0.01 260);
@@ -162,7 +162,7 @@
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 50;
+  z-index: 1;
   opacity: 0;
 }
 

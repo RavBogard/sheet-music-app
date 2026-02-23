@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Sparkles, X, Bot, User, Loader2 } from "lucide-react"
+import { Send, Sparkles, X, Bot, User, Loader2, ShieldAlert, Check, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -23,12 +23,77 @@ interface ChatCommand {
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 
+/** Commands that require user confirmation before execution */
+const DESTRUCTIVE_COMMANDS = new Set([
+    'PUBLISH_SETLIST',
+    'ADMIN_ACTION',
+])
+
+/** Check if a REMOVE command is destructive (removing all tracks) */
+function isDestructiveRemove(cmd: ChatCommand): boolean {
+    if (cmd.type !== 'REMOVE_FROM_SETLIST') return false
+    const p = cmd.payload as Record<string, unknown>
+    return p.all === true || p.index === 'all'
+}
+
+/** Check if a batch of commands needs confirmation */
+function needsConfirmation(commands: ChatCommand[]): boolean {
+    return commands.some(cmd =>
+        DESTRUCTIVE_COMMANDS.has(cmd.type) || isDestructiveRemove(cmd)
+    )
+}
+
+/** Generate a human-readable summary of pending commands */
+function summarizeCommands(commands: ChatCommand[], currentTrackCount: number): string[] {
+    const summaries: string[] = []
+    for (const cmd of commands) {
+        const p = cmd.payload as Record<string, string | number | boolean | object[] | undefined>
+        switch (cmd.type) {
+            case 'PUBLISH_SETLIST':
+                summaries.push(`Publish setlist for ${p.date || 'unknown date'}`)
+                break
+            case 'ADMIN_ACTION':
+                summaries.push(`Change user ${p.userId || 'unknown'} role to "${p.targetRole || 'member'}"`)
+                break
+            case 'REMOVE_FROM_SETLIST':
+                if (p.all === true || p.index === 'all') {
+                    summaries.push(`Remove all ${currentTrackCount} tracks from setlist`)
+                } else {
+                    summaries.push(`Remove track at position ${Number(p.index) + 1}`)
+                }
+                break
+            case 'CREATE_SETLIST':
+                summaries.push(`Create new setlist "${p.name}"`)
+                break
+            case 'ADD_TO_SETLIST':
+                summaries.push(`Add "${p.fileName || p.title || 'song'}" to setlist`)
+                break
+            case 'TRANSPOSE_CHART':
+                summaries.push(`Transpose by ${p.steps} semitones`)
+                break
+            case 'SEARCH_LIBRARY':
+                summaries.push(`Search library for "${p.query}"`)
+                break
+            case 'NAVIGATE':
+                summaries.push(`Navigate to ${p.path}`)
+                break
+        }
+    }
+    return summaries
+}
+
+interface PendingConfirmation {
+    commands: ChatCommand[]
+    summaries: string[]
+}
+
 export function ChatPanel() {
     const { user } = useAuth() // Get user for auth token
     const { isOpen, close, messages, addMessage, replaceLastAssistant, contextData, onApplyEdits } = useChatStore()
     const { allFiles } = useLibraryStore()
     const [input, setInput] = useState("")
     const [loading, setLoading] = useState(false)
+    const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null)
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter() // For navigation commands
@@ -43,21 +108,19 @@ export function ChatPanel() {
         if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: "smooth" })
         }
-    }, [messages, loading])
+    }, [messages, loading, pendingConfirmation])
 
-    // Focus input and handle Pending Prompt
+    // Focus input and handle Pending Prompt (M6 fix: deps + cleanup)
     useEffect(() => {
-        if (isOpen) {
-            if (inputRef.current) {
-                inputRef.current.focus()
-            }
-            if (pendingPrompt) {
-                setInput(pendingPrompt)
-                clearPendingPrompt()
-                setTimeout(() => handleSend(pendingPrompt), 100)
-            }
+        if (!isOpen) return
+        inputRef.current?.focus()
+        if (pendingPrompt) {
+            setInput(pendingPrompt)
+            clearPendingPrompt()
+            const timer = setTimeout(() => handleSend(pendingPrompt), 100)
+            return () => clearTimeout(timer)
         }
-         
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, pendingPrompt])
 
     const handleSend = async (overrideInput?: string) => {
@@ -94,14 +157,17 @@ export function ChatPanel() {
             const decoder = new TextDecoder()
             let streamedMessage = ""
             let assistantMsgAdded = false
+            let sseBuffer = "" // M1 fix: buffer for SSE chunks split across TCP boundaries
 
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
 
-                const text = decoder.decode(value, { stream: true })
+                sseBuffer += decoder.decode(value, { stream: true })
+                const lines = sseBuffer.split('\n')
+                sseBuffer = lines.pop() || "" // Keep incomplete last line in buffer
                 // Parse SSE lines
-                for (const line of text.split('\n')) {
+                for (const line of lines) {
                     if (!line.startsWith('data: ')) continue
                     try {
                         const payload = JSON.parse(line.slice(6))
@@ -124,9 +190,17 @@ export function ChatPanel() {
                                 toast.success("Setlist updated!")
                             }
 
-                            // Handle Commands
+                            // Handle Commands — with guardrails for destructive ones
                             if (payload.commands && Array.isArray(payload.commands)) {
-                                await handleCommands(payload.commands)
+                                if (needsConfirmation(payload.commands)) {
+                                    const trackCount = contextData.currentSetlist?.length || 0
+                                    setPendingConfirmation({
+                                        commands: payload.commands,
+                                        summaries: summarizeCommands(payload.commands, trackCount),
+                                    })
+                                } else {
+                                    await handleCommands(payload.commands)
+                                }
                             }
                         } else if (payload.chunk) {
                             // Streaming chunk — show progressive text
@@ -158,6 +232,18 @@ export function ChatPanel() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleConfirmPending = async () => {
+        if (!pendingConfirmation) return
+        const commands = pendingConfirmation.commands
+        setPendingConfirmation(null)
+        await handleCommands(commands)
+    }
+
+    const handleRejectPending = () => {
+        setPendingConfirmation(null)
+        addMessage({ role: 'assistant', content: "Cancelled. No changes were made." })
     }
 
     const handleCommands = async (commands: ChatCommand[]) => {
@@ -343,6 +429,43 @@ export function ChatPanel() {
                         </div>
                     ))}
 
+                    {/* Pending confirmation banner */}
+                    {pendingConfirmation && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-amber-400 text-sm font-semibold">
+                                <ShieldAlert className="h-4 w-4" />
+                                Confirm actions
+                            </div>
+                            <ul className="space-y-1.5">
+                                {pendingConfirmation.summaries.map((s, i) => (
+                                    <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                                        <span className="text-amber-400 mt-0.5">&#8226;</span>
+                                        {s}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="flex gap-2 pt-1">
+                                <Button
+                                    size="sm"
+                                    onClick={handleConfirmPending}
+                                    className="bg-amber-600 hover:bg-amber-500 text-white"
+                                >
+                                    <Check className="h-3.5 w-3.5 mr-1" />
+                                    Approve
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleRejectPending}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     {loading && (
                         <div className="flex gap-3">
                             <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
@@ -367,11 +490,11 @@ export function ChatPanel() {
                         onKeyDown={e => e.key === 'Enter' && handleSend()}
                         placeholder="Ask me to suggest or add songs..."
                         className="bg-muted border-border focus-visible:ring-blue-500/50"
-                        disabled={loading}
+                        disabled={loading || !!pendingConfirmation}
                     />
                     <Button
                         onClick={() => handleSend()}
-                        disabled={!input.trim() || loading}
+                        disabled={!input.trim() || loading || !!pendingConfirmation}
                         className="bg-blue-600 hover:bg-blue-500"
                     >
                         <Send className="h-4 w-4" />
