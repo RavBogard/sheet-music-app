@@ -25,6 +25,7 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'),
   title: {
     template: "%s | CRC Music",
     default: "CRC Music | Digital Sheet Library",
@@ -39,7 +40,18 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "CRC Music",
-  }
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'CRC Music',
+    title: 'Central Reform Congregation — Music',
+    description: 'Digital Sheet Music Library for Central Reform Congregation',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CRC Music',
+    description: 'Digital Sheet Music Library for Central Reform Congregation',
+  },
 };
 
 export const viewport: Viewport = {
