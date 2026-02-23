@@ -24,8 +24,8 @@ export function ErrorState({
                 <Icon className="h-8 w-8 text-red-500" />
             </div>
             <div className="space-y-2 max-w-sm">
-                <h3 className="text-lg font-semibold text-zinc-200">{title}</h3>
-                <p className="text-sm text-zinc-400">{description}</p>
+                <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                <p className="text-sm text-muted-foreground">{description}</p>
             </div>
             {onRetry && (
                 <Button

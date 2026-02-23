@@ -55,6 +55,7 @@ export function OfflineDownloadButton({
     if (isFullyOffline) {
         return (
             <button
+                type="button"
                 className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 px-2 py-1 rounded bg-green-500/10"
                 disabled
             >
@@ -67,6 +68,7 @@ export function OfflineDownloadButton({
     if (isDownloading && progress) {
         return (
             <button
+                type="button"
                 className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded bg-accent"
                 disabled
             >
@@ -78,6 +80,7 @@ export function OfflineDownloadButton({
 
     return (
         <button
+            type="button"
             onClick={onDownload}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
             title="Download all charts for offline use"

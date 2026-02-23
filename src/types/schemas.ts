@@ -47,12 +47,12 @@ export const setlistTrackSchema = z.preprocess(
         if (typeof val === 'object' && val !== null) {
             // Map legacy 'name' to 'title' if title is missing
             if (!val.title && val.name) val.title = val.name;
-            if (!val.id) val.id = `legacy-${Math.random().toString(36).slice(2, 9)}`;
+            if (!val.id) val.id = `legacy-${crypto.randomUUID().slice(0, 9)}`;
         }
         return val;
     },
     z.object({
-        id: z.string().catch(() => `legacy-${Math.random().toString(36).slice(2, 9)}`),
+        id: z.string().catch(() => `legacy-${crypto.randomUUID().slice(0, 9)}`),
         title: z.string().catch("Untitled Track"),
         fileId: z.string().nullish().catch(undefined).transform(v => v || undefined),
         fileName: z.string().nullish().catch(undefined).transform(v => v || undefined),

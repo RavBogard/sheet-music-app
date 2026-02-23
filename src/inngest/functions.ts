@@ -35,7 +35,7 @@ export const generatePdfJob = inngest.createFunction(
                     status: progress.phase,
                     progress: Math.round((progress.currentTrack / Math.max(1, progress.totalTracks)) * 100),
                     message: progress.message
-                }).catch(() => { })
+                }).catch(err => logger.warn("[PDF Job] Progress update failed:", err))
             })
 
             const bucket = getStorage().bucket()

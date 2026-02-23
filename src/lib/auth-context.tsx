@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ idToken }),
                     }).catch(() => {/* non-critical: SSR just won't have auth */ })
-                }).catch(() => { })
+                }).catch(err => logger.warn("Token refresh failed:", err))
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Force-refresh the ID token so new custom claims take effect immediately
                     const claimsTs = p?.claimsUpdatedAt?.toString() || null
                     if (claimsTs && lastClaimsUpdate.current && claimsTs !== lastClaimsUpdate.current) {
-                        currentUser.getIdToken(true).catch(() => { })
+                        currentUser.getIdToken(true).catch(err => logger.warn("Claims refresh failed:", err))
                     }
                     lastClaimsUpdate.current = claimsTs
 

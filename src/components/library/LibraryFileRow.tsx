@@ -25,7 +25,7 @@ interface LibraryFileRowProps {
 }
 
 function isAudioMime(item: DriveFile) {
-    return item.mimeType.startsWith('audio/') ||
+    return item.mimeType?.startsWith('audio/') ||
         /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(item.name)
 }
 
@@ -37,7 +37,7 @@ function getAudioCleanName(name: string) {
 }
 
 export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
-    const isFolder = item.mimeType.includes('folder')
+    const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
 
@@ -93,6 +93,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     onTouchEnd={handleTouchEndOrMove}
                     onTouchMove={handleTouchEndOrMove}
                     onTouchCancel={handleTouchEndOrMove}
+                    type="button"
+                    aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
+                    aria-selected={selectMode ? isSelected : undefined}
                     className={`w-full text-left transition-all group relative ${isSelected
                         ? 'bg-blue-500/10'
                         : isFolder

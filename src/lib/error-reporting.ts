@@ -14,7 +14,9 @@ let Sentry: typeof import('@sentry/nextjs') | null = null
 
 // Dynamically import Sentry on both client and server when DSN is configured
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    import('@sentry/nextjs').then(mod => { Sentry = mod }).catch(() => {})
+    import('@sentry/nextjs').then(mod => { Sentry = mod }).catch(err => {
+        logger.warn('[ErrorReport] Sentry import failed — error reporting will use console only:', err)
+    })
 }
 
 interface ErrorContext {

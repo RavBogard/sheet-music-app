@@ -41,12 +41,39 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         logger.info(`[Sync] Found ${allFiles.length} files in Drive.`)
         stats.totalScanned = allFiles.length
 
-        // 3. Get existing doc IDs for add/update detection
-        const existingSnapshot = await db.collection('library_index').select().get()
-        const existingIds = new Set(existingSnapshot.docs.map(d => d.id))
+        // 3. Get existing docs with modifiedTime for change detection (single query)
+        const existingSnapshot = await db.collection('library_index').select('modifiedTime').get()
+        const existingDocs = new Map<string, string | null>()
+        for (const doc of existingSnapshot.docs) {
+            existingDocs.set(doc.id, doc.data()?.modifiedTime || null)
+        }
         const driveIds = new Set(allFiles.map(f => f.id))
 
-        // 4. Batch Write to Firestore (index metadata)
+        // 4. Pre-detect which files need chord cache purging (modified since last sync)
+        const filesToPurge: string[] = []
+        for (const file of allFiles) {
+            if (existingDocs.has(file.id) && file.modifiedTime) {
+                const existingModified = existingDocs.get(file.id)
+                if (existingModified && existingModified !== file.modifiedTime) {
+                    filesToPurge.push(file.id)
+                }
+            }
+        }
+
+        // Purge stale chord caches before batch writes (avoids reads inside batch loop)
+        for (const fileId of filesToPurge) {
+            const docRef = db.collection('library_index').doc(fileId)
+            const chordDocs = await docRef.collection('chordData').get()
+            if (!chordDocs.empty) {
+                const purgeBatch = db.batch()
+                chordDocs.forEach(d => purgeBatch.delete(d.ref))
+                await purgeBatch.commit()
+                const fileName = allFiles.find(f => f.id === fileId)?.name || fileId
+                logger.info(`[Sync] Purged chord cache for ${fileName} (file modified)`)
+            }
+        }
+
+        // 5. Batch Write to Firestore (index metadata) — no reads inside loop
         const BATCH_SIZE = 450
         const chunks = []
         for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
@@ -55,27 +82,10 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
         for (const chunk of chunks) {
             const batch = db.batch()
+            const now = new Date().toISOString()
 
             for (const file of chunk) {
                 const docRef = db.collection('library_index').doc(file.id)
-                const now = new Date().toISOString()
-
-                // Check if the file was modified since last sync
-                // If so, invalidate the chord cache for this file
-                if (existingIds.has(file.id) && file.modifiedTime) {
-                    const existingDoc = await docRef.get()
-                    const existingModified = existingDoc.data()?.modifiedTime
-                    if (existingModified && existingModified !== file.modifiedTime) {
-                        // File changed on Drive — purge stale chord cache
-                        const chordDocs = await docRef.collection('chordData').get()
-                        if (!chordDocs.empty) {
-                            const purgeBatch = db.batch()
-                            chordDocs.forEach(d => purgeBatch.delete(d.ref))
-                            await purgeBatch.commit()
-                            logger.info(`[Sync] 🗑️ Purged chord cache for ${file.name} (file modified)`)
-                        }
-                    }
-                }
 
                 batch.set(docRef, {
                     id: file.id,
@@ -89,7 +99,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     source: 'google_drive'
                 }, { merge: true })
 
-                if (existingIds.has(file.id)) {
+                if (existingDocs.has(file.id)) {
                     stats.updated++
                     stats.updatedFiles!.push(file.name)
                 } else {

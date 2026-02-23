@@ -165,7 +165,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             edits.forEach(edit => {
                 if (edit.action === 'add') {
                     const newTrack: SetlistTrack = {
-                        id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        id: `track-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
                         title: edit.title || "New Song",
                         fileId: edit.fileId || undefined,
                         type: (edit.type as SetlistTrack['type']) || 'song',
@@ -400,7 +400,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             const original = prev[index]
             const newTrack: SetlistTrack = {
                 ...original,
-                id: `track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: `track-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
                 ...overrides
             }
 

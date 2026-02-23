@@ -20,7 +20,13 @@ export async function GET(req: NextRequest) {
         const db = getFirestore()
 
         // 1. Generate the date columns (-3 weeks to +4 weeks)
-        const columns: any[] = []
+        interface MatrixColumn {
+            id: string
+            date: string
+            context: Awaited<ReturnType<typeof getFullServiceContext>>
+            setlist?: Setlist | null
+        }
+        const columns: MatrixColumn[] = []
         let baseDate = new Date()
         baseDate.setDate(baseDate.getDate() - 21) // Go back 3 weeks
 
@@ -79,7 +85,7 @@ export async function GET(req: NextRequest) {
                 const sDate = new Date((s.eventDate || s.date) as string)
                 return Math.abs(sDate.getTime() - colTime) < 3 * 24 * 60 * 60 * 1000 // 3 days tolerance
             })
-                ; (col as any).setlist = match || null
+            col.setlist = match || null
         })
 
         // 4. Get the liturgical slots (Rows)
@@ -95,14 +101,14 @@ export async function GET(req: NextRequest) {
                 type: slot.type || 'song'
             }))
 
-        // 5. Build the Grid 
+        // 5. Build the Grid
         // grid[rowId][colId] = { track: SetlistTrack | null }
-        const grid: Record<string, Record<string, any>> = {}
+        const grid: Record<string, Record<string, { track: Setlist['tracks'] extends (infer T)[] | undefined ? T | null : null }>> = {}
 
         rows.forEach(row => {
             grid[row.id] = {}
             columns.forEach(col => {
-                const setlist: Setlist | null = (col as any).setlist
+                const setlist = col.setlist ?? null
                 let matchedTrack = null
 
                 if (setlist && setlist.tracks) {
@@ -128,8 +134,8 @@ export async function GET(req: NextRequest) {
             grid
         })
 
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error("Matrix API Error:", e)
-        return NextResponse.json({ error: e.message }, { status: 500 })
+        return NextResponse.json({ error: e instanceof Error ? e.message : "Matrix generation failed" }, { status: 500 })
     }
 }

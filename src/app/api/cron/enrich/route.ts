@@ -17,11 +17,12 @@ export const maxDuration = 300
  */
 export async function GET(req: NextRequest) {
     try {
-        // Verify cron secret
+        // Verify Vercel Cron header (preferred) or fallback to CRON_SECRET
+        const isVercelCron = req.headers.get('x-vercel-cron') === '1'
         const authHeader = req.headers.get('authorization')
         const cronSecret = process.env.CRON_SECRET
 
-        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        if (!isVercelCron && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
                         lastFailure: new Date().toISOString(),
                         lastError: e instanceof Error ? e.message : 'Unknown error'
                     }
-                }, { merge: true }).catch(() => {/* fire and forget */})
+                }, { merge: true }).catch(err => logger.warn(`[Cron] Failed to track enrichment failure for ${doc.id}:`, err))
             }
         }
 

@@ -24,6 +24,7 @@ export function PerformanceStatusStrip() {
                 select-none shadow-lg border-white/10"
             aria-label={`Song ${queueIndex + 1} of ${playbackQueue.length}: ${current.name}`}
             role="status"
+            aria-live="polite"
         >
             <span className="tabular-nums opacity-60">{queueIndex + 1}/{playbackQueue.length}</span>
             <span className="truncate max-w-[150px] sm:max-w-[200px] text-white/90">{current.name}</span>

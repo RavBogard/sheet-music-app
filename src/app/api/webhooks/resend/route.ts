@@ -35,8 +35,8 @@ const EVENT_STATUS_MAP: Record<string, string> = {
 function verifyWebhook(body: string, headers: Headers): boolean {
     const secret = process.env.RESEND_WEBHOOK_SECRET
     if (!secret) {
-        logger.warn("[Webhook] RESEND_WEBHOOK_SECRET not configured — skipping verification")
-        return true // Allow in dev, but log warning
+        logger.error("[Webhook] RESEND_WEBHOOK_SECRET not configured — rejecting request")
+        return false
     }
 
     const svixId = headers.get("svix-id")

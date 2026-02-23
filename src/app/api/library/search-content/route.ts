@@ -33,11 +33,12 @@ export async function GET(req: NextRequest) {
         const db = getFirestore()
         const termLower = searchTerm.toLowerCase()
 
-        // Get all library files (we search their chord data)
-        const librarySnap = await db.collection('library_index')
-            .where('mimeType', '!=', 'application/vnd.google-apps.folder')
-            .limit(500)
-            .get()
+        // Use collectionGroup query to search all chordData across all files at once
+        // This avoids the N+1 pattern of querying each file's subcollection individually
+        const chordGroupSnap = await db.collectionGroup('chordData').get()
+
+        // Build a map of fileId → file name for display
+        const fileNameCache = new Map<string, string>()
 
         const results: Array<{
             fileId: string
@@ -45,48 +46,60 @@ export async function GET(req: NextRequest) {
             matches: Array<{ page: number; context: string }>
         }> = []
 
-        // For each file, check its chordData subcollection
-        for (const fileDoc of librarySnap.docs) {
-            const fileName = fileDoc.data().name || fileDoc.id
-            const chordSnap = await db.collection('library_index')
-                .doc(fileDoc.id)
-                .collection('chordData')
-                .get()
+        // Group chord docs by parent file
+        const matchesByFile = new Map<string, Array<{ page: number; context: string }>>()
 
-            if (chordSnap.empty) continue
+        for (const chordDoc of chordGroupSnap.docs) {
+            const data = chordDoc.data()
+            // Extract parent fileId from the doc path: library_index/{fileId}/chordData/{pageId}
+            const fileId = chordDoc.ref.parent.parent?.id
+            if (!fileId) continue
 
-            const matches: Array<{ page: number; context: string }> = []
+            // Search in raw text content, chord names, section labels
+            const searchableFields = [
+                data.rawText,
+                ...(data.chords || []).map((c: { name?: string }) => c.name),
+                ...(data.sections || []).map((s: { label?: string }) => s.label),
+            ].filter(Boolean)
 
-            for (const chordDoc of chordSnap.docs) {
-                const data = chordDoc.data()
-                // Search in raw text content, chord names, section labels
-                const searchableFields = [
-                    data.rawText,
-                    ...(data.chords || []).map((c: { name?: string }) => c.name),
-                    ...(data.sections || []).map((s: { label?: string }) => s.label),
-                ].filter(Boolean)
+            const fullText = searchableFields.join(' ').toLowerCase()
 
-                const fullText = searchableFields.join(' ').toLowerCase()
+            if (fullText.includes(termLower)) {
+                const idx = fullText.indexOf(termLower)
+                const start = Math.max(0, idx - 40)
+                const end = Math.min(fullText.length, idx + termLower.length + 40)
+                const context = (start > 0 ? '...' : '') +
+                    fullText.slice(start, end) +
+                    (end < fullText.length ? '...' : '')
 
-                if (fullText.includes(termLower)) {
-                    // Extract context around the match
-                    const idx = fullText.indexOf(termLower)
-                    const start = Math.max(0, idx - 40)
-                    const end = Math.min(fullText.length, idx + termLower.length + 40)
-                    const context = (start > 0 ? '...' : '') +
-                        fullText.slice(start, end) +
-                        (end < fullText.length ? '...' : '')
+                if (!matchesByFile.has(fileId)) {
+                    matchesByFile.set(fileId, [])
+                }
+                matchesByFile.get(fileId)!.push({
+                    page: parseInt(chordDoc.id.replace('page_', '')) || 1,
+                    context: context.trim(),
+                })
+            }
+        }
 
-                    matches.push({
-                        page: parseInt(chordDoc.id.replace('page_', '')) || 1,
-                        context: context.trim(),
-                    })
+        // Fetch file names only for files that had matches
+        if (matchesByFile.size > 0) {
+            const fileIds = Array.from(matchesByFile.keys())
+            const fileRefs = fileIds.map(id => db.collection('library_index').doc(id))
+            const fileDocs = await db.getAll(...fileRefs)
+            for (const doc of fileDocs) {
+                if (doc.exists) {
+                    fileNameCache.set(doc.id, doc.data()?.name || doc.id)
                 }
             }
+        }
 
-            if (matches.length > 0) {
-                results.push({ fileId: fileDoc.id, fileName, matches })
-            }
+        for (const [fileId, matches] of matchesByFile) {
+            results.push({
+                fileId,
+                fileName: fileNameCache.get(fileId) || fileId,
+                matches,
+            })
         }
 
         return NextResponse.json({

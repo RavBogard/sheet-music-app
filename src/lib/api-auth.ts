@@ -27,7 +27,7 @@ export interface AuthResult {
     isMusician: boolean
 }
 
-const SUPER_ADMIN_UID = '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3'
+const SUPER_ADMIN_UID = process.env.SUPER_ADMIN_UID || '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3'
 
 /**
  * Verify the request has a valid Firebase auth token.

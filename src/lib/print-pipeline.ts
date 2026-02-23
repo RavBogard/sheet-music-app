@@ -597,7 +597,7 @@ export async function generatePrintPdf(
 
                         // Cache for next time (fire-and-forget)
                         if (extraction.totalChords > 0) {
-                            cacheChords(track.fileId, extraction).catch(() => {})
+                            cacheChords(track.fileId, extraction).catch(err => logger.warn(`[PrintPipeline] Chord cache write failed for ${track.title}:`, err))
                         }
                     }
 
@@ -643,7 +643,7 @@ export async function generatePrintPdf(
     const pdf = new Uint8Array(finalPdfBytes)
 
     // Cache result for future requests (fire-and-forget)
-    cacheResult(contentHash, pdf).catch(() => {})
+    cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
 
     logger.info(`[PrintPipeline] Complete: ${stats.appendedTracks} files, ${stats.transposedTracks} transposed, ${stats.cacheHits} cache hits, ${stats.cacheMisses} misses`)
 

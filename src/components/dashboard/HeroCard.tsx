@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { isFileCached } from "@/lib/cache-utils"
@@ -46,15 +46,20 @@ export function HeroCard({
         return () => clearInterval(iv)
     }, [eventDate])
 
+    // Memoize fileIds to avoid re-running cache check on every render
+    const fileIds = useMemo(
+        () => (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!),
+        [setlist.tracks]
+    )
+
     // Check offline readiness for this setlist's charts
     useEffect(() => {
-        const fileIds = (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!)
         if (fileIds.length === 0) return
         Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
             const cached = results.filter(Boolean).length
             setOfflineStatus({ cached, total: fileIds.length })
-        }).catch(() => {/* silent */ })
-    }, [setlist.tracks])
+        }).catch(() => {/* non-critical: offline indicator just won't show */ })
+    }, [fileIds])
 
     const urgencyLabel = prep?.urgencyLabel || (() => {
         if (!eventDate) return 'Upcoming'

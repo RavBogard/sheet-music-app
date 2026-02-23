@@ -88,26 +88,42 @@ export async function POST(req: NextRequest) {
         initAdmin()
         const db = getFirestore()
 
-        // 1. Duplicate Prevention Check
-        const librarySnapshot = await db.collection('library_index').where('status', '==', 'active').select('name').get();
-        const existingTitles = librarySnapshot.docs.map((doc: any) => doc.data().name as string);
-        const normalizedNewTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        // 1. Duplicate Prevention Check — query by nameLower prefix to avoid scanning all docs
+        const nameLower = title.toLowerCase()
+        const exactMatch = await db.collection('library_index')
+            .where('status', '==', 'active')
+            .where('nameLower', '==', nameLower)
+            .limit(1)
+            .get()
 
-        for (const existing of existingTitles) {
-            const normalizedExisting = existing.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedNewTitle.length < 3 || normalizedExisting.length < 3) {
-                if (normalizedNewTitle === normalizedExisting) {
-                    return NextResponse.json({ error: `A chart with a very similar name ("${existing}") already exists.` }, { status: 409 });
+        if (!exactMatch.empty) {
+            const existingName = exactMatch.docs[0].data().name
+            return NextResponse.json({ error: `A chart with the same name ("${existingName}") already exists.` }, { status: 409 })
+        }
+
+        // Fuzzy check: query a narrow prefix range instead of loading all titles
+        const prefix = nameLower.replace(/[^a-z0-9]/g, '').slice(0, 6)
+        if (prefix.length >= 3) {
+            const prefixEnd = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
+            const similarSnap = await db.collection('library_index')
+                .where('status', '==', 'active')
+                .where('nameLower', '>=', prefix)
+                .where('nameLower', '<', prefixEnd)
+                .select('name')
+                .limit(20)
+                .get()
+
+            const normalizedNewTitle = nameLower.replace(/[^a-z0-9]/g, '')
+            for (const doc of similarSnap.docs) {
+                const existingName = doc.data().name as string
+                const normalizedExisting = existingName.toLowerCase().replace(/[^a-z0-9]/g, '')
+                const distance = levenshteinDistance(normalizedNewTitle, normalizedExisting)
+                const maxLength = Math.max(normalizedNewTitle.length, normalizedExisting.length)
+                const similarity = 1 - (distance / maxLength)
+
+                if (similarity > 0.85) {
+                    return NextResponse.json({ error: `A chart with a similar name ("${existingName}") already exists in the library.` }, { status: 409 })
                 }
-                continue;
-            }
-
-            const distance = levenshteinDistance(normalizedNewTitle, normalizedExisting);
-            const maxLength = Math.max(normalizedNewTitle.length, normalizedExisting.length);
-            const similarity = 1 - (distance / maxLength);
-
-            if (similarity > 0.85) {
-                return NextResponse.json({ error: `A chart with a similar name ("${existing}") already exists in the library.` }, { status: 409 });
             }
         }
 
