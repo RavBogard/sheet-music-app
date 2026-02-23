@@ -37,9 +37,10 @@ async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastMo
  */
 export function useLibrary(force = false) {
     const queryInfo = useQuery({
-        queryKey: ['library', force],
+        queryKey: ['library', force, !!auth.currentUser],
         queryFn: () => fetchLibrary(force),
         staleTime: 1000 * 60 * 60 * 24, // Consider data fresh for 24 hours (sync handles updates)
+        enabled: !!auth.currentUser, // Wait for auth to initialize
     })
 
     const { data } = queryInfo

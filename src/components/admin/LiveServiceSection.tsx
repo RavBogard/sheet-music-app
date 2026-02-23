@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Activity, Radio, Users, Settings2, Loader2, Music2 } from "lucide-react"
 import { db } from "@/lib/firebase"
@@ -32,7 +32,7 @@ export function LiveServiceSection() {
     }, [configData])
 
     // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
-    const setlistsQuery = query(collection(db, "setlists"), where("isPublic", "==", true))
+    const setlistsQuery = useMemo(() => query(collection(db, "setlists"), where("isPublic", "==", true)), [])
     const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
 
     useEffect(() => {

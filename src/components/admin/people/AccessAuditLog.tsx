@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { collection, query, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { History, Shield, ArrowRight, Loader2 } from "lucide-react"
@@ -21,11 +21,11 @@ export function AccessAuditLog() {
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
 
-    const q = query(
+    const q = useMemo(() => query(
         collection(db, "auditLogs"),
         orderBy("timestamp", "desc"),
         limit(20) // Only show the last 20 actions
-    )
+    ), [])
 
     const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q as any)
 

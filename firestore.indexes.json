@@ -43,16 +43,6 @@
       ]
     },
     {
-      "collectionGroup": "songUsage",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "lastUsedDate",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "bridge-setup-codes",
       "queryScope": "COLLECTION",
       "fields": [
