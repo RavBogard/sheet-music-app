@@ -151,9 +151,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                     )}
 
                     {error && !loading && (
-                        <div className="text-destructive p-10 text-center space-y-3">
-                            <p className="font-semibold">Failed to load PDF</p>
-                            <p className="text-xs text-muted-foreground max-w-xs mx-auto break-words">
+                        <div className="p-10 text-center space-y-3">
+                            <p className="font-semibold text-destructive text-lg">Failed to load PDF</p>
+                            <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
                                 {error}
                             </p>
                             <button

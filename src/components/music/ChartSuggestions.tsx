@@ -60,9 +60,6 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
     const getCleanName = (name: string) => name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
     const handleSelect = (file: DriveFile) => {
-        const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
-        const type = isXml ? 'musicxml' : 'pdf'
-
         // No file assigned — perhaps we just navigate
         toast.success(`Opening ${getCleanName(file.name)}`)
         router.push(`/perform/${file.id}`)
@@ -71,16 +68,16 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
     if (!trackName) return null
 
     if (searching) {
-        return <div className="text-sm text-zinc-500 animate-pulse mt-6">Searching library for suggestions...</div>
+        return <div className="text-sm text-muted-foreground animate-pulse mt-6">Searching library for suggestions...</div>
     }
 
     if (suggestions.length === 0) {
         return (
             <div className="mt-6">
-                <p className="text-sm text-zinc-400">We couldn't find any obvious matches in your library.</p>
+                <p className="text-sm text-muted-foreground">We couldn&apos;t find any obvious matches in your library.</p>
                 <button
                     onClick={() => router.push(`/library?q=${encodeURIComponent(trackName)}`)}
-                    className="mt-3 px-4 py-2 border border-zinc-700 rounded-lg text-sm hover:bg-zinc-800 transition-colors"
+                    className="mt-3 px-4 py-2 border border-border rounded-lg text-sm text-foreground hover:bg-muted transition-colors"
                 >
                     Search Library
                 </button>
@@ -90,7 +87,7 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
 
     return (
         <div className="mt-8 text-left max-w-sm w-full mx-auto">
-            <p className="text-sm text-zinc-400 mb-3 text-center">Are you looking for one of these?</p>
+            <p className="text-sm text-muted-foreground mb-3 text-center">Are you looking for one of these?</p>
             <div className="space-y-2">
                 {suggestions.map(file => {
                     const isAudio = file.mimeType.startsWith('audio/') || /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)
@@ -99,15 +96,15 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
                         <button
                             key={file.id}
                             onClick={() => handleSelect(file)}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-zinc-700/50 bg-zinc-800/20 hover:bg-zinc-800/60 transition-colors text-left group"
+                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/50 hover:bg-accent transition-colors text-left group"
                         >
-                            <Icon className="w-5 h-5 text-blue-400 shrink-0" />
+                            <Icon className="w-5 h-5 text-primary shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-zinc-200 truncate group-hover:text-blue-300 transition-colors">
+                                <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                                     {getCleanName(file.name)}
                                 </p>
                             </div>
-                            <PlusCircle className="w-4 h-4 text-zinc-500 group-hover:text-blue-400" />
+                            <PlusCircle className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                         </button>
                     )
                 })}

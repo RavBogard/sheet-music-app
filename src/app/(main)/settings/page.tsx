@@ -13,8 +13,14 @@ import { Switch } from "@/components/ui/switch"
 import buildInfo from "@/build-info.json"
 import {
     ArrowLeft, Loader2, User, Moon, Sun, Monitor,
-    LogOut, ShieldAlert, Pencil, Check,
+    LogOut, ShieldAlert, Pencil, Check, Lock,
 } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import {
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword,
+} from "firebase/auth"
 
 export default function SettingsPage() {
     const { user, profile, isBandLeader, loading: authLoading, signOut } = useAuth()
@@ -25,6 +31,60 @@ export default function SettingsPage() {
     const [savingName, setSavingName] = useState(false)
     const gigModeActive = useMusicStore(s => s.gigModeActive)
     const setGigModeActive = useMusicStore(s => s.setGigModeActive)
+
+    // Change password state (email/password users only)
+    const [currentPassword, setCurrentPassword] = useState("")
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [passwordLoading, setPasswordLoading] = useState(false)
+    const [passwordError, setPasswordError] = useState<string | null>(null)
+    const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+    const isEmailPasswordUser = user?.providerData[0]?.providerId === "password"
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setPasswordError(null)
+        setPasswordSuccess(false)
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError("New passwords do not match.")
+            return
+        }
+        if (newPassword.length < 6) {
+            setPasswordError("New password must be at least 6 characters.")
+            return
+        }
+        if (!user?.email) return
+
+        setPasswordLoading(true)
+        try {
+            const credential = EmailAuthProvider.credential(user.email, currentPassword)
+            await reauthenticateWithCredential(user, credential)
+            await updatePassword(user, newPassword)
+            setPasswordSuccess(true)
+            setCurrentPassword("")
+            setNewPassword("")
+            setConfirmPassword("")
+        } catch (err: unknown) {
+            if (err && typeof err === "object" && "code" in err) {
+                const code = (err as { code: string }).code
+                if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+                    setPasswordError("Current password is incorrect.")
+                } else if (code === "auth/weak-password") {
+                    setPasswordError("New password is too weak. Use at least 6 characters.")
+                } else if (code === "auth/too-many-requests") {
+                    setPasswordError("Too many attempts. Please try again later.")
+                } else {
+                    setPasswordError("Failed to change password. Please try again.")
+                }
+            } else {
+                setPasswordError("Failed to change password. Please try again.")
+            }
+        } finally {
+            setPasswordLoading(false)
+        }
+    }
 
     if (authLoading) return (
         <div className="h-screen bg-background flex items-center justify-center">
@@ -151,6 +211,78 @@ export default function SettingsPage() {
                     <div className="bg-card border border-border p-5 rounded-2xl">
                         <PushNotificationSettings />
                     </div>
+
+                    {/* Change Password (email/password users only) */}
+                    {isEmailPasswordUser && (
+                        <div className="bg-card border border-border p-5 rounded-2xl">
+                            <h3 className="font-semibold text-foreground mb-1">Change Password</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Update the password for your email account.
+                            </p>
+                            <form onSubmit={handleChangePassword} className="space-y-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="current-password">Current password</Label>
+                                    <Input
+                                        id="current-password"
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        required
+                                        autoComplete="current-password"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="new-password">New password</Label>
+                                    <Input
+                                        id="new-password"
+                                        type="password"
+                                        placeholder="At least 6 characters"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="confirm-password">Confirm new password</Label>
+                                    <Input
+                                        id="confirm-password"
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+
+                                {passwordError && (
+                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl p-3">
+                                        {passwordError}
+                                    </div>
+                                )}
+                                {passwordSuccess && (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm rounded-xl p-3">
+                                        Password updated successfully.
+                                    </div>
+                                )}
+
+                                <Button
+                                    type="submit"
+                                    disabled={passwordLoading}
+                                    className="gap-2 rounded-xl"
+                                >
+                                    {passwordLoading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Lock className="h-4 w-4" />
+                                    )}
+                                    Update password
+                                </Button>
+                            </form>
+                        </div>
+                    )}
                 </section>
 
                 {/* My Instrument */}

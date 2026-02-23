@@ -27,10 +27,14 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
         const updates: Record<string, unknown> = {
             lastLoginAt: Timestamp.now(),
             email: user.email,
-            photoURL: user.photoURL,
+        }
+        // Only write photoURL if the auth user actually has one —
+        // prevents email/password users from blanking a manually-set avatar
+        if (user.photoURL) {
+            updates.photoURL = user.photoURL
         }
         // Only set displayName if user hasn't customized theirs
-        if (!data.displayName || data.displayName === user.displayName) {
+        if (user.displayName && !data.displayName) {
             updates.displayName = user.displayName
         }
         updateDoc(ref, updates).catch(() => { /* non-critical */ })

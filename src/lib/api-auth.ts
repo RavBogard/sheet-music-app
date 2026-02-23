@@ -27,7 +27,9 @@ export interface AuthResult {
     isMusician: boolean
 }
 
-const SUPER_ADMIN_UID = process.env.SUPER_ADMIN_UID || null
+function getSuperAdminUid(): string | null {
+    return process.env.SUPER_ADMIN_UID || null
+}
 
 /**
  * Verify the request has a valid Firebase auth token.
@@ -60,7 +62,8 @@ export async function requireAuth(
     }
 
     const userRole = (decoded.role as string) || undefined
-    const isAdmin = (SUPER_ADMIN_UID && decoded.uid === SUPER_ADMIN_UID) || userRole === 'admin'
+    const superAdminUid = getSuperAdminUid()
+    const isAdmin = (superAdminUid && decoded.uid === superAdminUid) || userRole === 'admin'
     // Backward compat: old 'leader' maps to band_leader
     const isBandLeader = isAdmin || userRole === 'band_leader' || userRole === 'leader'
     const isMusician = isBandLeader || userRole === 'musician'

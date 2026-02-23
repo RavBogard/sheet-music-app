@@ -47,7 +47,7 @@ export function SetlistTopBar({
     }, [editing])
 
     return (
-        <div className="h-14 flex items-center px-3 gap-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30">
+        <div className="h-14 flex items-center px-3 gap-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 md:top-16 z-30">
             <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={onBack}>
                 <ChevronLeft className="h-6 w-6" />
             </Button>

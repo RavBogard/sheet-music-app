@@ -17,7 +17,7 @@ interface AddBarProps {
 
 export function AddBar({ onAddSongs, onAddItem }: AddBarProps) {
     return (
-        <div className="sticky bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">
+        <div className="sticky bottom-16 sm:bottom-20 md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">
             <Button
                 variant="outline"
                 className="flex-1 h-10 gap-2"

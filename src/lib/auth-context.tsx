@@ -1,7 +1,16 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from "react"
-import { User, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth"
+import {
+    User,
+    onAuthStateChanged,
+    signInWithPopup,
+    signOut as firebaseSignOut,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    sendPasswordResetEmail,
+} from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
 import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
@@ -20,6 +29,9 @@ interface AuthContextType {
     cachedUser: CachedUser | null
     loading: boolean
     signIn: () => Promise<void>
+    signInWithEmail: (email: string, password: string) => Promise<void>
+    signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>
+    resetPassword: (email: string) => Promise<void>
     signOut: () => Promise<void>
     isAdmin: boolean
     isBandLeader: boolean
@@ -34,6 +46,9 @@ const AuthContext = createContext<AuthContextType>({
     cachedUser: null,
     loading: true,
     signIn: async () => { },
+    signInWithEmail: async () => { },
+    signUpWithEmail: async () => { },
+    resetPassword: async () => { },
     signOut: async () => { },
     isAdmin: false,
     isBandLeader: false,
@@ -151,6 +166,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    const signInWithEmailFn = async (email: string, password: string) => {
+        await signInWithEmailAndPassword(auth, email, password)
+    }
+
+    const signUpWithEmailFn = async (email: string, password: string, displayName: string) => {
+        const credential = await createUserWithEmailAndPassword(auth, email, password)
+        await updateProfile(credential.user, { displayName })
+        // Force token refresh so downstream listeners see the updated displayName
+        await credential.user.getIdToken(true)
+    }
+
+    const resetPasswordFn = async (email: string) => {
+        await sendPasswordResetEmail(auth, email)
+    }
+
     const signOut = async () => {
         try {
             localStorage.removeItem('crc_cached_user')
@@ -173,6 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cachedUser,
         loading,
         signIn,
+        signInWithEmail: signInWithEmailFn,
+        signUpWithEmail: signUpWithEmailFn,
+        resetPassword: resetPasswordFn,
         signOut,
         isAdmin,
         isBandLeader,

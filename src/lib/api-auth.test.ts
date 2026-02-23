@@ -67,6 +67,9 @@ describe('requireAuth', () => {
     })
 
     it('grants admin to super admin UID regardless of role', async () => {
+        const originalUid = process.env.SUPER_ADMIN_UID
+        process.env.SUPER_ADMIN_UID = '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3'
+
         mockVerify.mockResolvedValue({
             uid: '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3',
             email: 'admin@test.com',
@@ -74,6 +77,10 @@ describe('requireAuth', () => {
 
         const result = await requireAuth(makeReq('admin-token'), 'admin')
         expect(result.isAdmin).toBe(true)
+
+        // Cleanup
+        if (originalUid) process.env.SUPER_ADMIN_UID = originalUid
+        else delete process.env.SUPER_ADMIN_UID
     })
 
     it('grants admin to user with admin role', async () => {

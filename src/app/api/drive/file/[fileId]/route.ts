@@ -36,9 +36,15 @@ function getAllowedOrigin(request: NextRequest): string {
  * Fallback: also accept requests with a valid Referer from our domain.
  */
 function isTrustedBrowserRequest(req: NextRequest): boolean {
+    // 1. Best signal: Sec-Fetch-Site (set by all modern browsers, can't be forged)
     const secFetchSite = req.headers.get('sec-fetch-site')
     if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true
 
+    // 2. Sec-Fetch-Dest indicates a browser request context (embed, document, image, etc.)
+    const secFetchDest = req.headers.get('sec-fetch-dest')
+    if (secFetchDest && secFetchDest !== 'empty') return true
+
+    // 3. Referer from our domain
     const referer = req.headers.get('referer')
     if (referer) {
         try {
@@ -49,6 +55,11 @@ function isTrustedBrowserRequest(req: NextRequest): boolean {
                 url.hostname.endsWith('.vercel.app')
         } catch { /* invalid referer */ }
     }
+
+    // 4. Accept header with browser-typical content types
+    const accept = req.headers.get('accept') || ''
+    if (accept.includes('text/html') || accept.includes('application/pdf') || accept.includes('image/')) return true
+
     return false
 }
 
@@ -67,6 +78,12 @@ export async function GET(
         const auth = await withAuth(request)
         if (auth instanceof NextResponse) return auth
     } else if (!isTrustedBrowserRequest(request)) {
+        const { fileId: fid } = await params
+        logger.warn(`[FileProxy] Untrusted request blocked for ${fid}`, {
+            secFetchSite: request.headers.get('sec-fetch-site'),
+            secFetchDest: request.headers.get('sec-fetch-dest'),
+            referer: request.headers.get('referer'),
+        })
         return NextResponse.json(
             { error: "Authentication required" },
             { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request) } }

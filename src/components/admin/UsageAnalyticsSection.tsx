@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import {
     BarChart3, Users, FileMusic, ListMusic, Loader2,
     Download, TrendingUp, Music, AlertTriangle, Calendar,
@@ -397,6 +397,9 @@ function TimelineTab({ data }: { data: SongAnalytics }) {
 // ── Neglected Songs Tab ──
 
 function NeglectedTab({ data }: { data: SongAnalytics }) {
+    // useState initializer to satisfy React Compiler purity rules (Date.now is impure)
+    const [now] = useState(() => Date.now())
+
     if (data.neglectedSongs.length === 0) {
         return (
             <div className="text-center py-8 text-muted-foreground text-sm">
@@ -416,7 +419,7 @@ function NeglectedTab({ data }: { data: SongAnalytics }) {
             <div className="space-y-1">
                 {data.neglectedSongs.map((song, i) => {
                     const daysSince = song.lastUsed
-                        ? Math.round((Date.now() - new Date(song.lastUsed).getTime()) / (86400000))
+                        ? Math.round((now - new Date(song.lastUsed).getTime()) / (86400000))
                         : null
 
                     return (

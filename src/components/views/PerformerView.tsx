@@ -212,7 +212,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             const prev = prevSong()
             if (prev) router.push(`/perform/${prev.fileId}`)
         }
-    }, [isAnnotating, zoom, nextSong, prevSong, router])
+    }, [isAnnotating, zoom, nextSong, prevSong, router, syncedBroadcasterId, setSyncedBroadcasterId])
 
     return (
         <div className="h-[100dvh] flex flex-col bg-background text-foreground relative">
