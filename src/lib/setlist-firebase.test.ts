@@ -20,6 +20,10 @@ vi.mock('firebase/firestore', () => ({
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
     getDoc: (...args: unknown[]) => mockGetDoc(...args),
     getDocs: vi.fn().mockResolvedValue({ docs: [] }),
+    writeBatch: vi.fn(() => ({
+        delete: vi.fn(),
+        commit: vi.fn().mockResolvedValue(undefined),
+    })),
 }))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
 vi.mock('@/lib/notification-store', () => ({
