@@ -297,7 +297,7 @@ export default function SettingsPage() {
                 {isBandLeader && (
                     <section className="space-y-4">
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <ShieldAlert className="w-3.5 h-3.5 text-violet-500" />
+                            <ShieldAlert className="w-3.5 h-3.5 text-brand" />
                             Administration
                         </h2>
                         <div className="bg-card border border-border p-5 rounded-2xl flex items-center justify-between">
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                                 <h3 className="font-semibold text-foreground">Admin Console</h3>
                                 <p className="text-sm text-muted-foreground mt-1">Manage users, roles, system limits, and band prep.</p>
                             </div>
-                            <Button onClick={() => router.push('/admin')} className="gap-2 bg-violet-600 hover:bg-violet-500 text-white shadow-md">
+                            <Button onClick={() => router.push('/admin')} className="gap-2 bg-brand hover:bg-brand/90 text-white shadow-md">
                                 Open Console
                             </Button>
                         </div>

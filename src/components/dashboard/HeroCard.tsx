@@ -99,8 +99,8 @@ export function HeroCard({
             className={cn(
                 "w-full text-left rounded-2xl p-5 shadow-lg active:scale-[0.98] transition-all group border relative overflow-hidden",
                 isImminent
-                    ? "bg-gradient-to-br from-violet-600 to-indigo-700 border-white/15 shadow-violet-500/20"
-                    : "bg-gradient-to-br from-indigo-600/90 to-violet-600/90 border-white/10"
+                    ? "bg-gradient-to-br from-brand to-brand/80 border-white/15 shadow-brand/20"
+                    : "bg-gradient-to-br from-brand/90 to-brand/80 border-white/10"
             )}
         >
             {/* Urgency badge */}
@@ -129,7 +129,7 @@ export function HeroCard({
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold text-white leading-snug mb-4">
+            <h3 className="text-xl font-bold text-white leading-snug mb-4 font-display">
                 {setlist.name}
             </h3>
 
@@ -144,7 +144,7 @@ export function HeroCard({
                         <div
                             className={cn(
                                 "h-full rounded-full transition-all duration-500",
-                                prepData.percent === 100 ? "bg-green-400" : "bg-white/70"
+                                prepData.percent === 100 ? "bg-success" : "bg-white/70"
                             )}
                             style={{ width: `${prepData.percent}%` }}
                         />

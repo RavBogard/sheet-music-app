@@ -68,7 +68,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         </Button>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10">
+                                <Button variant="outline" className="gap-2 border-brand/30 text-brand hover:bg-brand/10">
                                     <Sparkles className="h-4 w-4" /> From Template
                                 </Button>
                             </DropdownMenuTrigger>
@@ -88,14 +88,14 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button onClick={onCreateNew || (() => router.push('/setlists/new'))} className="gap-2 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 px-6">
+                        <Button onClick={onCreateNew || (() => router.push('/setlists/new'))} className="gap-2 bg-brand hover:bg-brand/90 shadow-lg shadow-brand/20 px-6">
                             <Plus className="h-5 w-5" /> New
                         </Button>
                     </div>
                 ) : user ? (
                     <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1.5 rounded-lg">Account pending</span>
                 ) : (
-                    <Button onClick={signIn} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-500">
+                    <Button onClick={signIn} size="sm" className="gap-2 bg-brand hover:bg-brand/90">
                         <LogIn className="h-4 w-4" /> Sign In
                     </Button>
                 )}

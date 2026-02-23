@@ -279,7 +279,7 @@ export function SoundSystemSection() {
                                     </div>
                                     {scanResult && (
                                         <div className="mt-1">
-                                            <p className={`text-xs ${scanResult.includes("Found") ? "text-green-500" : "text-yellow-500"}`}>{scanResult}</p>
+                                            <p className={`text-xs ${scanResult.includes("Found") ? "text-success" : "text-yellow-500"}`}>{scanResult}</p>
                                             {trustUrl && (
                                                 <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block">
                                                     Trust Bridge Certificate &rarr;

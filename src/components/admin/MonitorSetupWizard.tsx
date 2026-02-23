@@ -50,7 +50,7 @@ export function MonitorSetupWizard({
                             key={i}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium transition-colors ${
                                 i === step ? "bg-blue-500/10 text-blue-400 border-b-2 border-blue-500"
-                                    : i < step ? "text-green-500" : "text-muted-foreground"
+                                    : i < step ? "text-success" : "text-muted-foreground"
                             }`}
                         >
                             {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
@@ -97,7 +97,7 @@ export function MonitorSetupWizard({
                             </Button>
                         </div>
                         {scanResult && (
-                            <p className={`text-xs ${scanResult.includes("Found") ? "text-green-500" : "text-yellow-500"}`}>
+                            <p className={`text-xs ${scanResult.includes("Found") ? "text-success" : "text-yellow-500"}`}>
                                 {scanResult}
                             </p>
                         )}
@@ -138,7 +138,7 @@ export function MonitorSetupWizard({
                         Next <ArrowRight className="w-4 h-4" />
                     </Button>
                 ) : (
-                    <Button onClick={onComplete} className="gap-2 bg-green-600 hover:bg-green-500">
+                    <Button onClick={onComplete} className="gap-2 bg-success hover:bg-success/90">
                         <CheckCircle className="w-4 h-4" /> Save & Finish
                     </Button>
                 )}

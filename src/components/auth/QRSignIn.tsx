@@ -152,8 +152,8 @@ export function QRSignIn() {
     if (state === "signing-in" || state === "approved") {
         return (
             <div className="flex flex-col items-center gap-3 py-4">
-                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-green-500" />
+                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-success" />
                 </div>
                 <p className="text-sm font-medium text-foreground">
                     Signing in{approvedName ? ` as ${approvedName}` : ""}…

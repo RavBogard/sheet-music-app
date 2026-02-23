@@ -178,7 +178,7 @@ export function DesktopHeader() {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || "Musician"}</p>
                                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                                        <p className="text-[10px] uppercase font-bold text-blue-500 mt-1">{profile?.role || "Pending"}</p>
+                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{profile?.role || "Pending"}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />

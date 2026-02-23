@@ -44,20 +44,20 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
         <button
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border-l-4 border-l-blue-500 border border-border rounded-2xl p-6 text-left fluid-interaction group relative overflow-hidden shadow-sm ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border-l-4 border-l-brand border border-border rounded-2xl p-6 text-left fluid-interaction group relative overflow-hidden shadow-sm ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-brand" />
                 </div>
             )}
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Calendar className="h-24 w-24 -mr-4 -mt-4 text-blue-500" />
+                <Calendar className="h-24 w-24 -mr-4 -mt-4 text-brand" />
             </div>
 
             <div className="relative z-10">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                    <div className="inline-flex items-center gap-2 bg-brand/10 text-brand px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
                         {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="flex gap-1 items-center">
@@ -69,7 +69,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                             className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
                             title="Download for Offline"
                         >
-                            <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-blue-400' : ''}`} />
+                            <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
                         </div>
 
                         {/* Overflow Menu */}
@@ -110,7 +110,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                         </div>
                     </div>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-blue-500 dark:group-hover:text-blue-300 transition-colors">{setlist.name}</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-brand transition-colors">{setlist.name}</h3>
                 {setlist.ownerName && <p className="text-muted-foreground text-sm">Leader: {setlist.ownerName}</p>}
                 {setlist.rabbi && <p className="text-muted-foreground text-sm">Rabbi {setlist.rabbi}</p>}
 
@@ -154,11 +154,11 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
         <button
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border border-border rounded-2xl p-6 text-left fluid-interaction group relative shadow-sm ${isLoading ? 'ring-2 ring-blue-500 opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`bg-card/60 backdrop-blur-md hover:bg-muted/80 border border-border rounded-2xl p-6 text-left fluid-interaction group relative shadow-sm ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                    <Loader2 className="h-5 w-5 animate-spin text-brand" />
                 </div>
             )}
             <div className="flex items-start justify-between mb-2">
@@ -239,9 +239,9 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
     return (
         <button
             onClick={() => onCreate(date)}
-            className="border-2 border-dashed border-border/80 hover:border-blue-500/50 hover:bg-blue-500/5 rounded-2xl p-6 text-left fluid-interaction flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
+            className="border-2 border-dashed border-border/80 hover:border-brand/50 hover:bg-brand/5 rounded-2xl p-6 text-left fluid-interaction flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
         >
-            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-colors">
+            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/20 group-hover:text-brand transition-colors">
                 <Plus className="h-6 w-6" />
             </div>
             <div className="text-center">
@@ -252,7 +252,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
                     {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </div>
             </div>
-            <div className="text-xs font-medium text-blue-500/80 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-wider">
+            <div className="text-xs font-medium text-brand/80 bg-brand/10 px-3 py-1 rounded-full uppercase tracking-wider">
                 Plan Service
             </div>
         </button>

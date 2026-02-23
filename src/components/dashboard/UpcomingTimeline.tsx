@@ -86,7 +86,7 @@ export function UpcomingTimeline({
                                             {/* Status dot */}
                                             <div className={cn(
                                                 "w-2 h-2 rounded-full shrink-0",
-                                                isToday ? "bg-violet-500" : "bg-muted-foreground/25"
+                                                isToday ? "bg-brand" : "bg-muted-foreground/25"
                                             )} />
 
                                             {/* Info */}
@@ -94,7 +94,7 @@ export function UpcomingTimeline({
                                                 <div className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
                                                     {s.name}
                                                     {isNew && (
-                                                        <span className="text-[9px] font-bold bg-blue-500/15 text-blue-500 px-1.5 py-0.5 rounded-full shrink-0">
+                                                        <span className="text-[9px] font-bold bg-brand/15 text-brand px-1.5 py-0.5 rounded-full shrink-0">
                                                             Updated
                                                         </span>
                                                     )}
@@ -107,7 +107,7 @@ export function UpcomingTimeline({
                                                             <div
                                                                 className={cn(
                                                                     "h-full rounded-full dash-progress-bar",
-                                                                    prep.percent === 100 ? "bg-green-500" : "bg-violet-500"
+                                                                    prep.percent === 100 ? "bg-success" : "bg-brand"
                                                                 )}
                                                                 style={{ width: `${prep.percent}%` }}
                                                             />

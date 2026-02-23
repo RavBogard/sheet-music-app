@@ -208,7 +208,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                     {/* Greeting */}
                     <div className="mb-5">
                         <h1 className={cn(
-                            "text-[26px] font-bold tracking-tight leading-tight",
+                            "text-[26px] font-bold tracking-tight leading-tight font-display",
                             greeting.isSpecial
                                 ? "bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text"
                                 : "text-foreground"

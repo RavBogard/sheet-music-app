@@ -131,23 +131,32 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-sm space-y-8 text-center">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+            {/* Subtle brand gradient ambient glow */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-brand/[0.04] blur-3xl" />
+                <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-brand/[0.03] blur-3xl" />
+            </div>
+
+            <div className="w-full max-w-sm space-y-8 text-center relative z-10">
                 <div className="flex flex-col items-center gap-4">
-                    <img
-                        src="/logo.jpg"
-                        alt={congregation.shortName}
-                        className="h-20 w-20 rounded-full border border-border object-cover shadow-sm"
-                    />
+                    <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-brand/15 blur-xl scale-150" aria-hidden="true" />
+                        <img
+                            src="/logo.jpg"
+                            alt={congregation.shortName}
+                            className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
+                        />
+                    </div>
                     <div>
-                        <h1 className="text-2xl font-semibold text-foreground">{congregation.shortName}</h1>
-                        <p className="text-muted-foreground text-sm mt-1">
+                        <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{congregation.shortName}</h1>
+                        <p className="text-muted-foreground text-sm mt-1.5">
                             Sign in to access the music library
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-sm">
+                <div className="glass-card rounded-2xl p-6 space-y-5">
                     {/* Google Sign-In */}
                     <Button
                         size="lg"
@@ -194,7 +203,7 @@ export default function LoginPage() {
                             </div>
 
                             {resetSuccess ? (
-                                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm rounded-xl p-3">
+                                <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
                                     Password reset email sent! Check your inbox.
                                 </div>
                             ) : (

@@ -111,7 +111,7 @@ export default function TasksDashboardPage() {
             <div className="px-6 py-6 border-b border-border/50 bg-card">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-5xl mx-auto w-full">
                     <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <h1 className="text-2xl font-bold font-display flex items-center gap-2">
                             <ListTodo className="h-6 w-6 text-primary" /> Tasks Hub
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -152,9 +152,9 @@ export default function TasksDashboardPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : tasks.length === 0 ? (
-                        <div className="text-center p-20 bg-card border border-dashed border-border/60 rounded-xl my-8">
-                            <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500/50" />
-                            <h3 className="text-lg font-medium text-foreground">All caught up!</h3>
+                        <div className="text-center p-20 bg-card/50 border border-border/50 rounded-2xl my-8">
+                            <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-success/50" />
+                            <h3 className="text-lg font-semibold text-foreground font-display">All caught up!</h3>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {viewMode === 'my_tasks'
                                     ? "You have no outstanding tasks assigned to you."
@@ -217,7 +217,7 @@ export default function TasksDashboardPage() {
                                         )}
 
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md">
+                                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand bg-brand/10 px-2.5 py-1 rounded-md">
                                                 <FileText className="h-3.5 w-3.5" />
                                                 <Link href={`/perform/setlist/${task.setlistId}`} className="hover:underline">
                                                     {task.setlistName}

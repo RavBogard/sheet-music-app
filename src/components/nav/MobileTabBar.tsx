@@ -94,9 +94,11 @@ export function MobileTabBar() {
                             )}
                         >
                             <div className={cn(
-                                "relative flex items-center justify-center w-12 h-8 rounded-full transition-colors duration-300",
-                                item.active ? "bg-accent" : "bg-transparent"
-                            )}>
+                                "relative flex items-center justify-center w-12 h-8 rounded-full transition-all duration-300",
+                                item.active
+                                    ? "bg-accent scale-100"
+                                    : "bg-transparent scale-90"
+                            )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
                                 <Icon className={cn(
                                     "w-5 h-5 transition-all duration-300",
                                     item.active ? "fill-foreground/20 stroke-[2.5px]" : "stroke-2"

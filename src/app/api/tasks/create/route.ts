@@ -60,11 +60,11 @@ export async function POST(request: NextRequest) {
 
         await taskRef.set(taskData)
 
-        // Fire-and-forget assignment email
+        // Send assignment email (must await — Vercel kills the runtime after response)
         const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
         const taskUrl = `${origin}/perform/setlist/${setlistId}`
 
-        sendTaskAssignmentEmail({
+        const emailResult = await sendTaskAssignmentEmail({
             to: assigneeEmail,
             cc: taskData.notifiedEmails,
             recipientName: assigneeName,
@@ -74,8 +74,11 @@ export async function POST(request: NextRequest) {
             taskDescription: description,
             taskUrl
         }).catch(err => {
-            logger.warn('[Tasks] Failed to send assignment email natively. The task was still created.', err)
+            logger.warn('[Tasks] Failed to send assignment email. The task was still created.', err)
+            return { ok: false, reason: String(err) }
         })
+
+        logger.info(`[Tasks] Task ${taskRef.id} created. Email: ${emailResult?.ok ? 'sent' : emailResult?.reason || 'failed'}`)
 
         return NextResponse.json({ success: true, taskId: taskRef.id })
     } catch (err) {

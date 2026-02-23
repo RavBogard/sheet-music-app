@@ -77,10 +77,10 @@ export function SetlistTopBar({
             {/* Save status dot — optimistic: green unless actively saving */}
             <div className="shrink-0 flex items-center gap-1">
                 {lastSaved && !saving && (
-                    <div className="h-2 w-2 rounded-full bg-green-500 mr-1" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
+                    <div className="h-2 w-2 rounded-full bg-success mr-1" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
                 )}
                 {saving && (
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1" title="Saving..." />
+                    <div className="h-2 w-2 rounded-full bg-success animate-pulse mr-1" title="Saving..." />
                 )}
                 {!lastSaved && !saving && (
                     <div className="h-2 w-2 rounded-full bg-muted-foreground/30 mr-1" title="Not yet saved" />

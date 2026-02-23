@@ -106,7 +106,7 @@ export function BandPrepSection() {
                                             {/* Progress bar */}
                                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-32">
                                                 <div
-                                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' :
+                                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' :
                                                             pct > 50 ? 'bg-blue-500' :
                                                                 pct > 0 ? 'bg-amber-500' : 'bg-muted-foreground/20'
                                                         }`}
@@ -119,7 +119,7 @@ export function BandPrepSection() {
                                             </span>
 
                                             {isComplete ? (
-                                                <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                                                <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
                                             ) : (
                                                 <span className="w-3" />
                                             )}

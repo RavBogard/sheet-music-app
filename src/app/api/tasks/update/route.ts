@@ -83,7 +83,7 @@ export async function PATCH(request: NextRequest) {
                 const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
                 const taskUrl = `${origin}/perform/setlist/${taskData.setlistId}`
 
-                sendTaskCompletionEmail({
+                await sendTaskCompletionEmail({
                     to: assignerDoc.data()!.email,
                     assignerName: taskData.createdByName,
                     assigneeName: taskData.assigneeName,
@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest) {
                     taskTitle: safeUpdates.title || taskData.title,
                     taskUrl
                 }).catch(err => {
-                    logger.warn('[Tasks] Failed to send completion email natives', err)
+                    logger.warn('[Tasks] Failed to send completion email', err)
                 })
             }
         }

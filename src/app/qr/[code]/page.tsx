@@ -125,8 +125,8 @@ export default function QRApprovePage() {
     if (state === "success") {
         return (
             <Shell>
-                <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-10 w-10 text-green-500" />
+                <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-10 w-10 text-success" />
                 </div>
                 <h1 className="text-xl font-bold text-foreground">Signed In!</h1>
                 <p className="text-muted-foreground text-sm text-center">

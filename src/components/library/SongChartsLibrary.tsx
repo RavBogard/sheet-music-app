@@ -239,7 +239,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
                     <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-border object-cover" />
-                    <h1 className="text-2xl font-bold">Song Charts</h1>
+                    <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
                 {(isBandLeader || isAdmin) && (
