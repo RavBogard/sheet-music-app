@@ -33,9 +33,10 @@ export default function AdminSections() {
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
-            {/* Sidebar Navigation */}
-            <div className="flex-[0_0_220px] flex flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 shrink-0 border-b md:border-b-0 md:border-r border-border pr-0 md:pr-4">
-                <div className="flex md:flex-col gap-1 w-max md:w-full p-1">
+            {/* Tab Navigation */}
+            <div className="flex-[0_0_auto] md:flex-[0_0_220px] flex flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 shrink-0 border-b md:border-b-0 md:border-r border-border pr-0 md:pr-4">
+                <p className="hidden md:block text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 mb-2">Navigation</p>
+                <div className="flex md:flex-col gap-1.5 w-full p-1">
                     {tabs.map(tab => {
                         const Icon = tab.icon
                         const isActive = activeTab === tab.id
@@ -43,10 +44,11 @@ export default function AdminSections() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as AdminTab)}
-                                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors text-left
+                                aria-pressed={isActive}
+                                className={`flex items-center justify-center md:justify-start gap-2.5 flex-1 md:flex-initial px-4 py-3 rounded-xl text-sm font-medium transition-colors text-center md:text-left border
                                     ${isActive
-                                        ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
-                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                        ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/30'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground border-transparent'
                                     }
                                 `}
                             >

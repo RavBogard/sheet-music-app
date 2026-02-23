@@ -22,8 +22,8 @@ export function LiveServiceSection() {
     const canSeeLive = isAdmin || isBandLeader
 
     // 1. Watch Monitor Config (Bridge Status)
-    const monitorConfigRef = doc(db, "config", "monitor")
-    const { data: configData } = useSafeFirestoreSync<MonitorConfig>(monitorConfigRef as any)
+    const monitorConfigRef = useMemo(() => doc(db, "config", "monitor"), [])
+    const { data: configData, error: configError } = useSafeFirestoreSync<MonitorConfig>(monitorConfigRef as any)
 
     useEffect(() => {
         if (configData) {
@@ -33,28 +33,40 @@ export function LiveServiceSection() {
 
     // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
     const setlistsQuery = useMemo(() => query(collection(db, "setlists"), where("isPublic", "==", true)), [])
-    const { data: setlistsData } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
+    const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
+
+    // Resolve loading once Firestore queries have returned (even if empty)
+    useEffect(() => {
+        if (!setlistsLoading && !setlistsData) {
+            setLoading(false)
+        }
+    }, [setlistsLoading, setlistsData])
 
     useEffect(() => {
         if (!canSeeLive || !setlistsData) return
 
         const fetchPresence = async () => {
-            const lists = setlistsData as any[]
-            setActiveSetlists(lists)
+            try {
+                const lists = setlistsData as any[]
+                setActiveSetlists(lists)
 
-            // For each setlist, fetch presence to see if it's "active"
-            const counts: Record<string, number> = {}
-            for (const list of lists) {
-                try {
-                    const pSnap = await getDocs(collection(db, `setlists/${list.id}/presence`))
-                    const count = pSnap.size
-                    counts[list.id] = count
-                } catch (e) {
-                    console.error("Failed to fetch presence for setlist", list.id)
+                // For each setlist, fetch presence to see if it's "active"
+                const counts: Record<string, number> = {}
+                for (const list of lists) {
+                    try {
+                        const pSnap = await getDocs(collection(db, `setlists/${list.id}/presence`))
+                        const count = pSnap.size
+                        counts[list.id] = count
+                    } catch (e) {
+                        console.error("Failed to fetch presence for setlist", list.id)
+                    }
                 }
+                setPresenceCounts(counts)
+            } catch (e) {
+                console.error("Failed to fetch presence data", e)
+            } finally {
+                setLoading(false)
             }
-            setPresenceCounts(counts)
-            setLoading(false)
         }
 
         fetchPresence()
@@ -66,11 +78,17 @@ export function LiveServiceSection() {
 
     useEffect(() => {
         const checkStatus = () => {
-            if (!bridgeStatus) {
+            if (!bridgeStatus?.lastSeen) {
                 setIsBridgeOnline(false)
                 return
             }
-            setIsBridgeOnline((Date.now() - (bridgeStatus.lastSeen as number)) < 90000)
+            // Handle both raw timestamps and Firestore Timestamp objects
+            const lastSeenMs = typeof bridgeStatus.lastSeen === 'number'
+                ? bridgeStatus.lastSeen
+                : typeof (bridgeStatus.lastSeen as any)?.toMillis === 'function'
+                    ? (bridgeStatus.lastSeen as any).toMillis()
+                    : 0
+            setIsBridgeOnline((Date.now() - lastSeenMs) < 90000)
         }
 
         checkStatus()
@@ -226,7 +244,9 @@ export function LiveServiceSection() {
                         <div className="flex justify-between">
                             <span>Bridge Heartbeat Check:</span>
                             <span className={isBridgeOnline ? "text-emerald-500" : "text-muted-foreground/60"}>
-                                {bridgeStatus?.lastSeen ? new Date(bridgeStatus.lastSeen as number).toLocaleTimeString() : 'N/A'}
+                                {bridgeStatus?.lastSeen
+                                    ? new Date(typeof bridgeStatus.lastSeen === 'number' ? bridgeStatus.lastSeen : typeof (bridgeStatus.lastSeen as any)?.toMillis === 'function' ? (bridgeStatus.lastSeen as any).toMillis() : 0).toLocaleTimeString()
+                                    : 'N/A'}
                             </span>
                         </div>
                         <div className="flex justify-between">

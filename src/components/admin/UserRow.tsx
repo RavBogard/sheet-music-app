@@ -135,7 +135,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
     return (
-        <div className={`flex items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50 ${isSelected ? 'bg-violet-500/5 hover:bg-violet-500/10' : ''}`}>
+        <div className={`flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50 ${isSelected ? 'bg-violet-500/5 hover:bg-violet-500/10' : ''}`}>
             {/* Checkbox Column */}
             <input
                 type="checkbox"
@@ -231,7 +231,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             </div>
 
             {/* Mobile Actions (visible only < sm) */}
-            <div className="sm:hidden w-full flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+            <div className="sm:hidden basis-full flex items-center justify-between px-2 pt-2 mt-1 border-t border-border/50">
                 <div className="flex items-center gap-1.5 flex-wrap flex-1">
                     {effectiveRole === 'admin' && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[9px] h-4 px-1.5">Admin</Badge>}
                     {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-blue-500/20 text-blue-300 border-blue-500/50 text-[9px] h-4 px-1.5">Leader</Badge>}
