@@ -9,9 +9,9 @@ interface ChordPosition {
     originalText: string
     x: number
     y: number
-    w?: number
-    h?: number
-    pxHeight?: number
+    w?: number | null
+    h?: number | null
+    pxHeight?: number | null
     source?: 'textLayer' | 'ai' | 'user'
 }
 
@@ -104,13 +104,18 @@ export async function POST(req: NextRequest) {
         const db = getFirestore()
 
         const cacheData: PageChordData = {
-            chords: chords.map((c: ChordPosition) => ({
-                text: c.text || c.originalText || '',
-                originalText: c.originalText || c.text,
-                x: c.x, y: c.y, w: c.w, h: c.h,
-                pxHeight: c.pxHeight,
-                source: c.source || 'textLayer',
-            })),
+            chords: chords.map((c: ChordPosition) => {
+                // Firestore rejects undefined values, so fallback optional fields to null
+                return {
+                    text: c.text || c.originalText || '',
+                    originalText: c.originalText || c.text || '',
+                    x: c.x, y: c.y,
+                    w: c.w ?? null,
+                    h: c.h ?? null,
+                    pxHeight: c.pxHeight ?? null,
+                    source: c.source || 'textLayer',
+                }
+            }),
             scannedAt: new Date().toISOString(),
             scanMethod: scanMethod || 'textLayer',
             aiValidated: aiValidated || false,

@@ -50,23 +50,66 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     // Bounds for percentage calculations
     const pageRect = pageElement.getBoundingClientRect();
 
-    // 1. Map to objects with coordinates
-    const items = spans.map(span => {
+    // 1. Map to objects with coordinates, splitting spans with spaces
+    const items: Array<{
+        text: string;
+        rect: DOMRect;
+        y: number;
+        x: number;
+        r: number;
+        b: number;
+        w: number;
+        h: number;
+        span: HTMLSpanElement;
+    }> = [];
+
+    spans.forEach(span => {
+        const rawText = span.textContent || "";
+        const text = normalizeAccidentals(rawText);
+        if (text.trim().length === 0) return;
+
         const rect = span.getBoundingClientRect();
-        return {
-            // Normalize Unicode accidentals (♯→#, ♭→b) immediately so all
-            // downstream regex matching works with ASCII characters only
-            text: normalizeAccidentals(span.textContent || ""),
-            rect,
-            y: rect.top,
-            x: rect.left,
-            r: rect.right,
-            b: rect.bottom,
-            w: rect.width,
-            h: rect.height,
-            span
-        };
-    }).filter(i => i.text.trim().length > 0);
+
+        // If the span contains multiple tokens separated by spaces, split them
+        // so that "F   G" doesn't become a single "FG" item after cleaning.
+        if (/\s/.test(text.trim())) {
+            const regex = /\S+/g;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const token = match[0];
+                const startIdx = match.index;
+
+                // Approximate X/Width based on character index
+                const charWidth = rect.width / text.length;
+                const tokenX = rect.left + (startIdx * charWidth);
+                const tokenW = token.length * charWidth;
+
+                items.push({
+                    text: token,
+                    rect,
+                    y: rect.top,
+                    x: tokenX,
+                    r: tokenX + tokenW,
+                    b: rect.bottom,
+                    w: tokenW,
+                    h: rect.height,
+                    span
+                });
+            }
+        } else {
+            items.push({
+                text: text,
+                rect,
+                y: rect.top,
+                x: rect.left,
+                r: rect.right,
+                b: rect.bottom,
+                w: rect.width,
+                h: rect.height,
+                span
+            });
+        }
+    });
 
     // 2. Sort by Y (Line) then X (Position)
     items.sort((a, b) => {
