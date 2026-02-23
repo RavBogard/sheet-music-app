@@ -14,6 +14,7 @@ import { SetlistToolbar } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
+import { SetlistMatrixView } from "./v2/SetlistMatrixView"
 
 // Lazy-load CalendarView — most users stay on list view, so the
 // calendar component (+ its date-fns dependencies) can load on demand.
@@ -119,6 +120,10 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">
                     <CalendarView setlists={displayedSetlists} onSelectSetlist={handleSelect} onCreateSetlist={handleCreateFromCalendar} />
+                </div>
+            ) : view === 'matrix' ? (
+                <div className="flex-1 p-6 overflow-hidden">
+                    <SetlistMatrixView />
                 </div>
             ) : (
                 <ScrollArea className="flex-1 p-6">

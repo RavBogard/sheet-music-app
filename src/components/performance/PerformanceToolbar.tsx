@@ -16,6 +16,10 @@ import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useAnnotationStore } from "@/lib/annotation-store"
 import { AnnotationToolbar } from "@/components/music/AnnotationToolbar"
 import { cn } from "@/lib/utils"
+import { LiveSession, subscribeToLiveSessions } from "@/lib/live-session-firebase"
+import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
+import { Link as LinkIcon, Unlink } from "lucide-react"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -23,9 +27,16 @@ interface PerformanceToolbarProps {
 }
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
-    const { aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom } = useMusicStore()
+    const {
+        aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom,
+        currentSetlistId, syncedBroadcasterId, setSyncedBroadcasterId, jumpToSong, setCurrentVisiblePage, playbackQueue, queueIndex
+    } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isAnnotating, setAnnotating } = useAnnotationStore()
+    const { user, isAdmin, isBandLeader } = useAuth()
+    const router = useRouter()
+
+    const isBroadcaster = (isAdmin || isBandLeader) && !!user?.uid
 
     // Establish WebSocket connection immediately so the bridge is 
     // ready *before* the user opens the Audio popover (zero latency).
@@ -73,6 +84,35 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         return "Transpose"
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
+    // ── Live Session Sync Logic ──
+    const [activeSessions, setActiveSessions] = useState<LiveSession[]>([])
+
+    useEffect(() => {
+        if (!currentSetlistId || isBroadcaster) return
+        const unsub = subscribeToLiveSessions(currentSetlistId, setActiveSessions)
+        return () => unsub()
+    }, [currentSetlistId, isBroadcaster])
+
+    useEffect(() => {
+        if (!syncedBroadcasterId || isBroadcaster) return
+
+        const session = activeSessions.find(s => s.broadcasterId === syncedBroadcasterId)
+        if (!session) return // Keep state just in case they drop momentarily
+
+        if (session.queueIndex !== queueIndex && session.queueIndex >= 0 && session.queueIndex < playbackQueue.length) {
+            const track = jumpToSong(session.queueIndex)
+            if (track) router.push(`/perform/${track.fileId}`)
+        }
+
+        if (session.currentVisiblePage !== currentVisiblePage && session.currentVisiblePage > 0) {
+            setCurrentVisiblePage(session.currentVisiblePage)
+            const pageEl = document.querySelector(`[data-page-number="${session.currentVisiblePage}"]`)
+            if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    }, [activeSessions, syncedBroadcasterId, queueIndex, currentVisiblePage, playbackQueue, jumpToSong, isBroadcaster, router, setCurrentVisiblePage])
+
+    const availableSession = activeSessions[0]
+
     return (
         <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
 
@@ -93,6 +133,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                     {/* Metronome */}
                     <MetronomeControl />
+
+                    {/* Sync Button (if not broadcaster and session available) */}
+                    {!isBroadcaster && availableSession && (
+                        <button
+                            onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
+                            className={cn(
+                                "h-9 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5 transition-all max-w-[110px]",
+                                syncedBroadcasterId
+                                    ? "bg-green-600 border border-green-500/50 text-white shadow-lg shadow-green-900/20"
+                                    : "glass-card text-foreground hover:bg-zinc-800 animate-pulse"
+                            )}
+                        >
+                            {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
+                            <span className="truncate">{syncedBroadcasterId ? "Following" : "Sync"}</span>
+                        </button>
+                    )}
 
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
@@ -175,6 +231,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     >
                         <Pencil className="h-5 w-5" />
                     </Button>
+
+                    {/* Sync Button (Desktop) */}
+                    {!isBroadcaster && availableSession && (
+                        <button
+                            onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
+                            className={cn(
+                                "h-11 px-4 rounded-xl text-xs font-bold uppercase tracking-wider fluid-interaction flex items-center gap-2 min-w-[120px]",
+                                syncedBroadcasterId
+                                    ? "bg-green-600 border border-green-500/50 text-white shadow-lg shadow-green-900/20"
+                                    : "glass-card text-foreground hover:bg-zinc-800 animate-pulse"
+                            )}
+                        >
+                            {syncedBroadcasterId ? <LinkIcon className="h-4 w-4 shrink-0" /> : <Unlink className="h-4 w-4 shrink-0" />}
+                            <span className="truncate">{syncedBroadcasterId ? `Following ${availableSession.broadcasterName.split(' ')[0]}` : "Sync to Leader"}</span>
+                        </button>
+                    )}
 
                     {/* Scale Controls */}
                     <div className="flex items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 gap-1 h-11">

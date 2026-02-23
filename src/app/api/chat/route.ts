@@ -73,6 +73,7 @@ You must return a JSON object with this structure:
 - When building Shabbat morning setlists: Birchot HaShachar header → Morning Blessings → P'sukei D'zimra header → Ashrei → Nishmat → Bar'chu → Shema → V'ahavta → Mi Chamocha → T'filah header → Silent Prayer → Torah Service header → Torah Processional → Torah Reading → Haftarah → Returning the Torah → Sermon → Aleinu → Mourner's Kaddish → Adon Olam/Ein Keloheinu → Kiddush.
 - Search the library context to find matching files for each liturgical slot.
 - When SONG USAGE HISTORY is available, use it to rotate repertoire: prefer songs not used recently over ones used last week. Mention rotation reasoning if asked.
+- **Matrix Review**: When provided with MATRIX CONTEXT, analyze the multi-week rotational grid. Suggest additions for upcoming columns that prevent repetition ("You played X last week, try Y this week"). Recommend repertoire that aligns with the specific parasha or holiday provided in the columns.
 - **Rabbi-Specific Preferences**: Each rabbi has their own style and preferences. The "ALL SETLISTS" context shows which rabbi led each past service. When building or suggesting setlists, study past setlists tagged with the same rabbi to learn their patterns — typical song choices, service flow ordering, liturgical emphasis, and preferred musicians. If the current setlist has a rabbi assigned, tailor your suggestions to match that rabbi's established patterns. If asked about differences between rabbis, compare their past setlists.
 - If asked to "Add Adon Olam to the setlist", use context to find the fileId and issue ADD_TO_SETLIST with both "title" and "fileId".
 - ADD_TO_SETLIST payload uses "title" (not "fileName") for the display name. Include "fileId" if found in the library. For non-song items, include "type", "performer", "estimatedMinutes".
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
     }
 
-    const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi } = body
+    const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi, matrixContext } = body
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages[messages.length - 1]?.content) {
       return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })
@@ -226,6 +227,14 @@ Hebrew Date: ${friCtx.hebrewDate.display}
       // Usage context is best-effort
     }
 
+    let matrixStr = ""
+    if (matrixContext && matrixContext.columns) {
+      matrixStr = `\n--- MATRIX CONTEXT (8-WEEK ROTATION) ---\n`
+      matrixStr += `This represents the past 3 weeks and upcoming 4 weeks of repertoire.\n`
+      matrixStr += JSON.stringify(matrixContext, null, 2)
+      matrixStr += `\n----------------------------------------\n`
+    }
+
     const prompt = `
 ${SYSTEM_PROMPT}
 
@@ -239,7 +248,7 @@ ${libraryContext}
 --- CURRENT SETLIST${setlistName ? ` ("${setlistName}")` : ''}${rabbi ? ` [Rabbi: ${rabbi}]` : ''} ---
 ${setlistContext}
 -----------------------
-${allSetlistsContext}${liturgicalContext}${usageContext}${userContext}
+${allSetlistsContext}${liturgicalContext}${usageContext}${matrixStr}${userContext}
 
 USER MESSAGE:
 ${messages[messages.length - 1].content}

@@ -59,6 +59,10 @@ export interface MusicState {
         fret: number // e.g. 3
     }
 
+    // Live Follow-the-Leader Sync
+    syncedBroadcasterId: string | null
+    setSyncedBroadcasterId: (id: string | null) => void
+
     // Chord Edit Mode
     isEditingChords: boolean
     setEditingChords: (editing: boolean) => void
@@ -88,6 +92,7 @@ export interface MusicState {
     setQueue: (items: QueueItem[], startIndex?: number, returnPath?: string, setlistId?: string) => void
     nextSong: () => QueueItem | null
     prevSong: () => QueueItem | null
+    jumpToSong: (index: number) => QueueItem | null
 
 
 
@@ -131,6 +136,9 @@ export const useMusicStore = create<MusicState>()(
                 targetShape: '',
                 fret: 0
             },
+
+            syncedBroadcasterId: null,
+
             isEditingChords: false,
             gigModeActive: false,
             capoFret: null,
@@ -152,7 +160,8 @@ export const useMusicStore = create<MusicState>()(
                 capoFret: null,
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
-                aiXmlContent: null // Clear AI content
+                aiXmlContent: null, // Clear AI content
+                syncedBroadcasterId: null // Clear sync on new file if manually changed
             }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
@@ -202,6 +211,20 @@ export const useMusicStore = create<MusicState>()(
                 }
                 return null
             },
+            jumpToSong: (index: number) => {
+                const { playbackQueue, aiState } = get()
+                if (index >= 0 && index < playbackQueue.length) {
+                    const track = playbackQueue[index]
+                    set({
+                        queueIndex: index,
+                        transposition: track.transposition ?? 0,
+                        isEditingChords: false,
+                        aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
+                    })
+                    return track
+                }
+                return null
+            },
 
             setAiXmlContent: (xml: string | null) => set({ aiXmlContent: xml }),
 
@@ -235,6 +258,8 @@ export const useMusicStore = create<MusicState>()(
 
             setCapoFret: (fret) => set({ capoFret: fret }),
 
+            setSyncedBroadcasterId: (id) => set({ syncedBroadcasterId: id }),
+
             setEditingChords: (editing) => set({ isEditingChords: editing }),
             setGigModeActive: (active) => set({ gigModeActive: active }),
 
@@ -250,7 +275,8 @@ export const useMusicStore = create<MusicState>()(
                 queueIndex: -1,
                 returnPath: null,
                 currentSetlistId: null,
-                audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
+                audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false },
+                syncedBroadcasterId: null
             })
         }),
         {

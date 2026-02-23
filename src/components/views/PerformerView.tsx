@@ -11,6 +11,7 @@ import { PerformanceStatusStrip } from "@/components/performance/PerformanceStat
 import { FileType } from "@/lib/store"
 import { ChartSuggestions } from "@/components/music/ChartSuggestions"
 import { useAuth } from "@/lib/auth-context"
+import { broadcastLiveSession } from '@/lib/live-session-firebase'
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
@@ -22,8 +23,8 @@ interface PerformerViewProps {
 }
 
 export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps) {
-    const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex } = useMusicStore()
-    const { isAdmin, isBandLeader } = useAuth()
+    const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex, currentSetlistId, currentVisiblePage, syncedBroadcasterId, setSyncedBroadcasterId } = useMusicStore()
+    const { user, isAdmin, isBandLeader } = useAuth()
     const isAnnotating = useAnnotationStore(s => s.isAnnotating)
     const [barsVisible, setBarsVisible] = useState(true)
     const router = useRouter()
@@ -45,6 +46,20 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             })
         }
     }, [fileUrl])
+
+    // ── Live Session Broadcasting (Zero-UI) ──
+    const isBroadcaster = (isAdmin || isBandLeader) && !!user?.uid
+    useEffect(() => {
+        if (isBroadcaster && currentSetlistId && user) {
+            broadcastLiveSession(
+                currentSetlistId,
+                user.uid,
+                user.displayName || 'Leader',
+                queueIndex,
+                currentVisiblePage
+            )
+        }
+    }, [isBroadcaster, user, currentSetlistId, queueIndex, currentVisiblePage])
 
     // ── Single source of truth for toolbar visibility ──
     const toggleBars = useCallback(() => {
@@ -84,6 +99,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                 case 'ArrowRight':
                 case 'PageDown': {
                     e.preventDefault()
+                    if (syncedBroadcasterId) setSyncedBroadcasterId(null)
                     const el = viewRef.current
                     if (el) {
                         const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20
@@ -115,6 +131,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                 case 'ArrowLeft':
                 case 'PageUp': {
                     e.preventDefault()
+                    if (syncedBroadcasterId) setSyncedBroadcasterId(null)
                     const el = viewRef.current
                     if (el) {
                         const atTop = el.scrollTop <= 20
@@ -185,6 +202,8 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
 
         // Only trigger if horizontal swipe is dominant and fast enough
         if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.7 || dt > 500) return
+
+        if (syncedBroadcasterId) setSyncedBroadcasterId(null)
 
         if (dx < -50) {
             const next = nextSong()

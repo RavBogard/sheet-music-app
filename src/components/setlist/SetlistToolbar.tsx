@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Calendar, Search, X } from "lucide-react"
+import { List, Calendar, Search, X, Grid3X3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
@@ -8,8 +8,8 @@ import { useState } from "react"
 interface SetlistToolbarProps {
     activeTab: 'personal' | 'public'
     onTabChange: (tab: 'personal' | 'public') => void
-    view: 'list' | 'calendar'
-    onViewChange: (view: 'list' | 'calendar') => void
+    view: 'list' | 'calendar' | 'matrix'
+    onViewChange: (view: 'list' | 'calendar' | 'matrix') => void
     showPersonalTab: boolean
     searchQuery: string
     onSearchChange: (query: string) => void
@@ -79,6 +79,15 @@ export function SetlistToolbar({
                         >
                             <Calendar className="h-4 w-4" />
                         </Button>
+                        <Button
+                            variant={view === 'matrix' ? 'secondary' : 'ghost'}
+                            size="icon"
+                            onClick={() => onViewChange('matrix')}
+                            className={`h-9 w-9 transition-all ${view === 'matrix' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                            title="Matrix View"
+                        >
+                            <Grid3X3 className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -100,9 +109,8 @@ export function SetlistToolbar({
                 <div className="flex gap-1.5 flex-wrap">
                     <button
                         onClick={() => onRabbiFilterChange("")}
-                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
-                            !rabbiFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
+                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${!rabbiFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                            }`}
                     >
                         All
                     </button>
@@ -110,9 +118,8 @@ export function SetlistToolbar({
                         <button
                             key={r}
                             onClick={() => onRabbiFilterChange(rabbiFilter === r ? "" : r)}
-                            className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
-                                rabbiFilter === r ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
+                            className={`px-2.5 py-1 rounded-full text-xs transition-colors ${rabbiFilter === r ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                                }`}
                         >
                             Rabbi {r}
                         </button>

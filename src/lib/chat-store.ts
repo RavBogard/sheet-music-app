@@ -25,6 +25,7 @@ interface ChatContextData {
     setlistId?: string
     rabbi?: string
     libraryFiles?: Array<{ id: string; name: string; mimeType: string }>
+    matrixContext?: { columns: any[]; rows: any[]; grid: any }
 }
 
 interface ChatState {

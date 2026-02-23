@@ -1,17 +1,11 @@
 {
-  "version": "0.0.1",
-  "commit": "e07889b",
+  "version": "0.1.0",
+  "commit": "208fcb3",
   "branch": "master",
   "buildDate": "2/22/2026",
   "changelog": [
-    "0.0.1 - feat: phase 1 - error boundaries and legacy v1 component excision",
-    "0.0.1 - refactor: library sync optimizations, UI/UX polish, and offline improvements",
-    "0.0.1 - fix: correctly identify synthetic queue IDs starting with flow- and route them to FlowItemView instead of attempting to fetch a missing PDF",
-    "0.0.1 - fix: make fetchFileById resilient to UUID database string corruption where hyphens are replaced by underscores",
-    "0.0.1 - fix: extract inline Wrapper component in PerformPage to prevent continuous React unmount/remount destruction loops on PDFViewer",
-    "0.0.1 - fix: exclude PWA manifest and service worker files from middleware auth redirects to fix JSON syntax error",
-    "0.0.1 - fix: rename rxdb instance to sheet-music-db-v2 to permanently bypass all corrupted version 0 IndexedDB schema caches across all clients",
-    "0.0.1 - fix: implement global rxdb try-catch to destroy and wipe corrupted IndexedDB instances if the old stored schema is invalid during migration",
-    "0.0.1 - fix: import RxDBMigrationsSchemaPlugin required for version migrations"
+    "0.1.0 - feat: implement task assignment and tracking system",
+    "0.1.0 - feat: phase 1 - error boundaries and legacy v1 component excision",
+    "0.1.0 - refactor: library sync optimizations, UI/UX polish, and offline improvements"
   ]
 }
