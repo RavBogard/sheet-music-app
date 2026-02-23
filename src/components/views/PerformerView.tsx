@@ -11,7 +11,7 @@ import { PerformanceStatusStrip } from "@/components/performance/PerformanceStat
 import { FileType } from "@/lib/store"
 import { ChartSuggestions } from "@/components/music/ChartSuggestions"
 import { useAuth } from "@/lib/auth-context"
-import { broadcastLiveSession } from '@/lib/live-session-firebase'
+import { broadcastLiveSession, endLiveSession } from '@/lib/live-session-firebase'
 
 const PDFViewer = dynamic(() => import("@/components/music/PDFViewer").then(mod => mod.PDFViewer), { ssr: false })
 const SmartScoreViewer = dynamic(() => import("@/components/music/SmartScoreViewer").then(mod => mod.SmartScoreViewer), { ssr: false })
@@ -60,6 +60,15 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             )
         }
     }, [isBroadcaster, user, currentSetlistId, queueIndex, currentVisiblePage])
+
+    // Clean up live session on unmount (prevents stale session documents)
+    useEffect(() => {
+        return () => {
+            if (isBroadcaster && currentSetlistId && user) {
+                endLiveSession(currentSetlistId, user.uid)
+            }
+        }
+    }, [isBroadcaster, currentSetlistId, user])
 
     // ── Single source of truth for toolbar visibility ──
     const toggleBars = useCallback(() => {

@@ -571,6 +571,7 @@ export function SetlistEditorV2({
                 isOpen={!!matchingTrackId && canEdit}
                 onClose={() => setMatchingTrackId(null)}
                 onMatch={(fileId) => matchingTrackId && matchFile(matchingTrackId, fileId)}
+                trackTitle={matchingTrackId ? tracks.find(t => t.id === matchingTrackId)?.title : undefined}
             />
 
             {showPrintModal && (

@@ -1,12 +1,14 @@
 "use client"
 
-import { BookOpen, Heart, ArrowLeftRight, StickyNote } from "lucide-react"
+import { BookOpen, Heart, ArrowLeftRight, StickyNote, Music, ChevronRight } from "lucide-react"
 import { QueueItem } from "@/lib/store"
 
 interface ServiceFlowCardProps {
     item: QueueItem
     index: number
     total: number
+    /** Optional upcoming items to show as "Up Next" preview */
+    upNext?: QueueItem[]
 }
 
 const TYPE_STYLES: Record<string, {
@@ -21,7 +23,41 @@ const TYPE_STYLES: Record<string, {
     header: { icon: ArrowLeftRight, color: 'text-zinc-300', label: 'Section' },
 }
 
-export function ServiceFlowCard({ item, index, total }: ServiceFlowCardProps) {
+function UpNextPreview({ items }: { items: QueueItem[] }) {
+    if (items.length === 0) return null
+
+    return (
+        <div className="w-full max-w-sm mt-auto pt-8">
+            <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-zinc-600 mb-3 text-center">
+                Up Next
+            </p>
+            <div className="space-y-1.5">
+                {items.map((item, i) => {
+                    const isSong = !item.trackType || item.trackType === 'song'
+                    const style = TYPE_STYLES[item.trackType || 'note'] || TYPE_STYLES.note
+                    const ItemIcon = isSong ? Music : style.icon
+
+                    return (
+                        <div
+                            key={`${item.fileId}-${i}`}
+                            className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/50"
+                        >
+                            <ItemIcon className={`h-4 w-4 shrink-0 ${isSong ? 'text-zinc-400' : style.color}`} />
+                            <span className={`text-sm truncate ${isSong ? 'text-zinc-300 font-medium' : 'text-zinc-500'}`}>
+                                {item.name}
+                            </span>
+                            {isSong && (
+                                <ChevronRight className="h-3.5 w-3.5 text-zinc-600 shrink-0 ml-auto" />
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+export function ServiceFlowCard({ item, index, total, upNext = [] }: ServiceFlowCardProps) {
     const trackType = item.trackType || 'note'
     const style = TYPE_STYLES[trackType] || TYPE_STYLES.note
     const Icon = style.icon
@@ -36,6 +72,7 @@ export function ServiceFlowCard({ item, index, total }: ServiceFlowCardProps) {
                 <div className="text-sm text-zinc-600 mt-8">
                     {index + 1} / {total}
                 </div>
+                <UpNextPreview items={upNext} />
             </div>
         )
     }
@@ -51,6 +88,11 @@ export function ServiceFlowCard({ item, index, total }: ServiceFlowCardProps) {
             <h1 className="text-4xl font-bold text-white text-center mb-4">
                 {item.name}
             </h1>
+
+            {/* Type Label */}
+            <span className="text-xs uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-4">
+                {style.label}
+            </span>
 
             {/* Performer */}
             {item.performer && (
@@ -74,9 +116,12 @@ export function ServiceFlowCard({ item, index, total }: ServiceFlowCardProps) {
             )}
 
             {/* Position */}
-            <div className="text-sm text-zinc-600 mt-auto pt-8">
+            <div className="text-sm text-zinc-600 pt-8">
                 {index + 1} / {total}
             </div>
+
+            {/* Up Next */}
+            <UpNextPreview items={upNext} />
         </div>
     )
 }

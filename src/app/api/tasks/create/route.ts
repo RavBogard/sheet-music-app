@@ -5,7 +5,7 @@
  * Logic:
  * 1. Validate payload (belongs to a setlist, has an assignee)
  * 2. Create the task doc in the top-level 'tasks' collection
- * 3. Trigger assignment email (fire-and-forget)
+ * 3. Send assignment email (awaited — Vercel kills runtime after response)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,6 +14,9 @@ import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { sendTaskAssignmentEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
+
+/** Basic email format check — not exhaustive but catches junk input */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,6 +33,14 @@ export async function POST(request: NextRequest) {
         if (!setlistId || !title || !assigneeId || !assigneeName || !assigneeEmail) {
             return NextResponse.json({ error: 'Missing required task fields' }, { status: 400 })
         }
+
+        // Validate email formats before passing to the email service
+        if (!EMAIL_RE.test(assigneeEmail)) {
+            return NextResponse.json({ error: 'Invalid assignee email format' }, { status: 400 })
+        }
+        const validatedCc = Array.isArray(notifiedEmails)
+            ? notifiedEmails.filter((e: unknown) => typeof e === 'string' && EMAIL_RE.test(e))
+            : []
 
         initAdmin()
         const db = getFirestore()
@@ -55,14 +66,14 @@ export async function POST(request: NextRequest) {
             createdByName: auth.email?.split('@')[0] || 'Admin',
             createdAt: FieldValue.serverTimestamp(),
             completedAt: null,
-            notifiedEmails: Array.isArray(notifiedEmails) ? notifiedEmails : []
+            notifiedEmails: validatedCc
         }
 
         await taskRef.set(taskData)
 
         // Send assignment email (must await — Vercel kills the runtime after response)
-        const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
-        const taskUrl = `${origin}/perform/setlist/${setlistId}`
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
+        const taskUrl = `${baseUrl}/perform/setlist/${setlistId}?tasks=1`
 
         const emailResult = await sendTaskAssignmentEmail({
             to: assigneeEmail,

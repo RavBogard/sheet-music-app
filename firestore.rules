@@ -112,7 +112,19 @@ service cloud.firestore {
     // Write: All writes go through the secure API routes using the Admin SDK
     match /tasks/{taskId} {
       allow read: if isSignedIn();
-      allow write: if false; 
+      allow write: if false;
+    }
+
+    // LIVE SESSIONS — Real-time performer position broadcasting
+    // Read: Any signed-in user (musicians follow the leader)
+    // Write: Only the broadcaster can write/delete their own session doc
+    // Doc ID format: {setlistId}_{broadcasterId}
+    match /live_sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+                            && request.resource.data.broadcasterId == request.auth.uid;
+      allow delete: if isSignedIn()
+                    && resource.data.broadcasterId == request.auth.uid;
     }
     
     // PUBLIC SETLISTS (Legacy)

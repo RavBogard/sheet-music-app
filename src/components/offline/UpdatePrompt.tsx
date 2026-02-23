@@ -18,7 +18,9 @@ export function UpdatePrompt() {
         if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
 
         const handleUpdate = (reg: ServiceWorkerRegistration) => {
-            if (reg.waiting) {
+            // Only show the banner if there's a waiting SW AND an existing controller.
+            // If there's no controller, this is a first install — not an update.
+            if (reg.waiting && navigator.serviceWorker.controller) {
                 setWaitingSW(reg.waiting)
             }
 
@@ -58,7 +60,7 @@ export function UpdatePrompt() {
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
             <button
                 onClick={handleUpdate}
-                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-full shadow-lg transition-colors text-sm font-medium"
+                className="flex items-center gap-2 bg-brand hover:bg-brand/90 text-brand-foreground px-4 py-2.5 rounded-full shadow-lg transition-colors text-sm font-medium"
             >
                 <RefreshCw className="w-4 h-4" />
                 Update available — tap to refresh

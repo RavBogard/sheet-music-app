@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
@@ -10,7 +10,8 @@ import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 /**
  * Full-screen wrapper for non-song items (readings, prayers, headers, etc.)
  * that provides the same navigation as PerformerView: keyboard (foot pedal),
- * swipe, and toolbar controls.
+ * swipe, and toolbar controls. Shows an "Up Next" preview so musicians
+ * know what's coming.
  */
 export function FlowItemView({
     onHome,
@@ -20,6 +21,11 @@ export function FlowItemView({
     const router = useRouter()
     const { playbackQueue, queueIndex, nextSong, prevSong } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
+
+    // Gather the next 3 items for the "Up Next" preview
+    const upNext = useMemo(() => {
+        return playbackQueue.slice(queueIndex + 1, queueIndex + 4)
+    }, [playbackQueue, queueIndex])
 
     // Swipe state
     const swipeRef = useRef<{ x: number; y: number; time: number } | null>(null)
@@ -91,11 +97,12 @@ export function FlowItemView({
         >
             <PerformanceStatusStrip />
 
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center overflow-y-auto">
                 <ServiceFlowCard
                     item={currentTrack}
                     index={queueIndex}
                     total={playbackQueue.length}
+                    upNext={upNext}
                 />
             </div>
 

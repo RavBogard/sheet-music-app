@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -47,7 +47,9 @@ export default function SetlistPerformPage() {
     const [changesSummary, setChangesSummary] = useState<string | null>(null)
     const [showChangeBanner, setShowChangeBanner] = useState(true)
     const [showPrintModal, setShowPrintModal] = useState(false)
-    const [showTaskSheet, setShowTaskSheet] = useState(false)
+    const searchParams = useSearchParams()
+    // Auto-open tasks panel when linked from a task email (?tasks=1)
+    const [showTaskSheet, setShowTaskSheet] = useState(searchParams?.get('tasks') === '1')
 
     // Real-time subscription to setlist
     const setlistRef = useMemo(() => setlistId ? doc(db, "setlists", setlistId) : null, [setlistId])
@@ -154,10 +156,10 @@ export default function SetlistPerformPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[60vh] md:pt-20">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
-                    <p className="text-sm text-zinc-500 font-medium">Loading setlist…</p>
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground font-medium">Loading setlist…</p>
                 </div>
             </div>
         )
@@ -165,8 +167,8 @@ export default function SetlistPerformPage() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-                <p className="text-zinc-400">{error}</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
+                <p className="text-muted-foreground">{error}</p>
                 <Button asChild variant="outline">
                     <Link href="/setlists">Back to Setlists</Link>
                 </Button>
@@ -175,7 +177,7 @@ export default function SetlistPerformPage() {
     }
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden">
+        <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 glass border-b-0 z-20 relative">
                 <Link

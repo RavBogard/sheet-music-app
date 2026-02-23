@@ -80,8 +80,8 @@ export async function PATCH(request: NextRequest) {
             // Retrieve assigner's email to send it back to them
             const assignerDoc = await db.collection('users').doc(taskData.createdBy).get()
             if (assignerDoc.exists && assignerDoc.data()?.email) {
-                const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
-                const taskUrl = `${origin}/perform/setlist/${taskData.setlistId}`
+                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
+                const taskUrl = `${baseUrl}/perform/setlist/${taskData.setlistId}?tasks=1`
 
                 await sendTaskCompletionEmail({
                     to: assignerDoc.data()!.email,
