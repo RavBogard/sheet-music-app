@@ -13,7 +13,8 @@ interface FaderStripProps {
 }
 
 export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck }: FaderStripProps) {
-    const isDragging = useRef(false)
+    const isDraggingRef = useRef(false)
+    const [isDragging, setIsDragging] = useState(false)
     const sliderRef = useRef<HTMLDivElement>(null)
     const lastWriteTime = useRef<number>(0)
     const pendingValue = useRef<number | null>(null)
@@ -26,7 +27,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
 
     // Sync display value with actual value when not dragging and no pending writes
     useEffect(() => {
-        if (!isDragging.current && !isPending) {
+        if (!isDraggingRef.current && !isPending) {
             setDisplayValue(value)
         }
     }, [value, isPending])
@@ -94,23 +95,26 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
             // Let's implement reset to 0 as a quick kill, or if already 0, reset to 0.75 (unity)
             const resetVal = displayValue > 0.1 ? 0.0 : 0.75
             updateFromPointer(sliderRef.current ? sliderRef.current.getBoundingClientRect().left + (sliderRef.current.getBoundingClientRect().width * resetVal) : e.clientX)
-            isDragging.current = false
+            isDraggingRef.current = false
+            setIsDragging(false)
             return;
         }
         lastTapTime.current = now
 
-        isDragging.current = true
+        isDraggingRef.current = true
+        setIsDragging(true)
             ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
         updateFromPointer(e.clientX)
     }, [updateFromPointer, displayValue])
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
-        if (!isDragging.current) return
+        if (!isDraggingRef.current) return
         updateFromPointer(e.clientX)
     }, [updateFromPointer])
 
     const handlePointerUp = useCallback(() => {
-        isDragging.current = false
+        isDraggingRef.current = false
+        setIsDragging(false)
         // Trigger one final write to ensure the exact drop position is recorded
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
         throttledOnChange(displayValue)
@@ -118,7 +122,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
 
     const percentage = Math.round(displayValue * 100)
     // If pending, slightly dim the bar to indicate latency taking effect
-    const barOpacity = isDragging.current ? "opacity-100" : (isPending ? "opacity-70" : "opacity-100")
+    const barOpacity = isDragging ? "opacity-100" : (isPending ? "opacity-70" : "opacity-100")
 
     return (
         <div className={`w-full py-1.5 transition-opacity ${!on ? "opacity-50 grayscale" : ""}`}>
@@ -145,7 +149,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                         {label}
                     </span>
                     <div className="flex items-center gap-2">
-                        {isPending && !isDragging.current && (
+                        {isPending && !isDragging && (
                             <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
                         )}
                         <span className="text-xs font-mono font-bold text-zinc-400 shrink-0">

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "commit": "0b6fc02",
+  "commit": "e07889b",
   "branch": "master",
   "buildDate": "2/22/2026",
   "changelog": [
@@ -12,9 +12,6 @@
     "0.0.1 - fix: exclude PWA manifest and service worker files from middleware auth redirects to fix JSON syntax error",
     "0.0.1 - fix: rename rxdb instance to sheet-music-db-v2 to permanently bypass all corrupted version 0 IndexedDB schema caches across all clients",
     "0.0.1 - fix: implement global rxdb try-catch to destroy and wipe corrupted IndexedDB instances if the old stored schema is invalid during migration",
-    "0.0.1 - fix: import RxDBMigrationsSchemaPlugin required for version migrations",
-    "0.0.1 - fix: bump rxdb schema version to 1 and add cache-dropping migration strategy to fix DB6 mismatch",
-    "0.0.1 - fix: resolve RxDB DXE1 strict schema error and PWA service-worker range request no-response crashes",
-    "0.0.1 - fix: relax Next.js 15 route handler parameter typings in custom api-wrapper"
+    "0.0.1 - fix: import RxDBMigrationsSchemaPlugin required for version migrations"
   ]
 }

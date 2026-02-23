@@ -43,7 +43,7 @@ export async function fileExistsInStorage(fileId: string, mimeType?: string): Pr
         const altFileId = fileId.replace(/_/g, '-')
         const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
 
-        let paths: string[] = []
+        const paths: string[] = []
         for (const id of fileIdsToTry) {
             if (mimeType) {
                 paths.push(getStoragePath(id, mimeType))
@@ -103,7 +103,7 @@ export async function getStorageUrl(fileId: string, mimeType?: string): Promise<
         const altFileId = fileId.replace(/_/g, '-')
         const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
 
-        let paths: string[] = []
+        const paths: string[] = []
         for (const id of fileIdsToTry) {
             paths.push(getStoragePath(id, mimeType))
             if (!mimeType) {
@@ -139,7 +139,7 @@ export async function downloadFromStorage(fileId: string, mimeType?: string): Pr
         const altFileId = fileId.replace(/_/g, '-')
         const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
 
-        let paths: string[] = []
+        const paths: string[] = []
         for (const id of fileIdsToTry) {
             if (mimeType) {
                 paths.push(getStoragePath(id, mimeType))

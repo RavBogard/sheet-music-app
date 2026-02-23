@@ -12,6 +12,8 @@ import {
     serverTimestamp,
     Timestamp,
     where,
+    getDocs,
+    writeBatch
 } from "firebase/firestore";
 
 import { SetlistTrack } from "@/types/api"
@@ -111,8 +113,27 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         async deleteSetlist(id: string, _isPublic: boolean) {
-            logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
-            await deleteDoc(doc(db, COLLECTION_PATH, id));
+            try {
+                // Determine what tasks are attached and batch delete them
+                const tasksQuery = query(collection(db, 'tasks'), where('setlistId', '==', id))
+                const taskSnap = await getDocs(tasksQuery)
+
+                const batch = writeBatch(db)
+
+                // Delete the core setlist doc
+                batch.delete(doc(db, COLLECTION_PATH, id))
+
+                // Delete all associated tasks
+                taskSnap.docs.forEach(taskDoc => {
+                    batch.delete(taskDoc.ref)
+                })
+
+                await batch.commit()
+                logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
+            } catch (e) {
+                logger.error("Error deleting setlist and its tasks:", e)
+                throw e
+            }
         },
 
         // ===== PUBLIC SETLISTS =====

@@ -22,7 +22,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
 
     useEffect(() => {
         let active = true
-        let objectUrl: string | null = null
+        const objectUrl: string | null = null
 
         const loadOffline = async () => {
             if (active) {

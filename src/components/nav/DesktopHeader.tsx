@@ -42,6 +42,7 @@ export function DesktopHeader() {
     const navLinks = [
         { label: "Home", href: "/", show: true },
         { label: "Setlists", href: "/setlists", show: true },
+        { label: "Tasks", href: "/tasks", show: !!user },
         { label: "Library", href: "/library", show: isMember },
         { label: "Leader", href: "/leader", show: isBandLeader },
         { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },

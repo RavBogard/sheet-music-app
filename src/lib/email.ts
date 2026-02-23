@@ -11,32 +11,32 @@ import { logger } from '@/lib/logger'
 let resend: Resend | null = null
 
 function getResend(): Resend | null {
-    const apiKey = process.env.RESEND_API_KEY
-    if (!apiKey) {
-        logger.warn('[Email] RESEND_API_KEY not configured — email disabled')
-        return null
-    }
-    if (!resend) {
-        resend = new Resend(apiKey)
-    }
-    return resend
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    logger.warn('[Email] RESEND_API_KEY not configured — email disabled')
+    return null
+  }
+  if (!resend) {
+    resend = new Resend(apiKey)
+  }
+  return resend
 }
 
 function getFromEmail(): string {
-    return process.env.RESEND_FROM_EMAIL || 'noreply@centralreform.live'
+  return process.env.RESEND_FROM_EMAIL || 'noreply@centralreform.live'
 }
 
 interface SetlistEmailParams {
-    to: string
-    recipientName: string
-    setlistName: string
-    eventDate: string
-    setlistUrl: string
-    packetUrl?: string
-    songs: string[]
-    publisherName: string
-    note?: string
-    subject?: string
+  to: string
+  recipientName: string
+  setlistName: string
+  eventDate: string
+  setlistUrl: string
+  packetUrl?: string
+  songs: string[]
+  publisherName: string
+  note?: string
+  subject?: string
 }
 
 /**
@@ -44,32 +44,32 @@ interface SetlistEmailParams {
  * Returns { ok: true } or { ok: false, reason: string }.
  */
 export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok: boolean; reason?: string; messageId?: string }> {
-    const client = getResend()
-    if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
+  const client = getResend()
+  if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
-    try {
-        const html = buildSetlistEmailHtml(params)
+  try {
+    const html = buildSetlistEmailHtml(params)
 
-        const { data, error } = await client.emails.send({
-            from: `CRC Music <${getFromEmail()}>`,
-            to: params.to,
-            subject: params.subject || `🎵 ${params.setlistName} — Setlist Published`,
-            html,
-        })
+    const { data, error } = await client.emails.send({
+      from: `CRC Music <${getFromEmail()}>`,
+      to: params.to,
+      subject: params.subject || `🎵 ${params.setlistName} — Setlist Published`,
+      html,
+    })
 
-        if (error) {
-            const msg = error.message || JSON.stringify(error)
-            logger.error(`[Email] Resend error for ${params.to}: ${msg}`)
-            return { ok: false, reason: msg }
-        }
-
-        logger.info(`[Email] Sent setlist notification to ${params.to}`)
-        return { ok: true, messageId: data?.id }
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        logger.error(`[Email] Failed to send to ${params.to}: ${msg}`)
-        return { ok: false, reason: msg }
+    if (error) {
+      const msg = error.message || JSON.stringify(error)
+      logger.error(`[Email] Resend error for ${params.to}: ${msg}`)
+      return { ok: false, reason: msg }
     }
+
+    logger.info(`[Email] Sent setlist notification to ${params.to}`)
+    return { ok: true, messageId: data?.id }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[Email] Failed to send to ${params.to}: ${msg}`)
+    return { ok: false, reason: msg }
+  }
 }
 
 /**
@@ -77,63 +77,63 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok
  * Returns structured result with count and any error details.
  */
 export async function emailAllMembers(
-    members: Array<{ email: string; displayName: string }>,
-    setlistId: string,
-    setlistName: string,
-    eventDate: string,
-    publisherName: string,
-    songs: string[],
-    baseUrl: string,
-    note?: string,
-    subject?: string
+  members: Array<{ email: string; displayName: string }>,
+  setlistId: string,
+  setlistName: string,
+  eventDate: string,
+  publisherName: string,
+  songs: string[],
+  baseUrl: string,
+  note?: string,
+  subject?: string
 ): Promise<{ sent: number; failed: number; errors: string[]; messageIds: Array<{ email: string; messageId: string }> }> {
-    let sent = 0
-    let failed = 0
-    const errors: string[] = []
-    const messageIds: Array<{ email: string; messageId: string }> = []
+  let sent = 0
+  let failed = 0
+  const errors: string[] = []
+  const messageIds: Array<{ email: string; messageId: string }> = []
 
-    for (let i = 0; i < members.length; i++) {
-        const member = members[i]
-        if (!member.email) continue
+  for (let i = 0; i < members.length; i++) {
+    const member = members[i]
+    if (!member.email) continue
 
-        // Resend free tier: 2 requests/second. Space them out.
-        if (i > 0) await new Promise(r => setTimeout(r, 600))
+    // Resend free tier: 2 requests/second. Space them out.
+    if (i > 0) await new Promise(r => setTimeout(r, 600))
 
-        const result = await sendSetlistEmail({
-            to: member.email,
-            recipientName: member.displayName,
-            setlistName,
-            eventDate,
-            setlistUrl: `${baseUrl}/perform/setlist/${setlistId}`,
-            packetUrl: `${baseUrl}/api/setlist/print/public?setlistId=${setlistId}`,
-            songs,
-            publisherName,
-            note,
-            subject,
-        })
-        if (result.ok) {
-            sent++
-            if (result.messageId) {
-                messageIds.push({ email: member.email, messageId: result.messageId })
-            }
-        } else {
-            failed++
-            errors.push(`${member.email}: ${result.reason || 'unknown error'}`)
-        }
+    const result = await sendSetlistEmail({
+      to: member.email,
+      recipientName: member.displayName,
+      setlistName,
+      eventDate,
+      setlistUrl: `${baseUrl}/perform/setlist/${setlistId}`,
+      packetUrl: `${baseUrl}/api/setlist/print/public?setlistId=${setlistId}`,
+      songs,
+      publisherName,
+      note,
+      subject,
+    })
+    if (result.ok) {
+      sent++
+      if (result.messageId) {
+        messageIds.push({ email: member.email, messageId: result.messageId })
+      }
+    } else {
+      failed++
+      errors.push(`${member.email}: ${result.reason || 'unknown error'}`)
     }
+  }
 
-    return { sent, failed, errors, messageIds }
+  return { sent, failed, errors, messageIds }
 }
 
 /**
  * Build clean HTML email for setlist notification.
  */
 export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
-    const songList = params.songs.length > 0
-        ? params.songs.map((s, i) => `<tr><td style="padding:4px 8px;color:#666;font-size:13px;">${i + 1}.</td><td style="padding:4px 8px;font-size:14px;">${escapeHtml(s)}</td></tr>`).join('')
-        : '<tr><td style="padding:8px;color:#999;font-style:italic;">No songs yet</td></tr>'
+  const songList = params.songs.length > 0
+    ? params.songs.map((s, i) => `<tr><td style="padding:4px 8px;color:#666;font-size:13px;">${i + 1}.</td><td style="padding:4px 8px;font-size:14px;">${escapeHtml(s)}</td></tr>`).join('')
+    : '<tr><td style="padding:8px;color:#999;font-style:italic;">No songs yet</td></tr>'
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -182,9 +182,169 @@ export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
 }
 
 function escapeHtml(str: string): string {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Send an email notifying a user that a task has been assigned to them.
+ */
+export async function sendTaskAssignmentEmail(params: {
+  to: string
+  cc?: string[]
+  recipientName: string
+  assignerName: string
+  setlistName: string
+  taskTitle: string
+  taskDescription?: string
+  taskUrl: string
+}): Promise<{ ok: boolean; reason?: string }> {
+  const client = getResend()
+  if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
+
+  try {
+    const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:20px auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+  <tr>
+    <td style="background:#1a1a2e;padding:24px 32px;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">You've been assigned a task</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 32px;">
+      <p style="margin:0 0 16px;color:#333;font-size:15px;">Hi ${escapeHtml(params.recipientName)},</p>
+      <p style="margin:0 0 20px;color:#333;font-size:15px;">
+        <strong>${escapeHtml(params.assignerName)}</strong> assigned you a task for the upcoming service: 
+        <strong style="color: #3b82f6;">${escapeHtml(params.setlistName)}</strong>
+      </p>
+      
+      <div style="margin:0 0 24px;padding:16px;background:#f8fafc;border-left:4px solid #3b82f6;border-radius:4px;">
+        <h2 style="margin:0 0 8px;font-size:16px;color:#1e293b;">${escapeHtml(params.taskTitle)}</h2>
+        ${params.taskDescription ? `<p style="margin:0;color:#475569;font-size:14px;white-space:pre-wrap;">${escapeHtml(params.taskDescription)}</p>` : ''}
+      </div>
+
+      <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="padding:0 8px;">
+            <a href="${escapeHtml(params.taskUrl)}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Setlist & Tasks</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+
+    const sendPayload: any = {
+      from: `CRC Music <${getFromEmail()}>`,
+      to: params.to,
+      subject: `Task Assigned: ${params.taskTitle}`,
+      html,
+    }
+
+    if (params.cc && params.cc.length > 0) {
+      sendPayload.cc = params.cc
+    }
+
+    const { error } = await client.emails.send(sendPayload)
+
+    if (error) {
+      const msg = error.message || JSON.stringify(error)
+      logger.error(`[Email] Assignment Resend error for ${params.to}: ${msg}`)
+      return { ok: false, reason: msg }
+    }
+
+    logger.info(`[Email] Sent task assignment to ${params.to}`)
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[Email] Failed task assignment email to ${params.to}: ${msg}`)
+    return { ok: false, reason: msg }
+  }
+}
+
+/**
+ * Send an email notifying the assigner that a task has been completed.
+ */
+export async function sendTaskCompletionEmail(params: {
+  to: string
+  assignerName: string
+  assigneeName: string
+  setlistName: string
+  taskTitle: string
+  taskUrl: string
+}): Promise<{ ok: boolean; reason?: string }> {
+  const client = getResend()
+  if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
+
+  try {
+    const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:20px auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+  <tr>
+    <td style="background:#10b981;padding:24px 32px;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">✅ Task Completed</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 32px;">
+      <p style="margin:0 0 16px;color:#333;font-size:15px;">Hi ${escapeHtml(params.assignerName)},</p>
+      <p style="margin:0 0 20px;color:#333;font-size:15px;">
+        <strong>${escapeHtml(params.assigneeName)}</strong> just completed a task you assigned for <strong>${escapeHtml(params.setlistName)}</strong>:
+      </p>
+      
+      <div style="margin:0 0 24px;padding:16px;background:#f8fafc;border-left:4px solid #10b981;border-radius:4px;">
+        <h2 style="margin:0;font-size:16px;color:#1e293b;text-decoration:line-through;">${escapeHtml(params.taskTitle)}</h2>
+      </div>
+
+      <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="padding:0 8px;">
+            <a href="${escapeHtml(params.taskUrl)}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">View Setlist</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+
+    const { error } = await client.emails.send({
+      from: `CRC Music <${getFromEmail()}>`,
+      to: params.to,
+      subject: `Task Completed: ${params.taskTitle}`,
+      html,
+    })
+
+    if (error) {
+      const msg = error.message || JSON.stringify(error)
+      logger.error(`[Email] Completion Resend error for ${params.to}: ${msg}`)
+      return { ok: false, reason: msg }
+    }
+
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, reason: msg }
+  }
 }

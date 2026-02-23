@@ -19,8 +19,9 @@ import { useMusicStore } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink } from "lucide-react"
+import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink, ListTodo } from "lucide-react"
 import { PrintModal } from "@/components/setlist/PrintModal"
+import { TaskSheet } from "@/components/setlist/tasks/TaskSheet"
 import { Metronome } from "@/components/performance/Metronome"
 import { SetlistTrack } from "@/types/models"
 import { QueueItem } from "@/lib/store"
@@ -47,6 +48,7 @@ export default function SetlistPerformPage() {
     const [changesSummary, setChangesSummary] = useState<string | null>(null)
     const [showChangeBanner, setShowChangeBanner] = useState(true)
     const [showPrintModal, setShowPrintModal] = useState(false)
+    const [showTaskSheet, setShowTaskSheet] = useState(false)
 
     // Real-time subscription to setlist
     const setlistRef = useMemo(() => setlistId ? doc(db, "setlists", setlistId) : null, [setlistId])
@@ -197,6 +199,16 @@ export default function SetlistPerformPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-1">
+                    {setlistData?.isPublic && (
+                        <button
+                            onClick={() => setShowTaskSheet(true)}
+                            className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors relative"
+                            title="Setlist Tasks"
+                        >
+                            <ListTodo className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            {/* Assuming we might add a dot indicator later */}
+                        </button>
+                    )}
                     <button
                         onClick={() => setShowPrintModal(true)}
                         className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
@@ -422,6 +434,15 @@ export default function SetlistPerformPage() {
                     onClose={() => setShowPrintModal(false)}
                 />
             )}
+
+            {/* Tasks Slide-over */}
+            <TaskSheet
+                open={showTaskSheet}
+                onOpenChange={setShowTaskSheet}
+                setlistId={setlistId}
+                setlistName={name}
+                eventDate={setlistData?.eventDate?.toDate?.() || setlistData?.date?.toDate?.()}
+            />
         </div>
     )
 }

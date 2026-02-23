@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Library, ListMusic, Settings, Radio } from "lucide-react"
+import { Home, Library, ListMusic, Settings, Radio, ListTodo } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAuth } from "@/lib/auth-context"
@@ -17,7 +17,7 @@ interface NavItem {
 
 export function MobileTabBar() {
     const pathname = usePathname()
-    const { isMember } = useAuth()
+    const { isMember, user } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
 
@@ -38,6 +38,16 @@ export function MobileTabBar() {
             href: "/library",
             icon: Library,
             active: pathname.startsWith("/library"),
+        })
+    }
+
+    // Tasks (user+)
+    if (user) {
+        navItems.push({
+            label: "Tasks",
+            href: "/tasks",
+            icon: ListTodo,
+            active: pathname.startsWith("/tasks"),
         })
     }
 

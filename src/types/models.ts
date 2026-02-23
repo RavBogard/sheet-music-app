@@ -109,3 +109,27 @@ export interface MusicianProfile {
     preferFlats?: boolean // Prefer flat notation (Bb) over sharps (A#)
 }
 
+export type TaskStatus = 'todo' | 'completed'
+
+export interface SetlistTask {
+    id: string
+    setlistId: string
+    setlistName: string // Denormalized for the global dashboard
+    eventDate?: FirestoreDate | null // Denormalized for sorting priority
+    title: string
+    description?: string
+    status: TaskStatus
+
+    // Assignment
+    assigneeId: string
+    assigneeName: string
+    assigneeEmail: string
+
+    // Audit & Notification
+    createdBy: string
+    createdByName: string
+    createdAt: FirestoreDate
+    completedAt?: FirestoreDate | null
+    notifiedEmails?: string[] // CCs who receive the initial assignment email
+}
+
