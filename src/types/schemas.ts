@@ -14,79 +14,89 @@ const firestoreTimestampSchema = z.custom<any>((val: any) => {
 
 // --- User Profile Schema ---
 
-const userRoleSchema = z.enum(['admin', 'band_leader', 'musician', 'member', 'pending', 'denied'])
+const userRoleSchema = z.enum(['admin', 'band_leader', 'musician', 'member', 'pending', 'denied']).catch('member')
 
 export const musicianProfileSchema = z.object({
-    instrument: z.string().optional(),
-    defaultTransposition: z.number().optional(),
-    preferCapo: z.boolean().optional(),
-    preferredCapoFret: z.number().optional(),
-    preferFlats: z.boolean().optional(),
+    instrument: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    defaultTransposition: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+    preferCapo: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
+    preferredCapoFret: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+    preferFlats: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
 }).passthrough() // Allow other fields for future-proofing
 
 export const userProfileSchema = z.object({
-    uid: z.string(),
-    email: z.string().email(),
-    displayName: z.string(),
-    photoURL: z.string().optional(),
-    viewedWelcomeModal: z.boolean().optional(),
+    uid: z.string().catch(""),
+    email: z.string().email().catch(""),
+    displayName: z.string().catch("Unknown User"),
+    photoURL: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    viewedWelcomeModal: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
     role: userRoleSchema,
-    soundEngineer: z.boolean().optional(),
-    createdAt: firestoreTimestampSchema.optional(),
-    lastLoginAt: firestoreTimestampSchema.optional(),
-    claimsUpdatedAt: firestoreTimestampSchema.optional(),
-    musicianProfile: musicianProfileSchema.optional(),
+    soundEngineer: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
+    createdAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
+    lastLoginAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
+    claimsUpdatedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
+    musicianProfile: musicianProfileSchema.nullish().catch(undefined).transform(v => v || undefined),
 }).passthrough()
 
 // --- Setlist Schema ---
 
-export const trackTypeSchema = z.enum(['song', 'header', 'reading', 'prayer', 'transition', 'note'])
+export const trackTypeSchema = z.enum(['song', 'header', 'reading', 'prayer', 'transition', 'note']).catch('song')
 
-export const setlistTrackSchema = z.object({
-    id: z.string(),
-    title: z.string(),
-    fileId: z.string().optional(),
-    fileName: z.string().optional(),
-    audioFileId: z.string().optional(),
-    audioFileName: z.string().optional(),
-    key: z.string().optional(),
-    notes: z.string().optional(),
-    referenceLink: z.string().optional(),
-    type: trackTypeSchema.optional(),
-    duration: z.string().optional(),
-    bpm: z.number().optional(),
-    leadMusician: z.string().optional(),
-    transposition: z.number().optional(),
-    description: z.string().optional(),
-    performer: z.string().optional(),
-    estimatedMinutes: z.number().optional(),
-}).passthrough()
+export const setlistTrackSchema = z.preprocess(
+    (val: any) => {
+        if (typeof val === 'object' && val !== null) {
+            // Map legacy 'name' to 'title' if title is missing
+            if (!val.title && val.name) val.title = val.name;
+            if (!val.id) val.id = `legacy-${Math.random().toString(36).slice(2, 9)}`;
+        }
+        return val;
+    },
+    z.object({
+        id: z.string().catch(() => `legacy-${Math.random().toString(36).slice(2, 9)}`),
+        title: z.string().catch("Untitled Track"),
+        fileId: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        fileName: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        audioFileId: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        audioFileName: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        key: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        notes: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        referenceLink: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        type: trackTypeSchema,
+        duration: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        bpm: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+        leadMusician: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        transposition: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+        description: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        performer: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        estimatedMinutes: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+    }).passthrough()
+)
 
 export const setlistMusicianSchema = z.object({
-    uid: z.string().optional(),
-    name: z.string(),
-    email: z.string().email().or(z.string().length(0)), // Sometimes empty string
-    instrument: z.string().optional(),
+    uid: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    name: z.string().catch("Unknown"),
+    email: z.string().catch(""), // Accept invalid emails seamlessly
+    instrument: z.string().nullish().catch(undefined).transform(v => v || undefined),
 }).passthrough()
 
 export const setlistSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    date: firestoreTimestampSchema,
-    eventDate: firestoreTimestampSchema.optional(),
-    updatedAt: firestoreTimestampSchema.optional(),
-    tracks: z.array(setlistTrackSchema).default([]),
-    trackCount: z.number().default(0),
-    isPublic: z.boolean().optional(),
-    ownerId: z.string().optional(),
-    ownerName: z.string().optional(),
-    rabbi: z.string().optional(),
-    serviceNotes: z.string().optional(),
-    musicians: z.array(setlistMusicianSchema).optional(),
-    isTemplate: z.boolean().optional(),
-    templateType: z.enum(['shabbat_morning', 'friday_night', 'rosh_hashanah', 'yom_kippur', 'festival', 'other']).optional(),
-    transferredAt: z.string().optional(),
-    previousOwnerId: z.string().optional(),
+    id: z.string().catch(""),
+    name: z.string().catch("Unnamed Setlist"),
+    date: firestoreTimestampSchema.catch(() => new Date()),
+    eventDate: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
+    updatedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
+    tracks: z.array(setlistTrackSchema).catch([]).default([]),
+    trackCount: z.number().catch(0).default(0),
+    isPublic: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
+    ownerId: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    ownerName: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    rabbi: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    serviceNotes: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    musicians: z.array(setlistMusicianSchema).nullish().catch(undefined).transform(v => v || undefined),
+    isTemplate: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
+    templateType: z.enum(['shabbat_morning', 'friday_night', 'rosh_hashanah', 'yom_kippur', 'festival', 'other']).nullish().catch(undefined).transform(v => v || undefined),
+    transferredAt: z.string().nullish().catch(undefined).transform(v => v || undefined),
+    previousOwnerId: z.string().nullish().catch(undefined).transform(v => v || undefined),
 }).passthrough()
 
 // --- Data Converters ---
@@ -105,13 +115,12 @@ export const createZodConverter = <T extends z.ZodTypeAny>(schema: T) => ({
     fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): z.infer<T> | null => {
         const data = snapshot.data(options)
         try {
-            // Include the document ID in the parsed data (app expects this)
-            const parsed = schema.parse({ id: snapshot.id, ...data })
+            // Include both id and uid (for User Profiles) natively from the document key
+            const parsed = schema.parse({ id: snapshot.id, uid: snapshot.id, ...data })
             return parsed
         } catch (error) {
             console.error(`[Zod] Validation failed for document ${snapshot.id}:`, error)
-            // Depending on strictness, we could return null or partial data.
-            // For now, return null to signify a corrupted document.
+            // Return null to signify a corrupted document.
             return null
         }
     }
