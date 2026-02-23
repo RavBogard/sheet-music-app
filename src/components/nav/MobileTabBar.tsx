@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Library, ListMusic, Settings, Radio, ListTodo } from "lucide-react"
+import { Home, Library, ListMusic, Settings, Radio, ListTodo, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAuth } from "@/lib/auth-context"
@@ -17,11 +17,13 @@ interface NavItem {
 
 export function MobileTabBar() {
     const pathname = usePathname()
-    const { isMember, user } = useAuth()
+    const { isMember, user, profile } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
 
-    // Tab order: Setlists (most used) → Library → Home (dashboard) → Monitor → Settings
+    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
+
+    // Tab order: Setlists (most used) → Schedule → Library → Home → Monitor → Settings
     const navItems: NavItem[] = [
         {
             label: "Setlists",
@@ -30,6 +32,16 @@ export function MobileTabBar() {
             active: pathname.startsWith("/setlists"),
         },
     ]
+
+    // Schedule (musician+)
+    if (isMusician) {
+        navItems.push({
+            label: "Schedule",
+            href: "/schedule",
+            icon: CalendarDays,
+            active: pathname.startsWith("/schedule"),
+        })
+    }
 
     // Library (member+)
     if (isMember) {
@@ -41,8 +53,8 @@ export function MobileTabBar() {
         })
     }
 
-    // Tasks (user+)
-    if (user) {
+    // Tasks (user+) — only show if there's room (5 tab max)
+    if (user && navItems.length < 4) {
         navItems.push({
             label: "Tasks",
             href: "/tasks",

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { db } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
+import type { RabbiProfile } from "@/types/models"
 
 export interface CongregationConfig {
     name: string
@@ -24,6 +25,11 @@ export interface CongregationConfig {
         name: string
         instrument?: string
     }>
+    scheduling?: {
+        rabbiProfiles?: RabbiProfile[]
+        defaultReminderHours?: number     // Hours before service to send reminder (default: 48)
+        allowSelfScheduling?: boolean     // Can musicians volunteer for open slots?
+    }
 }
 
 const DEFAULT_CONFIG: CongregationConfig = {

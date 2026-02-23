@@ -5,8 +5,10 @@ import { useAuth } from "@/lib/auth-context"
 import { MusicianProfile } from "@/types/models"
 import { saveMusicianProfile, subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { Button } from "@/components/ui/button"
-import { Guitar, Check } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star } from "lucide-react"
 import { toast } from "sonner"
+import type { SchedulingTier } from "@/types/models"
 
 export function MusicianProfileSettings() {
     const { user } = useAuth()
@@ -223,6 +225,136 @@ export function MusicianProfileSettings() {
                     </div>
                 </div>
             )}
+
+            {/* ─── Scheduling Settings ─── */}
+            <div className="space-y-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-semibold text-foreground">Scheduling</h4>
+                        <p className="text-xs text-muted-foreground">Phone, availability, and notification preferences</p>
+                    </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        Phone Number
+                    </label>
+                    <Input
+                        type="tel"
+                        placeholder="(555) 123-4567"
+                        value={profile.phone || ''}
+                        onChange={(e) => updateField('phone', e.target.value)}
+                        className="h-9 text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">For SMS scheduling notifications (optional)</p>
+                </div>
+
+                {/* Notification Preferences */}
+                <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+                        Scheduling Notifications
+                    </label>
+                    <div className="space-y-2">
+                        {([
+                            { key: 'email' as const, label: 'Email', desc: 'Assignment and reminder emails' },
+                            { key: 'sms' as const, label: 'SMS', desc: 'Text message notifications' },
+                            { key: 'push' as const, label: 'Push', desc: 'Browser push notifications' },
+                        ]).map(({ key, label, desc }) => (
+                            <div key={key} className="flex items-center justify-between">
+                                <div>
+                                    <span className="text-sm text-foreground">{label}</span>
+                                    <p className="text-xs text-muted-foreground">{desc}</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const current = profile.notificationPreferences || { email: true, sms: false, push: true }
+                                        updateField('notificationPreferences', {
+                                            ...current,
+                                            [key]: !current[key],
+                                        })
+                                    }}
+                                    className={`
+                                        w-11 h-6 rounded-full transition-colors relative
+                                        ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
+                                            ? 'bg-blue-500' : 'bg-muted border border-border'}
+                                    `}
+                                >
+                                    <div className={`
+                                        w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform
+                                        ${(profile.notificationPreferences?.[key] ?? (key === 'email' || key === 'push'))
+                                            ? 'translate-x-5' : 'translate-x-0.5'}
+                                    `} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Calendar Feed URL */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                        Calendar Subscription
+                    </label>
+                    {profile.calendarFeedToken ? (
+                        <>
+                            <div className="flex gap-2">
+                                <Input
+                                    readOnly
+                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`}
+                                    className="h-9 text-xs font-mono bg-muted"
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 shrink-0 text-xs"
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/api/scheduling/calendar-feed/${profile.calendarFeedToken}`
+                                        navigator.clipboard.writeText(url)
+                                        toast.success('Calendar URL copied!')
+                                    }}
+                                >
+                                    Copy
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Add this URL to Google Calendar, Apple Calendar, or Outlook to see your CRC schedule.
+                            </p>
+                        </>
+                    ) : (
+                        <div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs gap-1.5"
+                                onClick={async () => {
+                                    if (!user) return
+                                    try {
+                                        const { generateCalendarFeedToken } = await import('@/lib/scheduling-firebase')
+                                        const token = await generateCalendarFeedToken(user.uid)
+                                        setProfile(prev => ({ ...prev, calendarFeedToken: token }))
+                                        toast.success('Calendar feed URL generated!')
+                                    } catch {
+                                        toast.error('Failed to generate calendar URL')
+                                    }
+                                }}
+                            >
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                Generate Calendar URL
+                            </Button>
+                            <p className="text-xs text-muted-foreground mt-1.5">
+                                Generate a URL to subscribe to your CRC schedule in your personal calendar app.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Save Button */}
             {hasChanges && (

@@ -107,7 +107,85 @@ export interface MusicianProfile {
     preferCapo?: boolean // Whether to show capo notation instead of transposed chords
     preferredCapoFret?: number // Default capo position (e.g., 7 for guitar in Am → Em shape)
     preferFlats?: boolean // Prefer flat notation (Bb) over sharps (A#)
+    // Scheduling fields
+    phone?: string // For SMS notifications
+    schedulingTier?: SchedulingTier // 'core' | 'regular' | 'guest'
+    calendarFeedToken?: string // Unique token for iCal feed URL
+    notificationPreferences?: {
+        email: boolean
+        sms: boolean
+        push: boolean
+    }
 }
+
+// ── Scheduling Types ──
+
+/** Scheduling tier determines the default confirmation behavior */
+export type SchedulingTier = 'core' | 'regular' | 'guest'
+
+/** Assignment status tracks the lifecycle of a scheduling request */
+export type AssignmentStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+
+/** A musician's scheduling assignment for a specific setlist/service */
+export interface SchedulingAssignment {
+    id: string
+    setlistId: string
+    setlistName: string           // Denormalized
+    eventDate: FirestoreDate | null
+    serviceType?: string          // 'friday_night' | 'shabbat_morning' | etc.
+
+    // Musician
+    musicianUid: string
+    musicianName: string
+    musicianEmail: string
+    musicianPhone?: string
+    instrument?: string
+
+    // Status
+    status: AssignmentStatus
+    autoConfirmed: boolean        // true for core musicians (assumed confirmed)
+    respondedAt?: FirestoreDate
+    declineReason?: string
+
+    // Audit
+    assignedBy: string
+    assignedByName: string
+    assignedAt: FirestoreDate
+    notifiedVia?: ('email' | 'sms' | 'push' | 'in_app')[]
+}
+
+/** Musician availability blockout */
+export interface MusicianBlockout {
+    id: string
+    musicianUid: string
+    startDate: string             // 'YYYY-MM-DD' for date-only comparison
+    endDate: string               // 'YYYY-MM-DD' (inclusive)
+    reason?: string               // Optional note: "vacation", "out of town"
+    recurring?: boolean           // Future: weekly recurring unavailability
+    createdAt: FirestoreDate
+}
+
+/** Rabbi musical profile for scheduling guidance */
+export interface RabbiProfile {
+    name: string                  // "Rabbi Daniel", "Rabbi Randy", "Rabbi Karen"
+    musicalRole: 'band_leader' | 'strummer' | 'non_musical'
+    instruments?: string[]        // ["acoustic_guitar", "voice"]
+    bandSizeGuidance: string      // "Smaller band OK — Rabbi leads guitar + vocals"
+    notes?: string                // Freeform scheduling notes
+}
+
+/** Scheduling history entry for analytics */
+export interface SchedulingHistory {
+    musicianUid: string
+    setlistId: string
+    eventDate: FirestoreDate | null
+    serviceType?: string
+    instrument?: string
+    status: 'played' | 'declined' | 'cancelled' | 'no_show'
+    recordedAt: FirestoreDate
+}
+
+// ── Task Types ──
 
 export type TaskStatus = 'todo' | 'completed'
 

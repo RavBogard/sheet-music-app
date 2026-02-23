@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { SetlistMusician, UserProfile } from "@/types/models"
+import { SetlistMusician, UserProfile, SchedulingAssignment, MusicianBlockout } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -10,17 +10,22 @@ import { db } from "@/lib/firebase"
 import { doc, updateDoc, collection } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, Ban, UserSearch } from "lucide-react"
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
+import { subscribeToSetlistAssignments, subscribeToAllBlockouts, assignMusicians, getAvailabilityStatus } from "@/lib/scheduling-firebase"
+import { RabbiBanner } from "@/components/scheduling/RabbiBanner"
 
 interface MusicianPickerProps {
     musicians: SetlistMusician[]
     onChange: (musicians: SetlistMusician[]) => void
     canEdit: boolean
     setlistId?: string
+    setlistName?: string
+    eventDate?: string | null
+    rabbiName?: string
     isPublished?: boolean
 }
 
@@ -34,8 +39,8 @@ const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) =
     label: val.label,
 }))
 
-export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPublished }: MusicianPickerProps) {
-    const { isAdmin, user: currentUser } = useAuth()
+export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlistName, eventDate, rabbiName, isPublished }: MusicianPickerProps) {
+    const { isAdmin, isBandLeader, user: currentUser } = useAuth()
     const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
@@ -46,6 +51,12 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
     const [editingInstrumentUid, setEditingInstrumentUid] = useState<string | null>(null)
     const instrumentRef = useRef<HTMLDivElement>(null)
     const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailStatus>>(new Map())
+    const [schedulingAssignments, setSchedulingAssignments] = useState<SchedulingAssignment[]>([])
+    const [allBlockouts, setAllBlockouts] = useState<MusicianBlockout[]>([])
+    const [isSendingRequests, setIsSendingRequests] = useState(false)
+    const [suggestingFor, setSuggestingFor] = useState<string | null>(null) // declined musician instrument
+    const [suggestions, setSuggestions] = useState<Array<{ uid: string; name: string; email: string; instrument: string | null; instrumentMatch: boolean | null }>>([])
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false)
 
     const defaultMusicians = useMemo(() => congregation.defaultMusicians || [], [congregation.defaultMusicians])
     const defaultUids = useMemo(() => new Set(defaultMusicians.map(m => m.uid)), [defaultMusicians])
@@ -69,6 +80,103 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
         })
         setEmailStatuses(map)
     }, [emailEventsData])
+
+    // Subscribe to scheduling assignments for this setlist
+    useEffect(() => {
+        if (!setlistId) return
+        const unsub = subscribeToSetlistAssignments(setlistId, setSchedulingAssignments)
+        return unsub
+    }, [setlistId])
+
+    // Subscribe to all blockouts for availability indicators (band leaders only)
+    useEffect(() => {
+        if (!isBandLeader) return
+        const unsub = subscribeToAllBlockouts(setAllBlockouts)
+        return unsub
+    }, [isBandLeader])
+
+    // Get scheduling status for a musician
+    const getSchedulingStatus = useCallback((uid: string): SchedulingAssignment | undefined => {
+        return schedulingAssignments.find(a => a.musicianUid === uid && a.status !== 'cancelled')
+    }, [schedulingAssignments])
+
+    // Send scheduling requests to all selected musicians
+    const handleRequestAll = useCallback(async () => {
+        if (!setlistId || !setlistName || musicians.length === 0) return
+        setIsSendingRequests(true)
+        try {
+            const musiciansToAssign = musicians
+                .filter(m => m.uid) // Only registered users
+                .filter(m => {
+                    // Skip musicians who already have active assignments
+                    const existing = getSchedulingStatus(m.uid!)
+                    return !existing
+                })
+                .map(m => {
+                    const user = allUsers.find(u => u.uid === m.uid)
+                    return {
+                        uid: m.uid!,
+                        name: m.name,
+                        email: m.email,
+                        phone: user?.musicianProfile?.phone,
+                        instrument: m.instrument,
+                        schedulingTier: user?.musicianProfile?.schedulingTier,
+                    }
+                })
+
+            if (musiciansToAssign.length === 0) {
+                toast.info('All musicians already have scheduling requests')
+                setIsSendingRequests(false)
+                return
+            }
+
+            const result = await assignMusicians({
+                setlistId,
+                setlistName,
+                eventDate: eventDate || null,
+                musicians: musiciansToAssign,
+            })
+
+            if (result.success) {
+                toast.success(`Sent scheduling requests to ${result.assigned} musician${result.assigned === 1 ? '' : 's'}`)
+            } else {
+                toast.error('Failed to send some scheduling requests')
+            }
+        } catch (e) {
+            toast.error('Failed to send scheduling requests')
+        } finally {
+            setIsSendingRequests(false)
+        }
+    }, [setlistId, setlistName, eventDate, musicians, allUsers, getSchedulingStatus])
+
+    // Get availability status for a musician on the event date
+    const getMusicianAvailability = useCallback((uid: string): 'available' | 'blocked' | 'unknown' => {
+        if (!eventDate || !isBandLeader) return 'unknown'
+        const dateOnly = eventDate.split('T')[0]
+        return getAvailabilityStatus(allBlockouts, uid, dateOnly)
+    }, [eventDate, isBandLeader, allBlockouts])
+
+    // Fetch replacement suggestions when a musician declines
+    const handleSuggestReplacement = useCallback(async (instrument?: string) => {
+        if (!setlistId) return
+        setLoadingSuggestions(true)
+        setSuggestingFor(instrument || 'any')
+        try {
+            const { apiFetch } = await import('@/lib/api-client')
+            const params = new URLSearchParams({ setlistId })
+            if (instrument) params.set('instrument', instrument)
+            if (eventDate) params.set('date', eventDate.split('T')[0])
+            const res = await apiFetch(`/api/scheduling/suggest?${params}`)
+            const data = await res.json()
+            if (data.success) {
+                setSuggestions(data.suggestions)
+            }
+        } catch {
+            toast.error('Failed to fetch suggestions')
+        } finally {
+            setLoadingSuggestions(false)
+        }
+    }, [setlistId, eventDate])
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
@@ -238,16 +346,40 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
 
                 {expanded && (
                     <div className="px-4 pb-3 space-y-3">
-                        {/* Load Defaults button */}
-                        {canEdit && defaultMusicians.length > 0 && (
-                            <button
-                                onClick={loadDefaults}
-                                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                            >
-                                <UserPlus className="h-3.5 w-3.5" />
-                                {musicians.length === 0 ? 'Load Default Band' : 'Reset to Defaults'}
-                            </button>
-                        )}
+                        {/* Rabbi guidance banner */}
+                        <RabbiBanner rabbiName={rabbiName} />
+
+                        {/* Action buttons row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Load Defaults button */}
+                            {canEdit && defaultMusicians.length > 0 && (
+                                <button
+                                    onClick={loadDefaults}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                                >
+                                    <UserPlus className="h-3.5 w-3.5" />
+                                    {musicians.length === 0 ? 'Load Default Band' : 'Reset to Defaults'}
+                                </button>
+                            )}
+
+                            {/* Request All button — sends scheduling requests */}
+                            {canEdit && isBandLeader && setlistId && musicians.length > 0 && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1.5 border-brand/30 text-brand hover:bg-brand/10"
+                                    onClick={handleRequestAll}
+                                    disabled={isSendingRequests}
+                                >
+                                    {isSendingRequests ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <Send className="h-3 w-3" />
+                                    )}
+                                    {isSendingRequests ? 'Sending...' : 'Request All'}
+                                </Button>
+                            )}
+                        </div>
 
                         {allUsers.length > 0 && (
                             <div className="space-y-1.5">
@@ -258,6 +390,8 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                                         const instrument = getInstrumentLabel(user)
                                         const showInstrumentPicker = editingInstrumentUid === user.uid
                                         const isDefault = defaultUids.has(user.uid)
+                                        const schedulingStatus = getSchedulingStatus(user.uid)
+                                        const availability = getMusicianAvailability(user.uid)
 
                                         return (
                                             <div key={user.uid} className="relative">
@@ -269,12 +403,23 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                                                         transition-all duration-150 border
                                                         ${selected
                                                             ? 'bg-primary/15 border-primary/40 text-foreground'
-                                                            : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
+                                                            : availability === 'blocked'
+                                                                ? 'bg-red-500/5 border-red-500/30 text-muted-foreground'
+                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
                                                         }
                                                         ${!canEdit ? 'opacity-60 cursor-default' : 'cursor-pointer'}
                                                     `}
                                                 >
-                                                    {selected && (
+                                                    {/* Availability dot (band leaders only) */}
+                                                    {isBandLeader && availability !== 'unknown' && (
+                                                        <span
+                                                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                                                availability === 'blocked' ? 'bg-red-500' : 'bg-emerald-500'
+                                                            }`}
+                                                            title={availability === 'blocked' ? 'Unavailable (blockout)' : 'Available'}
+                                                        />
+                                                    )}
+                                                    {selected && availability === 'unknown' && (
                                                         <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                                                     )}
                                                     <span>{user.displayName || user.email?.split('@')[0]}</span>
@@ -316,6 +461,22 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                                                         >
                                                             <Star className={`h-3 w-3 ${isDefault ? 'fill-current' : ''}`} />
                                                         </span>
+                                                    )}
+                                                    {/* Scheduling status indicator */}
+                                                    {selected && schedulingStatus && (
+                                                        <span title={`Scheduling: ${schedulingStatus.status}`}>
+                                                            {schedulingStatus.status === 'confirmed' ? (
+                                                                <Check className="h-3 w-3 text-emerald-500" />
+                                                            ) : schedulingStatus.status === 'pending' ? (
+                                                                <Clock className="h-3 w-3 text-amber-500" />
+                                                            ) : schedulingStatus.status === 'declined' ? (
+                                                                <X className="h-3 w-3 text-red-500" />
+                                                            ) : null}
+                                                        </span>
+                                                    )}
+                                                    {/* Blocked indicator */}
+                                                    {availability === 'blocked' && !selected && (
+                                                        <Ban className="h-3 w-3 text-red-400" />
                                                     )}
                                                     {/* Email delivery status */}
                                                     {selected && (() => {
@@ -406,6 +567,95 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, isPubl
                                             </div>
                                         )
                                     })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Suggest Replacement — shown when any musician has declined */}
+                        {canEdit && isBandLeader && setlistId && schedulingAssignments.some(a => a.status === 'declined') && (
+                            <div className="space-y-2">
+                                {schedulingAssignments
+                                    .filter(a => a.status === 'declined')
+                                    .map(a => (
+                                        <div key={a.id} className="flex items-center gap-2 text-xs p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <X className="h-3 w-3 text-red-500 shrink-0" />
+                                            <span className="text-muted-foreground">
+                                                {a.musicianName} declined{a.instrument ? ` (${a.instrument})` : ''}
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 text-[11px] gap-1 text-brand hover:text-brand ml-auto"
+                                                onClick={() => handleSuggestReplacement(a.instrument)}
+                                                disabled={loadingSuggestions}
+                                            >
+                                                {loadingSuggestions && suggestingFor === (a.instrument || 'any') ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <UserSearch className="h-3 w-3" />
+                                                )}
+                                                Find Replacement
+                                            </Button>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        )}
+
+                        {/* Replacement suggestions panel */}
+                        {suggestions.length > 0 && suggestingFor && (
+                            <div className="p-3 rounded-lg bg-brand/5 border border-brand/20 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                                        <UserSearch className="h-3.5 w-3.5 text-brand" />
+                                        Available Musicians
+                                    </p>
+                                    <button onClick={() => { setSuggestions([]); setSuggestingFor(null) }} className="text-muted-foreground hover:text-foreground">
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {suggestions.map(s => (
+                                        <button
+                                            key={s.uid}
+                                            onClick={() => {
+                                                const existing = musicians.find(m => m.uid === s.uid)
+                                                if (!existing) {
+                                                    const instrumentLabel = s.instrument
+                                                        ? (INSTRUMENT_PRESETS[s.instrument]?.label || s.instrument)
+                                                        : undefined
+                                                    onChange([...musicians, {
+                                                        uid: s.uid,
+                                                        name: s.name,
+                                                        email: s.email,
+                                                        instrument: instrumentLabel,
+                                                    }])
+                                                    toast.success(`Added ${s.name}`)
+                                                }
+                                                setSuggestions([])
+                                                setSuggestingFor(null)
+                                            }}
+                                            className={`
+                                                inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs
+                                                border transition-all
+                                                ${s.instrumentMatch
+                                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground'
+                                                    : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
+                                                }
+                                            `}
+                                        >
+                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                            {s.name}
+                                            {s.instrument && (
+                                                <span className="text-muted-foreground/60">
+                                                    {INSTRUMENT_PRESETS[s.instrument]?.label || s.instrument}
+                                                </span>
+                                            )}
+                                            {s.instrumentMatch && (
+                                                <Check className="h-2.5 w-2.5 text-emerald-500" />
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}

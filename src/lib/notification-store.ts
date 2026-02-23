@@ -9,6 +9,11 @@
  *   - setlist_updated: Tracks were added/removed from a setlist
  *   - chart_uploaded: A new chart was added to the library
  *   - role_changed: User's role was updated
+ *   - scheduling_request: You've been scheduled for a service (accept/decline)
+ *   - scheduling_confirmed: A musician confirmed their assignment
+ *   - scheduling_declined: A musician declined their assignment
+ *   - scheduling_reminder: Reminder about upcoming service assignment
+ *   - scheduling_cancelled: A service assignment was cancelled
  */
 
 import { db } from '@/lib/firebase'
@@ -19,9 +24,14 @@ import {
 } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
 
+export type NotificationType =
+    | 'setlist_published' | 'setlist_updated' | 'chart_uploaded' | 'role_changed' | 'general'
+    | 'scheduling_request' | 'scheduling_confirmed' | 'scheduling_declined'
+    | 'scheduling_reminder' | 'scheduling_cancelled'
+
 export interface Notification {
     id: string
-    type: 'setlist_published' | 'setlist_updated' | 'chart_uploaded' | 'role_changed' | 'general'
+    type: NotificationType
     title: string
     body: string
     read: boolean
@@ -30,6 +40,8 @@ export interface Notification {
     link?: string
     /** Related entity ID (setlist, file, etc.) */
     entityId?: string
+    /** Action buttons for scheduling notifications (accept/decline links) */
+    actions?: { label: string; url: string }[]
 }
 
 /**
@@ -258,5 +270,77 @@ export async function notifyRoleChanged(
         })
     } catch (e) {
         logger.warn('[Notifications] Failed to notify role change:', e)
+    }
+}
+
+// ── Scheduling Notifications ──
+
+/**
+ * Notify a musician they've been scheduled for a service.
+ */
+export async function notifySchedulingRequest(
+    musicianUid: string,
+    setlistName: string,
+    setlistId: string,
+    instrument?: string,
+    assignmentId?: string,
+): Promise<void> {
+    try {
+        const instrumentText = instrument ? ` on ${instrument}` : ''
+        await createNotification(musicianUid, {
+            type: 'scheduling_request',
+            title: 'You\'re scheduled to play',
+            body: `You've been assigned${instrumentText} for "${setlistName}"`,
+            link: `/schedule`,
+            entityId: assignmentId || setlistId,
+        })
+    } catch (e) {
+        logger.warn('[Notifications] Failed to notify scheduling_request:', e)
+    }
+}
+
+/**
+ * Notify the band leader that a musician confirmed/declined.
+ */
+export async function notifySchedulingResponse(
+    leaderUid: string,
+    musicianName: string,
+    setlistName: string,
+    action: 'confirmed' | 'declined',
+    setlistId: string,
+): Promise<void> {
+    try {
+        const type = action === 'confirmed' ? 'scheduling_confirmed' : 'scheduling_declined'
+        await createNotification(leaderUid, {
+            type,
+            title: action === 'confirmed' ? 'Assignment confirmed' : 'Assignment declined',
+            body: `${musicianName} ${action} for "${setlistName}"`,
+            link: `/setlists/${setlistId}`,
+            entityId: setlistId,
+        })
+    } catch (e) {
+        logger.warn(`[Notifications] Failed to notify scheduling_${action}:`, e)
+    }
+}
+
+/**
+ * Send a scheduling reminder to a musician about an upcoming service.
+ */
+export async function notifySchedulingReminder(
+    musicianUid: string,
+    setlistName: string,
+    setlistId: string,
+    eventDateStr: string,
+): Promise<void> {
+    try {
+        await createNotification(musicianUid, {
+            type: 'scheduling_reminder',
+            title: 'Upcoming service reminder',
+            body: `Reminder: "${setlistName}" on ${eventDateStr}`,
+            link: `/schedule`,
+            entityId: setlistId,
+        })
+    } catch (e) {
+        logger.warn('[Notifications] Failed to notify scheduling_reminder:', e)
     }
 }

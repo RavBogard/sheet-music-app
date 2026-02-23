@@ -191,6 +191,29 @@ service cloud.firestore {
       }
     }
 
+    // SCHEDULING ASSIGNMENTS — server writes via Admin SDK, musicians read own
+    match /scheduling_assignments/{assignmentId} {
+      allow read: if isSignedIn()
+                  && (resource.data.musicianUid == request.auth.uid || isBandLeader());
+      allow write: if false; // Server-only via Admin SDK
+    }
+
+    // MUSICIAN AVAILABILITY (blockout dates) — musicians manage own, leaders read all
+    match /musician_availability/{blockoutId} {
+      allow read: if isSignedIn()
+                  && (resource.data.musicianUid == request.auth.uid || isBandLeader());
+      allow create: if isSignedIn()
+                    && request.resource.data.musicianUid == request.auth.uid;
+      allow update, delete: if isSignedIn()
+                            && resource.data.musicianUid == request.auth.uid;
+    }
+
+    // SCHEDULING HISTORY (analytics, append-only via Admin SDK)
+    match /scheduling_history/{entryId} {
+      allow read: if isBandLeader();
+      allow write: if false; // Server-only via Admin SDK
+    }
+
     // QR SIGN-IN SESSIONS — server-only via admin SDK
     // iPad creates via API, phone approves via API, iPad polls via API.
     // No direct client reads/writes needed.

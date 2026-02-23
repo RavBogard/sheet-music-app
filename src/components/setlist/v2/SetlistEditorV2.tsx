@@ -471,6 +471,9 @@ export function SetlistEditorV2({
                     onChange={setMusicians}
                     canEdit={canEdit}
                     setlistId={setlistId}
+                    setlistName={name}
+                    eventDate={eventDate ? new Date(eventDate).toISOString() : null}
+                    rabbiName={rabbi}
                     isPublished={isPublic}
                 />
             )}

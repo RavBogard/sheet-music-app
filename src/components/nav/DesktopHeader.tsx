@@ -39,9 +39,12 @@ export function DesktopHeader() {
     const [showResults, setShowResults] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
 
+    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
+
     const navLinks = [
         { label: "Home", href: "/", show: true },
         { label: "Setlists", href: "/setlists", show: true },
+        { label: "Schedule", href: "/schedule", show: isMusician },
         { label: "Tasks", href: "/tasks", show: !!user },
         { label: "Library", href: "/library", show: isMember },
         { label: "Leader", href: "/leader", show: isBandLeader },
