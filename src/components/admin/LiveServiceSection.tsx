@@ -8,6 +8,7 @@ import { collection, query, where, doc, getDocs } from "firebase/firestore"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
 import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
+import { formatEventDate } from "@/lib/firestore-helpers"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 export function LiveServiceSection() {
@@ -210,7 +211,7 @@ export function LiveServiceSection() {
                                     <div>
                                         <h4 className="font-semibold text-sm">{sl.title}</h4>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-xs text-muted-foreground">{sl.date}</span>
+                                            <span className="text-xs text-muted-foreground">{formatEventDate(sl.date) || 'No Date'}</span>
                                             {sl.liveState?.enabled && (
                                                 <Badge variant="default" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 text-[9px] h-4 px-1.5 border-none">
                                                     BROADCASTING

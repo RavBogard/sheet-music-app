@@ -7,6 +7,7 @@ import { Star } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { formatEventDate } from "@/lib/firestore-helpers"
 
 export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] }) {
     const [featuredId, setFeaturedId] = useState<string | null>(null)
@@ -64,7 +65,7 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
                     <option value="">-- No setlist featured --</option>
                     {activeSetlists.map(sl => (
                         <option key={sl.id} value={sl.id}>
-                            {sl.title} ({sl.date || 'No Date'})
+                            {sl.title} ({formatEventDate(sl.date) || 'No Date'})
                         </option>
                     ))}
                 </select>
