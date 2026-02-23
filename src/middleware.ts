@@ -30,12 +30,20 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     const session = request.cookies.get('__session')?.value
     const decodedSession = session ? decodeJwtPayload(session) : null
+    const ua = request.headers.get('user-agent') || ''
 
     const isPublicRoute =
         publicExactRoutes.includes(pathname) ||
         publicPrefixes.some(p => pathname.startsWith(p))
     const isApiRoute = pathname.startsWith('/api')
     const isAdminRoute = pathname.startsWith('/admin')
+
+    // Allow social media crawlers through so they can read OG meta tags.
+    // These bots only fetch HTML <head> for link previews — no security risk.
+    const isSocialCrawler = /facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot|TelegramBot/i.test(ua)
+    if (isSocialCrawler) {
+        return NextResponse.next()
+    }
 
     // We do not want to block API routes here; let them handle their own auth
     if (isApiRoute) {

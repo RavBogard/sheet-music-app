@@ -36,7 +36,13 @@ export function UpdatePrompt() {
             })
         }
 
-        navigator.serviceWorker.ready.then(handleUpdate)
+        // Use getRegistration('/') to target only the main PWA service worker.
+        // navigator.serviceWorker.ready can resolve to ANY active SW (including
+        // the Firebase Messaging SW at /firebase-messaging-sw.js), which causes
+        // false "update available" prompts when the messaging SW installs.
+        navigator.serviceWorker.getRegistration('/').then(reg => {
+            if (reg) handleUpdate(reg)
+        })
 
         // Also listen for controller change (another tab triggered update)
         let refreshing = false

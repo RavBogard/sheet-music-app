@@ -16,8 +16,6 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
-import { doc, deleteDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { Headphones, Trash2 } from "lucide-react"
 
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -106,7 +104,21 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             return
         }
         try {
-            await deleteDoc(doc(db, "users", user.uid))
+            // Use server-side Admin SDK route for proper cleanup
+            // (deletes both Firestore doc and Firebase Auth user)
+            const { auth: firebaseAuth } = await import("@/lib/firebase")
+            const currentUser = firebaseAuth.currentUser
+            if (!currentUser) throw new Error("Not authenticated")
+            const token = await currentUser.getIdToken()
+            const res = await fetch("/api/admin/delete-user", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ targetUserId: user.uid }),
+            })
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data.error || "Failed")
+            }
             toast.success(`Removed ${user.displayName}`)
         } catch (e) {
             logger.error(e)

@@ -2,7 +2,7 @@
 import buildInfo from "@/build-info.json"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+// ScrollArea removed — natural page scrolling so the layout footer works correctly
 import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import dynamic from "next/dynamic"
@@ -47,7 +47,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
     /* ─── Render ─── */
     return (
-        <div className="h-screen flex flex-col bg-background text-foreground">
+        <div className="flex flex-col bg-background text-foreground relative">
             {/* Header */}
             <div className="h-20 border-b border-border flex items-center px-4 gap-4 shrink-0">
                 <Button size="icon" variant="ghost" className="h-12 w-12" onClick={onBack || (() => router.back())}>
@@ -126,7 +126,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                     <SetlistMatrixView />
                 </div>
             ) : (
-                <ScrollArea className="flex-1 p-6">
+                <div className="p-6">
                     {!loading && error && (
                         <div className="max-w-md mx-auto mt-20">
                             <ErrorState title="Unable to Load Setlists" description={error} onRetry={() => window.location.reload()} />
@@ -199,7 +199,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                             </section>
                         </div>
                     )}
-                </ScrollArea>
+                </div>
             )}
 
             <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/30 pointer-events-none select-none z-50">

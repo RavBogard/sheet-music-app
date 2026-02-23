@@ -1,2 +1,17 @@
+# Allow social media crawlers and search engines to fetch OG metadata
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /login
+Disallow: /qr/
+
+# Explicitly allow Facebook's crawler
+User-agent: facebookexternalhit
+Allow: /
+
+# Explicitly allow Twitter's crawler
+User-agent: Twitterbot
+Allow: /
+
+Sitemap: https://centralreform.live/sitemap.xml

@@ -259,13 +259,33 @@ export function ChatPanel() {
             try {
                 switch (cmd.type) {
                     case 'CREATE_SETLIST':
-                        const newId = await setlistService.createSetlist(
-                            String(p.name),
-                            (p.tracks || []) as SetlistTrack[],
-                            !!p.isPublic
-                        )
-                        lastCreatedSetlistId = newId
-                        toast.success(`Created setlist: ${p.name}`)
+                        {
+                            // Normalize AI-generated tracks: ensure each has a unique id,
+                            // a title, and a valid type. The AI model sometimes omits ids
+                            // or sends malformed track objects.
+                            const rawTracks = Array.isArray(p.tracks) ? p.tracks : []
+                            const validTypes = ['song', 'header', 'reading', 'prayer', 'transition', 'note']
+                            const normalizedTracks: SetlistTrack[] = (rawTracks as Record<string, unknown>[]).map((t, idx) => ({
+                                id: `track-${Date.now()}-${idx}-${crypto.randomUUID().slice(0, 6)}`,
+                                title: String(t.title || t.name || t.fileName || 'Untitled'),
+                                fileId: t.fileId ? String(t.fileId) : undefined,
+                                type: (validTypes.includes(String(t.type || ''))
+                                    ? String(t.type)
+                                    : 'song') as SetlistTrack['type'],
+                                performer: t.performer ? String(t.performer) : undefined,
+                                estimatedMinutes: t.estimatedMinutes ? Number(t.estimatedMinutes) : undefined,
+                                key: '',
+                                notes: '',
+                            }))
+
+                            const newId = await setlistService.createSetlist(
+                                String(p.name),
+                                normalizedTracks,
+                                !!p.isPublic
+                            )
+                            lastCreatedSetlistId = newId
+                            toast.success(`Created setlist: ${p.name}`)
+                        }
                         break;
 
                     case 'PUBLISH_SETLIST':
@@ -291,7 +311,7 @@ export function ChatPanel() {
                         // Route through local state, not Firestore
                         edits.push({
                             action: 'add',
-                            title: String(p.fileName || p.title || 'Untitled'),
+                            title: String(p.title || p.fileName || 'Untitled'),
                             fileId: p.fileId ? String(p.fileId) : undefined,
                             type: p.type ? String(p.type) : undefined,
                             performer: p.performer ? String(p.performer) : undefined,
@@ -388,118 +408,139 @@ export function ChatPanel() {
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-card border-l border-border shadow-2xl z-50 flex flex-col transition-transform animate-in slide-in-from-right">
-            {/* Header */}
-            <div className="h-16 border-b border-border flex items-center justify-between px-4 bg-muted backdrop-blur-md">
-                <div className="flex items-center gap-2 text-blue-400">
-                    <Sparkles className="h-5 w-5" />
-                    <h2 className="font-bold">Cantor AI</h2>
+        <>
+            {/* Backdrop — mobile only, solid dark overlay */}
+            <div
+                className="fixed inset-0 z-40 bg-black/60 sm:hidden animate-in fade-in"
+                onClick={close}
+            />
+
+            {/* Panel — full-screen bottom sheet on mobile, side panel on desktop */}
+            <div className={cn(
+                "fixed z-50 flex flex-col bg-card shadow-2xl animate-in",
+                // Mobile: bottom sheet covering most of the screen
+                "inset-x-0 bottom-0 top-12 rounded-t-2xl sm:rounded-t-none",
+                // Desktop: side panel
+                "sm:inset-y-0 sm:right-0 sm:left-auto sm:top-0 sm:w-[400px] sm:border-l sm:border-border",
+                "slide-in-from-bottom sm:slide-in-from-right"
+            )}>
+                {/* Drag handle — mobile only */}
+                <div className="sm:hidden flex justify-center pt-2 pb-1">
+                    <div className="w-10 h-1 rounded-full bg-border" />
                 </div>
-                <Button size="icon" variant="ghost" onClick={close} className="text-muted-foreground hover:text-foreground">
-                    <X className="h-5 w-5" />
-                </Button>
-            </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4 pb-4">
-                    {messages.length === 0 && (
-                        <div className="text-center text-muted-foreground mt-10 space-y-2">
-                            <Bot className="h-12 w-12 mx-auto opacity-20" />
-                            <p>Hello! I can help you build your setlist.</p>
-                            <p className="text-sm">Try asking: <br />&ldquo;Add a festive opening song&rdquo;<br />&ldquo;What do we have for Shabbat?&rdquo;</p>
-                        </div>
-                    )}
-
-                    {messages.map((m, i) => (
-                        <div key={i} className={cn("flex gap-3", m.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-                            <div className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                                m.role === 'user' ? "bg-blue-600" : "bg-purple-600"
-                            )}>
-                                {m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                            </div>
-                            <div className={cn(
-                                "rounded-2xl px-4 py-2 max-w-[80%] text-sm",
-                                m.role === 'user' ? "bg-blue-600/20 text-blue-900 dark:text-blue-100" : "bg-muted text-foreground"
-                            )}>
-                                {m.content}
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* Pending confirmation banner */}
-                    {pendingConfirmation && (
-                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
-                            <div className="flex items-center gap-2 text-amber-400 text-sm font-semibold">
-                                <ShieldAlert className="h-4 w-4" />
-                                Confirm actions
-                            </div>
-                            <ul className="space-y-1.5">
-                                {pendingConfirmation.summaries.map((s, i) => (
-                                    <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
-                                        <span className="text-amber-400 mt-0.5">&#8226;</span>
-                                        {s}
-                                    </li>
-                                ))}
-                            </ul>
-                            <div className="flex gap-2 pt-1">
-                                <Button
-                                    size="sm"
-                                    onClick={handleConfirmPending}
-                                    className="bg-amber-600 hover:bg-amber-500 text-white"
-                                >
-                                    <Check className="h-3.5 w-3.5 mr-1" />
-                                    Approve
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={handleRejectPending}
-                                    className="text-muted-foreground hover:text-foreground"
-                                >
-                                    <XCircle className="h-3.5 w-3.5 mr-1" />
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    {loading && (
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            </div>
-                            <div className="bg-muted rounded-2xl px-4 py-2 text-sm text-muted-foreground">
-                                Thinking...
-                            </div>
-                        </div>
-                    )}
-                    <div ref={scrollRef} />
-                </div>
-            </ScrollArea>
-
-            {/* Input */}
-            <div className="p-4 border-t border-border bg-card">
-                <div className="flex gap-2">
-                    <Input
-                        ref={inputRef}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                        placeholder="Ask me to suggest or add songs..."
-                        className="bg-muted border-border focus-visible:ring-blue-500/50"
-                        disabled={loading || !!pendingConfirmation}
-                    />
-                    <Button
-                        onClick={() => handleSend()}
-                        disabled={!input.trim() || loading || !!pendingConfirmation}
-                        className="bg-blue-600 hover:bg-blue-500"
-                    >
-                        <Send className="h-4 w-4" />
+                {/* Header */}
+                <div className="h-14 sm:h-16 border-b border-border flex items-center justify-between px-4 shrink-0">
+                    <div className="flex items-center gap-2 text-primary">
+                        <Sparkles className="h-5 w-5" />
+                        <h2 className="font-bold">Cantor AI</h2>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={close} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-5 w-5" />
                     </Button>
                 </div>
+
+                {/* Messages */}
+                <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-4 pb-4">
+                        {messages.length === 0 && (
+                            <div className="text-center text-muted-foreground mt-10 space-y-2">
+                                <Bot className="h-12 w-12 mx-auto opacity-20" />
+                                <p>Hello! I can help you build your setlist.</p>
+                                <p className="text-sm">Try asking: <br />&ldquo;Add a festive opening song&rdquo;<br />&ldquo;What do we have for Shabbat?&rdquo;</p>
+                            </div>
+                        )}
+
+                        {messages.map((m, i) => (
+                            <div key={i} className={cn("flex gap-3", m.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+                                <div className={cn(
+                                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                    m.role === 'user' ? "bg-primary" : "bg-brand"
+                                )}>
+                                    {m.role === 'user' ? <User className="h-4 w-4 text-primary-foreground" /> : <Bot className="h-4 w-4 text-brand-foreground" />}
+                                </div>
+                                <div className={cn(
+                                    "rounded-2xl px-4 py-2 max-w-[80%] text-sm",
+                                    m.role === 'user' ? "bg-primary/15 text-foreground" : "bg-muted text-foreground"
+                                )}>
+                                    {m.content}
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Pending confirmation banner */}
+                        {pendingConfirmation && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                                <div className="flex items-center gap-2 text-amber-400 text-sm font-semibold">
+                                    <ShieldAlert className="h-4 w-4" />
+                                    Confirm actions
+                                </div>
+                                <ul className="space-y-1.5">
+                                    {pendingConfirmation.summaries.map((s, i) => (
+                                        <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                                            <span className="text-amber-400 mt-0.5">&#8226;</span>
+                                            {s}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <div className="flex gap-2 pt-1">
+                                    <Button
+                                        size="sm"
+                                        onClick={handleConfirmPending}
+                                        className="bg-amber-600 hover:bg-amber-500 text-white"
+                                    >
+                                        <Check className="h-3.5 w-3.5 mr-1" />
+                                        Approve
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={handleRejectPending}
+                                        className="text-muted-foreground hover:text-foreground"
+                                    >
+                                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {loading && (
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0">
+                                    <Loader2 className="h-4 w-4 animate-spin text-brand-foreground" />
+                                </div>
+                                <div className="bg-muted rounded-2xl px-4 py-2 text-sm text-muted-foreground">
+                                    Thinking...
+                                </div>
+                            </div>
+                        )}
+                        <div ref={scrollRef} />
+                    </div>
+                </ScrollArea>
+
+                {/* Input */}
+                <div className="p-4 border-t border-border bg-card pb-safe">
+                    <div className="flex gap-2">
+                        <Input
+                            ref={inputRef}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                            placeholder="Ask me to suggest or add songs..."
+                            className="bg-muted border-border focus-visible:ring-primary/50"
+                            disabled={loading || !!pendingConfirmation}
+                        />
+                        <Button
+                            onClick={() => handleSend()}
+                            disabled={!input.trim() || loading || !!pendingConfirmation}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             </div>
-        </div>
+        </>
     )
 }
