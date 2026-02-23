@@ -95,7 +95,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     onTouchCancel={handleTouchEndOrMove}
                     type="button"
                     aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
-                    aria-selected={selectMode ? isSelected : undefined}
+                    aria-pressed={selectMode ? isSelected : undefined}
                     className={`w-full text-left transition-all group relative ${isSelected
                         ? 'bg-blue-500/10'
                         : isFolder
