@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Component, ReactNode, ErrorInfo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { PeopleSection } from "@/components/admin/PeopleSection"
 import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
@@ -12,6 +12,47 @@ import { DeveloperToolsSection } from "@/components/admin/DeveloperToolsSection"
 import { Loader2, Users, Radio, Wrench, ShieldAlert, ChevronDown } from "lucide-react"
 
 type AdminTab = 'people' | 'production' | 'advanced'
+
+/** Lightweight error boundary that contains crashes within a single admin section */
+class SectionErrorBoundary extends Component<
+    { children: ReactNode; label: string },
+    { hasError: boolean; error?: Error }
+> {
+    state = { hasError: false, error: undefined as Error | undefined }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error }
+    }
+
+    componentDidCatch(error: Error, info: ErrorInfo) {
+        console.error(`[AdminSection] ${this.props.label} crashed:`, error, info.componentStack)
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center space-y-3">
+                    <ShieldAlert className="w-8 h-8 text-red-500 mx-auto" />
+                    <h3 className="font-semibold text-red-600 dark:text-red-400">
+                        {this.props.label} failed to load
+                    </h3>
+                    {this.state.error && (
+                        <pre className="text-xs text-red-400/80 bg-red-500/5 rounded-lg p-3 overflow-auto max-h-32 text-left">
+                            {this.state.error.message}
+                        </pre>
+                    )}
+                    <button
+                        onClick={() => this.setState({ hasError: false, error: undefined })}
+                        className="text-sm font-medium text-red-500 hover:text-red-400 underline"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )
+        }
+        return this.props.children
+    }
+}
 
 export default function AdminSections() {
     const { isAdmin, isBandLeader, loading: authLoading } = useAuth()
@@ -71,11 +112,15 @@ export default function AdminSections() {
 
                 {activeTab === 'production' && (
                     <div className="space-y-12 animate-in fade-in duration-300">
-                        <LiveServiceSection />
+                        <SectionErrorBoundary label="Live Production">
+                            <LiveServiceSection />
+                        </SectionErrorBoundary>
                         {isAdmin && (
                             <>
                                 <hr className="border-border" />
-                                <SoundSystemSection />
+                                <SectionErrorBoundary label="Sound System">
+                                    <SoundSystemSection />
+                                </SectionErrorBoundary>
                             </>
                         )}
                     </div>
