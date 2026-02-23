@@ -12,6 +12,7 @@ import { Loader2, ListTodo, Circle, CheckCircle2, Calendar, FileText, Filter } f
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiFetch } from "@/lib/api-client"
 
 export default function TasksDashboardPage() {
     const { user, isAdmin, isBandLeader } = useAuth()
@@ -78,7 +79,7 @@ export default function TasksDashboardPage() {
 
     const markComplete = async (taskId: string) => {
         try {
-            const res = await fetch('/api/tasks/update', {
+            const res = await apiFetch('/api/tasks/update', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -105,7 +106,7 @@ export default function TasksDashboardPage() {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-background text-foreground">
+        <div className="flex flex-col min-h-[calc(100dvh-5rem)] bg-background text-foreground">
             {/* Header */}
             <div className="px-6 py-6 border-b border-border/50 bg-card">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-5xl mx-auto w-full">

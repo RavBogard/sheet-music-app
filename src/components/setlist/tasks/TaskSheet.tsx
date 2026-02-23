@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { CheckCircle2, Circle, Loader2, Plus, GripVertical, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiFetch } from "@/lib/api-client"
 
 interface TaskSheetProps {
     setlistId: string
@@ -43,7 +44,7 @@ export function TaskSheet({ setlistId, setlistName, eventDate, open, onOpenChang
 
         const unsubUsers = subscribeToAllUsers((users) => {
             const active = users.filter(u =>
-                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
+                u.uid === currentUser?.uid || u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
             )
             setAllUsers(active)
             if (!selectedAssigneeUid && currentUser) {
@@ -82,7 +83,7 @@ export function TaskSheet({ setlistId, setlistName, eventDate, open, onOpenChang
 
         setIsSubmitting(true)
         try {
-            const res = await fetch('/api/tasks/create', {
+            const res = await apiFetch('/api/tasks/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -114,7 +115,7 @@ export function TaskSheet({ setlistId, setlistName, eventDate, open, onOpenChang
         const newStatus = task.status === 'completed' ? 'todo' : 'completed'
 
         try {
-            const res = await fetch('/api/tasks/update', {
+            const res = await apiFetch('/api/tasks/update', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -132,7 +133,7 @@ export function TaskSheet({ setlistId, setlistName, eventDate, open, onOpenChang
     const deleteTask = async (taskId: string) => {
         if (!confirm("Delete this task entirely?")) return
         try {
-            const res = await fetch(`/api/tasks/delete?id=${taskId}`, { method: 'DELETE' })
+            const res = await apiFetch(`/api/tasks/delete?id=${taskId}`, { method: 'DELETE' })
             if (!res.ok) throw new Error(await res.text())
             toast.success("Task deleted")
         } catch (err) {

@@ -44,7 +44,7 @@ export function PeopleSection() {
                 u.email?.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesRole = roleFilter === 'all' ||
                 (roleFilter === 'pending' && u.role === 'pending') ||
-                (roleFilter === 'band_leader' && u.role === 'band_leader') ||
+                (roleFilter === 'band_leader' && (u.role === 'band_leader' || u.role === ('leader' as string))) ||
                 (u.role === roleFilter)
             return matchesSearch && matchesRole
         })

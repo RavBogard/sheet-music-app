@@ -199,16 +199,13 @@ export default function SetlistPerformPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-1">
-                    {setlistData?.isPublic && (
-                        <button
-                            onClick={() => setShowTaskSheet(true)}
-                            className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors relative"
-                            title="Setlist Tasks"
-                        >
-                            <ListTodo className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                            {/* Assuming we might add a dot indicator later */}
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setShowTaskSheet(true)}
+                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors relative"
+                        title="Setlist Tasks"
+                    >
+                        <ListTodo className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                    </button>
                     <button
                         onClick={() => setShowPrintModal(true)}
                         className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
