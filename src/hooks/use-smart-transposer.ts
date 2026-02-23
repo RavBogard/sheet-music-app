@@ -237,20 +237,23 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 try {
                     const cached = await loadChordCache(fileId, pageNumber)
                     if (cached && cached.chords.length > 0) {
-                        userOverrides = cached.chords.filter(c => c.source === 'user')
-                        const autoChords = cached.chords.filter(c => c.source !== 'user')
+                        const isValid = cached.chords.every(c => typeof c.x === 'number' && !isNaN(c.x) && typeof c.y === 'number' && !isNaN(c.y))
+                        if (isValid) {
+                            userOverrides = cached.chords.filter(c => c.source === 'user')
+                            const autoChords = cached.chords.filter(c => c.source !== 'user')
 
-                        if (autoChords.length > 0 && cached.aiValidated) {
-                            const mappedChords = cached.chords.map(c => ({
-                                text: c.text,
-                                originalText: c.originalText || c.text,
-                                x: c.x, y: c.y, w: c.w, h: c.h,
-                                pxHeight: c.pxHeight,
-                                source: (c.source || 'textLayer') as ChordSource,
-                            }))
-                            setPageData(pageNumber, { chords: mappedChords, strips: [] })
-                            setPageScanning(pageNumber, false)
-                            return
+                            if (autoChords.length > 0 && cached.aiValidated) {
+                                const mappedChords = cached.chords.map(c => ({
+                                    text: c.text,
+                                    originalText: c.originalText || c.text,
+                                    x: c.x, y: c.y, w: c.w, h: c.h,
+                                    pxHeight: c.pxHeight,
+                                    source: (c.source || 'textLayer') as ChordSource,
+                                }))
+                                setPageData(pageNumber, { chords: mappedChords, strips: [] })
+                                setPageScanning(pageNumber, false)
+                                return
+                            }
                         }
                     }
                 } catch {

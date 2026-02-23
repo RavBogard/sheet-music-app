@@ -48,17 +48,7 @@ export function scanTextLayer(pageElement: HTMLElement): ScannedChord[] {
     const spans = Array.from(textLayer.querySelectorAll('span'));
 
     // Bounds for percentage calculations
-    const textLayerRect = textLayer.getBoundingClientRect();
-    const pageRect = {
-        left: Math.min(pageElement.getBoundingClientRect().left, textLayerRect.left),
-        right: Math.max(pageElement.getBoundingClientRect().right, textLayerRect.right),
-        top: Math.min(pageElement.getBoundingClientRect().top, textLayerRect.top),
-        bottom: Math.max(pageElement.getBoundingClientRect().bottom, textLayerRect.bottom),
-        width: 0,
-        height: 0
-    };
-    pageRect.width = pageRect.right - pageRect.left;
-    pageRect.height = pageRect.bottom - pageRect.top;
+    const pageRect = pageElement.getBoundingClientRect();
 
     // 1. Map to objects with coordinates
     const items = spans.map(span => {
