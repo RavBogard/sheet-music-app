@@ -43,9 +43,19 @@ export function TaskSheet({ setlistId, setlistName, eventDate, open, onOpenChang
         if (!open) return
 
         const unsubUsers = subscribeToAllUsers((users) => {
-            const active = users.filter(u =>
+            let active = users.filter(u =>
                 u.uid === currentUser?.uid || u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
             )
+
+            if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
+                active = [{
+                    uid: currentUser.uid,
+                    email: currentUser.email || '',
+                    displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Me',
+                    role: 'musician' as const, // For typing purposes
+                } as UserProfile, ...active]
+            }
+
             setAllUsers(active)
             if (!selectedAssigneeUid && currentUser) {
                 setSelectedAssigneeUid(currentUser.uid)
