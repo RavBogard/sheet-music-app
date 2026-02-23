@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
 import { ChevronLeft, FolderOpen, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,10 +81,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     }
 
     const storeHydrated = useRef(false)
-    if (!storeHydrated.current && initialLibrary.length > 0) {
-        hydrate(initialLibrary)
-        storeHydrated.current = true
-    }
+    useLayoutEffect(() => {
+        if (!storeHydrated.current && initialLibrary.length > 0) {
+            hydrate(initialLibrary)
+            storeHydrated.current = true
+        }
+    }, [initialLibrary, hydrate])
 
     // Automatically load the library on mount if needed
     const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary()

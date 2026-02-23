@@ -3,6 +3,7 @@ import { auth } from "@/lib/firebase"
 import { DriveFile } from "@/types/models"
 import { useEffect } from "react"
 import { useLibraryStore } from "@/lib/library-store"
+import { useAuth } from "@/lib/auth-context"
 
 /**
  * Fetches the library files from the API.
@@ -10,7 +11,7 @@ import { useLibraryStore } from "@/lib/library-store"
  * If force=true, bypasses the browser cache.
  */
 async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastModified: string }> {
-    const user = auth.currentUser
+    const user = auth?.currentUser
     const headers: HeadersInit = {}
     if (user) {
         const token = await user.getIdToken()
@@ -36,11 +37,13 @@ async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastMo
  * refetching, completely replacing the bespoke IDB caching layer.
  */
 export function useLibrary(force = false) {
+    const { user } = useAuth()
+
     const queryInfo = useQuery({
-        queryKey: ['library', force, !!auth.currentUser],
+        queryKey: ['library', force, !!user],
         queryFn: () => fetchLibrary(force),
         staleTime: 1000 * 60 * 60 * 24, // Consider data fresh for 24 hours (sync handles updates)
-        enabled: !!auth.currentUser, // Wait for auth to initialize
+        enabled: !!user, // Wait for auth to initialize reactively
     })
 
     const { data } = queryInfo
