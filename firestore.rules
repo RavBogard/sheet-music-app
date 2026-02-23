@@ -107,6 +107,14 @@ service cloud.firestore {
       }
     }
     
+    // TASKS Collection
+    // Read: Any signed-in user can read tasks (to see them on setlists)
+    // Write: All writes go through the secure API routes using the Admin SDK
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if false; 
+    }
+    
     // PUBLIC SETLISTS (Legacy)
     match /publicSetlists/{docId} {
       allow read: if true;
