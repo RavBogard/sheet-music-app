@@ -195,7 +195,7 @@ export function SetlistEditorV2({
                 useChatStore.getState().open()
             }
         }
-    }, [])  
+    }, [])
 
     // Bust Next.js aggressive Server Component cache when client-side togglePublic mutates Firestore
     useEffect(() => {
@@ -430,7 +430,7 @@ export function SetlistEditorV2({
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col bg-background text-foreground">
+        <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100vh-5rem)]">
             {/* Name prompt for new setlists */}
             <NamePrompt
                 isOpen={showNamePrompt || showEditDetails}

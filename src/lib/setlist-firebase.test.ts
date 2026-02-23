@@ -19,6 +19,7 @@ vi.mock('firebase/firestore', () => ({
     where: vi.fn(),
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
     getDoc: (...args: unknown[]) => mockGetDoc(...args),
+    getDocs: vi.fn().mockResolvedValue({ docs: [] }),
 }))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
 vi.mock('@/lib/notification-store', () => ({
