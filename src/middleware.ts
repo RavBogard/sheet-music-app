@@ -36,7 +36,7 @@ export function middleware(request: NextRequest) {
         publicExactRoutes.includes(pathname) ||
         publicPrefixes.some(p => pathname.startsWith(p))
     const isApiRoute = pathname.startsWith('/api')
-    const isAdminRoute = pathname.startsWith('/admin')
+    const isLeaderRoute = pathname.startsWith('/admin') || pathname.startsWith('/manage') || pathname.startsWith('/leader')
 
     // Allow social media crawlers through so they can read OG meta tags.
     // These bots only fetch HTML <head> for link previews — no security risk.
@@ -62,13 +62,19 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
+    // Redirect old routes to /manage
+    if (session && (pathname === '/admin' || pathname === '/leader')) {
+        const redirectUrl = new URL('/manage', request.url)
+        return NextResponse.redirect(redirectUrl)
+    }
+
     // Role Verification via Claims
-    if (isAdminRoute && session) {
+    if (isLeaderRoute && session) {
         // Check if the user possesses the admin or leader role
         // Backward compat: 'leader' is the legacy name for 'band_leader'
         const role = decodedSession?.role
         if (role !== 'admin' && role !== 'band_leader' && role !== 'leader') {
-            // Unprivileged user trying to access admin
+            // Unprivileged user trying to access leader/admin routes
             const redirectUrl = new URL('/setlists', request.url)
             return NextResponse.redirect(redirectUrl)
         }

@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch"
 import buildInfo from "@/build-info.json"
 import {
     ArrowLeft, Loader2, User, Moon, Sun, Monitor,
-    LogOut, ShieldAlert, Pencil, Check, Lock,
+    LogOut, Pencil, Check, Lock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import {
@@ -23,7 +23,7 @@ import {
 } from "firebase/auth"
 
 export default function SettingsPage() {
-    const { user, profile, isBandLeader, loading: authLoading, signOut } = useAuth()
+    const { user, profile, loading: authLoading, signOut } = useAuth()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [editingName, setEditingName] = useState(false)
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-semibold">Settings</h1>
-                        <p className="text-muted-foreground text-sm">Profile, preferences{isBandLeader ? ", and administration" : ""}</p>
+                        <p className="text-muted-foreground text-sm">Profile and preferences</p>
                     </div>
                 </div>
 
@@ -292,25 +292,6 @@ export default function SettingsPage() {
                         <MusicianProfileSettings />
                     </div>
                 </section>
-
-                {/* Admin Sections — People for band leaders+, full admin for admins */}
-                {isBandLeader && (
-                    <section className="space-y-4">
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <ShieldAlert className="w-3.5 h-3.5 text-brand" />
-                            Administration
-                        </h2>
-                        <div className="bg-card border border-border p-5 rounded-2xl flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold text-foreground">Admin Console</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Manage users, roles, system limits, and band prep.</p>
-                            </div>
-                            <Button onClick={() => router.push('/admin')} className="gap-2 bg-brand hover:bg-brand/90 text-white shadow-md">
-                                Open Console
-                            </Button>
-                        </div>
-                    </section>
-                )}
 
                 {/* Footer */}
                 <div className="pt-6 pb-8 flex flex-col items-center gap-3">
