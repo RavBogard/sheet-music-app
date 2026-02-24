@@ -419,6 +419,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 }
                 const updated = [...pageData.chords, placeholder]
                 persistChords(updated)
+                incrementPendingEdits()
                 setEditPopover({ index: updated.length - 1, x: xPct, y: yPct })
             }
         } catch (err) {
