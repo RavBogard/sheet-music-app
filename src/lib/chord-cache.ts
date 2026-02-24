@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api-client"
  */
 
 // Bump this when scanner logic changes to invalidate stale caches
-const CACHE_VERSION = 6
+const CACHE_VERSION = 7
 
 export type ChordSource = 'textLayer' | 'ai' | 'user'
 

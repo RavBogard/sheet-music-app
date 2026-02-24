@@ -5,6 +5,9 @@
  * 1. Fully cover the original chord text in the PDF
  * 2. Fit the transposed chord text being displayed
  *
+ * Font size is derived from the chord's percentage height (h%) relative
+ * to the live container height, so it scales correctly with zoom.
+ *
  * Uses a character-width heuristic table calibrated for
  * Times New Roman Bold (the overlay font). No canvas measurement needed.
  */
@@ -48,27 +51,64 @@ export interface OverlayDimensions {
     padH: number
 }
 
+// Minimum font size to remain legible
+const FONT_MIN_PX = 10
+
+// Multiplier from measured span height to font-size.
+// DOM span height includes line-height padding; 0.90 brings the overlay
+// font visually in line with the PDF's own rendered chord text.
+const H_PCT_TO_FONT_SCALE = 0.90
+
+// Default chord row height as percentage of page (for AI-added chords with no size data).
+// Typical hymnal/worship lead sheet chords occupy ~2.5-3.5% of a US Letter page height.
+// 2.8% at a standard 1100px container yields ~27.7px — close to what most charts use.
+const DEFAULT_CHORD_H_PCT = 2.8
+
 /**
  * Compute all sizing values for a single chord overlay.
  *
- * @param chord           The ChordOverlay data (carries original width measurement)
- * @param displayText     The text that will be rendered (may be transposed)
- * @param containerWidthPx  Pixel width of the PDF page container at render time
+ * @param chord              The ChordOverlay data (carries h% and w% from scan time)
+ * @param displayText        The text that will be rendered (may be transposed)
+ * @param containerWidthPx   Pixel width of the PDF page container at render time
+ * @param containerHeightPx  Pixel height of the PDF page container at render time
  */
 export function computeOverlayDimensions(
     chord: ChordOverlay,
     displayText: string,
     containerWidthPx: number,
+    containerHeightPx: number,
 ): OverlayDimensions {
     const padH = 4
 
     // --- Font size ---
-    // sizeOverride takes priority, then detected pxHeight, then fallback
-    const rawHeight = chord.sizeOverride?.pxHeight ?? chord.pxHeight ?? 0
-    const fontSizePx = rawHeight > 4
-        ? Math.max(12, Math.min(rawHeight * 0.85, 28))
-        : 16
+    // Priority 1: explicit user size override
+    if (chord.sizeOverride?.pxHeight && chord.sizeOverride.pxHeight > 4) {
+        const fontSizePx = Math.max(FONT_MIN_PX, chord.sizeOverride.pxHeight)
+        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, padH)
+    }
 
+    // Priority 2: h% x containerHeightPx — zoom-reactive, stale-proof
+    const hPct = chord.h ?? 0
+    if (hPct > 0 && containerHeightPx > 0) {
+        const rawPx = (hPct / 100) * containerHeightPx
+        const fontSizePx = Math.max(FONT_MIN_PX, rawPx * H_PCT_TO_FONT_SCALE)
+        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, padH)
+    }
+
+    // Priority 3: AI-added chords have no h — estimate from container height
+    const fallbackPx = containerHeightPx > 0
+        ? Math.max(FONT_MIN_PX, (containerHeightPx * DEFAULT_CHORD_H_PCT / 100) * H_PCT_TO_FONT_SCALE)
+        : 16
+    return buildDimensions(chord, displayText, containerWidthPx, fallbackPx, padH)
+}
+
+function buildDimensions(
+    chord: ChordOverlay,
+    displayText: string,
+    containerWidthPx: number,
+    fontSizePx: number,
+    padH: number,
+): OverlayDimensions {
     // --- Cover width: must cover the ORIGINAL chord text in the PDF ---
     const originalWPct = chord.sizeOverride?.wPct ?? chord.w ?? 0
     let coverWidthPx: number

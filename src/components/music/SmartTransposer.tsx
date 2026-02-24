@@ -36,8 +36,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     // Ref map for chord overlay elements (needed by portal popover positioning)
     const chordElsRef = useRef<Map<number, HTMLElement>>(new Map())
 
-    // Container width for overlay sizing (read at render time, reactive to zoom)
+    // Container dimensions for overlay sizing (read at render time, reactive to zoom)
     const containerWidthPx = pageRef.current?.offsetWidth ?? 800
+    const containerHeightPx = pageRef.current?.offsetHeight ?? 1100
 
     const setChordRef = useCallback((i: number, el: HTMLDivElement | null) => {
         if (el) chordElsRef.current.set(i, el)
@@ -79,9 +80,12 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                 )}
 
                 {pageData.chords.map((chord: ChordOverlay, i: number) => {
-                    const sourceText = cleanChordText(chord.originalText || chord.text)
-                    const transposed = transposeChord(sourceText, transposition, preferFlats)
-                    const displayText = transposition !== 0 ? transposed : chord.text
+                    // Transpose from chord.text (includes AI/user corrections), not originalText.
+                    // originalText is only used for cover-width sizing.
+                    const sourceText = cleanChordText(chord.text)
+                    const displayText = transposition !== 0
+                        ? transposeChord(sourceText, transposition, preferFlats)
+                        : sourceText
                     const isTransposing = transposition !== 0
 
                     // Show overlay when text differs from original (AI/user corrected or added)
@@ -93,7 +97,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     if (!needsOverlay && !isEditingChords) return null
 
                     // Compute dimensions using the sizing utility
-                    const dims = computeOverlayDimensions(chord, displayText, containerWidthPx)
+                    const dims = computeOverlayDimensions(chord, displayText, containerWidthPx, containerHeightPx)
                     const showPopover = editPopover?.index === i
                     const isVisible = needsOverlay || isEditingChords || showPopover
 
