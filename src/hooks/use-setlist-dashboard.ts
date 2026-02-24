@@ -26,7 +26,7 @@ export function useSetlistDashboard({
     initialPublicSetlists = []
 }: UseSetlistDashboardProps) {
     const router = useRouter()
-    const { user, signIn, isMember } = useAuth()
+    const { user, signIn, isMember, isBandLeader } = useAuth()
     const { downloadSetlist, isDownloading } = useOffline()
 
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>(initialPersonalSetlists)
@@ -313,7 +313,7 @@ export function useSetlistDashboard({
     const hasUpcoming = upcoming.length > 0 || placeholders.length > 0
 
     return {
-        router, user, signIn, isMember, onBack, onCreateNew,
+        router, user, signIn, isMember, isBandLeader, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab, view, setView,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,

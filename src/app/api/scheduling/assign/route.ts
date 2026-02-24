@@ -5,6 +5,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingAssignmentSMS } from "@/lib/sms"
+import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
 
 const assignSchema = z.object({
     setlistId: z.string().min(1),
@@ -30,6 +31,19 @@ export const POST = createApiHandler(
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
         const created: string[] = []
         const errors: string[] = []
+
+        // Fetch setlist tracks once for new-song detection across all musicians
+        let setlistTracks: TrackRef[] = []
+        try {
+            const setlistDoc = await db.collection('setlists').doc(setlistId).get()
+            if (setlistDoc.exists) {
+                setlistTracks = ((setlistDoc.data()?.tracks ?? []) as any[]).map(
+                    (t: any) => ({ fileId: t.fileId, title: t.title || '' })
+                )
+            }
+        } catch (e) {
+            logger.warn('[Scheduling] Failed to fetch setlist tracks for new-song detection:', e)
+        }
 
         for (const musician of musicians) {
             try {
@@ -69,6 +83,17 @@ export const POST = createApiHandler(
                 const ref = await db.collection('scheduling_assignments').add(assignmentData)
                 created.push(musician.uid)
 
+                // Detect new songs for this musician (best effort — never blocks assignment)
+                let newSongs: { title: string; fileId: string }[] = []
+                if (setlistTracks.length > 0) {
+                    try {
+                        const detected = await detectNewSongs(db, musician.uid, setlistTracks)
+                        newSongs = detected.filter(s => s.fileId).map(s => ({ title: s.title, fileId: s.fileId! }))
+                    } catch (e) {
+                        logger.warn(`[Scheduling] New song detection failed for ${musician.name}:`, e)
+                    }
+                }
+
                 // Check musician's notification preferences
                 const musicianDoc = await db.collection('users').doc(musician.uid).get()
                 const musicianData = musicianDoc.data()
@@ -87,6 +112,7 @@ export const POST = createApiHandler(
                     status: isCore ? 'confirmed' : 'pending',
                     scheduleUrl: `${baseUrl}/schedule`,
                     assignmentId: ref.id,
+                    newSongs: newSongs.length > 0 ? newSongs : undefined,
                 }).then(result => {
                     if (result.ok) {
                         // Update notifiedVia
@@ -108,6 +134,7 @@ export const POST = createApiHandler(
                         instrument: musician.instrument,
                         status: isCore ? 'confirmed' : 'pending',
                         scheduleUrl: `${baseUrl}/schedule`,
+                        newSongs: newSongs.length > 0 ? newSongs.map(s => s.title) : undefined,
                     }).then(result => {
                         if (result.ok) {
                             db.collection('scheduling_assignments').doc(ref.id).update({
@@ -150,6 +177,7 @@ export const POST = createApiHandler(
         // Also update the setlist's musicians array to keep it in sync
         try {
             const setlistRef = db.collection('setlists').doc(setlistId)
+            // Re-fetch to get the latest musicians array (may have changed during assignment loop)
             const setlistDoc = await setlistRef.get()
             if (setlistDoc.exists) {
                 const existingMusicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string; name: string; email: string; instrument?: string }>

@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase"
 import { doc, updateDoc, collection } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, Ban, UserSearch } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, Ban, UserSearch, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
@@ -57,6 +57,18 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
     const [suggestingFor, setSuggestingFor] = useState<string | null>(null) // declined musician instrument
     const [suggestions, setSuggestions] = useState<Array<{ uid: string; name: string; email: string; instrument: string | null; instrumentMatch: boolean | null }>>([])
     const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+
+    // Smart band suggestion state
+    const [bandSuggestions, setBandSuggestions] = useState<Array<{
+        uid: string; name: string; email: string; phone: string | null;
+        instrumentKey: string | null; instrumentLabel: string | null;
+        schedulingTier: string; score: number; blocked: boolean;
+        reasons: string[];
+    }>>([])
+    const [bandSuggestionsGap, setBandSuggestionsGap] = useState<string[]>([])
+    const [bandSuggestionsGuidance, setBandSuggestionsGuidance] = useState<string | null>(null)
+    const [loadingBandSuggestions, setLoadingBandSuggestions] = useState(false)
+    const [showBandSuggestions, setShowBandSuggestions] = useState(false)
 
     const defaultMusicians = useMemo(() => congregation.defaultMusicians || [], [congregation.defaultMusicians])
     const defaultUids = useMemo(() => new Set(defaultMusicians.map(m => m.uid)), [defaultMusicians])
@@ -177,6 +189,33 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
             setLoadingSuggestions(false)
         }
     }, [setlistId, eventDate])
+
+    // Fetch smart band suggestions via the suggest-band API
+    const handleSuggestBand = useCallback(async () => {
+        if (!setlistId) return
+        setLoadingBandSuggestions(true)
+        setShowBandSuggestions(true)
+        try {
+            const { apiFetch } = await import('@/lib/api-client')
+            const params = new URLSearchParams({ setlistId })
+            if (eventDate) params.set('date', eventDate.split('T')[0])
+            if (rabbiName) params.set('rabbiName', rabbiName)
+            const selectedUids = musicians.filter(m => m.uid).map(m => m.uid!).join(',')
+            if (selectedUids) params.set('selectedUids', selectedUids)
+
+            const res = await apiFetch(`/api/scheduling/suggest-band?${params}`)
+            const data = await res.json()
+            if (data.success) {
+                setBandSuggestions(data.suggestions || [])
+                setBandSuggestionsGap(data.coverageGap || [])
+                setBandSuggestionsGuidance(data.rabbiGuidance || null)
+            }
+        } catch {
+            toast.error('Failed to fetch suggestions')
+        } finally {
+            setLoadingBandSuggestions(false)
+        }
+    }, [setlistId, eventDate, rabbiName, musicians])
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((users) => {
@@ -360,6 +399,24 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                     <UserPlus className="h-3.5 w-3.5" />
                                     {musicians.length === 0 ? 'Load Default Band' : 'Reset to Defaults'}
                                 </button>
+                            )}
+
+                            {/* Suggest Band button — smart ranking */}
+                            {canEdit && isBandLeader && setlistId && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1.5 border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                    onClick={handleSuggestBand}
+                                    disabled={loadingBandSuggestions}
+                                >
+                                    {loadingBandSuggestions ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="h-3 w-3" />
+                                    )}
+                                    {loadingBandSuggestions ? 'Loading...' : 'Suggest Band'}
+                                </Button>
                             )}
 
                             {/* Request All button — sends scheduling requests */}
@@ -657,6 +714,87 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Smart Band Suggestions panel */}
+                        {showBandSuggestions && (
+                            <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                                        <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                                        Smart Suggestions
+                                    </p>
+                                    <button onClick={() => setShowBandSuggestions(false)} className="text-muted-foreground hover:text-foreground">
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+
+                                {bandSuggestionsGuidance && (
+                                    <p className="text-[11px] text-muted-foreground italic">{bandSuggestionsGuidance}</p>
+                                )}
+
+                                {bandSuggestionsGap.length > 0 && (
+                                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                        Missing: {bandSuggestionsGap.map(k => INSTRUMENT_PRESETS[k]?.label || k).join(', ')}
+                                    </p>
+                                )}
+
+                                {loadingBandSuggestions ? (
+                                    <div className="flex justify-center py-4">
+                                        <Loader2 className="h-5 w-5 animate-spin text-purple-500/60" />
+                                    </div>
+                                ) : bandSuggestions.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground text-center py-3">No suggestions available</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {bandSuggestions.filter(s => !s.blocked).map(s => {
+                                            const alreadySelected = musicians.some(m => m.uid === s.uid)
+                                            return (
+                                                <button
+                                                    key={s.uid}
+                                                    onClick={() => {
+                                                        if (alreadySelected) return
+                                                        onChange([...musicians, {
+                                                            uid: s.uid,
+                                                            name: s.name,
+                                                            email: s.email,
+                                                            instrument: s.instrumentLabel || undefined,
+                                                        }])
+                                                        toast.success(`Added ${s.name}`)
+                                                    }}
+                                                    disabled={alreadySelected}
+                                                    className={`
+                                                        inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs
+                                                        border transition-all
+                                                        ${alreadySelected
+                                                            ? 'bg-primary/10 border-primary/30 text-muted-foreground opacity-60 cursor-default'
+                                                            : s.schedulingTier === 'core'
+                                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground hover:bg-emerald-500/20'
+                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
+                                                        }
+                                                    `}
+                                                    title={s.reasons.join(' · ')}
+                                                >
+                                                    {alreadySelected ? (
+                                                        <Check className="h-2.5 w-2.5 text-primary" />
+                                                    ) : (
+                                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                                            s.schedulingTier === 'core' ? 'bg-emerald-500'
+                                                                : s.schedulingTier === 'regular' ? 'bg-blue-500'
+                                                                : 'bg-muted-foreground/40'
+                                                        }`} />
+                                                    )}
+                                                    {s.name}
+                                                    {s.instrumentLabel && (
+                                                        <span className="text-muted-foreground/60">{s.instrumentLabel}</span>
+                                                    )}
+                                                    <span className="text-[10px] text-muted-foreground/40">{s.score}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         )}
 

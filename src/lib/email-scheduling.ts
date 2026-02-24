@@ -46,6 +46,7 @@ interface SchedulingEmailParams {
     status: 'pending' | 'confirmed' | 'cancelled'
     scheduleUrl: string
     assignmentId: string
+    newSongs?: { title: string; fileId: string }[]
 }
 
 /**
@@ -112,6 +113,15 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
           </tr>
         </table>
       </div>
+
+      ${(params.newSongs && params.newSongs.length > 0) ? `
+      <div style="margin:0 0 24px;padding:16px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#92400e;">🎶 New Songs to Learn</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#78350f;">You haven't played these before — give them a listen before the service:</p>
+        <ul style="margin:0;padding-left:18px;">
+          ${params.newSongs.map(s => `<li style="font-size:13px;color:#1e293b;padding:2px 0;">${escapeHtml(s.title)}</li>`).join('')}
+        </ul>
+      </div>` : ''}
 
       <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
         <tr>

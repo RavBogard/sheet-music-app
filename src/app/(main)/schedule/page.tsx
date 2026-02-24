@@ -12,8 +12,7 @@ import {
     subscribeToAllUpcomingAssignments,
 } from "@/lib/scheduling-firebase"
 import { ScheduleCard } from "@/components/scheduling/ScheduleCard"
-import { AvailabilityManager } from "@/components/scheduling/AvailabilityManager"
-import { SchedulingCalendar } from "@/components/scheduling/SchedulingCalendar"
+import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import type { SchedulingAssignment } from "@/types/models"
 
 type TabId = 'my_schedule' | 'calendar' | 'availability' | 'all'
@@ -187,13 +186,13 @@ export default function SchedulePage() {
             {/* Content */}
             <div className="p-4 sm:p-6">
                 {activeTab === 'availability' ? (
-                    /* Availability Tab -- Blockout Calendar */
+                    /* Availability Tab -- Unified Calendar in blockout mode */
                     <div className="max-w-lg mx-auto">
-                        <AvailabilityManager />
+                        <UnifiedCalendar mode="availability" />
                     </div>
                 ) : activeTab === 'calendar' ? (
                     /* Planning Calendar Tab (band leaders only) */
-                    <SchedulingCalendar />
+                    <UnifiedCalendar mode="planning" />
                 ) : loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {[1, 2, 3].map(i => (

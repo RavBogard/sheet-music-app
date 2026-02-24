@@ -1,6 +1,7 @@
 "use client"
+import { useState } from "react"
 import buildInfo from "@/build-info.json"
-import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp } from "lucide-react"
+import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 // ScrollArea removed — natural page scrolling so the layout footer works correctly
 import { ErrorState } from "@/components/ui/error-state"
@@ -15,20 +16,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCongregation } from "@/lib/congregation-store"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { SetlistMatrixView } from "./v2/SetlistMatrixView"
+import { CreationWizard } from "./wizard/CreationWizard"
 
-// Lazy-load CalendarView — most users stay on list view, so the
-// calendar component (+ its date-fns dependencies) can load on demand.
-const CalendarView = dynamic(
-    () => import("@/components/calendar/CalendarView").then(m => m.CalendarView),
+// Lazy-load UnifiedCalendar — most users stay on list view
+const UnifiedCalendar = dynamic(
+    () => import("@/components/calendar/UnifiedCalendar").then(m => m.UnifiedCalendar),
     { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-xl" /> }
 )
 
 export function SetlistDashboard(props: UseSetlistDashboardProps) {
     const congregation = useCongregation()
+    const [showWizard, setShowWizard] = useState(false)
 
     // Destructure all the state and handlers from our custom hook
     const {
-        router, user, signIn, isMember, onBack, onCreateNew,
+        router, user, signIn, isMember, isBandLeader, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab, view, setView,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
@@ -88,8 +90,8 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button onClick={onCreateNew || (() => router.push('/setlists/new'))} className="gap-2 bg-brand hover:bg-brand/90 shadow-lg shadow-brand/20 px-6">
-                            <Plus className="h-5 w-5" /> New
+                        <Button onClick={() => setShowWizard(true)} className="gap-2 bg-brand hover:bg-brand/90 shadow-lg shadow-brand/20 px-6">
+                            <Wand2 className="h-5 w-5" /> New
                         </Button>
                     </div>
                 ) : user ? (
@@ -100,6 +102,9 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                     </Button>
                 )}
             </div>
+
+            {/* Creation Wizard */}
+            <CreationWizard open={showWizard} onOpenChange={setShowWizard} />
 
             {/* Dialogs */}
             <ImporterModal open={showImporterModal} onOpenChange={setShowImporterModal} onComplete={(id: string) => router.push(`/setlists/${id}`)} />
@@ -119,7 +124,12 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
             {view === 'calendar' ? (
                 <div className="flex-1 p-6 overflow-hidden">
-                    <CalendarView setlists={displayedSetlists} onSelectSetlist={handleSelect} onCreateSetlist={handleCreateFromCalendar} />
+                    <UnifiedCalendar
+                        mode={isBandLeader ? 'planning' : 'viewer'}
+                        setlists={displayedSetlists}
+                        onSelectSetlist={handleSelect}
+                        onCreateSetlist={handleCreateFromCalendar}
+                    />
                 </div>
             ) : view === 'matrix' ? (
                 <div className="flex-1 p-6 overflow-hidden">

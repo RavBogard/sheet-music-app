@@ -91,14 +91,18 @@ export async function sendSchedulingAssignmentSMS(params: {
     instrument?: string
     status: 'pending' | 'confirmed'
     scheduleUrl: string
+    newSongs?: string[]
 }): Promise<{ ok: boolean; error?: string }> {
-    const { musicianName, setlistName, eventDate, instrument, status, scheduleUrl } = params
+    const { musicianName, setlistName, eventDate, instrument, status, scheduleUrl, newSongs } = params
     const firstName = musicianName.split(' ')[0]
 
     const instrumentText = instrument ? ` on ${instrument}` : ''
+    const newSongsText = (newSongs && newSongs.length > 0)
+        ? ` New songs: ${newSongs.slice(0, 3).join(', ')}${newSongs.length > 3 ? ` +${newSongs.length - 3} more` : ''}.`
+        : ''
     const body = status === 'confirmed'
-        ? `Hi ${firstName}! You're confirmed to play${instrumentText} at CRC on ${eventDate} for "${setlistName}". View schedule: ${scheduleUrl}`
-        : `Hi ${firstName}, you're scheduled to play${instrumentText} at CRC on ${eventDate} for "${setlistName}". Please confirm: ${scheduleUrl}`
+        ? `Hi ${firstName}! You're confirmed to play${instrumentText} at CRC on ${eventDate} for "${setlistName}".${newSongsText} View schedule: ${scheduleUrl}`
+        : `Hi ${firstName}, you're scheduled to play${instrumentText} at CRC on ${eventDate} for "${setlistName}".${newSongsText} Please confirm: ${scheduleUrl}`
 
     return sendSMS(params.to, body)
 }
