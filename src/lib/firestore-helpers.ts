@@ -44,9 +44,6 @@ export function formatEventDate(value: string | number | Date | { seconds: numbe
 }
 
 /**
- * Get a relative label for an event date: "Tonight", "Tomorrow", or the formatted date.
- */
-/**
  * Convert any Firestore date variant to a 'YYYY-MM-DD' string.
  * Useful for calendar day-key comparisons.
  */

@@ -56,6 +56,7 @@ export interface UseCreationWizardReturn {
     // Final
     creating: boolean
     create: () => Promise<void>
+    reset: () => void
 }
 
 export function useCreationWizard(): UseCreationWizardReturn {
@@ -121,6 +122,18 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
     const removeTask = useCallback((index: number) => {
         setTasks(prev => prev.filter((_, i) => i !== index))
+    }, [])
+
+    const reset = useCallback(() => {
+        setStep('details')
+        setCreating(false)
+        setName("")
+        setIsPublic(false)
+        setEventDate(null)
+        setRabbi("")
+        setTracks([])
+        setMusicians([])
+        setTasks([])
     }, [])
 
     const create = useCallback(async () => {
@@ -221,5 +234,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         removeTask,
         creating,
         create,
+        reset,
     }
 }

@@ -55,12 +55,23 @@ export const POST = createApiHandler(
                     .get()
 
                 if (!existing.empty) {
-                    // Already assigned — skip
-                    created.push(musician.uid)
+                    // Already assigned — skip (don't count as newly created)
                     continue
                 }
 
                 const isCore = musician.schedulingTier === 'core'
+
+                // Detect new songs BEFORE writing the assignment (so the new assignment
+                // doesn't appear in the musician's history and mark everything as "seen")
+                let newSongs: { title: string; fileId: string }[] = []
+                if (setlistTracks.length > 0) {
+                    try {
+                        const detected = await detectNewSongs(db, musician.uid, setlistTracks)
+                        newSongs = detected.filter(s => s.fileId).map(s => ({ title: s.title, fileId: s.fileId! }))
+                    } catch (e) {
+                        logger.warn(`[Scheduling] New song detection failed for ${musician.name}:`, e)
+                    }
+                }
 
                 const assignmentData = {
                     setlistId,
@@ -82,17 +93,6 @@ export const POST = createApiHandler(
 
                 const ref = await db.collection('scheduling_assignments').add(assignmentData)
                 created.push(musician.uid)
-
-                // Detect new songs for this musician (best effort — never blocks assignment)
-                let newSongs: { title: string; fileId: string }[] = []
-                if (setlistTracks.length > 0) {
-                    try {
-                        const detected = await detectNewSongs(db, musician.uid, setlistTracks)
-                        newSongs = detected.filter(s => s.fileId).map(s => ({ title: s.title, fileId: s.fileId! }))
-                    } catch (e) {
-                        logger.warn(`[Scheduling] New song detection failed for ${musician.name}:`, e)
-                    }
-                }
 
                 // Check musician's notification preferences
                 const musicianDoc = await db.collection('users').doc(musician.uid).get()
@@ -146,7 +146,7 @@ export const POST = createApiHandler(
                     })
                 }
 
-                // Create in-app notification (fire-and-forget) — only if enabled
+                // Create in-app notification — only if enabled
                 if (pushEnabled) {
                     try {
                         const notifRef = db.collection('users').doc(musician.uid).collection('notifications')

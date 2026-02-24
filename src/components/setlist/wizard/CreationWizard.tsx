@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
     ChevronLeft, ChevronRight, Check, Loader2, Music, Users, ListTodo,
     Calendar as CalendarIcon, Lock, Globe, Plus, X, Trash2,
@@ -35,6 +35,11 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
     const { isBandLeader } = useAuth()
     const wizard = useCreationWizard()
     const [showAddSongs, setShowAddSongs] = useState(false)
+
+    // Reset wizard state each time the dialog opens
+    useEffect(() => {
+        if (open) wizard.reset()
+    }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const isLastStep = wizard.stepIndex === wizard.totalSteps - 1
 
@@ -322,9 +327,6 @@ function MusiciansStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard
 function TasksStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
     const { user } = useAuth()
     const [title, setTitle] = useState("")
-    const [assigneeUid, setAssigneeUid] = useState(user?.uid || "")
-
-    // We'll use a simplified version — assignee defaults to the current user
     const handleAdd = () => {
         if (!title.trim() || !user) return
         wizard.addTask({

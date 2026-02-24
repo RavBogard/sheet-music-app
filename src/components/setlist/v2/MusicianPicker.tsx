@@ -62,7 +62,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
     const [bandSuggestions, setBandSuggestions] = useState<Array<{
         uid: string; name: string; email: string; phone: string | null;
         instrumentKey: string | null; instrumentLabel: string | null;
-        schedulingTier: string; score: number; blocked: boolean;
+        schedulingTier: string; score: number; isBlocked: boolean;
         reasons: string[];
     }>>([])
     const [bandSuggestionsGap, setBandSuggestionsGap] = useState<string[]>([])
@@ -748,7 +748,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                     <p className="text-xs text-muted-foreground text-center py-3">No suggestions available</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-1.5">
-                                        {bandSuggestions.filter(s => !s.blocked).map(s => {
+                                        {bandSuggestions.filter(s => !s.isBlocked).map(s => {
                                             const alreadySelected = musicians.some(m => m.uid === s.uid)
                                             return (
                                                 <button
