@@ -3,6 +3,7 @@ import {
     collection,
     addDoc,
     updateDoc,
+    deleteDoc,
     doc,
     onSnapshot,
     query,
@@ -113,24 +114,28 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         async deleteSetlist(id: string, _isPublic: boolean) {
             try {
-                // Determine what tasks are attached and batch delete them
-                const tasksQuery = query(collection(db, 'tasks'), where('setlistId', '==', id))
-                const taskSnap = await getDocs(tasksQuery)
+                // Delete the setlist document — this is the critical operation.
+                await deleteDoc(doc(db, COLLECTION_PATH, id))
 
-                const batch = writeBatch(db)
+                // Best-effort cleanup of associated tasks.
+                // Tasks use `allow write: if false` in Firestore rules (server-only),
+                // so client-side deletion will fail. Orphaned tasks are harmless
+                // (they reference a non-existent setlist and won't render).
+                try {
+                    const tasksQuery = query(collection(db, 'tasks'), where('setlistId', '==', id))
+                    const taskSnap = await getDocs(tasksQuery)
+                    if (taskSnap.size > 0) {
+                        const batch = writeBatch(db)
+                        taskSnap.docs.forEach(taskDoc => batch.delete(taskDoc.ref))
+                        await batch.commit()
+                    }
+                } catch {
+                    // Expected in most cases — rules block client-side task writes
+                }
 
-                // Delete the core setlist doc
-                batch.delete(doc(db, COLLECTION_PATH, id))
-
-                // Delete all associated tasks
-                taskSnap.docs.forEach(taskDoc => {
-                    batch.delete(taskDoc.ref)
-                })
-
-                await batch.commit()
                 logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
             } catch (e) {
-                logger.error("Error deleting setlist and its tasks:", e)
+                logger.error("Error deleting setlist:", e)
                 throw e
             }
         },
