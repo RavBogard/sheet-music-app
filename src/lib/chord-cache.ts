@@ -20,6 +20,24 @@ export interface CachedChord {
     h?: number
     pxHeight?: number
     source?: ChordSource
+    sizeOverride?: { wPct?: number; pxHeight?: number }
+}
+
+/**
+ * Canonical overlay type used at render time.
+ * Extends CachedChord — same shape persisted to Firestore.
+ */
+export interface ChordOverlay extends CachedChord {}
+
+/** Convert a ChordOverlay to a CachedChord for persistence. */
+export function toCache(c: ChordOverlay): CachedChord {
+    return {
+        text: c.text,
+        originalText: c.originalText || c.text,
+        x: c.x, y: c.y, w: c.w, h: c.h, pxHeight: c.pxHeight,
+        source: (c.source || 'textLayer') as ChordSource,
+        sizeOverride: c.sizeOverride,
+    }
 }
 
 interface CacheResult {

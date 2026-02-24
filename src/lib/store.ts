@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { ChordOverlay } from '@/lib/chord-cache'
 
 export type FileType = 'pdf' | 'musicxml' | 'chordpro'
 
@@ -26,13 +27,13 @@ export interface MusicState {
     zoom: number // 1 = 100%
     currentVisiblePage: number // 1-indexed, tracks which PDF page is most visible
 
-    // AI Transposer State (New Approach)
+    // AI Transposer State
     aiState: {
         isEnabled: boolean
-        scanningPages: number[] // List of page indexes currently scanning
+        scanningPages: number[]
         pageData: Record<number, {
             strips: { id: string; y: number; height: number; image?: string }[]
-            chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number; source?: 'textLayer' | 'ai' | 'user' }[]
+            chords: ChordOverlay[]
         }>
         error: string | null
     }
@@ -66,6 +67,9 @@ export interface MusicState {
     // Chord Edit Mode
     isEditingChords: boolean
     setEditingChords: (editing: boolean) => void
+    pendingEditCount: number
+    incrementPendingEdits: () => void
+    resetPendingEdits: () => void
 
     // Gig Mode (Performance)
     gigModeActive: boolean
@@ -84,7 +88,7 @@ export interface MusicState {
     setPageScanning: (pageIndex: number, isScanning: boolean) => void
     setPageData: (pageIndex: number, data: {
         strips: { id: string; y: number; height: number; image?: string }[]
-        chords: { text: string; x: number; y: number; originalText: string; pxHeight?: number; h?: number; w?: number; source?: 'textLayer' | 'ai' | 'user' }[]
+        chords: ChordOverlay[]
     }) => void
     setAiError: (error: string | null) => void
 
@@ -140,6 +144,7 @@ export const useMusicStore = create<MusicState>()(
             syncedBroadcasterId: null,
 
             isEditingChords: false,
+            pendingEditCount: 0,
             gigModeActive: false,
             capoFret: null,
 
@@ -260,7 +265,9 @@ export const useMusicStore = create<MusicState>()(
 
             setSyncedBroadcasterId: (id) => set({ syncedBroadcasterId: id }),
 
-            setEditingChords: (editing) => set({ isEditingChords: editing }),
+            setEditingChords: (editing) => set({ isEditingChords: editing, ...(editing ? {} : { pendingEditCount: 0 }) }),
+            incrementPendingEdits: () => set(s => ({ pendingEditCount: s.pendingEditCount + 1 })),
+            resetPendingEdits: () => set({ pendingEditCount: 0 }),
             setGigModeActive: (active) => set({ gigModeActive: active }),
 
             reset: () => set({
@@ -271,6 +278,10 @@ export const useMusicStore = create<MusicState>()(
                 currentVisiblePage: 1,
                 aiXmlContent: null,
                 isEditingChords: false,
+                pendingEditCount: 0,
+                gigModeActive: false,
+                capoFret: null,
+                capo: { active: false, targetShape: '', fret: 0 },
                 playbackQueue: [],
                 queueIndex: -1,
                 returnPath: null,

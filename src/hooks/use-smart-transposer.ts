@@ -3,43 +3,13 @@ import { useMusicStore } from "@/lib/store"
 import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
-import { loadChordCache, saveChordCache, saveNativeKey, type CachedChord, type ChordSource } from "@/lib/chord-cache"
+import { loadChordCache, saveChordCache, saveNativeKey, toCache, type CachedChord, type ChordSource, type ChordOverlay } from "@/lib/chord-cache"
+import { acquireAiSlot, releaseAiSlot } from "@/lib/ai-concurrency"
 import { apiFetch } from "@/lib/api-client"
 import { logger } from "@/lib/logger"
 
-export interface ChordOverlay {
-    text: string
-    originalText: string
-    x: number
-    y: number
-    w?: number
-    h?: number
-    pxHeight?: number
-    source?: ChordSource
-}
-
-// ── Concurrency limiter for AI validation ──
-let activeAiCalls = 0
-const AI_MAX_CONCURRENT = 2
-const aiQueue: (() => void)[] = []
-
-export function acquireAiSlot(): Promise<void> {
-    if (activeAiCalls < AI_MAX_CONCURRENT) {
-        activeAiCalls++
-        return Promise.resolve()
-    }
-    return new Promise(resolve => {
-        aiQueue.push(() => { activeAiCalls++; resolve() })
-    })
-}
-
-export function releaseAiSlot() {
-    activeAiCalls--
-    if (aiQueue.length > 0) {
-        const next = aiQueue.shift()
-        next?.()
-    }
-}
+// Re-export for consumers that import from here
+export type { ChordOverlay } from "@/lib/chord-cache"
 
 /**
  * Resolve the current file's Drive ID from the store.
@@ -92,12 +62,10 @@ export function mergeAiResults(
             matchedAiIndices.add(ai)
             const cleanAi = cleanChordText(aiChord.text)
             if (cleanAi !== merged[bestMatch].text) {
-                // AI corrected this chord
                 merged[bestMatch].text = cleanAi
                 merged[bestMatch].source = 'ai'
             }
         } else {
-            // AI found a chord the text layer missed
             matchedAiIndices.add(ai)
             merged.push({
                 text: cleanChordText(aiChord.text),
@@ -141,12 +109,10 @@ export async function capturePageImage(pageEl: HTMLElement): Promise<string | nu
     const canvas = pageEl.querySelector('canvas') as HTMLCanvasElement
     if (!canvas) return null
 
-    // Create a smaller canvas for the API (1200px wide max)
     const maxWidth = 1200
     const scale = canvas.width > maxWidth ? maxWidth / canvas.width : 1
 
     if (typeof OffscreenCanvas !== 'undefined') {
-        // OffscreenCanvas is non-blocking for blob conversion
         const offscreen = new OffscreenCanvas(canvas.width * scale, canvas.height * scale)
         const ctx = offscreen.getContext('2d')
         if (!ctx) return null
@@ -191,23 +157,26 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         setAiError,
         transposition,
         isEditingChords,
+        incrementPendingEdits,
     } = useMusicStore()
     const fileId = useCurrentFileId()
 
     const [hasScanned, setHasScanned] = useState(false)
     const [_localError, setLocalError] = useState<string | null>(null)
     const [editPopover, setEditPopover] = useState<{ index: number; x: number; y: number } | null>(null)
+    const [addingChordAt, setAddingChordAt] = useState<{ x: number; y: number } | null>(null)
 
     const nativeKeyWritten = useRef(false)
     const pageData = aiState.pageData[pageNumber]
 
+    // ── Trigger scan when enabled and page is rendered ──
     useEffect(() => {
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
             runScan()
         }
     }, [aiState.isEnabled, isRendered, pageData, hasScanned, pageNumber, aiState.scanningPages])
 
-    // Write native key when we have enough data (once per file)
+    // ── Write native key when we have enough data (once per file) ──
     useEffect(() => {
         if (!fileId || nativeKeyWritten.current) return
         const allChords = Object.values(aiState.pageData).flatMap(
@@ -222,6 +191,20 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         }
     }, [aiState.pageData, fileId])
 
+    // ── Helper: persist chords to store + cache ──
+    const persistChords = useCallback((chords: ChordOverlay[]) => {
+        // Read fresh strips from store to avoid stale closure
+        const freshStrips = useMusicStore.getState().aiState.pageData[pageNumber]?.strips ?? []
+        setPageData(pageNumber, { chords, strips: freshStrips })
+        if (fileId) {
+            saveChordCache(fileId, pageNumber, chords.map(toCache), 'textLayer+ai', true)
+        }
+    }, [pageNumber, fileId, setPageData])
+
+    // ════════════════════════════════════════════════════
+    // SCAN PIPELINE (cache → text layer → AI validation)
+    // ════════════════════════════════════════════════════
+
     const runScan = async () => {
         if (!pageRef.current) return
 
@@ -232,7 +215,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             let userOverrides: CachedChord[] = []
 
-            // ── Step 1: Check chord cache ──
+            // Step 1: Check chord cache
             if (fileId) {
                 try {
                     const cached = await loadChordCache(fileId, pageNumber)
@@ -243,12 +226,13 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                             const autoChords = cached.chords.filter(c => c.source !== 'user')
 
                             if (autoChords.length > 0 && cached.aiValidated) {
-                                const mappedChords = cached.chords.map(c => ({
+                                const mappedChords: ChordOverlay[] = cached.chords.map(c => ({
                                     text: c.text,
                                     originalText: c.originalText || c.text,
                                     x: c.x, y: c.y, w: c.w, h: c.h,
                                     pxHeight: c.pxHeight,
                                     source: (c.source || 'textLayer') as ChordSource,
+                                    sizeOverride: c.sizeOverride,
                                 }))
                                 setPageData(pageNumber, { chords: mappedChords, strips: [] })
                                 setPageScanning(pageNumber, false)
@@ -263,7 +247,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             const pageEl = pageRef.current
 
-            // ── Step 2: Text Layer Scan ──
+            // Step 2: Text Layer Scan
             const textChords = scanTextLayer(pageEl)
 
             const mappedChords: ChordOverlay[] = textChords.map(c => ({
@@ -298,7 +282,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             setPageData(pageNumber, { chords: mappedChords, strips: [] })
             setPageScanning(pageNumber, false)
 
-            // ── Step 3: AI Validation (async) ──
+            // Step 3: AI Validation (async, non-blocking)
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(() => {
                     runAiValidation(pageEl, mappedChords, userOverrides)
@@ -323,14 +307,10 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         currentChords: ChordOverlay[],
         userOverrides: CachedChord[]
     ) => {
+        await acquireAiSlot()
         try {
-            await acquireAiSlot()
-
             const image = await capturePageImage(pageEl)
-            if (!image) {
-                releaseAiSlot()
-                return
-            }
+            if (!image) return
 
             const existingChords = currentChords
                 .filter(c => c.source !== 'user')
@@ -341,23 +321,15 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 body: JSON.stringify({ image, existingChords })
             })
 
-            if (!res.ok) {
-                releaseAiSlot()
-                return
-            }
+            if (!res.ok) return
 
             const json = await res.json()
             const aiChords = json.chords as { text: string; x: number; y: number }[]
 
             if (!aiChords || aiChords.length === 0) {
                 if (fileId) {
-                    saveChordCache(fileId, pageNumber, currentChords.map(c => ({
-                        text: c.text, originalText: c.originalText,
-                        x: c.x, y: c.y, w: c.w, h: c.h, pxHeight: c.pxHeight,
-                        source: c.source,
-                    })), 'textLayer+ai', true)
+                    saveChordCache(fileId, pageNumber, currentChords.map(toCache), 'textLayer+ai', true)
                 }
-                releaseAiSlot()
                 return
             }
 
@@ -365,46 +337,31 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             setPageData(pageNumber, { chords: merged, strips: [] })
 
             if (fileId) {
-                saveChordCache(fileId, pageNumber, merged.map(c => ({
-                    text: c.text, originalText: c.originalText,
-                    x: c.x, y: c.y, w: c.w, h: c.h, pxHeight: c.pxHeight,
-                    source: c.source,
-                })), 'textLayer+ai', true)
+                saveChordCache(fileId, pageNumber, merged.map(toCache), 'textLayer+ai', true)
             }
-
-            releaseAiSlot()
         } catch (err) {
             logger.warn("[AI Validation] Failed (non-fatal):", err)
+        } finally {
             releaseAiSlot()
         }
     }
 
-    const handleChordCorrection = useCallback((chordIndex: number, newText: string) => {
-        if (!pageData) return
+    // ════════════════════════════════════════════════════
+    // EDIT MODE HANDLERS
+    // ════════════════════════════════════════════════════
 
-        const updatedChords = pageData.chords.map((c: ChordOverlay, i: number) => {
-            if (i === chordIndex) {
-                return { ...c, text: newText, source: 'user' as ChordSource }
-            }
-            return c
-        })
+    /** Single-click on a chord in edit mode → open popover */
+    const handleChordClick = useCallback((e: React.MouseEvent, i: number, chord: ChordOverlay) => {
+        e.stopPropagation()
 
-        setPageData(pageNumber, { ...pageData, chords: updatedChords })
-        setEditPopover(null)
-
-        if (fileId) {
-            saveChordCache(fileId, pageNumber, updatedChords.map((c: ChordOverlay) => ({
-                text: c.text, originalText: c.originalText || c.text,
-                x: c.x, y: c.y, w: c.w, h: c.h, pxHeight: c.pxHeight,
-                source: (c.source || 'textLayer') as ChordSource,
-            })), 'textLayer+ai', true)
+        if (isEditingChords) {
+            // Toggle popover
+            setEditPopover(editPopover?.index === i ? null : { index: i, x: chord.x, y: chord.y })
         }
-    }, [pageData, pageNumber, fileId, setPageData])
+    }, [isEditingChords, editPopover])
 
-    const bgLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const [addingChord, setAddingChord] = useState<{ x: number; y: number } | null>(null)
-
-    const handleBgLongPressStart = useCallback((e: React.PointerEvent) => {
+    /** Double-click on empty background → AI detects chord at that position */
+    const handleBgDoubleClick = useCallback(async (e: React.MouseEvent) => {
         if (!isEditingChords || !pageRef.current) return
 
         const pageEl = pageRef.current
@@ -412,92 +369,113 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         const xPct = ((e.clientX - rect.left) / rect.width) * 100
         const yPct = ((e.clientY - rect.top) / rect.height) * 100
 
-        bgLongPressTimer.current = setTimeout(async () => {
-            setAddingChord({ x: xPct, y: yPct })
+        setAddingChordAt({ x: xPct, y: yPct })
+        setEditPopover(null)
 
-            try {
-                const image = await capturePageImage(pageEl)
-                if (!image) { setAddingChord(null); return }
+        try {
+            const image = await capturePageImage(pageEl)
+            if (!image) { setAddingChordAt(null); return }
 
-                const res = await apiFetch('/api/ai/chord-validate', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        image,
-                        existingChords: [],
-                        regionHint: { x: xPct, y: yPct }
-                    })
+            const res = await apiFetch('/api/ai/chord-validate', {
+                method: 'POST',
+                body: JSON.stringify({
+                    image,
+                    existingChords: [],
+                    regionHint: { x: xPct, y: yPct }
+                })
+            })
+
+            if (!res.ok) { setAddingChordAt(null); return }
+
+            const json = await res.json()
+            const aiChords = json.chords as { text: string; x: number; y: number }[]
+
+            if (aiChords && aiChords.length > 0 && pageData) {
+                // Find closest chord to click point
+                const closest = aiChords.reduce((best, c) => {
+                    const dist = Math.sqrt((c.x - xPct) ** 2 + (c.y - yPct) ** 2)
+                    const bestDist = Math.sqrt((best.x - xPct) ** 2 + (best.y - yPct) ** 2)
+                    return dist < bestDist ? c : best
                 })
 
-                if (!res.ok) { setAddingChord(null); return }
-
-                const json = await res.json()
-                const aiChords = json.chords as { text: string; x: number; y: number }[]
-
-                if (aiChords && aiChords.length > 0) {
-                    let closest = aiChords[0]
-                    let closestDist = Infinity
-                    for (const c of aiChords) {
-                        const dist = Math.sqrt((c.x - xPct) ** 2 + (c.y - yPct) ** 2)
-                        if (dist < closestDist) {
-                            closestDist = dist
-                            closest = c
-                        }
-                    }
-
-                    if (pageData) {
-                        const newChord: ChordOverlay = {
-                            text: cleanChordText(closest.text),
-                            originalText: '',
-                            x: closest.x, y: closest.y,
-                            source: 'user'
-                        }
-                        const updatedChords = [...pageData.chords, newChord]
-                        setPageData(pageNumber, { ...pageData, chords: updatedChords })
-
-                        if (fileId) {
-                            saveChordCache(fileId, pageNumber, updatedChords.map(c => ({
-                                text: c.text, originalText: c.originalText || c.text,
-                                x: c.x, y: c.y, w: c.w, h: c.h, pxHeight: c.pxHeight,
-                                source: (c.source || 'textLayer') as ChordSource,
-                            })), 'textLayer+ai', true)
-                        }
-                    }
+                const newChord: ChordOverlay = {
+                    text: cleanChordText(closest.text),
+                    originalText: '',
+                    x: closest.x, y: closest.y,
+                    source: 'user'
                 }
-            } catch (err) {
-                logger.warn("[Add Chord] Failed:", err)
+                const updated = [...pageData.chords, newChord]
+                persistChords(updated)
+                incrementPendingEdits()
+                // Open popover on the new chord so user can confirm/edit
+                setEditPopover({ index: updated.length - 1, x: newChord.x, y: newChord.y })
+            } else if (pageData) {
+                // AI found nothing — insert a placeholder the user can fill in
+                const placeholder: ChordOverlay = {
+                    text: '?',
+                    originalText: '',
+                    x: xPct, y: yPct,
+                    source: 'user'
+                }
+                const updated = [...pageData.chords, placeholder]
+                persistChords(updated)
+                setEditPopover({ index: updated.length - 1, x: xPct, y: yPct })
             }
-
-            setAddingChord(null)
-        }, 500)
-    }, [isEditingChords, pageRef, pageData, pageNumber, fileId, setPageData])
-
-    const handleBgLongPressEnd = useCallback(() => {
-        if (bgLongPressTimer.current) {
-            clearTimeout(bgLongPressTimer.current)
-            bgLongPressTimer.current = null
+        } catch (err) {
+            logger.warn("[Add Chord] Failed:", err)
+        } finally {
+            setAddingChordAt(null)
         }
-    }, [])
+    }, [isEditingChords, pageRef, pageData, persistChords, incrementPendingEdits])
 
-    const chordPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const handleChordPointerDown = useCallback((e: React.PointerEvent, i: number, chord: ChordOverlay) => {
-        e.stopPropagation()
+    /** Correct a chord's text */
+    const handleChordCorrection = useCallback((chordIndex: number, newText: string) => {
+        if (!pageData) return
+        const text = newText.trim()
+        if (!text || text === '?') return
 
-        if (isEditingChords) {
-            setEditPopover(editPopover?.index === i ? null : { index: i, x: chord.x, y: chord.y })
-            return
-        }
+        const updatedChords = pageData.chords.map((c: ChordOverlay, i: number) =>
+            i === chordIndex ? { ...c, text, source: 'user' as ChordSource } : c
+        )
 
-        chordPressTimer.current = setTimeout(() => {
-            setEditPopover({ index: i, x: chord.x, y: chord.y })
-        }, 500)
-    }, [isEditingChords, editPopover])
+        persistChords(updatedChords)
+        setEditPopover(null)
+        incrementPendingEdits()
+    }, [pageData, persistChords, incrementPendingEdits])
 
-    const handleChordPointerUpOrCancel = useCallback((e: React.PointerEvent) => {
-        if (chordPressTimer.current) {
-            clearTimeout(chordPressTimer.current)
-            chordPressTimer.current = null
-        }
-    }, [])
+    /** Delete a chord */
+    const handleChordDelete = useCallback((chordIndex: number) => {
+        if (!pageData) return
+
+        const updatedChords = pageData.chords.filter((_: ChordOverlay, i: number) => i !== chordIndex)
+        persistChords(updatedChords)
+        setEditPopover(null)
+        incrementPendingEdits()
+    }, [pageData, persistChords, incrementPendingEdits])
+
+    /** Nudge a chord's width override */
+    const handleChordResize = useCallback((chordIndex: number, deltaW: number) => {
+        if (!pageData) return
+
+        const updatedChords = pageData.chords.map((c: ChordOverlay, i: number) => {
+            if (i !== chordIndex) return c
+            const currentW = c.sizeOverride?.wPct ?? c.w ?? 2
+            return {
+                ...c,
+                sizeOverride: {
+                    ...c.sizeOverride,
+                    wPct: Math.max(0.5, currentW + deltaW),
+                },
+            }
+        })
+
+        persistChords(updatedChords)
+        incrementPendingEdits()
+    }, [pageData, persistChords, incrementPendingEdits])
+
+    // ════════════════════════════════════════════════════
+    // DERIVED STATE
+    // ════════════════════════════════════════════════════
 
     // Derive flat/sharp preference from the target key
     const allChords = Object.values(aiState.pageData).flatMap(
@@ -569,12 +547,12 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         transposition,
         preferFlats,
         detectedKey,
-        addingChord,
-        handleBgLongPressStart,
-        handleBgLongPressEnd,
-        handleChordPointerDown,
-        handleChordPointerUpOrCancel,
+        addingChordAt,
+        handleChordClick,
+        handleBgDoubleClick,
         handleChordCorrection,
-        getSuggestions
+        handleChordDelete,
+        handleChordResize,
+        getSuggestions,
     }
 }

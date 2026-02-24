@@ -14,19 +14,13 @@ vi.mock('react', () => ({
     useRef: vi.fn(() => ({ current: null })),
 }))
 
-import {
-    mergeAiResults,
-    acquireAiSlot,
-    releaseAiSlot,
-    ChordOverlay
-} from './use-smart-transposer'
-import { CachedChord } from '@/lib/chord-cache'
+import { mergeAiResults } from './use-smart-transposer'
+import { acquireAiSlot, releaseAiSlot, resetAiConcurrency } from '@/lib/ai-concurrency'
+import type { ChordOverlay, CachedChord } from '@/lib/chord-cache'
 
 describe('Concurrency Limiter (acquireAiSlot / releaseAiSlot)', () => {
     beforeEach(() => {
-        // We have to reset module state before each test, but they are module-level lets.
-        // A hacky reset is to acquire/release until balanced, but since we can't inspect the queue, 
-        // we'll just test the concurrency behavior within a single suite run.
+        resetAiConcurrency()
         vi.useFakeTimers()
     })
 

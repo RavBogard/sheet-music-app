@@ -341,7 +341,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
  * Rendered by the performance layout, not the popover.
  */
 export function ChordEditBar() {
-    const { isEditingChords, setEditingChords, playbackQueue, queueIndex, fileUrl } = useMusicStore()
+    const { isEditingChords, setEditingChords, pendingEditCount, resetPendingEdits, playbackQueue, queueIndex, fileUrl } = useMusicStore()
     const { user } = useAuth()
 
     if (!isEditingChords) return null
@@ -364,10 +364,12 @@ export function ChordEditBar() {
             saveVerification(fileId, verifierName)
         }
         setEditingChords(false)
+        resetPendingEdits()
     }
 
     const handleCancel = () => {
         setEditingChords(false)
+        resetPendingEdits()
     }
 
     return (
@@ -376,8 +378,16 @@ export function ChordEditBar() {
                 <div className="flex items-center gap-2 text-violet-300 text-sm font-medium">
                     <Pencil className="h-4 w-4" />
                     Editing Chords
+                    {pendingEditCount > 0 && (
+                        <span className="bg-violet-600/20 text-violet-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-violet-500/30">
+                            {pendingEditCount} edit{pendingEditCount !== 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
+                    <span className="text-zinc-600 text-[10px] hidden sm:block mr-1">
+                        Click chord to edit · Double-click to add
+                    </span>
                     <Button
                         variant="ghost"
                         size="sm"
