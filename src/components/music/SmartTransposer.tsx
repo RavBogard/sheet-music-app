@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react"
+import React, { useRef, useCallback, useState, useEffect } from "react"
 import { transposeChord } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
 import { useSmartTransposer } from "@/hooks/use-smart-transposer"
@@ -36,9 +36,35 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
     // Ref map for chord overlay elements (needed by portal popover positioning)
     const chordElsRef = useRef<Map<number, HTMLElement>>(new Map())
 
-    // Container dimensions for overlay sizing (read at render time, reactive to zoom)
-    const containerWidthPx = pageRef.current?.offsetWidth ?? 800
-    const containerHeightPx = pageRef.current?.offsetHeight ?? 1100
+    // Container dimensions for overlay sizing — tracked via ResizeObserver
+    // so they update reactively on zoom/resize without reading refs during render.
+    const [containerDims, setContainerDims] = useState({ width: 800, height: 1100 })
+
+    useEffect(() => {
+        const el = pageRef.current
+        if (!el) return
+
+        const measure = () => {
+            setContainerDims({ width: el.offsetWidth, height: el.offsetHeight })
+        }
+        measure()
+
+        const observer = new ResizeObserver(measure)
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [pageRef, isRendered])
+
+    // Sync the popover anchor element from the ref map into state,
+    // so it's available during render without reading refs directly.
+    const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null)
+
+    useEffect(() => {
+        if (editPopover) {
+            setPopoverAnchor(chordElsRef.current.get(editPopover.index) ?? null)
+        } else {
+            setPopoverAnchor(null)
+        }
+    }, [editPopover])
 
     const setChordRef = useCallback((i: number, el: HTMLDivElement | null) => {
         if (el) chordElsRef.current.set(i, el)
@@ -97,7 +123,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     if (!needsOverlay && !isEditingChords) return null
 
                     // Compute dimensions using the sizing utility
-                    const dims = computeOverlayDimensions(chord, displayText, containerWidthPx, containerHeightPx)
+                    const dims = computeOverlayDimensions(chord, displayText, containerDims.width, containerDims.height)
                     const showPopover = editPopover?.index === i
                     const isVisible = needsOverlay || isEditingChords || showPopover
 
@@ -141,7 +167,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                 <ChordEditPopover
                                     chord={chord}
                                     chordIndex={i}
-                                    anchorEl={chordElsRef.current.get(i) ?? null}
+                                    anchorEl={popoverAnchor}
                                     suggestions={getSuggestions(chord, detectedKey)}
                                     transposition={transposition}
                                     preferFlats={preferFlats}
