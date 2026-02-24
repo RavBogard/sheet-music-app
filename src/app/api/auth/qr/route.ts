@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
         const limited = await checkRateLimit(req, 'api')
         if (limited) return limited
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json({ error: "unavailable" }, { status: 503 })
+        }
         const db = getFirestore()
 
         // Accept client-provided code or generate server-side
@@ -83,7 +85,9 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json({ error: "unavailable" }, { status: 503 })
+        }
         const db = getFirestore()
         const doc = await db.collection(COLLECTION).doc(code).get()
 
@@ -135,7 +139,9 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json({ error: "unavailable" }, { status: 503 })
+        }
         const decoded = await verifyIdToken(rawToken)
         if (!decoded) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 })

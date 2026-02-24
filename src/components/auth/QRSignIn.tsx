@@ -70,6 +70,12 @@ export function QRSignIn() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ code }),
             })
+            if (res.status === 503) {
+                // Firebase Admin not available (dev without credentials) — stop polling
+                cleanup()
+                setState("error")
+                return
+            }
             if (!res.ok) throw new Error("Failed to register session")
             // Server confirmed — QR is already showing, nothing to update
         } catch (err) {
@@ -93,6 +99,13 @@ export function QRSignIn() {
         pollRef.current = setInterval(async () => {
             try {
                 const res = await fetch(`/api/auth/qr?code=${session.code}`)
+
+                if (res.status === 503) {
+                    // Firebase Admin not available — stop polling entirely
+                    cleanup()
+                    setState("error")
+                    return
+                }
 
                 if (res.status === 410 || res.status === 404) {
                     // Expired or not found — auto-refresh
