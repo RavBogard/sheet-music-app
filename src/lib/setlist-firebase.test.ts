@@ -23,6 +23,7 @@ vi.mock('firebase/firestore', () => ({
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
     getDoc: (...args: unknown[]) => mockGetDoc(...args),
     getDocs: vi.fn().mockResolvedValue({
+        size: 1,
         docs: [
             { id: 'task1', ref: { path: 'tasks/task1' }, data: () => ({}) },
         ]
@@ -90,10 +91,13 @@ describe('createSetlistService', () => {
     })
 
     describe('deleteSetlist', () => {
-        it('deletes a setlist document and its tasks via batch', async () => {
+        it('deletes the setlist document directly and attempts task cleanup', async () => {
             await service.deleteSetlist('setlist-abc', false)
 
-            expect(mockBatchDelete).toHaveBeenCalledTimes(2) // 1 setlist doc + 1 mocked task
+            // Setlist doc is deleted directly (not via batch)
+            expect(mockDeleteDoc).toHaveBeenCalledTimes(1)
+            // Task cleanup is best-effort via batch (may fail due to Firestore rules)
+            expect(mockBatchDelete).toHaveBeenCalledTimes(1) // 1 mocked task
             expect(mockBatchCommit).toHaveBeenCalledTimes(1)
         })
     })
