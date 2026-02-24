@@ -25,9 +25,9 @@ export interface CachedChord {
 
 /**
  * Canonical overlay type used at render time.
- * Extends CachedChord — same shape persisted to Firestore.
+ * Same shape as CachedChord — persisted to Firestore.
  */
-export interface ChordOverlay extends CachedChord {}
+export type ChordOverlay = CachedChord
 
 /** Convert a ChordOverlay to a CachedChord for persistence. */
 export function toCache(c: ChordOverlay): CachedChord {
