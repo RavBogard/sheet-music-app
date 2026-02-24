@@ -1,7 +1,9 @@
+import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+
 /**
  * Contextual greeting generator with Hebrew calendar awareness.
  * Uses the browser/Node Intl API for Hebrew date conversion (zero dependencies).
- * 
+ *
  * Priority: Holiday greeting > Shabbat greeting > Time-of-day greeting
  */
 
@@ -189,7 +191,7 @@ export function getContextualGreeting(name: string | null, date?: Date, appName?
     const hour = now.getHours()
     const atmosphere = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
     return {
-        text: name ? `${timeGreeting}, ${name}` : `Welcome to ${appName || 'CRC Music'}`,
+        text: name ? `${timeGreeting}, ${name}` : `Welcome to ${appName || DEFAULT_SHORT_NAME}`,
         hebrewDate: hDate.display,
         isSpecial: false,
         atmosphere

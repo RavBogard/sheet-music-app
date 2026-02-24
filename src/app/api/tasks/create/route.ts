@@ -14,6 +14,7 @@ import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { sendTaskAssignmentEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
+import { BASE_URL } from '@/lib/constants'
 
 /** Basic email format check — not exhaustive but catches junk input */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
         await taskRef.set(taskData)
 
         // Send assignment email (must await — Vercel kills the runtime after response)
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
+        const baseUrl = BASE_URL
         const taskUrl = `${baseUrl}/perform/setlist/${setlistId}?tasks=1`
 
         const emailResult = await sendTaskAssignmentEmail({

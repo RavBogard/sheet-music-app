@@ -53,13 +53,6 @@ export interface MusicState {
         isLooping: boolean
     }
 
-    // Capo State
-    capo: {
-        active: boolean
-        targetShape: string // e.g. "G"
-        fret: number // e.g. 3
-    }
-
     // Live Follow-the-Leader Sync
     syncedBroadcasterId: string | null
     setSyncedBroadcasterId: (id: string | null) => void
@@ -103,9 +96,6 @@ export interface MusicState {
     // Audio Actions
     setAudioState: (state: Partial<MusicState['audio']>) => void
 
-    // Capo Actions
-    setCapoState: (state: Partial<MusicState['capo']>) => void
-
     // AI OMR Content
     aiXmlContent: string | null
     setAiXmlContent: (xml: string | null) => void
@@ -135,12 +125,6 @@ export const useMusicStore = create<MusicState>()(
                 error: null
             },
 
-            capo: {
-                active: false,
-                targetShape: '',
-                fret: 0
-            },
-
             syncedBroadcasterId: null,
 
             isEditingChords: false,
@@ -161,7 +145,6 @@ export const useMusicStore = create<MusicState>()(
                 fileType: type,
                 returnPath: returnPath ?? get().returnPath,
                 transposition: 0,
-                capo: { active: false, targetShape: '', fret: 0 },
                 capoFret: null,
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
@@ -257,10 +240,6 @@ export const useMusicStore = create<MusicState>()(
                 audio: { ...state.audio, ...newState }
             })),
 
-            setCapoState: (newState: Partial<MusicState['capo']>) => set((state) => ({
-                capo: { ...state.capo, ...newState }
-            })),
-
             setCapoFret: (fret) => set({ capoFret: fret }),
 
             setSyncedBroadcasterId: (id) => set({ syncedBroadcasterId: id }),
@@ -281,7 +260,6 @@ export const useMusicStore = create<MusicState>()(
                 pendingEditCount: 0,
                 gigModeActive: false,
                 capoFret: null,
-                capo: { active: false, targetShape: '', fret: 0 },
                 playbackQueue: [],
                 queueIndex: -1,
                 returnPath: null,

@@ -71,15 +71,24 @@ export function PeopleSection() {
     const bulkSetRole = async (role: string) => {
         const uids = Array.from(selectedUsers)
         let success = 0
+        let failed = 0
         for (const uid of uids) {
             try {
                 await updateUserRole(uid, role as UserRole)
                 notifyRoleChanged(uid, role).catch(() => { })
                 success++
-            } catch { /* skip failures */ }
+            } catch {
+                failed++
+            }
         }
         const labels: Record<string, string> = { member: 'Member', musician: 'Musician', band_leader: 'Band Leader' }
-        toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
+        if (failed === 0) {
+            toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
+        } else if (success > 0) {
+            toast.warning(`Updated ${success} user${success !== 1 ? 's' : ''}, but ${failed} failed`)
+        } else {
+            toast.error(`Failed to update ${failed} user${failed !== 1 ? 's' : ''}`)
+        }
         clearSelection()
     }
 

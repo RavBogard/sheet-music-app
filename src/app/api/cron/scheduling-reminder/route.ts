@@ -3,6 +3,7 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
+import { BASE_URL } from "@/lib/constants"
 
 /**
  * GET /api/cron/scheduling-reminder
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
     try {
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+        const baseUrl = BASE_URL
 
         // Get all pending assignments
         const snap = await db.collection('scheduling_assignments')

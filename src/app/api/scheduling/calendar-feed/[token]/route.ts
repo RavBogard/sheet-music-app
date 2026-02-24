@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { BASE_URL } from "@/lib/constants"
 
 /**
  * GET /api/scheduling/calendar-feed/[token]
@@ -69,7 +70,7 @@ export async function GET(
 
             const instrumentText = a.instrument ? ` (${a.instrument})` : ''
             const statusText = a.status === 'confirmed' ? 'Confirmed' : 'Pending'
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+            const baseUrl = BASE_URL
 
             const description = [
                 `Status: ${statusText}`,

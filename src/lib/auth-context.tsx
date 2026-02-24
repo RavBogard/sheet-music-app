@@ -15,6 +15,7 @@ import { auth, googleProvider } from "./firebase"
 import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
+import { deriveRoles } from "@/lib/roles"
 
 interface CachedUser {
     displayName: string | null
@@ -73,13 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch { return null }
     })
 
-    // Derived roles — hierarchical: admin > band_leader > musician > member > pending
-    // Backward compat: old 'leader' maps to band_leader, old 'member' maps to musician (until migration)
-    const role = profile?.role
-    const isAdmin = role === 'admin'
-    const isBandLeader = isAdmin || role === 'band_leader' || role === 'leader' as string
-    const isMusician = isBandLeader || role === 'musician'
-    const isMember = isMusician || role === 'member'
+    // Derived roles — uses shared hierarchy from @/lib/roles
+    const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(profile?.role)
     const isSoundEngineer = !!profile?.soundEngineer
 
     useEffect(() => {
@@ -139,13 +135,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     logger.error("Error ensuring user profile", e)
                 })
 
-                // Re-register push token if user previously opted in (once per session, M5 fix)
-                if (!pushRegistered.current && typeof window !== 'undefined' && localStorage.getItem('crc_push_token')) {
-                    pushRegistered.current = true
-                    import('./push-notifications').then(({ registerPushNotifications }) => {
-                        registerPushNotifications(currentUser.uid).catch(() => {})
-                    }).catch(() => {})
-                }
             } else {
                 setProfile(null)
                 setLoading(false)
@@ -157,6 +146,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (unsubscribeProfile) unsubscribeProfile()
         }
     }, [])
+
+    // Re-register push token if user previously opted in (once per session).
+    // Separated from the auth listener to keep concerns clean.
+    useEffect(() => {
+        if (!user || pushRegistered.current) return
+        if (typeof window === 'undefined' || !localStorage.getItem('crc_push_token')) return
+        pushRegistered.current = true
+        import('./push-notifications').then(({ registerPushNotifications }) => {
+            registerPushNotifications(user.uid).catch(() => {})
+        }).catch(() => {})
+    }, [user])
 
     const signIn = async () => {
         try {

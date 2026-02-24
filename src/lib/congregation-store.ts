@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { db } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
 import type { RabbiProfile } from "@/types/models"
+import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 
 export interface CongregationConfig {
     name: string
@@ -34,7 +35,7 @@ export interface CongregationConfig {
 
 const DEFAULT_CONFIG: CongregationConfig = {
     name: "Central Reform Congregation",
-    shortName: "CRC Music",
+    shortName: DEFAULT_SHORT_NAME,
     location: "St. Louis, MO",
     logoUrl: "/logo.jpg",
     description: "Digital Sheet Music Library for CRC Musicians",

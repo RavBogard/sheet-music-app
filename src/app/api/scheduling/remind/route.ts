@@ -5,6 +5,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
+import { BASE_URL } from "@/lib/constants"
 
 const remindSchema = z.object({
     setlistId: z.string().min(1),
@@ -18,7 +19,7 @@ export const POST = createApiHandler(
     async (ctx) => {
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+        const baseUrl = BASE_URL
 
         const setlistId = ctx.body?.setlistId
 

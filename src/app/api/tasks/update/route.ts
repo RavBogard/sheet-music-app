@@ -16,6 +16,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { sendTaskCompletionEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { SetlistTask } from '@/types/models'
+import { BASE_URL } from '@/lib/constants'
 
 export async function PATCH(request: NextRequest) {
     try {
@@ -80,7 +81,7 @@ export async function PATCH(request: NextRequest) {
             // Retrieve assigner's email to send it back to them
             const assignerDoc = await db.collection('users').doc(taskData.createdBy).get()
             if (assignerDoc.exists && assignerDoc.data()?.email) {
-                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
+                const baseUrl = BASE_URL
                 const taskUrl = `${baseUrl}/perform/setlist/${taskData.setlistId}?tasks=1`
 
                 await sendTaskCompletionEmail({

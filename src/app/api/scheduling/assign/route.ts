@@ -6,6 +6,7 @@ import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingAssignmentSMS } from "@/lib/sms"
 import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
+import { BASE_URL } from "@/lib/constants"
 
 const assignSchema = z.object({
     setlistId: z.string().min(1),
@@ -28,7 +29,7 @@ export const POST = createApiHandler(
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+        const baseUrl = BASE_URL
         const created: string[] = []
         const errors: string[] = []
 

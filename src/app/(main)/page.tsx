@@ -1,6 +1,7 @@
 import { getServerUser, getServerCongregationConfig } from "@/lib/server-auth"
 import { getContextualGreeting } from "@/lib/greeting"
 import DashboardClient from "./DashboardClient"
+import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 
 /**
  * Dashboard — Server Component wrapper.
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
         getServerCongregationConfig().catch(() => null),
     ])
 
-    const shortName = (config?.shortName as string) || "CRC Music"
+    const shortName = (config?.shortName as string) || DEFAULT_SHORT_NAME
     const firstName = user?.displayName?.split(" ")[0] || null
     const greeting = getContextualGreeting(firstName, undefined, shortName)
 

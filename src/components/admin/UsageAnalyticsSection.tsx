@@ -1,13 +1,22 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
+import dynamic from "next/dynamic"
 import {
     BarChart3, Users, FileMusic, ListMusic, Loader2,
-    Download, TrendingUp, Music, AlertTriangle, Calendar,
+    Download, TrendingUp, Music, AlertTriangle,
 } from "lucide-react"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+
+const TimelineChart = dynamic(
+    () => import("@/components/admin/analytics/TimelineChart"),
+    {
+        ssr: false,
+        loading: () => <LoadingState />,
+    }
+)
 
 interface AnalyticsData {
     users: { total: number; pending: number; active30d: number }
@@ -142,7 +151,13 @@ export function UsageAnalyticsSection() {
                                 songLoading ? <LoadingState /> : songData ? <TopSongsTab data={songData} /> : null
                             )}
                             {activeTab === 'timeline' && (
-                                songLoading ? <LoadingState /> : songData ? <TimelineTab data={songData} /> : null
+                                songLoading ? <LoadingState /> : songData ? (
+                                    <TimelineChart
+                                        timeline={songData.timeline}
+                                        dateRange={songData.dateRange}
+                                        totalSetlists={songData.totalSetlists}
+                                    />
+                                ) : null
                             )}
                             {activeTab === 'neglected' && (
                                 songLoading ? <LoadingState /> : songData ? <NeglectedTab data={songData} /> : null
@@ -280,120 +295,6 @@ function TopSongsTab({ data }: { data: SongAnalytics }) {
     )
 }
 
-// ── Timeline Tab (with recharts) ──
-
-function TimelineTab({ data }: { data: SongAnalytics }) {
-    const [ChartComponents, setChartComponents] = useState<{
-        ResponsiveContainer: any
-        BarChart: any
-        Bar: any
-        XAxis: any
-        YAxis: any
-        Tooltip: any
-        CartesianGrid: any
-        LineChart: any
-        Line: any
-    } | null>(null)
-
-    const [chartError, setChartError] = useState(false)
-
-    useEffect(() => {
-        import('recharts').then(mod => {
-            setChartComponents({
-                ResponsiveContainer: mod.ResponsiveContainer,
-                BarChart: mod.BarChart,
-                Bar: mod.Bar,
-                XAxis: mod.XAxis,
-                YAxis: mod.YAxis,
-                Tooltip: mod.Tooltip,
-                CartesianGrid: mod.CartesianGrid,
-                LineChart: mod.LineChart,
-                Line: mod.Line,
-            })
-        }).catch(() => {
-            setChartError(true)
-        })
-    }, [])
-
-    if (chartError) {
-        return <p className="text-sm text-muted-foreground text-center py-8">Failed to load charts. Try refreshing.</p>
-    }
-
-    if (!ChartComponents) {
-        return <LoadingState />
-    }
-
-    const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } = ChartComponents
-
-    const timelineData = data.timeline.map(t => ({
-        ...t,
-        label: formatMonth(t.month),
-    }))
-
-    return (
-        <div className="space-y-6">
-            {/* Setlist count over time */}
-            <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                    Services per Month
-                </h3>
-                <div className="h-48 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={timelineData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                            <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={30} />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--card))',
-                                    border: '1px solid hsl(var(--border))',
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                }}
-                            />
-                            <Bar dataKey="setlistCount" fill="hsl(262, 83%, 58%)" radius={[4, 4, 0, 0]} name="Services" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Songs per service trend */}
-            <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                    Songs per Month
-                </h3>
-                <div className="h-48 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={timelineData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                            <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={30} />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--card))',
-                                    border: '1px solid hsl(var(--border))',
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                }}
-                            />
-                            <Line type="monotone" dataKey="totalSongs" stroke="hsl(262, 83%, 58%)" strokeWidth={2} dot={{ r: 3 }} name="Total Songs" />
-                            <Line type="monotone" dataKey="uniqueSongs" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={{ r: 3 }} name="Unique Songs" />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Summary table */}
-            <div className="text-xs text-muted-foreground">
-                Showing data from {formatDateRange(data.dateRange.from)} to {formatDateRange(data.dateRange.to)}
-                {' · '}{data.totalSetlists} total setlists
-            </div>
-        </div>
-    )
-}
-
 // ── Neglected Songs Tab ──
 
 function NeglectedTab({ data }: { data: SongAnalytics }) {
@@ -473,15 +374,4 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
             </div>
         </div>
     )
-}
-
-function formatMonth(monthStr: string): string {
-    const [year, month] = monthStr.split('-')
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return `${months[parseInt(month) - 1]} ${year.slice(2)}`
-}
-
-function formatDateRange(isoStr: string): string {
-    const d = new Date(isoStr)
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }

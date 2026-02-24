@@ -15,6 +15,7 @@ import { useChatStore } from "@/lib/chat-store"
 import { useMusicStore } from "@/lib/store"
 import { buildPerformQueue } from "@/lib/queue-utils"
 import { useCongregation } from "@/lib/congregation-store"
+import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { HeroCard, CommandRow, UpcomingTimeline, CompactSetlistRow, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
@@ -64,13 +65,13 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
     // On the server, this is pre-computed with the user's name from the session cookie.
     // Client-side: recalculated in useEffect to avoid Hydration mismatches (Error #418).
-    const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || 'CRC Music')
+    const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || DEFAULT_SHORT_NAME)
     const [greeting, setGreeting] = useState<Greeting>(initialGreeting)
 
     useEffect(() => {
         const displayName = profile?.displayName || user?.displayName || cachedUser?.displayName
         const firstName = displayName?.split(' ')[0] || null
-        const shortName = congregation.shortName || serverShortName || 'CRC Music'
+        const shortName = congregation.shortName || serverShortName || DEFAULT_SHORT_NAME
         setGreeting(getContextualGreeting(firstName, undefined, shortName))
     }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName, serverShortName])
 

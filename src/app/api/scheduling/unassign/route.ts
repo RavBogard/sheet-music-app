@@ -5,6 +5,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingCancellationSMS } from "@/lib/sms"
+import { BASE_URL } from "@/lib/constants"
 
 const unassignSchema = z.object({
     assignmentId: z.string().min(1),
@@ -49,7 +50,7 @@ export const POST = createApiHandler(
             } catch { /* use defaults */ }
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.centralreform.live'
+        const baseUrl = BASE_URL
         const eventDateStr = assignment.eventDate
             ? (typeof assignment.eventDate === 'string'
                 ? new Date(assignment.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
