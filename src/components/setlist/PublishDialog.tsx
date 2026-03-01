@@ -11,7 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Check, Mail, Music, AlertTriangle, Users, MailX } from "lucide-react"
+import { Loader2, Check, Mail, Music, AlertTriangle, Users, MailX, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { SetlistMusician } from "@/types/models"
@@ -41,6 +41,8 @@ interface PublishResult {
 export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], isPublished, onPublished }: PublishDialogProps) {
     const [publishing, setPublishing] = useState(false)
     const [result, setResult] = useState<PublishResult | null>(null)
+    const [emailError, setEmailError] = useState<string | null>(null)
+    const [resending, setResending] = useState(false)
     // Per-musician email opt-out: set of indices that should NOT receive email
     const [emailOptOut, setEmailOptOut] = useState<Set<number>>(new Set())
     const [note, setNote] = useState("")
@@ -93,12 +95,19 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
 
             const data: PublishResult = await response.json()
             setResult(data)
+            setEmailError(data.emailError || null)
             onPublished?.()
 
-            toast.success(data.wasAlreadyPublic ? 'Re-notified!' : 'Published!', {
-                description: `${data.musicianCount} musicians · ${data.emailed}/${data.emailTargets} emailed · ${data.usageRecorded} songs indexed`
-                    + (data.emailError ? ` ⚠️ ${data.emailError}` : ''),
-            })
+            if (data.emailError) {
+                toast.warning('Published! But email delivery failed', {
+                    description: data.emailError,
+                    duration: 8000,
+                })
+            } else {
+                toast.success(data.wasAlreadyPublic ? 'Re-notified!' : 'Published!', {
+                    description: `${data.musicianCount} musicians · ${data.emailed}/${data.emailTargets} emailed · ${data.usageRecorded} songs indexed`,
+                })
+            }
         } catch (err) {
             logger.error('[PublishDialog] Error:', err)
             toast.error('Failed to publish', {
@@ -109,8 +118,38 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         }
     }
 
+    const handleResendEmails = async () => {
+        setResending(true)
+        try {
+            const response = await apiFetch('/api/setlist/resend-email', {
+                method: 'POST',
+                body: JSON.stringify({ setlistId }),
+            })
+
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.error || 'Failed to resend emails')
+            }
+
+            const data = await response.json()
+            toast.success('Emails resent!', {
+                description: `${data.sent} email${data.sent !== 1 ? 's' : ''} sent successfully`,
+            })
+            setEmailError(null)
+        } catch (err) {
+            logger.error('[PublishDialog] Resend error:', err)
+            toast.error('Failed to resend emails', {
+                description: err instanceof Error ? err.message : 'Unknown error',
+            })
+        } finally {
+            setResending(false)
+        }
+    }
+
     const handleClose = () => {
         setResult(null)
+        setEmailError(null)
+        setResending(false)
         setEmailOptOut(new Set())
         setNote("")
         setSubject(defaultSubject)
@@ -285,7 +324,27 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className={emailError ? "flex-col sm:flex-row gap-2" : ""}>
+                            {emailError && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleResendEmails}
+                                    disabled={resending}
+                                    className="gap-2"
+                                >
+                                    {resending ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Resending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="h-4 w-4" />
+                                            Resend Emails
+                                        </>
+                                    )}
+                                </Button>
+                            )}
                             <Button onClick={handleClose}>Done</Button>
                         </DialogFooter>
                     </>
