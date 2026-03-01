@@ -9,10 +9,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Data Model
 
-- [ ] **DATA-01**: Setlist track has a `tune` field for arrangement/version name (e.g., "Klepper", "Friedman", "Moshav")
-- [ ] **DATA-02**: Tune field threads through all 3 type hierarchies: `SetlistTrack`, `QueueItem`, `PrintTrack`
+- [x] **DATA-01**: Setlist track has a `tune` field for arrangement/version name (e.g., "Klepper", "Friedman", "Moshav")
+- [x] **DATA-02**: Tune field threads through all 3 type hierarchies: `SetlistTrack`, `QueueItem`, `PrintTrack`
 - [ ] **DATA-03**: Tune field is editable in the track editor (TrackSheet) with free-text input
-- [ ] **DATA-04**: Existing setlists with no tune data display gracefully (no errors, empty field shown as blank)
+- [x] **DATA-04**: Existing setlists with no tune data display gracefully (no errors, empty field shown as blank)
 
 ### Live Performance View
 
@@ -99,10 +99,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Complete |
 | STAB-01 | Phase 1 | Pending |
 | STAB-02 | Phase 1 | Pending |
 | LIVE-01 | Phase 2 | Pending |
