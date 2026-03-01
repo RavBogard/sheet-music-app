@@ -12,7 +12,7 @@ This milestone transforms CentralReform.Live from a chart-centric sheet music ap
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Data Foundation + Critical Stability** - Add tune field to data model and fix cache/publish bugs before Bat Mitzvah
+- [x] **Phase 1: Data Foundation + Critical Stability** - Add tune field to data model and fix cache/publish bugs before Bat Mitzvah (completed 2026-03-01)
 - [ ] **Phase 2: Live Outline View** - Redesign performance view to outline-first with tune, key, lead at a glance
 - [ ] **Phase 3: Printed Outline** - Redesign PDF cover page to clean columnar outline readable from a music stand
 - [ ] **Phase 4: Live Monitoring** - Fix Firebase connection bug and ensure reliable leader-to-musician real-time sync
@@ -121,7 +121,7 @@ Sequence: 1 -> (2 + 3 in parallel) -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation + Critical Stability | 2/3 | In Progress | - |
+| 1. Data Foundation + Critical Stability | 2/3 | Complete    | 2026-03-01 |
 | 2. Live Outline View | 0/3 | Not started | - |
 | 3. Printed Outline | 0/2 | Not started | - |
 | 4. Live Monitoring | 0/2 | Not started | - |
