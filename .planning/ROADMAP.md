@@ -30,12 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Tune field appears in the track editor, and existing setlists with no tune data load without errors (blank field, no crashes)
   3. Reprinting a setlist after changing only the tune name produces an updated PDF (not a stale cached version)
   4. When email delivery fails during publish, the user sees an error message instead of a silent success
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Thread tune field through all type hierarchies (SetlistTrack, QueueItem, PrintTrack)
+- [ ] 01-02-PLAN.md — Add tune editor input + print cover page tune column, hash fix, font bump
+- [ ] 01-03-PLAN.md — Surface email failures with warning toast + resend button
 
 ### Phase 2: Live Outline View
 **Goal**: Musicians on phone/tablet can glance at the app during a live service and see the full service order with tune, key, and lead -- without scrolling through charts
