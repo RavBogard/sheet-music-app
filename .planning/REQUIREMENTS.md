@@ -117,25 +117,25 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PRNT-03 | Phase 3 | Pending |
 | PRNT-04 | Phase 3 | Pending |
 | PRNT-05 | Phase 3 | Pending |
-| STAB-03 | Phase 4 | Pending |
-| STAB-04 | Phase 4 | Pending |
-| STAB-05 | Phase 4 | Pending |
-| STAB-06 | Phase 4 | Pending |
-| TYPE-01 | Phase 4 | Pending |
-| TYPE-02 | Phase 4 | Pending |
-| TYPE-03 | Phase 4 | Pending |
-| TYPE-04 | Phase 4 | Pending |
-| MON-01 | Phase 2 | Pending |
-| MON-02 | Phase 2 | Pending |
-| MON-03 | Phase 2 | Pending |
-| MON-04 | Phase 2 | Pending |
-| EVAL-01 | Phase 5 | Pending |
+| MON-01 | Phase 4 | Pending |
+| MON-02 | Phase 4 | Pending |
+| MON-03 | Phase 4 | Pending |
+| MON-04 | Phase 4 | Pending |
+| STAB-03 | Phase 5 | Pending |
+| STAB-04 | Phase 5 | Pending |
+| STAB-05 | Phase 5 | Pending |
+| STAB-06 | Phase 5 | Pending |
+| TYPE-01 | Phase 5 | Pending |
+| TYPE-02 | Phase 5 | Pending |
+| TYPE-03 | Phase 5 | Pending |
+| TYPE-04 | Phase 5 | Pending |
+| EVAL-01 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
 - Mapped to phases: 31
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation*
