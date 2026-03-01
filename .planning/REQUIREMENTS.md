@@ -11,7 +11,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **DATA-01**: Setlist track has a `tune` field for arrangement/version name (e.g., "Klepper", "Friedman", "Moshav")
 - [x] **DATA-02**: Tune field threads through all 3 type hierarchies: `SetlistTrack`, `QueueItem`, `PrintTrack`
-- [ ] **DATA-03**: Tune field is editable in the track editor (TrackSheet) with free-text input
+- [x] **DATA-03**: Tune field is editable in the track editor (TrackSheet) with free-text input
 - [x] **DATA-04**: Existing setlists with no tune data display gracefully (no errors, empty field shown as blank)
 
 ### Live Performance View
@@ -34,7 +34,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Critical Stability
 
-- [ ] **STAB-01**: Print cache hash (`computeContentHash`) includes all cover page fields (title, key, lead, tune, notes) to prevent stale PDFs
+- [x] **STAB-01**: Print cache hash (`computeContentHash`) includes all cover page fields (title, key, lead, tune, notes) to prevent stale PDFs
 - [x] **STAB-02**: Publish route surfaces email delivery failures to user instead of silent swallowing
 - [ ] **STAB-03**: Fix npm critical vulnerability in opensheetmusicdisplay dependency chain
 - [ ] **STAB-04**: Replace `as any` type assertions in API routes with proper Firestore Timestamp type guards (~10 instances in scheduling/admin routes)
@@ -101,9 +101,9 @@ Deferred to future milestone. Tracked but not in current roadmap.
 |-------------|-------|--------|
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
-| STAB-01 | Phase 1 | Pending |
+| STAB-01 | Phase 1 | Complete |
 | STAB-02 | Phase 1 | Complete |
 | LIVE-01 | Phase 2 | Pending |
 | LIVE-02 | Phase 2 | Pending |
