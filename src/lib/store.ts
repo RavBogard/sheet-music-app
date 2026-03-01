@@ -13,6 +13,7 @@ export interface QueueItem {
     targetKey?: string // For auto-transpose
     bpm?: number
     key?: string
+    tune?: string
     // Service flow fields (for setlist performance mode)
     trackType?: string // 'song' | 'header' | 'reading' | 'prayer' | 'transition' | 'note'
     performer?: string

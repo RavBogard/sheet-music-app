@@ -71,6 +71,7 @@ export const setlistTrackSchema = z.preprocess(
         audioFileId: z.string().nullish().catch(undefined).transform(v => v || undefined),
         audioFileName: z.string().nullish().catch(undefined).transform(v => v || undefined),
         key: z.string().nullish().catch(undefined).transform(v => v || undefined),
+        tune: z.string().nullish().catch(undefined).transform(v => v || undefined),
         notes: z.string().nullish().catch(undefined).transform(v => v || undefined),
         referenceLink: z.string().nullish().catch(undefined).transform(v => v || undefined),
         type: trackTypeSchema,

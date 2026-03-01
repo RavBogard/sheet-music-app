@@ -24,6 +24,7 @@ export function toQueueItem(track: SetlistTrack, index: number): QueueItem {
         audioFileId: track.audioFileId,
         transposition: track.transposition,
         key: track.key,
+        tune: track.tune,
         bpm: track.bpm,
         trackType: track.type || 'song',
         performer: track.performer,

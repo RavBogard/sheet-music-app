@@ -39,6 +39,7 @@ export interface SetlistTrack {
     audioFileId?: string // Linked Audio File ID (MP3)
     audioFileName?: string // Cached Audio File Name
     key?: string
+    tune?: string
     notes?: string
     referenceLink?: string // Link to YouTube/Spotify reference audio
     type?: TrackType // Default: 'song' (backward compatible)
