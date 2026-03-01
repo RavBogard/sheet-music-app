@@ -156,7 +156,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
                     const useTransposition = printMode === "just-me"
                     const tp = useTransposition ? trackTranspositions[t.id] : null
                     return {
-                        title: t.title, key: t.key || '', notes: t.notes || '',
+                        title: t.title, key: t.key || '', tune: t.tune || '', notes: t.notes || '',
                         leadMusician: t.leadMusician || '', fileId: t.fileId,
                         transposition: tp ? tp.transposition : transposition,
                         preferFlats: tp ? tp.preferFlats : preferFlats,

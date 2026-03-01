@@ -25,6 +25,7 @@ export interface PrintTrack {
     key: string
     notes: string
     leadMusician?: string
+    tune?: string
     fileId?: string
     transposition?: number
     preferFlats?: boolean
