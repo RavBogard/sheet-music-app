@@ -52,6 +52,7 @@ export function TrackSheet({
     const [trackType, setTrackType] = useState<TrackType>("song")
     const [key, setKey] = useState("")
     const [bpm, setBpm] = useState("")
+    const [tune, setTune] = useState("")
     const [leadMusician, setLeadMusician] = useState("")
     const [notes, setNotes] = useState("")
     const [transposition, setTransposition] = useState(0)
@@ -74,6 +75,7 @@ export function TrackSheet({
             setTrackType((track.type || "song") as TrackType)
             setKey(track.key || "")
             setBpm(track.bpm?.toString() || "")
+            setTune(track.tune || "")
             setLeadMusician(track.leadMusician || "")
             setNotes(track.notes || "")
             setTransposition(track.transposition || 0)
@@ -148,6 +150,7 @@ export function TrackSheet({
         if (isSong) {
             data.key = key || undefined
             data.bpm = bpm ? parseInt(bpm) : undefined
+            data.tune = tune || undefined
             data.leadMusician = leadMusician || undefined
             data.notes = notes || undefined
             data.referenceLink = referenceLink || undefined
@@ -166,7 +169,7 @@ export function TrackSheet({
         setSaved(true)
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
         saveTimerRef.current = setTimeout(() => setSaved(false), 1500)
-    }, [track, title, trackType, isSong, isFlowItem, key, bpm, leadMusician, notes, referenceLink, transposition, performer, estimatedMinutes, description, onUpdate])
+    }, [track, title, trackType, isSong, isFlowItem, key, bpm, tune, leadMusician, notes, referenceLink, transposition, performer, estimatedMinutes, description, onUpdate])
 
     // Auto-save when any field loses focus
     const handleBlur = useCallback(() => {
@@ -237,6 +240,19 @@ export function TrackSheet({
                                     className="w-full"
                                 />
                             </div>
+                            <div className="space-y-1.5">
+                                <Label variant="setlist">Tune</Label>
+                                <Input
+                                    variant="setlist"
+                                    value={tune}
+                                    onChange={(e) => setTune(e.target.value)}
+                                    onBlur={handleBlur}
+                                    className=""
+                                    placeholder="e.g. Friedman"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                                 <Label variant="setlist">Lead</Label>
                                 <Input
