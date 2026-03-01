@@ -76,11 +76,17 @@ function computeContentHash(req: PrintRequest): string {
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
+        eventName: req.eventName,
         tracks: req.tracks.map(t => ({
             fileId: t.fileId,
             transposition: t.transposition || 0,
             preferFlats: t.preferFlats || false,
             capoFret: t.capoFret || 0,
+            title: t.title,
+            key: t.key || '',
+            notes: t.notes || '',
+            leadMusician: t.leadMusician || '',
+            tune: t.tune || '',
         })),
     }
     return createHash('sha256').update(JSON.stringify(significant)).digest('hex').slice(0, 16)
@@ -264,43 +270,49 @@ async function buildCoverPage(
     })
     yOffset -= 25
 
-    // Column positions
+    // Column positions — redistributed to fit Tune column on 612pt page
     const colNum = 50
     const colTitle = 75
-    const colLead = hasTranspositions ? 280 : 310
-    const colKey = hasTranspositions ? 380 : 430
-    const colTransKey = 430
-    const colNotes = hasTranspositions ? 490 : 475
+    const colTune = hasTranspositions ? 195 : 210
+    const colLead = hasTranspositions ? 275 : 295
+    const colKey = hasTranspositions ? 365 : 380
+    const colTransKey = 420
+    const colNotes = hasTranspositions ? 460 : 425
 
-    // Header
-    coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    // Header row (14pt for readability at arm's length)
+    coverPage.drawText("#", { x: colNum, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Tune", { x: colTune, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Key", { x: colKey, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     if (hasTranspositions) {
-        coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     }
-    coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
 
-    yOffset -= 8
+    yOffset -= 10
     coverPage.drawLine({
         start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
         thickness: 0.5, color: rgb(0.8, 0.8, 0.8),
     })
-    yOffset -= 16
+    yOffset -= 18
 
-    // Rows
+    // Rows (12pt body text for readability)
     req.tracks.forEach((track, index) => {
         if (yOffset < 60) return
 
         const trackType = track.type || 'song'
         const isServiceFlow = trackType !== 'song'
 
-        const maxTitleLen = hasTranspositions ? 26 : 30
+        const maxTitleLen = hasTranspositions ? 16 : 18
         const songTitle = track.title.length > maxTitleLen
             ? track.title.substring(0, maxTitleLen - 3) + "..." : track.title
         const key = isServiceFlow ? "" : (track.key || "-")
-        const maxLeadLen = hasTranspositions ? 12 : 15
+        const maxTuneLen = hasTranspositions ? 10 : 12
+        const tuneStr = isServiceFlow ? "" : (track.tune || "")
+        const tuneDisplay = tuneStr.length > maxTuneLen
+            ? tuneStr.substring(0, maxTuneLen - 3) + "..." : tuneStr
+        const maxLeadLen = hasTranspositions ? 10 : 12
         const lead = isServiceFlow ? (track.performer || "") : (track.leadMusician || "")
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
@@ -312,7 +324,7 @@ async function buildCoverPage(
             const capoNote = `Capo ${track.capoFret}`
             notesStr = notesStr ? `${capoNote} • ${notesStr}` : capoNote
         }
-        const maxNotesLen = hasTranspositions ? 14 : 18
+        const maxNotesLen = hasTranspositions ? 12 : 16
         const notesDisplay = notesStr.length > maxNotesLen
             ? notesStr.substring(0, maxNotesLen - 3) + "..." : notesStr
 
@@ -322,8 +334,8 @@ async function buildCoverPage(
         // Headers render as bold centered labels (no number)
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
-            coverPage.drawText(songTitle.toUpperCase(), { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
-            yOffset -= 18
+            coverPage.drawText(songTitle.toUpperCase(), { x: colTitle, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            yOffset -= 20
             return
         }
 
@@ -331,16 +343,17 @@ async function buildCoverPage(
         const titleFont = isServiceFlow ? helveticaOblique : helvetica
         const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
 
-        coverPage.drawText(`${index + 1}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: titleFont, color: titleColor })
-        if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+        coverPage.drawText(`${index + 1}.`, { x: colNum, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 12, font: titleFont, color: titleColor })
+        if (tuneDisplay) coverPage.drawText(tuneDisplay, { x: colTune, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
-            coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
+            coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
-        if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
+        if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 10, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
 
-        yOffset -= 18
+        yOffset -= 20
     })
 
     // Footer
