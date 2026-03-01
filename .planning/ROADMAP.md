@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 01-01-PLAN.md — Thread tune field through all type hierarchies (SetlistTrack, QueueItem, PrintTrack)
+- [x] 01-01-PLAN.md — Thread tune field through all type hierarchies (SetlistTrack, QueueItem, PrintTrack)
 - [ ] 01-02-PLAN.md — Add tune editor input + print cover page tune column, hash fix, font bump
-- [ ] 01-03-PLAN.md — Surface email failures with warning toast + resend button
+- [x] 01-03-PLAN.md — Surface email failures with warning toast + resend button
 
 ### Phase 2: Live Outline View
 **Goal**: Musicians on phone/tablet can glance at the app during a live service and see the full service order with tune, key, and lead -- without scrolling through charts
@@ -121,7 +121,7 @@ Sequence: 1 -> (2 + 3 in parallel) -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation + Critical Stability | 0/3 | Not started | - |
+| 1. Data Foundation + Critical Stability | 2/3 | In Progress | - |
 | 2. Live Outline View | 0/3 | Not started | - |
 | 3. Printed Outline | 0/2 | Not started | - |
 | 4. Live Monitoring | 0/2 | Not started | - |

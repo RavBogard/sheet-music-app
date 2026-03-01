@@ -35,7 +35,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Critical Stability
 
 - [ ] **STAB-01**: Print cache hash (`computeContentHash`) includes all cover page fields (title, key, lead, tune, notes) to prevent stale PDFs
-- [ ] **STAB-02**: Publish route surfaces email delivery failures to user instead of silent swallowing
+- [x] **STAB-02**: Publish route surfaces email delivery failures to user instead of silent swallowing
 - [ ] **STAB-03**: Fix npm critical vulnerability in opensheetmusicdisplay dependency chain
 - [ ] **STAB-04**: Replace `as any` type assertions in API routes with proper Firestore Timestamp type guards (~10 instances in scheduling/admin routes)
 - [ ] **STAB-05**: Add Zod schema validation to API routes that currently skip it (publish, tasks/update)
@@ -104,7 +104,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | DATA-03 | Phase 1 | Pending |
 | DATA-04 | Phase 1 | Complete |
 | STAB-01 | Phase 1 | Pending |
-| STAB-02 | Phase 1 | Pending |
+| STAB-02 | Phase 1 | Complete |
 | LIVE-01 | Phase 2 | Pending |
 | LIVE-02 | Phase 2 | Pending |
 | LIVE-03 | Phase 2 | Pending |
