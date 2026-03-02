@@ -140,8 +140,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             >
                                 <div
                                     style={{
-                                        margin: `0 0 0 -${dims.padH}px`,
-                                        padding: `0 ${dims.padH}px`,
+                                        margin: `-${dims.padV}px 0 0 -${dims.padH}px`,
+                                        padding: `${dims.padV}px ${dims.padH}px`,
                                         minWidth: `${dims.minWidthPx}px`,
 
                                         backgroundColor: isVisible ? '#ffffff' : 'transparent',

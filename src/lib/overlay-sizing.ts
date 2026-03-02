@@ -49,6 +49,8 @@ export interface OverlayDimensions {
     minWidthPx: number
     /** Horizontal padding applied to the overlay div */
     padH: number
+    /** Vertical padding applied to the overlay div to expand blockout area */
+    padV: number
 }
 
 // Minimum font size to remain legible
@@ -132,5 +134,9 @@ function buildDimensions(
     // --- Final: accommodate whichever is larger ---
     const minWidthPx = Math.max(coverWidthPx, transposedWidthPx)
 
-    return { fontSizePx, coverWidthPx, minWidthPx, padH }
+    // Vertical padding to ensure the white background completely obscures the ink
+    // even if the Vision API bounding box is off by a pixel or two
+    const padV = Math.max(3, Math.round(fontSizePx * 0.15))
+
+    return { fontSizePx, coverWidthPx, minWidthPx, padH, padV }
 }
