@@ -16,18 +16,18 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Client-Side Caching & State
 
-- [ ] **STATE-01**: Client requests Vision API scan ONLY if coordinates are not found in local `idb` or global Firestore cache.
-- [ ] **STATE-02**: Global Firestore cache persists exact Vision API coordinates so subsequent users get instant results.
-- [ ] **STATE-03**: Background worker proactive scans adjacent pages (page 2, 3...) when user loads page 1.
-- [ ] **STATE-04**: Complete removal of `text-scanner.ts` DOM scraping logic.
+- [x] **STATE-01**: Client requests Vision API scan ONLY if coordinates are not found in local `idb` or global Firestore cache.
+- [x] **STATE-02**: Global Firestore cache persists exact Vision API coordinates so subsequent users get instant results.
+- [x] **STATE-03**: Background worker proactive scans adjacent pages (page 2, 3...) when user loads page 1.
+- [x] **STATE-04**: Complete removal of `text-scanner.ts` DOM scraping logic.
 
 ### Presentation & Overlay
 
-- [ ] **UI-01**: Chords render at exact percentage coordinates returned by Vision API.
-- [ ] **UI-02**: Transposed chord text size automatically scales based on the visual bounding box (`width`/`height`) to fully cover the original printed chord.
-- [ ] **UI-03**: Overlay visually blocks underlying text (e.g., matching page background color) so original chords don't peek through.
-- [ ] **UI-04**: User can double-click empty space to manually insert a missing chord.
-- [ ] **UI-05**: User can click an existing overlay to correct the detected text, resize width, or delete it entirely.
+- [x] **UI-01**: Chords render at exact percentage coordinates returned by Vision API.
+- [x] **UI-02**: Transposed chord text size automatically scales based on the visual bounding box (`width`/`height`) to fully cover the original printed chord.
+- [x] **UI-03**: Overlay visually blocks underlying text (e.g., matching page background color) so original chords don't peek through.
+- [x] **UI-04**: User can double-click empty space to manually insert a missing chord.
+- [x] **UI-05**: User can click an existing overlay to correct the detected text, resize width, or delete it entirely.
 
 ## v2 Requirements
 
@@ -52,15 +52,15 @@ Deferred to future release. Tracked but not in current roadmap.
 | VIS-02 | Phase 1 | Complete |
 | VIS-03 | Phase 1 | Complete |
 | VIS-04 | Phase 1 | Complete |
-| STATE-01 | Phase 2 | Pending |
-| STATE-02 | Phase 2 | Pending |
-| STATE-03 | Phase 2 | Pending |
-| STATE-04 | Phase 2 | Pending |
-| UI-01 | Phase 3 | Pending |
-| UI-02 | Phase 3 | Pending |
-| UI-03 | Phase 3 | Pending |
-| UI-04 | Phase 3 | Pending |
-| UI-05 | Phase 3 | Pending |
+| STATE-01 | Phase 2 | Complete |
+| STATE-02 | Phase 2 | Complete |
+| STATE-03 | Phase 2 | Complete |
+| STATE-04 | Phase 2 | Complete |
+| UI-01 | Phase 3 | Complete |
+| UI-02 | Phase 3 | Complete |
+| UI-03 | Phase 3 | Complete |
+| UI-04 | Phase 3 | Complete |
+| UI-05 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total

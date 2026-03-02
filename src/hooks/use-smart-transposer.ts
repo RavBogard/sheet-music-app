@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
-import { scanTextLayer } from "@/lib/text-scanner"
 import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
 import { cleanChordText } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache, saveNativeKey, toCache, type CachedChord, type ChordSource, type ChordOverlay } from "@/lib/chord-cache"
@@ -29,78 +28,6 @@ export function useCurrentFileId(): string | null {
     return null
 }
 
-/**
- * Merge AI validation results with text-layer chords.
- */
-export function mergeAiResults(
-    textLayerChords: ChordOverlay[],
-    aiChords: { text: string; x: number; y: number }[],
-    userOverrides: CachedChord[]
-): ChordOverlay[] {
-    const TOLERANCE = 5 // percentage points
-
-    const merged = textLayerChords.map(c => ({ ...c }))
-    const matchedAiIndices = new Set<number>()
-
-    // Match AI chords to text-layer chords by position
-    for (let ai = 0; ai < aiChords.length; ai++) {
-        const aiChord = aiChords[ai]
-        let bestMatch = -1
-        let bestDist = Infinity
-
-        for (let tl = 0; tl < merged.length; tl++) {
-            const dx = Math.abs(merged[tl].x - aiChord.x)
-            const dy = Math.abs(merged[tl].y - aiChord.y)
-            const dist = Math.sqrt(dx * dx + dy * dy)
-            if (dist < TOLERANCE && dist < bestDist) {
-                bestDist = dist
-                bestMatch = tl
-            }
-        }
-
-        if (bestMatch >= 0) {
-            matchedAiIndices.add(ai)
-            const cleanAi = cleanChordText(aiChord.text)
-            if (cleanAi !== merged[bestMatch].text) {
-                merged[bestMatch].text = cleanAi
-                merged[bestMatch].source = 'ai'
-            }
-        } else {
-            matchedAiIndices.add(ai)
-            merged.push({
-                text: cleanChordText(aiChord.text),
-                originalText: '',
-                x: aiChord.x,
-                y: aiChord.y,
-                source: 'ai'
-            })
-        }
-    }
-
-    // Apply user overrides (highest priority)
-    for (const override of userOverrides) {
-        const match = merged.find(c =>
-            Math.abs(c.x - override.x) < 3 && Math.abs(c.y - override.y) < 3
-        )
-        if (match) {
-            match.text = override.text
-            match.source = 'user'
-        } else {
-            merged.push({
-                text: override.text,
-                originalText: override.originalText || '',
-                x: override.x,
-                y: override.y,
-                w: override.w,
-                h: override.h,
-                pxHeight: override.pxHeight,
-                source: 'user'
-            })
-        }
-    }
-
-    return merged
-}
 
 /**
  * Capture a page canvas as a JPEG base64 string for AI validation.
@@ -167,6 +94,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
     const [addingChordAt, setAddingChordAt] = useState<{ x: number; y: number } | null>(null)
 
     const nativeKeyWritten = useRef(false)
+    const backgroundScanDispatched = useRef(false)
     const pageData = aiState.pageData[pageNumber]
 
     // ── Trigger scan when enabled and page is rendered ──
@@ -175,6 +103,17 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             runScan()
         }
     }, [aiState.isEnabled, isRendered, pageData, hasScanned, pageNumber, aiState.scanningPages])
+
+    // ── Preemptively scan next page ──
+    useEffect(() => {
+        if (isRendered && (pageData || hasScanned) && !backgroundScanDispatched.current && aiState.isEnabled) {
+            backgroundScanDispatched.current = true
+            // Give the UI a moment to breathe before kicking off a background task
+            setTimeout(() => {
+                dispatchBackgroundScan(pageNumber + 1)
+            }, 3000)
+        }
+    }, [isRendered, pageData, hasScanned, pageNumber, aiState.isEnabled])
 
     // ── Write native key when we have enough data (once per file) ──
     useEffect(() => {
@@ -202,7 +141,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
     }, [pageNumber, fileId, setPageData])
 
     // ════════════════════════════════════════════════════
-    // SCAN PIPELINE (cache → text layer → AI validation)
+    // SCAN PIPELINE (cache → AI vision endpoint)
     // ════════════════════════════════════════════════════
 
     const runScan = async () => {
@@ -215,7 +154,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             let userOverrides: CachedChord[] = []
 
-            // Step 1: Check chord cache
+            // Step 1: Check chord cache (global Firestore cache)
             if (fileId) {
                 try {
                     const cached = await loadChordCache(fileId, pageNumber)
@@ -225,13 +164,14 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                             userOverrides = cached.chords.filter(c => c.source === 'user')
                             const autoChords = cached.chords.filter(c => c.source !== 'user')
 
-                            if (autoChords.length > 0 && cached.aiValidated) {
+                            if (autoChords.length > 0) {
+                                // Cache hit! Skip the vision API.
                                 const mappedChords: ChordOverlay[] = cached.chords.map(c => ({
                                     text: c.text,
                                     originalText: c.originalText || c.text,
                                     x: c.x, y: c.y, w: c.w, h: c.h,
                                     pxHeight: c.pxHeight,
-                                    source: (c.source || 'textLayer') as ChordSource,
+                                    source: (c.source || 'ai') as ChordSource,
                                     sizeOverride: c.sizeOverride,
                                 }))
                                 setPageData(pageNumber, { chords: mappedChords, strips: [] })
@@ -247,17 +187,60 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             const pageEl = pageRef.current
 
-            // Step 2: Text Layer Scan
-            const textChords = scanTextLayer(pageEl)
+            // Step 2: AI Validation (async generation from image)
+            // Schedule via idle callback if possible so rendering isn't blocked
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => {
+                    runAiVisionExtration(pageEl, userOverrides)
+                }, { timeout: 2000 })
+            } else {
+                setTimeout(() => {
+                    runAiVisionExtration(pageEl, userOverrides)
+                }, 100)
+            }
 
-            const mappedChords: ChordOverlay[] = textChords.map(c => ({
-                text: c.text,
-                originalText: c.text,
-                x: c.x, y: c.y, w: c.w, h: c.h,
-                pxHeight: c.pxHeight,
-                source: 'textLayer' as ChordSource,
-            }))
+        } catch (err) {
+            logger.error("Scan Error:", err)
+            setLocalError(err instanceof Error ? err.message : "Scan failed")
+            setAiError(err instanceof Error ? err.message : "Scan failed")
+            setPageScanning(pageNumber, false)
+        }
+    }
 
+    const runAiVisionExtration = async (
+        pageEl: HTMLElement,
+        userOverrides: CachedChord[]
+    ) => {
+        await acquireAiSlot()
+        try {
+            const image = await capturePageImage(pageEl)
+            if (!image) return
+
+            const res = await apiFetch('/api/ai/transposer/scan', {
+                method: 'POST',
+                body: JSON.stringify({ image })
+            })
+
+            if (!res.ok) return
+
+            const json = await res.json()
+            const aiChords = json.chords as { text: string; x: number; y: number; width: number; height: number }[]
+
+            let mappedChords: ChordOverlay[] = []
+
+            if (aiChords && aiChords.length > 0) {
+                mappedChords = aiChords.map(c => ({
+                    text: cleanChordText(c.text),
+                    originalText: c.text,
+                    x: c.x,
+                    y: c.y,
+                    w: c.width,
+                    h: c.height,
+                    source: 'ai' as ChordSource
+                }))
+            }
+
+            // Apply overrides
             if (userOverrides.length > 0) {
                 for (const override of userOverrides) {
                     const match = mappedChords.find(c =>
@@ -280,68 +263,93 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             }
 
             setPageData(pageNumber, { chords: mappedChords, strips: [] })
-            setPageScanning(pageNumber, false)
 
-            // Step 3: AI Validation (async, non-blocking)
-            if ('requestIdleCallback' in window) {
-                window.requestIdleCallback(() => {
-                    runAiValidation(pageEl, mappedChords, userOverrides)
-                }, { timeout: 2000 })
-            } else {
-                setTimeout(() => {
-                    runAiValidation(pageEl, mappedChords, userOverrides)
-                }, 100)
+            if (fileId) {
+                saveChordCache(fileId, pageNumber, mappedChords.map(toCache), 'ai', true)
             }
-
         } catch (err) {
-            logger.error("Scan Error:", err)
-            setLocalError(err instanceof Error ? err.message : "Scan failed")
-            setAiError(err instanceof Error ? err.message : "Scan failed")
+            logger.warn("[AI Vision Extraction] Failed (non-fatal):", err)
         } finally {
             setPageScanning(pageNumber, false)
+            releaseAiSlot()
         }
     }
 
-    const runAiValidation = async (
-        pageEl: HTMLElement,
-        currentChords: ChordOverlay[],
-        userOverrides: CachedChord[]
-    ) => {
-        await acquireAiSlot()
+    const dispatchBackgroundScan = async (nextPage: number) => {
+        if (!fileId) return
+
+        // Ensure the next page isn't already scanned or scanning
+        const state = useMusicStore.getState().aiState
+        if (state.pageData[nextPage] || state.scanningPages.includes(nextPage)) return
+
         try {
-            const image = await capturePageImage(pageEl)
+            // First check if it's already cached — if so, do nothing, subsequent loads will hit cache
+            const cached = await loadChordCache(fileId, nextPage)
+            if (cached && cached.chords.length > 0) return
+
+            // If not cached, we need the DOM element for the next page to capture the image.
+            // Since this is a React hook tied to a specific page component, we query the DOM
+            // to find the next page's canvas if it has been rendered by react-pdf.
+            const nextCanvas = document.querySelector(`.react-pdf__Page[data-page-number="${nextPage}"] canvas`) as HTMLCanvasElement
+            if (!nextCanvas) return // Page isn't rendered in DOM yet, can't capture
+
+            // Schedule via idle callback if possible so rendering isn't blocked
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => {
+                    executeBackgroundScan(fileId, nextPage, nextCanvas)
+                }, { timeout: 5000 })
+            } else {
+                setTimeout(() => {
+                    executeBackgroundScan(fileId, nextPage, nextCanvas)
+                }, 500)
+            }
+        } catch (e) {
+            logger.warn("[Background Scan Check] Failed:", e)
+        }
+    }
+
+    const executeBackgroundScan = async (targetFileId: string, targetPage: number, canvas: HTMLCanvasElement) => {
+        await acquireAiSlot()
+        // Signal we are scanning so multiple instances don't try
+        useMusicStore.getState().setPageScanning(targetPage, true)
+
+        try {
+            // Create a temporary container to use capturePageImage
+            const tempDiv = document.createElement('div')
+            tempDiv.appendChild(canvas.cloneNode(true)) // Clone to avoid detaching
+
+            const image = await capturePageImage(tempDiv)
             if (!image) return
 
-            const existingChords = currentChords
-                .filter(c => c.source !== 'user')
-                .map(c => ({ text: c.text, x: c.x, y: c.y }))
-
-            const res = await apiFetch('/api/ai/chord-validate', {
+            const res = await apiFetch('/api/ai/transposer/scan', {
                 method: 'POST',
-                body: JSON.stringify({ image, existingChords })
+                body: JSON.stringify({ image })
             })
 
             if (!res.ok) return
 
             const json = await res.json()
-            const aiChords = json.chords as { text: string; x: number; y: number }[]
+            const aiChords = json.chords as { text: string; x: number; y: number; width: number; height: number }[]
 
-            if (!aiChords || aiChords.length === 0) {
-                if (fileId) {
-                    saveChordCache(fileId, pageNumber, currentChords.map(toCache), 'textLayer+ai', true)
-                }
-                return
-            }
-
-            const merged = mergeAiResults(currentChords, aiChords, userOverrides)
-            setPageData(pageNumber, { chords: merged, strips: [] })
-
-            if (fileId) {
-                saveChordCache(fileId, pageNumber, merged.map(toCache), 'textLayer+ai', true)
+            if (aiChords && aiChords.length > 0) {
+                const mappedChords = aiChords.map(c => ({
+                    text: cleanChordText(c.text),
+                    originalText: c.text,
+                    x: c.x,
+                    y: c.y,
+                    w: c.width,
+                    h: c.height,
+                    source: 'ai' as ChordSource
+                }))
+                // Save to Firestore so it's ready when user scrolls to it
+                saveChordCache(targetFileId, targetPage, mappedChords.map(toCache), 'ai', true)
+                // Also optimistically insert into zustand
+                useMusicStore.getState().setPageData(targetPage, { chords: mappedChords, strips: [] })
             }
         } catch (err) {
-            logger.warn("[AI Validation] Failed (non-fatal):", err)
+            logger.warn("[Background Vision Extraction] Failed:", err)
         } finally {
+            useMusicStore.getState().setPageScanning(targetPage, false)
             releaseAiSlot()
         }
     }
@@ -376,12 +384,10 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             const image = await capturePageImage(pageEl)
             if (!image) { setAddingChordAt(null); return }
 
-            const res = await apiFetch('/api/ai/chord-validate', {
+            const res = await apiFetch('/api/ai/transposer/scan', {
                 method: 'POST',
                 body: JSON.stringify({
-                    image,
-                    existingChords: [],
-                    regionHint: { x: xPct, y: yPct }
+                    image
                 })
             })
 

@@ -144,7 +144,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                         padding: `0 ${dims.padH}px`,
                                         minWidth: `${dims.minWidthPx}px`,
 
-                                        backgroundColor: isVisible ? 'rgba(255, 255, 255, 0.97)' : 'transparent',
+                                        backgroundColor: isVisible ? '#ffffff' : 'transparent',
                                         borderRadius: '2px',
                                         border: (isEditingChords || showPopover) ? '1px dashed rgba(139, 92, 246, 0.5)' : 'none',
 

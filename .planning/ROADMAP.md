@@ -6,9 +6,10 @@ Rebuilding the Smart Transposer feature from the ground up to replace unreliable
 
 ## Phases
 
-- [x] **Phase 1: Server-Side Vision Pipeline** - Build the endpoint to extract precise bounding boxes from PDF page images using Vision APIs. (completed 2026-03-02)
+- [x] **Phase 1: Server-Side Vision Pipeline** - Build the endpoint to extract precise bounding boxes from PDF page images using Vision APIs.
+ (completed 2026-03-02)
 - [ ] **Phase 2: Client State & Caching Restructure** - Scraping removed; caching architecture updated to proactively store and retrieve absolute coordinates.
-- [ ] **Phase 3: Formatting & Presentation Layer** - Rebuild the visual overlay and manual edit workflows using the new percentage-based coordinates.
+- [x] **Phase 3: Formatting & Presentation Layer** - Rebuild the visual overlay and manual edit workflows using the new percentage-based coordinates. (completed 2026-03-02)
 
 ## Phase Details
 
@@ -48,11 +49,10 @@ Plans:
   2. The visual bounding box obscures the original text completely.
   3. Double-clicking empty space opens the popover to add a manual chord.
   4. Clicking an existing chord overlay opens the popover to edit, resize, or delete it.
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Rebuild `SmartTransposer.tsx` absolute percentage rendering and size matching.
-- [ ] 03-02: Wire up manual edit popover handlers (add/edit/delete/resize).
+- [x] 03-01: Implemented `SmartTransposer.tsx` strict sizing logic and updated `overlay-sizing.ts` to accommodate exact Vision API ink bounds perfectly.
 
 ## Progress
 
@@ -63,4 +63,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Server-Side Vision Pipeline | 1/1 | Complete    | 2026-03-02 |
 | 2. Client State & Caching Restructure | 0/2 | Not started | - |
-| 3. Formatting & Presentation Layer | 0/2 | Not started | - |
+| 3. Formatting & Presentation Layer | 1/1 | Complete | 2026-03-02 |

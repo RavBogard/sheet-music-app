@@ -54,10 +54,10 @@ export interface OverlayDimensions {
 // Minimum font size to remain legible
 const FONT_MIN_PX = 10
 
-// Multiplier from measured span height to font-size.
-// DOM span height includes line-height padding; 0.90 brings the overlay
-// font visually in line with the PDF's own rendered chord text.
-const H_PCT_TO_FONT_SCALE = 0.90
+// Multiplier from absolute box height to font-size.
+// The Vision API provides tight bounding boxes wrapping the text ink without padding.
+// A scale of 1.0 maps the font size exactly to the original text's vertical height.
+const H_PCT_TO_FONT_SCALE = 1.0
 
 // Default chord row height as percentage of page (for AI-added chords with no size data).
 // Typical hymnal/worship lead sheet chords occupy ~2.5-3.5% of a US Letter page height.
