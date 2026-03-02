@@ -140,9 +140,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                             >
                                 <div
                                     style={{
-                                        margin: `-${dims.padV}px 0 0 -${dims.padH}px`,
-                                        padding: `${dims.padV}px ${dims.padH}px`,
+                                        margin: `0 0 0 -${dims.padH}px`,
+                                        padding: `0 ${dims.padH}px`,
                                         minWidth: `${dims.minWidthPx}px`,
+                                        height: `${dims.coverHeightPx}px`,
 
                                         backgroundColor: isVisible ? '#ffffff' : 'transparent',
                                         borderRadius: '2px',
@@ -152,7 +153,8 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                         fontSize: `${dims.fontSizePx}px`,
                                         fontWeight: 700,
                                         fontFamily: "'Times New Roman', 'Georgia', serif",
-                                        lineHeight: 1.1,
+                                        lineHeight: 1, // Minimize internal box padding
+                                        transform: 'translateY(-0.15em)', // Counteract web-font descender gap to align mathematically to bounds top
                                         whiteSpace: 'nowrap' as const,
                                         zIndex: showPopover ? 150 : 100,
                                         pointerEvents: 'auto' as const,
