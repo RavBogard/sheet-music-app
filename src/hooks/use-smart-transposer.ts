@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { transposeChord, estimateKey, keyUsesFlats } from "@/lib/music-math"
-import { cleanChordText } from "@/lib/chord-utils"
+import { cleanChordText, sortChordsByTopLeft } from "@/lib/chord-utils"
 import { loadChordCache, saveChordCache, saveNativeKey, toCache, type CachedChord, type ChordSource, type ChordOverlay } from "@/lib/chord-cache"
 import { acquireAiSlot, releaseAiSlot } from "@/lib/ai-concurrency"
 import { apiFetch } from "@/lib/api-client"
@@ -134,9 +134,11 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
     const persistChords = useCallback((chords: ChordOverlay[]) => {
         // Read fresh strips from store to avoid stale closure
         const freshStrips = useMusicStore.getState().aiState.pageData[pageNumber]?.strips ?? []
-        setPageData(pageNumber, { chords, strips: freshStrips })
+        // Sort chords by visual layout so iteration methods (like key detection) function sequentially
+        const sortedChords = sortChordsByTopLeft(chords)
+        setPageData(pageNumber, { chords: sortedChords, strips: freshStrips })
         if (fileId) {
-            saveChordCache(fileId, pageNumber, chords.map(toCache), 'textLayer+ai', true)
+            saveChordCache(fileId, pageNumber, sortedChords.map(toCache), 'textLayer+ai', true)
         }
     }, [pageNumber, fileId, setPageData])
 
