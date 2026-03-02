@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Server-Side Vision Pipeline
 
-- [ ] **VIS-01**: Server endpoint receives a page image and requests chord bounding boxes from Vision API (Gemini/OpenAI).
-- [ ] **VIS-02**: Vision API prompt enforces strict JSON schema returning `[text, x, y, width, height]` for each chord.
-- [ ] **VIS-03**: Vision API coordinate percentages are normalized accurately relative to the source image dimensions.
-- [ ] **VIS-04**: Endpoint gracefully handles empty pages or pages with no discernible chords.
+- [x] **VIS-01**: Server endpoint receives a page image and requests chord bounding boxes from Vision API (Gemini/OpenAI).
+- [x] **VIS-02**: Vision API prompt enforces strict JSON schema returning `[text, x, y, width, height]` for each chord.
+- [x] **VIS-03**: Vision API coordinate percentages are normalized accurately relative to the source image dimensions.
+- [x] **VIS-04**: Endpoint gracefully handles empty pages or pages with no discernible chords.
 
 ### Client-Side Caching & State
 
@@ -48,10 +48,10 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIS-01 | Phase 1 | Pending |
-| VIS-02 | Phase 1 | Pending |
-| VIS-03 | Phase 1 | Pending |
-| VIS-04 | Phase 1 | Pending |
+| VIS-01 | Phase 1 | Complete |
+| VIS-02 | Phase 1 | Complete |
+| VIS-03 | Phase 1 | Complete |
+| VIS-04 | Phase 1 | Complete |
 | STATE-01 | Phase 2 | Pending |
 | STATE-02 | Phase 2 | Pending |
 | STATE-03 | Phase 2 | Pending |

@@ -6,7 +6,7 @@ Rebuilding the Smart Transposer feature from the ground up to replace unreliable
 
 ## Phases
 
-- [ ] **Phase 1: Server-Side Vision Pipeline** - Build the endpoint to extract precise bounding boxes from PDF page images using Vision APIs.
+- [x] **Phase 1: Server-Side Vision Pipeline** - Build the endpoint to extract precise bounding boxes from PDF page images using Vision APIs. (completed 2026-03-02)
 - [ ] **Phase 2: Client State & Caching Restructure** - Scraping removed; caching architecture updated to proactively store and retrieve absolute coordinates.
 - [ ] **Phase 3: Formatting & Presentation Layer** - Rebuild the visual overlay and manual edit workflows using the new percentage-based coordinates.
 
@@ -61,6 +61,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Server-Side Vision Pipeline | 0/2 | Not started | - |
+| 1. Server-Side Vision Pipeline | 1/1 | Complete    | 2026-03-02 |
 | 2. Client State & Caching Restructure | 0/2 | Not started | - |
 | 3. Formatting & Presentation Layer | 0/2 | Not started | - |
