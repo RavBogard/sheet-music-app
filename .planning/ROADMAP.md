@@ -20,11 +20,10 @@ Rebuilding the Smart Transposer feature from the ground up to replace unreliable
   1. Server endpoint `/api/ai/transposer/scan` successfully responds to a `POST` request containing a base64 image.
   2. The returned JSON strictly matches the schema `[{ text: "C", x: 10, y: 15, w: 5, h: 3 }]`.
   3. Empty or non-musical pages return an empty array without throwing a 500 error.
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: Build endpoint structure and Vision API prompt integration.
-- [ ] 01-02: Implement PDF-to-image pipeline for testing the endpoint.
+- [ ] 01-01-PLAN.md — Build the Next.js API route for the Vision pipeline
 
 ### Phase 2: Client State & Caching Restructure
 **Goal**: The client requests Vision API scans entirely separate from the DOM rendering logic, caches the results aggressively, and strips out `text-scanner.ts`.
