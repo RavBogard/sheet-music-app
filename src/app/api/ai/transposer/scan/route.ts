@@ -3,6 +3,16 @@ import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
+export const maxDuration = 60; // 1 min (Vercel max for Hobby is 10, Pro is 300)
+
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '10mb',
+        },
+    },
+};
+
 export async function POST(request: NextRequest) {
     if (!apiKey) {
         return NextResponse.json(

@@ -218,7 +218,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             const res = await apiFetch('/api/ai/transposer/scan', {
                 method: 'POST',
-                body: JSON.stringify({ image })
+                body: JSON.stringify({ base64Image: image })
             })
 
             if (!res.ok) return
@@ -323,7 +323,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             const res = await apiFetch('/api/ai/transposer/scan', {
                 method: 'POST',
-                body: JSON.stringify({ image })
+                body: JSON.stringify({ base64Image: image })
             })
 
             if (!res.ok) return
@@ -386,9 +386,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
             const res = await apiFetch('/api/ai/transposer/scan', {
                 method: 'POST',
-                body: JSON.stringify({
-                    image
-                })
+                body: JSON.stringify({ base64Image: image })
             })
 
             if (!res.ok) { setAddingChordAt(null); return }
