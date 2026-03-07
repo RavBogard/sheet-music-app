@@ -161,8 +161,8 @@
 | PROF-02 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42
+- v1 requirements: 44 total
+- Mapped to phases: 44
 - Unmapped: 0 ✓
 
 ---
