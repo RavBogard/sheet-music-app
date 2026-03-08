@@ -507,7 +507,7 @@ export function convertSetlistToTemplate(tracks: SetlistTrack[]): TemplateSlot[]
         if (effectiveType === 'song') {
             if (track.fileId) {
                 slot.fileId = track.fileId
-                slot.fileName = track.fileName
+                if (track.fileName) slot.fileName = track.fileName
             }
             // Always set queries as fallback (lowercase title for fuzzy match)
             slot.queries = [track.title.toLowerCase().replace(/\s*\(unmatched\)\s*$/, '')]

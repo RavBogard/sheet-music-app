@@ -32,6 +32,13 @@ export async function getCustomTemplate(key: string): Promise<TemplateSlot[] | n
     return (snap.data() as CustomTemplateDoc).slots
 }
 
+/** Strip undefined values from an object (Firestore rejects them). */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([, v]) => v !== undefined)
+    ) as T
+}
+
 /**
  * Save a custom template override to Firebase.
  */
@@ -40,11 +47,12 @@ export async function saveCustomTemplate(
     slots: TemplateSlot[],
     userId: string,
 ): Promise<void> {
+    const cleanSlots = slots.map(s => stripUndefined({ ...s }))
     await setDoc(doc(db, COLLECTION, key), {
-        slots,
+        slots: cleanSlots,
         updatedAt: Timestamp.now(),
         updatedBy: userId,
-    } satisfies CustomTemplateDoc)
+    })
 }
 
 /**
