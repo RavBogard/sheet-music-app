@@ -2,12 +2,11 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Users, Eye, Database, FileText, Radio, History } from "lucide-react"
+import { Loader2, ArrowLeft, ShieldAlert, Users, Database, FileText, Radio, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { PeopleSection } from "@/components/admin/PeopleSection"
-import { BandPrepSection } from "@/components/admin/BandPrepSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
 import { TemplatesSection } from "@/components/admin/TemplatesSection"
@@ -56,16 +55,6 @@ export default function ManagePage() {
                         defaultOpen={true}
                     >
                         <PeopleSection />
-                    </CollapsibleSection>
-                </SectionErrorBoundary>
-
-                {/* Rehearsal Readiness */}
-                <SectionErrorBoundary label="Rehearsal Readiness">
-                    <CollapsibleSection
-                        icon={<Eye className="w-5 h-5 text-brand" />}
-                        title="Rehearsal Readiness"
-                    >
-                        <BandPrepSection />
                     </CollapsibleSection>
                 </SectionErrorBoundary>
 
