@@ -83,15 +83,15 @@
 
 ## Print Pipeline
 
-- [ ] **PRINT-01**: Band leader can generate PDF gig packets for a setlist
-- [ ] **PRINT-02**: Gig packets can be emailed to musicians (especially guest musicians)
+- [x] **PRINT-01**: Band leader can generate PDF gig packets for a setlist
+- [x] **PRINT-02**: Gig packets can be emailed to musicians (especially guest musicians)
 
 ## Code Quality & Architecture
 
 - [x] **CODE-01**: Codebase audit — identify and remove dead code, unused components, abandoned features
 - [x] **CODE-02**: Consolidate Zustand stores from 8 fragmented stores to a focused architecture
 - [x] **CODE-03**: Backend systems are robust enough that admin duct-tape tools are unnecessary
-- [ ] **CODE-04**: Admin tooling simplified to essentials: user management and library management
+- [x] **CODE-04**: Admin tooling simplified to essentials: user management and library management
 
 ## v2 (After Launch)
 
@@ -171,12 +171,12 @@
 | NOTIF-02 | Phase 6 | Pending |
 | HOME-01 | Phase 3 | Complete |
 | HOME-02 | Phase 3 | Complete |
-| PRINT-01 | Phase 5 | Pending |
-| PRINT-02 | Phase 5 | Pending |
+| PRINT-01 | Phase 5 | Complete |
+| PRINT-02 | Phase 5 | Complete |
 | CODE-01 | Phase 1 | Complete |
 | CODE-02 | Phase 1 | Complete |
 | CODE-03 | Phase 5 | Complete |
-| CODE-04 | Phase 5 | Pending |
+| CODE-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 53 total (excluding 3 already existing)

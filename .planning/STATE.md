@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-08T04:51:24Z"
-last_activity: 2026-03-08 -- Completed 05-02 (Library flat list with Fuse.js search, per-user canUpload flag)
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-08T05:01:00Z"
+last_activity: 2026-03-08 -- Completed 05-03 (Gig packet UI + admin simplification)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
-  percent: 78
+  completed_plans: 15
+  percent: 83
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 5 of 6 (in progress)
-Plan: 2 of 3 in current phase (complete)
-Status: 05-02 complete -- Library flat list with Fuse.js search, per-user canUpload flag
-Last activity: 2026-03-08 -- Completed 05-02 (Library flat list with Fuse.js search, per-user canUpload flag)
+Phase: 5 of 6 (complete)
+Plan: 3 of 3 in current phase (complete)
+Status: Phase 5 complete -- Backend hardening & library
+Last activity: 2026-03-08 -- Completed 05-03 (Gig packet UI + admin simplification)
 
-Progress: [████████░░] 78%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -103,6 +103,10 @@ Progress: [████████░░] 78%
 - [05-01]: Storage deletion tries .pdf, .xml, and extensionless paths to cover all file formats
 - [05-02]: canUpload is a boolean field on UserProfile, not a role -- granular per-user permission
 - [05-02]: Folders filtered out at hydration time in library store, not at render time
+- [05-03]: PrintModal uses optional uid from SetlistMusician to pre-check assigned musicians
+- [05-03]: Admin page uses flat section layout (no tabs) since only 2 sections remain
+- [05-03]: Sound system config at /settings/sound, not embedded in admin page
+- [05-03]: parseTemplateRequest extracted to src/lib/template-parser.ts (was illegally exported from route file)
 
 ### Blockers/Concerns
 
@@ -111,6 +115,6 @@ Progress: [████████░░] 78%
 
 ## Session Continuity
 
-Last session: 2026-03-08T04:51:24Z
-Stopped at: Completed 05-02-PLAN.md
-Resume file: .planning/phases/05-backend-hardening-library/05-03-PLAN.md
+Last session: 2026-03-08T05:01:00Z
+Stopped at: Completed 05-03-PLAN.md (Phase 5 complete)
+Resume file: Phase 6 plans
