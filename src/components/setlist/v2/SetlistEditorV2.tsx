@@ -85,10 +85,10 @@ export function SetlistEditorV2({
     const router = useRouter()
     const { setQueue } = useMusicStore()
 
-    const handleBack = () => {
+    const handleBack = useCallback(() => {
         if (onBack) return onBack()
         router.push(initialSetlistId ? `/perform/setlist/${initialSetlistId}` : "/setlists")
-    }
+    }, [onBack, router, initialSetlistId])
 
     const handleSave = (id: string) => {
         if (onSave) return onSave(id)
@@ -190,11 +190,17 @@ export function SetlistEditorV2({
     }, [isPublic, initialIsPublic, router])
 
     // Background offline syncing — silent to avoid toast spam on every track change
+    // Skip initial mount to avoid racing with auto-save
+    const hasMountedForSync = useRef(false)
     useEffect(() => {
+        if (!hasMountedForSync.current) {
+            hasMountedForSync.current = true
+            return
+        }
         if (tracks.length > 0) {
             syncSetlist(tracks, { silent: true }).catch(console.error)
         }
-    }, [tracks])
+    }, [tracks, syncSetlist])
 
     // ── UI State ──
 
