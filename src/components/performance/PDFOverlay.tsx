@@ -1,12 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
-import * as Dialog from "@radix-ui/react-dialog"
 import { SetlistTrack } from "@/types/models"
-import { PerformanceBottomBar } from "./PerformanceBottomBar"
-import { SetlistDrawer } from "./SetlistDrawer"
-import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
+import { PerformanceToolbar } from "./PerformanceToolbar"
+import { useMusicStore, QueueItem } from "@/lib/store"
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
 const PDFViewer = dynamic(
@@ -26,16 +24,11 @@ export interface PDFOverlayProps {
 /**
  * Full-screen PDF takeover overlay for the performance view.
  *
- * Renders the selected song's PDF using the existing PDFViewer component,
- * with a persistent PerformanceBottomBar providing setlist drawer, monitor
- * access, song name, prev/next navigation, and close button.
+ * Uses the full PerformanceToolbar (transpose, annotate, zoom, metronome,
+ * monitor) — same experience as opening a chart from the library.
  *
  * The setlist DOM stays mounted underneath (fixed positioning) so scroll
  * position is preserved when the overlay closes (per RESEARCH.md Pitfall 3).
- *
- * When switching songs (via drawer or prev/next), the `url` prop is updated
- * rather than unmounting/remounting PDFViewer to avoid "Worker was destroyed"
- * errors (per RESEARCH.md Pitfall 1).
  */
 export function PDFOverlay({
     track,
@@ -45,8 +38,66 @@ export function PDFOverlay({
     onNavigate,
     isPublicView,
 }: PDFOverlayProps) {
-    const [showDrawer, setShowDrawer] = useState(false)
-    const [showMonitor, setShowMonitor] = useState(false)
+    const setQueue = useMusicStore(s => s.setQueue)
+    const queueIndex = useMusicStore(s => s.queueIndex)
+    const prevQueueIndexRef = useRef(queueIndex)
+
+    // Build playback queue from setlist tracks (only songs with fileIds)
+    // Map track indices so we can translate between queue and setlist positions
+    useEffect(() => {
+        const songTracks = tracks
+            .map((t, i) => ({ track: t, setlistIndex: i }))
+            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+
+        const queueItems: QueueItem[] = songTracks.map(({ track: t }) => ({
+            name: t.title || "Untitled",
+            fileId: t.fileId!,
+            type: "pdf" as const,
+            key: t.key || undefined,
+            transposition: 0,
+        }))
+
+        // Find queue position matching current setlist index
+        const queueStart = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
+
+        setQueue(queueItems, Math.max(0, queueStart), undefined, undefined)
+    // Only re-init queue when overlay first opens or tracks change structurally
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tracks.length])
+
+    // Sync currentIndex → queueIndex when parent navigates (e.g., from setlist view)
+    useEffect(() => {
+        const songTracks = tracks
+            .map((t, i) => ({ track: t, setlistIndex: i }))
+            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+        const queuePos = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
+        if (queuePos >= 0 && queuePos !== queueIndex) {
+            useMusicStore.getState().setQueue(
+                useMusicStore.getState().playbackQueue,
+                queuePos,
+                undefined,
+                undefined
+            )
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentIndex])
+
+    // When toolbar navigates (queueIndex changes), translate back to setlist index
+    useEffect(() => {
+        if (queueIndex === prevQueueIndexRef.current) return
+        prevQueueIndexRef.current = queueIndex
+
+        const songTracks = tracks
+            .map((t, i) => ({ track: t, setlistIndex: i }))
+            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+
+        if (queueIndex >= 0 && queueIndex < songTracks.length) {
+            const setlistIndex = songTracks[queueIndex].setlistIndex
+            if (setlistIndex !== currentIndex) {
+                onNavigate(setlistIndex)
+            }
+        }
+    }, [queueIndex, tracks, currentIndex, onNavigate])
 
     // Lock body scroll while overlay is open (per RESEARCH.md Pitfall 3)
     useEffect(() => {
@@ -60,56 +111,23 @@ export function PDFOverlay({
     // Build the PDF URL from the track's fileId
     const pdfUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
 
+    // Track menu open state to keep toolbar visible
+    const [, setMenuOpen] = useState(false)
+
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
-            {/* PDF content area with bottom padding for the bar (per RESEARCH.md Pitfall 6) */}
-            <div className="flex-1 overflow-auto pb-16">
+            {/* PDF content area */}
+            <div className="flex-1 overflow-auto pb-28">
                 {pdfUrl && (
                     <PDFViewer url={pdfUrl} trackName={track.title} />
                 )}
             </div>
 
-            {/* Persistent bottom bar */}
-            <PerformanceBottomBar
-                track={track}
-                tracks={tracks}
-                currentIndex={currentIndex}
-                isPublicView={isPublicView}
-                onDrawerToggle={() => setShowDrawer((v) => !v)}
-                onMonitorToggle={() => setShowMonitor(true)}
-                onNavigate={(index) => {
-                    onNavigate(index)
-                }}
-                onClose={onClose}
+            {/* Full performance toolbar (transpose, annotate, zoom, metronome, monitor) */}
+            <PerformanceToolbar
+                onHome={onClose}
+                onMenuOpenChange={setMenuOpen}
             />
-
-            {/* Setlist drawer overlay */}
-            <SetlistDrawer
-                open={showDrawer}
-                tracks={tracks}
-                currentIndex={currentIndex}
-                onSelect={(index) => {
-                    onNavigate(index)
-                    setShowDrawer(false)
-                }}
-                onClose={() => setShowDrawer(false)}
-            />
-
-            {/* Monitor panel overlay (Radix Dialog with glass morphism) */}
-            {!isPublicView && (
-                <Dialog.Root open={showMonitor} onOpenChange={(v) => !v && setShowMonitor(false)}>
-                    <Dialog.Portal>
-                        <Dialog.Overlay className="fixed inset-0 bg-black/60 z-[70] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
-                        <Dialog.Content
-                            className="fixed bottom-14 left-0 right-0 z-[80] max-h-[50vh] bg-zinc-900/95 backdrop-blur-xl rounded-t-2xl border-t border-white/10 overflow-y-auto data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom"
-                            aria-describedby={undefined}
-                        >
-                            <Dialog.Title className="sr-only">Monitor Mixer</Dialog.Title>
-                            <QuickMonitorPanel />
-                        </Dialog.Content>
-                    </Dialog.Portal>
-                </Dialog.Root>
-            )}
         </div>
     )
 }

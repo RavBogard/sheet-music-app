@@ -206,6 +206,7 @@ export function SetlistEditorV2({
     const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
+    const [focusedTrackIndex, setFocusedTrackIndex] = useState<number | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -344,11 +345,14 @@ export function SetlistEditorV2({
     const handleToggleExpand = useCallback((track: SetlistTrack) => {
         if (canEdit) {
             setExpandedTrackId(prev => prev === track.id ? null : track.id)
+            // Track focused position for insert-at-position
+            const idx = tracks.findIndex(t => t.id === track.id)
+            if (idx >= 0) setFocusedTrackIndex(idx)
         } else {
             // Read-only mode: fall back to the TrackSheet modal
             setEditingTrack(track)
         }
-    }, [canEdit])
+    }, [canEdit, tracks])
 
     const handleReplace = useCallback((track: SetlistTrack) => {
         setReplacingTrackId(track.id)
@@ -373,8 +377,8 @@ export function SetlistEditorV2({
             setReplacingTrackId(null)
             setExpandedTrackId(null)
         } else {
-            // Add mode: add as new track
-            addSongsFromLibrary([file])
+            // Add mode: insert after focused track, or append
+            addSongsFromLibrary([file], focusedTrackIndex ?? undefined)
         }
         setShowSearchOverlay(false)
     }, [replacingTrackId, updateTrack, addSongsFromLibrary])
@@ -578,7 +582,7 @@ export function SetlistEditorV2({
                         setReplacingTrackId(null)
                         setShowSearchOverlay(true)
                     }}
-                    onAddItem={(type: TrackType) => addServiceItem(type)}
+                    onAddItem={(type: TrackType) => addServiceItem(type, undefined, focusedTrackIndex ?? undefined)}
                 />
             )}
 
@@ -614,7 +618,7 @@ export function SetlistEditorV2({
                 isOpen={showAddSongs && canEdit}
                 onClose={() => setShowAddSongs(false)}
                 onAdd={(files) => {
-                    addSongsFromLibrary(files)
+                    addSongsFromLibrary(files, focusedTrackIndex ?? undefined)
                     setShowAddSongs(false)
                 }}
                 currentTrackFileIds={currentTrackFileIds}

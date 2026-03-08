@@ -450,7 +450,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
-    const addSongsFromLibrary = (files: DriveFile[]) => {
+    const addSongsFromLibrary = (files: DriveFile[], insertAfterIndex?: number) => {
         if (!canEdit) return
         const newTracks: SetlistTrack[] = files.map((file, index) => {
             const cleanName = file.name
@@ -472,12 +472,17 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
         setTracks(prev => {
             addToHistory(prev)
+            if (insertAfterIndex != null && insertAfterIndex >= 0 && insertAfterIndex < prev.length) {
+                const result = [...prev]
+                result.splice(insertAfterIndex + 1, 0, ...newTracks)
+                return result
+            }
             return [...prev, ...newTracks]
         })
     }
 
     /** Add a non-song service flow item (reading, prayer, transition, note, or header) */
-    const addServiceItem = (type: SetlistTrack['type'], defaults?: Partial<SetlistTrack>) => {
+    const addServiceItem = (type: SetlistTrack['type'], defaults?: Partial<SetlistTrack>, insertAfterIndex?: number) => {
         if (!canEdit) return
         const id = `track-${Date.now()}-${type}`
         const defaultsByType: Record<string, Partial<SetlistTrack>> = {
@@ -497,6 +502,11 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
         setTracks(prev => {
             addToHistory(prev)
+            if (insertAfterIndex != null && insertAfterIndex >= 0 && insertAfterIndex < prev.length) {
+                const result = [...prev]
+                result.splice(insertAfterIndex + 1, 0, newTrack)
+                return result
+            }
             return [...prev, newTrack]
         })
     }

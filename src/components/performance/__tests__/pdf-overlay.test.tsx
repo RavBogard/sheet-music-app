@@ -28,6 +28,61 @@ vi.mock("@/lib/utils", () => ({
         args.filter(Boolean).join(" "),
 }))
 
+// Mock the music store used by PDFOverlay and PerformanceToolbar
+const mockStoreState = {
+    setQueue: vi.fn(),
+    queueIndex: 0,
+    playbackQueue: [],
+    aiState: { isEnabled: false, pageData: {}, scanningPages: [], error: null },
+    setAiEnabled: vi.fn(),
+    capoFret: null,
+    transposition: 0,
+    currentVisiblePage: 1,
+    zoom: 1,
+    setZoom: vi.fn(),
+    currentSetlistId: null,
+    syncedBroadcasterId: null,
+    setSyncedBroadcasterId: vi.fn(),
+    jumpToSong: vi.fn(),
+    setCurrentVisiblePage: vi.fn(),
+}
+vi.mock("@/lib/store", () => ({
+    useMusicStore: Object.assign(
+        (selectorOrUndefined?: (s: Record<string, unknown>) => unknown) => {
+            if (typeof selectorOrUndefined === "function") return selectorOrUndefined(mockStoreState)
+            return mockStoreState
+        },
+        { getState: () => mockStoreState }
+    ),
+    QueueItem: {},
+}))
+
+// Mock hooks used by PerformanceToolbar
+vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
+vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
+vi.mock("@/lib/annotation-store", () => ({ useAnnotationStore: () => ({ isAnnotating: false, setAnnotating: vi.fn() }) }))
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
+
+// Mock sub-components of PerformanceToolbar
+vi.mock("@/components/music/TransposerMenu", () => ({
+    TransposerMenu: () => <div>Transposer</div>,
+    ChordEditBar: () => null,
+}))
+vi.mock("@/components/performance/MetronomeControl", () => ({
+    MetronomeControl: () => <div>Metronome</div>,
+}))
+vi.mock("@/components/performance/SongNavigation", () => ({
+    SongNavigation: () => <div data-testid="song-nav">Nav</div>,
+}))
+vi.mock("@/components/performance/SetlistDrawerLegacy", () => ({
+    SetlistDrawer: () => <div>Drawer</div>,
+}))
+vi.mock("@/components/music/AnnotationToolbar", () => ({
+    AnnotationToolbar: () => null,
+}))
+
 import { PDFOverlay } from "../PDFOverlay"
 import { PerformanceBottomBar } from "../PerformanceBottomBar"
 
@@ -92,14 +147,9 @@ describe("PerformanceBottomBar", () => {
     })
 
     it("prev/next navigation skips non-song items", () => {
-        // Song A is at index 0, Song B is at index 2 (prayer at 1 is skipped)
         render(<PerformanceBottomBar {...defaultProps} currentIndex={0} />)
-
-        // Prev should be disabled (first song)
         const prevBtn = screen.getByLabelText("Previous song")
         expect(prevBtn).toHaveProperty("disabled", true)
-
-        // Next should navigate to index 2 (Song B, skipping prayer at 1)
         const nextBtn = screen.getByLabelText("Next song")
         expect(nextBtn).toHaveProperty("disabled", false)
         fireEvent.click(nextBtn)
@@ -137,18 +187,14 @@ describe("PDFOverlay", () => {
         expect(viewer.getAttribute("data-url")).toBe("/api/drive/file/file-a")
     })
 
-    it("calls onClose when close button is clicked", () => {
+    it("renders the full PerformanceToolbar", () => {
         render(<PDFOverlay {...defaultProps} />)
-        const closeBtn = screen.getByLabelText("Close PDF")
-        fireEvent.click(closeBtn)
-        expect(defaultProps.onClose).toHaveBeenCalled()
+        // PerformanceToolbar includes song navigation
+        expect(screen.getByTestId("song-nav")).toBeDefined()
     })
 
-    it("opens setlist drawer on drawer toggle click", () => {
+    it("renders Exit button from PerformanceToolbar", () => {
         render(<PDFOverlay {...defaultProps} />)
-        const drawerBtn = screen.getByLabelText("Open setlist")
-        fireEvent.click(drawerBtn)
-        // Drawer should now be visible with "Setlist" heading
-        expect(screen.getByText("Setlist")).toBeDefined()
+        expect(screen.getByText("Exit")).toBeDefined()
     })
 })

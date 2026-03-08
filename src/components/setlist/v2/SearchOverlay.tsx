@@ -8,6 +8,11 @@ import { useLibraryStore } from "@/lib/library-store"
 import { DriveFile } from "@/types/models"
 import Fuse from "fuse.js"
 
+/** Only show chart files (PDF, MusicXML, ChordPro) — exclude audio files */
+const isChartFile = (f: DriveFile) =>
+    !f.mimeType.startsWith("audio/") &&
+    !/\.(mp3|wav|m4a|ogg|flac|aac|wma)$/i.test(f.name)
+
 interface SearchOverlayProps {
     isOpen: boolean
     onClose: () => void
@@ -32,7 +37,7 @@ export function SearchOverlay({
     // Build Fuse index for search
     const fuse = useMemo(() => {
         // Only index non-folder files
-        const files = allFiles.filter((f) => !f.mimeType.includes("folder"))
+        const files = allFiles.filter((f) => !f.mimeType.includes("folder") && isChartFile(f))
         return new Fuse(files, {
             keys: ["name"],
             threshold: 0.4,
@@ -55,7 +60,7 @@ export function SearchOverlay({
         if (!query.trim()) {
             // Show recent/all files when no search query (limited to 20)
             return allFiles
-                .filter((f) => !f.mimeType.includes("folder"))
+                .filter((f) => !f.mimeType.includes("folder") && isChartFile(f))
                 .slice(0, 20)
         }
         return fuse.search(query).map((r) => r.item).slice(0, 30)
