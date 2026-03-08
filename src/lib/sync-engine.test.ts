@@ -81,14 +81,18 @@ vi.mock('@/lib/firebase-admin', () => ({
     getFirestore: vi.fn(() => mockDb),
 }))
 
-const mockUploadToStorage = vi.fn(async () => 'gs://bucket/library/test.pdf')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockUploadToStorage = vi.fn<any>(async () => 'gs://bucket/library/test.pdf')
 
 vi.mock('@/lib/firebase-storage', () => ({
-    uploadToStorage: (...args: unknown[]) => mockUploadToStorage(...args),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    uploadToStorage: (...args: any[]) => mockUploadToStorage(...args),
 }))
 
-const mockListAllFiles = vi.fn(async () => [])
-const mockGetFile = vi.fn(async () => new ArrayBuffer(100))
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockListAllFiles = vi.fn<any>(async () => [])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockGetFile = vi.fn<any>(async () => new ArrayBuffer(100))
 
 vi.mock('@/lib/google-drive', () => ({
     DriveClient: vi.fn().mockImplementation(() => ({
