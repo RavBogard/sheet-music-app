@@ -92,6 +92,7 @@ Plans:
 **Goal**: Backend systems are robust enough to run without admin duct tape — Drive sync is reliable, library management works in-app, print pipeline is clean, admin is simplified to essentials
 **Depends on**: Phases 1-4 (cleanup work identified in Phase 1, executed here alongside library/print work)
 **Requirements**: LIB-01, LIB-02, LIB-03, LIB-04, PRINT-01, PRINT-02, CODE-03, CODE-04
+**Plans:** 3 plans
 **Success Criteria:**
   1. A PDF added to Google Drive appears in the app library within one sync cycle without manual intervention or admin action
   2. Drive sync recovers from transient errors automatically (retry, backoff) — no silent failures
@@ -100,9 +101,9 @@ Plans:
   5. Admin interface has exactly two sections: user management and library management — nothing else
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
-- [ ] 05-03: TBD
+- [ ] 05-01-PLAN.md — Drive sync hardening: Storage copy, error tracking, retry, sync run logging
+- [ ] 05-02-PLAN.md — Library UI flat list with search, upload permission canUpload flag
+- [ ] 05-03-PLAN.md — Gig packet UI in setlist editor, admin simplification to 2 sections
 
 ### Phase 6: Scheduling, Notifications & Polish
 **Goal**: Band leader can assign musicians to services, musicians get notified, and the entire app is polished and ready for the band to use at real services
@@ -159,8 +160,11 @@ All 53 new requirements mapped to exactly one phase:
 
 | Phase | Requirements | Count |
 |-------|-------------|-------|
-| 1. Monitor Research + Code Audit | 3/3 | Complete   | 2026-03-08 | 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
-| 3. Setlist Performance View | 2/3 | In Progress|  | 4. Setlist Editor | 2/3 | In Progress|  | 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
+| 1. Monitor Research + Code Audit | MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02 | 6 |
+| 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
+| 3. Setlist Performance View | SET-01..07, PDF-03, PUB-01..03, HOME-01..02 | 13 |
+| 4. Setlist Editor | EDIT-01..10 | 10 |
+| 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
 | 6. Scheduling, Notifications & Polish | SCHED-01..02, NOTIF-01..02 | 4 |
 | **Total** | | **52** |
 
@@ -176,7 +180,7 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 | 2. Monitor Mixing Implementation | 0/3 | Not started |
 | 3. Setlist Performance View | 0/3 | Not started |
 | 4. Setlist Editor | 3/3 | Complete |
-| 5. Backend Hardening & Library | 0/3 | Not started |
+| 5. Backend Hardening & Library | 0/3 | Planned |
 | 6. Scheduling, Notifications & Polish | 0/2 | Not started |
 
 ---
