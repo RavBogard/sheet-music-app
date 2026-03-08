@@ -5,8 +5,82 @@ import { withAuth } from "@/lib/api-auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
-import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
+import { getFullServiceContext, getNextFriday, getNextSaturday, ServiceContext } from "@/lib/liturgical-calendar"
 import { getUsageSummaries } from "@/lib/song-usage"
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS, getAllTemplateKeys } from "@/lib/liturgical-templates"
+
+/**
+ * Map natural language service descriptions to template keys and rabbi identifiers.
+ * Returns { templateKey, rabbi } or null if no template matches.
+ */
+export function parseTemplateRequest(text: string): { templateKey: string; rabbi?: string; date?: Date } | null {
+    const lower = text.toLowerCase()
+
+    // Extract date from message (e.g., "March 14", "for March 14th", "on 3/14")
+    let date: Date | undefined
+    const dateMatch = text.match(/(?:for|on)\s+(\w+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?)/i)
+    if (dateMatch) {
+        const parsed = new Date(dateMatch[1].replace(/(st|nd|rd|th)/i, ''))
+        if (!isNaN(parsed.getTime())) {
+            // If no year specified, use current year (or next year if date already passed)
+            if (!dateMatch[1].match(/\d{4}/)) {
+                const now = new Date()
+                parsed.setFullYear(now.getFullYear())
+                if (parsed < now) parsed.setFullYear(now.getFullYear() + 1)
+            }
+            date = parsed
+        }
+    }
+
+    // Template matching with rabbi detection
+    // Order matters: more specific matches first
+    if (lower.includes('daniel') && lower.includes('friday')) {
+        return { templateKey: 'friday_night', rabbi: 'daniel_karen', date }
+    }
+    if (lower.includes('karen') && lower.includes('friday')) {
+        return { templateKey: 'friday_night', rabbi: 'daniel_karen', date }
+    }
+    if (lower.includes('randy') && lower.includes('friday')) {
+        return { templateKey: 'friday_night', rabbi: 'randy', date }
+    }
+    if (lower.includes('daniel') && (lower.includes('saturday') || lower.includes('morning') || lower.includes('shabbat morning'))) {
+        return { templateKey: 'shabbat_morning', rabbi: 'daniel_karen', date }
+    }
+    if (lower.includes('karen') && (lower.includes('saturday') || lower.includes('morning'))) {
+        return { templateKey: 'shabbat_morning', rabbi: 'daniel_karen', date }
+    }
+    if (lower.includes('randy') && (lower.includes('saturday') || lower.includes('morning') || lower.includes('shabbat morning'))) {
+        return { templateKey: 'shabbat_morning', rabbi: 'randy', date }
+    }
+
+    // Non-rabbi-specific templates
+    const templatePatterns: [RegExp, string][] = [
+        [/friday\s*night|kabbalat\s*shabbat|erev\s*shabbat/, 'friday_night'],
+        [/shir\s*shabbat/, 'shir_shabbat'],
+        [/shabbat\s*morning|saturday\s*morning/, 'shabbat_morning'],
+        [/b.?nei\s*mitzvah\s*(saturday|morning)/i, 'bnei_mitzvah_saturday'],
+        [/havdalah\s*b.?nei\s*mitzvah/i, 'havdalah_bnei_mitzvah'],
+        [/rosh\s*hashanah\s*evening/i, 'rosh_hashanah_evening'],
+        [/rosh\s*hashanah\s*morning/i, 'rosh_hashanah_morning'],
+        [/rosh\s*hashanah/i, 'rosh_hashanah_evening'],  // default to evening
+        [/kol\s*nidre/i, 'yom_kippur_kol_nidre'],
+        [/yom\s*kippur\s*morning/i, 'yom_kippur_morning'],
+        [/yom\s*kippur\s*afternoon|neilah/i, 'yom_kippur_afternoon'],
+        [/yom\s*kippur/i, 'yom_kippur_kol_nidre'],  // default to kol nidre
+        [/sukkot/i, 'sukkot'],
+        [/simchat\s*torah/i, 'simchat_torah'],
+        [/passover|pesach/i, 'passover'],
+        [/shavuot/i, 'shavuot'],
+    ]
+
+    for (const [pattern, key] of templatePatterns) {
+        if (pattern.test(lower)) {
+            return { templateKey: key, date }
+        }
+    }
+
+    return null
+}
 
 // New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
@@ -83,6 +157,11 @@ You must return a JSON object with this structure:
 - If asked to "Transpose up 2 steps", issue TRANSPOSE_CHART.
 - If asked "Search for...", issue SEARCH_LIBRARY.
 - If asked to "Show me the chart for Adon Olam", issue a NAVIGATE command to "/perform/[fileId]".
+- **Template-Based Creation**: When the user asks to "create a [service type] for [date]" (e.g., "Create a Daniel Friday for March 14"), the server will automatically use the template engine to build a pre-populated setlist. You do NOT need to generate tracks manually. Simply issue a CREATE_SETLIST command and the server will fill in the tracks.
+- When adding songs, you can specify "key" and "bpm" in the ADD_TO_SETLIST payload: { "title": "Mi Chamocha", "key": "Am", "bpm": 120 }.
+- When the user says "in Am" or "in the key of G", set the "key" field on the ADD_TO_SETLIST payload.
+- When the user says "after the responsive reading" or "after [title]", set "afterTitle" in the ADD_TO_SETLIST payload so the track is inserted after the specified track: { "title": "Mi Chamocha", "key": "Am", "afterTitle": "Responsive Reading" }.
+- **Available Templates**: ${Object.entries(TEMPLATE_LABELS).map(([k, v]) => `${v.label} (${k})`).join(', ')}
 `
 
 export async function POST(request: NextRequest) {
@@ -101,6 +180,79 @@ export async function POST(request: NextRequest) {
     }
 
     const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi, matrixContext } = body
+
+    // ── Template Auto-Fill: detect "Create a X for Y" and use template engine ──
+    const lastMessage = messages[messages.length - 1]?.content || ''
+    const templateRequest = parseTemplateRequest(lastMessage)
+
+    if (templateRequest && (lastMessage.toLowerCase().includes('create') || lastMessage.toLowerCase().includes('build') || lastMessage.toLowerCase().includes('make'))) {
+        const template = getTemplate(templateRequest.templateKey)
+        if (template) {
+            // Build service context for the template engine
+            const targetDate = templateRequest.date || new Date()
+            let serviceContext: ServiceContext & { rabbi?: string }
+            try {
+                const fullCtx = await getFullServiceContext(targetDate)
+                serviceContext = { ...fullCtx, type: templateRequest.templateKey as any, rabbi: templateRequest.rabbi }
+            } catch {
+                serviceContext = {
+                    type: templateRequest.templateKey as any,
+                    date: targetDate,
+                    hebrewDate: { display: '', year: 0, month: 0, day: 0 },
+                    parasha: null,
+                    holiday: null,
+                    isShabbat: false,
+                    rabbi: templateRequest.rabbi,
+                }
+            }
+
+            // Build tracks using the template engine with the user's library
+            const libFiles = libraryFiles.map((f: { id: string; name: string }) => ({
+                id: f.id,
+                name: f.name,
+                mimeType: 'application/pdf',
+            }))
+            const tracks = buildSetlistFromTemplate(template, libFiles, serviceContext)
+            const setlistGeneratedName = generateSetlistName(serviceContext)
+            const templateLabel = TEMPLATE_LABELS[templateRequest.templateKey]?.label || templateRequest.templateKey
+
+            // Return SSE response with template-generated tracks
+            const encoder = new TextEncoder()
+            const responsePayload = {
+                done: true,
+                message: `Created a ${templateLabel} setlist${templateRequest.rabbi ? ` for Rabbi ${templateRequest.rabbi.replace('_', ' & ')}` : ''} on ${targetDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} with ${tracks.length} items from the template. Review and adjust as needed!`,
+                commands: [{
+                    type: 'CREATE_SETLIST',
+                    payload: {
+                        name: setlistGeneratedName,
+                        isPublic: false,
+                        tracks: tracks.map(t => ({
+                            title: t.title,
+                            fileId: t.fileId,
+                            type: t.type,
+                            performer: t.performer,
+                            estimatedMinutes: t.estimatedMinutes,
+                            key: t.key,
+                        })),
+                    },
+                }],
+                edits: [],
+            }
+            const stream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(responsePayload)}\n\n`))
+                    controller.close()
+                },
+            })
+            return new Response(stream, {
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                },
+            })
+        }
+    }
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages[messages.length - 1]?.content) {
       return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })

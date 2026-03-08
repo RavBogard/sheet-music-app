@@ -17,6 +17,12 @@ export interface ChatEditAction {
     type?: string
     performer?: string
     estimatedMinutes?: number
+    /** Musical key for the track (e.g., "Am", "G", "Bb") */
+    key?: string
+    /** Tempo in beats per minute */
+    bpm?: number
+    /** Insert after the track with this title (positional insertion) */
+    afterTitle?: string
 }
 
 interface ChatContextData {

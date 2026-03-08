@@ -251,7 +251,7 @@ export function ChatPanel() {
         // ── Batch all setlist modifications into edits ──
         // This ensures all changes go through local React state (via onApplyEdits)
         // instead of writing directly to Firestore (which causes stale-read races).
-        const edits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+        const edits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number; key?: string; bpm?: number; afterTitle?: string }[] = []
         let shouldClearFirst = false
 
         for (const cmd of commands) {
@@ -316,6 +316,9 @@ export function ChatPanel() {
                             type: p.type ? String(p.type) : undefined,
                             performer: p.performer ? String(p.performer) : undefined,
                             estimatedMinutes: p.estimatedMinutes ? Number(p.estimatedMinutes) : undefined,
+                            key: p.key ? String(p.key) : undefined,
+                            bpm: p.bpm ? Number(p.bpm) : undefined,
+                            afterTitle: p.afterTitle ? String(p.afterTitle) : undefined,
                         })
                         break;
 
@@ -365,7 +368,7 @@ export function ChatPanel() {
 
         // ── Apply batched setlist edits ──
         if ((shouldClearFirst || edits.length > 0) && onApplyEdits) {
-            const batchedEdits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+            const batchedEdits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number; key?: string; bpm?: number; afterTitle?: string }[] = []
 
             if (shouldClearFirst) {
                 // Remove all tracks by index, from last to first

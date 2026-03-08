@@ -172,11 +172,23 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                         type: (edit.type as SetlistTrack['type']) || 'song',
                         performer: edit.performer,
                         estimatedMinutes: edit.estimatedMinutes,
-                        key: '',
+                        key: edit.key || '',
+                        bpm: edit.bpm,
                         notes: ''
                     }
 
-                    if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
+                    if (edit.afterTitle) {
+                        // Positional insertion: find the track with the matching title and insert after it
+                        const afterIndex = newTracks.findIndex(t =>
+                            t.title.toLowerCase().includes(edit.afterTitle!.toLowerCase())
+                        )
+                        if (afterIndex >= 0) {
+                            newTracks.splice(afterIndex + 1, 0, newTrack)
+                        } else {
+                            // Title not found — append to end
+                            newTracks.push(newTrack)
+                        }
+                    } else if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
                         newTracks.splice(edit.index, 0, newTrack)
                     } else {
                         newTracks.push(newTrack)
