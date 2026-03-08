@@ -9,7 +9,7 @@
  * and wake lock keep the musician oriented during live services.
  *
  * Architecture: useSetlistPerformance hook + SetlistView component
- * Future: PDFOverlay (Plan 02) renders on top when a song is tapped.
+ * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
  */
 
 import { useState } from "react"
@@ -19,6 +19,7 @@ import { Loader2, ArrowLeft, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { SetlistView } from "@/components/performance/SetlistView"
+import { PDFOverlay } from "@/components/performance/PDFOverlay"
 
 export default function SetlistPerformPage() {
     const params = useParams()
@@ -113,8 +114,17 @@ export default function SetlistPerformPage() {
                 serviceNotes={serviceNotes}
             />
 
-            {/* Plan 02 will render PDFOverlay here when activeSongIndex is set */}
-            {/* {activeSongIndex !== null && <PDFOverlay ... />} */}
+            {/* PDF overlay: renders on top of setlist when a song is tapped */}
+            {activeSongIndex !== null && tracks[activeSongIndex] && (
+                <PDFOverlay
+                    track={tracks[activeSongIndex]}
+                    tracks={tracks}
+                    currentIndex={activeSongIndex}
+                    onClose={() => setActiveSongIndex(null)}
+                    onNavigate={(index) => setActiveSongIndex(index)}
+                    isPublicView={isPublicView}
+                />
+            )}
 
             {/* Empty state */}
             {tracks.length === 0 && (
