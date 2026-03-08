@@ -17,12 +17,12 @@
 
 - [ ] **EDIT-01**: Band leader can create a new setlist from a service template that pre-fills the liturgical skeleton (16 templates: 7 regular, 9 holiday)
 - [ ] **EDIT-02**: Band leader can duplicate a previous setlist and modify it (the primary weekly workflow)
-- [ ] **EDIT-03**: Band leader can add songs from the library, set key, tempo/feel, lead musician, and notes for each song
-- [ ] **EDIT-04**: Band leader can add, reorder, and edit non-song items (readings, prayers, transitions) in the service flow
-- [ ] **EDIT-05**: Band leader can drag-drop to reorder all items in the service flow
-- [ ] **EDIT-06**: Band leader can publish a setlist, making it visible to all assigned musicians
-- [ ] **EDIT-07**: Band leader can edit a published setlist (changes propagate to musicians)
-- [ ] **EDIT-08**: Setlist creation is faster than a spreadsheet — minimal clicks, keyboard-friendly, tab-through fields
+- [x] **EDIT-03**: Band leader can add songs from the library, set key, tempo/feel, lead musician, and notes for each song
+- [x] **EDIT-04**: Band leader can add, reorder, and edit non-song items (readings, prayers, transitions) in the service flow
+- [x] **EDIT-05**: Band leader can drag-drop to reorder all items in the service flow
+- [x] **EDIT-06**: Band leader can publish a setlist, making it visible to all assigned musicians
+- [x] **EDIT-07**: Band leader can edit a published setlist (changes propagate to musicians)
+- [x] **EDIT-08**: Setlist creation is faster than a spreadsheet — minimal clicks, keyboard-friendly, tab-through fields
 - [ ] **EDIT-09**: AI can auto-fill a setlist from a template with reasonable defaults via natural language command
 - [ ] **EDIT-10**: AI accepts chat commands for setlist modifications ("add Mi Chamocha in Am after the responsive reading")
 
@@ -129,12 +129,12 @@
 | SET-07 | Phase 3 | Complete |
 | EDIT-01 | Phase 4 | Pending |
 | EDIT-02 | Phase 4 | Pending |
-| EDIT-03 | Phase 4 | Pending |
-| EDIT-04 | Phase 4 | Pending |
-| EDIT-05 | Phase 4 | Pending |
-| EDIT-06 | Phase 4 | Pending |
-| EDIT-07 | Phase 4 | Pending |
-| EDIT-08 | Phase 4 | Pending |
+| EDIT-03 | Phase 4 | Complete |
+| EDIT-04 | Phase 4 | Complete |
+| EDIT-05 | Phase 4 | Complete |
+| EDIT-06 | Phase 4 | Complete |
+| EDIT-07 | Phase 4 | Complete |
+| EDIT-08 | Phase 4 | Complete |
 | EDIT-09 | Phase 4 | Pending |
 | EDIT-10 | Phase 4 | Pending |
 | MIX-01 | Phase 2 | Complete |

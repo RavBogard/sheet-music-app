@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-08T03:36:16.851Z"
-last_activity: 2026-03-08 -- Completed 03-03 (public access, home screen redesign, recharts cleanup)
+status: in_progress
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-08T04:02:18.000Z"
+last_activity: 2026-03-08 -- Completed 04-01 (inline editing, search overlay, auto-publish, notifications)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 50
+  total_plans: 12
+  completed_plans: 10
+  percent: 55
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 3 of 6 (complete)
-Plan: 3 of 3 in current phase (complete)
-Status: Phase 3 complete -- all 3 plans done (setlist view, PDF overlay, public access + home)
-Last activity: 2026-03-08 -- Completed 03-03 (public access, home screen redesign, recharts cleanup)
+Phase: 4 of 6
+Plan: 1 of 3 in current phase (complete)
+Status: Phase 4 in progress -- Plan 01 complete (inline editing, search overlay, auto-publish, notifications)
+Last activity: 2026-03-08 -- Completed 04-01 (inline accordion editing, search overlay, auto-publish)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 55%
 
 ## Performance Metrics
 
@@ -86,6 +86,11 @@ Progress: [█████░░░░░] 50%
 - [03-03]: NextServiceCard is standalone in src/components/home/ not in dashboard barrel export
 - [03-03]: Empty state uses most recent past setlist with isPastSetlist flag (Practice button)
 - [03-03]: recharts removed along with orphaned TimelineChart.tsx (resolves 01-02 deferred item)
+- [04-01]: Accordion expand uses single expandedTrackId state, collapses on drag-start
+- [04-01]: SearchOverlay replaces AddSongsModal as primary song-adding path (also handles replace flow)
+- [04-01]: Library "Add to Setlist" context menu removed -- editor search overlay is the canonical add path
+- [04-01]: Notification throttled to 5 min per setlist, fires only on track count changes (add/remove)
+- [04-01]: setlist-store.ts deleted per 01-02 decision (legacy staging buffer removed)
 
 ### Blockers/Concerns
 
@@ -94,6 +99,6 @@ Progress: [█████░░░░░] 50%
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:36:16.849Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-setlist-editor/04-CONTEXT.md
+Last session: 2026-03-08T04:02:18.000Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: .planning/phases/04-setlist-editor/04-02-PLAN.md
