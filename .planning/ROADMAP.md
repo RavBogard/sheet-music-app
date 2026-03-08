@@ -74,6 +74,7 @@ Plans:
 **Goal**: Daniel can build a complete service — songs, readings, prayers, keys, tempos, leads — faster than a spreadsheet, using templates, duplication, and AI assistance
 **Depends on**: Phase 3 (performance view validates the setlist data model before building the editor on top of it)
 **Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10
+**Plans:** 3 plans
 **Success Criteria:**
   1. Band leader selects a service template (from 16 options) and gets a pre-filled liturgical skeleton with the correct structure
   2. Band leader duplicates last week's setlist and swaps 2-3 songs in under 2 minutes
@@ -83,9 +84,9 @@ Plans:
   6. Publishing a setlist makes it immediately visible in musicians' performance view
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md — Inline accordion editing, search-first song adding, auto-publish, and change notifications
+- [ ] 04-02-PLAN.md — Complete 16 liturgical templates and enhance duplicate-and-tweak workflow
+- [ ] 04-03-PLAN.md — AI template auto-fill and enhanced chat commands for setlist modifications
 
 ### Phase 5: Backend Hardening & Library
 **Goal**: Backend systems are robust enough to run without admin duct tape — Drive sync is reliable, library management works in-app, print pipeline is clean, admin is simplified to essentials
