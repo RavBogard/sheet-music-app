@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-08T04:49:37Z"
-last_activity: 2026-03-08 -- Completed 05-01 (Sync engine Storage copy with retry, cleanup, and observability)
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-08T04:51:24Z"
+last_activity: 2026-03-08 -- Completed 05-02 (Library flat list with Fuse.js search, per-user canUpload flag)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 15
-  completed_plans: 13
-  percent: 72
+  completed_plans: 14
+  percent: 78
 ---
 
 # Project State
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 5 of 6 (in progress)
-Plan: 1 of 3 in current phase (complete)
-Status: 05-01 complete -- Sync engine copies Drive files to Storage with retry, cleanup, and observability
-Last activity: 2026-03-08 -- Completed 05-01 (Sync engine Storage copy with retry, cleanup, and observability)
+Plan: 2 of 3 in current phase (complete)
+Status: 05-02 complete -- Library flat list with Fuse.js search, per-user canUpload flag
+Last activity: 2026-03-08 -- Completed 05-02 (Library flat list with Fuse.js search, per-user canUpload flag)
 
-Progress: [███████░░░] 72%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: ~6 min
-- Total execution time: ~1.4 hours
+- Total execution time: ~1.5 hours
 
 ## Accumulated Context
 
@@ -101,6 +101,8 @@ Progress: [███████░░░] 72%
 - [04-03]: System prompt includes all 16 template types so Gemini maps natural language to template keys
 - [05-01]: MAX_COPIES_PER_RUN=20 for Vercel 300s timeout; failed copies prioritized first in retry queue
 - [05-01]: Storage deletion tries .pdf, .xml, and extensionless paths to cover all file formats
+- [05-02]: canUpload is a boolean field on UserProfile, not a role -- granular per-user permission
+- [05-02]: Folders filtered out at hydration time in library store, not at render time
 
 ### Blockers/Concerns
 
@@ -109,6 +111,6 @@ Progress: [███████░░░] 72%
 
 ## Session Continuity
 
-Last session: 2026-03-08T04:49:37Z
-Stopped at: Completed 05-01-PLAN.md
-Resume file: .planning/phases/05-backend-hardening-library/05-02-PLAN.md
+Last session: 2026-03-08T04:51:24Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: .planning/phases/05-backend-hardening-library/05-03-PLAN.md
