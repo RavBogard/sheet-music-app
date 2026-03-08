@@ -59,9 +59,9 @@
 - [ ] **AUTH-01**: User can sign in with Google OAuth
 - [ ] **AUTH-02**: User can sign in via QR code
 - [ ] **AUTH-03**: User session persists across browser refresh
-- [ ] **AUTH-04**: Role-based access: admin (Daniel), band leader, musician, sound engineer
-- [ ] **PROF-01**: Musician profile includes name, instrument(s), transposition preferences
-- [ ] **PROF-02**: Profile settings (instrument, transposition) are applied automatically across the entire app
+- [x] **AUTH-04**: Role-based access: admin (Daniel), band leader, musician, sound engineer
+- [x] **PROF-01**: Musician profile includes name, instrument(s), transposition preferences
+- [x] **PROF-02**: Profile settings (instrument, transposition) are applied automatically across the entire app
 
 ## Public Access
 
@@ -159,9 +159,9 @@
 | AUTH-01 | — | Existing |
 | AUTH-02 | — | Existing |
 | AUTH-03 | — | Existing |
-| AUTH-04 | Phase 1 | Pending |
-| PROF-01 | Phase 1 | Pending |
-| PROF-02 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Complete (01-03) |
+| PROF-01 | Phase 1 | Complete (01-03) |
+| PROF-02 | Phase 1 | Complete (01-03) |
 | PUB-01 | Phase 3 | Pending |
 | PUB-02 | Phase 3 | Pending |
 | PUB-03 | Phase 3 | Pending |

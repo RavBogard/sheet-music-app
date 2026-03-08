@@ -6,7 +6,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 
 ## Phases
 
-- [ ] **Phase 1: Monitor Research Spike + Code Audit** — Deep research into X32 bridge architecture; audit codebase for cleanup
+- [x] **Phase 1: Monitor Research Spike + Code Audit** — Deep research into X32 bridge architecture; audit codebase for cleanup
 - [ ] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
 - [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
 - [ ] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
@@ -28,9 +28,9 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
   5. User profiles with instrument/transposition preferences work (foundation for Phase 3 auto-transposition)
 
 Plans:
-- [ ] 01-01-PLAN.md — Bridge architecture research spike, PoC validation, architecture decision document
-- [ ] 01-02-PLAN.md — Codebase audit document and dead code removal
-- [ ] 01-03-PLAN.md — Profile and auth role verification with tests
+- [x] 01-01-PLAN.md — Bridge architecture research spike, PoC validation, architecture decision document
+- [x] 01-02-PLAN.md — Codebase audit document and dead code removal
+- [x] 01-03-PLAN.md — Profile and auth role verification with tests
 
 **This phase is research-heavy.** The monitor research determines the entire architecture of Phase 2. Do not write production monitor code until the research is validated with a working proof-of-concept.
 
@@ -172,7 +172,7 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 1. Monitor Research + Code Audit | 0/3 | Planned |
+| 1. Monitor Research + Code Audit | 3/3 | Complete |
 | 2. Monitor Mixing Implementation | 0/3 | Not started |
 | 3. Setlist Performance View | 0/3 | Not started |
 | 4. Setlist Editor | 0/3 | Not started |

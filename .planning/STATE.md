@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 0 of 6 (not started)
-Plan: 0 of 0 in current phase
-Status: Ready to plan Phase 1
-Last activity: 2026-03-07 — Project re-initialized with focused scope
+Phase: 1 of 6 (in progress)
+Plan: 3 of 3 in current phase
+Status: Phase 1 complete — all 3 plans executed
+Last activity: 2026-03-08 — Completed 01-03 (role + transposition verification)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 3
+- Average duration: ~10 min
+- Total execution time: 0.5 hours
 
 ## Accumulated Context
 
@@ -38,6 +38,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Project]: Backend open for rework — simplify so admin duct tape is unnecessary
 - [Roadmap]: Monitor research is Phase 1, not Phase 5
 - [Roadmap]: Phases 2 and 3 can parallelize after Phase 1
+- [01-03]: soundEngineer is orthogonal boolean flag on UserProfile — not a role hierarchy level
+- [01-03]: INSTRUMENT_PRESETS has 18 presets (not 17): 7 core + 8 occasional + 3 other
+- [01-03]: bridge-latency.test.ts is a browser dev utility — renamed to .util.ts to exclude from vitest
 
 ### Blockers/Concerns
 
@@ -46,6 +49,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-07
-Stopped at: Planning docs created; ready for review and Phase 1 planning
+Last session: 2026-03-08
+Stopped at: Completed 01-03-PLAN.md (role + transposition verification, 131 new tests)
 Resume file: None
