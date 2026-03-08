@@ -10,7 +10,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 - [ ] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
 - [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
 - [x] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
-- [ ] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
+- [x] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
 - [ ] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
 
 ## Phase Details
@@ -92,7 +92,7 @@ Plans:
 **Goal**: Backend systems are robust enough to run without admin duct tape — Drive sync is reliable, library management works in-app, print pipeline is clean, admin is simplified to essentials
 **Depends on**: Phases 1-4 (cleanup work identified in Phase 1, executed here alongside library/print work)
 **Requirements**: LIB-01, LIB-02, LIB-03, LIB-04, PRINT-01, PRINT-02, CODE-03, CODE-04
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 **Success Criteria:**
   1. A PDF added to Google Drive appears in the app library within one sync cycle without manual intervention or admin action
   2. Drive sync recovers from transient errors automatically (retry, backoff) — no silent failures
@@ -101,14 +101,15 @@ Plans:
   5. Admin interface has exactly two sections: user management and library management — nothing else
 
 Plans:
-- [ ] 05-01-PLAN.md — Drive sync hardening: Storage copy, error tracking, retry, sync run logging
-- [ ] 05-02-PLAN.md — Library UI flat list with search, upload permission canUpload flag
-- [ ] 05-03-PLAN.md — Gig packet UI in setlist editor, admin simplification to 2 sections
+- [x] 05-01-PLAN.md — Drive sync hardening: Storage copy, error tracking, retry, sync run logging
+- [x] 05-02-PLAN.md — Library UI flat list with search, upload permission canUpload flag
+- [x] 05-03-PLAN.md — Gig packet UI in setlist editor, admin simplification to 2 sections
 
 ### Phase 6: Scheduling, Notifications & Polish
 **Goal**: Band leader can assign musicians to services, musicians get notified, and the entire app is polished and ready for the band to use at real services
 **Depends on**: Phases 2-5 (all features exist, this phase connects them and polishes)
 **Requirements**: SCHED-01, SCHED-02, NOTIF-01, NOTIF-02
+**Plans:** 2 plans
 **Success Criteria:**
   1. Band leader assigns musicians to a service; musicians see who else is playing
   2. Musicians receive push/SMS notification when assigned to a service
@@ -117,8 +118,8 @@ Plans:
   5. End-to-end flow works: create setlist → assign musicians → publish → musicians see it on their tablets → perform with monitor mixing → done
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Notification wiring: FCM push + SMS into publish and assign routes, scheduling icons in NotificationBell
+- [ ] 06-02-PLAN.md — Performance view "who's playing" display, onboarding polish with inline quick-setup
 
 ## Dependency Graph
 
@@ -180,7 +181,7 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 | 2. Monitor Mixing Implementation | 0/3 | Not started |
 | 3. Setlist Performance View | 0/3 | Not started |
 | 4. Setlist Editor | 3/3 | Complete |
-| 5. Backend Hardening & Library | 0/3 | Planned |
+| 5. Backend Hardening & Library | 3/3 | Complete |
 | 6. Scheduling, Notifications & Polish | 0/2 | Not started |
 
 ---
