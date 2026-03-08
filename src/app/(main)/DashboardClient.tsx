@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { getContextualGreeting, Greeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
+import { doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,11 @@ import { cn } from "@/lib/utils"
 // import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 // import { HeroCard, CommandRow, UpcomingTimeline, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
 
+const INSTRUMENTS = [
+    'Guitar', 'Bass', 'Drums', 'Keys/Piano', 'Vocals',
+    'Trumpet', 'Saxophone', 'Clarinet', 'Violin', 'Flute', 'Other'
+]
+
 export interface DashboardServerProps {
     /** Pre-computed greeting from the server (avoids blank flash before JS boots) */
     serverGreeting: Greeting | null
@@ -43,6 +49,11 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
     const [personalLoaded, setPersonalLoaded] = useState(false)
     const [publicLoaded, setPublicLoaded] = useState(false)
+
+    // Quick-setup inline form state
+    const [showQuickSetup, setShowQuickSetup] = useState(false)
+    const [selectedInstrument, setSelectedInstrument] = useState('')
+    const [saving, setSaving] = useState(false)
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -295,12 +306,49 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Button asChild variant="outline" className="w-full gap-2">
-                                <Link href="/settings">
+                            {!showQuickSetup ? (
+                                <Button
+                                    variant="outline"
+                                    className="w-full gap-2"
+                                    onClick={() => setShowQuickSetup(true)}
+                                >
                                     <Music2 className="w-4 h-4" />
                                     Set Up My Instrument
-                                </Link>
-                            </Button>
+                                </Button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <label className="text-sm font-medium text-foreground">What do you play?</label>
+                                    <select
+                                        value={selectedInstrument}
+                                        onChange={e => setSelectedInstrument(e.target.value)}
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                    >
+                                        <option value="">Select instrument...</option>
+                                        {INSTRUMENTS.map(inst => (
+                                            <option key={inst} value={inst}>{inst}</option>
+                                        ))}
+                                    </select>
+                                    <Button
+                                        className="w-full"
+                                        disabled={!selectedInstrument || saving}
+                                        onClick={async () => {
+                                            if (!user || !selectedInstrument) return
+                                            setSaving(true)
+                                            try {
+                                                const userRef = doc(db, "users", user.uid)
+                                                await updateDoc(userRef, { "musicianProfile.instrument": selectedInstrument })
+                                            } catch {
+                                                // Silent fail -- user can set instrument later in settings
+                                            } finally {
+                                                setSaving(false)
+                                                setShowQuickSetup(false)
+                                            }
+                                        }}
+                                    >
+                                        {saving ? 'Saving...' : 'Save & Continue'}
+                                    </Button>
+                                </div>
+                            )}
                             <NudgeAdminButton />
                         </div>
                     </div>
@@ -316,26 +364,79 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                                 Set up your instrument to get transposed charts and personalized gig packets.
                             </p>
                         </div>
-                        <div className="flex gap-2">
-                            <Button asChild className="flex-1 gap-2">
-                                <Link href="/settings">
+                        {!showQuickSetup ? (
+                            <div className="flex gap-2">
+                                <Button
+                                    className="flex-1 gap-2"
+                                    onClick={() => setShowQuickSetup(true)}
+                                >
                                     <Music2 className="w-4 h-4" />
                                     Set Up Instrument
-                                </Link>
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                className="text-muted-foreground"
-                                onClick={async () => {
-                                    if (user) {
-                                        const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
-                                        await markWelcomeModalViewed(user.uid)
-                                    }
-                                }}
-                            >
-                                Skip
-                            </Button>
-                        </div>
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    className="text-muted-foreground"
+                                    onClick={async () => {
+                                        if (user) {
+                                            const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
+                                            await markWelcomeModalViewed(user.uid)
+                                        }
+                                    }}
+                                >
+                                    Skip
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-foreground">What do you play?</label>
+                                <select
+                                    value={selectedInstrument}
+                                    onChange={e => setSelectedInstrument(e.target.value)}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                >
+                                    <option value="">Select instrument...</option>
+                                    {INSTRUMENTS.map(inst => (
+                                        <option key={inst} value={inst}>{inst}</option>
+                                    ))}
+                                </select>
+                                <div className="flex gap-2">
+                                    <Button
+                                        className="flex-1"
+                                        disabled={!selectedInstrument || saving}
+                                        onClick={async () => {
+                                            if (!user || !selectedInstrument) return
+                                            setSaving(true)
+                                            try {
+                                                const userRef = doc(db, "users", user.uid)
+                                                await updateDoc(userRef, { "musicianProfile.instrument": selectedInstrument })
+                                                const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
+                                                await markWelcomeModalViewed(user.uid)
+                                            } catch {
+                                                // Silent fail -- user can set instrument later in settings
+                                            } finally {
+                                                setSaving(false)
+                                                setShowQuickSetup(false)
+                                            }
+                                        }}
+                                    >
+                                        {saving ? 'Saving...' : 'Save & Continue'}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="text-muted-foreground"
+                                        onClick={async () => {
+                                            if (user) {
+                                                const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
+                                                await markWelcomeModalViewed(user.uid)
+                                            }
+                                            setShowQuickSetup(false)
+                                        }}
+                                    >
+                                        Skip
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
