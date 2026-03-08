@@ -6,7 +6,8 @@ import { UserProfile, subscribeToAllUsers, updateUserRole, UserRole } from "@/li
 import { UserRow } from "@/components/admin/UserRow"
 import { notifyRoleChanged } from "@/lib/notification-store"
 import { toast } from "sonner"
-import { Loader2, Users, Search, FilterX } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Loader2, Search, FilterX } from "lucide-react"
 
 type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin'
 
@@ -94,15 +95,12 @@ export function PeopleSection() {
 
     return (
         <section className="space-y-4">
+            {/* Pending badge + Bulk Actions */}
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-violet-500" />
-                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                        People Management
-                    </h2>
                     {pendingCount > 0 && (
-                        <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded-full ml-2 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                        <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             {pendingCount} pending requests
                         </span>
                     )}
@@ -110,40 +108,40 @@ export function PeopleSection() {
 
                 {/* Bulk Actions Header (visible when items selected) */}
                 {selectedUsers.size > 0 && (
-                    <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-top-2">
-                        <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 mr-2">
+                    <div className="flex items-center gap-2 bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-lg animate-in fade-in slide-in-from-top-2">
+                        <span className="text-xs font-semibold text-brand mr-2">
                             {selectedUsers.size} Selected
                         </span>
 
-                        <div className="flex items-center gap-1.5 border-l border-violet-500/20 pl-3">
+                        <div className="flex items-center gap-1.5 border-l border-brand/20 pl-3">
                             <button
                                 onClick={() => bulkSetRole('member')}
-                                className="text-xs bg-background/50 hover:bg-background text-foreground border border-border px-2 py-1 rounded-md font-medium transition-colors"
+                                className="text-xs bg-background/50 hover:bg-background text-foreground border border-border px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
                             >
                                 Make Member
                             </button>
                             <button
                                 onClick={() => bulkSetRole('musician')}
-                                className="text-xs bg-green-600/10 hover:bg-green-600/20 text-green-600 dark:text-green-400 border border-green-500/20 px-2 py-1 rounded-md font-medium transition-colors"
+                                className="text-xs bg-success/10 hover:bg-success/20 text-success border border-success/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
                             >
                                 Make Musician
                             </button>
                             {isAdmin && (
                                 <button
                                     onClick={() => bulkSetRole('band_leader')}
-                                    className="text-xs bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-1 rounded-md font-medium transition-colors"
+                                    className="text-xs bg-brand/10 hover:bg-brand/20 text-brand border border-brand/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
                                 >
                                     Make Band Leader
                                 </button>
                             )}
                             <button
                                 onClick={() => bulkSetRole('denied')}
-                                className="text-xs bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 border border-red-500/20 px-2 py-1 rounded-md font-medium transition-colors ml-2"
+                                className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 px-2.5 py-1.5 rounded-md font-medium transition-colors ml-2 min-h-8"
                                 title="Set role to denied (removes access)"
                             >
                                 Deny Access
                             </button>
-                            <button onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2 px-1">
+                            <button onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2 px-2 min-h-8">
                                 Cancel
                             </button>
                         </div>
@@ -158,7 +156,7 @@ export function PeopleSection() {
                     <input
                         type="text"
                         placeholder="Search users..."
-                        className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-violet-500 transition-shadow"
+                        className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-shadow min-h-11"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -169,10 +167,12 @@ export function PeopleSection() {
                         <button
                             key={role}
                             onClick={() => setRoleFilter(role)}
-                            className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${roleFilter === role
-                                ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                }`}
+                            className={cn(
+                                "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors min-h-9",
+                                roleFilter === role
+                                    ? "bg-brand/20 text-brand"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
                         >
                             {role === 'band_leader' ? 'Leader' : role.charAt(0).toUpperCase() + role.slice(1)}
                         </button>
@@ -182,7 +182,7 @@ export function PeopleSection() {
                 {(searchQuery || roleFilter !== 'all') && (
                     <button
                         onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
-                        className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted flex-shrink-0"
+                        className="p-2.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted flex-shrink-0 min-h-11 min-w-11 flex items-center justify-center"
                         title="Clear filters"
                     >
                         <FilterX className="w-4 h-4" />
@@ -201,7 +201,7 @@ export function PeopleSection() {
                             type="checkbox"
                             checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
                             onChange={() => selectedUsers.size > 0 ? clearSelection() : selectAllFiltered()}
-                            className="h-4 w-4 rounded border-border accent-violet-600 shrink-0 cursor-pointer"
+                            className="h-5 w-5 rounded border-border accent-brand shrink-0 cursor-pointer"
                         />
                         <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center pl-2">
                             <div className="col-span-12 sm:col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</div>

@@ -2,10 +2,11 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Radio, FileText } from "lucide-react"
+import { Loader2, ArrowLeft, ShieldAlert, Radio, FileText, Users, Music, Database, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
+import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { PeopleSection } from "@/components/admin/PeopleSection"
 import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
 import { BandPrepSection } from "@/components/admin/BandPrepSection"
@@ -29,9 +30,9 @@ export default function ManagePage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground p-6 pb-24">
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-4 mb-2">
                     <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
@@ -46,31 +47,51 @@ export default function ManagePage() {
                     </div>
                 </div>
 
-                {/* Section 1: People */}
-                <div className="space-y-8">
-                    <SectionErrorBoundary label="People">
+                {/* People Management */}
+                <SectionErrorBoundary label="People">
+                    <CollapsibleSection
+                        icon={<Users className="w-5 h-5 text-brand" />}
+                        title="People Management"
+                        defaultOpen={true}
+                    >
                         <PeopleSection />
-                    </SectionErrorBoundary>
+                    </CollapsibleSection>
+                </SectionErrorBoundary>
 
-                    <SectionErrorBoundary label="Band Prep">
+                {/* Band Prep */}
+                <SectionErrorBoundary label="Band Prep">
+                    <CollapsibleSection
+                        icon={<Music className="w-5 h-5 text-brand" />}
+                        title="Band Preparation"
+                    >
                         <BandPrepSection />
-                    </SectionErrorBoundary>
+                    </CollapsibleSection>
+                </SectionErrorBoundary>
 
-                    {isAdmin && (
-                        <SectionErrorBoundary label="Access Audit">
+                {/* Access Audit */}
+                {isAdmin && (
+                    <SectionErrorBoundary label="Access Audit">
+                        <CollapsibleSection
+                            icon={<History className="w-5 h-5 text-muted-foreground" />}
+                            title="Access Audit Log"
+                        >
                             <AccessAuditLog />
-                        </SectionErrorBoundary>
-                    )}
-                </div>
+                        </CollapsibleSection>
+                    </SectionErrorBoundary>
+                )}
 
                 <hr className="border-border" />
 
-                {/* Section 2: Library */}
-                <div className="space-y-8">
-                    <SectionErrorBoundary label="Library">
+                {/* Library */}
+                <SectionErrorBoundary label="Library">
+                    <CollapsibleSection
+                        icon={<Database className="w-5 h-5 text-brand" />}
+                        title="Library"
+                        defaultOpen={true}
+                    >
                         <LibraryDataSection />
-                    </SectionErrorBoundary>
-                </div>
+                    </CollapsibleSection>
+                </SectionErrorBoundary>
 
                 {/* Footer links */}
                 <div className="pt-4 border-t border-border space-y-1">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { Music, CheckCircle2, Clock, Loader2 } from "lucide-react"
+import { CheckCircle2, Clock, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface MemberPrep {
@@ -52,18 +52,7 @@ export function BandPrepSection() {
     if (!isBandLeader) return null
 
     return (
-        <section className="space-y-4">
-            <div className="flex items-center gap-2">
-                <Music className="w-5 h-5 text-brand" />
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Band Preparation
-                </h2>
-                {data.length > 0 && (
-                    <span className="text-[10px] font-bold bg-brand/20 text-brand px-1.5 py-0.5 rounded-full ml-2">
-                        {data.length} upcoming
-                    </span>
-                )}
-            </div>
+        <div className="space-y-4">
             {loading ? (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -141,6 +130,6 @@ export function BandPrepSection() {
                     ))}
                 </div>
             )}
-        </section>
+        </div>
     )
 }

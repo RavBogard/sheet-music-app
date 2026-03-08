@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Database, Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react"
+import { Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
 import { collection, query, orderBy, limit, getDocs, getCountFromServer } from "firebase/firestore"
@@ -71,14 +71,7 @@ export function LibraryDataSection() {
                 : 'No sync data'
 
     return (
-        <section className="space-y-4">
-            <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-brand" />
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Library
-                </h2>
-            </div>
-
+        <div className="space-y-4">
             {loading ? (
                 <div className="flex justify-center p-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -121,6 +114,6 @@ export function LibraryDataSection() {
                     <LibrarySyncCard />
                 </div>
             )}
-        </section>
+        </div>
     )
 }

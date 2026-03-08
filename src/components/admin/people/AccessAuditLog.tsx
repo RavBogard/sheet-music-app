@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { collection, query, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { History, Shield, ArrowRight, Loader2 } from "lucide-react"
+import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 
 interface AuditLog {
@@ -51,11 +51,6 @@ export function AccessAuditLog() {
 
     return (
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-                <History className="w-5 h-5 text-zinc-500" />
-                <h3 className="font-semibold text-foreground text-sm">Access Audit Log</h3>
-            </div>
-
             {logs.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4 text-center bg-muted/20 rounded-lg">No audit records found.</p>
             ) : (
