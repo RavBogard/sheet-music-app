@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
         // Use collectionGroup query to search all chordData across all files at once
         // This avoids the N+1 pattern of querying each file's subcollection individually
-        const chordGroupSnap = await db.collectionGroup('chordData').get()
+        const chordGroupSnap = await db.collectionGroup('chordData').limit(2000).get()
 
         // Build a map of fileId → file name for display
         const fileNameCache = new Map<string, string>()

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
+import { withAuth } from "@/lib/api-auth";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -14,6 +15,9 @@ export const config = {
 };
 
 export async function POST(request: NextRequest) {
+    const auth = await withAuth(request);
+    if (auth instanceof NextResponse) return auth;
+
     if (!apiKey) {
         return NextResponse.json(
             { error: "GEMINI_API_KEY environment variable is missing" },

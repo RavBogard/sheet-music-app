@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
     try {
-        const auth = await withAuth(req)
+        const auth = await withAuth(req, 'musician')
         if (auth instanceof NextResponse) return auth
 
         const body = await req.json()
@@ -179,7 +179,7 @@ export async function PATCH(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const auth = await withAuth(req)
+        const auth = await withAuth(req, 'band_leader')
         if (auth instanceof NextResponse) return auth
 
         const fileId = req.nextUrl.searchParams.get("fileId")

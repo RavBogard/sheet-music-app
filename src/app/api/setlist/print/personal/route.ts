@@ -36,6 +36,11 @@ export async function GET(request: NextRequest) {
         }
         const setlist = setlistDoc.data()!
 
+        // Verify access: must be public, owned by user, or user is a band leader
+        if (setlist.isPublic !== true && setlist.ownerId !== auth.uid && !auth.isBandLeader) {
+            return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+        }
+
         // Load user profile for musician preferences
         const userDoc = await db.collection('users').doc(auth.uid).get()
         const profile: MusicianProfile = userDoc.data()?.musicianProfile || {}

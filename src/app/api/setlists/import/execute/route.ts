@@ -80,7 +80,8 @@ export async function POST(req: NextRequest) {
 
                         try {
                             const driveRes = await fetch(downloadUrl)
-                            if (driveRes.ok) {
+                            const contentType = driveRes.headers.get('content-type') || ''
+                            if (driveRes.ok && contentType.startsWith('application/pdf')) {
                                 const buffer = Buffer.from(await driveRes.arrayBuffer())
                                 const newLibraryId = `upload-${crypto.randomUUID()}`
 
