@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { toDate, toISOString, formatEventDate, getRelativeDateLabel } from './firestore-helpers'
 
 describe('toDate', () => {
@@ -65,35 +65,42 @@ describe('formatEventDate', () => {
 })
 
 describe('getRelativeDateLabel', () => {
-    it('returns "Today" or "Tonight" for today', () => {
-        const now = new Date()
-        const result = getRelativeDateLabel(now)
-        expect(result === 'Today' || result === 'Tonight').toBe(true)
+    // Pin time to a known point to avoid timezone edge cases
+    // Wednesday March 4, 2026 at 10:00 AM local time
+    const FIXED_NOW = new Date(2026, 2, 4, 10, 0, 0, 0)
+
+    beforeEach(() => {
+        vi.useFakeTimers()
+        vi.setSystemTime(FIXED_NOW)
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('returns "Today" for today (morning)', () => {
+        const result = getRelativeDateLabel(FIXED_NOW)
+        expect(result).toBe('Today')
     })
 
     it('returns "Tomorrow" for tomorrow', () => {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        tomorrow.setHours(12, 0, 0, 0) // Noon tomorrow
+        // March 5, 2026 at noon
+        const tomorrow = new Date(2026, 2, 5, 12, 0, 0, 0)
         const result = getRelativeDateLabel(tomorrow)
         expect(result).toBe('Tomorrow')
     })
 
     it('returns weekday name for dates within the week', () => {
-        const inThreeDays = new Date()
-        inThreeDays.setDate(inThreeDays.getDate() + 3)
-        inThreeDays.setHours(12, 0, 0, 0)
+        // March 7, 2026 (Saturday) — 3 days from the fixed Wednesday
+        const inThreeDays = new Date(2026, 2, 7, 12, 0, 0, 0)
         const result = getRelativeDateLabel(inThreeDays)
-        // Should be a day name like "Monday", "Tuesday", etc.
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        expect(dayNames).toContain(result)
+        expect(result).toBe('Saturday')
     })
 
     it('returns formatted date for dates further out', () => {
-        const farFuture = new Date()
-        farFuture.setDate(farFuture.getDate() + 14)
+        // March 18, 2026 — 14 days out
+        const farFuture = new Date(2026, 2, 18, 12, 0, 0, 0)
         const result = getRelativeDateLabel(farFuture)
-        // Should be a full date like "Friday, March 15"
         expect(result).toBeTruthy()
         expect(result).not.toBe('Tomorrow')
     })
