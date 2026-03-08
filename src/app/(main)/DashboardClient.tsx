@@ -50,10 +50,15 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     const [personalLoaded, setPersonalLoaded] = useState(false)
     const [publicLoaded, setPublicLoaded] = useState(false)
 
-    // Quick-setup inline form state
+    // Quick-setup inline form state — reset when role changes to avoid stuck UI
     const [showQuickSetup, setShowQuickSetup] = useState(false)
     const [selectedInstrument, setSelectedInstrument] = useState('')
     const [saving, setSaving] = useState(false)
+    useEffect(() => {
+        setShowQuickSetup(false)
+        setSelectedInstrument('')
+        setSaving(false)
+    }, [profile?.role])
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)

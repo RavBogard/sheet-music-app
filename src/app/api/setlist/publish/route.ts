@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Determine base URL and publisher name
-        const origin = request.headers.get('origin') || request.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://centralreform.live'
+        const origin = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
         // Use publisher's displayName from Firestore (respects custom names)
         const publisherDoc = await db.collection('users').doc(auth.uid).get()
         const publisherName = publisherDoc.data()?.displayName || auth.email?.split('@')[0] || 'A band member'
@@ -230,18 +230,16 @@ export async function POST(request: NextRequest) {
 
         // Step 5: Log audit entry (fire-and-forget)
         const historyRef = setlistRef.collection('history').doc()
-        db.runTransaction(async () => {
-            await historyRef.set({
-                action: 'published',
-                userId: auth.uid,
-                userName: auth.email || 'unknown',
-                timestamp: FieldValue.serverTimestamp(),
-                details: {
-                    wasAlreadyPublic: wasPublic,
-                    musicianCount: musicians.length,
-                    musicianNames: musicians.map(m => m.name),
-                },
-            })
+        historyRef.set({
+            action: 'published',
+            userId: auth.uid,
+            userName: auth.email || 'unknown',
+            timestamp: FieldValue.serverTimestamp(),
+            details: {
+                wasAlreadyPublic: wasPublic,
+                musicianCount: musicians.length,
+                musicianNames: musicians.map(m => m.name),
+            },
         }).catch(err => logger.warn('[Publish] Audit log failed:', err))
 
         // Wait for usage + email results

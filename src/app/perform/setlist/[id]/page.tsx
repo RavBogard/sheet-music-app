@@ -112,7 +112,7 @@ export default function SetlistPerformPage() {
                             key={m.uid || i}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
                         >
-                            <span className="font-medium text-foreground">{m.name.split(' ')[0]}</span>
+                            <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || 'Unknown'}</span>
                             {m.instrument && (
                                 <span className="text-muted-foreground/70">{m.instrument}</span>
                             )}

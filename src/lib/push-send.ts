@@ -38,7 +38,11 @@ export async function sendPushToUsers(
         return { sent: 0, failed: 0, staleTokensCleaned: 0 }
     }
 
-    initAdmin()
+    const ready = initAdmin()
+    if (!ready) {
+        logger.warn('[Push] Firebase Admin not initialized — skipping push')
+        return { sent: 0, failed: 0, staleTokensCleaned: 0 }
+    }
     const db = getFirestore()
 
     // Collect FCM tokens from all target users
@@ -48,6 +52,7 @@ export async function sendPushToUsers(
     for (let i = 0; i < targetUids.length; i += TOKEN_BATCH) {
         const batch = targetUids.slice(i, i + TOKEN_BATCH)
         const refs = batch.map(uid => db.collection('users').doc(uid))
+        if (refs.length === 0) continue
         const docs = await db.getAll(...refs)
 
         for (const userDoc of docs) {
@@ -106,7 +111,6 @@ export async function sendPushToUsers(
 
     // Clean up stale tokens
     if (staleTokens.length > 0) {
-        const { FieldValue } = await import('firebase-admin/firestore')
         for (const uid of targetUids) {
             try {
                 const userRef = db.collection('users').doc(uid)
@@ -116,9 +120,8 @@ export async function sendPushToUsers(
 
                 const staleForUser = tokens.filter(t => staleTokens.includes(t))
                 if (staleForUser.length > 0) {
-                    await userRef.update({
-                        fcmTokens: FieldValue.arrayRemove(...staleForUser),
-                    })
+                    const updatedTokens = tokens.filter(t => !staleTokens.includes(t))
+                    await userRef.update({ fcmTokens: updatedTokens })
                 }
             } catch {
                 // Best-effort cleanup

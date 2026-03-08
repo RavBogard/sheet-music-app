@@ -7,8 +7,8 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 ## Phases
 
 - [x] **Phase 1: Monitor Research Spike + Code Audit** — Deep research into X32 bridge architecture; audit codebase for cleanup
-- [ ] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
-- [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
+- [x] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
+- [x] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
 - [x] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
 - [x] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
 - [x] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
@@ -178,11 +178,11 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 1. Monitor Research + Code Audit | 3/3 | Complete |
-| 2. Monitor Mixing Implementation | 0/3 | Not started |
-| 3. Setlist Performance View | 0/3 | Not started |
+| 2. Monitor Mixing Implementation | 3/3 | Complete |
+| 3. Setlist Performance View | 3/3 | Complete |
 | 4. Setlist Editor | 3/3 | Complete |
 | 5. Backend Hardening & Library | 3/3 | Complete |
-| 6. Scheduling, Notifications & Polish | 0/2 | Not started |
+| 6. Scheduling, Notifications & Polish | 2/2 | Complete |
 
 ---
 *Roadmap created: 2026-03-07*
