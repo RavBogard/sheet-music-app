@@ -47,9 +47,9 @@ Plans:
   6. When X32 is unreachable, the app shows a clear status indicator and all non-monitor features continue working normally
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Configure mode data layer and UI (starring, default channels, monitor page)
+- [ ] 02-02-PLAN.md — Live mode popup with vertical faders and simplified QuickMonitorPanel
+- [ ] 02-03-PLAN.md — Connection reliability, graceful degradation, and bridge hardening
 
 ### Phase 3: Setlist Performance View
 **Goal**: A musician sets their tablet on a music stand and sees the full service at a glance — songs in their key, tempo, notes, liturgical flow items — with immersive PDF drill-down and public access for jam sessions
