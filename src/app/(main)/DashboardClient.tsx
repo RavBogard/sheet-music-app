@@ -188,15 +188,15 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     const atmosphereClasses = useMemo(() => {
         switch (greeting.atmosphere) {
             case 'shabbat':
-                return 'from-amber-500/8 via-orange-500/5 to-transparent dark:from-amber-500/10 dark:via-orange-900/8 dark:to-transparent'
+                return 'from-amber-500/10 via-brand/5 to-transparent'
             case 'holiday':
-                return 'from-yellow-500/8 via-amber-500/5 to-transparent dark:from-yellow-500/10 dark:via-amber-900/8 dark:to-transparent'
+                return 'from-yellow-500/10 via-brand/5 to-transparent'
             case 'morning':
-                return 'from-sky-500/5 via-blue-500/3 to-transparent dark:from-sky-900/10 dark:via-blue-900/5 dark:to-transparent'
+                return 'from-brand/8 via-indigo-500/5 to-transparent'
             case 'evening':
-                return 'from-indigo-500/5 via-violet-500/3 to-transparent dark:from-indigo-900/10 dark:via-violet-900/5 dark:to-transparent'
+                return 'from-brand/10 via-violet-900/8 to-transparent'
             default:
-                return 'from-slate-500/3 to-transparent dark:from-slate-800/10 dark:to-transparent'
+                return 'from-brand/5 to-transparent'
         }
     }, [greeting.atmosphere])
 
@@ -220,9 +220,9 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                             alt={congregation.shortName}
                             width={32}
                             height={32}
-                            className="w-8 h-8 rounded-full border border-border/50"
+                            className="w-8 h-8 rounded-full border border-brand/20"
                         />
-                        <span className="text-xs font-semibold text-muted-foreground/70 tracking-wider uppercase">
+                        <span className="text-xs font-semibold text-brand/70 tracking-wider uppercase">
                             {congregation.shortName}
                         </span>
                     </div>
@@ -262,15 +262,15 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                     {user && isMember && (
                         <div className="flex flex-col gap-4">
                             {!setlistsReady ? (
-                                /* Skeleton card while loading */
-                                <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-3">
+                                /* Skeleton card while loading — brand-tinted */
+                                <div className="rounded-2xl border border-brand/10 bg-card/50 p-5 space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full bg-muted-foreground/15 animate-pulse" />
-                                        <div className="h-3 w-20 bg-muted-foreground/10 rounded animate-pulse" />
+                                        <div className="h-3 w-3 rounded-full bg-brand/15 animate-pulse" />
+                                        <div className="h-3 w-20 bg-brand/10 rounded animate-pulse" />
                                     </div>
-                                    <div className="h-5 w-52 bg-muted-foreground/15 rounded animate-pulse" />
-                                    <div className="h-3 w-32 bg-muted-foreground/10 rounded animate-pulse" />
-                                    <div className="h-9 w-full bg-muted-foreground/10 rounded-xl animate-pulse mt-2" />
+                                    <div className="h-5 w-52 bg-brand/15 rounded animate-pulse" />
+                                    <div className="h-3 w-32 bg-brand/10 rounded animate-pulse" />
+                                    <div className="h-9 w-full bg-brand/10 rounded-xl animate-pulse mt-2" />
                                 </div>
                             ) : tonightSetlist ? (
                                 <NextServiceCard
@@ -300,7 +300,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
 
                 {/* ── Onboarding: Pending User ── */}
                 {user && profile?.role === "pending" && (
-                    <div className={cn("bg-card border border-border rounded-2xl p-6 space-y-4", stagger(2))}>
+                    <div className={cn("bg-card border border-brand/15 rounded-2xl p-6 space-y-4", stagger(2))}>
                         <div className="flex flex-col items-center text-center gap-3">
                             <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
                             <div>
@@ -361,7 +361,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
 
                 {/* ── Onboarding: First-time approved ── */}
                 {user && isMember && profile && !profile.musicianProfile?.instrument && !profile.viewedWelcomeModal && (
-                    <div className={cn("bg-card border-2 border-violet-500/30 rounded-2xl p-6 space-y-4", stagger(2))}>
+                    <div className={cn("bg-card border-2 border-brand/30 rounded-2xl p-6 space-y-4", stagger(2))}>
                         <div className="text-center">
                             <span className="text-2xl">{'\uD83C\uDF89'}</span>
                             <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>

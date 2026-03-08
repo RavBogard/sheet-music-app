@@ -36,8 +36,8 @@ export function SetlistView({
             <div className="flex flex-col pb-24">
                 {/* Service notes banner */}
                 {serviceNotes && (
-                    <div className="mx-3 mt-2 mb-1 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                        <p className="text-sm text-blue-200 whitespace-pre-wrap">{serviceNotes}</p>
+                    <div className="mx-3 mt-2 mb-1 p-3 bg-brand/10 border border-brand/20 rounded-lg">
+                        <p className="text-sm text-brand whitespace-pre-wrap">{serviceNotes}</p>
                     </div>
                 )}
 

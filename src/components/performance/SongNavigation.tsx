@@ -33,7 +33,7 @@ export function SongNavigation() {
                 size="icon"
                 onClick={handlePrev}
                 disabled={queueIndex <= 0}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95"
+                className="text-muted-foreground hover:text-foreground hover:bg-brand/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95"
             >
                 <ChevronLeft className="h-8 w-8" />
             </Button>
@@ -52,7 +52,7 @@ export function SongNavigation() {
                 size="icon"
                 onClick={handleNext}
                 disabled={queueIndex >= playbackQueue.length - 1}
-                className="text-foreground hover:bg-accent rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95 bg-white/5 border border-white/5"
+                className="text-foreground hover:bg-brand/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95 bg-brand/10 border border-brand/20"
             >
                 <ChevronRight className="h-8 w-8" />
             </Button>

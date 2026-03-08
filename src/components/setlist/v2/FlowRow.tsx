@@ -73,8 +73,8 @@ export const FlowRow = memo(function FlowRow({
             ref={setNodeRef}
             style={style}
             className={`rounded-lg transition-colors
-                ${isExpanded ? "bg-accent/60 ring-1 ring-primary/20" : `${config.tint} hover:bg-accent/50 active:bg-accent`}
-                ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50" : ""}
+                ${isExpanded ? "bg-brand/5 ring-1 ring-brand/20" : `${config.tint} hover:bg-brand/5 active:bg-brand/10`}
+                ${isDragging ? "opacity-50 ring-2 ring-brand scale-[1.02] z-50" : ""}
             `}
         >
             {/* Collapsed row (always visible) */}

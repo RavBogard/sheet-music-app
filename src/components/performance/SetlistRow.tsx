@@ -75,11 +75,11 @@ export function SetlistRow({
                 role={isLeader ? "button" : undefined}
                 onClick={isLeader ? handleClick : undefined}
             >
-                <div className="h-px flex-1 bg-border/50" />
+                <div className="h-px flex-1 bg-brand/10" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                     {track.title}
                 </span>
-                <div className="h-px flex-1 bg-border/50" />
+                <div className="h-px flex-1 bg-brand/10" />
             </div>
         )
     }
@@ -98,7 +98,7 @@ export function SetlistRow({
                 }}
                 className={cn(
                     "flex items-center gap-3 px-4 py-2 transition-colors",
-                    isCurrentPosition && "bg-violet-500/15 border-l-2 border-violet-500",
+                    isCurrentPosition && "bg-brand/15 border-l-2 border-brand",
                     isClickable ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
                     !isSong && "opacity-70"
                 )}
@@ -109,7 +109,7 @@ export function SetlistRow({
                             {track.title}
                         </span>
                         {displayKey && (
-                            <span className="font-mono text-xs px-1.5 py-0.5 bg-muted rounded shrink-0">
+                            <span className="font-mono text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded shrink-0">
                                 {displayKey}
                             </span>
                         )}

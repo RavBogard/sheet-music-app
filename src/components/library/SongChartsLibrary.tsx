@@ -216,7 +216,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
-                    <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-border object-cover" />
+                    <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-brand/20 object-cover" />
                     <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
@@ -249,7 +249,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
-                        className="pl-12 h-14 text-xl rounded-full bg-card border-border focus:border-blue-500"
+                        className="pl-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
                     />
                 </div>
 
@@ -269,7 +269,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         <button
                             onClick={() => setTab("charts")}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "charts"
-                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30"
+                                ? "bg-brand/15 text-brand ring-1 ring-brand/30"
                                 : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
                                 }`}
                         >
@@ -278,7 +278,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         <button
                             onClick={() => setTab("audio")}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${tab === "audio"
-                                ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/30"
+                                ? "bg-brand/15 text-brand ring-1 ring-brand/30"
                                 : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
                                 }`}
                         >
@@ -381,7 +381,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
             {/* Selection Action Bar */}
             {selectMode && selectedIds.size > 0 && (
-                <div className="border-t border-border bg-blue-500/10 backdrop-blur-sm px-4 py-3">
+                <div className="border-t border-border bg-brand/10 backdrop-blur-sm px-4 py-3">
                     <div className="max-w-2xl mx-auto flex items-center justify-between">
                         <span className="text-sm font-medium">
                             {selectedIds.size} file{selectedIds.size !== 1 ? 's' : ''} selected
@@ -424,7 +424,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                             <Button
                                 size="sm"
                                 variant="default"
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                className="bg-brand hover:bg-brand/90 text-white"
                                 onClick={() => {
                                     const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
                                     toast.info(`${selectedItems.length} songs selected. Use the setlist editor to add songs directly.`)

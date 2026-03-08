@@ -128,7 +128,7 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
         <div className={`w-full py-1.5 transition-opacity ${!on ? "opacity-50 grayscale" : ""}`}>
             <div
                 ref={sliderRef}
-                className="relative h-14 w-full rounded-xl bg-zinc-900/80 border border-white/5 overflow-hidden cursor-pointer touch-none select-none"
+                className="relative h-14 w-full rounded-xl bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -137,15 +137,15 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                 {/* Fill bar */}
                 <div
                     className={`absolute inset-y-0 left-0 transition-all duration-75 ${barOpacity} ${isMaster
-                        ? "bg-violet-600/60"
-                        : "bg-blue-600/50"
+                        ? "bg-brand/60"
+                        : "bg-brand/50"
                         }`}
                     style={{ width: `${percentage}%` }}
                 />
 
                 {/* Content Overlay */}
                 <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-                    <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-violet-100" : "text-zinc-200"}`}>
+                    <span className={`text-sm font-semibold truncate pr-4 ${isMaster ? "text-white" : "text-zinc-200"}`}>
                         {label}
                     </span>
                     <div className="flex items-center gap-2">

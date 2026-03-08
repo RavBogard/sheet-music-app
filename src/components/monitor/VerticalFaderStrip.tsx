@@ -126,7 +126,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         >
             {/* Channel name */}
             <div
-                className={`text-[10px] font-medium truncate w-full text-center mb-1 ${isMaster ? "text-violet-300" : "text-zinc-400"}`}
+                className={`text-[10px] font-medium truncate w-full text-center mb-1 ${isMaster ? "text-brand" : "text-zinc-400"}`}
                 title={label}
             >
                 {label}
@@ -135,7 +135,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             {/* Vertical fader track */}
             <div
                 ref={sliderRef}
-                className="relative w-8 h-[200px] rounded-lg bg-zinc-900/80 border border-white/5 overflow-hidden cursor-pointer touch-none select-none"
+                className="relative w-8 h-[200px] rounded-lg bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -144,7 +144,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 {/* Fill bar from bottom up */}
                 <div
                     className={`absolute bottom-0 left-0 right-0 transition-all duration-75 ${barOpacity} ${
-                        isMaster ? "bg-violet-600/60" : "bg-blue-600/50"
+                        isMaster ? "bg-brand/60" : "bg-brand/50"
                     }`}
                     style={{ height: fillHeight }}
                 />

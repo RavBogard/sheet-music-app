@@ -40,7 +40,7 @@ function UpNextPreview({ items }: { items: QueueItem[] }) {
                     return (
                         <div
                             key={`${item.fileId}-${i}`}
-                            className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/50"
+                            className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-brand/5 border border-brand/10"
                         >
                             <ItemIcon className={`h-4 w-4 shrink-0 ${isSong ? 'text-zinc-400' : style.color}`} />
                             <span className={`text-sm truncate ${isSong ? 'text-zinc-300 font-medium' : 'text-zinc-500'}`}>

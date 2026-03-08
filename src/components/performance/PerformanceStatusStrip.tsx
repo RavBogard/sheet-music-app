@@ -32,13 +32,13 @@ export function PerformanceStatusStrip() {
             {(current.key || transposition !== 0 || (capoFret && capoFret > 0)) && (
                 <div className="flex items-center gap-1.5 ml-1 relative">
                     {current.key && (
-                        <span className={transposition !== 0 || capoFret ? "text-white/40 line-through" : "text-violet-300 font-semibold"}>
+                        <span className={transposition !== 0 || capoFret ? "text-white/40 line-through" : "text-brand font-semibold"}>
                             {current.key}
                         </span>
                     )}
 
                     {transposition !== 0 && (
-                        <span className="bg-purple-600/40 text-purple-200 border border-purple-500/50 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide flex items-center leading-none">
+                        <span className="bg-brand/40 text-white border border-brand/50 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide flex items-center leading-none">
                             {transposition > 0 ? '+' : ''}{transposition}
                         </span>
                     )}

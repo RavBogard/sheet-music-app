@@ -47,7 +47,7 @@ export function SetlistTopBar({
     }, [editing])
 
     return (
-        <div className="h-14 flex items-center px-3 gap-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 md:top-16 z-30">
+        <div className="h-14 flex items-center px-3 gap-2 border-b border-brand/10 bg-background/95 backdrop-blur-sm sticky top-0 md:top-16 z-30">
             <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={onBack}>
                 <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -132,10 +132,10 @@ export function SetlistTopBar({
                 <Button
                     size="sm"
                     variant="default"
-                    className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+                    className="h-8 gap-1.5 bg-brand hover:bg-brand/90 text-white shadow-sm"
                     onClick={onPerform}
                 >
-                    <Play className="h-4 w-4 fill-white" />
+                    <Play className="h-4 w-4 fill-current" />
                     <span className="hidden sm:inline">Perform</span>
                 </Button>
             )}

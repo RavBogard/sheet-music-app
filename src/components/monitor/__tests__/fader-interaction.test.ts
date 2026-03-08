@@ -84,7 +84,7 @@ describe("VerticalFaderStrip component rendering", () => {
             onChange: vi.fn(),
             onMuteToggle: vi.fn(),
         }))
-        expect(container.innerHTML).toContain("violet")
+        expect(container.innerHTML).toContain("brand")
     })
 
     it("renders muted state with reduced opacity", () => {

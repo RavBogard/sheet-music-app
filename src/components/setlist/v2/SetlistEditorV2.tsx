@@ -421,10 +421,10 @@ export function SetlistEditorV2({
             return (
                 <div
                     key={track.id}
-                    className={`flex items-center gap-2 cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 rounded-lg' : ''}`}
+                    className={`flex items-center gap-2 cursor-pointer transition-colors ${isSelected ? 'bg-brand/10 rounded-lg' : ''}`}
                     onClick={() => toggleSelectId(track.id)}
                 >
-                    <div className={`ml-2 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                    <div className={`ml-2 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'}`}>
                         {isSelected && <span className="text-white text-xs font-bold">✓</span>}
                     </div>
                     <div className="flex-1 min-w-0">{row}</div>
@@ -527,7 +527,7 @@ export function SetlistEditorV2({
 
             {/* Service notes */}
             {(canEdit || serviceNotes) && (
-                <div className="border-b border-border/50 px-4 py-2">
+                <div className="border-b border-brand/10 px-4 py-2">
                     {!serviceNotes && canEdit ? (
                         <button
                             onClick={() => setServiceNotes(" ")}
@@ -543,7 +543,7 @@ export function SetlistEditorV2({
                                     value={serviceNotes?.trim() || ""}
                                     onChange={(e) => setServiceNotes(e.target.value)}
                                     placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
-                                    className="w-full text-sm bg-muted/30 rounded-lg border border-border/50 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full text-sm bg-muted/30 rounded-lg border border-brand/10 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand/30"
                                     rows={2}
                                 />
                             ) : (

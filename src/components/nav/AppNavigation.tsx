@@ -9,7 +9,7 @@ export function AppNavigation() {
     // The Setlist Editor (/setlists/[id]) is inside (main) and should show navigation.
 
     return (
-        <div className="z-40 w-full relative">
+        <div className="z-40 w-full relative print:hidden">
             <GlobalAlertBanner />
             <DesktopHeader />
             <MobileTabBar />

@@ -82,12 +82,12 @@ export function DesktopHeader() {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick overflow-hidden">
+        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-hidden">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
                     <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105" />
-                    <span className="font-bold text-lg text-foreground">{congregation.shortName}</span>
+                    <span className="font-display font-bold text-lg text-foreground">{congregation.shortName}</span>
                 </Link>
 
                 <nav className="flex items-center gap-1">
@@ -97,7 +97,7 @@ export function DesktopHeader() {
                             <Link key={link.href} href={link.href}
                                 className={cn(
                                     "px-4 py-1.5 rounded-full text-sm font-medium transition-all fluid-interaction",
-                                    isActive ? "bg-accent text-foreground shadow-sm border border-border/50" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                                    isActive ? "bg-brand/15 text-brand shadow-[0_0_10px_oklch(0.50_0.20_275/0.2)] border border-brand/20" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
                                 )}>
                                 {link.label}
                             </Link>
@@ -122,7 +122,7 @@ export function DesktopHeader() {
                                 variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
                                 className={cn(
                                     "gap-2 rounded-full transition-colors",
-                                    isChatOpen ? "bg-foreground text-background hover:bg-foreground/90 shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                                    isChatOpen ? "bg-brand text-brand-foreground hover:bg-brand/90 shadow-md" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
                                 )}
                             >
                                 <Sparkles className="h-4 w-4" />
@@ -132,20 +132,20 @@ export function DesktopHeader() {
 
                         {/* Search */}
                         <div className="relative group" ref={searchRef}>
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
                             <Input
                                 placeholder="Search songs..."
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-48 lg:w-64 bg-input/30 border-border/50 rounded-full pl-9 h-9 text-sm focus:ring-foreground/10 focus:bg-background focus:border-foreground/20 transition-all fluid-interaction shadow-inner"
+                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full pl-9 h-9 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
                             />
                             {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full mt-2 left-0 right-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-full mt-2 left-0 right-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 border border-brand/10">
                                     <div className="p-2 space-y-1">
                                         {searchResults.map(file => (
                                             <button key={file.id} onClick={() => handleSelectSong(file)}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors group">
+                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-brand/10 transition-colors group">
                                                 <div className="text-sm font-medium text-foreground group-hover:text-foreground truncate">
                                                     {file.name.replace(/\.[^/.]+$/, "")}
                                                 </div>
@@ -156,7 +156,7 @@ export function DesktopHeader() {
                             )}
                         </div>
 
-                        <div className="w-px h-6 bg-border" />
+                        <div className="w-px h-6 bg-brand/10" />
 
                         {/* Notifications */}
                         <NotificationBell />

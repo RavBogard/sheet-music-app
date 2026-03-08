@@ -73,11 +73,11 @@ export function SetlistDrawer({
                                         key={track.id || `drawer-${index}`}
                                         className="flex items-center gap-3 px-4 py-1 my-0.5"
                                     >
-                                        <div className="h-px flex-1 bg-zinc-700/50" />
+                                        <div className="h-px flex-1 bg-brand/10" />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
                                             {track.title}
                                         </span>
-                                        <div className="h-px flex-1 bg-zinc-700/50" />
+                                        <div className="h-px flex-1 bg-brand/10" />
                                     </div>
                                 )
                             }
@@ -96,7 +96,7 @@ export function SetlistDrawer({
                                         hasFile
                                             ? "hover:bg-white/5 cursor-pointer"
                                             : "cursor-default opacity-50",
-                                        isCurrent && "bg-violet-500/15 border-l-2 border-violet-500"
+                                        isCurrent && "bg-brand/15 border-l-2 border-brand"
                                     )}
                                 >
                                     <span
@@ -108,7 +108,7 @@ export function SetlistDrawer({
                                         {track.title}
                                     </span>
                                     {isSong && track.key && (
-                                        <span className="font-mono text-[10px] px-1 py-0.5 bg-zinc-800 rounded text-zinc-400 shrink-0">
+                                        <span className="font-mono text-[10px] px-1 py-0.5 bg-brand/10 rounded text-brand shrink-0">
                                             {track.key}
                                         </span>
                                     )}

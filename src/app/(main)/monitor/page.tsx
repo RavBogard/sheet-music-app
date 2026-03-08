@@ -128,7 +128,7 @@ export default function MonitorPage() {
     if (status === "disconnected" || status === "connecting") {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-                <Radio className="w-8 h-8 text-violet-500 animate-pulse" />
+                <Radio className="w-8 h-8 text-brand animate-pulse" />
                 <p className="text-muted-foreground">Connecting to mixer...</p>
                 <ConnectionIndicator status={status} error={error} />
             </div>
@@ -202,7 +202,7 @@ export default function MonitorPage() {
             </p>
 
             {/* Master fader */}
-            <div className="bg-card border border-border rounded-xl p-4 mb-4">
+            <div className="bg-card border border-brand/10 rounded-xl p-4 mb-4">
                 <FaderStrip
                     label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `Master` : "Master"}
                     value={myBus.fader}
@@ -213,7 +213,7 @@ export default function MonitorPage() {
             </div>
 
             {/* Channel sends -- all channels with star toggle */}
-            <div className="bg-card border border-border rounded-xl p-4">
+            <div className="bg-card border border-brand/10 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-medium text-muted-foreground">Channels</h2>
                     <p className="text-xs text-muted-foreground">
@@ -249,7 +249,7 @@ export default function MonitorPage() {
                                     />
                                 </div>
                                 {isDefault && (
-                                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-violet-600/20 text-violet-400 border border-violet-500/20">
+                                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-brand/20 text-brand border border-brand/20">
                                         default
                                     </span>
                                 )}

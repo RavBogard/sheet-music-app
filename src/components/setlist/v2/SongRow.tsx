@@ -55,8 +55,8 @@ export const SongRow = memo(function SongRow({
             ref={setNodeRef}
             style={style}
             className={`rounded-lg transition-colors
-                ${isExpanded ? "bg-accent/60 ring-1 ring-primary/20" : "hover:bg-accent/50 active:bg-accent"}
-                ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50 bg-accent" : ""}
+                ${isExpanded ? "bg-brand/5 ring-1 ring-brand/20" : "hover:bg-brand/5 active:bg-brand/10"}
+                ${isDragging ? "opacity-50 ring-2 ring-brand scale-[1.02] z-50 bg-brand/10" : ""}
             `}
         >
             {/* Collapsed row (always visible) */}
@@ -91,7 +91,7 @@ export const SongRow = memo(function SongRow({
                             {track.title || "Untitled"}
                         </span>
                         {track.key && (
-                            <span className="shrink-0 text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground/80">
+                            <span className="shrink-0 text-xs font-mono bg-brand/10 px-1.5 py-0.5 rounded text-brand">
                                 {track.key}
                             </span>
                         )}

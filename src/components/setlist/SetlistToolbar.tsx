@@ -33,7 +33,7 @@ export function SetlistToolbar({
                         variant={activeTab === 'public' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => onTabChange('public')}
-                        className={`transition-all ${activeTab === 'public' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                        className={`transition-all ${activeTab === 'public' ? 'bg-brand/15 text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
                     >
                         Public Library
                     </Button>
@@ -42,7 +42,7 @@ export function SetlistToolbar({
                             variant={activeTab === 'personal' ? 'secondary' : 'ghost'}
                             size="sm"
                             onClick={() => onTabChange('personal')}
-                            className={`transition-all ${activeTab === 'personal' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                            className={`transition-all ${activeTab === 'personal' ? 'bg-brand/15 text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
                         >
                             My Personal
                         </Button>
@@ -54,7 +54,7 @@ export function SetlistToolbar({
                         variant="ghost"
                         size="icon"
                         onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchChange("") }}
-                        className={`h-9 w-9 ${searchOpen ? "text-foreground" : "text-muted-foreground"}`}
+                        className={`h-9 w-9 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
                         title="Search"
                     >
                         {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
@@ -65,7 +65,7 @@ export function SetlistToolbar({
                             variant={view === 'list' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('list')}
-                            className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                            className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-brand/15 text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
                             title="List View"
                         >
                             <List className="h-4 w-4" />
@@ -74,7 +74,7 @@ export function SetlistToolbar({
                             variant={view === 'calendar' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('calendar')}
-                            className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                            className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-brand/15 text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
                             title="Calendar View"
                         >
                             <Calendar className="h-4 w-4" />
@@ -83,7 +83,7 @@ export function SetlistToolbar({
                             variant={view === 'matrix' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('matrix')}
-                            className={`h-9 w-9 transition-all ${view === 'matrix' ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-transparent'}`}
+                            className={`h-9 w-9 transition-all ${view === 'matrix' ? 'bg-brand/15 text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
                             title="Matrix View"
                         >
                             <Grid3X3 className="h-4 w-4" />
@@ -109,7 +109,7 @@ export function SetlistToolbar({
                 <div className="flex gap-1.5 flex-wrap">
                     <button
                         onClick={() => onRabbiFilterChange("")}
-                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${!rabbiFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${!rabbiFilter ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         All
@@ -118,7 +118,7 @@ export function SetlistToolbar({
                         <button
                             key={r}
                             onClick={() => onRabbiFilterChange(rabbiFilter === r ? "" : r)}
-                            className={`px-2.5 py-1 rounded-full text-xs transition-colors ${rabbiFilter === r ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                            className={`px-2.5 py-1 rounded-full text-xs transition-colors ${rabbiFilter === r ? "bg-brand text-white" : "bg-muted text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             Rabbi {r}

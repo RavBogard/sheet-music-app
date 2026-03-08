@@ -94,7 +94,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.keys.size > 0
-                                ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30"
+                                ? "bg-brand/15 text-brand border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -110,7 +110,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.topics.size > 0
-                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                ? "bg-brand/15 text-brand border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -126,7 +126,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.recency !== 'all'
-                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                ? "bg-brand/15 text-brand border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -160,7 +160,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "w-10 h-10 rounded-lg text-xs font-bold transition-colors",
                                 filters.keys.has(key)
-                                    ? "bg-violet-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
@@ -179,7 +179,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
                                 filters.topics.has(topic)
-                                    ? "bg-blue-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
@@ -203,7 +203,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                             className={cn(
                                 "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
                                 filters.recency === option.value
-                                    ? "bg-amber-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >

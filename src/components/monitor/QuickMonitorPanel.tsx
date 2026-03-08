@@ -87,7 +87,7 @@ export function QuickMonitorPanel() {
     if (bridgeMessage) {
         const isMixerOnly = bridgeMessage.includes("mixer disconnected")
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 {isMixerOnly ? <ServerOff className="w-4 h-4 text-yellow-600" /> : <ServerOff className="w-4 h-4" />}
                 <span className="text-xs">{bridgeMessage}</span>
             </div>
@@ -96,7 +96,7 @@ export function QuickMonitorPanel() {
 
     if (status === "connecting") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-400">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Connecting to mixer...</span>
             </div>
@@ -105,7 +105,7 @@ export function QuickMonitorPanel() {
 
     if (status === "error" || status === "disconnected") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 <WifiOff className="w-4 h-4" />
                 <span className="text-xs">Mixer offline</span>
             </div>
@@ -114,7 +114,7 @@ export function QuickMonitorPanel() {
 
     if (!myBusIndex || !myBus) {
         return (
-            <div className="flex items-center justify-center py-6 text-zinc-500 text-xs">
+            <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
                 No monitor bus assigned
             </div>
         )
@@ -125,10 +125,10 @@ export function QuickMonitorPanel() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div>
-                    <div className="text-sm font-semibold text-zinc-200 truncate pr-2 max-w-[180px]">
+                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[180px]">
                         {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
                     </div>
-                    <div className="text-[10px] text-zinc-500">
+                    <div className="text-[10px] text-muted-foreground">
                         Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `\u2014 ${myBus.name}`}
                     </div>
                 </div>
@@ -161,12 +161,12 @@ export function QuickMonitorPanel() {
 
                 {/* Divider between master and channels */}
                 {visibleSends.length > 0 && (
-                    <div className="w-px bg-zinc-800 mx-1 self-stretch" />
+                    <div className="w-px bg-brand/20 mx-1 self-stretch" />
                 )}
 
                 {/* Channel sends */}
                 {visibleSends.length === 0 ? (
-                    <div className="flex items-center justify-center flex-1 text-[10px] text-zinc-600">
+                    <div className="flex items-center justify-center flex-1 text-[10px] text-muted-foreground">
                         No channels starred
                     </div>
                 ) : (

@@ -157,7 +157,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
                     {loading && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl bg-card border border-border" />)}
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl bg-card border border-brand/10" />)}
                         </div>
                     )}
 
@@ -166,7 +166,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                             {hasUpcoming && (
                                 <section>
                                     <h2 className="text-eyebrow mb-4 flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" /> Upcoming Services
+                                        <Calendar className="h-4 w-4 text-brand" /> Upcoming Services
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {upcoming.map(setlist => (
@@ -194,7 +194,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
                             <section>
                                 {hasUpcoming && (
-                                    <h2 className="text-eyebrow mb-4 border-t border-border pt-8">
+                                    <h2 className="text-eyebrow mb-4 border-t border-brand/10 pt-8">
                                         Library &amp; Past Events
                                     </h2>
                                 )}

@@ -57,7 +57,7 @@ export function UpcomingTimeline({
     return (
         <div className="flex flex-col gap-4">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 text-brand" />
                 Coming Up
             </h2>
 
@@ -77,16 +77,16 @@ export function UpcomingTimeline({
                                 const isExp = expanded === s.id
 
                                 return (
-                                    <div key={s.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                                    <div key={s.id} className="bg-card border border-brand/10 rounded-xl overflow-hidden">
                                         <Link
                                             href={`/perform/setlist/${s.id}`}
                                             onClick={onSelect ? () => onSelect(s) : undefined}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-accent/50 transition-colors text-left"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-brand/5 transition-colors text-left"
                                         >
                                             {/* Status dot */}
                                             <div className={cn(
                                                 "w-2 h-2 rounded-full shrink-0",
-                                                isToday ? "bg-brand" : "bg-muted-foreground/25"
+                                                isToday ? "bg-brand" : "bg-brand/20"
                                             )} />
 
                                             {/* Info */}
@@ -103,7 +103,7 @@ export function UpcomingTimeline({
                                                 {/* Progress bar */}
                                                 {prep.total > 0 && (
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-1 bg-brand/10 rounded-full overflow-hidden">
                                                             <div
                                                                 className={cn(
                                                                     "h-full rounded-full dash-progress-bar",
@@ -122,7 +122,7 @@ export function UpcomingTimeline({
                                             {/* Expand toggle */}
                                             <button
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
-                                                className="p-1 rounded-lg hover:bg-accent text-muted-foreground/50 shrink-0"
+                                                className="p-1 rounded-lg hover:bg-brand/10 text-muted-foreground/50 shrink-0"
                                             >
                                                 <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", isExp && "rotate-90")} />
                                             </button>
@@ -150,7 +150,7 @@ function ExpandedTrackList({ setlist, viewedFileIds }: { setlist: Setlist; viewe
     const tracks = (setlist.tracks || []).filter(t => t.type !== 'header')
 
     return (
-        <div className="border-t border-border px-3 py-2 space-y-0.5 bg-muted/20">
+        <div className="border-t border-brand/10 px-3 py-2 space-y-0.5 bg-brand/5">
             {tracks.map((track, i) => {
                 const viewed = track.fileId ? viewedFileIds.has(track.fileId) : false
                 return (
@@ -159,7 +159,7 @@ function ExpandedTrackList({ setlist, viewedFileIds }: { setlist: Setlist; viewe
                             viewed ? (
                                 <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
                             ) : (
-                                <Circle className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+                                <Circle className="w-3 h-3 text-brand/25 shrink-0" />
                             )
                         ) : (
                             <span className="w-3 h-3 shrink-0" />

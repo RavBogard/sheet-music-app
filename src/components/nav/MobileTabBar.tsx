@@ -75,7 +75,7 @@ export function MobileTabBar() {
     return (
         <>
             <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
-                <div className="absolute inset-0 material-thick" />
+                <div className="absolute inset-0 material-thick border-t border-brand/10" />
 
                 <div className="relative flex items-center justify-around h-16 sm:h-20 px-2">
                     {navItems.map((item) => {
@@ -87,23 +87,23 @@ export function MobileTabBar() {
                                 aria-label={item.label}
                                 className={cn(
                                     "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
-                                    item.active ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                                    item.active ? "text-brand" : "text-muted-foreground hover:text-brand/70"
                                 )}
                             >
                                 <div className={cn(
-                                    "relative flex items-center justify-center w-12 h-8 rounded-full transition-all duration-300",
+                                    "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
                                     item.active
-                                        ? "bg-accent scale-100"
+                                        ? "bg-brand/15 shadow-[0_0_12px_oklch(0.50_0.20_275/0.3)] scale-100"
                                         : "bg-transparent scale-90"
                                 )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
                                     <Icon className={cn(
-                                        "w-5 h-5 transition-all duration-300",
-                                        item.active ? "fill-foreground/20 stroke-[2.5px]" : "stroke-2"
+                                        "w-6 h-6 transition-all duration-300",
+                                        item.active ? "text-brand stroke-[2.5px]" : "stroke-2"
                                     )} />
                                 </div>
                                 <span className={cn(
-                                    "text-[10px] font-medium transition-colors",
-                                    item.active ? "text-foreground font-semibold" : "text-muted-foreground"
+                                    "text-[11px] font-medium transition-colors",
+                                    item.active ? "text-brand font-bold" : "text-muted-foreground"
                                 )}>
                                     {item.label}
                                 </span>
@@ -117,23 +117,23 @@ export function MobileTabBar() {
                         onClick={() => setDrawerOpen(true)}
                         className={cn(
                             "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
-                            isDrawerPageActive || drawerOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                            isDrawerPageActive || drawerOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
                         )}
                     >
                         <div className={cn(
-                            "relative flex items-center justify-center w-12 h-8 rounded-full transition-all duration-300",
+                            "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
                             isDrawerPageActive || drawerOpen
-                                ? "bg-accent scale-100"
+                                ? "bg-brand/15 shadow-[0_0_12px_oklch(0.50_0.20_275/0.3)] scale-100"
                                 : "bg-transparent scale-90"
                         )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
                             <Menu className={cn(
-                                "w-5 h-5 transition-all duration-300",
-                                isDrawerPageActive || drawerOpen ? "stroke-[2.5px]" : "stroke-2"
+                                "w-6 h-6 transition-all duration-300",
+                                isDrawerPageActive || drawerOpen ? "text-brand stroke-[2.5px]" : "stroke-2"
                             )} />
                         </div>
                         <span className={cn(
-                            "text-[10px] font-medium transition-colors",
-                            isDrawerPageActive || drawerOpen ? "text-foreground font-semibold" : "text-muted-foreground"
+                            "text-[11px] font-medium transition-colors",
+                            isDrawerPageActive || drawerOpen ? "text-brand font-bold" : "text-muted-foreground"
                         )}>
                             Menu
                         </span>

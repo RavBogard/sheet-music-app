@@ -58,16 +58,16 @@ export function TaskCards() {
     return (
         <div className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <CheckSquare className="w-3.5 h-3.5" />
+                <CheckSquare className="w-3.5 h-3.5 text-brand" />
                 Your Tasks
             </h2>
             <div className="flex flex-col gap-1.5">
                 {tasks.map(task => (
                     <div
                         key={task.id}
-                        className="bg-card border border-border rounded-xl px-3 py-2.5 flex items-start gap-2.5"
+                        className="bg-card border border-brand/10 border-l-2 border-l-brand/20 rounded-xl px-3 py-2.5 flex items-start gap-2.5"
                     >
-                        <Square className="w-4 h-4 text-muted-foreground/40 mt-0.5 shrink-0" />
+                        <Square className="w-4 h-4 text-brand/30 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                                 {task.title}

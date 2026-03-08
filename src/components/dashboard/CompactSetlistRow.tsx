@@ -34,8 +34,8 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
 
     const content = (
         <>
-            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Music2 className="w-3.5 h-3.5 text-muted-foreground" />
+            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <Music2 className="w-3.5 h-3.5 text-brand" />
             </div>
             <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm text-foreground truncate">{setlist.name}</div>
@@ -44,7 +44,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
                     <span>{setlist.tracks?.length || 0} songs</span>
                 </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4 text-brand/30 group-hover:text-brand/60 transition-colors shrink-0" />
         </>
     )
 
@@ -52,7 +52,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
         return (
             <button
                 onClick={handleSelect}
-                className={`w-full flex items-center gap-3 bg-card hover:bg-accent rounded-xl px-3 py-2.5 transition-colors text-left group border border-border ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`w-full flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 transition-colors text-left group border border-brand/10 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
             </button>
@@ -62,7 +62,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
     return (
         <Link
             href={href}
-            className="w-full flex items-center gap-3 bg-card hover:bg-accent rounded-xl px-3 py-2.5 transition-colors text-left group border border-border"
+            className="w-full flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 transition-colors text-left group border border-brand/10"
         >
             {content}
         </Link>

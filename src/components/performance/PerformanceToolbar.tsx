@@ -120,7 +120,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
             <div className="lg:hidden w-full">
 
                 {/* Row 1 (top): Annotate | Metronome | Audio | Transposer — evenly spread */}
-                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-border/30">
+                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-brand/10">
 
                     {/* Annotate */}
                     <Button
@@ -181,7 +181,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 className={cn(
                                     "h-9 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
                                     aiState.isEnabled
-                                        ? "bg-blue-600 border border-blue-500/50 text-white shadow-lg shadow-blue-900/20"
+                                        ? "bg-brand border border-brand/50 text-white shadow-lg shadow-brand/20"
                                         : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >
@@ -322,7 +322,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 className={cn(
                                     "h-10 px-4 rounded-xl text-xs font-bold fluid-interaction flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
-                                        ? "bg-blue-600 border border-blue-500/50 text-white shadow-lg shadow-blue-900/20"
+                                        ? "bg-brand border border-brand/50 text-white shadow-lg shadow-brand/20"
                                         : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >

@@ -16,7 +16,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
 
                 <div className="space-y-4">
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowLeft className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -25,7 +25,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowRight className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -34,7 +34,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <Hand className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -43,7 +43,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowDown className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -54,7 +54,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
 
                 <button
                     onClick={onDismiss}
-                    className="w-full py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
+                    className="w-full py-3 bg-brand text-white font-semibold rounded-xl hover:bg-brand/90 transition-colors"
                 >
                     Got it
                 </button>

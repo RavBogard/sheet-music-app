@@ -1,13 +1,9 @@
 {
   "version": "0.1.0",
-  "commit": "d205c72",
+  "commit": "078d310",
   "branch": "master",
-  "buildDate": "3/2/2026",
+  "buildDate": "3/8/2026",
   "changelog": [
-    "0.1.0 - fix: Update delete test for new non-batch approach + remove stale eslint-disable",
-    "0.1.0 - fix: Setlist delete permission error + SW update banner on fresh loads",
-    "0.1.0 - fix: Stop QR poll error flooding dev server when Firebase Admin unavailable",
-    "0.1.0 - fix: Resolve react-hooks/refs lint errors in SmartTransposer",
-    "0.1.0 - fix: Replace empty ChordOverlay interface with type alias to fix lint"
+    "0.1.0 - fix: resolve 7 bugs from sweep — audit log, push-send, SMS URLs, onboarding state"
   ]
 }

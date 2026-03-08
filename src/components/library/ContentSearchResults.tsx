@@ -93,7 +93,7 @@ function HighlightedContext({ context, term }: { context: string; term: string }
     return (
         <span>
             {context.slice(0, idx)}
-            <span className="text-violet-500 font-medium">{context.slice(idx, idx + term.length)}</span>
+            <span className="text-brand font-medium">{context.slice(idx, idx + term.length)}</span>
             {context.slice(idx + term.length)}
         </span>
     )
