@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, doc, getDocs } from "firebase/firestore"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
 import { formatEventDate } from "@/lib/firestore-helpers"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -111,16 +112,16 @@ export function LiveServiceSection() {
     return (
         <section className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-5 h-5 text-emerald-500" />
+                <Activity className="w-5 h-5 text-success" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Live Service Monitor
                 </h2>
                 <div className="flex items-center gap-1.5 ml-auto">
                     <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
                     </span>
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Live</span>
+                    <span className="text-xs font-semibold text-success">Live</span>
                 </div>
             </div>
 
@@ -128,15 +129,15 @@ export function LiveServiceSection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {/* Network / Bridge Status */}
                 <div className="bg-card border border-border p-4 rounded-xl shadow-sm relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-violet-500/10 rounded-lg text-violet-500">
+                        <div className="p-2 bg-brand/10 rounded-lg text-brand">
                             <Radio className="w-5 h-5" />
                         </div>
                         {isBridgeOnline ? (
-                            <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">Online</span>
+                            <span className="text-[10px] font-bold bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20">Online</span>
                         ) : (
-                            <span className="text-[10px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">Offline</span>
+                            <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20">Offline</span>
                         )}
                     </div>
                     <div>
@@ -155,9 +156,9 @@ export function LiveServiceSection() {
 
                 {/* Total Active Users (in Setlists) */}
                 <div className="bg-card border border-border p-4 rounded-xl shadow-sm relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+                        <div className="p-2 bg-brand/10 rounded-lg text-brand">
                             <Users className="w-5 h-5" />
                         </div>
                     </div>
@@ -205,7 +206,7 @@ export function LiveServiceSection() {
                         {liveSetlists.map(sl => (
                             <div key={sl.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                    <div className="w-10 h-10 rounded-lg bg-success/10 text-success flex items-center justify-center shrink-0">
                                         <Music2 className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -213,7 +214,7 @@ export function LiveServiceSection() {
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-xs text-muted-foreground">{formatEventDate(sl.date) || 'No Date'}</span>
                                             {sl.liveState?.enabled && (
-                                                <Badge variant="default" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 text-[9px] h-4 px-1.5 border-none">
+                                                <Badge variant="default" className="bg-destructive/10 text-destructive hover:bg-destructive/20 text-[9px] h-4 px-1.5 border-none">
                                                     BROADCASTING
                                                 </Badge>
                                             )}
@@ -244,7 +245,7 @@ export function LiveServiceSection() {
                     <div className="text-xs font-mono text-muted-foreground space-y-2">
                         <div className="flex justify-between">
                             <span>Bridge Heartbeat Check:</span>
-                            <span className={isBridgeOnline ? "text-emerald-500" : "text-muted-foreground/60"}>
+                            <span className={cn(isBridgeOnline ? "text-success" : "text-muted-foreground/60")}>
                                 {bridgeStatus?.lastSeen
                                     ? new Date(typeof bridgeStatus.lastSeen === 'number' ? bridgeStatus.lastSeen : typeof (bridgeStatus.lastSeen as any)?.toMillis === 'function' ? (bridgeStatus.lastSeen as any).toMillis() : 0).toLocaleTimeString()
                                     : 'N/A'}

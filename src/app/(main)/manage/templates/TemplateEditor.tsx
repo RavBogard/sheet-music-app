@@ -11,15 +11,16 @@ import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
 import type { TrackType, DriveFile } from "@/types/models"
 import { SearchOverlay } from "@/components/setlist/v2/SearchOverlay"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 const SLOT_TYPES: TrackType[] = ["song", "prayer", "reading", "transition", "note", "header"]
 
 const TYPE_COLORS: Record<string, string> = {
-    song: "bg-blue-500/20 text-blue-400",
-    prayer: "bg-purple-500/20 text-purple-400",
-    reading: "bg-green-500/20 text-green-400",
-    transition: "bg-yellow-500/20 text-yellow-400",
-    note: "bg-zinc-500/20 text-zinc-400",
+    song: "bg-brand/20 text-brand",
+    prayer: "bg-brand/20 text-brand",
+    reading: "bg-success/20 text-success",
+    transition: "bg-amber-500/20 text-amber-500",
+    note: "bg-muted-foreground/20 text-muted-foreground",
     header: "bg-brand/20 text-brand",
 }
 
@@ -136,7 +137,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                             </span>
                         )}
                         {!isCustomized && (
-                            <span className="ml-2 px-1.5 py-0.5 rounded bg-zinc-500/20 text-zinc-400 font-medium">
+                            <span className="ml-2 px-1.5 py-0.5 rounded bg-muted-foreground/20 text-muted-foreground font-medium">
                                 Default
                             </span>
                         )}
@@ -225,7 +226,7 @@ function SlotRow({
     const typeColor = TYPE_COLORS[slot.type ?? "song"] ?? TYPE_COLORS.song
 
     return (
-        <div className={`rounded-lg border transition-colors ${expanded ? "border-brand/30 bg-brand/5" : "border-transparent hover:bg-accent/50"}`}>
+        <div className={cn("rounded-lg border transition-colors", expanded ? "border-brand/30 bg-brand/5" : "border-transparent hover:bg-accent/50")}>
             {/* Collapsed row */}
             <div
                 className="flex items-center gap-2 px-3 py-2 cursor-pointer"
@@ -236,16 +237,16 @@ function SlotRow({
                     <button
                         onClick={() => onMove(-1)}
                         disabled={index === 0}
-                        className="p-0.5 rounded hover:bg-accent disabled:opacity-20"
+                        className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-accent disabled:opacity-20"
                     >
-                        <ChevronUp className="h-3 w-3" />
+                        <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => onMove(1)}
                         disabled={index === total - 1}
-                        className="p-0.5 rounded hover:bg-accent disabled:opacity-20"
+                        className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-accent disabled:opacity-20"
                     >
-                        <ChevronDown className="h-3 w-3" />
+                        <ChevronDown className="h-4 w-4" />
                     </button>
                 </div>
 
@@ -253,7 +254,7 @@ function SlotRow({
                 <span className="text-xs text-muted-foreground w-6 text-right">{index + 1}</span>
 
                 {/* Type badge */}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${typeColor}`}>
+                <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", typeColor)}>
                     {slot.type ?? "song"}
                 </span>
 
@@ -262,7 +263,7 @@ function SlotRow({
 
                 {/* Linked file indicator */}
                 {slot.fileId && (
-                    <span className="flex items-center gap-1 text-xs text-blue-400">
+                    <span className="flex items-center gap-1 text-xs text-brand">
                         <Link2 className="h-3 w-3" />
                         <span className="truncate max-w-[120px]">{slot.fileName || "Linked"}</span>
                         {slot.pageNumber && <span className="text-muted-foreground">p.{slot.pageNumber}</span>}
@@ -287,9 +288,9 @@ function SlotRow({
                         e.stopPropagation()
                         if (confirm(`Remove "${slot.label}"?`)) onRemove()
                     }}
-                    className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground"
+                    className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-muted-foreground"
                 >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                 </button>
             </div>
 
@@ -328,14 +329,14 @@ function SlotRow({
                         <label className="text-xs text-muted-foreground mb-1 block">Linked Chart</label>
                         {slot.fileId ? (
                             <div className="flex items-center gap-2">
-                                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-sm">
-                                    <Music className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                                    <span className="truncate text-blue-300">{slot.fileName || slot.fileId}</span>
+                                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md bg-brand/10 border border-brand/20 text-sm">
+                                    <Music className="h-3.5 w-3.5 text-brand shrink-0" />
+                                    <span className="truncate text-brand">{slot.fileName || slot.fileId}</span>
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-400"
+                                    className="min-h-11 min-w-11 shrink-0 text-muted-foreground hover:text-destructive"
                                     onClick={() => onUpdate({ fileId: undefined, fileName: undefined, pageNumber: undefined })}
                                 >
                                     <X className="h-3.5 w-3.5" />
