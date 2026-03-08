@@ -55,6 +55,8 @@ Plans:
 **Goal**: A musician sets their tablet on a music stand and sees the full service at a glance — songs in their key, tempo, notes, liturgical flow items — with immersive PDF drill-down and public access for jam sessions
 **Depends on**: Phase 1 (profiles with transposition, code audit informs component structure)
 **Requirements**: SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07, PDF-03, PUB-01, PUB-02, PUB-03, HOME-01, HOME-02
+**Plans:** 3 plans
+
 **Success Criteria:**
   1. Musician sees the full service flow at a glance on a portrait tablet: song title, their transposed key, tempo, notes, and non-song liturgical items — without tapping anything
   2. A trumpet player and a guitarist looking at the same setlist see different keys for the same song
@@ -64,9 +66,9 @@ Plans:
   6. Home screen shows this week's upcoming service focused, not a busy dashboard
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Dense setlist view with transposition, position highlighting, and wake lock
+- [ ] 03-02-PLAN.md — Immersive PDF overlay with bottom bar, setlist drawer, and monitor access
+- [ ] 03-03-PLAN.md — Public access for jam sessions and focused home screen redesign
 
 ### Phase 4: Setlist Editor
 **Goal**: Daniel can build a complete service — songs, readings, prayers, keys, tempos, leads — faster than a spreadsheet, using templates, duplication, and AI assistance
