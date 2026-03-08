@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { doc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Star } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -46,18 +47,22 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
     if (loading) return null
 
     return (
-        <div className="bg-card border border-border p-4 rounded-xl space-y-4">
-            <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500" />
+        <div className="bg-card border border-border p-5 rounded-xl space-y-4">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500" />
                 Featured Setlist
             </h4>
-            <p className="text-xs text-muted-foreground mt-1">
-                Pin a specific public setlist to the top of everyone's homepage.
+            <p className="text-xs text-muted-foreground">
+                Pin a specific public setlist to the top of everyone&apos;s homepage.
             </p>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3">
                 <select
-                    className="w-full bg-muted text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                    className={cn(
+                        "w-full bg-muted text-sm text-foreground border border-border",
+                        "rounded-lg px-3 min-h-11",
+                        "focus:outline-none focus:ring-1 focus:ring-ring"
+                    )}
                     value={featuredId || ""}
                     onChange={(e) => handleSetFeatured(e.target.value || null)}
                     disabled={saving}
@@ -71,9 +76,14 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
                 </select>
 
                 {featuredId && !activeSetlists.find(s => s.id === featuredId) && (
-                    <div className="text-xs text-amber-500 bg-amber-500/10 p-2 rounded flex items-center justify-between">
+                    <div className="text-xs text-amber-500 bg-amber-500/10 p-3 rounded-lg flex items-center justify-between">
                         <span>Currently featuring an older/private setlist.</span>
-                        <Button variant="ghost" size="sm" onClick={() => handleSetFeatured(null)} className="h-6 px-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetFeatured(null)}
+                            className="min-h-9 px-3"
+                        >
                             Clear
                         </Button>
                     </div>

@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Loader2, ArrowLeft, ShieldAlert, Radio, FileText } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { PeopleSection } from "@/components/admin/PeopleSection"
@@ -72,19 +73,27 @@ export default function ManagePage() {
                 </div>
 
                 {/* Footer links */}
-                <div className="pt-4 border-t border-border space-y-2">
+                <div className="pt-4 border-t border-border space-y-1">
                     <Link
                         href="/manage/templates"
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className={cn(
+                            "flex items-center gap-3 text-sm text-muted-foreground",
+                            "hover:text-foreground hover:bg-muted/50 transition-colors",
+                            "rounded-lg px-3 min-h-11"
+                        )}
                     >
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-5 h-5" />
                         Template Editor
                     </Link>
                     <Link
                         href="/settings/sound"
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className={cn(
+                            "flex items-center gap-3 text-sm text-muted-foreground",
+                            "hover:text-foreground hover:bg-muted/50 transition-colors",
+                            "rounded-lg px-3 min-h-11"
+                        )}
                     >
-                        <Radio className="w-4 h-4" />
+                        <Radio className="w-5 h-5" />
                         Sound System Settings
                     </Link>
                 </div>

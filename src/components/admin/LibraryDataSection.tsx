@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Database, Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
 import { collection, query, orderBy, limit, getDocs, getCountFromServer } from "firebase/firestore"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
@@ -54,12 +55,12 @@ export function LibraryDataSection() {
     }, [])
 
     const statusIcon = lastSync?.status === 'completed'
-        ? <CheckCircle className="w-4 h-4 text-success" />
+        ? <CheckCircle className="w-5 h-5 text-success" />
         : lastSync?.status === 'failed'
-            ? <AlertCircle className="w-4 h-4 text-red-500" />
+            ? <AlertCircle className="w-5 h-5 text-destructive" />
             : lastSync?.status === 'running'
-                ? <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                : <Clock className="w-4 h-4 text-muted-foreground" />
+                ? <Loader2 className="w-5 h-5 text-brand animate-spin" />
+                : <Clock className="w-5 h-5 text-muted-foreground" />
 
     const statusLabel = lastSync?.status === 'completed'
         ? 'Healthy'
@@ -72,7 +73,7 @@ export function LibraryDataSection() {
     return (
         <section className="space-y-4">
             <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-teal-500" />
+                <Database className="w-5 h-5 text-brand" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Library
                 </h2>
@@ -89,7 +90,7 @@ export function LibraryDataSection() {
                         <h3 className="font-semibold text-foreground text-sm">Sync Status</h3>
                         <div className="flex items-center gap-2">
                             {statusIcon}
-                            <span className="text-sm font-medium">{statusLabel}</span>
+                            <span className="text-sm font-medium text-foreground">{statusLabel}</span>
                         </div>
                         {lastSync?.completedAt && (
                             <p className="text-xs text-muted-foreground">
@@ -102,14 +103,14 @@ export function LibraryDataSection() {
                                 {(lastSync.stats.added ?? 0) > 0 && <p>Added: {lastSync.stats.added}</p>}
                                 {(lastSync.stats.updated ?? 0) > 0 && <p>Updated: {lastSync.stats.updated}</p>}
                                 {(lastSync.stats.copyErrors ?? 0) > 0 && (
-                                    <p className="text-red-400">Copy errors: {lastSync.stats.copyErrors}</p>
+                                    <p className="text-destructive">Copy errors: {lastSync.stats.copyErrors}</p>
                                 )}
                             </div>
                         )}
                         {fileCount !== null && (
                             <div className="pt-2 border-t border-border">
                                 <p className="text-sm">
-                                    <span className="font-semibold">{fileCount}</span>
+                                    <span className="font-semibold text-foreground">{fileCount}</span>
                                     <span className="text-muted-foreground ml-1">files in library</span>
                                 </p>
                             </div>

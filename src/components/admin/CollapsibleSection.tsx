@@ -27,7 +27,7 @@ export function CollapsibleSection({
         <section className="space-y-4">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-2 group cursor-pointer"
+                className="w-full flex items-center gap-3 group cursor-pointer min-h-11"
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {icon}
@@ -37,7 +37,7 @@ export function CollapsibleSection({
                     {badge}
                     <ChevronDown
                         className={cn(
-                            "w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200",
+                            "w-5 h-5 text-muted-foreground/50 transition-transform duration-200",
                             isOpen && "rotate-180"
                         )}
                     />

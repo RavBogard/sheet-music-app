@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { Music, CheckCircle2, Clock, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface MemberPrep {
     uid: string
@@ -53,12 +54,12 @@ export function BandPrepSection() {
     return (
         <section className="space-y-4">
             <div className="flex items-center gap-2">
-                <Music className="w-5 h-5 text-blue-500" />
+                <Music className="w-5 h-5 text-brand" />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Band Preparation
                 </h2>
                 {data.length > 0 && (
-                    <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-1.5 py-0.5 rounded-full ml-2">
+                    <span className="text-[10px] font-bold bg-brand/20 text-brand px-1.5 py-0.5 rounded-full ml-2">
                         {data.length} upcoming
                     </span>
                 )}
@@ -77,7 +78,7 @@ export function BandPrepSection() {
                     {data.map(setlist => (
                         <div key={setlist.id} className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <h4 className="font-medium text-sm">{setlist.name}</h4>
+                                <h4 className="font-medium text-sm text-foreground">{setlist.name}</h4>
                                 {setlist.eventDate && (
                                     <span className="text-xs text-muted-foreground">
                                         {new Date(setlist.eventDate).toLocaleDateString('en-US', {
@@ -106,10 +107,12 @@ export function BandPrepSection() {
                                             {/* Progress bar */}
                                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-32">
                                                 <div
-                                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' :
-                                                            pct > 50 ? 'bg-blue-500' :
-                                                                pct > 0 ? 'bg-amber-500' : 'bg-muted-foreground/20'
-                                                        }`}
+                                                    className={cn(
+                                                        "h-full rounded-full transition-all",
+                                                        isComplete ? "bg-success" :
+                                                            pct > 50 ? "bg-brand" :
+                                                                pct > 0 ? "bg-amber-500" : "bg-muted-foreground/20"
+                                                    )}
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
