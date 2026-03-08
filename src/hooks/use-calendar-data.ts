@@ -6,13 +6,10 @@ import {
     subscribeToMyBlockouts,
     subscribeToAllBlockouts,
 } from "@/lib/scheduling-firebase"
-import { collection, query, where, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { dateStr as toDateKey } from "@/lib/firestore-helpers"
 import type {
     SchedulingAssignment,
     MusicianBlockout,
-    SetlistTask,
 } from "@/types/models"
 import type { Setlist } from "@/lib/setlist-firebase"
 
@@ -25,8 +22,6 @@ export interface CalendarDayData {
     setlists: Setlist[]
     /** Scheduling assignments grouped by setlist */
     assignmentsBySetlist: Map<string, SchedulingAssignment[]>
-    /** Tasks due on this day (lazy — populated per-day when opened) */
-    tasks: SetlistTask[]
     /** Number of musicians blocked out on this day */
     blockedCount: number
     /** UIDs blocked on this day */
@@ -62,11 +57,10 @@ export function useCalendarData(
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
     const [myBlockouts, setMyBlockouts] = useState<MusicianBlockout[]>([])
     const [allBlockouts, setAllBlockouts] = useState<MusicianBlockout[]>([])
-    const [tasks, setTasks] = useState<SetlistTask[]>([])
     const [loading, setLoading] = useState(true)
 
     // Track individual stream completion
-    const [loaded, setLoaded] = useState({ assignments: false, blockouts: false, tasks: false })
+    const [loaded, setLoaded] = useState({ assignments: false, blockouts: false })
 
     // ── Assignments subscription ──
     useEffect(() => {
@@ -106,29 +100,9 @@ export function useCalendarData(
         return unsub
     }, [user, mode, isBandLeader])
 
-    // ── Tasks subscription (viewer + planning) ──
-    useEffect(() => {
-        if (!user) { setLoaded(p => ({ ...p, tasks: true })); return }
-        if (mode === 'availability') { setLoaded(p => ({ ...p, tasks: true })); return }
-
-        // Subscribe to tasks relevant to the user
-        const q = (mode === 'planning' && isBandLeader)
-            ? query(collection(db, 'tasks'), where('status', '==', 'todo'))
-            : query(collection(db, 'tasks'), where('assigneeId', '==', user.uid), where('status', '==', 'todo'))
-
-        const unsub = onSnapshot(q, (snap) => {
-            const docs = snap.docs.map(d => ({ ...d.data(), id: d.id } as SetlistTask))
-            setTasks(docs)
-            setLoaded(p => ({ ...p, tasks: true }))
-        }, () => {
-            setLoaded(p => ({ ...p, tasks: true }))
-        })
-        return unsub
-    }, [user, mode, isBandLeader])
-
     // ── Loading state ──
     useEffect(() => {
-        if (loaded.assignments && loaded.blockouts && loaded.tasks) {
+        if (loaded.assignments && loaded.blockouts) {
             setLoading(false)
         }
     }, [loaded])
@@ -136,7 +110,7 @@ export function useCalendarData(
     // Reset loading on mode change
     useEffect(() => {
         setLoading(true)
-        setLoaded({ assignments: false, blockouts: false, tasks: false })
+        setLoaded({ assignments: false, blockouts: false })
     }, [mode])
 
     // ── Resolve blockouts to use ──
@@ -151,7 +125,6 @@ export function useCalendarData(
                 map.set(key, {
                     setlists: [],
                     assignmentsBySetlist: new Map(),
-                    tasks: [],
                     blockedCount: 0,
                     blockedUids: new Set(),
                 })
@@ -177,13 +150,6 @@ export function useCalendarData(
             day.assignmentsBySetlist.get(a.setlistId)!.push(a)
         }
 
-        // Tasks → days (via setlist eventDate)
-        for (const t of tasks) {
-            const key = toDateKey(t.eventDate)
-            if (!key) continue
-            ensure(key).tasks.push(t)
-        }
-
         // Blockouts → days
         for (const b of blockouts) {
             // Expand range
@@ -200,7 +166,7 @@ export function useCalendarData(
         }
 
         return map
-    }, [setlists, assignments, tasks, blockouts])
+    }, [setlists, assignments, blockouts])
 
     // ── Helper: is date blocked for current user ──
     const isMyBlockedDate = useMemo(() => {

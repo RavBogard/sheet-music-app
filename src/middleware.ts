@@ -36,7 +36,7 @@ export function middleware(request: NextRequest) {
         publicExactRoutes.includes(pathname) ||
         publicPrefixes.some(p => pathname.startsWith(p))
     const isApiRoute = pathname.startsWith('/api')
-    const isLeaderRoute = pathname.startsWith('/admin') || pathname.startsWith('/manage') || pathname.startsWith('/leader')
+    const isLeaderRoute = pathname.startsWith('/admin') || pathname.startsWith('/manage')
 
     // Allow social media crawlers through so they can read OG meta tags.
     // These bots only fetch HTML <head> for link previews — no security risk.
@@ -62,8 +62,8 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
-    // Redirect old routes to /manage
-    if (session && (pathname === '/admin' || pathname === '/leader')) {
+    // Redirect /admin to /manage
+    if (session && pathname === '/admin') {
         const redirectUrl = new URL('/manage', request.url)
         return NextResponse.redirect(redirectUrl)
     }

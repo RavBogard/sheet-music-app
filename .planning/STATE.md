@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-08T00:59:13.964Z"
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 2
+---
+
 # Project State
 
 ## Project Reference
@@ -41,6 +54,10 @@ Progress: [██░░░░░░░░] 17%
 - [01-03]: soundEngineer is orthogonal boolean flag on UserProfile — not a role hierarchy level
 - [01-03]: INSTRUMENT_PRESETS has 18 presets (not 17): 7 core + 8 occasional + 3 other
 - [01-03]: bridge-latency.test.ts is a browser dev utility — renamed to .util.ts to exclude from vitest
+- [Phase 01-monitor-research-code-audit]: Firestore-only transport: zero iPad config wins over WebSocket latency
+- [Phase 01-monitor-research-code-audit]: Production PC deployment: Electron installer and auto-start already handle it
+- [Phase 01-monitor-research-code-audit]: Hybrid WebSocket fallback: implement only if P95 server-confirmed latency exceeds 300ms in production
+- [Phase 01-monitor-research-code-audit]: Sound engineer as boolean flag orthogonal to role hierarchy: AUTH-04 satisfied by current implementation
 
 ### Blockers/Concerns
 

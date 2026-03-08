@@ -19,7 +19,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 **Goal**: Answer every open question about how to connect to the X32 reliably and simply, and identify all code cleanup work across the codebase
 **Depends on**: Nothing (first phase)
 **Requirements**: MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 **Success Criteria:**
   1. A written technical document answers: what bridge architecture, what deployment model (Raspberry Pi vs production PC vs other), what install experience, what failure modes, what auto-recovery strategy
   2. A working proof-of-concept demonstrates: connect to X32 from a browser via the chosen bridge, read a fader value, set a fader value, survive a 30-second network interruption
@@ -156,8 +156,7 @@ All 53 new requirements mapped to exactly one phase:
 
 | Phase | Requirements | Count |
 |-------|-------------|-------|
-| 1. Monitor Research + Code Audit | MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02 | 6 |
-| 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
+| 1. Monitor Research + Code Audit | 2/3 | In Progress|  | 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
 | 3. Setlist Performance View | SET-01..07, PDF-03, PUB-01..03, HOME-01..02 | 13 |
 | 4. Setlist Editor | EDIT-01..10 | 10 |
 | 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |

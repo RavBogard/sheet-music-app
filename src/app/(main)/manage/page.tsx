@@ -14,8 +14,6 @@ import { SystemSection } from "@/components/admin/SystemSection"
 import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 import { DeveloperToolsSection } from "@/components/admin/DeveloperToolsSection"
 import { BandPrepSection } from "@/components/admin/BandPrepSection"
-import { UsageAnalyticsSection } from "@/components/admin/UsageAnalyticsSection"
-
 type ManageTab = 'overview' | 'people' | 'production' | 'system'
 
 export default function ManagePage() {
@@ -96,10 +94,6 @@ export default function ManagePage() {
                                 <div className="space-y-8 animate-in fade-in duration-300">
                                     <SectionErrorBoundary label="Band Prep">
                                         <BandPrepSection />
-                                    </SectionErrorBoundary>
-                                    <hr className="border-border" />
-                                    <SectionErrorBoundary label="Usage Analytics">
-                                        <UsageAnalyticsSection />
                                     </SectionErrorBoundary>
                                 </div>
                             )}

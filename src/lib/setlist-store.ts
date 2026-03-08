@@ -1,3 +1,9 @@
+// TODO: Remove setlist-store dependency (Phase 4)
+// This legacy localStorage store is still used as a staging buffer for the
+// library-to-setlist workflow (SongChartsLibrary/LibraryFileRow → SetlistEditorV2).
+// The setlist-firebase.ts system handles persistence, but this store manages the
+// temporary staging of songs before a new setlist is saved. Remove when the
+// new setlist creation flow in Phase 3/4 replaces this pattern.
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'

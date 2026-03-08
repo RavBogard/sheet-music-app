@@ -2,7 +2,7 @@
 
 import React from "react"
 import {
-    Plus, CheckCircle2, Clock, Users, AlertCircle, ListTodo,
+    Plus, CheckCircle2, Clock, Users, AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { CalendarMode, CalendarDayData } from "@/hooks/use-calendar-data"
@@ -44,7 +44,6 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
     const isSaturday = date.getDay() === 6
     const setlists = dayData?.setlists ?? []
     const blockedCount = dayData?.blockedCount ?? 0
-    const taskCount = dayData?.tasks?.length ?? 0
 
     // ── Availability mode ──
     if (mode === 'availability') {
@@ -92,13 +91,6 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                     {date.getDate()}
                 </span>
                 <div className="flex items-center gap-1">
-                    {/* Task indicator */}
-                    {taskCount > 0 && (
-                        <span className="text-[10px] text-blue-500 flex items-center gap-0.5 bg-blue-500/10 px-1 py-0.5 rounded-full" title={`${taskCount} open task(s)`}>
-                            <ListTodo className="h-2.5 w-2.5" />
-                            {taskCount}
-                        </span>
-                    )}
                     {/* Blocked musicians indicator (planning only) */}
                     {mode === 'planning' && blockedCount > 0 && (
                         <span className="text-[10px] text-red-500 flex items-center gap-0.5 bg-red-500/10 px-1 py-0.5 rounded-full" title={`${blockedCount} musician(s) unavailable`}>
