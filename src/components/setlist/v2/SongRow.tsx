@@ -120,7 +120,7 @@ export const SongRow = memo(function SongRow({
                         </span>
 
                         {track.referenceLink && (
-                            <Badge asChild variant="violet" className="text-[10px] px-1.5 py-0.5 cursor-pointer">
+                            <Badge asChild variant="brand" className="text-[10px] px-1.5 py-0.5 cursor-pointer">
                                 <a
                                     href={track.referenceLink}
                                     target="_blank"

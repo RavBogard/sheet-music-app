@@ -1,15 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, DM_Serif_Display } from "next/font/google";
+import { Poppins, Righteous, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
 
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -18,7 +17,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const dmSerif = DM_Serif_Display({
+const righteous = Righteous({
   weight: "400",
   variable: "--font-display",
   subsets: ["latin"],
@@ -56,8 +55,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbfbfb" },
-    { media: "(prefers-color-scheme: dark)", color: "#303030" },
+    { media: "(prefers-color-scheme: light)", color: "#f0f0f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F0F23" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -79,7 +78,7 @@ export default function RootLayout({
         <link rel="preconnect" href={`https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${dmSerif.variable} antialiased`}
+        className={`${poppins.variable} ${geistMono.variable} ${righteous.variable} antialiased`}
       >
         <div className="bg-noise" />
         <ThemeProvider

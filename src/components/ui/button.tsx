@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium fluid-interaction disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive active:scale-[0.98]",
   {
     variants: {
       variant: {
@@ -13,12 +13,13 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 shadow-[inset_0_1px_rgba(255,255,255,0.2)]",
         outline:
-          "border border-border/50 bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/10 dark:hover:bg-input/30",
+          "border border-border/50 bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-border/60 dark:bg-input/10 dark:hover:bg-secondary/40",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-secondary/30",
         link: "text-primary underline-offset-4 hover:underline",
+        brand: "bg-brand text-brand-foreground hover:bg-brand/85 shadow-[inset_0_1px_rgba(255,255,255,0.15)] focus-visible:ring-brand/30",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
