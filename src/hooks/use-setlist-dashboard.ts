@@ -96,7 +96,7 @@ export function useSetlistDashboard({
         if (onSelect) {
             onSelect(setlist)
         } else {
-            router.push(`/perform/setlist/${setlist.id}`)
+            router.push(`/setlists/${setlist.id}`)
         }
     }
 
@@ -186,20 +186,53 @@ export function useSetlistDashboard({
 
     const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
         if (!setlistService || !user) return
+
+        // Determine template type: explicit type, Saturday → shabbat_morning, Friday → friday_night
+        const templateType = type
+            || (date.getDay() === 6 ? 'shabbat_morning' : undefined)
+            || (date.getDay() === 5 ? 'friday_night' : undefined)
+
+        // If we have a matching template, build a full setlist from it (like "From Template")
+        if (templateType) {
+            const template = getTemplate(templateType)
+            if (template) {
+                try {
+                    toast.loading('Building setlist from template...')
+                    const context = await getFullServiceContext(date)
+                    context.type = templateType as any
+                    const { allFiles } = useLibraryStore.getState()
+                    const tracks = buildSetlistFromTemplate(template, allFiles, context)
+                    const name = generateSetlistName(context)
+
+                    const id = await setlistService.createSetlist(name, tracks, true, {
+                        eventDate: date.toISOString(),
+                        templateType: templateType as any,
+                        isTemplate: false,
+                    })
+
+                    toast.dismiss()
+                    const matched = tracks.filter(t => t.fileId).length
+                    const total = tracks.filter(t => t.type === 'song').length
+                    toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+
+                    router.push(`/setlists/${id}`)
+                    return
+                } catch (err: unknown) {
+                    toast.dismiss()
+                    toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"))
+                    return
+                }
+            }
+        }
+
+        // Fallback: no matching template, create blank setlist
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-        const name = (type === 'shabbat_morning' || date.getDay() === 6)
-            ? `Shabbat Morning ${formattedDate}`
-            : 'New Setlist'
+        const name = 'New Setlist — ' + formattedDate
         try {
             const id = await setlistService.createSetlist(name, [], true, {
                 eventDate: date.toISOString(),
-                templateType: type || undefined
             })
-            handleSelect({
-                id, name, tracks: [], trackCount: 0,
-                date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                eventDate: date.toISOString(), ownerId: user.uid, isPublic: false
-            })
+            router.push(`/setlists/${id}`)
         } catch {
             toast.error("Failed to create setlist")
         }
