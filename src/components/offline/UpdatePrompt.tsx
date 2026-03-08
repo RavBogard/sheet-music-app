@@ -5,7 +5,6 @@ import { RefreshCw, X } from "lucide-react"
 
 const DISMISS_KEY = 'crc-update-dismissed'
 const DISMISS_DURATION_MS = 4 * 60 * 60 * 1000 // Don't re-show for 4 hours after dismissal
-const INITIAL_LOAD_GRACE_MS = 8000 // Auto-activate updates during this window
 
 /**
  * Detects when a new service worker is waiting and shows a gentle
@@ -13,10 +12,10 @@ const INITIAL_LOAD_GRACE_MS = 8000 // Auto-activate updates during this window
  * means users would never get new versions until they close all tabs.
  *
  * Key behavior:
- * - If a SW update is already waiting when the page loads, it's
- *   auto-activated silently. The user just navigated here — they
+ * - If the user hasn't interacted with the page yet (no click/scroll/keypress),
+ *   updates are auto-activated silently. They just navigated here — they
  *   should get the latest version without a disruptive banner.
- * - If a new SW arrives mid-session (user is actively using the app),
+ * - If a new SW arrives mid-session (user has interacted with the app),
  *   the banner appears so they can choose when to refresh.
  *   This is critical during live performances.
  * - Users can dismiss and the prompt won't reappear for 4 hours.
@@ -34,17 +33,24 @@ export function UpdatePrompt() {
             setDismissed(true)
         }
 
-        // During the initial page load grace period, we auto-activate
-        // waiting SWs silently instead of showing the banner.
-        let isInitialLoad = true
-        const settleTimer = setTimeout(() => { isInitialLoad = false }, INITIAL_LOAD_GRACE_MS)
+        // Track whether the user has interacted with the page.
+        // Before any interaction, updates are auto-activated silently.
+        // After interaction, the banner is shown so the user can choose when to refresh.
+        // This prevents the confusing "update available" banner on fresh page loads
+        // regardless of how long the SW update check takes.
+        let userHasInteracted = false
+        const markInteracted = () => { userHasInteracted = true }
+        const interactionEvents = ["click", "scroll", "keydown", "touchstart"] as const
+        interactionEvents.forEach(evt =>
+            window.addEventListener(evt, markInteracted, { once: true, passive: true, capture: true })
+        )
 
         // Track if we auto-activated a SW (suppress the controllerchange reload)
         let autoActivated = false
 
         const activateOrPrompt = (sw: ServiceWorker) => {
-            if (isInitialLoad) {
-                // Page just loaded — silently activate the waiting SW.
+            if (!userHasInteracted) {
+                // User hasn't interacted yet — silently activate the waiting SW.
                 // The current page is already rendered with cached resources.
                 // The new SW will serve fresh content on the next navigation.
                 autoActivated = true
@@ -98,7 +104,11 @@ export function UpdatePrompt() {
             window.location.reload()
         })
 
-        return () => clearTimeout(settleTimer)
+        return () => {
+            interactionEvents.forEach(evt =>
+                window.removeEventListener(evt, markInteracted, { capture: true } as EventListenerOptions)
+            )
+        }
     }, [])
 
     const handleUpdate = useCallback(() => {

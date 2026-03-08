@@ -116,7 +116,7 @@ export async function measureSingleRoundTrip(
 ): Promise<LatencyMeasurement> {
     const { busIndex, targetValue, timeoutMs, round, db, auth, addDoc, collection, doc, onSnapshot } = options
 
-    // @ts-ignore — auth is typed as unknown for portability
+    // @ts-expect-error — auth is typed as unknown for portability
     const user = auth.currentUser
     if (!user) {
         throw new Error("Not authenticated — sign in first")
@@ -136,14 +136,14 @@ export async function measureSingleRoundTrip(
 
         // Watch for state updates BEFORE sending the command
         // to avoid race conditions
-        // @ts-ignore
+        // @ts-expect-error
         const stateRef = doc(db, "monitor-live", "state")
         let commandSentAt = -1
 
         const unsub = onSnapshot(
             stateRef,
             { includeMetadataChanges: true },
-            // @ts-ignore
+            // @ts-expect-error
             (snap: any) => {
                 if (!snap.exists()) return
 
@@ -183,7 +183,7 @@ export async function measureSingleRoundTrip(
         setTimeout(async () => {
             commandSentAt = performance.now()
             try {
-                // @ts-ignore
+                // @ts-expect-error
                 await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                     type: "set_bus_master",
                     busIndex,
@@ -294,7 +294,7 @@ export async function runRapidDragTest(
     const { db, auth } = await import("@/lib/firebase")
     const { addDoc, collection } = await import("firebase/firestore")
 
-    // @ts-ignore
+    // @ts-expect-error
     const user = auth.currentUser
     if (!user) throw new Error("Not authenticated")
 
@@ -318,7 +318,7 @@ export async function runRapidDragTest(
             const value = 0.3 + Math.sin(progress * Math.PI * 2) * 0.3
 
             try {
-                // @ts-ignore
+                // @ts-expect-error
                 await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                     type: "set_bus_master",
                     busIndex,
