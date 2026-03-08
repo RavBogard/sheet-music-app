@@ -71,10 +71,10 @@
 
 ## Scheduling & Notifications
 
-- [ ] **SCHED-01**: Band leader can assign musicians to a service
-- [ ] **SCHED-02**: Musicians can see who else is playing at each service
-- [ ] **NOTIF-01**: Musicians receive notifications (push and/or SMS) when assigned to a service
-- [ ] **NOTIF-02**: Musicians receive notifications when a setlist is published or updated
+- [x] **SCHED-01**: Band leader can assign musicians to a service
+- [x] **SCHED-02**: Musicians can see who else is playing at each service
+- [x] **NOTIF-01**: Musicians receive notifications (push and/or SMS) when assigned to a service
+- [x] **NOTIF-02**: Musicians receive notifications when a setlist is published or updated
 
 ## Home Screen
 
@@ -165,10 +165,10 @@
 | PUB-01 | Phase 3 | Complete |
 | PUB-02 | Phase 3 | Complete |
 | PUB-03 | Phase 3 | Complete |
-| SCHED-01 | Phase 6 | Pending |
-| SCHED-02 | Phase 6 | Pending |
-| NOTIF-01 | Phase 6 | Pending |
-| NOTIF-02 | Phase 6 | Pending |
+| SCHED-01 | Phase 6 | Complete |
+| SCHED-02 | Phase 6 | Complete |
+| NOTIF-01 | Phase 6 | Complete |
+| NOTIF-02 | Phase 6 | Complete |
 | HOME-01 | Phase 3 | Complete |
 | HOME-02 | Phase 3 | Complete |
 | PRINT-01 | Phase 5 | Complete |

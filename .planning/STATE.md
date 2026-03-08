@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-08T05:35:00Z"
-last_activity: 2026-03-08 -- Completed 06-01 (FCM push + SMS notification wiring)
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-08T05:42:00Z"
+last_activity: 2026-03-08 -- Completed 06-02 (who's playing chips + onboarding polish)
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 17
-  completed_plans: 16
-  percent: 88
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 6 of 6 (in progress)
-Plan: 1 of 2 in current phase (complete)
-Status: Phase 6 in progress -- Scheduling, notifications & polish
-Last activity: 2026-03-08 -- Completed 06-01 (FCM push + SMS notification wiring)
+Phase: 6 of 6 (complete)
+Plan: 2 of 2 in current phase (complete)
+Status: All phases complete
+Last activity: 2026-03-08 -- Completed 06-02 (who's playing chips + onboarding polish)
 
-Progress: [████████░░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: ~6 min
-- Total execution time: ~1.6 hours
+- Total execution time: ~1.7 hours
 
 ## Accumulated Context
 
@@ -109,6 +109,9 @@ Progress: [████████░░] 88%
 - [05-03]: parseTemplateRequest extracted to src/lib/template-parser.ts (was illegally exported from route file)
 - [06-01]: SMS on initial publish only (not re-publish) to control Twilio costs; FCM push on both since push is free
 - [06-01]: Shared push-send helper uses Firebase Admin directly (not HTTP to /api/push/send) to avoid auth forwarding
+- [06-02]: Firestore dot-notation updateDoc for instrument field instead of full profile save (safer, no overwrite risk)
+- [06-02]: First name only in musician chips to keep performance view compact
+- [06-02]: Shared showQuickSetup state between pending and approved cards (only one shows at a time)
 
 ### Blockers/Concerns
 
@@ -117,6 +120,6 @@ Progress: [████████░░] 88%
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:35:00Z
-Stopped at: Completed 06-01-PLAN.md
-Resume file: 06-02-PLAN.md
+Last session: 2026-03-08T05:42:00Z
+Stopped at: Completed 06-02-PLAN.md (all plans complete)
+Resume file: N/A -- all phases complete

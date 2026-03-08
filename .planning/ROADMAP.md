@@ -11,7 +11,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 - [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
 - [x] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
 - [x] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
-- [ ] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
+- [x] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
 
 ## Phase Details
 
@@ -118,8 +118,8 @@ Plans:
   5. End-to-end flow works: create setlist → assign musicians → publish → musicians see it on their tablets → perform with monitor mixing → done
 
 Plans:
-- [ ] 06-01-PLAN.md — Notification wiring: FCM push + SMS into publish and assign routes, scheduling icons in NotificationBell
-- [ ] 06-02-PLAN.md — Performance view "who's playing" display, onboarding polish with inline quick-setup
+- [x] 06-01-PLAN.md — Notification wiring: FCM push + SMS into publish and assign routes, scheduling icons in NotificationBell
+- [x] 06-02-PLAN.md — Performance view "who's playing" display, onboarding polish with inline quick-setup
 
 ## Dependency Graph
 
