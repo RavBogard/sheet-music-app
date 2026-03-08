@@ -168,7 +168,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                     <span className="text-violet-300 text-sm font-medium">
                         Playing in {setlistKey}
                     </span>
-                    <span className="text-zinc-500 text-sm ml-1.5">
+                    <span className="text-muted-foreground text-sm ml-1.5">
                         (chart: {libraryMeta?.nativeKey || detectedKey})
                     </span>
                 </div>
@@ -177,11 +177,11 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {/* ── Detected Key ── */}
             <div className="flex items-center justify-between">
                 <div>
-                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                         {isScanning ? "Scanning..." : hasChords ? "Detected Key" : "Waiting for scan..."}
                     </div>
                     {detectedKey && (
-                        <div className="text-2xl font-bold text-white leading-tight">
+                        <div className="text-2xl font-bold text-foreground leading-tight">
                             {detectedKey}
                             {isModified && (
                                 <span className="text-violet-400 text-lg ml-2">
@@ -196,7 +196,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                         variant="ghost"
                         size="sm"
                         onClick={handleReset}
-                        className="text-zinc-500 hover:text-white h-8 px-2"
+                        className="text-muted-foreground hover:text-foreground h-8 px-2"
                     >
                         <RotateCcw className="h-3.5 w-3.5 mr-1" />
                         Reset
@@ -205,7 +205,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             </div>
 
             {/* ── Key Shift Stepper ── */}
-            <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+            <div className="flex items-center gap-2 bg-muted rounded-lg p-1 border border-border">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -213,7 +213,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                         setTransposition(transposition - 1)
                         setCapoFret(null)
                     }}
-                    className="h-8 w-10 hover:bg-zinc-800"
+                    className="h-8 w-10 hover:bg-muted"
                 >
                     <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -221,12 +221,12 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <div className="flex-1 text-center">
                     <span className={cn(
                         "font-bold text-base",
-                        isModified ? "text-violet-400" : "text-zinc-500"
+                        isModified ? "text-violet-400" : "text-muted-foreground"
                     )}>
                         {transposition === 0 ? "Original Key" : (transposition > 0 ? `+${transposition}` : `${transposition}`)}
                     </span>
                     {transposition !== 0 && (
-                        <span className="text-zinc-600 text-xs ml-1.5">semitones</span>
+                        <span className="text-muted-foreground/60 text-xs ml-1.5">semitones</span>
                     )}
                 </div>
 
@@ -237,7 +237,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                         setTransposition(transposition + 1)
                         setCapoFret(null)
                     }}
-                    className="h-8 w-10 hover:bg-zinc-800"
+                    className="h-8 w-10 hover:bg-muted"
                 >
                     <ChevronUp className="h-4 w-4" />
                 </Button>
@@ -246,7 +246,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {/* ── Play As (Capo Shapes) ── */}
             {effectiveKey && (
                 <div className="space-y-2">
-                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                         Play As (with capo)
                     </div>
                     <div className="grid grid-cols-4 gap-1.5">
@@ -265,21 +265,21 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                                         isActive
                                             ? "bg-violet-600/20 border-violet-500/40 text-violet-300"
                                             : isSameKey
-                                                ? "bg-zinc-900/30 border-zinc-800/50 text-zinc-700 cursor-default"
-                                                : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white hover:border-zinc-700"
+                                                ? "bg-muted/30 border-border/50 text-muted-foreground/40 cursor-default"
+                                                : "bg-muted border-border text-foreground/80 hover:bg-muted/80 hover:text-foreground hover:border-border/80"
                                     )}
                                 >
                                     <div className="font-bold text-sm leading-tight">{shape.label}</div>
                                     {result && !isSameKey && (
                                         <div className={cn(
                                             "text-[10px] leading-tight mt-0.5",
-                                            isActive ? "text-violet-400" : "text-zinc-500"
+                                            isActive ? "text-violet-400" : "text-muted-foreground"
                                         )}>
                                             capo {result.fret}
                                         </div>
                                     )}
                                     {isSameKey && (
-                                        <div className="text-[10px] leading-tight mt-0.5 text-zinc-700">
+                                        <div className="text-[10px] leading-tight mt-0.5 text-muted-foreground/40">
                                             same
                                         </div>
                                     )}
@@ -294,12 +294,12 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                             <span className="text-violet-300 text-sm font-medium">
                                 {activeShape} shapes
                             </span>
-                            <span className="text-zinc-500 text-sm mx-2">→</span>
+                            <span className="text-muted-foreground text-sm mx-2">→</span>
                             <span className="text-violet-400 text-sm font-bold">
                                 Capo {capoFret}
                             </span>
-                            <span className="text-zinc-500 text-sm mx-2">→</span>
-                            <span className="text-white text-sm font-medium">
+                            <span className="text-muted-foreground text-sm mx-2">→</span>
+                            <span className="text-foreground text-sm font-medium">
                                 sounds {effectiveKey}
                             </span>
                         </div>
@@ -309,7 +309,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
 
             {/* ── Chord Count + Verification Badge ── */}
             {hasChords && (
-                <div className="text-[10px] text-zinc-600 text-center space-y-1">
+                <div className="text-[10px] text-muted-foreground/60 text-center space-y-1">
                     <div>
                         {allChords.length} chords detected across {Object.keys(aiState.pageData).length} page{Object.keys(aiState.pageData).length !== 1 ? 's' : ''}
                     </div>
@@ -326,7 +326,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
             {hasChords && (
                 <button
                     onClick={handleEditChords}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg text-sm text-zinc-300 hover:text-white transition-all"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-muted hover:bg-muted/80 border border-border hover:border-border/80 rounded-lg text-sm text-foreground/80 hover:text-foreground transition-all"
                 >
                     <Pencil className="h-3.5 w-3.5" />
                     Edit Chords
@@ -374,7 +374,7 @@ export function ChordEditBar() {
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe">
-            <div className="flex items-center justify-between bg-zinc-900 border border-violet-500/30 rounded-t-xl px-4 py-3 shadow-lg shadow-violet-500/10">
+            <div className="flex items-center justify-between bg-muted border border-violet-500/30 rounded-t-xl px-4 py-3 shadow-lg shadow-violet-500/10">
                 <div className="flex items-center gap-2 text-violet-300 text-sm font-medium">
                     <Pencil className="h-4 w-4" />
                     Editing Chords
@@ -385,21 +385,21 @@ export function ChordEditBar() {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-zinc-600 text-[10px] hidden sm:block mr-1">
+                    <span className="text-muted-foreground/60 text-[10px] hidden sm:block mr-1">
                         Click chord to edit · Double-click to add
                     </span>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleCancel}
-                        className="text-zinc-400 hover:text-white h-8 text-xs"
+                        className="text-muted-foreground hover:text-foreground h-8 text-xs"
                     >
                         Cancel
                     </Button>
                     <Button
                         size="sm"
                         onClick={handleVerifyAndDone}
-                        className="bg-violet-600 hover:bg-violet-500 text-white h-8 text-xs"
+                        className="bg-violet-600 hover:bg-violet-500 text-foreground h-8 text-xs"
                     >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                         Verify & Done

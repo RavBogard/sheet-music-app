@@ -49,7 +49,7 @@ export function MetronomeControl() {
                         ? "h-4 w-4 bg-red-500 shadow-[0_0_10px_#ef4444] scale-110"
                         : isPlaying
                             ? "h-2.5 w-2.5 bg-red-800"
-                            : "h-2 w-2 bg-zinc-700"
+                            : "h-2 w-2 bg-muted-foreground/40"
                 )} />
                 <span className={cn(
                     "text-xs font-semibold lg:hidden",

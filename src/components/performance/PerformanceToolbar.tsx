@@ -120,15 +120,15 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
             <div className="lg:hidden w-full">
 
                 {/* Row 1 (top): Annotate | Metronome | Audio | Transposer — evenly spread */}
-                <div className="w-full h-11 flex items-center justify-between px-3 border-b border-brand/10">
+                <div className="w-full h-14 flex items-center justify-between px-3 border-b border-brand/10">
 
                     {/* Annotate */}
                     <Button
                         variant="ghost" size="icon"
                         onClick={() => setAnnotating(!isAnnotating)}
-                        className={cn("h-9 w-9 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                        className={cn("h-11 w-11 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
                     >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-5 w-5" />
                     </Button>
 
                     {/* Metronome */}
@@ -139,10 +139,10 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <button
                             onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
                             className={cn(
-                                "h-9 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5 transition-all max-w-[110px]",
+                                "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5 transition-all max-w-[110px]",
                                 syncedBroadcasterId
-                                    ? "bg-green-600 border border-green-500/50 text-white shadow-lg shadow-green-900/20"
-                                    : "glass-card text-foreground hover:bg-zinc-800 animate-pulse"
+                                    ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
+                                    : "glass-card text-foreground hover:bg-muted animate-pulse"
                             )}
                         >
                             {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
@@ -153,19 +153,19 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-9 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
+                            <button className="h-11 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 <span>Audio</span>
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="center" side="top">
-                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                        <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="center" side="top">
+                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
                                 <Speaker className="h-3 w-3" /> Monitor Mix
                             </div>
                             {hasMonitorAccess ? (
                                 <QuickMonitorPanel />
                             ) : (
-                                <div className="text-xs text-zinc-600 px-1 py-2">No monitor connected</div>
+                                <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
                             )}
                         </PopoverContent>
                     </Popover>
@@ -179,21 +179,21 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <PopoverTrigger asChild>
                             <button
                                 className={cn(
-                                    "h-9 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
+                                    "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
                                     aiState.isEnabled
-                                        ? "bg-brand border border-brand/50 text-white shadow-lg shadow-brand/20"
+                                        ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
                                         : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >
                                 {aiState.scanningPages.length > 0 ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                                 ) : (
-                                    <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                                    <Sparkles className="h-4 w-4 shrink-0" />
                                 )}
                                 <span className="truncate max-w-[90px]">{buttonLabel}</span>
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                        <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
                             <TransposerMenu onRequestClose={() => setTransposerOpenMobile(false)} />
                         </PopoverContent>
                     </Popover>
@@ -226,7 +226,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     <Button
                         variant="ghost" size="icon"
                         onClick={() => setAnnotating(!isAnnotating)}
-                        className={cn("h-11 w-11 rounded-xl transition-all hover:scale-105", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-zinc-500 hover:text-white hover:bg-zinc-800")}
+                        className={cn("h-11 w-11 rounded-xl transition-all hover:scale-105", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
                         title="Annotate"
                     >
                         <Pencil className="h-5 w-5" />
@@ -239,8 +239,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                             className={cn(
                                 "h-11 px-4 rounded-xl text-xs font-bold uppercase tracking-wider fluid-interaction flex items-center gap-2 min-w-[120px]",
                                 syncedBroadcasterId
-                                    ? "bg-green-600 border border-green-500/50 text-white shadow-lg shadow-green-900/20"
-                                    : "glass-card text-foreground hover:bg-zinc-800 animate-pulse"
+                                    ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
+                                    : "glass-card text-foreground hover:bg-muted animate-pulse"
                             )}
                         >
                             {syncedBroadcasterId ? <LinkIcon className="h-4 w-4 shrink-0" /> : <Unlink className="h-4 w-4 shrink-0" />}
@@ -249,22 +249,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     )}
 
                     {/* Scale Controls */}
-                    <div className="flex items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 gap-1 h-11">
+                    <div className="flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1 h-11">
                         <Button
                             variant="ghost" size="icon"
                             onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                            className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                             title="Zoom Out"
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
-                        <span className="text-xs font-medium text-zinc-300 w-10 text-center">
+                        <span className="text-xs font-medium text-foreground w-10 text-center">
                             {Math.round(zoom * 100)}%
                         </span>
                         <Button
                             variant="ghost" size="icon"
                             onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
-                            className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                             title="Zoom In"
                         >
                             <ZoomIn className="h-4 w-4" />
@@ -292,19 +292,19 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 AUDIO
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3 bg-zinc-950 border-zinc-800 space-y-3" align="end" side="top">
-                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                        <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="end" side="top">
+                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
                                 <Speaker className="h-3 w-3" /> Monitor Mix
                             </div>
                             {hasMonitorAccess ? (
                                 <QuickMonitorPanel />
                             ) : (
-                                <div className="text-xs text-zinc-600 px-1 py-2">No monitor connected</div>
+                                <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
                             )}
                         </PopoverContent>
                     </Popover>
 
-                    <div className="w-px h-8 bg-zinc-800/50" />
+                    <div className="w-px h-8 bg-border/50" />
 
                     {/* Metronome */}
                     <div className="flex items-center">
@@ -322,7 +322,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 className={cn(
                                     "h-10 px-4 rounded-xl text-xs font-bold fluid-interaction flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
-                                        ? "bg-brand border border-brand/50 text-white shadow-lg shadow-brand/20"
+                                        ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
                                         : "glass-card text-foreground/80 hover:text-foreground"
                                 )}
                             >
@@ -334,7 +334,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 <span>{buttonLabel.toUpperCase()}</span>
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0 bg-zinc-950 border-zinc-800" align="end" side="top">
+                        <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
                             <TransposerMenu onRequestClose={() => setTransposerOpenDesktop(false)} />
                         </PopoverContent>
                     </Popover>

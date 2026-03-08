@@ -247,18 +247,18 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                 {fileType === 'pdf' && !aiXmlContent && fileUrl && <PDFViewer key={fileUrl} url={fileUrl} trackName={playbackQueue[queueIndex]?.name} />}
 
                 {!fileUrl && (
-                    <div className="flex flex-col w-full h-full items-center justify-center text-zinc-500 gap-4">
+                    <div className="flex flex-col w-full h-full items-center justify-center text-muted-foreground gap-4">
                         {playbackQueue.length > 0 && queueIndex >= 0 ? (
                             <>
                                 <div className="animate-pulse flex flex-col items-center gap-3">
-                                    <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-                                    <p className="text-lg font-medium text-zinc-400">Loading</p>
-                                    <p className="text-sm text-zinc-500 italic">{playbackQueue[queueIndex]?.name || ""}</p>
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/60" />
+                                    <p className="text-lg font-medium text-muted-foreground">Loading</p>
+                                    <p className="text-sm text-muted-foreground italic">{playbackQueue[queueIndex]?.name || ""}</p>
                                 </div>
                                 <div className="w-64 space-y-3 mt-4">
-                                    <div className="h-3 bg-zinc-800 rounded-full w-full animate-pulse" />
-                                    <div className="h-3 bg-zinc-800 rounded-full w-5/6 animate-pulse" />
-                                    <div className="h-3 bg-zinc-800 rounded-full w-4/6 animate-pulse" />
+                                    <div className="h-3 bg-muted rounded-full w-full animate-pulse" />
+                                    <div className="h-3 bg-muted rounded-full w-5/6 animate-pulse" />
+                                    <div className="h-3 bg-muted rounded-full w-4/6 animate-pulse" />
                                 </div>
                             </>
                         ) : (
@@ -276,7 +276,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                                     )}
                                     <button
                                         onClick={onHome}
-                                        className="px-6 py-2 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors border border-zinc-700"
+                                        className="px-6 py-2 bg-muted text-foreground rounded-full font-medium hover:bg-muted/80 transition-colors border border-border"
                                     >
                                         Go Back
                                     </button>

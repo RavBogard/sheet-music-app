@@ -27,22 +27,22 @@ export function SongNavigation() {
     }
 
     return (
-        <div className="flex items-center gap-2 sm:gap-6 w-full max-w-sm sm:max-w-md justify-center">
+        <div className="flex items-center gap-2 sm:gap-6 w-full max-w-md sm:max-w-lg justify-center">
             <Button
                 variant="ghost"
                 size="icon"
                 onClick={handlePrev}
                 disabled={queueIndex <= 0}
-                className="text-muted-foreground hover:text-foreground hover:bg-brand/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95"
+                className="text-muted-foreground hover:text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95"
             >
-                <ChevronLeft className="h-8 w-8" />
+                <ChevronLeft className="h-10 w-10" />
             </Button>
 
             <div className="flex flex-col items-center overflow-hidden min-w-0 flex-1 px-2">
-                <span className="text-base sm:text-xl font-bold truncate text-center w-full leading-tight text-foreground drop-shadow-md">
+                <span className="text-xl sm:text-3xl font-bold truncate text-center w-full leading-tight text-foreground drop-shadow-md">
                     {currentTrack?.name || "No Song Selected"}
                 </span>
-                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium tracking-wide uppercase mt-0.5">
+                <span className="text-sm sm:text-base text-muted-foreground font-medium tracking-wide uppercase mt-0.5">
                     {playbackQueue.length > 0 ? `Song ${queueIndex + 1} of ${playbackQueue.length}` : "Setlist Empty"}
                 </span>
             </div>
@@ -52,9 +52,9 @@ export function SongNavigation() {
                 size="icon"
                 onClick={handleNext}
                 disabled={queueIndex >= playbackQueue.length - 1}
-                className="text-foreground hover:bg-brand/10 rounded-full h-12 w-12 shrink-0 transition-transform active:scale-95 bg-brand/10 border border-brand/20"
+                className="text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95 bg-brand/10 border border-brand/20"
             >
-                <ChevronRight className="h-8 w-8" />
+                <ChevronRight className="h-10 w-10" />
             </Button>
         </div>
     )
