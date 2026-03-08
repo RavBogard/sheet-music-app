@@ -189,12 +189,13 @@ describe("PDFOverlay", () => {
 
     it("renders the full PerformanceToolbar", () => {
         render(<PDFOverlay {...defaultProps} />)
-        // PerformanceToolbar includes song navigation
-        expect(screen.getByTestId("song-nav")).toBeDefined()
+        // PerformanceToolbar renders mobile + desktop layouts (both visible in jsdom)
+        expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(1)
     })
 
     it("renders Exit button from PerformanceToolbar", () => {
         render(<PDFOverlay {...defaultProps} />)
-        expect(screen.getByText("Exit")).toBeDefined()
+        // Mobile + desktop layouts each render an Exit button
+        expect(screen.getAllByText("Exit").length).toBeGreaterThanOrEqual(1)
     })
 })
