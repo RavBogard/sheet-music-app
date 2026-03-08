@@ -38,6 +38,10 @@
 // They do NOT work in Vitest's Node.js environment because they need Firebase auth.
 // This is intentional — this utility is meant to be run from the browser console.
 
+// Type-only imports for function signatures (no runtime cost)
+import type { Firestore } from "firebase/firestore"
+import type { Auth } from "firebase/auth"
+
 /**
  * Latency measurement result for a single round-trip.
  */
@@ -106,17 +110,16 @@ export async function measureSingleRoundTrip(
         round: number
         // Injected Firebase/Firestore functions for browser context
         // These can't be imported at module level because they need Firebase config
-        db: unknown
-        auth: unknown
-        addDoc: (...args: unknown[]) => unknown
-        collection: (...args: unknown[]) => unknown
-        doc: (...args: unknown[]) => unknown
-        onSnapshot: (...args: unknown[]) => unknown
+        db: Firestore
+        auth: Auth
+        addDoc: typeof import("firebase/firestore").addDoc
+        collection: typeof import("firebase/firestore").collection
+        doc: typeof import("firebase/firestore").doc
+        onSnapshot: typeof import("firebase/firestore").onSnapshot
     }
 ): Promise<LatencyMeasurement> {
     const { busIndex, targetValue, timeoutMs, round, db, auth, addDoc, collection, doc, onSnapshot } = options
 
-    // @ts-expect-error — auth is typed as unknown for portability
     const user = auth.currentUser
     if (!user) {
         throw new Error("Not authenticated — sign in first")
@@ -291,7 +294,7 @@ export async function runRapidDragTest(
     const { db, auth } = await import("@/lib/firebase")
     const { addDoc, collection } = await import("firebase/firestore")
 
-    const user = (auth as any).currentUser
+    const user = auth.currentUser
     if (!user) throw new Error("Not authenticated")
 
     const intervalMs = 1000 / changesPerSecond
