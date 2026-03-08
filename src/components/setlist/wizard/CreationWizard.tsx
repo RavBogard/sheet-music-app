@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import {
-    ChevronLeft, ChevronRight, Check, Loader2, Music, Users, ListTodo,
-    Calendar as CalendarIcon, Lock, Globe, Plus, X, Trash2,
+    ChevronLeft, ChevronRight, Check, Loader2, Music, Users,
+    Calendar as CalendarIcon, Lock, Globe, Plus, X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
-import { useCreationWizard, type WizardStep, type WizardTask } from "@/hooks/use-creation-wizard"
+import { useCreationWizard, type WizardStep } from "@/hooks/use-creation-wizard"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MusicianPicker } from "../v2/MusicianPicker"
 
@@ -28,7 +28,6 @@ const STEPS: { id: WizardStep; label: string; icon: React.ReactNode }[] = [
     { id: 'details', label: 'Details', icon: <CalendarIcon className="h-4 w-4" /> },
     { id: 'songs', label: 'Songs', icon: <Music className="h-4 w-4" /> },
     { id: 'musicians', label: 'Musicians', icon: <Users className="h-4 w-4" /> },
-    { id: 'tasks', label: 'Tasks', icon: <ListTodo className="h-4 w-4" /> },
 ]
 
 export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
@@ -90,9 +89,6 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
                         {wizard.step === 'musicians' && (
                             <MusiciansStep wizard={wizard} />
                         )}
-                        {wizard.step === 'tasks' && (
-                            <TasksStep wizard={wizard} />
-                        )}
                     </div>
 
                     {/* Footer */}
@@ -107,15 +103,6 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
                         </Button>
 
                         <div className="flex items-center gap-2">
-                            {!isLastStep && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => wizard.goToStep('tasks')}
-                                    className="text-xs text-muted-foreground"
-                                >
-                                    Skip to end
-                                </Button>
-                            )}
                             <Button
                                 onClick={handleNext}
                                 disabled={!wizard.canGoNext || wizard.creating}
@@ -322,71 +309,3 @@ function MusiciansStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard
     )
 }
 
-// ── Step 4: Tasks ──
-
-function TasksStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
-    const { user } = useAuth()
-    const [title, setTitle] = useState("")
-    const handleAdd = () => {
-        if (!title.trim() || !user) return
-        wizard.addTask({
-            title: title.trim(),
-            assigneeUid: user.uid,
-            assigneeName: user.displayName || user.email?.split('@')[0] || 'Me',
-            assigneeEmail: user.email || '',
-        })
-        setTitle("")
-    }
-
-    return (
-        <div className="space-y-4">
-            <div>
-                <h2 className="text-xl font-bold mb-1">Add prep tasks</h2>
-                <p className="text-sm text-muted-foreground">
-                    Assign preparation tasks. You can skip this and add them later.
-                </p>
-            </div>
-
-            {/* Add form */}
-            <div className="flex gap-2">
-                <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Add chart wrapper for new song..."
-                    className="flex-1 h-9"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                />
-                <Button size="sm" onClick={handleAdd} disabled={!title.trim()} className="gap-1.5 h-9">
-                    <Plus className="h-3.5 w-3.5" /> Add
-                </Button>
-            </div>
-
-            {/* Task list */}
-            {wizard.tasks.length > 0 ? (
-                <div className="space-y-2">
-                    {wizard.tasks.map((task, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-card/70 border border-border/50 group">
-                            <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">{task.title}</p>
-                                <p className="text-xs text-muted-foreground">{task.assigneeName}</p>
-                            </div>
-                            <button
-                                onClick={() => wizard.removeTask(i)}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all"
-                            >
-                                <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-12 text-muted-foreground border border-dashed border-border/60 rounded-xl bg-muted/10">
-                    <ListTodo className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm font-medium">No tasks yet</p>
-                    <p className="text-xs mt-1">Add preparation tasks or skip this step</p>
-                </div>
-            )}
-        </div>
-    )
-}

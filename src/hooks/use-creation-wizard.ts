@@ -3,20 +3,12 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
 import { assignMusicians } from "@/lib/scheduling-firebase"
-import { apiFetch } from "@/lib/api-client"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 
-export type WizardStep = 'details' | 'songs' | 'musicians' | 'tasks'
+export type WizardStep = 'details' | 'songs' | 'musicians'
 
-const STEP_ORDER: WizardStep[] = ['details', 'songs', 'musicians', 'tasks']
-
-export interface WizardTask {
-    title: string
-    assigneeUid: string
-    assigneeName: string
-    assigneeEmail: string
-}
+const STEP_ORDER: WizardStep[] = ['details', 'songs', 'musicians']
 
 export interface UseCreationWizardReturn {
     // Navigation
@@ -48,11 +40,6 @@ export interface UseCreationWizardReturn {
     musicians: SetlistMusician[]
     setMusicians: (v: SetlistMusician[]) => void
 
-    // Step 4: Tasks
-    tasks: WizardTask[]
-    addTask: (task: WizardTask) => void
-    removeTask: (index: number) => void
-
     // Final
     creating: boolean
     create: () => Promise<void>
@@ -61,7 +48,7 @@ export interface UseCreationWizardReturn {
 
 export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
-    const { user, isBandLeader } = useAuth()
+    const { user } = useAuth()
 
     const [step, setStep] = useState<WizardStep>('details')
     const [creating, setCreating] = useState(false)
@@ -78,16 +65,13 @@ export function useCreationWizard(): UseCreationWizardReturn {
     // Step 3
     const [musicians, setMusicians] = useState<SetlistMusician[]>([])
 
-    // Step 4
-    const [tasks, setTasks] = useState<WizardTask[]>([])
-
     const stepIndex = STEP_ORDER.indexOf(step)
     const totalSteps = STEP_ORDER.length
 
     const canGoBack = stepIndex > 0
     const canGoNext = useMemo(() => {
         if (step === 'details') return name.trim().length > 0
-        return true // Songs, musicians, tasks are all optional to skip
+        return true // Songs, musicians are all optional to skip
     }, [step, name])
 
     const goNext = useCallback(() => {
@@ -116,14 +100,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setTracks(prev => [...prev, ...newTracks])
     }, [])
 
-    const addTask = useCallback((task: WizardTask) => {
-        setTasks(prev => [...prev, task])
-    }, [])
-
-    const removeTask = useCallback((index: number) => {
-        setTasks(prev => prev.filter((_, i) => i !== index))
-    }, [])
-
     const reset = useCallback(() => {
         setStep('details')
         setCreating(false)
@@ -133,7 +109,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setRabbi("")
         setTracks([])
         setMusicians([])
-        setTasks([])
     }, [])
 
     const create = useCallback(async () => {
@@ -176,28 +151,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 }
             }
 
-            // 3. Create tasks (if any)
-            for (const task of tasks) {
-                try {
-                    await apiFetch('/api/tasks/create', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            setlistId,
-                            setlistName: name,
-                            eventDate: eventDate?.toISOString() ?? null,
-                            title: task.title,
-                            assigneeId: task.assigneeUid,
-                            assigneeName: task.assigneeName,
-                            assigneeEmail: task.assigneeEmail,
-                            notifiedEmails: [],
-                        }),
-                    })
-                } catch {
-                    // Don't block for individual task failures
-                }
-            }
-
             toast.success(`"${name}" created!`)
             router.push(`/setlists/${setlistId}`)
         } catch (err) {
@@ -205,7 +158,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, tasks, router])
+    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, router])
 
     return {
         step,
@@ -229,9 +182,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         addSongsFromFiles,
         musicians,
         setMusicians,
-        tasks,
-        addTask,
-        removeTask,
         creating,
         create,
         reset,
