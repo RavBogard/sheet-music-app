@@ -11,15 +11,20 @@ import { PendingAccountIllustration } from "@/components/ui/illustrations"
 import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { Button } from "@/components/ui/button"
 import { Music2 } from "lucide-react"
-import { useChatStore } from "@/lib/chat-store"
-import { useMusicStore } from "@/lib/store"
-import { buildPerformQueue } from "@/lib/queue-utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
-import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 import { QRSignIn } from "@/components/auth/QRSignIn"
-import { HeroCard, CommandRow, UpcomingTimeline, CompactSetlistRow, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
+import { NextServiceCard } from "@/components/home/NextServiceCard"
+import { CompactSetlistRow } from "@/components/dashboard"
 import { cn } from "@/lib/utils"
+
+// Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
+// Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
+// import { useChatStore } from "@/lib/chat-store"
+// import { useMusicStore } from "@/lib/store"
+// import { buildPerformQueue } from "@/lib/queue-utils"
+// import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
+// import { HeroCard, CommandRow, UpcomingTimeline, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
 
 export interface DashboardServerProps {
     /** Pre-computed greeting from the server (avoids blank flash before JS boots) */
@@ -30,12 +35,11 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName }: DashboardServerProps) {
     const router = useRouter()
-    const { user, profile, cachedUser, signIn, isMember, isBandLeader, loading: authLoading } = useAuth()
+    const { user, profile, cachedUser, signIn, isMember, loading: authLoading } = useAuth()
     const congregation = useCongregation()
-    const { open: openChat } = useChatStore()
-    const { setQueue } = useMusicStore()
 
     const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
+    const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
     const [personalLoaded, setPersonalLoaded] = useState(false)
     const [publicLoaded, setPublicLoaded] = useState(false)
@@ -52,7 +56,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
         } catch { /* SSR or private mode */ }
     }, [])
 
-    // Safety timeout: 2s (was 4s). Prevents hanging on slow networks.
+    // Safety timeout: 2s. Prevents hanging on slow networks.
     useEffect(() => {
         if (personalLoaded && publicLoaded) return
         const timer = setTimeout(() => {
@@ -63,8 +67,6 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     }, [personalLoaded, publicLoaded])
 
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
-    // On the server, this is pre-computed with the user's name from the session cookie.
-    // Client-side: recalculated in useEffect to avoid Hydration mismatches (Error #418).
     const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || DEFAULT_SHORT_NAME)
     const [greeting, setGreeting] = useState<Greeting>(initialGreeting)
 
@@ -74,9 +76,6 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
         const shortName = congregation.shortName || serverShortName || DEFAULT_SHORT_NAME
         setGreeting(getContextualGreeting(firstName, undefined, shortName))
     }, [profile?.displayName, user?.displayName, cachedUser?.displayName, congregation.shortName, serverShortName])
-
-    // Prep data for upcoming setlists (members only)
-    const { items: upcomingWithPrep, hasData: hasWeekData } = useUpcomingPrep()
 
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
@@ -100,9 +99,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
         }
     }, [])
 
-    // ── PUBLIC setlists: start IMMEDIATELY — no auth gate ──
-    // Firestore rules allow anyone to read isPublic === true.
-    // This breaks the waterfall: data loads in parallel with auth.
+    // ── PUBLIC setlists: start IMMEDIATELY -- no auth gate ──
     useEffect(() => {
         if (!setlistService) return
         setPublicLoaded(false)
@@ -115,8 +112,10 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                 .slice(0, 5)
             setRecentPublicSetlists(recent)
 
-            if (!user?.uid) setUpcomingSetlists(upcoming.slice(0, 5))
-            // Accept data immediately — cache or network, first callback wins
+            if (!user?.uid) {
+                setUpcomingSetlists(upcoming.slice(0, 5))
+                setAllSetlists(setlists)
+            }
             setPublicLoaded(true)
         })
 
@@ -137,6 +136,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
 
         const unsub = setlistService.subscribeToPersonalSetlists((setlists) => {
             setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
+            setAllSetlists(setlists)
             setPersonalLoaded(true)
         })
 
@@ -145,15 +145,29 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
 
 
     // Content is ready once public setlists have loaded.
-    // Personal setlists augment later — no need to wait.
     const setlistsReady = publicLoaded
     const tonightSetlist = upcomingSetlists[0]
-    const additionalUpcoming = upcomingSetlists.slice(1)
 
-    const tonightPrep = useMemo(() => {
-        if (!tonightSetlist) return null
-        return upcomingWithPrep.find(u => u.setlist.id === tonightSetlist.id) || null
-    }, [tonightSetlist, upcomingWithPrep])
+    // Empty state: find the most recent past setlist for practice reference
+    const mostRecentPastSetlist = useMemo(() => {
+        if (tonightSetlist) return null // Have upcoming, no need for past
+        const now = new Date()
+        now.setHours(0, 0, 0, 0)
+        const pastSetlists = allSetlists
+            .filter(s => {
+                if (!s.eventDate) return false
+                const d = toDate(s.eventDate)
+                if (!d) return false
+                d.setHours(0, 0, 0, 0)
+                return d < now
+            })
+            .sort((a, b) => {
+                const da = toDate(a.eventDate)
+                const db = toDate(b.eventDate)
+                return (db?.getTime() || 0) - (da?.getTime() || 0)
+            })
+        return pastSetlists[0] || null
+    }, [tonightSetlist, allSetlists])
 
     const atmosphereClasses = useMemo(() => {
         switch (greeting.atmosphere) {
@@ -173,20 +187,11 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     const stagger = (n: number) =>
         shouldAnimate ? `dash-stagger dash-stagger-${n}` : ''
 
-    const navigateToSetlist = (s: Setlist) => {
-        router.push(`/perform/setlist/${s.id}`)
-    }
-
-    const timelineItems = useMemo(() => {
-        if (!tonightSetlist) return upcomingWithPrep
-        return upcomingWithPrep.filter(u => u.setlist.id !== tonightSetlist.id)
-    }, [upcomingWithPrep, tonightSetlist])
-
     return (
         <div className={cn("flex flex-col w-full pb-28", !shouldAnimate && "dash-no-animate")}>
 
             {/* ══════════════════════════════════════════
-                ATMOSPHERIC HERO ZONE — renders immediately,
+                ATMOSPHERIC HERO ZONE -- renders immediately,
                 no data dependency. Greeting is computed client-side.
                ══════════════════════════════════════════ */}
             <div className={`bg-gradient-to-b ${atmosphereClasses} px-4 md:px-6 pt-4 pb-6`}>
@@ -217,7 +222,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                             {greeting.text}
                             {greeting.isSpecial && (
                                 <span className="inline-block ml-2 text-lg align-middle opacity-80">
-                                    {greeting.atmosphere === 'shabbat' ? '✨' : '🎉'}
+                                    {greeting.atmosphere === 'shabbat' ? '\u2728' : '\uD83C\uDF89'}
                                 </span>
                             )}
                         </h1>
@@ -226,7 +231,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                                 <span key={i}>
                                     {part}
                                     {i < arr.length - 1 && (i === arr.length - 2
-                                        ? <span className="mx-1.5 text-muted-foreground/40">·</span>
+                                        ? <span className="mx-1.5 text-muted-foreground/40">{'\u00B7'}</span>
                                         : ' '
                                     )}
                                 </span>
@@ -234,13 +239,12 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                         </p>
                     </div>
 
-                    {/* Desktop: two-column layout */}
-                    <div className="flex flex-col md:flex-row md:gap-6">
-
-                        {/* Left column: hero card + command row */}
-                        <div className="flex-1 min-w-0 flex flex-col gap-4">
-
-                            {/* Hero: skeleton → setlist card → empty state */}
+                    {/* ══════════════════════════════════════════
+                        MEMBER VIEW: Single focused card -- one card, one action.
+                        Replaces HeroCard + CommandRow + UpcomingTimeline + etc.
+                       ══════════════════════════════════════════ */}
+                    {user && isMember && (
+                        <div className="flex flex-col gap-4">
                             {!setlistsReady ? (
                                 /* Skeleton card while loading */
                                 <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-3">
@@ -250,77 +254,33 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                                     </div>
                                     <div className="h-5 w-52 bg-muted-foreground/15 rounded animate-pulse" />
                                     <div className="h-3 w-32 bg-muted-foreground/10 rounded animate-pulse" />
-                                    <div className="flex gap-2 pt-1">
-                                        <div className="h-9 flex-1 bg-muted-foreground/10 rounded-lg animate-pulse" />
-                                        <div className="h-9 w-24 bg-muted-foreground/8 rounded-lg animate-pulse" />
-                                    </div>
+                                    <div className="h-9 w-full bg-muted-foreground/10 rounded-xl animate-pulse mt-2" />
                                 </div>
                             ) : tonightSetlist ? (
-                                <HeroCard
+                                <NextServiceCard
                                     setlist={tonightSetlist}
-                                    prep={tonightPrep}
-                                    onClick={() => navigateToSetlist(tonightSetlist)}
-                                    onPerform={() => {
-                                        const result = buildPerformQueue(tonightSetlist.tracks || [])
-                                        if (result) {
-                                            setQueue(result.queue, result.startIndex, `/perform/setlist/${tonightSetlist.id}`, tonightSetlist.id!)
-                                            router.push(`/perform/${result.firstFileId}`)
-                                        } else {
-                                            router.push(`/perform/setlist/${tonightSetlist.id}`)
-                                        }
-                                    }}
+                                    onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
                                 />
-                            ) : recentPublicSetlists.length > 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-2">
-                                    No upcoming services scheduled
+                            ) : mostRecentPastSetlist ? (
+                                <NextServiceCard
+                                    setlist={mostRecentPastSetlist}
+                                    onPerform={() => router.push(`/perform/setlist/${mostRecentPastSetlist.id}`)}
+                                    isPastSetlist={true}
+                                />
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                    No services scheduled yet
                                 </p>
-                            ) : null}
-
-                            {/* Command Row — always visible immediately */}
-                            <CommandRow
-                                isMember={isMember}
-                                isBandLeader={isBandLeader}
-                                isLoggedIn={!!user}
-                                onAI={() => openChat()}
-                                className={stagger(1)}
-                                hasAI={congregation.features.ai}
-                            />
+                            )}
                         </div>
-
-                        {/* Right column (desktop only): Upcoming timeline */}
-                        {hasWeekData && timelineItems.length > 0 && (
-                            <div className={cn(
-                                "hidden md:block w-80 shrink-0",
-                                stagger(2)
-                            )}>
-                                <UpcomingTimeline
-                                    items={timelineItems}
-                                />
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
 
             {/* ══════════════════════════════════════════
-                BELOW HERO — content area
+                BELOW HERO -- content area
                ══════════════════════════════════════════ */}
             <div className="flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full">
-
-                {/* ── What's Changed Banner ── */}
-                {hasWeekData && upcomingWithPrep.length > 0 && (
-                    <WhatsChangedBanner items={upcomingWithPrep} />
-                )}
-
-                {/* ── Practice Recommendations ── */}
-                {hasWeekData && upcomingWithPrep.length > 0 && (
-                    <PrepRecommendations items={upcomingWithPrep} />
-                )}
-
-                {/* ── Your Tasks ── */}
-                {user && isMember && (
-                    <TaskCards />
-                )}
 
                 {/* ── Onboarding: Pending User ── */}
                 {user && profile?.role === "pending" && (
@@ -350,7 +310,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                 {user && isMember && profile && !profile.musicianProfile?.instrument && !profile.viewedWelcomeModal && (
                     <div className={cn("bg-card border-2 border-violet-500/30 rounded-2xl p-6 space-y-4", stagger(2))}>
                         <div className="text-center">
-                            <span className="text-2xl">🎉</span>
+                            <span className="text-2xl">{'\uD83C\uDF89'}</span>
                             <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>
                             <p className="text-sm text-muted-foreground mt-1">
                                 Set up your instrument to get transposed charts and personalized gig packets.
@@ -379,31 +339,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
                     </div>
                 )}
 
-                {/* ── Upcoming Timeline (mobile) ── */}
-                {hasWeekData && timelineItems.length > 0 && (
-                    <div className={cn("md:hidden", stagger(3))}>
-                        <UpcomingTimeline
-                            items={timelineItems}
-                        />
-                    </div>
-                )}
-
-                {/* ── Additional upcoming (non-prep-tracked) ── */}
-                {additionalUpcoming.length > 0 && !hasWeekData && (
-                    <div className={cn("flex flex-col gap-2", stagger(3))}>
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Coming Up
-                        </h2>
-                        {additionalUpcoming.slice(0, 3).map(s => (
-                            <CompactSetlistRow
-                                key={s.id}
-                                setlist={s}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* ── Recent Public Setlists ── */}
+                {/* ── Recent Public Setlists (non-member / no upcoming) ── */}
                 {setlistsReady && !tonightSetlist && recentPublicSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
