@@ -50,8 +50,8 @@
 ## Library & Drive Sync
 
 - [ ] **LIB-01**: Musician can browse and search the music library
-- [ ] **LIB-02**: New files added to Google Drive appear in the app library via sync
-- [ ] **LIB-03**: Drive sync is robust with retry logic and error recovery — no silent failures, no admin duct tape needed
+- [x] **LIB-02**: New files added to Google Drive appear in the app library via sync
+- [x] **LIB-03**: Drive sync is robust with retry logic and error recovery — no silent failures, no admin duct tape needed
 - [ ] **LIB-04**: Library management in-app: upload and organize files directly (in addition to Drive sync)
 
 ## Authentication & Profiles
@@ -90,7 +90,7 @@
 
 - [x] **CODE-01**: Codebase audit — identify and remove dead code, unused components, abandoned features
 - [x] **CODE-02**: Consolidate Zustand stores from 8 fragmented stores to a focused architecture
-- [ ] **CODE-03**: Backend systems are robust enough that admin duct-tape tools are unnecessary
+- [x] **CODE-03**: Backend systems are robust enough that admin duct-tape tools are unnecessary
 - [ ] **CODE-04**: Admin tooling simplified to essentials: user management and library management
 
 ## v2 (After Launch)
@@ -153,8 +153,8 @@
 | PDF-02 | — | Existing |
 | PDF-03 | Phase 3 | Complete |
 | LIB-01 | Phase 5 | Pending |
-| LIB-02 | Phase 5 | Pending |
-| LIB-03 | Phase 5 | Pending |
+| LIB-02 | Phase 5 | Complete |
+| LIB-03 | Phase 5 | Complete |
 | LIB-04 | Phase 5 | Pending |
 | AUTH-01 | — | Existing |
 | AUTH-02 | — | Existing |
@@ -175,7 +175,7 @@
 | PRINT-02 | Phase 5 | Pending |
 | CODE-01 | Phase 1 | Complete |
 | CODE-02 | Phase 1 | Complete |
-| CODE-03 | Phase 5 | Pending |
+| CODE-03 | Phase 5 | Complete |
 | CODE-04 | Phase 5 | Pending |
 
 **Coverage:**

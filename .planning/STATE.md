@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-08T04:28:37.615Z"
-last_activity: 2026-03-08 -- Completed 04-03 (AI template auto-fill, chat commands for key/tempo/positioning)
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-08T04:49:37Z"
+last_activity: 2026-03-08 -- Completed 05-01 (Sync engine Storage copy with retry, cleanup, and observability)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
-  percent: 67
+  total_plans: 15
+  completed_plans: 13
+  percent: 72
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A musician sets their tablet on a music stand, sees this week's service at a glance, drills into PDFs when needed, and adjusts their monitor mix in 1-2 taps.
-**Current focus:** Phase 3 - Setlist Performance View
+**Current focus:** Phase 5 - Backend Hardening & Library
 
 ## Current Position
 
-Phase: 4 of 6 (complete)
-Plan: 3 of 3 in current phase (complete)
-Status: Phase 4 complete -- All 10 EDIT requirements met (inline editing, templates, duplicate workflow, AI integration)
-Last activity: 2026-03-08 -- Completed 04-03 (AI template auto-fill, chat commands for key/tempo/positioning)
+Phase: 5 of 6 (in progress)
+Plan: 1 of 3 in current phase (complete)
+Status: 05-01 complete -- Sync engine copies Drive files to Storage with retry, cleanup, and observability
+Last activity: 2026-03-08 -- Completed 05-01 (Sync engine Storage copy with retry, cleanup, and observability)
 
-Progress: [██████▓░░░] 67%
+Progress: [███████░░░] 72%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: ~7 min
-- Total execution time: ~1.3 hours
+- Total plans completed: 13
+- Average duration: ~6 min
+- Total execution time: ~1.4 hours
 
 ## Accumulated Context
 
@@ -99,6 +99,8 @@ Progress: [██████▓░░░] 67%
 - [04-03]: AI template dispatch reuses buildSetlistFromTemplate pipeline for consistency with manual template picker
 - [04-03]: ChatEditAction extended with key/bpm/afterTitle fields maintaining backward compatibility
 - [04-03]: System prompt includes all 16 template types so Gemini maps natural language to template keys
+- [05-01]: MAX_COPIES_PER_RUN=20 for Vercel 300s timeout; failed copies prioritized first in retry queue
+- [05-01]: Storage deletion tries .pdf, .xml, and extensionless paths to cover all file formats
 
 ### Blockers/Concerns
 
@@ -107,6 +109,6 @@ Progress: [██████▓░░░] 67%
 
 ## Session Continuity
 
-Last session: 2026-03-08T04:28:37.612Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-backend-hardening-library/05-CONTEXT.md
+Last session: 2026-03-08T04:49:37Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: .planning/phases/05-backend-hardening-library/05-02-PLAN.md
