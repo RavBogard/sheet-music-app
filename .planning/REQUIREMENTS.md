@@ -1,170 +1,187 @@
 # Requirements: CRC Music v2.0
 
 **Defined:** 2026-03-07
-**Core Value:** A musician opens the app, sees exactly what's coming up — song title, their key, tempo, notes — and performs the entire service without flipping through a binder or asking "what key?"
+**Core Value:** A musician sets their tablet on a music stand, sees this week's service at a glance, drills into PDFs when needed, and adjusts their monitor mix in 1-2 taps.
 
-## v1 Requirements
+## Setlist Performance View
 
-### Foundation
+- [ ] **SET-01**: Musician sees the full service flow at a glance on a portrait tablet: song title, their transposed key, tempo/feel, and notes — without tapping into anything
+- [ ] **SET-02**: Non-song items (readings, prayers, transitions, Torah service) appear as first-class items in the service flow alongside songs
+- [ ] **SET-03**: Current position is clearly highlighted so musician never loses their place during a service
+- [ ] **SET-04**: Musician taps a song to open the PDF viewer immersively (full-screen, setlist gets out of the way)
+- [ ] **SET-05**: Musician can return to the setlist view quickly and fluidly from the PDF viewer (slide-out drawer, back gesture, or equivalent)
+- [ ] **SET-06**: Screen stays awake during performance mode (wake lock)
+- [ ] **SET-07**: Each musician sees every song in their instrument's key automatically based on their profile (auto-transposition at a glance)
 
-- [ ] **FOUND-01**: App uses consolidated 3-store Zustand architecture (auth, setlist, mixer) instead of 8 fragmented stores
-- [ ] **FOUND-02**: App uses feature-based folder structure with clear component boundaries (~50-60 components, not 157)
-- [ ] **FOUND-03**: App uses Tailwind v4 + shadcn/ui component system with premium visual design
-- [ ] **FOUND-04**: App uses Motion (Framer Motion 11+) for smooth animations and swipe gestures
-- [ ] **FOUND-05**: Service worker caches all static assets and setlist data for offline use via Serwist/Workbox
-- [ ] **FOUND-06**: IndexedDB stores setlist data and song metadata for offline access
-- [ ] **FOUND-07**: Mobile-first responsive design — primary experience is phone-sized, desktop is secondary
+## Setlist Editor
 
-### Setlist Performance
+- [ ] **EDIT-01**: Band leader can create a new setlist from a service template that pre-fills the liturgical skeleton (16 templates: 7 regular, 9 holiday)
+- [ ] **EDIT-02**: Band leader can duplicate a previous setlist and modify it (the primary weekly workflow)
+- [ ] **EDIT-03**: Band leader can add songs from the library, set key, tempo/feel, lead musician, and notes for each song
+- [ ] **EDIT-04**: Band leader can add, reorder, and edit non-song items (readings, prayers, transitions) in the service flow
+- [ ] **EDIT-05**: Band leader can drag-drop to reorder all items in the service flow
+- [ ] **EDIT-06**: Band leader can publish a setlist, making it visible to all assigned musicians
+- [ ] **EDIT-07**: Band leader can edit a published setlist (changes propagate to musicians)
+- [ ] **EDIT-08**: Setlist creation is faster than a spreadsheet — minimal clicks, keyboard-friendly, tab-through fields
+- [ ] **EDIT-09**: AI can auto-fill a setlist from a template with reasonable defaults via natural language command
+- [ ] **EDIT-10**: AI accepts chat commands for setlist modifications ("add Mi Chamocha in Am after the responsive reading")
 
-- [ ] **PERF-01**: Musician sees their upcoming service setlist with song title, their transposed key, tempo/feel, and quick notes — at a glance
-- [ ] **PERF-02**: Musician swipes to advance to next song/item during a live service
-- [ ] **PERF-03**: Service flow includes non-song items (readings, prayers, transitions, announcements) as first-class items alongside songs
-- [ ] **PERF-04**: Current position is clearly highlighted so musician never loses their place
-- [ ] **PERF-05**: Performance view works fully offline after initial cache
-- [ ] **PERF-06**: Musician can tap a song to drill into sheet music PDF if needed (secondary action)
-- [ ] **PERF-07**: Screen stays awake during performance mode (wake lock)
+## Monitor Mixing
 
-### Setlist Creation
+- [ ] **MIX-01**: Musician can see their assigned monitor channels and adjust fader levels from their tablet
+- [ ] **MIX-02**: Musician can mute/unmute individual channels in their personal monitor mix
+- [ ] **MIX-03**: Configure mode: musician can star/select which channels (6-8) they want to see during live performance
+- [ ] **MIX-04**: Live mode: only starred channels are visible — clean, fast, no clutter
+- [ ] **MIX-05**: Sound engineer can pre-configure which channels each musician sees
+- [ ] **MIX-06**: Sound engineer can assign monitor bus mappings to individual musicians via the app
+- [ ] **MIX-07**: Monitor controls are always 1-2 taps away from any screen in the app (setlist, PDF, home)
+- [ ] **MIX-08**: Bridge/proxy architecture is stupid simple to install on the production PC or LAN device
+- [ ] **MIX-09**: Bridge auto-starts, auto-reconnects, and requires zero technical troubleshooting during a service
+- [ ] **MIX-10**: App shows clear connection status — if X32 isn't reachable, musician sees an obvious indicator, not silent failure
+- [ ] **MIX-11**: App functions normally (setlist, library, everything) when X32/bridge is offline — mixing degrades gracefully
+- [ ] **MIX-12**: Bridge architecture validated through research spike before any implementation code is written
 
-- [ ] **CREATE-01**: Band leader can create a new setlist by selecting songs from the library and ordering them
-- [ ] **CREATE-02**: Band leader can drag-drop to reorder songs and service flow items
-- [ ] **CREATE-03**: Band leader can add non-song items (readings, prayers, transitions) to the service flow
-- [ ] **CREATE-04**: Band leader can set key, tempo/feel, and notes for each song
-- [ ] **CREATE-05**: Band leader can publish a setlist, making it visible to all assigned musicians
-- [ ] **CREATE-06**: Band leader can edit a published setlist (changes propagate to musicians)
+## PDF Viewer (Existing — No Changes)
 
-### Transposition
+- [ ] **PDF-01**: Existing PDF viewer with AI chord detection, transposed overlays, and annotations continues to work as-is
+- [ ] **PDF-02**: PDF view is immersive — when open, it owns the full screen
+- [ ] **PDF-03**: Monitor quick-adjust and setlist navigation remain accessible from within PDF view without breaking immersion
 
-- [ ] **TRANS-01**: Each musician sees every song in their instrument's key automatically based on their profile
-- [ ] **TRANS-02**: Musician can set their instrument and transposition preference once in their profile
-- [ ] **TRANS-03**: AI-detected chords are rendered as overlays on sheet music PDFs with accurate positioning
-- [ ] **TRANS-04**: Musician can manually add, edit, or delete chord overlays if AI detection is wrong
-- [ ] **TRANS-05**: Manual chord corrections persist across sessions and cache invalidations
+## Library & Drive Sync
 
-### Monitor Mixing
+- [ ] **LIB-01**: Musician can browse and search the music library
+- [ ] **LIB-02**: New files added to Google Drive appear in the app library via sync
+- [ ] **LIB-03**: Drive sync is robust with retry logic and error recovery — no silent failures, no admin duct tape needed
+- [ ] **LIB-04**: Library management in-app: upload and organize files directly (in addition to Drive sync)
 
-- [ ] **MIX-01**: Musician can adjust their personal monitor mix levels from their phone during rehearsal/service
-- [ ] **MIX-02**: Musician can mute/unmute individual channels in their monitor mix
-- [ ] **MIX-03**: Sound engineer can assign monitor bus mappings to individual musicians via the app
-- [ ] **MIX-04**: Music director (band leader) has monitor mix control like any musician
-- [ ] **MIX-05**: X32 connection uses WebSocket-to-UDP proxy (x32-proxy on Raspberry Pi or LAN device) — no Electron
-- [ ] **MIX-06**: Monitor mixing works reliably with X32 keepalive handling in the proxy, not the browser
+## Authentication & Profiles
 
-### Library
+- [ ] **AUTH-01**: User can sign in with Google OAuth
+- [ ] **AUTH-02**: User can sign in via QR code
+- [ ] **AUTH-03**: User session persists across browser refresh
+- [ ] **AUTH-04**: Role-based access: admin (Daniel), band leader, musician, sound engineer
+- [ ] **PROF-01**: Musician profile includes name, instrument(s), transposition preferences
+- [ ] **PROF-02**: Profile settings (instrument, transposition) are applied automatically across the entire app
 
-- [ ] **LIB-01**: Musician can browse and search the music library (synced from Google Drive)
-- [ ] **LIB-02**: Musician can view sheet music PDFs with transposed chord overlays
-- [ ] **LIB-03**: New files added to Google Drive appear automatically in the app library via sync
-- [ ] **LIB-04**: Drive sync is reliable with retry logic and error recovery
+## Public Access
 
-### Scheduling & Notifications
+- [ ] **PUB-01**: Band leader can mark a setlist as public (no authentication required to view)
+- [ ] **PUB-02**: Community members can access a public setlist and view PDFs without signing in
+- [ ] **PUB-03**: Public view is read-only: setlist + PDFs only (no monitoring, no editing, no transposition)
+
+## Scheduling & Notifications
 
 - [ ] **SCHED-01**: Band leader can assign musicians to a service
 - [ ] **SCHED-02**: Musicians can see who else is playing at each service
-- [ ] **NOTIF-01**: Musicians receive notifications when assigned to a service
+- [ ] **NOTIF-01**: Musicians receive notifications (push and/or SMS) when assigned to a service
 - [ ] **NOTIF-02**: Musicians receive notifications when a setlist is published or updated
 
-### Authentication & Profiles
+## Home Screen
 
-- [ ] **AUTH-01**: User can sign in with Google OAuth
-- [ ] **AUTH-02**: User session persists across browser refresh
-- [ ] **AUTH-03**: Role-based access: admin (Daniel), band leader, musician
-- [ ] **PROF-01**: Musician profile includes name, instrument(s), transposition preferences
-- [ ] **PROF-02**: Profile settings are applied automatically across the entire app
+- [ ] **HOME-01**: When a musician opens the app, they see this week's upcoming service with the setlist, who's playing, and quick access to perform
+- [ ] **HOME-02**: Home screen is focused on the next service — not a dashboard with multiple competing sections
 
-## v2 Requirements
+## Print Pipeline
 
-### Scheduling
+- [ ] **PRINT-01**: Band leader can generate PDF gig packets for a setlist
+- [ ] **PRINT-02**: Gig packets can be emailed to musicians (especially guest musicians)
 
-- **SCHED-V2-01**: Musicians can mark dates they're unavailable (blockout periods)
-- **SCHED-V2-02**: Leader sees availability when assigning musicians
-- **SCHED-V2-03**: iCal feed export for musicians' personal calendars
+## Code Quality & Architecture
 
-### Monitor Mixing
+- [ ] **CODE-01**: Codebase audit — identify and remove dead code, unused components, abandoned features
+- [ ] **CODE-02**: Consolidate Zustand stores from 8 fragmented stores to a focused architecture
+- [ ] **CODE-03**: Backend systems are robust enough that admin duct-tape tools are unnecessary
+- [ ] **CODE-04**: Admin tooling simplified to essentials: user management and library management
 
+## v2 (After Launch)
+
+- **SCHED-V2-01**: Musicians can mark dates they're unavailable
+- **SCHED-V2-02**: AI-powered musician suggestions based on availability
+- **SCHED-V2-03**: iCal feed export
 - **MIX-V2-01**: Musicians can save and recall personal mix presets
-- **MIX-V2-02**: Mix settings persist between services
-
-### Performance
-
 - **PERF-V2-01**: Live follow mode — all musicians' views advance together when leader changes position
-- **PERF-V2-02**: Metronome/click track integrated into performance view
-
-### Library
-
 - **LIB-V2-01**: Key and topic filters for library browsing
-- **LIB-V2-02**: Song usage analytics (how often each song is played)
+- **OFFLINE-01**: Full offline support — all setlist data and PDFs cached proactively
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Admin analytics dashboard | No users yet to analyze; premature optimization |
-| Audio file library | Separate concern, not core to setlist/performance |
-| Tasks dashboard | Over-engineered for 10-person user base |
-| AI chat agent for setlist commands | Clever but unnecessary complexity |
-| Multi-tenancy / multi-congregation | Build for CRC first, generalize later |
-| QR code sign-in bridge | Unnecessary for known user base |
+| Task management system | Over-engineered for 10-person user base |
+| Analytics/usage dashboard | No users yet to analyze |
+| 8-week rotation matrix | Premature optimization |
+| Multi-tenancy / multi-congregation | Build for CRC first |
 | Real-time collaborative editing | One person builds setlists, others consume |
-| Print pipeline for gig packets | The whole point is replacing paper |
 | Replacing Mixing Station | Sound engineer keeps Mixing Station for full board control |
-| Song suggestions / AI setlist building | Nice-to-have, not core workflow |
+| Availability calendar | v2 feature — simple assign-and-notify is enough for launch |
+| AI musician suggestions | v2 feature |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| FOUND-06 | Phase 1 | Pending |
-| FOUND-07 | Phase 1 | Pending |
-| PERF-01 | Phase 2 | Pending |
-| PERF-02 | Phase 2 | Pending |
-| PERF-03 | Phase 2 | Pending |
-| PERF-04 | Phase 2 | Pending |
-| PERF-05 | Phase 2 | Pending |
-| PERF-06 | Phase 2 | Pending |
-| PERF-07 | Phase 2 | Pending |
-| CREATE-01 | Phase 3 | Pending |
-| CREATE-02 | Phase 3 | Pending |
-| CREATE-03 | Phase 3 | Pending |
-| CREATE-04 | Phase 3 | Pending |
-| CREATE-05 | Phase 3 | Pending |
-| CREATE-06 | Phase 3 | Pending |
-| TRANS-01 | Phase 2 | Pending |
-| TRANS-02 | Phase 2 | Pending |
-| TRANS-03 | Phase 4 | Pending |
-| TRANS-04 | Phase 4 | Pending |
-| TRANS-05 | Phase 4 | Pending |
-| MIX-01 | Phase 5 | Pending |
-| MIX-02 | Phase 5 | Pending |
-| MIX-03 | Phase 5 | Pending |
-| MIX-04 | Phase 5 | Pending |
-| MIX-05 | Phase 5 | Pending |
-| MIX-06 | Phase 5 | Pending |
-| LIB-01 | Phase 4 | Pending |
-| LIB-02 | Phase 4 | Pending |
-| LIB-03 | Phase 4 | Pending |
-| LIB-04 | Phase 4 | Pending |
+| SET-01 | Phase 3 | Pending |
+| SET-02 | Phase 3 | Pending |
+| SET-03 | Phase 3 | Pending |
+| SET-04 | Phase 3 | Pending |
+| SET-05 | Phase 3 | Pending |
+| SET-06 | Phase 3 | Pending |
+| SET-07 | Phase 3 | Pending |
+| EDIT-01 | Phase 4 | Pending |
+| EDIT-02 | Phase 4 | Pending |
+| EDIT-03 | Phase 4 | Pending |
+| EDIT-04 | Phase 4 | Pending |
+| EDIT-05 | Phase 4 | Pending |
+| EDIT-06 | Phase 4 | Pending |
+| EDIT-07 | Phase 4 | Pending |
+| EDIT-08 | Phase 4 | Pending |
+| EDIT-09 | Phase 4 | Pending |
+| EDIT-10 | Phase 4 | Pending |
+| MIX-01 | Phase 2 | Pending |
+| MIX-02 | Phase 2 | Pending |
+| MIX-03 | Phase 2 | Pending |
+| MIX-04 | Phase 2 | Pending |
+| MIX-05 | Phase 2 | Pending |
+| MIX-06 | Phase 2 | Pending |
+| MIX-07 | Phase 2 | Pending |
+| MIX-08 | Phase 2 | Pending |
+| MIX-09 | Phase 2 | Pending |
+| MIX-10 | Phase 2 | Pending |
+| MIX-11 | Phase 2 | Pending |
+| MIX-12 | Phase 1 | Pending |
+| PDF-01 | — | Existing |
+| PDF-02 | — | Existing |
+| PDF-03 | Phase 3 | Pending |
+| LIB-01 | Phase 5 | Pending |
+| LIB-02 | Phase 5 | Pending |
+| LIB-03 | Phase 5 | Pending |
+| LIB-04 | Phase 5 | Pending |
+| AUTH-01 | — | Existing |
+| AUTH-02 | — | Existing |
+| AUTH-03 | — | Existing |
+| AUTH-04 | Phase 1 | Pending |
+| PROF-01 | Phase 1 | Pending |
+| PROF-02 | Phase 1 | Pending |
+| PUB-01 | Phase 3 | Pending |
+| PUB-02 | Phase 3 | Pending |
+| PUB-03 | Phase 3 | Pending |
 | SCHED-01 | Phase 6 | Pending |
 | SCHED-02 | Phase 6 | Pending |
 | NOTIF-01 | Phase 6 | Pending |
 | NOTIF-02 | Phase 6 | Pending |
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| PROF-01 | Phase 1 | Pending |
-| PROF-02 | Phase 1 | Pending |
+| HOME-01 | Phase 3 | Pending |
+| HOME-02 | Phase 3 | Pending |
+| PRINT-01 | Phase 5 | Pending |
+| PRINT-02 | Phase 5 | Pending |
+| CODE-01 | Phase 1 | Pending |
+| CODE-02 | Phase 1 | Pending |
+| CODE-03 | Phase 5 | Pending |
+| CODE-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 44
-- Unmapped: 0 ✓
+- v1 requirements: 53 total (excluding 3 already existing)
+- Mapped to phases: 53
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*

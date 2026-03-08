@@ -2,206 +2,181 @@
 
 ## Overview
 
-CRC Music v2.0 is a setlist-first rebuild of the worship music platform for Central Reform Congregation. The existing backend (Firebase Auth, Firestore, Google Drive sync, AI chord detection, transposition engine) is sound and stays. The UI layer gets a ground-up rebuild: from PDF-first to setlist-first, from desktop-assumed to mobile-first, from 157 accumulated components to ~50-60 purpose-built ones. The build follows a strangler fig migration -- v1 routes stay alive until v2 replacements are validated at actual Shabbat services. Six phases deliver the app from architectural foundation through the killer feature (X32 personal monitor mixing) to operational readiness.
+CRC Music v2.0 focuses on three pillars: the setlist experience (editor + performance view), bulletproof monitor mixing, and code quality. The PDF viewer and backend (Firebase, Drive sync, AI chord detection, transposition) are kept. The build order puts the highest-risk, highest-value work first: monitoring research, then code cleanup, then the three pillars, then supporting features.
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [ ] **Phase 1: Foundation and Architecture** - Scaffold v2 with 3-store state, UI primitives, auth, profiles, offline infrastructure, and strangler fig strategy
-- [ ] **Phase 2: Live Performance Setlist View** - The product: musicians open the app, see their setlist at a glance, swipe through the service, never lose their place
-- [ ] **Phase 3: Setlist Creation and Service Flow Builder** - Admin tooling to replace the Google Doc workflow with drag-drop service flow building
-- [ ] **Phase 4: Sheet Music, Library, and Drive Sync** - PDF viewer with transposed chord overlays, library browsing, and hardened Google Drive sync
-- [ ] **Phase 5: X32 Monitor Mixing** - Personal monitor mix self-service from phones via WebSocket-to-UDP proxy on the LAN
-- [ ] **Phase 6: Scheduling, Notifications, and Operations** - Who's playing this week, setlist alerts, and operational readiness for regular use
+- [ ] **Phase 1: Monitor Research Spike + Code Audit** — Deep research into X32 bridge architecture; audit codebase for cleanup
+- [ ] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
+- [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
+- [ ] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
+- [ ] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
+- [ ] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
 
 ## Phase Details
 
-### Phase 1: Foundation and Architecture
-**Goal**: A working v2 scaffold exists with premium UI primitives, consolidated state management, Firebase auth with profiles, offline infrastructure, and documented strangler fig cutover strategy -- so every subsequent phase builds on a clean, consistent foundation
+### Phase 1: Monitor Research Spike + Code Audit
+**Goal**: Answer every open question about how to connect to the X32 reliably and simply, and identify all code cleanup work across the codebase
 **Depends on**: Nothing (first phase)
-**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, AUTH-01, AUTH-02, AUTH-03, PROF-01, PROF-02
-**Success Criteria** (what must be TRUE):
-  1. User can sign in with Google OAuth on a phone and their session persists across browser refreshes
-  2. User can set their instrument and transposition preferences in their profile, and those settings are stored and recalled on next visit
-  3. App shell loads on mobile with shadcn/ui components, smooth Motion animations, and responsive layout -- feels like a native app, not a web form
-  4. App displays an offline fallback page when the network is unavailable (service worker caching is active)
-  5. v1 routes remain accessible and functional alongside v2 routes (strangler fig pattern verified)
-**Plans**: TBD
+**Requirements**: MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02
+**Success Criteria:**
+  1. A written technical document answers: what bridge architecture, what deployment model (Raspberry Pi vs production PC vs other), what install experience, what failure modes, what auto-recovery strategy
+  2. A working proof-of-concept demonstrates: connect to X32 from a browser via the chosen bridge, read a fader value, set a fader value, survive a 30-second network interruption
+  3. The bridge install process has been tested by a non-technical person (or documented to that standard)
+  4. Codebase audit document identifies: dead code to remove, stores to consolidate, components to cut, backend duct-tape to eliminate
+  5. User profiles with instrument/transposition preferences work (foundation for Phase 3 auto-transposition)
 
 Plans:
 - [ ] 01-01: TBD
 - [ ] 01-02: TBD
 - [ ] 01-03: TBD
 
-### Phase 2: Live Performance Setlist View
-**Goal**: A musician opens the app on their phone, sees the upcoming service setlist with every song displayed in their personal key, swipes through the service flow (songs and non-song items), and never loses their place -- this works offline after first load
-**Depends on**: Phase 1 (auth, profiles, state stores, offline infrastructure)
-**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06, PERF-07, TRANS-01, TRANS-02
-**Success Criteria** (what must be TRUE):
-  1. Musician sees the full service setlist at a glance: song title, their transposed key, tempo/feel, and notes -- without tapping into anything
-  2. Musician swipes to advance through the service flow; current item is clearly highlighted and next item is visible
-  3. Non-song items (readings, prayers, transitions) appear as first-class items in the setlist alongside songs
-  4. A trumpet player and a guitarist looking at the same setlist see different keys for the same song, matching their instrument profile
-  5. Musician can tap a song to drill into the sheet music PDF (secondary action, not the default)
-  6. The entire performance view works offline after the initial cache load, including screen wake lock
-**Plans**: TBD
+**This phase is research-heavy.** The monitor research determines the entire architecture of Phase 2. Do not write production monitor code until the research is validated with a working proof-of-concept.
+
+### Phase 2: Monitor Mixing Implementation
+**Goal**: Musicians can adjust their personal monitor mix from their tablets during rehearsal and services — configure mode for setup, live mode for performance, bulletproof connection
+**Depends on**: Phase 1 (bridge architecture validated)
+**Requirements**: MIX-01, MIX-02, MIX-03, MIX-04, MIX-05, MIX-06, MIX-07, MIX-08, MIX-09, MIX-10, MIX-11
+**Success Criteria:**
+  1. Musician opens configure mode, sees all X32 channels, and can star 6-8 channels they care about
+  2. Sound engineer can assign monitor bus mappings and pre-configure channel visibility for each musician
+  3. Musician opens live mode and sees only their starred channels as clean faders — adjusts a fader and hears the change in their wedge within 200ms
+  4. Monitor controls are accessible from the setlist view and PDF view in 1-2 taps
+  5. Bridge/proxy runs on the LAN, auto-starts, auto-reconnects after network interruption, and requires zero manual intervention during a service
+  6. When X32 is unreachable, the app shows a clear status indicator and all non-monitor features continue working normally
 
 Plans:
 - [ ] 02-01: TBD
 - [ ] 02-02: TBD
 - [ ] 02-03: TBD
 
-**Note**: This is the first vertical slice validated at an actual Shabbat service. Musicians must abandon paper after this phase. Validate the non-song service item data model (Kabbalat Shabbat, Torah, D'var structure) before building the UI.
-
-### Phase 3: Setlist Creation and Service Flow Builder
-**Goal**: The band leader (Daniel) can build a complete service flow -- songs from the library, non-song items, ordering, keys, tempos, notes -- and publish it so all assigned musicians instantly see the setlist in Phase 2's performance view
-**Depends on**: Phase 2 (Firestore setlist data model validated against the performance view)
-**Requirements**: CREATE-01, CREATE-02, CREATE-03, CREATE-04, CREATE-05, CREATE-06
-**Success Criteria** (what must be TRUE):
-  1. Band leader can create a new setlist by searching the library and adding songs
-  2. Band leader can drag-drop to reorder songs and non-song items (readings, prayers, transitions) in the service flow
-  3. Band leader can set key, tempo/feel, and notes for each song in the setlist
-  4. Band leader can publish a setlist; all assigned musicians see it appear in their performance view immediately
-  5. Band leader can edit a published setlist and changes propagate to musicians without requiring them to refresh
-**Plans**: TBD
+### Phase 3: Setlist Performance View
+**Goal**: A musician sets their tablet on a music stand and sees the full service at a glance — songs in their key, tempo, notes, liturgical flow items — with immersive PDF drill-down and public access for jam sessions
+**Depends on**: Phase 1 (profiles with transposition, code audit informs component structure)
+**Requirements**: SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07, PDF-03, PUB-01, PUB-02, PUB-03, HOME-01, HOME-02
+**Success Criteria:**
+  1. Musician sees the full service flow at a glance on a portrait tablet: song title, their transposed key, tempo, notes, and non-song liturgical items — without tapping anything
+  2. A trumpet player and a guitarist looking at the same setlist see different keys for the same song
+  3. Musician taps a song → PDF opens immersively (full screen). Musician can return to setlist fluidly without losing their place
+  4. Monitor quick-adjust is accessible from within the PDF view (1-2 taps) without breaking immersion
+  5. A community member at a jam session navigates to centralreform.live on their phone, sees the public setlist, and views PDFs — no sign-in required
+  6. Home screen shows this week's upcoming service focused, not a busy dashboard
 
 Plans:
 - [ ] 03-01: TBD
 - [ ] 03-02: TBD
 - [ ] 03-03: TBD
 
-**Note**: Verify `dnd-kit` compatibility with React 19 and Server Components before starting drag-drop implementation. This phase makes the Google Doc setlist workflow obsolete.
-
-### Phase 4: Sheet Music, Library, and Drive Sync
-**Goal**: Musicians can browse the music library, view sheet music PDFs with AI-detected chords transposed to their key, correct chord errors that persist, and trust that new files added to Google Drive appear reliably in the app
-**Depends on**: Phase 2 (performance view provides the drill-down entry point), Phase 1 (offline infrastructure)
-**Requirements**: LIB-01, LIB-02, LIB-03, LIB-04, TRANS-03, TRANS-04, TRANS-05
-**Success Criteria** (what must be TRUE):
-  1. Musician can browse and search the music library and see all songs synced from Google Drive
-  2. Musician can view a sheet music PDF with AI-detected chord symbols overlaid and transposed to their instrument's key
-  3. Musician can add, edit, or delete chord overlays on a PDF when the AI detection is wrong, and those corrections persist across sessions
-  4. A new PDF added to the Google Drive folder appears in the app library automatically within one sync cycle, without manual intervention
-  5. Drive sync recovers gracefully from errors (retry logic, webhook renewal) without silent failures
-**Plans**: TBD
+### Phase 4: Setlist Editor
+**Goal**: Daniel can build a complete service — songs, readings, prayers, keys, tempos, leads — faster than a spreadsheet, using templates, duplication, and AI assistance
+**Depends on**: Phase 3 (performance view validates the setlist data model before building the editor on top of it)
+**Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10
+**Success Criteria:**
+  1. Band leader selects a service template (from 16 options) and gets a pre-filled liturgical skeleton with the correct structure
+  2. Band leader duplicates last week's setlist and swaps 2-3 songs in under 2 minutes
+  3. Adding a song: search library → tap to add → set key/tempo/lead inline. No modals, no extra screens unless needed
+  4. Drag-drop reordering works for songs and non-song items (readings, prayers, transitions)
+  5. AI command: "add Mi Chamocha in Am after the responsive reading" executes correctly
+  6. Publishing a setlist makes it immediately visible in musicians' performance view
 
 Plans:
 - [ ] 04-01: TBD
 - [ ] 04-02: TBD
 - [ ] 04-03: TBD
 
-### Phase 5: X32 Monitor Mixing
-**Goal**: Each musician can adjust their personal monitor mix levels from their phone during rehearsal and services, without touching the sound board or asking the sound engineer -- while the sound engineer retains full board control via Mixing Station
-**Depends on**: Phase 2 (performance view is the context where mixing happens), Phase 1 (MixerStore, auth)
-**Requirements**: MIX-01, MIX-02, MIX-03, MIX-04, MIX-05, MIX-06
-**Success Criteria** (what must be TRUE):
-  1. Musician can see their assigned monitor bus channels and adjust fader levels from their phone
-  2. Musician can mute/unmute individual channels in their personal monitor mix
-  3. Sound engineer can assign monitor bus mappings to individual musicians through the app's admin interface
-  4. X32 connection is maintained reliably via WebSocket-to-UDP proxy on a LAN device with keepalive handling in the proxy (not the browser)
-  5. App functions normally (setlist, library, everything else) when the X32 proxy is offline -- mixing degrades gracefully with a clear status indicator
-**Plans**: TBD
+### Phase 5: Backend Hardening & Library
+**Goal**: Backend systems are robust enough to run without admin duct tape — Drive sync is reliable, library management works in-app, print pipeline is clean, admin is simplified to essentials
+**Depends on**: Phases 1-4 (cleanup work identified in Phase 1, executed here alongside library/print work)
+**Requirements**: LIB-01, LIB-02, LIB-03, LIB-04, PRINT-01, PRINT-02, CODE-03, CODE-04
+**Success Criteria:**
+  1. A PDF added to Google Drive appears in the app library within one sync cycle without manual intervention or admin action
+  2. Drive sync recovers from transient errors automatically (retry, backoff) — no silent failures
+  3. Band leader can upload and organize files directly in the app (not just via Drive)
+  4. Band leader can generate and email gig packets for a setlist
+  5. Admin interface has exactly two sections: user management and library management — nothing else
 
 Plans:
 - [ ] 05-01: TBD
 - [ ] 05-02: TBD
 - [ ] 05-03: TBD
 
-**RESEARCH REQUIRED**: X32 OSC protocol has non-obvious behaviors (no-self-echo, initial state polling, `/xremote` keepalive timeout, meter data as raw ArrayBuffer). Run a research spike before writing any bridge or client code. Document the exact OSC message sequence for: initial connect + state poll, fader set, mute toggle, and graceful disconnect. Verify whether `x32-proxy` 2.5.8 handles local broadcast natively or requires custom implementation.
-
-**Risk Flags:**
-- X32 keepalive expiry silently breaks monitor sessions mid-service if handled in browser instead of proxy
-- X32 does not echo its own OSC commands back to the sender -- proxy must implement local state broadcast
-- Raspberry Pi deployment adds operational complexity (PM2, systemd, physical hardware in the audio rack)
-- Sound engineer needs a runbook for proxy management before this goes live
-
-### Phase 6: Scheduling, Notifications, and Operations
-**Goal**: Band leader can assign musicians to services, musicians know when they're playing and when the setlist is ready, and the system is operationally ready for regular weekly use without Daniel being the single point of failure
-**Depends on**: Phase 3 (setlist publish is the trigger for notifications), Phase 1 (user model)
+### Phase 6: Scheduling, Notifications & Polish
+**Goal**: Band leader can assign musicians to services, musicians get notified, and the entire app is polished and ready for the band to use at real services
+**Depends on**: Phases 2-5 (all features exist, this phase connects them and polishes)
 **Requirements**: SCHED-01, SCHED-02, NOTIF-01, NOTIF-02
-**Success Criteria** (what must be TRUE):
-  1. Band leader can assign musicians to a service and musicians can see who else is playing
-  2. Musicians receive a notification when they are assigned to a service
-  3. Musicians receive a notification when a setlist is published or updated for their service
-  4. A substitute musician can be onboarded (sign in, set profile, see their setlist) within 5 minutes on their phone
-**Plans**: TBD
+**Success Criteria:**
+  1. Band leader assigns musicians to a service; musicians see who else is playing
+  2. Musicians receive push/SMS notification when assigned to a service
+  3. Musicians receive notification when a setlist is published or updated
+  4. A new musician (or substitute) can sign in, set up their profile, and see their setlist within 5 minutes
+  5. End-to-end flow works: create setlist → assign musicians → publish → musicians see it on their tablets → perform with monitor mixing → done
 
 Plans:
 - [ ] 06-01: TBD
 - [ ] 06-02: TBD
 
-**Note**: iOS PWA push notifications have historically been unreliable. Verify current iOS 17+/18+ Safari push notification support before committing to the push notification architecture. Android PWA push is well-documented and reliable. Consider in-app notification as a fallback.
-
 ## Dependency Graph
 
 ```
-Phase 1: Foundation
+Phase 1: Monitor Research + Code Audit
   |
-  +---> Phase 2: Live Performance Setlist View
+  +---> Phase 2: Monitor Mixing Implementation
   |       |
-  |       +---> Phase 3: Setlist Creation
-  |       |       |
-  |       |       +---> Phase 6: Scheduling & Notifications
-  |       |
-  |       +---> Phase 4: Sheet Music & Drive Sync
-  |       |
-  |       +---> Phase 5: X32 Monitor Mixing
+  |       +---> Phase 6: Scheduling, Notifications & Polish
   |
-  (v1 routes remain live throughout all phases)
+  +---> Phase 3: Setlist Performance View
+  |       |
+  |       +---> Phase 4: Setlist Editor
+  |               |
+  |               +---> Phase 6
+  |
+  +---> Phase 5: Backend Hardening & Library
+          |
+          +---> Phase 6
 ```
 
-**Critical path:** 1 --> 2 --> 3 --> 6
-**Parallel after Phase 2:** Phases 4 and 5 can execute in parallel with Phase 3 (architecturally independent)
+**Critical path:** 1 → 2 and 1 → 3 → 4 (can run in parallel after Phase 1)
+**Phase 5** can run in parallel with Phases 3-4
+**Phase 6** is the convergence point — everything must be done before final polish
 
-## Research Flags
+## Risk Flags
 
-| Phase | Research Needed | Reason |
-|-------|-----------------|--------|
-| Phase 1 | None | Standard patterns; official docs are authoritative |
-| Phase 2 | Light | Non-song service item data model (Jewish liturgical structure) needs design |
-| Phase 3 | Light | Verify `dnd-kit` + React 19 compatibility |
-| Phase 4 | None | PDF viewer and Drive webhook renewal are well-documented |
-| Phase 5 | **FULL SPIKE** | X32 OSC protocol quirks, `x32-proxy` capabilities, proxy deployment model |
-| Phase 6 | Moderate | iOS PWA push notification current status for iOS 17+/18+ |
+| Phase | Risk | Mitigation |
+|-------|------|------------|
+| Phase 1 | X32 bridge architecture may have no good simple answer | Research multiple approaches; accept complexity if needed but document install process thoroughly |
+| Phase 2 | X32 OSC protocol has non-obvious behaviors (no self-echo, keepalive timeout, meter data format) | Phase 1 proof-of-concept must exercise all critical paths |
+| Phase 3 | Setlist/PDF coexistence UX on portrait tablet needs design exploration | Prototype multiple approaches (drawer, split view, overlay) before committing |
+| Phase 4 | dnd-kit + React 19 compatibility not verified | Test early in phase; have fallback drag-drop approach |
+| Phase 6 | iOS PWA push notifications historically unreliable | SMS as primary notification channel; push as enhancement |
 
 ## Coverage
 
-All 44 v1 requirements mapped to exactly one phase:
+All 53 new requirements mapped to exactly one phase:
 
 | Phase | Requirements | Count |
 |-------|-------------|-------|
-| 1. Foundation and Architecture | FOUND-01..07, AUTH-01..03, PROF-01..02 | 12 |
-| 2. Live Performance Setlist View | PERF-01..07, TRANS-01, TRANS-02 | 9 |
-| 3. Setlist Creation and Service Flow Builder | CREATE-01..06 | 6 |
-| 4. Sheet Music, Library, and Drive Sync | LIB-01..04, TRANS-03..05 | 7 |
-| 5. X32 Monitor Mixing | MIX-01..06 | 6 |
-| 6. Scheduling, Notifications, and Operations | SCHED-01..02, NOTIF-01..02 | 4 |
-| **Total** | | **44** |
+| 1. Monitor Research + Code Audit | MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02 | 6 |
+| 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
+| 3. Setlist Performance View | SET-01..07, PDF-03, PUB-01..03, HOME-01..02 | 13 |
+| 4. Setlist Editor | EDIT-01..10 | 10 |
+| 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
+| 6. Scheduling, Notifications & Polish | SCHED-01..02, NOTIF-01..02 | 4 |
+| **Total** | | **52** |
 
-Mapped: 44/44
-Unmapped: 0
+Existing (no phase needed): AUTH-01, AUTH-02, AUTH-03, PDF-01, PDF-02 (5 requirements already working)
 
-**Note:** REQUIREMENTS.md states "42 total" but contains 44 unique requirement IDs (verified by checkbox count). Each requirement maps to exactly one phase with no orphans or duplicates.
+Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest of MIX in Phase 2). Total trackable: 52.
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 --> 2 --> 3 --> 4 --> 5 --> 6
-(Phases 3, 4, 5 can potentially run in parallel after Phase 2 -- see dependency graph)
-
-| Phase | Plans Complete | Status | Completed |
-|-------|---------------|--------|-----------|
-| 1. Foundation and Architecture | 0/3 | Not started | - |
-| 2. Live Performance Setlist View | 0/3 | Not started | - |
-| 3. Setlist Creation and Service Flow Builder | 0/3 | Not started | - |
-| 4. Sheet Music, Library, and Drive Sync | 0/3 | Not started | - |
-| 5. X32 Monitor Mixing | 0/3 | Not started | - |
-| 6. Scheduling, Notifications, and Operations | 0/2 | Not started | - |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1. Monitor Research + Code Audit | 0/3 | Not started |
+| 2. Monitor Mixing Implementation | 0/3 | Not started |
+| 3. Setlist Performance View | 0/3 | Not started |
+| 4. Setlist Editor | 0/3 | Not started |
+| 5. Backend Hardening & Library | 0/3 | Not started |
+| 6. Scheduling, Notifications & Polish | 0/2 | Not started |
 
 ---
 *Roadmap created: 2026-03-07*
-*Last updated: 2026-03-07*

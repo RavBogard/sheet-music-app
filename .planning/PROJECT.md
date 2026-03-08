@@ -2,99 +2,117 @@
 
 ## What This Is
 
-A setlist-first worship music platform for Central Reform Congregation's musicians. 5-8 instrumentalists, cantorial soloists, a rabbi/band leader, and a sound engineer use it to plan services, perform with confidence, and control their own monitor mixes — all from their phones. It replaces paper binders, Google Doc setlists, and the chaos of last-minute prep.
+A worship music platform for Central Reform Congregation. 5-8 core musicians, cantorial soloists, a rabbi/band leader (Daniel), and a sound engineer use it to plan services, perform with confidence, and control their personal monitor mixes — all from tablets on music stands. Community members and guest musicians also access setlists and sheet music for jam sessions and special events.
+
+It replaces: Google Sheets for setlist planning, paper binders during performance, and the inability for musicians to control their own monitor mix.
 
 ## Core Value
 
-A musician opens the app, sees exactly what's coming up — song title, their key, tempo, notes — and performs the entire service without flipping through a binder, asking "what key?", or losing their place. The setlist view is the product.
+A musician sets their tablet on a music stand, opens the app, and sees this week's service: song titles, their key, tempo, notes, and the full liturgical flow — readings, prayers, songs — all at a glance. They can drill into any PDF when needed, and adjust their monitor mix in 1-2 taps. A non-musician community member at a jam session can pull up centralreform.live on their phone and follow along with no account needed.
 
-## Requirements
+## The Three Pillars
 
-### Validated
+### 1. Setlist Experience (Editor + Performance View)
 
-- ✓ Firebase Auth with Google OAuth — existing, working
-- ✓ Firestore data model for setlists, users, library index — existing, sound architecture
-- ✓ Google Drive as canonical file store with sync engine — existing, needs reliability improvements
-- ✓ AI chord detection pipeline (Gemini Flash OCR) — existing, well-engineered
-- ✓ Smart transposition engine (music-math, chord-utils) — existing, 100% test coverage
-- ✓ PWA with service worker and IndexedDB offline cache — existing, functional
-- ✓ Role-based access control (admin > leader > member) — existing
-- ✓ Vercel deployment with cron jobs — existing
+**The editor** replaces Google Sheets. Daniel's weekly workflow is "duplicate last week's setlist and swap a few songs." The liturgical structure is fixed (Kabbalat Shabbat has a known order), so the app should pre-fill the entire service skeleton from a template and let Daniel slot in songs, set keys, assign leads. It needs to be faster than a spreadsheet — type, tab, type, tab. AI auto-fills templates and accepts natural language commands ("add Mi Chamocha in Am after the responsive reading").
 
-### Active
+16 service templates: 7 regular (Daniel/Karen Friday, Randy Friday, Shir Shabbat, Daniel/Karen Saturday, Randy Saturday, Bnei Mitzvah Saturday, Havdalah/Afternoon Bnei Mitzvah) and 9 holiday (Erev RH, Daytime RH, Alt Daytime RH, 2nd Day RH, Kol Nidre, Quick Kol Nidre, YK Morning, YK Yizkor, YK Neilah).
 
-- [ ] Setlist creation that replaces the Google Doc workflow — drag-drop song ordering, service flow modeling (readings, prayers, transitions, not just songs), estimated timing
-- [ ] Live performance setlist-at-a-glance — song title, musician's key, tempo/feel, quick notes, service flow context, swipe-to-next
-- [ ] Per-musician auto-transposition — each musician sees every chart in their instrument's key automatically, no mental math
-- [ ] Personal monitor mixing from phones — each musician adjusts their own monitor mix seamlessly via X32 connection
-- [ ] Mobile-first, premium UI — beautiful design, smooth animations, zero learning curve, feels like a real product
-- [ ] Musician profiles with instrument/transposition preferences — set once, applied everywhere
-- [ ] Offline reliability equal to paper — all setlist data and charts cached proactively, works without WiFi
-- [ ] Sheet music viewer for new/unfamiliar songs — PDF viewer with transposed chord overlays, secondary to setlist view
-- [ ] Simple scheduling — who's playing this week, with availability tracking
-- [ ] Notification system — upcoming service reminders, setlist published alerts
+**The performance view** is what musicians see on a portrait tablet during a service. At a glance: song title, their transposed key, tempo. The full service flow (readings, prayers, transitions) is visible so nobody gets lost. Tapping a song opens the PDF viewer immersively — the setlist gets out of the way. Getting back to the setlist is fast and fluid.
 
-### Out of Scope
+### 2. Monitor Mixing (The Killer Feature)
 
-- Admin analytics dashboard — premature optimization, no users yet to analyze
-- Audio file library — separate concern, not core to setlist/performance workflow
-- Tasks dashboard — over-engineered for a 10-person user base
-- AI chat agent for setlist commands — clever but unnecessary complexity for v2
-- Multi-tenancy / multi-congregation — build for CRC first, generalize later
-- QR code sign-in bridge — unnecessary complexity for known user base
-- Real-time collaborative editing — one person (Daniel) builds setlists, others consume
-- Print pipeline for physical gig packets — the whole point is replacing paper
+Musicians adjust their personal monitor mix from their tablets. 3-4 shared wedge monitor buses on an X32 console. Each musician sees 6-8 faders for the channels they care about.
 
-## Context
+**Two modes:**
+- **Configure** (before service): See all channels, star the ones you care about. Sound engineer can pre-configure which channels each musician sees.
+- **Live** (during service): Only your starred channels. Clean faders, instant response. 1-2 taps to open from anywhere in the app.
 
-### Current State
-The existing codebase (v1) is a production-grade Next.js 16 app with 30k+ lines, 157 components, 32 API routes, and 361 tests. It was built around PDF viewing with setlist features added on top. The architecture is sound but the UX priorities are inverted — the app treats sheet music as primary and setlists as secondary, when musicians actually need the opposite.
+**The bar:** A non-technical sound engineer plugs in the system and it works. Every musician opens their mix and it's just there. It never drops mid-service. Zero troubleshooting during a live service. If the X32 isn't reachable, the app says so clearly. This requires a serious research spike into the right bridge architecture — x32-proxy on a Raspberry Pi, a service on the production PC, direct browser OSC, or something else entirely. The answer must be stupid simple to install and bulletproof in production.
 
-### What Works Well
-- **Firebase + Firestore:** Solid data model, good security rules, real-time listeners
-- **Google Drive sync:** Clever architecture — congregation drops files into Drive, app auto-discovers them
-- **AI chord detection:** Three-layer pipeline (text scan → Gemini validation → user corrections) with correction persistence
-- **Music theory engine:** Chord transposition algorithms with 100% test coverage
-- **Offline infrastructure:** Service worker + IndexedDB caching with LRU eviction
+### 3. PDF Viewer (Keep As-Is)
 
-### What Needs Rethinking
-- **Monitor system:** X32 bridge (Electron + WebSocket) was built but never successfully deployed. Needs fundamental rethink — research simpler connection methods (direct OSC from browser, X32's built-in capabilities, or alternative bridge architecture)
-- **UI layer:** 157 components accumulated organically. Needs ground-up rebuild with setlist-first philosophy, mobile-first design, and premium visual quality
-- **State management:** 8 Zustand stores is over-fragmented. Consolidate to 2-3 focused stores
-- **Drive sync reliability:** Hourly cron approach works but feels fragile. Needs hardening (retry logic, better error handling, possibly webhook-based triggers)
-- **Component architecture:** Feature folders contain v1/v2 remnants, half-built features, and dead code. Clean slate
+The existing PDF viewer with AI chord detection, transposed chord overlays, and annotation is good. Don't rebuild it. Keep it immersive — when a musician taps into a PDF, it owns the screen. The setlist and monitor controls stay accessible (slide-out drawer, bottom bar button) but don't cover the PDF.
 
-### User Base
-- 5-8 instrumentalists (guitar, keys, bass, drums, winds, strings)
-- 1-2 cantorial soloists (vocalists leading prayers)
-- 1 rabbi/band leader (Daniel — service planner, setlist creator)
-- 1 sound engineer (runs the X32 board)
-- Total: ~10-15 accounts
+## What Exists and What Changes
 
-### Instruments & Transposition
-Musicians play transposing instruments (Bb trumpet, Eb alto sax, F horn) alongside concert-pitch instruments (guitar, piano, bass). The auto-transposition must handle all standard orchestral transpositions and respect individual capo preferences for guitarists.
+### Keep As-Is
+- PDF viewer + AI chord detection pipeline (Gemini Flash OCR, three-layer detection)
+- Transposition engine (music-math, chord-utils — 100% test coverage)
+- Firebase Auth with Google OAuth
+- Firestore data model (sound architecture)
+- Vercel deployment
+
+### Rebuild / Redesign
+- Setlist editor (too slow/clunky, must be faster than a spreadsheet)
+- Setlist performance view (tablet-first, portrait orientation, setlist-at-a-glance)
+- Monitor mixing (never worked — total rethink from bridge architecture to UX)
+- Home screen (upcoming service focus, not a dashboard)
+- AI integration (currently poorly integrated — needs auto-fill templates + chat commands + behind-the-scenes intelligence)
+
+### Improve / Harden
+- Google Drive sync (works but fragile — needs retry logic, better error handling, robustness that eliminates admin duct tape)
+- Library management (browse, search, upload — keep but clean up)
+- Backend systems generally (simplify so admin tooling becomes unnecessary)
+- Code cleanup (157 components → focused set, 8 Zustand stores → consolidated, dead code removal)
+
+### Keep but Simplify
+- Scheduling (assign musicians to services, notify, who's playing — no availability calendar or AI suggestions for now)
+- Print/gig packet pipeline (everyone uses it sometimes, especially for guest musicians)
+- QR code authentication
+- SMS and push notifications
+- User/role management
+
+### Cut
+- Task management system
+- Analytics/usage dashboard
+- 8-week rotation matrix
+- Admin features that exist as duct tape for fragile backend systems
+
+## User Tiers
+
+| Tier | Auth | Access |
+|------|------|--------|
+| Core band | Google OAuth, approved | Full: setlist, monitoring, PDFs, transposition, scheduling |
+| Guest musicians | Google OAuth or QR | Performance view + PDFs + transposed chords + print packets |
+| Community jammers | No auth (public link) | Setlist + PDFs only (jam sessions, special events) |
+| Band leader (Daniel) | Admin | All of the above + setlist editor + scheduling + user management |
+| Sound engineer | Authorized | Monitor bus assignment + their own mix |
+
+## Physical Setup
+
+- **Tablets** (mostly iPads, mix of CRC-provided and personal) in **portrait orientation** on music stands
+- **X32 digital console** with 3-4 shared wedge monitor buses
+- Venue WiFi (reliable enough — offline is nice-to-have, not critical)
+- 5-8 musicians per service, 3-5 needing monitor control
+- Community jam sessions: up to 40 people on their own phones/tablets
 
 ## Constraints
 
-- **Platform:** Vercel (serverless) — keep, works well at this scale
-- **Database:** Firebase/Firestore — keep, invested and working
-- **File storage:** Google Drive as canonical source — keep, but harden sync
-- **Framework:** Next.js (App Router) + React — keep, but rebuild UI components from scratch
-- **Timeline:** ASAP — ship core features fast, iterate. Musicians should be using this at services soon
-- **Budget:** Minimal — free tiers of Firebase, Vercel, Google APIs
-- **Users:** ~10-15 people — don't over-engineer for scale that doesn't exist
-- **Primary device:** Mobile phones during services, tablets occasionally, desktop for setlist creation
+- **Platform:** Vercel (serverless) — keep
+- **Database:** Firebase/Firestore — keep
+- **File storage:** Google Drive as canonical source — keep, harden
+- **Framework:** Next.js (App Router) + React — keep
+- **Timeline:** ASAP — ship polished, not half-baked
+- **Budget:** Minimal — free tiers
+- **Users:** ~10-15 core accounts, up to 40 for jam sessions
+- **Primary device:** Tablets in portrait on music stands; phones for jam session guests
+- **Success criteria:** Everything polished — setlist, monitoring, scheduling, notifications all solid before going live with the band
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Setlist-first UX (not PDF-first) | Musicians look at setlist 95% of the time, sheet music only for new songs | — Pending |
-| Aggressive UI rebuild, keep backend | Backend (Firebase, Drive sync, AI) is sound; UI priorities are inverted | — Pending |
-| Monitor system total rethink | Electron bridge approach never worked; need to research alternatives | — Pending |
-| Cut admin analytics, tasks, audio library | No users yet; premature features add complexity without value | — Pending |
-| Mobile-first design | Musicians hold phones during services; desktop is secondary | — Pending |
-| Consolidate 8 Zustand stores → 2-3 | Over-fragmented state management adds coupling and complexity | — Pending |
+| Decision | Rationale |
+|----------|-----------|
+| Tablet-first, portrait orientation | Musicians use tablets on music stands during services |
+| Setlist-at-a-glance as primary view | Musicians need song/key/tempo info 95% of the time, PDFs only for new songs |
+| Monitor mixing as foundational priority | The killer feature that's never worked — requires deep research before implementation |
+| Keep PDF viewer as-is | It's good engineering, don't break what works |
+| Two-mode monitor UX (configure vs live) | Separate configuration complexity from performance simplicity |
+| Template-based setlist creation | Liturgical structure is fixed — pre-fill skeleton, swap songs |
+| Duplicate-and-tweak workflow | 70-80% of songs stay the same week to week |
+| Public access for jam sessions | No auth — centralreform.live link, setlist + PDFs only |
+| Backend simplification over admin tooling | Fix the systems, the duct tape admin tools become unnecessary |
+| Cut tasks, analytics, rotation matrix | No users yet — premature features |
 
 ---
-*Last updated: 2026-03-07 after v2.0 initialization*
+*Last updated: 2026-03-07*
