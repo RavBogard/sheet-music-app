@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
 import {
     Loader2, Radio, CheckCircle,
     Radar, Save, Settings2, Download, Copy, KeyRound,
@@ -168,7 +169,7 @@ export function SoundSystemSection() {
         <section className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Radio className="w-5 h-5 text-blue-500" />
+                    <Radio className="w-5 h-5 text-brand" />
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                         Sound System
                     </h2>
@@ -216,7 +217,7 @@ export function SoundSystemSection() {
                                         <code className="bg-muted px-4 py-2 rounded-lg text-lg font-mono font-bold tracking-[0.3em] select-all">
                                             {setupCode}
                                         </code>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={() => {
                                             navigator.clipboard.writeText(setupCode)
                                             toast.success("Copied!")
                                         }}>
@@ -244,13 +245,15 @@ export function SoundSystemSection() {
                             </div>
 
                             {bridgeStatus && (
-                                <div className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
-                                    ? "bg-green-500/10 border border-green-500/20"
-                                    : "bg-red-500/10 border border-red-500/20"
-                                    }`}>
-                                    <div className={`w-2 h-2 rounded-full ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
-                                        ? "bg-green-500 animate-pulse" : "bg-red-500"
-                                        }`} />
+                                <div className={cn("flex items-center gap-3 rounded-lg px-4 py-3 text-sm",
+                                    bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                        ? "bg-success/10 border border-success/20"
+                                        : "bg-destructive/10 border border-destructive/20"
+                                )}>
+                                    <div className={cn("w-2 h-2 rounded-full",
+                                        bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                            ? "bg-success animate-pulse" : "bg-destructive"
+                                    )} />
                                     <div className="flex-1 min-w-0">
                                         <span className="font-medium">
                                             {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
@@ -280,9 +283,9 @@ export function SoundSystemSection() {
                                     </div>
                                     {scanResult && (
                                         <div className="mt-1">
-                                            <p className={`text-xs ${scanResult.includes("Found") ? "text-success" : "text-yellow-500"}`}>{scanResult}</p>
+                                            <p className={cn("text-xs", scanResult.includes("Found") ? "text-success" : "text-amber-500")}>{scanResult}</p>
                                             {trustUrl && (
-                                                <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block">
+                                                <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand hover:text-brand/80 underline mt-1 block">
                                                     Trust Bridge Certificate &rarr;
                                                 </a>
                                             )}

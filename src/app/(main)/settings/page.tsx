@@ -16,6 +16,7 @@ import {
     LogOut, Pencil, Check, Lock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
@@ -179,10 +180,11 @@ export default function SettingsPage() {
                                 <button
                                     key={value}
                                     onClick={() => setTheme(value)}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${theme === value
-                                        ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
-                                        }`}
+                                    className={cn("flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+                                        theme === value
+                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
+                                    )}
                                 >
                                     <Icon className="w-4 h-4" />
                                     {label}
@@ -263,7 +265,7 @@ export default function SettingsPage() {
                                     </div>
                                 )}
                                 {passwordSuccess && (
-                                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm rounded-xl p-3">
+                                    <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
                                         Password updated successfully.
                                     </div>
                                 )}
@@ -298,7 +300,7 @@ export default function SettingsPage() {
                     <Button
                         onClick={() => signOut()}
                         variant="ghost"
-                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 gap-2 px-8 rounded-xl"
+                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 gap-2 px-8 rounded-xl"
                     >
                         <LogOut className="w-4 h-4" />
                         Log Out
