@@ -48,19 +48,19 @@ export function QuickMonitorPanel() {
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateBusFader(myBusIndex, value)
         getMonitorClient()?.setBusMaster(myBusIndex, value)
     }, [myBusIndex, updateBusFader])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateSendLevel(myBusIndex, channelIndex, value)
         getMonitorClient()?.setSendLevel(myBusIndex, channelIndex, value)
     }, [myBusIndex, updateSendLevel])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateSendOn(myBusIndex, channelIndex, on)
         getMonitorClient()?.setSendOn(myBusIndex, channelIndex, on)
     }, [myBusIndex, updateSendOn])

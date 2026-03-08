@@ -44,6 +44,7 @@ export function PDFOverlay({
 
     // Build playback queue from setlist tracks (only songs with fileIds)
     // Map track indices so we can translate between queue and setlist positions
+    const trackIds = tracks.map(t => t.fileId || t.title).join(',')
     useEffect(() => {
         const songTracks = tracks
             .map((t, i) => ({ track: t, setlistIndex: i }))
@@ -61,8 +62,8 @@ export function PDFOverlay({
         const queueStart = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
 
         setQueue(queueItems, Math.max(0, queueStart), undefined, undefined)
-    // Only re-init queue when overlay first opens or tracks change structurally
-    }, [tracks.length])
+    // Re-init queue when tracks change (identity-based, not just length)
+    }, [trackIds])
 
     // Sync currentIndex → queueIndex when parent navigates (e.g., from setlist view)
     useEffect(() => {

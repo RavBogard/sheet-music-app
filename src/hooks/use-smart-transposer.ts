@@ -278,7 +278,9 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
     }
 
     const dispatchBackgroundScan = async (nextPage: number) => {
-        if (!fileId) return
+        // Read fileId from store to avoid stale closure
+        const currentFileId = useMusicStore.getState().playbackQueue[useMusicStore.getState().queueIndex]?.fileId
+        if (!currentFileId) return
 
         // Ensure the next page isn't already scanned or scanning
         const state = useMusicStore.getState().aiState
@@ -286,7 +288,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
         try {
             // First check if it's already cached — if so, do nothing, subsequent loads will hit cache
-            const cached = await loadChordCache(fileId, nextPage)
+            const cached = await loadChordCache(currentFileId, nextPage)
             if (cached && cached.chords.length > 0) return
 
             // If not cached, we need the DOM element for the next page to capture the image.
@@ -298,11 +300,11 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             // Schedule via idle callback if possible so rendering isn't blocked
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(() => {
-                    executeBackgroundScan(fileId, nextPage, nextCanvas)
+                    executeBackgroundScan(currentFileId, nextPage, nextCanvas)
                 }, { timeout: 5000 })
             } else {
                 setTimeout(() => {
-                    executeBackgroundScan(fileId, nextPage, nextCanvas)
+                    executeBackgroundScan(currentFileId, nextPage, nextCanvas)
                 }, 500)
             }
         } catch (e) {

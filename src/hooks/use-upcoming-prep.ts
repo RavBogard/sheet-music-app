@@ -49,16 +49,19 @@ export function useUpcomingPrep() {
 
     // Track last visit time — cache-first for instant load
     useEffect(() => {
-        if (!user) return
+        if (!user?.uid) return
+        let cancelled = false
         const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
         // Read from cache first, then update in background
         getDocFromCache(prefRef).catch(() => getDoc(prefRef)).then(snap => {
+            if (cancelled) return
             const ts = snap.data()?.lastVisitedAt
             if (ts?.toDate) setLastVisitedAt(ts.toDate())
             else if (ts) setLastVisitedAt(new Date(ts))
             setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => { })
         }).catch(() => { })
-    }, [user])
+        return () => { cancelled = true }
+    }, [user?.uid])
 
     // Subscribe to upcoming public setlists (next 7 days)
     const q = useMemo(() => {

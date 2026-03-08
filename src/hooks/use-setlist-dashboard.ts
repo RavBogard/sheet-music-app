@@ -196,8 +196,9 @@ export function useSetlistDashboard({
         if (templateType) {
             const template = getTemplate(templateType)
             if (template) {
+                let toastId: string | number | undefined
                 try {
-                    toast.loading('Building setlist from template...')
+                    toastId = toast.loading('Building setlist from template...')
                     const context = await getFullServiceContext(date)
                     context.type = templateType as any
                     const { allFiles } = useLibraryStore.getState()
@@ -210,7 +211,7 @@ export function useSetlistDashboard({
                         isTemplate: false,
                     })
 
-                    toast.dismiss()
+                    toast.dismiss(toastId)
                     const matched = tracks.filter(t => t.fileId).length
                     const total = tracks.filter(t => t.type === 'song').length
                     toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
@@ -218,7 +219,7 @@ export function useSetlistDashboard({
                     router.push(`/setlists/${id}`)
                     return
                 } catch (err: unknown) {
-                    toast.dismiss()
+                    toast.dismiss(toastId)
                     toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"))
                     return
                 }
@@ -246,8 +247,9 @@ export function useSetlistDashboard({
         const template = getTemplate(templateType)
         if (!template) return
 
+        let templateToastId: string | number | undefined
         try {
-            toast.loading('Building setlist from template...')
+            templateToastId = toast.loading('Building setlist from template...')
             const context = await getFullServiceContext(targetDate)
             context.type = templateType as any
             const { allFiles } = useLibraryStore.getState()
@@ -260,7 +262,7 @@ export function useSetlistDashboard({
                 isTemplate: false,
             })
 
-            toast.dismiss()
+            toast.dismiss(templateToastId)
 
             const matched = tracks.filter(t => t.fileId).length
             const total = tracks.filter(t => t.type === 'song').length
@@ -272,7 +274,7 @@ export function useSetlistDashboard({
                 eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: false,
             })
         } catch (err: unknown) {
-            toast.dismiss()
+            toast.dismiss(templateToastId)
             toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"))
         }
     }

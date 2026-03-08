@@ -1,5 +1,5 @@
 import { db, auth } from "./firebase"
-import { doc, updateDoc, onSnapshot, collection } from "firebase/firestore"
+import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
 
 /**
@@ -78,7 +78,7 @@ export function subscribeToAllMusicianProfiles(
 ): () => void {
     if (!db || Object.keys(db).length === 0) return () => { }
 
-    const q = collection(db, "users")
+    const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
     return onSnapshot(q, (snap) => {
         const musicians = snap.docs
             .map(d => {

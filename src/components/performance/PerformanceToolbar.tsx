@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X } from "lucide-react"
@@ -93,15 +93,23 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         return () => unsub()
     }, [currentSetlistId, isBroadcaster])
 
+    const navigatingRef = useRef(false)
     useEffect(() => {
         if (!syncedBroadcasterId || isBroadcaster) return
 
         const session = activeSessions.find(s => s.broadcasterId === syncedBroadcasterId)
         if (!session) return // Keep state just in case they drop momentarily
 
-        if (session.queueIndex !== queueIndex && session.queueIndex >= 0 && session.queueIndex < playbackQueue.length) {
+        if (session.queueIndex !== queueIndex && session.queueIndex >= 0 && session.queueIndex < playbackQueue.length && !navigatingRef.current) {
+            navigatingRef.current = true
             const track = jumpToSong(session.queueIndex)
-            if (track) router.push(`/perform/${track.fileId}`)
+            if (track) {
+                router.push(`/perform/${track.fileId}`)
+                // Reset guard after navigation settles
+                setTimeout(() => { navigatingRef.current = false }, 500)
+            } else {
+                navigatingRef.current = false
+            }
         }
 
         if (session.currentVisiblePage !== currentVisiblePage && session.currentVisiblePage > 0) {

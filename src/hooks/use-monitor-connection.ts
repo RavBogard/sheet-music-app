@@ -98,9 +98,6 @@ export function useMonitorConnection(): { client: FirestoreMonitorClient | null 
 
     }, [user?.uid, hasAccess])
 
-    // Keep ref current
-    clientRef.current = activeClient
-
     return { client: activeClient }
 }
 

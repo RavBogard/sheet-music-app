@@ -287,6 +287,7 @@ export function SetlistDrawer() {
                                             >
                                                 <button
                                                     onClick={() => {
+                                                        if (!track.fileId) return
                                                         router.push(`/perform/${track.fileId}`)
                                                         setOpen(false)
                                                     }}
