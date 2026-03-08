@@ -8,37 +8,8 @@ import { getMonitorClient } from "@/hooks/use-monitor-connection"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { BridgeStatus } from "@/types/monitor"
 import { Loader2, Star, Wifi, WifiOff, Server, ServerOff, PlusCircle } from "lucide-react"
-
-/**
- * Check if the bridge heartbeat indicates it's online.
- * Considers staleness: if lastSeen > 2 minutes ago, treat as offline.
- */
-function isBridgeOnline(bridge?: BridgeStatus): boolean {
-    if (!bridge?.lastSeen) return true // No heartbeat data = legacy bridge, assume online
-    if (bridge.status === "offline") return false
-
-    let lastSeen: Date
-    try {
-        const ts = bridge.lastSeen as { toDate?: () => Date; seconds?: number }
-        if (ts.toDate) lastSeen = ts.toDate()
-        else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
-        else lastSeen = new Date(bridge.lastSeen as string)
-    } catch {
-        return true
-    }
-
-    const ageMs = Date.now() - lastSeen.getTime()
-    return ageMs < 120_000
-}
-
-function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
-    if (!bridge?.lastSeen) return null
-    if (!isBridgeOnline(bridge)) return "Bridge is offline"
-    if (bridge.x32Connected === false) return "Bridge online — mixer disconnected"
-    return null
-}
+import { isBridgeOnline, getBridgeStatusMessage } from "@/components/monitor/ConnectionIndicator"
 
 /**
  * Compact monitor mixer panel for the performance toolbar.
