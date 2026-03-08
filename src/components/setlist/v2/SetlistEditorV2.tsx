@@ -381,7 +381,7 @@ export function SetlistEditorV2({
             addSongsFromLibrary([file], focusedTrackIndex ?? undefined)
         }
         setShowSearchOverlay(false)
-    }, [replacingTrackId, updateTrack, addSongsFromLibrary])
+    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex])
 
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
