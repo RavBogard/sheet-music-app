@@ -13,13 +13,14 @@ import {
     useSensor,
     useSensors,
     DragEndEvent,
+    DragStartEvent,
 } from "@dnd-kit/core"
 import {
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { SetlistTrack, TrackType, SetlistMusician } from "@/types/models"
+import { SetlistTrack, TrackType, SetlistMusician, DriveFile } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
 import { useAuth } from "@/lib/auth-context"
 import { useChatStore } from "@/lib/chat-store"
@@ -36,6 +37,7 @@ import { SwipeToDelete } from "./SwipeToDelete"
 import { BatchActionBar } from "./BatchActionBar"
 import { AddBar } from "./AddBar"
 import { MusicianPicker } from "./MusicianPicker"
+import { SearchOverlay } from "./SearchOverlay"
 
 // Shared components (kept from v1)
 import { PrintModal } from "../PrintModal"
@@ -213,6 +215,9 @@ export function SetlistEditorV2({
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
     const [showEditDetails, setShowEditDetails] = useState(false)
     const [showAddSongs, setShowAddSongs] = useState(false)
+    const [showSearchOverlay, setShowSearchOverlay] = useState(false)
+    const [replacingTrackId, setReplacingTrackId] = useState<string | null>(null)
+    const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
@@ -293,6 +298,11 @@ export function SetlistEditorV2({
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     )
 
+    const handleDragStart = (_event: DragStartEvent) => {
+        // Collapse any expanded row when drag starts
+        setExpandedTrackId(null)
+    }
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         if (over && active.id !== over.id) {
@@ -346,9 +356,47 @@ export function SetlistEditorV2({
 
     // ── Track rendering ──
 
+    const handleToggleExpand = useCallback((track: SetlistTrack) => {
+        if (canEdit) {
+            setExpandedTrackId(prev => prev === track.id ? null : track.id)
+        } else {
+            // Read-only mode: fall back to the TrackSheet modal
+            setEditingTrack(track)
+        }
+    }, [canEdit])
+
+    const handleReplace = useCallback((track: SetlistTrack) => {
+        setReplacingTrackId(track.id)
+        setShowSearchOverlay(true)
+    }, [])
+
+    const handleSearchSelect = useCallback((file: DriveFile) => {
+        const cleanName = file.name
+            .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
+            .replace(/_/g, ' ')
+            .replace(/-/g, ' ')
+            .trim() || "Untitled"
+
+        if (replacingTrackId) {
+            // Replace mode: update existing track with new file
+            updateTrack(replacingTrackId, {
+                title: cleanName,
+                fileId: file.id,
+                fileName: file.name,
+                key: file.metadata?.key || "",
+            })
+            setReplacingTrackId(null)
+            setExpandedTrackId(null)
+        } else {
+            // Add mode: add as new track
+            addSongsFromLibrary([file])
+        }
+        setShowSearchOverlay(false)
+    }, [replacingTrackId, updateTrack, addSongsFromLibrary])
+
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
-        const tapHandler = selectMode ? () => { } : setEditingTrack
+        const tapHandler = selectMode ? () => { } : handleToggleExpand
         const playHandler = selectMode ? undefined : handlePlayTrack
 
         const row = (() => {
@@ -356,15 +404,29 @@ export function SetlistEditorV2({
                 return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
             }
             if (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type)) {
-                return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
+                return (
+                    <FlowRow
+                        key={track.id}
+                        track={track}
+                        canEdit={canEdit}
+                        isExpanded={expandedTrackId === track.id}
+                        onTap={tapHandler}
+                        onUpdate={updateTrack}
+                        onDelete={deleteTrack}
+                    />
+                )
             }
             return (
                 <SongRow
                     key={track.id}
                     track={track}
                     canEdit={canEdit}
+                    isExpanded={expandedTrackId === track.id}
                     onTap={tapHandler}
                     onPlayFile={playHandler}
+                    onUpdate={updateTrack}
+                    onReplace={handleReplace}
+                    onDelete={deleteTrack}
                 />
             )
         })()
@@ -509,7 +571,7 @@ export function SetlistEditorV2({
 
             {/* Track list */}
             <div className="flex-1 overflow-y-auto">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext items={tracks} strategy={verticalListSortingStrategy}>
                         <div className="max-w-3xl mx-auto px-2 sm:px-4 py-4 space-y-1">
                             {showEmpty && tracks.length === 0 && (
@@ -527,7 +589,10 @@ export function SetlistEditorV2({
             {/* Add bar (sticky bottom) - only for editors, hidden in select mode */}
             {canEdit && !selectMode && (
                 <AddBar
-                    onAddSongs={() => setShowAddSongs(true)}
+                    onAddSongs={() => {
+                        setReplacingTrackId(null)
+                        setShowSearchOverlay(true)
+                    }}
                     onAddItem={(type: TrackType) => addServiceItem(type)}
                 />
             )}
@@ -611,6 +676,18 @@ export function SetlistEditorV2({
                 onOpenChange={setShowDuplicateConfirm}
                 setlistName={name}
                 onConfirm={handleDuplicateSetlist}
+            />
+
+            {/* Search overlay for adding/replacing songs */}
+            <SearchOverlay
+                isOpen={showSearchOverlay}
+                onClose={() => {
+                    setShowSearchOverlay(false)
+                    setReplacingTrackId(null)
+                }}
+                onSelect={handleSearchSelect}
+                replacingTrackId={replacingTrackId}
+                currentTrackFileIds={currentTrackFileIds}
             />
         </div>
     )

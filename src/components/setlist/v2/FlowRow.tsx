@@ -5,11 +5,15 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, BookOpen, Heart, ArrowLeftRight, StickyNote } from "lucide-react"
 import { SetlistTrack, TrackType } from "@/types/models"
+import { FlowInlineFields } from "./InlineFields"
 
 interface FlowRowProps {
     track: SetlistTrack
     canEdit: boolean
+    isExpanded?: boolean
     onTap?: (track: SetlistTrack) => void
+    onUpdate?: (id: string, data: Partial<SetlistTrack>) => void
+    onDelete?: (id: string) => void
 }
 
 const FLOW_CONFIG: Record<string, {
@@ -39,7 +43,14 @@ const FLOW_CONFIG: Record<string, {
     },
 }
 
-export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowProps) {
+export const FlowRow = memo(function FlowRow({
+    track,
+    canEdit,
+    isExpanded = false,
+    onTap,
+    onUpdate,
+    onDelete,
+}: FlowRowProps) {
     const trackType = (track.type || "note") as TrackType
     const config = FLOW_CONFIG[trackType] || FLOW_CONFIG.note
 
@@ -61,60 +72,74 @@ export const FlowRow = memo(function FlowRow({ track, canEdit, onTap }: FlowRowP
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer
-                ${config.tint} hover:bg-accent/50 active:bg-accent
+            className={`rounded-lg transition-colors
+                ${isExpanded ? "bg-accent/60 ring-1 ring-primary/20" : `${config.tint} hover:bg-accent/50 active:bg-accent`}
                 ${isDragging ? "opacity-50 ring-2 ring-primary scale-[1.02] z-50" : ""}
             `}
-            onClick={() => onTap?.(track)}
         >
-            {/* Drag handle */}
-            {canEdit && (
-                <div
-                    {...attributes}
-                    {...listeners}
-                    className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground p-1 -ml-1"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <GripVertical className="h-5 w-5" />
-                </div>
-            )}
+            {/* Collapsed row (always visible) */}
+            <div
+                className="flex items-center gap-3 px-3 py-3 cursor-pointer"
+                onClick={() => onTap?.(track)}
+            >
+                {/* Drag handle */}
+                {canEdit && (
+                    <div
+                        {...attributes}
+                        {...listeners}
+                        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground p-1 -ml-1"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <GripVertical className="h-5 w-5" />
+                    </div>
+                )}
 
-            {/* Type icon */}
-            {!canEdit && (
-                <div className={`shrink-0 ${config.iconColor}`}>
-                    <Icon className="h-4 w-4" />
-                </div>
-            )}
+                {/* Type icon */}
+                {!canEdit && (
+                    <div className={`shrink-0 ${config.iconColor}`}>
+                        <Icon className="h-4 w-4" />
+                    </div>
+                )}
 
-            {/* Content — two lines to match SongRow */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    {canEdit && (
-                        <div className={`shrink-0 ${config.iconColor}`}>
-                            <Icon className="h-4 w-4" />
-                        </div>
-                    )}
-                    <span className="font-medium text-foreground/80 truncate">
-                        {track.title || trackType.charAt(0).toUpperCase() + trackType.slice(1)}
-                    </span>
-                    {track.performer && (
-                        <span className="shrink-0 text-xs text-muted-foreground italic hidden sm:inline">
-                            {track.performer}
+                {/* Content -- two lines to match SongRow */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        {canEdit && (
+                            <div className={`shrink-0 ${config.iconColor}`}>
+                                <Icon className="h-4 w-4" />
+                            </div>
+                        )}
+                        <span className="font-medium text-foreground/80 truncate">
+                            {track.title || trackType.charAt(0).toUpperCase() + trackType.slice(1)}
                         </span>
-                    )}
+                        {track.performer && (
+                            <span className="shrink-0 text-xs text-muted-foreground italic hidden sm:inline">
+                                {track.performer}
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-muted-foreground/60 truncate mt-0.5">
+                        {trackType.charAt(0).toUpperCase() + trackType.slice(1)}
+                        {track.estimatedMinutes && track.estimatedMinutes > 0 ? ` · ~${track.estimatedMinutes} min` : ""}
+                        {track.description ? ` — ${track.description}` : ""}
+                    </div>
                 </div>
-                <div className="text-xs text-muted-foreground/60 truncate mt-0.5">
-                    {trackType.charAt(0).toUpperCase() + trackType.slice(1)}
-                    {track.estimatedMinutes && track.estimatedMinutes > 0 ? ` · ~${track.estimatedMinutes} min` : ""}
-                    {track.description ? ` — ${track.description}` : ""}
-                </div>
+
+                {/* Duration badge */}
+                {track.estimatedMinutes && track.estimatedMinutes > 0 && (
+                    <span className="text-xs text-muted-foreground/50 shrink-0">
+                        ~{track.estimatedMinutes}m
+                    </span>
+                )}
             </div>
 
-            {/* Duration badge */}
-            {track.estimatedMinutes && track.estimatedMinutes > 0 && (
-                <span className="text-xs text-muted-foreground/50 shrink-0">
-                    ~{track.estimatedMinutes}m
-                </span>
+            {/* Expanded inline fields */}
+            {isExpanded && canEdit && onUpdate && onDelete && (
+                <FlowInlineFields
+                    track={track}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                />
             )}
         </div>
     )
