@@ -35,10 +35,10 @@
 - [ ] **MIX-05**: Sound engineer can pre-configure which channels each musician sees
 - [ ] **MIX-06**: Sound engineer can assign monitor bus mappings to individual musicians via the app
 - [ ] **MIX-07**: Monitor controls are always 1-2 taps away from any screen in the app (setlist, PDF, home)
-- [ ] **MIX-08**: Bridge/proxy architecture is stupid simple to install on the production PC or LAN device
-- [ ] **MIX-09**: Bridge auto-starts, auto-reconnects, and requires zero technical troubleshooting during a service
-- [ ] **MIX-10**: App shows clear connection status — if X32 isn't reachable, musician sees an obvious indicator, not silent failure
-- [ ] **MIX-11**: App functions normally (setlist, library, everything) when X32/bridge is offline — mixing degrades gracefully
+- [x] **MIX-08**: Bridge/proxy architecture is stupid simple to install on the production PC or LAN device
+- [x] **MIX-09**: Bridge auto-starts, auto-reconnects, and requires zero technical troubleshooting during a service
+- [x] **MIX-10**: App shows clear connection status — if X32 isn't reachable, musician sees an obvious indicator, not silent failure
+- [x] **MIX-11**: App functions normally (setlist, library, everything) when X32/bridge is offline — mixing degrades gracefully
 - [x] **MIX-12**: Bridge architecture validated through research spike before any implementation code is written
 
 ## PDF Viewer (Existing — No Changes)
@@ -144,10 +144,10 @@
 | MIX-05 | Phase 2 | Pending |
 | MIX-06 | Phase 2 | Pending |
 | MIX-07 | Phase 2 | Pending |
-| MIX-08 | Phase 2 | Pending |
-| MIX-09 | Phase 2 | Pending |
-| MIX-10 | Phase 2 | Pending |
-| MIX-11 | Phase 2 | Pending |
+| MIX-08 | Phase 2 | Complete |
+| MIX-09 | Phase 2 | Complete |
+| MIX-10 | Phase 2 | Complete |
+| MIX-11 | Phase 2 | Complete |
 | MIX-12 | Phase 1 | Complete |
 | PDF-01 | — | Existing |
 | PDF-02 | — | Existing |

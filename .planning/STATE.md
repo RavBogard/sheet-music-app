@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 01-03-PLAN.md (role + transposition verification, 131 new tests)
-last_updated: "2026-03-08T01:33:52.681Z"
-last_activity: 2026-03-08 — Completed 01-03 (role + transposition verification)
+status: in-progress
+stopped_at: Completed 02-03-PLAN.md (connection reliability and bridge hardening)
+last_updated: "2026-03-08T02:14:00.000Z"
+last_activity: 2026-03-08 — Completed 02-03 (connection reliability, 28 new tests)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 17
+  percent: 33
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A musician sets their tablet on a music stand, sees this week's service at a glance, drills into PDFs when needed, and adjusts their monitor mix in 1-2 taps.
-**Current focus:** Phase 1 - Monitor Research Spike + Code Audit
+**Current focus:** Phase 2 - Monitor Mixing Implementation
 
 ## Current Position
 
-Phase: 1 of 6 (in progress)
+Phase: 2 of 6 (in progress)
 Plan: 3 of 3 in current phase
-Status: Phase 1 complete — all 3 plans executed
-Last activity: 2026-03-08 — Completed 01-03 (role + transposition verification)
+Status: Phase 2 plan 03 complete -- connection reliability and bridge hardening
+Last activity: 2026-03-08 -- Completed 02-03 (connection reliability, 28 new tests)
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~10 min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: ~8 min
+- Total execution time: ~1 hour
 
 ## Accumulated Context
 
@@ -65,6 +65,12 @@ Progress: [██░░░░░░░░] 17%
 - [Phase 01-monitor-research-code-audit]: Production PC deployment: Electron installer and auto-start already handle it
 - [Phase 01-monitor-research-code-audit]: Hybrid WebSocket fallback: implement only if P95 server-confirmed latency exceeds 300ms in production
 - [Phase 01-monitor-research-code-audit]: Sound engineer as boolean flag orthogonal to role hierarchy: AUTH-04 satisfied by current implementation
+- [02-01]: Keep pinnedChannels Firestore field name, use star terminology in UI only -- avoids data migration
+- [02-01]: Show ALL bus sends in configure mode so musicians can star any channel
+- [02-01]: DefaultChannelPicker integrated in both monitor page engineer section and admin SoundSystemSection
+- [02-03]: Colored dot indicator (w-2 h-2) preferred over Wifi icons for subtle connection status during services
+- [02-03]: Bridge backoff starts at 2s for fast recovery, caps at 60s for sustained outages
+- [02-03]: vitest.config.ts expanded to include bridge/src tests in unified test runner
 
 ### Blockers/Concerns
 
@@ -74,5 +80,5 @@ Progress: [██░░░░░░░░] 17%
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Completed 01-03-PLAN.md (role + transposition verification, 131 new tests)
+Stopped at: Completed 02-03-PLAN.md (connection reliability and bridge hardening, 28 new tests)
 Resume file: None
