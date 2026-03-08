@@ -133,6 +133,14 @@ service cloud.firestore {
       allow write: if false; // Read-only archive
     }
 
+    // LITURGICAL TEMPLATES — custom overrides for setlist templates
+    // Read: Any signed-in user (wizard needs to load custom templates)
+    // Write: Band leaders and admins (template editor)
+    match /templates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isBandLeader();
+    }
+
     // CONGREGATION CONFIG (branding, feature flags)
     match /config/congregation {
       allow read: if isSignedIn();

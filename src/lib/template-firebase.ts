@@ -66,15 +66,23 @@ export function useCustomTemplates(): {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const unsub = onSnapshot(collection(db, COLLECTION), (snap) => {
-            const result: Record<string, TemplateSlot[]> = {}
-            snap.forEach((d) => {
-                const data = d.data() as CustomTemplateDoc
-                if (data.slots) result[d.id] = data.slots
-            })
-            setOverrides(result)
-            setLoading(false)
-        })
+        const unsub = onSnapshot(
+            collection(db, COLLECTION),
+            (snap) => {
+                const result: Record<string, TemplateSlot[]> = {}
+                snap.forEach((d) => {
+                    const data = d.data() as CustomTemplateDoc
+                    if (data.slots) result[d.id] = data.slots
+                })
+                setOverrides(result)
+                setLoading(false)
+            },
+            () => {
+                // Permission denied or other error — fall back to empty overrides
+                // (hardcoded defaults will be used)
+                setLoading(false)
+            },
+        )
         return unsub
     }, [])
 
