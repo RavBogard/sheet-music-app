@@ -8,6 +8,7 @@ import { SetlistTrack, DriveFile, Setlist, SetlistMusician } from "@/types/model
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { useLibraryStore } from "@/lib/library-store"
+import { notifySetlistUpdated } from "@/lib/notification-store"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -218,6 +219,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         return () => registerOnApplyEdits(undefined)
     }, [handleApplyEdits, registerOnApplyEdits])
 
+    // Track count for significant change detection (notifications)
+    const prevTrackCountRef = useRef<number>(initialTracks.length)
+    const lastNotificationRef = useRef<number>(0) // Timestamp of last notification sent
+
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     // Refs to always read latest values inside the debounced save
     const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians })
@@ -274,6 +279,29 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 onSave?.(newId)
             }
             setLastSaved(new Date())
+
+            // Significant change detection: notify musicians when tracks are added/removed
+            const prevCount = prevTrackCountRef.current
+            const newCount = t.length
+            prevTrackCountRef.current = newCount
+
+            if (prevCount !== newCount && id) {
+                const now = Date.now()
+                const THROTTLE_MS = 5 * 60 * 1000 // 5 minutes
+                if (now - lastNotificationRef.current > THROTTLE_MS) {
+                    // Get musician UIDs excluding the current editor
+                    const musicianUids = (mus || [])
+                        .filter(m => m.uid && m.uid !== uid)
+                        .map(m => m.uid!)
+
+                    if (musicianUids.length > 0) {
+                        lastNotificationRef.current = now
+                        notifySetlistUpdated(n, id, newCount, uid || undefined).catch(() => {
+                            // Fire-and-forget -- don't break save flow
+                        })
+                    }
+                }
+            }
         } catch (e) {
             logger.error("Auto-save failed:", e)
             const msg = e instanceof Error ? e.message : String(e)

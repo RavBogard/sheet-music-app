@@ -22,8 +22,6 @@ import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
-import { useSetlistStore } from "@/lib/setlist-store"
-
 import { UploadDialog } from "./UploadDialog"
 import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
 import { LibraryFileRow } from "./LibraryFileRow"
@@ -60,8 +58,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         reset,
         hydrate
     } = useLibraryStore()
-
-    const { addItem } = useSetlistStore()
 
     const handleBack = () => {
         if (onBack) return onBack()
@@ -455,16 +451,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                                 onClick={() => {
                                     const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
-                                    selectedItems.forEach(item => {
-                                        const isXml = item.mimeType.includes('xml') || item.name.endsWith('.xml') || item.name.endsWith('.musicxml')
-                                        addItem({
-                                            fileId: item.id,
-                                            name: getCleanName(item.name),
-                                            type: isXml ? 'musicxml' : 'pdf'
-                                        })
-                                    })
-                                    toast.success(`Added ${selectedItems.length} songs to setlist`)
-                                    handleBack()
+                                    toast.info(`${selectedItems.length} songs selected. Use the setlist editor to add songs directly.`)
+                                    setSelectedIds(new Set())
+                                    setSelectMode(false)
                                 }}
                             >
                                 Add {selectedIds.size} to Setlist

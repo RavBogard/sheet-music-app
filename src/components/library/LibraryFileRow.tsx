@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-import { toast } from "sonner"
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
-import { useSetlistStore } from "@/lib/setlist-store"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -203,20 +201,6 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
                 {!isFolder && !isAudio && (
                     <>
-                        <ContextMenuItem onClick={() => {
-                            const isXml = item.mimeType.includes('xml') || item.name.endsWith('.xml') || item.name.endsWith('.musicxml')
-                            useSetlistStore.getState().addItem({
-                                fileId: item.id,
-                                name: getCleanName(item.name),
-                                type: isXml ? 'musicxml' : 'pdf'
-                            })
-                            toast.success(`Added ${getCleanName(item.name)} to setlist`)
-                            // Optional: auto-return
-                            // onClick() 
-                        }}>
-                            Add to Setlist
-                        </ContextMenuItem>
-
                         {isAdmin && item.mimeType.includes("pdf") && onDigitize && (
                             <ContextMenuItem
                                 onClick={onDigitize}

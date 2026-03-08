@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { useSetlistStore } from "@/lib/setlist-store"
 import { useMusicStore, FileType } from "@/lib/store"
 import {
     DndContext,
@@ -41,7 +40,6 @@ import { SearchOverlay } from "./SearchOverlay"
 
 // Shared components (kept from v1)
 import { PrintModal } from "../PrintModal"
-import { PublishDialog } from "../PublishDialog"
 import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
 import { NamePrompt } from "../modals/NamePrompt"
@@ -85,27 +83,15 @@ export function SetlistEditorV2({
 }: SetlistEditorV2Props) {
     const { user } = useAuth()
     const router = useRouter()
-    const { items: pendingItems, clear: clearPending } = useSetlistStore()
     const { setQueue } = useMusicStore()
-
-    const tracksToUse = isNew
-        ? pendingItems.map((item) => ({
-            id: item.id,
-            title: item.name,
-            fileId: item.fileId,
-            transposition: item.transposition,
-        } as SetlistTrack))
-        : initialTracks
 
     const handleBack = () => {
         if (onBack) return onBack()
-        clearPending()
         router.push(initialSetlistId ? `/perform/setlist/${initialSetlistId}` : "/setlists")
     }
 
     const handleSave = (id: string) => {
         if (onSave) return onSave(id)
-        clearPending()
         router.push("/setlists")
     }
 
@@ -175,7 +161,7 @@ export function SetlistEditorV2({
         restoreTracks,
     } = useSetlistLogic({
         initialSetlistId,
-        initialTracks: tracksToUse,
+        initialTracks,
         initialName,
         suggestedName,
         initialIsPublic,
@@ -221,7 +207,6 @@ export function SetlistEditorV2({
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
-    const [showPublishDialog, setShowPublishDialog] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
@@ -493,7 +478,7 @@ export function SetlistEditorV2({
                 overflowTrigger={
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
-                        onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
+                        onPublish={undefined}
                         onTogglePublic={togglePublic}
                         onSetRabbi={canEdit ? setRabbi : undefined}
                         onOpenAI={() => useChatStore.getState().toggle()}
@@ -648,19 +633,6 @@ export function SetlistEditorV2({
                     tracks={tracks}
                     setlistId={setlistId || undefined}
                     onClose={() => setShowPrintModal(false)}
-                />
-            )}
-
-            {setlistId && (
-                <PublishDialog
-                    isOpen={showPublishDialog}
-                    onClose={() => setShowPublishDialog(false)}
-                    setlistId={setlistId}
-                    setlistName={name}
-                    songCount={songCount}
-                    musicians={musicians}
-                    isPublished={isPublic}
-                    onPublished={() => setIsPublic(true)}
                 />
             )}
 
