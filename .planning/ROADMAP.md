@@ -19,6 +19,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 **Goal**: Answer every open question about how to connect to the X32 reliably and simply, and identify all code cleanup work across the codebase
 **Depends on**: Nothing (first phase)
 **Requirements**: MIX-12, CODE-01, CODE-02, AUTH-04, PROF-01, PROF-02
+**Plans:** 3 plans
 **Success Criteria:**
   1. A written technical document answers: what bridge architecture, what deployment model (Raspberry Pi vs production PC vs other), what install experience, what failure modes, what auto-recovery strategy
   2. A working proof-of-concept demonstrates: connect to X32 from a browser via the chosen bridge, read a fader value, set a fader value, survive a 30-second network interruption
@@ -27,9 +28,9 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
   5. User profiles with instrument/transposition preferences work (foundation for Phase 3 auto-transposition)
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Bridge architecture research spike, PoC validation, architecture decision document
+- [ ] 01-02-PLAN.md — Codebase audit document and dead code removal
+- [ ] 01-03-PLAN.md — Profile and auth role verification with tests
 
 **This phase is research-heavy.** The monitor research determines the entire architecture of Phase 2. Do not write production monitor code until the research is validated with a working proof-of-concept.
 
@@ -171,7 +172,7 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 1. Monitor Research + Code Audit | 0/3 | Not started |
+| 1. Monitor Research + Code Audit | 0/3 | Planned |
 | 2. Monitor Mixing Implementation | 0/3 | Not started |
 | 3. Setlist Performance View | 0/3 | Not started |
 | 4. Setlist Editor | 0/3 | Not started |
