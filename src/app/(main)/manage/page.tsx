@@ -2,16 +2,17 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Radio, FileText, Users, Music, Database, History } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Loader2, ArrowLeft, ShieldAlert, Users, Eye, Database, FileText, Radio, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { CollapsibleSection } from "@/components/admin/CollapsibleSection"
 import { PeopleSection } from "@/components/admin/PeopleSection"
-import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
 import { BandPrepSection } from "@/components/admin/BandPrepSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
-import Link from "next/link"
+import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
+import { TemplatesSection } from "@/components/admin/TemplatesSection"
+import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
+import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
 
 export default function ManagePage() {
     const { isAdmin, isBandLeader, loading } = useAuth()
@@ -30,7 +31,7 @@ export default function ManagePage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground p-6 pb-24">
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-5xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-2">
                     <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
@@ -42,7 +43,7 @@ export default function ManagePage() {
                             Manage
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
-                            User management and library overview
+                            Band management, library, templates, and sound system
                         </p>
                     </div>
                 </div>
@@ -58,27 +59,15 @@ export default function ManagePage() {
                     </CollapsibleSection>
                 </SectionErrorBoundary>
 
-                {/* Band Prep */}
-                <SectionErrorBoundary label="Band Prep">
+                {/* Rehearsal Readiness */}
+                <SectionErrorBoundary label="Rehearsal Readiness">
                     <CollapsibleSection
-                        icon={<Music className="w-5 h-5 text-brand" />}
-                        title="Band Preparation"
+                        icon={<Eye className="w-5 h-5 text-brand" />}
+                        title="Rehearsal Readiness"
                     >
                         <BandPrepSection />
                     </CollapsibleSection>
                 </SectionErrorBoundary>
-
-                {/* Access Audit */}
-                {isAdmin && (
-                    <SectionErrorBoundary label="Access Audit">
-                        <CollapsibleSection
-                            icon={<History className="w-5 h-5 text-muted-foreground" />}
-                            title="Access Audit Log"
-                        >
-                            <AccessAuditLog />
-                        </CollapsibleSection>
-                    </SectionErrorBoundary>
-                )}
 
                 <hr className="border-border" />
 
@@ -93,31 +82,42 @@ export default function ManagePage() {
                     </CollapsibleSection>
                 </SectionErrorBoundary>
 
-                {/* Footer links */}
-                <div className="pt-4 border-t border-border space-y-1">
-                    <Link
-                        href="/manage/templates"
-                        className={cn(
-                            "flex items-center gap-3 text-sm text-muted-foreground",
-                            "hover:text-foreground hover:bg-muted/50 transition-colors",
-                            "rounded-lg px-3 min-h-11"
-                        )}
+                {/* Templates */}
+                <SectionErrorBoundary label="Templates">
+                    <CollapsibleSection
+                        icon={<FileText className="w-5 h-5 text-brand" />}
+                        title="Service Templates"
                     >
-                        <FileText className="w-5 h-5" />
-                        Template Editor
-                    </Link>
-                    <Link
-                        href="/settings/sound"
-                        className={cn(
-                            "flex items-center gap-3 text-sm text-muted-foreground",
-                            "hover:text-foreground hover:bg-muted/50 transition-colors",
-                            "rounded-lg px-3 min-h-11"
-                        )}
+                        <TemplatesSection />
+                    </CollapsibleSection>
+                </SectionErrorBoundary>
+
+                <hr className="border-border" />
+
+                {/* Sound System */}
+                <SectionErrorBoundary label="Sound System">
+                    <CollapsibleSection
+                        icon={<Radio className="w-5 h-5 text-brand" />}
+                        title="Sound System"
                     >
-                        <Radio className="w-5 h-5" />
-                        Sound System Settings
-                    </Link>
-                </div>
+                        <div className="space-y-8">
+                            <LiveServiceSection />
+                            <SoundSystemSection />
+                        </div>
+                    </CollapsibleSection>
+                </SectionErrorBoundary>
+
+                {/* Access Audit Log — last */}
+                {isAdmin && (
+                    <SectionErrorBoundary label="Access Audit">
+                        <CollapsibleSection
+                            icon={<History className="w-5 h-5 text-muted-foreground" />}
+                            title="Access Audit Log"
+                        >
+                            <AccessAuditLog />
+                        </CollapsibleSection>
+                    </SectionErrorBoundary>
+                )}
             </div>
         </div>
     )
