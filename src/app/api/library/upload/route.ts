@@ -21,7 +21,7 @@ const ALLOWED_TYPES: Record<string, string> = {
 
 /**
  * POST /api/library/upload
- * 
+ *
  * Upload a file directly to the library.
  * Accepts multipart/form-data with:
  *   - file: The PDF or MusicXML file
@@ -29,8 +29,8 @@ const ALLOWED_TYPES: Record<string, string> = {
  *   - key: (optional) Musical key
  *   - bpm: (optional) Tempo
  *   - tags: (optional) Comma-separated tags
- * 
- * Requires 'band_leader' role or above.
+ *
+ * Requires canUpload flag on user profile.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -38,9 +38,21 @@ export async function POST(req: NextRequest) {
         const limited = await checkRateLimit(req, 'upload')
         if (limited) return limited
 
-        // Auth check: leaders and admins can upload
-        const auth = await withAuth(req, 'band_leader')
+        // Auth check: any authenticated user
+        const auth = await withAuth(req)
         if (auth instanceof NextResponse) return auth
+
+        // Check canUpload flag on user profile
+        initAdmin()
+        const db = getFirestore()
+
+        const userDoc = await db.collection('users').doc(auth.uid).get()
+        if (!userDoc.exists || !userDoc.data()?.canUpload) {
+            return NextResponse.json(
+                { error: "Upload permission required. Ask an admin to enable uploads for your account." },
+                { status: 403 }
+            )
+        }
 
         const formData = await req.formData()
         const file = formData.get('file') as File | null
@@ -85,10 +97,7 @@ export async function POST(req: NextRequest) {
             : mimeType.includes('xml') ? 'application/xml'
                 : mimeType
 
-        initAdmin()
-        const db = getFirestore()
-
-        // 1. Duplicate Prevention Check — query by nameLower prefix to avoid scanning all docs
+        // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs
         const nameLower = title.toLowerCase()
         const exactMatch = await db.collection('library_index')
             .where('status', '==', 'active')
@@ -153,7 +162,7 @@ export async function POST(req: NextRequest) {
 
         await db.collection('library_index').doc(fileId).set(indexEntry)
 
-        logger.info(`[Upload] ✅ ${title} uploaded successfully as ${fileId}`)
+        logger.info(`[Upload] ${title} uploaded successfully as ${fileId}`)
 
         // Purge CDN and Next.js data caches so the next library fetch sees the upload
         revalidatePath('/api/library/list')
