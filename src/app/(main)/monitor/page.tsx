@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
@@ -9,26 +9,67 @@ import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
-import { Loader2, Radio, ChevronDown, ChevronUp } from "lucide-react"
+import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
+import { doc, getDoc, setDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { Loader2, Radio, ChevronDown, ChevronUp, Star } from "lucide-react"
 
 export default function MonitorPage() {
     const { user, loading: authLoading, isAdmin } = useAuth()
     const { hasAccess, isSoundEngineer, loading: accessLoading } = useMonitorAccess()
-    // Fix #4: sound engineers see their section open by default
+    // Sound engineers see their section open by default
     const [showEngSection, setShowEngSection] = useState(true)
 
-    // Fix #9: singleton connection — shared with QuickMonitorPanel
+    // Singleton connection -- shared with QuickMonitorPanel
     const { client } = useMonitorConnection()
 
     const {
         status, error, channels, buses, matrices, config, myBusIndex,
         updateBusFader, updateSendLevel, updateSendOn, updateMatrixFader, updateMatrixOn,
+        starredChannels, defaultChannels, setStarredChannels, setDefaultChannels,
     } = useMonitorStore()
 
     // Admins or sound engineers get full controls
     const hasEngineerAccess = isSoundEngineer || isAdmin
 
-    // Fader handlers — own bus
+    // Load starred channels (pinnedChannels in Firestore) and default channels on mount
+    useEffect(() => {
+        if (!user) return
+        // Load starred channels from user preferences
+        getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
+            if (snap.exists()) {
+                const data = snap.data()
+                setStarredChannels(data.pinnedChannels || [])
+            }
+        }).catch(() => { /* ignore */ })
+
+        // Load default channels from config
+        getDoc(doc(db, "config", "monitor")).then(snap => {
+            if (snap.exists()) {
+                const data = snap.data()
+                setDefaultChannels(data.defaultChannels || [])
+            }
+        }).catch(() => { /* ignore */ })
+    }, [user, setStarredChannels, setDefaultChannels])
+
+    // Toggle star on a channel
+    const toggleStar = useCallback(async (channelIndex: number) => {
+        if (!user) return
+        const next = starredChannels.includes(channelIndex)
+            ? starredChannels.filter(c => c !== channelIndex)
+            : [...starredChannels, channelIndex]
+        setStarredChannels(next)
+        // Persist to Firestore using existing pinnedChannels field name
+        try {
+            await setDoc(
+                doc(db, "users", user.uid, "preferences", "monitor"),
+                { pinnedChannels: next },
+                { merge: true }
+            )
+        } catch { /* ignore */ }
+    }, [user, starredChannels, setStarredChannels])
+
+    // Fader handlers -- own bus
     const handleBusMaster = useCallback((value: number) => {
         if (!myBusIndex) return
         updateBusFader(myBusIndex, value)
@@ -47,7 +88,7 @@ export default function MonitorPage() {
         client?.setSendOn(myBusIndex, channelIndex, on)
     }, [myBusIndex, updateSendOn, client])
 
-    // Matrix handlers — engineers only
+    // Matrix handlers -- engineers only
     const handleMatrixFader = useCallback((matrixIndex: number, value: number) => {
         updateMatrixFader(matrixIndex, value)
         client?.setMatrixFader(matrixIndex, value)
@@ -58,7 +99,7 @@ export default function MonitorPage() {
         client?.setMatrixOn(matrixIndex, on)
     }, [updateMatrixOn, client])
 
-    // ── Loading ──
+    // -- Loading --
     if (authLoading || accessLoading) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
@@ -83,7 +124,7 @@ export default function MonitorPage() {
         )
     }
 
-    // ── Connecting / Error ──
+    // -- Connecting / Error --
     if (status === "disconnected" || status === "connecting") {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -105,7 +146,7 @@ export default function MonitorPage() {
         )
     }
 
-    // ── Engineer without a bus → engineer dashboard ──
+    // -- Engineer without a bus: engineer dashboard --
     if (config && myBusIndex === null && hasEngineerAccess) {
         return (
             <div className="max-w-lg mx-auto p-4 space-y-6">
@@ -120,6 +161,7 @@ export default function MonitorPage() {
                 </p>
 
                 <BusAssignmentPanel config={config} />
+                <DefaultChannelPicker />
 
                 {matrices.length > 0 && (
                     <MatrixPanel
@@ -132,7 +174,7 @@ export default function MonitorPage() {
         )
     }
 
-    // ── Main mixer view ──
+    // -- Main mixer view (Configure mode) --
     const myBus = buses.find(b => b.index === myBusIndex)
     if (!myBus) {
         return (
@@ -142,8 +184,8 @@ export default function MonitorPage() {
         )
     }
 
-    // Filter sends: only show channels that are ON or have a non-zero level
-    const activeSends = myBus.sends.filter(s => s.on || s.level > 0.001)
+    // Show ALL channel sends for the user's bus (configure mode = full channel list)
+    const allSends = myBus.sends
     const channelMap = new Map(channels.map(c => [c.index, c]))
 
     return (
@@ -156,13 +198,13 @@ export default function MonitorPage() {
                 <ConnectionIndicator status={status} error={error} />
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-                Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `— ${myBus.name}`}
+                Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `\u2014 ${myBus.name}`}
             </p>
 
             {/* Master fader */}
             <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <FaderStrip
-                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `🔊 ${myBus.name} Master` : "🔊 Master"}
+                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `Master` : "Master"}
                     value={myBus.fader}
                     on={true}
                     isMaster
@@ -170,25 +212,51 @@ export default function MonitorPage() {
                 />
             </div>
 
-            {/* Channel sends */}
+            {/* Channel sends -- all channels with star toggle */}
             <div className="bg-card border border-border rounded-xl p-4">
-                <h2 className="text-sm font-medium text-muted-foreground mb-3">Channels</h2>
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-medium text-muted-foreground">Channels</h2>
+                    <p className="text-xs text-muted-foreground">
+                        Tap <Star className="w-3 h-3 inline text-yellow-500" /> to add to your live mix
+                    </p>
+                </div>
                 <div className="space-y-1">
-                    {activeSends.map(send => {
+                    {allSends.map(send => {
                         const ch = channelMap.get(send.channelIndex)
                         const name = ch?.name || `Ch ${send.channelIndex}`
+                        const isStarred = starredChannels.includes(send.channelIndex)
+                        const isDefault = defaultChannels.includes(send.channelIndex)
                         return (
-                            <FaderStrip
-                                key={send.channelIndex}
-                                label={name}
-                                value={send.level}
-                                on={send.on}
-                                onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
-                            />
+                            <div key={send.channelIndex} className="flex items-center gap-1">
+                                <button
+                                    onClick={() => toggleStar(send.channelIndex)}
+                                    className={`shrink-0 p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                                        isStarred
+                                            ? "text-yellow-500"
+                                            : "text-zinc-700 hover:text-zinc-500"
+                                    }`}
+                                    title={isStarred ? "Remove from live mix" : "Add to live mix"}
+                                >
+                                    <Star className="w-4 h-4" fill={isStarred ? "currentColor" : "none"} />
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                    <FaderStrip
+                                        label={name}
+                                        value={send.level}
+                                        on={send.on}
+                                        onChange={(val) => handleSendLevel(send.channelIndex, val)}
+                                        onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
+                                    />
+                                </div>
+                                {isDefault && (
+                                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-violet-600/20 text-violet-400 border border-violet-500/20">
+                                        default
+                                    </span>
+                                )}
+                            </div>
                         )
                     })}
-                    {activeSends.length === 0 && (
+                    {allSends.length === 0 && (
                         <p className="text-sm text-muted-foreground py-4 text-center">
                             No channels routed to this bus yet.
                         </p>
@@ -196,7 +264,7 @@ export default function MonitorPage() {
                 </div>
             </div>
 
-            {/* Sound Engineer Section — collapsible, open by default */}
+            {/* Sound Engineer Section -- collapsible, open by default */}
             {hasEngineerAccess && (
                 <div className="mt-4 space-y-4">
                     <button
@@ -204,12 +272,13 @@ export default function MonitorPage() {
                         className="flex items-center gap-2 text-sm font-medium text-amber-500 hover:text-amber-400 transition-colors w-full"
                     >
                         {showEngSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        🎧 Sound Engineer
+                        Sound Engineer
                     </button>
 
                     {showEngSection && (
                         <div className="space-y-4">
                             <BusAssignmentPanel config={config!} />
+                            <DefaultChannelPicker />
                             <MatrixPanel
                                 matrices={matrices}
                                 onFaderChange={handleMatrixFader}

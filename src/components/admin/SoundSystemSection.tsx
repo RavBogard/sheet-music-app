@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
+import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { MonitorConfig } from "@/types/monitor"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
@@ -300,6 +301,8 @@ export function SoundSystemSection() {
                                 <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
                             </div>
                         </div>
+                        {/* Default Channel Picker -- sound engineer picks global defaults */}
+                        <DefaultChannelPicker />
                     </div>
                 )}
             </div>
