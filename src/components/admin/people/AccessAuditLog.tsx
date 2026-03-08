@@ -5,6 +5,7 @@ import { collection, query, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
+import { cn } from "@/lib/utils"
 
 interface AuditLog {
     id: string
@@ -61,7 +62,7 @@ export function AccessAuditLog() {
                         return (
                             <div key={log.id} className="flex gap-4 p-3 rounded-lg bg-muted/10 border border-border/50 text-sm">
                                 <div className="mt-0.5 shrink-0">
-                                    <Shield className={`w-4 h-4 ${isPromotion ? 'text-emerald-500' : 'text-amber-500'}`} />
+                                    <Shield className={cn("w-4 h-4", isPromotion ? "text-success" : "text-amber-500")} />
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <p className="text-foreground">
@@ -70,7 +71,7 @@ export function AccessAuditLog() {
                                     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                                         <span className="line-through opacity-70">{log.previousRole}</span>
                                         <ArrowRight className="w-3 h-3" />
-                                        <span className={`font-medium ${isPromotion ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                        <span className={cn("font-medium", isPromotion ? "text-success" : "text-amber-500")}>
                                             {log.newRole}
                                         </span>
                                     </div>

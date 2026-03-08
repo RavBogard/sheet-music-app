@@ -168,7 +168,7 @@ export function PeopleSection() {
                             key={role}
                             onClick={() => setRoleFilter(role)}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors min-h-9",
+                                "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors min-h-11",
                                 roleFilter === role
                                     ? "bg-brand/20 text-brand"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -197,12 +197,14 @@ export function PeopleSection() {
                 <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
                     {/* Grid Header */}
                     <div className="flex items-center gap-3 px-4 py-3 bg-muted/30">
-                        <input
-                            type="checkbox"
-                            checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
-                            onChange={() => selectedUsers.size > 0 ? clearSelection() : selectAllFiltered()}
-                            className="h-5 w-5 rounded border-border accent-brand shrink-0 cursor-pointer"
-                        />
+                        <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                                onChange={() => selectedUsers.size > 0 ? clearSelection() : selectAllFiltered()}
+                                className="h-5 w-5 rounded border-border accent-brand shrink-0 cursor-pointer"
+                            />
+                        </label>
                         <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center pl-2">
                             <div className="col-span-12 sm:col-span-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</div>
                             <div className="hidden sm:block col-span-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attributes</div>
