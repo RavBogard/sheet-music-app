@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-03-08T05:01:00Z"
-last_activity: 2026-03-08 -- Completed 05-03 (Gig packet UI + admin simplification)
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-08T05:35:00Z"
+last_activity: 2026-03-08 -- Completed 06-01 (FCM push + SMS notification wiring)
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
-  percent: 83
+  total_plans: 17
+  completed_plans: 16
+  percent: 88
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A musician sets their tablet on a music stand, sees this week's service at a glance, drills into PDFs when needed, and adjusts their monitor mix in 1-2 taps.
-**Current focus:** Phase 5 - Backend Hardening & Library
+**Current focus:** Phase 6 - Scheduling, Notifications & Polish
 
 ## Current Position
 
-Phase: 5 of 6 (complete)
-Plan: 3 of 3 in current phase (complete)
-Status: Phase 5 complete -- Backend hardening & library
-Last activity: 2026-03-08 -- Completed 05-03 (Gig packet UI + admin simplification)
+Phase: 6 of 6 (in progress)
+Plan: 1 of 2 in current phase (complete)
+Status: Phase 6 in progress -- Scheduling, notifications & polish
+Last activity: 2026-03-08 -- Completed 06-01 (FCM push + SMS notification wiring)
 
-Progress: [████████░░] 83%
+Progress: [████████░░] 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 16
 - Average duration: ~6 min
-- Total execution time: ~1.5 hours
+- Total execution time: ~1.6 hours
 
 ## Accumulated Context
 
@@ -107,6 +107,8 @@ Progress: [████████░░] 83%
 - [05-03]: Admin page uses flat section layout (no tabs) since only 2 sections remain
 - [05-03]: Sound system config at /settings/sound, not embedded in admin page
 - [05-03]: parseTemplateRequest extracted to src/lib/template-parser.ts (was illegally exported from route file)
+- [06-01]: SMS on initial publish only (not re-publish) to control Twilio costs; FCM push on both since push is free
+- [06-01]: Shared push-send helper uses Firebase Admin directly (not HTTP to /api/push/send) to avoid auth forwarding
 
 ### Blockers/Concerns
 
@@ -115,6 +117,6 @@ Progress: [████████░░] 83%
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:01:00Z
-Stopped at: Completed 05-03-PLAN.md (Phase 5 complete)
-Resume file: Phase 6 plans
+Last session: 2026-03-08T05:35:00Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: 06-02-PLAN.md
