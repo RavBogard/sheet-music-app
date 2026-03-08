@@ -11,9 +11,25 @@ import {
     MonitorConfig,
     ChannelInfo,
     BusInfo,
+    BusSend,
     MatrixInfo,
     MixerSnapshot,
 } from "@/types/monitor"
+
+/**
+ * Pure function: compute visible channels for live mode.
+ * Returns channel indices from the union of defaultChannels + starredChannels,
+ * filtered to only channels that have sends on the user's bus, deduped.
+ */
+export function getVisibleChannels(
+    defaultChannels: number[],
+    starredChannels: number[],
+    busSends: BusSend[],
+): number[] {
+    const visible = new Set([...defaultChannels, ...starredChannels])
+    const sendIndices = new Set(busSends.map(s => s.channelIndex))
+    return [...visible].filter(ch => sendIndices.has(ch))
+}
 
 interface MonitorState {
     // Connection
@@ -30,6 +46,10 @@ interface MonitorState {
     myBusIndex: number | null
     userId: string | null
 
+    // Channel visibility
+    starredChannels: number[]
+    defaultChannels: number[]
+
     // Actions
     setStatus: (status: ConnectionStatus, error?: string) => void
     setSnapshot: (snapshot: MixerSnapshot, userId: string) => void
@@ -38,6 +58,8 @@ interface MonitorState {
     updateSendOn: (busIndex: number, channelIndex: number, on: boolean) => void
     updateMatrixFader: (matrixIndex: number, value: number) => void
     updateMatrixOn: (matrixIndex: number, on: boolean) => void
+    setStarredChannels: (channels: number[]) => void
+    setDefaultChannels: (channels: number[]) => void
     setConfig: (config: MonitorConfig) => void
     reset: () => void
 }
@@ -51,6 +73,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     config: null,
     myBusIndex: null,
     userId: null,
+    starredChannels: [],
+    defaultChannels: [],
 
     setStatus: (status, error) => set({ status, error: error || null }),
 
@@ -135,6 +159,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         })
     },
 
+    setStarredChannels: (channels) => set({ starredChannels: channels }),
+    setDefaultChannels: (channels) => set({ defaultChannels: channels }),
+
     setConfig: (config) => {
         const { userId } = get()
         let myBusIndex: number | null = null
@@ -146,7 +173,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
                 }
             }
         }
-        set({ config, myBusIndex })
+        set({ config, myBusIndex, defaultChannels: config.defaultChannels || [] })
     },
 
     reset: () => set({
@@ -158,5 +185,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         config: null,
         myBusIndex: null,
         userId: null,
+        starredChannels: [],
+        defaultChannels: [],
     }),
 }))

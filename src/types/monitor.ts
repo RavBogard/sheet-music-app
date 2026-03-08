@@ -12,6 +12,7 @@ export interface MonitorConfig {
     monitorBuses: number[]
     busAssignments: Record<string, BusAssignment | null>
     bridge?: BridgeStatus
+    defaultChannels?: number[]
 }
 
 export interface BridgeStatus {
