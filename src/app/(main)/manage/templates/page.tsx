@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { ArrowLeft, Loader2, Import } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
+import { collection, query, orderBy, limit, where, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { getAllTemplateKeys, getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useCustomTemplates } from "@/lib/template-firebase"
@@ -45,6 +45,7 @@ export default function TemplatesPage() {
         try {
             const q = query(
                 collection(db, "setlists"),
+                where("isPublic", "==", true),
                 orderBy("date", "desc"),
                 limit(10),
             )
