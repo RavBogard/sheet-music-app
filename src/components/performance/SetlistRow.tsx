@@ -85,46 +85,54 @@ export function SetlistRow({
     }
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={handleClick}
-            onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    handleClick()
-                }
-            }}
-            className={cn(
-                "flex items-center gap-3 px-4 py-2 transition-colors",
-                isCurrentPosition && "bg-violet-500/15 border-l-2 border-violet-500",
-                isClickable ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
-                !isSong && "opacity-70"
-            )}
-        >
-            {isSong ? (
-                <>
-                    <span className="font-semibold text-base truncate flex-1 min-w-0">
-                        {track.title}
-                    </span>
-                    {displayKey && (
-                        <span className="font-mono text-xs px-1.5 py-0.5 bg-muted rounded shrink-0">
-                            {displayKey}
+        <div>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={handleClick}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        handleClick()
+                    }
+                }}
+                className={cn(
+                    "flex items-center gap-3 px-4 py-2 transition-colors",
+                    isCurrentPosition && "bg-violet-500/15 border-l-2 border-violet-500",
+                    isClickable ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
+                    !isSong && "opacity-70"
+                )}
+            >
+                {isSong ? (
+                    <>
+                        <span className="font-semibold text-base truncate flex-1 min-w-0">
+                            {track.title}
                         </span>
-                    )}
-                    {track.bpm && (
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                            {track.bpm}
-                        </span>
-                    )}
-                    {(track.leadMusician || track.performer) && (
-                        <span className="text-xs text-blue-400 truncate max-w-[60px] shrink-0">
-                            {track.leadMusician || track.performer}
-                        </span>
-                    )}
-                </>
-            ) : (
-                <span className="text-sm text-muted-foreground">{track.title}</span>
+                        {displayKey && (
+                            <span className="font-mono text-xs px-1.5 py-0.5 bg-muted rounded shrink-0">
+                                {displayKey}
+                            </span>
+                        )}
+                        {track.bpm && (
+                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                                {track.bpm}
+                            </span>
+                        )}
+                        {(track.leadMusician || track.performer) && (
+                            <span className="text-xs text-blue-400 truncate max-w-[60px] shrink-0">
+                                {track.leadMusician || track.performer}
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    <span className="text-sm text-muted-foreground">{track.title}</span>
+                )}
+            </div>
+            {/* Notes revealed on tap */}
+            {showNotes && track.notes && (
+                <div className="px-4 pb-2 pt-0.5">
+                    <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
+                </div>
             )}
         </div>
     )
