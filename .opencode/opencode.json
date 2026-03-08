@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "read": {
+      "C:/Users/dsbog/CentralReform.live/sheet-music-app/.opencode/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "C:/Users/dsbog/CentralReform.live/sheet-music-app/.opencode/get-shit-done/*": "allow"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "commit": "1f0e018",
+  "commit": "d205c72",
   "branch": "master",
   "buildDate": "3/2/2026",
   "changelog": [
@@ -8,9 +8,6 @@
     "0.1.0 - fix: Setlist delete permission error + SW update banner on fresh loads",
     "0.1.0 - fix: Stop QR poll error flooding dev server when Firebase Admin unavailable",
     "0.1.0 - fix: Resolve react-hooks/refs lint errors in SmartTransposer",
-    "0.1.0 - fix: Replace empty ChordOverlay interface with type alias to fix lint",
-    "0.1.0 - fix: Chord transposer sizing and transposition regression",
-    "0.1.0 - refactor: Codebase health cleanup — dead code, duplicates, constants, architecture",
-    "0.1.0 - refactor: Redesign navigation architecture for scalability"
+    "0.1.0 - fix: Replace empty ChordOverlay interface with type alias to fix lint"
   ]
 }
