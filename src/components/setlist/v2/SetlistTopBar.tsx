@@ -113,16 +113,17 @@ export function SetlistTopBar({
                 )}
             </div>
 
-            {/* Print action */}
+            {/* Gig Packet action */}
             {onPrint && (
                 <Button
-                    size="icon"
+                    size="sm"
                     variant="outline"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
                     onClick={onPrint}
-                    title="Print Gig Packets"
+                    title="Generate Gig Packet"
                 >
                     <Printer className="h-4 w-4" />
+                    <span className="hidden sm:inline">Gig Packet</span>
                 </Button>
             )}
 

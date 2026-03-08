@@ -40,9 +40,10 @@ interface PrintModalProps {
     tracks: SetlistTrack[]
     onClose: () => void
     setlistId?: string
+    assignedMusicians?: Array<{ uid?: string; name: string; displayName?: string }>
 }
 
-export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians }: PrintModalProps) {
     const { user, profile } = useAuth()
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(new Date().toLocaleDateString('en-US', {
@@ -72,7 +73,10 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
     })
 
     const [selectedUids, setSelectedUids] = useState<string[]>(() => {
-        return saved?.selectedUids || []
+        if (saved?.selectedUids?.length) return saved.selectedUids
+        // Pre-check assigned musicians by default
+        if (assignedMusicians?.length) return assignedMusicians.filter(m => m.uid).map(m => m.uid!)
+        return []
     })
 
     useEffect(() => {
@@ -211,9 +215,14 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId }: PrintMod
         }
         setSendingEmails(true)
         try {
+            const emailBody: Record<string, unknown> = { setlistId }
+            // Send to selected recipients when in select-musicians mode
+            if (printMode === "select-musicians" && selectedUids.length > 0) {
+                emailBody.recipientUids = selectedUids
+            }
             const response = await apiFetch('/api/setlist/email-packets', {
                 method: 'POST',
-                body: JSON.stringify({ setlistId }),
+                body: JSON.stringify(emailBody),
             })
             if (!response.ok) {
                 const err = await response.json()

@@ -632,6 +632,7 @@ export function SetlistEditorV2({
                     setlistName={name}
                     tracks={tracks}
                     setlistId={setlistId || undefined}
+                    assignedMusicians={musicians}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}
