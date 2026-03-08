@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
-import { ChevronLeft, FolderOpen, Search, Music, CheckSquare } from "lucide-react"
+import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -9,7 +9,7 @@ import { LibrarySkeleton } from "./LibrarySkeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 import { useMusicStore, FileType } from "@/lib/store"
-import { NoResultsIllustration, EmptyFolderIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
+import { NoResultsIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
@@ -23,7 +23,6 @@ import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
-import { LibraryBreadcrumbs, Breadcrumb } from "./LibraryBreadcrumbs"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { logger } from "@/lib/logger"
 
@@ -55,7 +54,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         loading: filtering,
         setFilter,
         initialized,
-        reset,
         hydrate
     } = useLibraryStore()
 
@@ -90,9 +88,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const error = queryError ? queryError.message : null
 
     const [searchQuery, setSearchQuery] = useState("")
-    const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
-        { id: null, name: 'Home' }
-    ])
     const [tab, setTab] = useState<LibraryTab>("charts")
     const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -116,41 +111,30 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         }
     }
 
-    const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
+    useEffect(() => { setFilter(searchQuery) }, [searchQuery, setFilter])
 
-    useEffect(() => { setFilter(currentFolderId, searchQuery) }, [currentFolderId, searchQuery, setFilter])
-    useEffect(() => { return () => { reset() } }, [reset])
-
-    // Separate folders, charts, and audio
-    const { folders, files: rawFiles, audioFiles } = useMemo(() => {
-        const folders: DriveFile[] = []
+    // Separate charts and audio (no folders)
+    const { files: rawFiles, audioFiles } = useMemo(() => {
         const files: DriveFile[] = []
         const audioFiles: DriveFile[] = []
         displayedFiles.forEach(f => {
-            if (f.mimeType.includes('folder')) {
-                folders.push(f)
-            } else if (isAudioFile(f)) {
+            if (isAudioFile(f)) {
                 audioFiles.push(f)
             } else if (isChartFile(f)) {
                 files.push(f)
             }
         })
-        return { folders, files, audioFiles }
+        return { files, audioFiles }
     }, [displayedFiles])
 
-    // Library filters (key, topic, recency) — state declared after usageMap below
+    // Library filters (key, topic, recency) -- state declared after usageMap below
     const [libraryFilters, setLibraryFilters] = useState<LibraryFilterState>(createEmptyFilters)
 
     const getCleanName = (name: string) =>
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
-    const handleBreadcrumbClick = (index: number) => {
-        setBreadcrumbs(prev => prev.slice(0, index + 1))
-        setSearchQuery(""); contentSearch.clear()
-    }
-
     // AI Digitize
-    const { isAdmin, isBandLeader } = useAuth()
+    const { isAdmin, isBandLeader, profile } = useAuth()
     const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
@@ -186,7 +170,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 throw new Error(saveError.error || "Failed to save XML")
             }
 
-            toast.success("Saved! The MusicXML file is now in this folder.")
+            toast.success("Saved! The MusicXML file is now in the library.")
             loadLibrary()
         } catch (e: unknown) {
             logger.error("Digitize Error:", e)
@@ -205,13 +189,11 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         [rawFiles, libraryFilters, usageMap]
     )
 
-    const combinedItems = tab === "audio"
-        ? [...folders, ...audioFiles]
-        : [...folders, ...files]
+    const combinedItems = tab === "audio" ? audioFiles : files
 
     useEffect(() => {
         const fileIds = combinedItems
-            .filter(f => !f.mimeType.includes('folder') && !isAudioFile(f))
+            .filter(f => !isAudioFile(f))
             .map(f => f.id)
         if (fileIds.length === 0) return
 
@@ -220,7 +202,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         apiFetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
             .then(r => r.ok ? r.json() : {})
             .then(data => setUsageMap(data))
-            .catch(() => { }) // Silent — usage badges are non-critical
+            .catch(() => { }) // Silent -- usage badges are non-critical
     }, [combinedItems.map(i => i.id).join(',')])
 
     const itemCount = tab === "audio" ? audioFiles.length : files.length
@@ -238,7 +220,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
-                {(isBandLeader || isAdmin) && (
+                {profile?.canUpload && (
                     <UploadDialog onUploadComplete={() => {
                         // Trigger a re-fetch of the library
                         loadLibrary()
@@ -259,7 +241,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </Button>
             </div>
 
-            {/* Search & Tabs & Breadcrumbs */}
+            {/* Search & Tabs */}
             <div className="p-4 border-b border-border space-y-4">
                 <div className="relative max-w-xl mx-auto">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
@@ -281,7 +263,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     />
                 )}
 
-                {/* Tabs — only show if audio files exist */}
+                {/* Tabs -- only show if audio files exist */}
                 {hasAudio && (
                     <div className="flex gap-2 max-w-xl mx-auto">
                         <button
@@ -304,10 +286,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                             Audio ({audioFiles.length})
                         </button>
                     </div>
-                )}
-
-                {!searchQuery && (
-                    <LibraryBreadcrumbs breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbClick} />
                 )}
             </div>
 
@@ -333,16 +311,16 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2 pb-10">
                         {combinedItems.length === 0 && !loading && (
                             <EmptyState
-                                icon={searchQuery ? Search : FolderOpen}
+                                icon={Search}
                                 illustration={
                                     searchQuery
                                         ? <NoResultsIllustration className="w-20 h-20 text-muted-foreground" />
                                         : tab === "audio"
                                             ? <EmptyAudioIllustration className="w-20 h-20 text-muted-foreground" />
-                                            : <EmptyFolderIllustration className="w-20 h-20 text-muted-foreground" />
+                                            : undefined
                                 }
-                                title={searchQuery ? "No matches found" : tab === "audio" ? "No audio files here" : "This folder is empty"}
-                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : tab === "audio" ? "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive." : "Try checking another folder."}
+                                title={searchQuery ? "No matches found" : tab === "audio" ? "No audio files yet" : "No charts in the library yet"}
+                                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : tab === "audio" ? "Audio files (.mp3, .m4a, etc.) will appear here when added to Drive." : "Charts will appear here once added to the library."}
                                 className="py-12"
                             />
                         )}
@@ -413,11 +391,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => {
-                                    // Select all visible non-folder files
+                                    // Select all visible files
                                     const allIds = new Set(
-                                        combinedItems
-                                            .filter(i => !i.mimeType.includes('folder'))
-                                            .map(i => i.id)
+                                        combinedItems.map(i => i.id)
                                     )
                                     setSelectedIds(allIds)
                                 }}

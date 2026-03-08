@@ -339,7 +339,7 @@ export function ChatPanel() {
                         break;
 
                     case 'SEARCH_LIBRARY':
-                        useLibraryStore.getState().setFilter(null, String(p.query))
+                        useLibraryStore.getState().setFilter(String(p.query))
                         router.push('/library')
                         break;
 

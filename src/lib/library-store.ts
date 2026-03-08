@@ -13,32 +13,24 @@ interface LibraryState {
     displayedFiles: DriveFile[]
     loading: boolean // Indicates if filtering is happening
     initialized: boolean
-    currentFolderId: string | null
     searchQuery: string
 
     // Cached search index
     _fuseIndex: Fuse<DriveFile> | null
 
-    setFilter: (folderId: string | null, query: string) => void
+    setFilter: (query: string) => void
     hydrate: (files: DriveFile[]) => void
-    reset: () => void
-}
-
-function sortFoldersFirst(files: DriveFile[]): DriveFile[] {
-    return [...files].sort((a, b) => {
-        const aIsFolder = a.mimeType.includes('folder')
-        const bIsFolder = b.mimeType.includes('folder')
-        if (aIsFolder && !bIsFolder) return -1
-        if (!aIsFolder && bIsFolder) return 1
-        return a.name.localeCompare(b.name)
-    })
 }
 
 function applyFiles(files: DriveFile[]) {
-    const fuseIndex = new Fuse(files, FUSE_OPTIONS)
+    // Filter out folders -- flat list only
+    const nonFolders = files.filter(f => !f.mimeType.includes('folder'))
+    // Sort alphabetically by name
+    nonFolders.sort((a, b) => a.name.localeCompare(b.name))
+    const fuseIndex = new Fuse(nonFolders, FUSE_OPTIONS)
     return {
-        allFiles: files,
-        displayedFiles: sortFoldersFirst(files),
+        allFiles: nonFolders,
+        displayedFiles: nonFolders,
         initialized: true,
         loading: false,
         _fuseIndex: fuseIndex,
@@ -50,21 +42,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     displayedFiles: [],
     loading: false,
     initialized: false,
-    currentFolderId: null,
     searchQuery: "",
     _fuseIndex: null,
-
-    reset: () => set((state) => ({
-        displayedFiles: state.allFiles, // Reset view back to root
-        currentFolderId: null,
-        searchQuery: "",
-        loading: false,
-    })),
 
     // Called by React Query hook to sync data to local ephemeral state
     hydrate: (files: DriveFile[]) => set(applyFiles(files)),
 
-    setFilter: (folderId, query) => {
+    setFilter: (query) => {
         const { allFiles, _fuseIndex } = get()
         let result: DriveFile[]
 
@@ -75,15 +59,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const fuse = new Fuse(allFiles, FUSE_OPTIONS)
                 result = fuse.search(query).map(r => r.item)
             }
-        } else if (folderId) {
-            result = allFiles.filter(f => f.parents?.includes(folderId))
         } else {
             result = allFiles
         }
 
         set({
-            displayedFiles: sortFoldersFirst(result),
-            currentFolderId: folderId,
+            displayedFiles: result,
             searchQuery: query,
         })
     }

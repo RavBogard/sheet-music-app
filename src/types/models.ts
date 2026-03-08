@@ -90,6 +90,7 @@ export interface UserProfile {
     viewedWelcomeModal?: boolean
     role: UserRole
     soundEngineer?: boolean
+    canUpload?: boolean
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate
     claimsUpdatedAt?: FirestoreDate
