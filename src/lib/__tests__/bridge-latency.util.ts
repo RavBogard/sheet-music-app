@@ -136,14 +136,12 @@ export async function measureSingleRoundTrip(
 
         // Watch for state updates BEFORE sending the command
         // to avoid race conditions
-        // @ts-expect-error
         const stateRef = doc(db, "monitor-live", "state")
         let commandSentAt = -1
 
         const unsub = onSnapshot(
             stateRef,
             { includeMetadataChanges: true },
-            // @ts-expect-error
             (snap: any) => {
                 if (!snap.exists()) return
 
@@ -183,7 +181,6 @@ export async function measureSingleRoundTrip(
         setTimeout(async () => {
             commandSentAt = performance.now()
             try {
-                // @ts-expect-error
                 await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                     type: "set_bus_master",
                     busIndex,
@@ -294,8 +291,7 @@ export async function runRapidDragTest(
     const { db, auth } = await import("@/lib/firebase")
     const { addDoc, collection } = await import("firebase/firestore")
 
-    // @ts-expect-error
-    const user = auth.currentUser
+    const user = (auth as any).currentUser
     if (!user) throw new Error("Not authenticated")
 
     const intervalMs = 1000 / changesPerSecond
@@ -318,7 +314,6 @@ export async function runRapidDragTest(
             const value = 0.3 + Math.sin(progress * Math.PI * 2) * 0.3
 
             try {
-                // @ts-expect-error
                 await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                     type: "set_bus_master",
                     busIndex,
