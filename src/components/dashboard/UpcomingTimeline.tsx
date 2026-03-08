@@ -122,9 +122,10 @@ export function UpcomingTimeline({
                                             {/* Expand toggle */}
                                             <button
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
-                                                className="p-1 rounded-lg hover:bg-brand/10 text-muted-foreground/50 shrink-0"
+                                                aria-label={isExp ? "Collapse track list" : "Expand track list"}
+                                                className="p-2.5 rounded-lg hover:bg-brand/10 text-muted-foreground/50 shrink-0 flex items-center justify-center min-w-[44px] min-h-[44px]"
                                             >
-                                                <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", isExp && "rotate-90")} />
+                                                <ChevronRight className={cn("w-4 h-4 transition-transform", isExp && "rotate-90")} />
                                             </button>
                                         </Link>
 

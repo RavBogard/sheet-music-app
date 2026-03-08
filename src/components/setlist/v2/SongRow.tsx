@@ -7,6 +7,7 @@ import { GripVertical, Music, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { SetlistTrack } from "@/types/models"
 import { SongInlineFields } from "./InlineFields"
+import { cn } from "@/lib/utils"
 
 interface SongRowProps {
     track: SetlistTrack
@@ -54,10 +55,11 @@ export const SongRow = memo(function SongRow({
         <div
             ref={setNodeRef}
             style={style}
-            className={`rounded-lg transition-colors
-                ${isExpanded ? "bg-brand/5 ring-1 ring-brand/20" : "hover:bg-brand/5 active:bg-brand/10"}
-                ${isDragging ? "opacity-50 ring-2 ring-brand scale-[1.02] z-50 bg-brand/10" : ""}
-            `}
+            className={cn(
+                "rounded-lg transition-colors",
+                isExpanded ? "bg-brand/5 ring-1 ring-brand/20" : "hover:bg-brand/5 active:bg-brand/10",
+                isDragging && "opacity-50 ring-2 ring-brand scale-[1.02] z-50 bg-brand/10"
+            )}
         >
             {/* Collapsed row (always visible) */}
             <div
@@ -69,7 +71,9 @@ export const SongRow = memo(function SongRow({
                     <div
                         {...attributes}
                         {...listeners}
-                        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground p-1 -ml-1"
+                        aria-label={`Reorder ${track.title || "track"}`}
+                        aria-roledescription="sortable"
+                        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/60 hover:text-muted-foreground flex items-center justify-center min-w-[44px] min-h-[44px] -ml-2"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <GripVertical className="h-5 w-5" />
@@ -87,7 +91,7 @@ export const SongRow = memo(function SongRow({
                 <div className="flex-1 min-w-0">
                     {/* Line 1: Title + key + lead */}
                     <div className="flex items-center gap-2">
-                        <span className={`font-medium truncate ${hasFile ? "text-foreground" : "text-muted-foreground"}`}>
+                        <span className={cn("font-medium truncate", hasFile ? "text-foreground" : "text-muted-foreground")}>
                             {track.title || "Untitled"}
                         </span>
                         {track.key && (
