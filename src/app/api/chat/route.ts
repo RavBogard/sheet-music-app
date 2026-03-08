@@ -89,6 +89,13 @@ You must return a JSON object with this structure:
 - When adding songs, you can specify "key" and "bpm" in the ADD_TO_SETLIST payload: { "title": "Mi Chamocha", "key": "Am", "bpm": 120 }.
 - When the user says "in Am" or "in the key of G", set the "key" field on the ADD_TO_SETLIST payload.
 - When the user says "after the responsive reading" or "after [title]", set "afterTitle" in the ADD_TO_SETLIST payload so the track is inserted after the specified track: { "title": "Mi Chamocha", "key": "Am", "afterTitle": "Responsive Reading" }.
+- **BUILD_TEMPLATE**: When the user asks to "build a template", "create a template", or describes a service order they want saved as a template (e.g., "Saturday morning template: modeh ani, mah tovu, barchu, shema..."), generate a BUILD_TEMPLATE command:
+  { "type": "BUILD_TEMPLATE", "payload": { "templateKey": "shabbat_morning", "slots": [ { "label": "Modeh Ani", "type": "song", "queries": ["modeh ani"], "fileId": "...", "fileName": "..." }, ... ] } }
+  - For templateKey, infer from the user's description: "Saturday morning" → "shabbat_morning", "Friday night" → "friday_night", "Kol Nidre" → "kol_nidre", etc.
+  - For each item in the user's list: search the LIBRARY FILES context for a match. If found, set fileId and fileName from the library. Always set queries with the song name lowercased as fallback.
+  - For non-song items (prayers, readings, headers), set the appropriate type and do NOT set fileId.
+  - Include section headers (type: "header") to organize the service flow.
+  - The server will save the template to Firebase automatically.
 - **Available Templates**: ${Object.entries(TEMPLATE_LABELS).map(([k, v]) => `${v.label} (${k})`).join(', ')}
 `
 
@@ -352,6 +359,45 @@ ${messages[messages.length - 1].content}
           // Final event with complete parsed response
           try {
             const parsed = JSON.parse(accumulated)
+
+            // Handle BUILD_TEMPLATE server-side: save to Firestore and strip from client commands
+            if (parsed.commands && Array.isArray(parsed.commands)) {
+              const buildCmd = parsed.commands.find((c: { type: string }) => c.type === 'BUILD_TEMPLATE')
+              if (buildCmd?.payload?.templateKey && buildCmd?.payload?.slots) {
+                try {
+                  const firestore = getFirestore()
+                  const templateKey = buildCmd.payload.templateKey as string
+                  const slots = buildCmd.payload.slots as Record<string, unknown>[]
+                  // Sanitize slots: ensure required fields and strip undefined
+                  const cleanSlots = slots.map((s: Record<string, unknown>) => {
+                    const slot: Record<string, unknown> = {
+                      label: s.label || 'Untitled',
+                      queries: Array.isArray(s.queries) ? s.queries : [],
+                    }
+                    if (s.type) slot.type = s.type
+                    if (s.fileId) { slot.fileId = s.fileId; slot.fileName = s.fileName || '' }
+                    if (s.pageNumber) slot.pageNumber = s.pageNumber
+                    if (s.defaultPerformer) slot.defaultPerformer = s.defaultPerformer
+                    if (s.estimatedMinutes) slot.estimatedMinutes = s.estimatedMinutes
+                    if (s.description) slot.description = s.description
+                    return slot
+                  })
+                  await firestore.collection('templates').doc(templateKey).set({
+                    slots: cleanSlots,
+                    updatedAt: new Date(),
+                    updatedBy: auth.uid,
+                  })
+                  const templateLabel = TEMPLATE_LABELS[templateKey]?.label || templateKey
+                  parsed.message = (parsed.message || '') + `\n\nTemplate "${templateLabel}" saved with ${cleanSlots.length} slots.`
+                } catch (saveErr) {
+                  logger.error("Failed to save BUILD_TEMPLATE:", saveErr)
+                  parsed.message = (parsed.message || '') + '\n\n⚠️ Failed to save template to Firebase.'
+                }
+                // Remove BUILD_TEMPLATE from commands sent to client
+                parsed.commands = parsed.commands.filter((c: { type: string }) => c.type !== 'BUILD_TEMPLATE')
+              }
+            }
+
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, ...parsed })}\n\n`))
           } catch {
             // If JSON parse fails, send raw text as message

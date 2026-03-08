@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { ChevronUp, ChevronDown, Plus, Trash2, Save, RotateCcw, Loader2 } from "lucide-react"
+import { ChevronUp, ChevronDown, Plus, Trash2, Save, RotateCcw, Loader2, Music, Link2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
 import { saveCustomTemplate, deleteCustomTemplate } from "@/lib/template-firebase"
 import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
-import type { TrackType } from "@/types/models"
+import type { TrackType, DriveFile } from "@/types/models"
+import { SearchOverlay } from "@/components/setlist/v2/SearchOverlay"
 import { toast } from "sonner"
 
 const SLOT_TYPES: TrackType[] = ["song", "prayer", "reading", "transition", "note", "header"]
@@ -26,14 +27,17 @@ interface TemplateEditorProps {
     templateKey: string
     defaultSlots: TemplateSlot[]
     customSlots: TemplateSlot[] | null
+    importedSlots?: TemplateSlot[] | null
+    onImportConsumed?: () => void
 }
 
-export function TemplateEditor({ templateKey, defaultSlots, customSlots }: TemplateEditorProps) {
+export function TemplateEditor({ templateKey, defaultSlots, customSlots, importedSlots, onImportConsumed }: TemplateEditorProps) {
     const { user } = useAuth()
     const [slots, setSlots] = useState<TemplateSlot[]>([])
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
     const [saving, setSaving] = useState(false)
     const [dirty, setDirty] = useState(false)
+    const [pickingSlotIndex, setPickingSlotIndex] = useState<number | null>(null)
 
     // Reset when template changes
     useEffect(() => {
@@ -41,6 +45,15 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots }: Templ
         setExpandedIndex(null)
         setDirty(false)
     }, [templateKey, defaultSlots, customSlots])
+
+    // Load imported slots when provided
+    useEffect(() => {
+        if (importedSlots && importedSlots.length > 0) {
+            setSlots(importedSlots)
+            setDirty(true)
+            onImportConsumed?.()
+        }
+    }, [importedSlots, onImportConsumed])
 
     const isCustomized = customSlots !== null
 
@@ -160,6 +173,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots }: Templ
                         onUpdate={(updates) => updateSlot(index, updates)}
                         onMove={(dir) => moveSlot(index, dir)}
                         onRemove={() => removeSlot(index)}
+                        onPickSong={() => setPickingSlotIndex(index)}
                     />
                 ))}
             </div>
@@ -168,6 +182,21 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots }: Templ
             <Button variant="outline" size="sm" onClick={addSlot} className="w-full">
                 <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Slot
             </Button>
+
+            {/* Song picker overlay */}
+            <SearchOverlay
+                isOpen={pickingSlotIndex !== null}
+                onClose={() => setPickingSlotIndex(null)}
+                onSelect={(file: DriveFile) => {
+                    if (pickingSlotIndex !== null) {
+                        updateSlot(pickingSlotIndex, {
+                            fileId: file.id,
+                            fileName: file.name.replace(/\.[^/.]+$/, ''),
+                        })
+                    }
+                    setPickingSlotIndex(null)
+                }}
+            />
         </div>
     )
 }
@@ -181,6 +210,7 @@ function SlotRow({
     onUpdate,
     onMove,
     onRemove,
+    onPickSong,
 }: {
     slot: TemplateSlot
     index: number
@@ -190,6 +220,7 @@ function SlotRow({
     onUpdate: (updates: Partial<TemplateSlot>) => void
     onMove: (direction: -1 | 1) => void
     onRemove: () => void
+    onPickSong: () => void
 }) {
     const typeColor = TYPE_COLORS[slot.type ?? "song"] ?? TYPE_COLORS.song
 
@@ -229,8 +260,17 @@ function SlotRow({
                 {/* Label */}
                 <span className="flex-1 text-sm truncate">{slot.label}</span>
 
-                {/* Queries preview */}
-                {slot.queries.length > 0 && (
+                {/* Linked file indicator */}
+                {slot.fileId && (
+                    <span className="flex items-center gap-1 text-xs text-blue-400">
+                        <Link2 className="h-3 w-3" />
+                        <span className="truncate max-w-[120px]">{slot.fileName || "Linked"}</span>
+                        {slot.pageNumber && <span className="text-muted-foreground">p.{slot.pageNumber}</span>}
+                    </span>
+                )}
+
+                {/* Queries preview (only if no direct link) */}
+                {!slot.fileId && slot.queries.length > 0 && (
                     <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                         {slot.queries.join(", ")}
                     </span>
@@ -283,9 +323,52 @@ function SlotRow({
                         </div>
                     </div>
 
+                    {/* Direct chart association */}
+                    <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Linked Chart</label>
+                        {slot.fileId ? (
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-sm">
+                                    <Music className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                    <span className="truncate text-blue-300">{slot.fileName || slot.fileId}</span>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-400"
+                                    onClick={() => onUpdate({ fileId: undefined, fileName: undefined, pageNumber: undefined })}
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </Button>
+                                <div className="w-20">
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={slot.pageNumber ?? ""}
+                                        onChange={e => onUpdate({
+                                            pageNumber: e.target.value ? Number(e.target.value) : undefined,
+                                        })}
+                                        placeholder="Page #"
+                                        className="h-8 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={onPickSong}
+                            >
+                                <Music className="h-3.5 w-3.5 mr-1.5" />
+                                Pick Song from Library
+                            </Button>
+                        )}
+                    </div>
+
                     <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
-                            Search Queries (comma-separated)
+                            Search Queries (comma-separated){slot.fileId ? " — fallback if file removed" : ""}
                         </label>
                         <Input
                             value={slot.queries.join(", ")}
