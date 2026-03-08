@@ -12,6 +12,19 @@ export interface SyncStats {
     addedFiles?: string[]
     updatedFiles?: string[]
     deletedFiles?: string[]
+    copiedToStorage: number
+    copyErrors: number
+    retriedCopies: number
+    deletedFromStorage: number
+    syncRunId?: string
+}
+
+export interface SyncRunRecord {
+    startedAt: string
+    completedAt: string | null
+    status: 'running' | 'completed' | 'failed'
+    stats: SyncStats | null
+    errors: Array<{ fileId: string; fileName: string; phase: string; error: string; retryable: boolean }>
 }
 
 export async function syncLibraryIndex(): Promise<SyncStats> {
@@ -24,6 +37,10 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         addedFiles: [],
         updatedFiles: [],
         deletedFiles: [],
+        copiedToStorage: 0,
+        copyErrors: 0,
+        retriedCopies: 0,
+        deletedFromStorage: 0,
     }
 
     try {
