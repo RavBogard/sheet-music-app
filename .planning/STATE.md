@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-08T03:05:00.000Z"
-last_activity: 2026-03-08 -- Completed 03-01 (dense setlist view, 5 new tests)
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-08T03:12:00.000Z"
+last_activity: 2026-03-08 -- Completed 03-02 (PDF overlay, bottom bar, setlist drawer, 7 new tests)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 38
+  completed_plans: 8
+  percent: 44
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 3 of 6
-Plan: 1 of 3 in current phase (complete)
-Status: Phase 3 in progress -- Plan 01 complete (dense setlist view, position highlighting, wake lock)
-Last activity: 2026-03-08 -- Completed 03-01 (dense setlist view, 5 new tests)
+Plan: 2 of 3 in current phase (complete)
+Status: Phase 3 in progress -- Plan 02 complete (PDF overlay, bottom bar, setlist drawer)
+Last activity: 2026-03-08 -- Completed 03-02 (PDF overlay, bottom bar, setlist drawer, 7 new tests)
 
-Progress: [████░░░░░░] 38%
+Progress: [████░░░░░░] 44%
 
 ## Performance Metrics
 
@@ -77,6 +77,10 @@ Progress: [████░░░░░░] 38%
 - [03-01]: Header tracks as inline dividers (hr with label), not sticky collapsible sections
 - [03-01]: Leader position advance via tap-to-set on any row (updateLiveTrack Firestore write)
 - [03-01]: activeSongIndex state as hook point for Plan 02 PDF overlay
+- [03-02]: Old SetlistDrawer preserved as SetlistDrawerLegacy for v1 PerformanceToolbar compatibility
+- [03-02]: Monitor panel opens as Radix Dialog sheet above bottom bar with glass morphism
+- [03-02]: PDFViewer dynamically imported via next/dynamic SSR disabled to avoid worker issues
+- [03-02]: Drawer closes automatically after song selection for fluid one-tap switching
 
 ### Blockers/Concerns
 
@@ -85,6 +89,6 @@ Progress: [████░░░░░░] 38%
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:05:00Z
-Stopped at: Completed 03-01-PLAN.md
-Resume file: .planning/phases/03-setlist-performance-view/03-02-PLAN.md
+Last session: 2026-03-08T03:12:00Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: .planning/phases/03-setlist-performance-view/03-03-PLAN.md

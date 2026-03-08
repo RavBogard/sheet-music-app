@@ -8,8 +8,8 @@
 - [x] **SET-01**: Musician sees the full service flow at a glance on a portrait tablet: song title, their transposed key, tempo/feel, and notes — without tapping into anything
 - [x] **SET-02**: Non-song items (readings, prayers, transitions, Torah service) appear as first-class items in the service flow alongside songs
 - [x] **SET-03**: Current position is clearly highlighted so musician never loses their place during a service
-- [ ] **SET-04**: Musician taps a song to open the PDF viewer immersively (full-screen, setlist gets out of the way)
-- [ ] **SET-05**: Musician can return to the setlist view quickly and fluidly from the PDF viewer (slide-out drawer, back gesture, or equivalent)
+- [x] **SET-04**: Musician taps a song to open the PDF viewer immersively (full-screen, setlist gets out of the way)
+- [x] **SET-05**: Musician can return to the setlist view quickly and fluidly from the PDF viewer (slide-out drawer, back gesture, or equivalent)
 - [x] **SET-06**: Screen stays awake during performance mode (wake lock)
 - [x] **SET-07**: Each musician sees every song in their instrument's key automatically based on their profile (auto-transposition at a glance)
 
@@ -45,7 +45,7 @@
 
 - [ ] **PDF-01**: Existing PDF viewer with AI chord detection, transposed overlays, and annotations continues to work as-is
 - [ ] **PDF-02**: PDF view is immersive — when open, it owns the full screen
-- [ ] **PDF-03**: Monitor quick-adjust and setlist navigation remain accessible from within PDF view without breaking immersion
+- [x] **PDF-03**: Monitor quick-adjust and setlist navigation remain accessible from within PDF view without breaking immersion
 
 ## Library & Drive Sync
 
@@ -123,8 +123,8 @@
 | SET-01 | Phase 3 | Complete |
 | SET-02 | Phase 3 | Complete |
 | SET-03 | Phase 3 | Complete |
-| SET-04 | Phase 3 | Pending |
-| SET-05 | Phase 3 | Pending |
+| SET-04 | Phase 3 | Complete |
+| SET-05 | Phase 3 | Complete |
 | SET-06 | Phase 3 | Complete |
 | SET-07 | Phase 3 | Complete |
 | EDIT-01 | Phase 4 | Pending |
@@ -151,7 +151,7 @@
 | MIX-12 | Phase 1 | Complete |
 | PDF-01 | — | Existing |
 | PDF-02 | — | Existing |
-| PDF-03 | Phase 3 | Pending |
+| PDF-03 | Phase 3 | Complete |
 | LIB-01 | Phase 5 | Pending |
 | LIB-02 | Phase 5 | Pending |
 | LIB-03 | Phase 5 | Pending |

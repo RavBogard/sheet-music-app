@@ -55,7 +55,7 @@ Plans:
 **Goal**: A musician sets their tablet on a music stand and sees the full service at a glance — songs in their key, tempo, notes, liturgical flow items — with immersive PDF drill-down and public access for jam sessions
 **Depends on**: Phase 1 (profiles with transposition, code audit informs component structure)
 **Requirements**: SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07, PDF-03, PUB-01, PUB-02, PUB-03, HOME-01, HOME-02
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 **Success Criteria:**
   1. Musician sees the full service flow at a glance on a portrait tablet: song title, their transposed key, tempo, notes, and non-song liturgical items — without tapping anything
@@ -159,8 +159,7 @@ All 53 new requirements mapped to exactly one phase:
 | Phase | Requirements | Count |
 |-------|-------------|-------|
 | 1. Monitor Research + Code Audit | 3/3 | Complete   | 2026-03-08 | 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
-| 3. Setlist Performance View | SET-01..07, PDF-03, PUB-01..03, HOME-01..02 | 13 |
-| 4. Setlist Editor | EDIT-01..10 | 10 |
+| 3. Setlist Performance View | 2/3 | In Progress|  | 4. Setlist Editor | EDIT-01..10 | 10 |
 | 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
 | 6. Scheduling, Notifications & Polish | SCHED-01..02, NOTIF-01..02 | 4 |
 | **Total** | | **52** |
