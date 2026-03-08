@@ -65,9 +65,9 @@
 
 ## Public Access
 
-- [ ] **PUB-01**: Band leader can mark a setlist as public (no authentication required to view)
-- [ ] **PUB-02**: Community members can access a public setlist and view PDFs without signing in
-- [ ] **PUB-03**: Public view is read-only: setlist + PDFs only (no monitoring, no editing, no transposition)
+- [x] **PUB-01**: Band leader can mark a setlist as public (no authentication required to view)
+- [x] **PUB-02**: Community members can access a public setlist and view PDFs without signing in
+- [x] **PUB-03**: Public view is read-only: setlist + PDFs only (no monitoring, no editing, no transposition)
 
 ## Scheduling & Notifications
 
@@ -78,8 +78,8 @@
 
 ## Home Screen
 
-- [ ] **HOME-01**: When a musician opens the app, they see this week's upcoming service with the setlist, who's playing, and quick access to perform
-- [ ] **HOME-02**: Home screen is focused on the next service — not a dashboard with multiple competing sections
+- [x] **HOME-01**: When a musician opens the app, they see this week's upcoming service with the setlist, who's playing, and quick access to perform
+- [x] **HOME-02**: Home screen is focused on the next service — not a dashboard with multiple competing sections
 
 ## Print Pipeline
 
@@ -162,15 +162,15 @@
 | AUTH-04 | Phase 1 | Complete (01-03) |
 | PROF-01 | Phase 1 | Complete (01-03) |
 | PROF-02 | Phase 1 | Complete (01-03) |
-| PUB-01 | Phase 3 | Pending |
-| PUB-02 | Phase 3 | Pending |
-| PUB-03 | Phase 3 | Pending |
+| PUB-01 | Phase 3 | Complete |
+| PUB-02 | Phase 3 | Complete |
+| PUB-03 | Phase 3 | Complete |
 | SCHED-01 | Phase 6 | Pending |
 | SCHED-02 | Phase 6 | Pending |
 | NOTIF-01 | Phase 6 | Pending |
 | NOTIF-02 | Phase 6 | Pending |
-| HOME-01 | Phase 3 | Pending |
-| HOME-02 | Phase 3 | Pending |
+| HOME-01 | Phase 3 | Complete |
+| HOME-02 | Phase 3 | Complete |
 | PRINT-01 | Phase 5 | Pending |
 | PRINT-02 | Phase 5 | Pending |
 | CODE-01 | Phase 1 | Complete |

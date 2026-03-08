@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-08T03:12:00.000Z"
-last_activity: 2026-03-08 -- Completed 03-02 (PDF overlay, bottom bar, setlist drawer, 7 new tests)
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-03-08T03:13:09.000Z"
+last_activity: 2026-03-08 -- Completed 03-03 (public access, home screen redesign, recharts cleanup)
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 44
+  completed_plans: 9
+  percent: 50
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 3 of 6
-Plan: 2 of 3 in current phase (complete)
-Status: Phase 3 in progress -- Plan 02 complete (PDF overlay, bottom bar, setlist drawer)
-Last activity: 2026-03-08 -- Completed 03-02 (PDF overlay, bottom bar, setlist drawer, 7 new tests)
+Phase: 3 of 6 (complete)
+Plan: 3 of 3 in current phase (complete)
+Status: Phase 3 complete -- all 3 plans done (setlist view, PDF overlay, public access + home)
+Last activity: 2026-03-08 -- Completed 03-03 (public access, home screen redesign, recharts cleanup)
 
-Progress: [████░░░░░░] 44%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -81,6 +81,11 @@ Progress: [████░░░░░░] 44%
 - [03-02]: Monitor panel opens as Radix Dialog sheet above bottom bar with glass morphism
 - [03-02]: PDFViewer dynamically imported via next/dynamic SSR disabled to avoid worker issues
 - [03-02]: Drawer closes automatically after song selection for fluid one-tap switching
+- [03-03]: Public back link goes to /perform (public listing) not / (dashboard) -- keeps public flow self-contained
+- [03-03]: Dashboard complexity components commented out, not deleted -- retained for Phase 4/6 reuse
+- [03-03]: NextServiceCard is standalone in src/components/home/ not in dashboard barrel export
+- [03-03]: Empty state uses most recent past setlist with isPastSetlist flag (Practice button)
+- [03-03]: recharts removed along with orphaned TimelineChart.tsx (resolves 01-02 deferred item)
 
 ### Blockers/Concerns
 
@@ -89,6 +94,6 @@ Progress: [████░░░░░░] 44%
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:12:00Z
-Stopped at: Completed 03-02-PLAN.md
-Resume file: .planning/phases/03-setlist-performance-view/03-03-PLAN.md
+Last session: 2026-03-08T03:13:09Z
+Stopped at: Completed 03-03-PLAN.md (Phase 3 complete)
+Resume file: .planning/phases/04-*/04-01-PLAN.md
