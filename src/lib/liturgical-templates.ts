@@ -493,7 +493,7 @@ export function generateSetlistName(context: ServiceContext): string {
     const label = typeLabels[context.type] || 'Service'
     const parts = [label]
 
-    if (context.parasha && (context.type === 'friday_night' || context.type === 'shabbat_morning' || context.type === 'shir_shabbat')) {
+    if (context.parasha && (context.type === 'friday_night' || context.type === 'shabbat_morning' || (context.type as string) === 'shir_shabbat')) {
         parts.push(`Parashat ${context.parasha}`)
     }
 

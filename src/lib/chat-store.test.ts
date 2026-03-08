@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useChatStore, ChatEditAction } from './chat-store'
-import { parseTemplateRequest } from '@/app/api/chat/route'
+import { parseTemplateRequest } from '@/lib/template-parser'
 
 describe('useChatStore', () => {
     beforeEach(() => {
