@@ -15,7 +15,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -36,6 +36,7 @@ export default function SetlistPerformPage() {
         isLeader,
         isPublicView,
         setCurrentPosition,
+        musicians,
     } = useSetlistPerformance(setlistId)
 
     // Hook point for Plan 02's PDF overlay
@@ -101,6 +102,24 @@ export default function SetlistPerformPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Who's playing */}
+            {musicians.length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 overflow-x-auto scrollbar-hide">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    {musicians.map((m, i) => (
+                        <span
+                            key={m.uid || i}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
+                        >
+                            <span className="font-medium text-foreground">{m.name.split(' ')[0]}</span>
+                            {m.instrument && (
+                                <span className="text-muted-foreground/70">{m.instrument}</span>
+                            )}
+                        </span>
+                    ))}
+                </div>
+            )}
 
             {/* Setlist content */}
             <SetlistView

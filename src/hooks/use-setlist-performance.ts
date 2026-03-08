@@ -8,7 +8,7 @@ import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { updateLiveTrack } from "@/lib/setlist-live"
-import { SetlistTrack } from "@/types/models"
+import { SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
 import { LiveState } from "@/lib/setlist-live"
 
@@ -24,6 +24,7 @@ interface UseSetlistPerformanceReturn {
     isLeader: boolean
     isPublicView: boolean
     setCurrentPosition: (index: number) => void
+    musicians: SetlistMusician[]
 }
 
 export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceReturn {
@@ -42,6 +43,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     const tracks: SetlistTrack[] = setlistData?.tracks || []
     const name: string = setlistData?.name || "Untitled"
     const serviceNotes: string | null = setlistData?.serviceNotes || null
+    const musicians: SetlistMusician[] = setlistData?.musicians || []
 
     // Live state: position tracking
     const liveState = setlistData?.liveState as LiveState | undefined
@@ -90,5 +92,6 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         isLeader,
         isPublicView,
         setCurrentPosition,
+        musicians,
     }
 }
