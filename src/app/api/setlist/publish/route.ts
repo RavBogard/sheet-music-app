@@ -15,6 +15,8 @@ import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { recordSongUsage } from '@/lib/song-usage'
 import { emailAllMembers } from '@/lib/email'
+import { sendPushToUsers } from '@/lib/push-send'
+import { sendSMS } from '@/lib/sms'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
 
@@ -126,6 +128,16 @@ export async function POST(request: NextRequest) {
             batch.commit().catch(err => logger.warn('[Publish] In-app notification batch failed:', err))
         }
 
+        // Step 3b: FCM push notifications (fire-and-forget, both publish and re-publish)
+        const pushUids = registeredMusicians.map(m => m.uid!)
+        if (pushUids.length > 0) {
+            sendPushToUsers(pushUids, {
+                title: 'New setlist published',
+                body: `"${setlistName}" is now available`,
+                link: `/perform/setlist/${setlistId}`,
+            }).catch(err => logger.warn('[Publish] FCM push failed:', err))
+        }
+
         // Step 4: Build email recipient list
         // Client sends emailRecipients — the subset of musicians who should receive email.
         // If not provided (backward compat), email all musicians.
@@ -135,8 +147,10 @@ export async function POST(request: NextRequest) {
 
         const emailRecipients: Array<{ email: string; displayName: string }> = []
 
-        // Batch-fetch registered user docs to get emails
+        // Batch-fetch registered user docs to get emails and SMS preferences
         const registeredUids = musicians.filter(m => m.uid).map(m => m.uid!)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userDataMap = new Map<string, Record<string, any>>()
         if (registeredUids.length > 0) {
             const userDocs = await Promise.all(
                 registeredUids.map(uid => db.collection('users').doc(uid).get())
@@ -144,6 +158,7 @@ export async function POST(request: NextRequest) {
             for (const doc of userDocs) {
                 if (doc.exists) {
                     const data = doc.data()!
+                    userDataMap.set(doc.id, data)
                     if (data.email) {
                         // If client sent a filter, only include musicians in that filter
                         if (emailableUids && !emailableUids.has(doc.id) && !emailableEmails?.has(data.email.toLowerCase())) {
@@ -193,6 +208,25 @@ export async function POST(request: NextRequest) {
                 return { sent: 0, failed: 0, errors: [], messageIds: [], error: err instanceof Error ? err.message : String(err) }
             })
             : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[], messageIds: [] as Array<{ email: string; messageId: string }> })
+
+        // Step 4b: SMS notifications for musicians with SMS preference (fire-and-forget)
+        // Only for initial publish, not re-publish (to control SMS costs)
+        if (!wasPublic) {
+            for (const musician of registeredMusicians) {
+                try {
+                    const userData = userDataMap.get(musician.uid!)
+                    if (!userData) continue
+                    const prefs = userData.musicianProfile?.notificationPreferences || {}
+                    const phone = userData.musicianProfile?.phone || userData.phone
+                    if (prefs.sms === true && phone) {
+                        sendSMS(phone, `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
+                            .catch(err => logger.warn(`[Publish] SMS failed for ${musician.uid}:`, err))
+                    }
+                } catch (e) {
+                    logger.warn(`[Publish] SMS pref check failed for ${musician.uid}:`, e)
+                }
+            }
+        }
 
         // Step 5: Log audit entry (fire-and-forget)
         const historyRef = setlistRef.collection('history').doc()
