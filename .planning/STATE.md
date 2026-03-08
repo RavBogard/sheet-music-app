@@ -54,6 +54,10 @@ Progress: [██░░░░░░░░] 17%
 - [01-03]: soundEngineer is orthogonal boolean flag on UserProfile — not a role hierarchy level
 - [01-03]: INSTRUMENT_PRESETS has 18 presets (not 17): 7 core + 8 occasional + 3 other
 - [01-03]: bridge-latency.test.ts is a browser dev utility — renamed to .util.ts to exclude from vitest
+- [01-02]: setlist-store.ts retained as staging buffer for library-to-setlist workflow — remove in Phase 4
+- [01-02]: Store consolidation documented in codebase-audit.md — plan-now-execute-later per CONTEXT.md
+- [01-02]: Admin triage: 7 essential, 7 duct-tape (remove when backend fixed), 4 simplify in Phase 5
+- [01-02]: recharts dependency orphaned after analytics deletion — remove when TimelineChart.tsx is deleted in Phase 3
 - [Phase 01-monitor-research-code-audit]: Firestore-only transport: zero iPad config wins over WebSocket latency
 - [Phase 01-monitor-research-code-audit]: Production PC deployment: Electron installer and auto-start already handle it
 - [Phase 01-monitor-research-code-audit]: Hybrid WebSocket fallback: implement only if P95 server-confirmed latency exceeds 300ms in production

@@ -88,8 +88,8 @@
 
 ## Code Quality & Architecture
 
-- [ ] **CODE-01**: Codebase audit — identify and remove dead code, unused components, abandoned features
-- [ ] **CODE-02**: Consolidate Zustand stores from 8 fragmented stores to a focused architecture
+- [x] **CODE-01**: Codebase audit — identify and remove dead code, unused components, abandoned features
+- [x] **CODE-02**: Consolidate Zustand stores from 8 fragmented stores to a focused architecture
 - [ ] **CODE-03**: Backend systems are robust enough that admin duct-tape tools are unnecessary
 - [ ] **CODE-04**: Admin tooling simplified to essentials: user management and library management
 
@@ -173,8 +173,8 @@
 | HOME-02 | Phase 3 | Pending |
 | PRINT-01 | Phase 5 | Pending |
 | PRINT-02 | Phase 5 | Pending |
-| CODE-01 | Phase 1 | Pending |
-| CODE-02 | Phase 1 | Pending |
+| CODE-01 | Phase 1 | Complete |
+| CODE-02 | Phase 1 | Complete |
 | CODE-03 | Phase 5 | Pending |
 | CODE-04 | Phase 5 | Pending |
 
