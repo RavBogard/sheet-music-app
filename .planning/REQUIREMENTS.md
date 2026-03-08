@@ -28,12 +28,12 @@
 
 ## Monitor Mixing
 
-- [ ] **MIX-01**: Musician can see their assigned monitor channels and adjust fader levels from their tablet
-- [ ] **MIX-02**: Musician can mute/unmute individual channels in their personal monitor mix
-- [ ] **MIX-03**: Configure mode: musician can star/select which channels (6-8) they want to see during live performance
+- [x] **MIX-01**: Musician can see their assigned monitor channels and adjust fader levels from their tablet
+- [x] **MIX-02**: Musician can mute/unmute individual channels in their personal monitor mix
+- [x] **MIX-03**: Configure mode: musician can star/select which channels (6-8) they want to see during live performance
 - [ ] **MIX-04**: Live mode: only starred channels are visible — clean, fast, no clutter
-- [ ] **MIX-05**: Sound engineer can pre-configure which channels each musician sees
-- [ ] **MIX-06**: Sound engineer can assign monitor bus mappings to individual musicians via the app
+- [x] **MIX-05**: Sound engineer can pre-configure which channels each musician sees
+- [x] **MIX-06**: Sound engineer can assign monitor bus mappings to individual musicians via the app
 - [ ] **MIX-07**: Monitor controls are always 1-2 taps away from any screen in the app (setlist, PDF, home)
 - [x] **MIX-08**: Bridge/proxy architecture is stupid simple to install on the production PC or LAN device
 - [x] **MIX-09**: Bridge auto-starts, auto-reconnects, and requires zero technical troubleshooting during a service
@@ -137,12 +137,12 @@
 | EDIT-08 | Phase 4 | Pending |
 | EDIT-09 | Phase 4 | Pending |
 | EDIT-10 | Phase 4 | Pending |
-| MIX-01 | Phase 2 | Pending |
-| MIX-02 | Phase 2 | Pending |
-| MIX-03 | Phase 2 | Pending |
+| MIX-01 | Phase 2 | Complete |
+| MIX-02 | Phase 2 | Complete |
+| MIX-03 | Phase 2 | Complete |
 | MIX-04 | Phase 2 | Pending |
-| MIX-05 | Phase 2 | Pending |
-| MIX-06 | Phase 2 | Pending |
+| MIX-05 | Phase 2 | Complete |
+| MIX-06 | Phase 2 | Complete |
 | MIX-07 | Phase 2 | Pending |
 | MIX-08 | Phase 2 | Complete |
 | MIX-09 | Phase 2 | Complete |
