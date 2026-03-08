@@ -9,7 +9,7 @@ CRC Music v2.0 focuses on three pillars: the setlist experience (editor + perfor
 - [x] **Phase 1: Monitor Research Spike + Code Audit** — Deep research into X32 bridge architecture; audit codebase for cleanup
 - [ ] **Phase 2: Monitor Mixing Implementation** — Build the bridge, configure mode, and live mode based on research findings
 - [ ] **Phase 3: Setlist Performance View** — Tablet-first setlist-at-a-glance with service flow, transposition, PDF integration, public access
-- [ ] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
+- [x] **Phase 4: Setlist Editor** — Template-based creation, duplicate-and-tweak workflow, AI integration, drag-drop service flow builder
 - [ ] **Phase 5: Backend Hardening & Library** — Drive sync robustness, library management, print pipeline, admin simplification, code cleanup execution
 - [ ] **Phase 6: Scheduling, Notifications & Polish** — Assign musicians, notifications, home screen, final polish for launch
 
@@ -74,7 +74,7 @@ Plans:
 **Goal**: Daniel can build a complete service — songs, readings, prayers, keys, tempos, leads — faster than a spreadsheet, using templates, duplication, and AI assistance
 **Depends on**: Phase 3 (performance view validates the setlist data model before building the editor on top of it)
 **Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **Success Criteria:**
   1. Band leader selects a service template (from 16 options) and gets a pre-filled liturgical skeleton with the correct structure
   2. Band leader duplicates last week's setlist and swaps 2-3 songs in under 2 minutes
@@ -84,9 +84,9 @@ Plans:
   6. Publishing a setlist makes it immediately visible in musicians' performance view
 
 Plans:
-- [ ] 04-01-PLAN.md — Inline accordion editing, search-first song adding, auto-publish, and change notifications
-- [ ] 04-02-PLAN.md — Complete 16 liturgical templates and enhance duplicate-and-tweak workflow
-- [ ] 04-03-PLAN.md — AI template auto-fill and enhanced chat commands for setlist modifications
+- [x] 04-01-PLAN.md — Inline accordion editing, search-first song adding, auto-publish, and change notifications
+- [x] 04-02-PLAN.md — Complete 16 liturgical templates and enhance duplicate-and-tweak workflow
+- [x] 04-03-PLAN.md — AI template auto-fill and enhanced chat commands for setlist modifications
 
 ### Phase 5: Backend Hardening & Library
 **Goal**: Backend systems are robust enough to run without admin duct tape — Drive sync is reliable, library management works in-app, print pipeline is clean, admin is simplified to essentials
@@ -175,7 +175,7 @@ Note: 53 new + MIX-12 counted in Phase 1 = 52 mapped (MIX-12 is research, rest o
 | 1. Monitor Research + Code Audit | 3/3 | Complete |
 | 2. Monitor Mixing Implementation | 0/3 | Not started |
 | 3. Setlist Performance View | 0/3 | Not started |
-| 4. Setlist Editor | 0/3 | Not started |
+| 4. Setlist Editor | 3/3 | Complete |
 | 5. Backend Hardening & Library | 0/3 | Not started |
 | 6. Scheduling, Notifications & Polish | 0/2 | Not started |
 

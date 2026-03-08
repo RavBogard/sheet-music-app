@@ -23,8 +23,8 @@
 - [x] **EDIT-06**: Band leader can publish a setlist, making it visible to all assigned musicians
 - [x] **EDIT-07**: Band leader can edit a published setlist (changes propagate to musicians)
 - [x] **EDIT-08**: Setlist creation is faster than a spreadsheet — minimal clicks, keyboard-friendly, tab-through fields
-- [ ] **EDIT-09**: AI can auto-fill a setlist from a template with reasonable defaults via natural language command
-- [ ] **EDIT-10**: AI accepts chat commands for setlist modifications ("add Mi Chamocha in Am after the responsive reading")
+- [x] **EDIT-09**: AI can auto-fill a setlist from a template with reasonable defaults via natural language command
+- [x] **EDIT-10**: AI accepts chat commands for setlist modifications ("add Mi Chamocha in Am after the responsive reading")
 
 ## Monitor Mixing
 
@@ -135,8 +135,8 @@
 | EDIT-06 | Phase 4 | Complete |
 | EDIT-07 | Phase 4 | Complete |
 | EDIT-08 | Phase 4 | Complete |
-| EDIT-09 | Phase 4 | Pending |
-| EDIT-10 | Phase 4 | Pending |
+| EDIT-09 | Phase 4 | Complete |
+| EDIT-10 | Phase 4 | Complete |
 | MIX-01 | Phase 2 | Complete |
 | MIX-02 | Phase 2 | Complete |
 | MIX-03 | Phase 2 | Complete |
