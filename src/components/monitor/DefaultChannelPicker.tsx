@@ -92,7 +92,7 @@ export function DefaultChannelPicker() {
             <p className="text-xs text-muted-foreground">
                 These channels appear in every musician&apos;s live monitor popup by default.
             </p>
-            <div className="grid grid-cols-2 gap-1.5 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto">
                 {channels.map(ch => {
                     const isSelected = selected.includes(ch.index)
                     return (
@@ -101,13 +101,13 @@ export function DefaultChannelPicker() {
                             onClick={() => toggleChannel(ch.index)}
                             className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm transition-colors min-h-[44px] ${
                                 isSelected
-                                    ? "bg-violet-600/20 border border-violet-500/30 text-violet-200"
+                                    ? "bg-brand/10 border border-brand/30 text-foreground"
                                     : "bg-zinc-900/40 border border-zinc-800 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/60"
                             }`}
                         >
                             <div className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
                                 isSelected
-                                    ? "bg-violet-600 border-violet-500"
+                                    ? "bg-brand border-brand"
                                     : "border-zinc-600"
                             }`}>
                                 {isSelected && <Check className="w-3 h-3 text-white" />}

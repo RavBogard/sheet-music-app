@@ -68,18 +68,18 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        dropZoneRef.current?.classList.remove('border-purple-500')
+        dropZoneRef.current?.classList.remove('border-brand')
         const droppedFile = e.dataTransfer.files[0]
         if (droppedFile) handleFileSelect(droppedFile)
     }, [handleFileSelect])
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault()
-        dropZoneRef.current?.classList.add('border-purple-500')
+        dropZoneRef.current?.classList.add('border-brand')
     }, [])
 
     const handleDragLeave = useCallback(() => {
-        dropZoneRef.current?.classList.remove('border-purple-500')
+        dropZoneRef.current?.classList.remove('border-brand')
     }, [])
 
     const handleUpload = async () => {
@@ -133,10 +133,10 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-white">
+            <DialogContent className="w-full sm:max-w-md bg-background border-border text-foreground">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Music className="h-5 w-5 text-purple-400" />
+                        <Music className="h-5 w-5 text-brand" />
                         Upload to Library
                     </DialogTitle>
                 </DialogHeader>
@@ -156,11 +156,11 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:border-zinc-500 transition-colors"
+                                className="border-2 border-dashed border-zinc-700 rounded-xl p-4 sm:p-8 text-center cursor-pointer hover:border-zinc-500 transition-colors"
                             >
                                 <FileUp className="h-8 w-8 text-zinc-500 mx-auto mb-3" />
                                 <p className="text-sm text-zinc-400 mb-1">
-                                    Drop a file here or <span className="text-purple-400">browse</span>
+                                    Drop a file here or <span className="text-brand">browse</span>
                                 </p>
                                 <p className="text-xs text-zinc-600">PDF or MusicXML, up to {MAX_SIZE_MB}MB</p>
                                 <input
@@ -176,14 +176,14 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                             </div>
                         ) : (
                             <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg border border-zinc-800">
-                                <div className="h-10 w-10 bg-purple-600/20 rounded-lg flex items-center justify-center shrink-0">
-                                    <FileUp className="h-5 w-5 text-purple-400" />
+                                <div className="h-10 w-10 bg-brand/10 rounded-lg flex items-center justify-center shrink-0">
+                                    <FileUp className="h-5 w-5 text-brand" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{file.name}</p>
                                     <p className="text-xs text-zinc-500">{(file.size / 1024).toFixed(0)} KB</p>
                                 </div>
-                                <button onClick={() => setFile(null)} className="text-zinc-500 hover:text-white">
+                                <button onClick={() => setFile(null)} className="text-zinc-500 hover:text-white" aria-label="Remove file">
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
@@ -194,23 +194,24 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                             <>
                                 {/* Title */}
                                 <div>
-                                    <label className="text-xs text-zinc-500 mb-1 block">Title</label>
+                                    <label htmlFor="upload-title" className="text-xs text-muted-foreground mb-1 block">Title</label>
                                     <Input
+                                        id="upload-title"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         placeholder="Song title"
-                                        className="bg-zinc-900 border-zinc-700 text-white"
                                     />
                                 </div>
 
                                 {/* Key + BPM row */}
                                 <div className="flex gap-3">
                                     <div className="flex-1">
-                                        <label className="text-xs text-zinc-500 mb-1 block">Key</label>
+                                        <label htmlFor="upload-key" className="text-xs text-muted-foreground mb-1 block">Key</label>
                                         <select
+                                            id="upload-key"
                                             value={key}
                                             onChange={(e) => setKey(e.target.value)}
-                                            className="w-full h-9 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-white text-sm"
+                                            className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                         >
                                             <option value="">—</option>
                                             {KEY_OPTIONS.filter(k => k).map(k => (
@@ -219,27 +220,27 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                         </select>
                                     </div>
                                     <div className="flex-1">
-                                        <label className="text-xs text-zinc-500 mb-1 block">BPM</label>
+                                        <label htmlFor="upload-bpm" className="text-xs text-muted-foreground mb-1 block">BPM</label>
                                         <Input
+                                            id="upload-bpm"
                                             type="number"
                                             value={bpm}
                                             onChange={(e) => setBpm(e.target.value)}
                                             placeholder="120"
                                             min={30}
                                             max={300}
-                                            className="bg-zinc-900 border-zinc-700 text-white"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Tags */}
                                 <div>
-                                    <label className="text-xs text-zinc-500 mb-1 block">Tags (comma-separated)</label>
+                                    <label htmlFor="upload-tags" className="text-xs text-muted-foreground mb-1 block">Tags (comma-separated)</label>
                                     <Input
+                                        id="upload-tags"
                                         value={tags}
                                         onChange={(e) => setTags(e.target.value)}
                                         placeholder="shabbat, morning, healing"
-                                        className="bg-zinc-900 border-zinc-700 text-white"
                                     />
                                 </div>
 
@@ -247,7 +248,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                 <Button
                                     onClick={handleUpload}
                                     disabled={uploading}
-                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white"
+                                    className="w-full bg-brand hover:bg-brand/80 text-white"
                                 >
                                     {uploading ? (
                                         <>

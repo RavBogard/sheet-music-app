@@ -378,10 +378,21 @@
   animation: page-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Disable page transitions for users who prefer reduced motion */
+/* Disable animations for users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .page-transition {
-    animation: none;
+  .page-transition,
+  .dash-stagger,
+  .dash-progress-bar,
+  .dash-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
   }
 }
 

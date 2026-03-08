@@ -129,7 +129,7 @@ export function HeroCard({
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold text-white leading-snug mb-4 font-display">
+            <h3 className="text-lg sm:text-xl font-bold text-white leading-snug mb-4 font-display line-clamp-2">
                 {setlist.name}
             </h3>
 
@@ -166,9 +166,10 @@ export function HeroCard({
                                 <Circle className="w-3 h-3" />
                                 {offlineStatus.cached}/{offlineStatus.total} cached
                             </span>
-                            <span
-                                role="button"
+                            <button
                                 onClick={handleDownloadForOffline}
+                                disabled={downloading}
+                                aria-label="Download all charts for offline use"
                                 className={cn(
                                     "inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full transition-colors",
                                     downloading
@@ -181,7 +182,7 @@ export function HeroCard({
                                 ) : (
                                     <><Download className="w-3 h-3" /> Download all</>
                                 )}
-                            </span>
+                            </button>
                         </>
                     )}
                 </div>
