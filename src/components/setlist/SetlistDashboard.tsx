@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import dynamic from "next/dynamic"
 
+import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
 import { ImporterModal } from "./importer/ImporterModal"
@@ -74,17 +75,28 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                     <Sparkles className="h-4 w-4" /> From Template
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
+                                {/* Quick picks */}
                                 <DropdownMenuItem onClick={() => handleCreateFromTemplate('friday_night')}>
                                     <span className="font-medium">This Friday Night</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleCreateFromTemplate('shabbat_morning')}>
                                     <span className="font-medium">This Shabbat Morning</span>
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {/* All templates */}
+                                {Object.entries(TEMPLATE_LABELS)
+                                    .filter(([key]) => key !== 'friday_night' && key !== 'shabbat_morning')
+                                    .map(([key, meta]) => (
+                                    <DropdownMenuItem key={key} onClick={() => handleCreateFromTemplate(key as any)}>
+                                        <span className="text-sm">{meta.label}</span>
+                                        <span className="ml-auto text-xs text-muted-foreground">{meta.slotCount}</span>
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => setShowImporterModal(true)} className="md:hidden">
                                     <FolderUp className="h-4 w-4 mr-2" /> Import Setlist
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={onCreateNew || (() => router.push('/setlists/new'))} className="text-muted-foreground">
                                     Blank Setlist
                                 </DropdownMenuItem>

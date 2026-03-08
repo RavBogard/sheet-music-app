@@ -5,10 +5,13 @@ import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
 import { assignMusicians } from "@/lib/scheduling-firebase"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
+import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
+import { useLibraryStore } from "@/lib/library-store"
 
-export type WizardStep = 'details' | 'songs' | 'musicians'
+export type WizardStep = 'template' | 'details'
 
-const STEP_ORDER: WizardStep[] = ['details', 'songs', 'musicians']
+const STEP_ORDER: WizardStep[] = ['template', 'details']
 
 export interface UseCreationWizardReturn {
     // Navigation
@@ -21,7 +24,12 @@ export interface UseCreationWizardReturn {
     goBack: () => void
     goToStep: (step: WizardStep) => void
 
-    // Step 1: Details
+    // Step 1: Template
+    selectedTemplate: string | null
+    setSelectedTemplate: (key: string | null) => void
+    templateKeys: string[]
+
+    // Step 2: Details
     name: string
     setName: (v: string) => void
     isPublic: boolean
@@ -31,12 +39,12 @@ export interface UseCreationWizardReturn {
     rabbi: string
     setRabbi: (v: string) => void
 
-    // Step 2: Songs
+    // Songs (auto-populated from template or editable)
     tracks: SetlistTrack[]
     setTracks: (v: SetlistTrack[]) => void
     addSongsFromFiles: (files: DriveFile[]) => void
 
-    // Step 3: Musicians
+    // Musicians
     musicians: SetlistMusician[]
     setMusicians: (v: SetlistMusician[]) => void
 
@@ -50,35 +58,63 @@ export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
     const { user } = useAuth()
 
-    const [step, setStep] = useState<WizardStep>('details')
+    const [step, setStep] = useState<WizardStep>('template')
     const [creating, setCreating] = useState(false)
 
-    // Step 1
+    // Step 1: Template
+    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+
+    // Step 2: Details
     const [name, setName] = useState("")
     const [isPublic, setIsPublic] = useState(false)
     const [eventDate, setEventDate] = useState<Date | null>(null)
     const [rabbi, setRabbi] = useState("")
 
-    // Step 2
+    // Tracks & musicians
     const [tracks, setTracks] = useState<SetlistTrack[]>([])
-
-    // Step 3
     const [musicians, setMusicians] = useState<SetlistMusician[]>([])
 
+    const templateKeys = getAllTemplateKeys()
     const stepIndex = STEP_ORDER.indexOf(step)
     const totalSteps = STEP_ORDER.length
 
     const canGoBack = stepIndex > 0
     const canGoNext = useMemo(() => {
+        if (step === 'template') return true // Template selection is optional (blank setlist)
         if (step === 'details') return name.trim().length > 0
-        return true // Songs, musicians are all optional to skip
+        return true
     }, [step, name])
+
+    // When template is selected, auto-fill name and date
+    const handleTemplateSelect = useCallback(async (key: string | null) => {
+        setSelectedTemplate(key)
+        if (!key) return
+
+        // Determine a sensible date based on template type
+        const isFriday = key.includes('friday') || key === 'shir_shabbat'
+        const targetDate = isFriday ? getNextFriday() : getNextSaturday()
+        setEventDate(targetDate)
+
+        // Auto-generate name from liturgical context
+        try {
+            const context = await getFullServiceContext(targetDate)
+            context.type = key as any
+            setName(generateSetlistName(context))
+        } catch {
+            const label = TEMPLATE_LABELS[key]?.label || 'Service'
+            setName(label)
+        }
+    }, [])
 
     const goNext = useCallback(() => {
         if (stepIndex < STEP_ORDER.length - 1) {
+            // When advancing from template to details, trigger auto-fill
+            if (step === 'template' && selectedTemplate) {
+                handleTemplateSelect(selectedTemplate)
+            }
             setStep(STEP_ORDER[stepIndex + 1])
         }
-    }, [stepIndex])
+    }, [stepIndex, step, selectedTemplate, handleTemplateSelect])
 
     const goBack = useCallback(() => {
         if (stepIndex > 0) {
@@ -101,8 +137,9 @@ export function useCreationWizard(): UseCreationWizardReturn {
     }, [])
 
     const reset = useCallback(() => {
-        setStep('details')
+        setStep('template')
         setCreating(false)
+        setSelectedTemplate(null)
         setName("")
         setIsPublic(false)
         setEventDate(null)
@@ -118,17 +155,33 @@ export function useCreationWizard(): UseCreationWizardReturn {
         try {
             const service = createSetlistService(user.uid, user.displayName)
 
-            // 1. Create the setlist
-            const setlistId = await service.createSetlist(name, tracks, isPublic, {
+            // If a template was selected, build tracks from template + library
+            let finalTracks = tracks
+            if (selectedTemplate && finalTracks.length === 0) {
+                const template = getTemplate(selectedTemplate)
+                if (template && eventDate) {
+                    toast.loading('Building setlist from template...')
+                    const context = await getFullServiceContext(eventDate)
+                    context.type = selectedTemplate as any
+                    if (rabbi) (context as any).rabbi = rabbi
+                    const { allFiles } = useLibraryStore.getState()
+                    finalTracks = buildSetlistFromTemplate(template, allFiles, context)
+                    toast.dismiss()
+                }
+            }
+
+            // Create the setlist
+            const setlistId = await service.createSetlist(name, finalTracks, isPublic, {
                 eventDate: eventDate?.toISOString() ?? undefined,
                 rabbi: rabbi || undefined,
                 musicians,
+                templateType: selectedTemplate as any,
             })
 
-            // 2. Schedule musicians (if any selected and setlist is public)
+            // Schedule musicians (if any selected and setlist is public)
             if (musicians.length > 0 && isPublic) {
                 const musiciansToAssign = musicians
-                    .filter(m => m.uid) // Only registered musicians
+                    .filter(m => m.uid)
                     .map(m => ({
                         uid: m.uid!,
                         name: m.name,
@@ -145,20 +198,28 @@ export function useCreationWizard(): UseCreationWizardReturn {
                             musicians: musiciansToAssign,
                         })
                     } catch {
-                        // Don't block creation if scheduling fails
                         toast.error('Setlist created but musician scheduling failed')
                     }
                 }
             }
 
-            toast.success(`"${name}" created!`)
+            // Report matching stats
+            if (selectedTemplate) {
+                const matched = finalTracks.filter(t => t.fileId).length
+                const total = finalTracks.filter(t => t.type === 'song').length
+                toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+            } else {
+                toast.success(`"${name}" created!`)
+            }
+
             router.push(`/setlists/${setlistId}`)
         } catch (err) {
+            toast.dismiss()
             toast.error('Failed to create setlist')
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, router])
+    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, selectedTemplate, router])
 
     return {
         step,
@@ -169,6 +230,9 @@ export function useCreationWizard(): UseCreationWizardReturn {
         goNext,
         goBack,
         goToStep,
+        selectedTemplate,
+        setSelectedTemplate: handleTemplateSelect,
+        templateKeys,
         name,
         setName,
         isPublic,

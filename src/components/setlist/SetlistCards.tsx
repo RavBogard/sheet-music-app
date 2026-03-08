@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2 } from "lucide-react"
+import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus } from "lucide-react"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
 import {
@@ -128,6 +128,20 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                         </span>
                     )}
                 </div>
+
+                {/* Prominent "Duplicate for next week" button */}
+                {canDuplicate && (
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onCloneNextWeek(setlist, e)
+                        }}
+                        className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-brand/10 hover:bg-brand/20 text-brand text-sm font-medium transition-colors cursor-pointer border border-brand/20"
+                    >
+                        <CalendarPlus className="h-4 w-4" />
+                        Duplicate for Next Week
+                    </div>
+                )}
             </div>
         </button>
     )
@@ -224,6 +238,20 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
             <div className="mt-2 text-muted-foreground text-sm">
                 {setlist.trackCount || 0} songs{setlist.rabbi ? ` · Rabbi ${setlist.rabbi}` : ''}
             </div>
+
+            {/* Quick clone action */}
+            {canDuplicate && (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onCloneNextWeek?.(setlist, e)
+                    }}
+                    className="mt-2 flex items-center gap-1.5 text-xs text-brand/80 hover:text-brand transition-colors cursor-pointer"
+                >
+                    <CalendarPlus className="h-3.5 w-3.5" />
+                    <span>Duplicate for next week</span>
+                </div>
+            )}
         </button>
     )
 }

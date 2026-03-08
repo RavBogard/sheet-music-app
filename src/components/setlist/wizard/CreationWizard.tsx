@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import {
-    ChevronLeft, ChevronRight, Check, Loader2, Music, Users,
-    Calendar as CalendarIcon, Lock, Globe, Plus, X,
+    ChevronLeft, ChevronRight, Check, Loader2,
+    Calendar as CalendarIcon, Lock, Globe, Sparkles, FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,8 +16,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
 import { useCreationWizard, type WizardStep } from "@/hooks/use-creation-wizard"
-import { AddSongsModal } from "../modals/AddSongsModal"
-import { MusicianPicker } from "../v2/MusicianPicker"
+import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 
 interface CreationWizardProps {
     open: boolean
@@ -25,15 +24,13 @@ interface CreationWizardProps {
 }
 
 const STEPS: { id: WizardStep; label: string; icon: React.ReactNode }[] = [
+    { id: 'template', label: 'Template', icon: <Sparkles className="h-4 w-4" /> },
     { id: 'details', label: 'Details', icon: <CalendarIcon className="h-4 w-4" /> },
-    { id: 'songs', label: 'Songs', icon: <Music className="h-4 w-4" /> },
-    { id: 'musicians', label: 'Musicians', icon: <Users className="h-4 w-4" /> },
 ]
 
 export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
     const { isBandLeader } = useAuth()
     const wizard = useCreationWizard()
-    const [showAddSongs, setShowAddSongs] = useState(false)
 
     // Reset wizard state each time the dialog opens
     useEffect(() => {
@@ -51,94 +48,181 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
     }
 
     return (
-        <>
-            <Dialog open={open} onOpenChange={(v) => !wizard.creating && onOpenChange(v)}>
-                <DialogContent className="bg-card border-border text-foreground sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
-                    {/* Step indicator */}
-                    <div className="flex items-center gap-1 px-6 pt-6 pb-4 border-b border-border/50">
-                        {STEPS.map((s, i) => {
-                            const isCurrent = s.id === wizard.step
-                            const isDone = i < wizard.stepIndex
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => i <= wizard.stepIndex && wizard.goToStep(s.id)}
-                                    disabled={i > wizard.stepIndex}
-                                    className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                                        isCurrent && "bg-brand/10 text-brand",
-                                        isDone && "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer",
-                                        !isCurrent && !isDone && "text-muted-foreground/50 cursor-not-allowed",
-                                    )}
-                                >
-                                    {isDone ? <Check className="h-3.5 w-3.5" /> : s.icon}
-                                    <span className="hidden sm:inline">{s.label}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    {/* Step content */}
-                    <div className="flex-1 overflow-y-auto px-6 py-5">
-                        {wizard.step === 'details' && (
-                            <DetailsStep wizard={wizard} isBandLeader={isBandLeader} />
-                        )}
-                        {wizard.step === 'songs' && (
-                            <SongsStep wizard={wizard} onOpenPicker={() => setShowAddSongs(true)} />
-                        )}
-                        {wizard.step === 'musicians' && (
-                            <MusiciansStep wizard={wizard} />
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/20">
-                        <Button
-                            variant="ghost"
-                            onClick={wizard.goBack}
-                            disabled={!wizard.canGoBack || wizard.creating}
-                            className="gap-1.5"
-                        >
-                            <ChevronLeft className="h-4 w-4" /> Back
-                        </Button>
-
-                        <div className="flex items-center gap-2">
-                            <Button
-                                onClick={handleNext}
-                                disabled={!wizard.canGoNext || wizard.creating}
+        <Dialog open={open} onOpenChange={(v) => !wizard.creating && onOpenChange(v)}>
+            <DialogContent className="bg-card border-border text-foreground sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+                {/* Step indicator */}
+                <div className="flex items-center gap-1 px-6 pt-6 pb-4 border-b border-border/50">
+                    {STEPS.map((s, i) => {
+                        const isCurrent = s.id === wizard.step
+                        const isDone = i < wizard.stepIndex
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => i <= wizard.stepIndex && wizard.goToStep(s.id)}
+                                disabled={i > wizard.stepIndex}
                                 className={cn(
-                                    "gap-1.5",
-                                    isLastStep && "bg-brand hover:bg-brand/90",
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                                    isCurrent && "bg-brand/10 text-brand",
+                                    isDone && "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer",
+                                    !isCurrent && !isDone && "text-muted-foreground/50 cursor-not-allowed",
                                 )}
                             >
-                                {wizard.creating ? (
-                                    <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>
-                                ) : isLastStep ? (
-                                    <><Check className="h-4 w-4" /> Create Setlist</>
-                                ) : (
-                                    <>Next <ChevronRight className="h-4 w-4" /></>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                                {isDone ? <Check className="h-3.5 w-3.5" /> : s.icon}
+                                <span className="hidden sm:inline">{s.label}</span>
+                            </button>
+                        )
+                    })}
+                </div>
 
-            {/* AddSongsModal (rendered outside the dialog to avoid z-index issues) */}
-            <AddSongsModal
-                isOpen={showAddSongs}
-                onClose={() => setShowAddSongs(false)}
-                onAdd={(files) => {
-                    wizard.addSongsFromFiles(files)
-                    setShowAddSongs(false)
-                }}
-                currentTrackFileIds={new Set(wizard.tracks.filter(t => t.fileId).map(t => t.fileId!))}
-            />
-        </>
+                {/* Step content */}
+                <div className="flex-1 overflow-y-auto px-6 py-5">
+                    {wizard.step === 'template' && (
+                        <TemplateStep wizard={wizard} />
+                    )}
+                    {wizard.step === 'details' && (
+                        <DetailsStep wizard={wizard} isBandLeader={isBandLeader} />
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/20">
+                    <Button
+                        variant="ghost"
+                        onClick={wizard.goBack}
+                        disabled={!wizard.canGoBack || wizard.creating}
+                        className="gap-1.5"
+                    >
+                        <ChevronLeft className="h-4 w-4" /> Back
+                    </Button>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handleNext}
+                            disabled={!wizard.canGoNext || wizard.creating}
+                            className={cn(
+                                "gap-1.5",
+                                isLastStep && "bg-brand hover:bg-brand/90",
+                            )}
+                        >
+                            {wizard.creating ? (
+                                <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>
+                            ) : isLastStep ? (
+                                <><Check className="h-4 w-4" /> Create Setlist</>
+                            ) : (
+                                <>Next <ChevronRight className="h-4 w-4" /></>
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }
 
-// ── Step 1: Details ──
+// ── Step 1: Template Picker ──
+
+function TemplateStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
+    const regularTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'regular')
+    const holidayTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'holiday')
+
+    return (
+        <div className="space-y-6 max-w-lg mx-auto">
+            <div>
+                <h2 className="text-xl font-bold mb-1">Choose a template</h2>
+                <p className="text-sm text-muted-foreground">
+                    Pick a service type to get a pre-filled liturgical skeleton, or start blank.
+                </p>
+            </div>
+
+            {/* Regular templates */}
+            <div className="space-y-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Regular Services</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {regularTemplates.map(key => {
+                        const meta = TEMPLATE_LABELS[key]
+                        const isSelected = wizard.selectedTemplate === key
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => wizard.setSelectedTemplate(isSelected ? null : key)}
+                                className={cn(
+                                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                                    isSelected
+                                        ? "border-brand bg-brand/10 ring-1 ring-brand/30"
+                                        : "border-border/50 bg-card/70 hover:bg-card hover:border-border"
+                                )}
+                            >
+                                <div className={cn(
+                                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                                    isSelected ? "bg-brand/20 text-brand" : "bg-muted text-muted-foreground"
+                                )}>
+                                    <Sparkles className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium truncate">{meta?.label || key}</div>
+                                    <div className="text-xs text-muted-foreground">{meta?.slotCount || 0} slots</div>
+                                </div>
+                                {isSelected && <Check className="h-4 w-4 text-brand shrink-0" />}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Holiday templates */}
+            <div className="space-y-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Holiday Services</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {holidayTemplates.map(key => {
+                        const meta = TEMPLATE_LABELS[key]
+                        const isSelected = wizard.selectedTemplate === key
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => wizard.setSelectedTemplate(isSelected ? null : key)}
+                                className={cn(
+                                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                                    isSelected
+                                        ? "border-brand bg-brand/10 ring-1 ring-brand/30"
+                                        : "border-border/50 bg-card/70 hover:bg-card hover:border-border"
+                                )}
+                            >
+                                <div className={cn(
+                                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                                    isSelected ? "bg-brand/20 text-brand" : "bg-muted text-muted-foreground"
+                                )}>
+                                    <FileText className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium truncate">{meta?.label || key}</div>
+                                    <div className="text-xs text-muted-foreground">{meta?.slotCount || 0} slots</div>
+                                </div>
+                                {isSelected && <Check className="h-4 w-4 text-brand shrink-0" />}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Blank option */}
+            <button
+                onClick={() => wizard.setSelectedTemplate(null)}
+                className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                    wizard.selectedTemplate === null
+                        ? "border-muted-foreground/30 bg-muted/20"
+                        : "border-border/30 bg-transparent hover:bg-muted/10"
+                )}
+            >
+                <div className="text-sm text-muted-foreground">
+                    Or skip template and start with a blank setlist
+                </div>
+            </button>
+        </div>
+    )
+}
+
+// ── Step 2: Details (Name, Date, Rabbi, Public/Private) ──
 
 function DetailsStep({ wizard, isBandLeader }: { wizard: ReturnType<typeof useCreationWizard>; isBandLeader: boolean }) {
     const congregation = useCongregation()
@@ -148,7 +232,11 @@ function DetailsStep({ wizard, isBandLeader }: { wizard: ReturnType<typeof useCr
         <div className="space-y-6 max-w-md mx-auto">
             <div>
                 <h2 className="text-xl font-bold mb-1">Name your setlist</h2>
-                <p className="text-sm text-muted-foreground">What service is this for?</p>
+                <p className="text-sm text-muted-foreground">
+                    {wizard.selectedTemplate
+                        ? "Auto-generated from template. Edit if needed."
+                        : "What service is this for?"}
+                </p>
             </div>
 
             <Input
@@ -235,77 +323,3 @@ function DetailsStep({ wizard, isBandLeader }: { wizard: ReturnType<typeof useCr
         </div>
     )
 }
-
-// ── Step 2: Songs ──
-
-function SongsStep({ wizard, onOpenPicker }: { wizard: ReturnType<typeof useCreationWizard>; onOpenPicker: () => void }) {
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold mb-1">Add songs</h2>
-                    <p className="text-sm text-muted-foreground">
-                        {wizard.tracks.length === 0
-                            ? "Browse the library to add songs. You can skip this and add them later."
-                            : `${wizard.tracks.length} song${wizard.tracks.length !== 1 ? 's' : ''} selected`}
-                    </p>
-                </div>
-                <Button onClick={onOpenPicker} className="gap-1.5 bg-brand hover:bg-brand/90">
-                    <Plus className="h-4 w-4" /> Add Songs
-                </Button>
-            </div>
-
-            {wizard.tracks.length > 0 && (
-                <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
-                    {wizard.tracks.map((track, i) => (
-                        <div key={track.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 bg-card/70 hover:bg-card transition-colors group">
-                            <span className="text-xs text-muted-foreground/60 w-5 text-right">{i + 1}</span>
-                            <Music className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="text-sm font-medium flex-1 truncate">{track.title}</span>
-                            {track.key && <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{track.key}</span>}
-                            <button
-                                onClick={() => wizard.setTracks(wizard.tracks.filter(t => t.id !== track.id))}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 transition-all"
-                            >
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {wizard.tracks.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground border border-dashed border-border/60 rounded-xl bg-muted/10">
-                    <Music className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm font-medium">No songs yet</p>
-                    <p className="text-xs mt-1">Click "Add Songs" to browse the library</p>
-                </div>
-            )}
-        </div>
-    )
-}
-
-// ── Step 3: Musicians ──
-
-function MusiciansStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
-    return (
-        <div className="space-y-4">
-            <div>
-                <h2 className="text-xl font-bold mb-1">Assign musicians</h2>
-                <p className="text-sm text-muted-foreground">
-                    Select who will play this service. You can skip this and assign later.
-                </p>
-            </div>
-
-            <MusicianPicker
-                musicians={wizard.musicians}
-                onChange={wizard.setMusicians}
-                canEdit={true}
-                setlistName={wizard.name}
-                eventDate={wizard.eventDate?.toISOString() ?? null}
-                rabbiName={wizard.rabbi}
-            />
-        </div>
-    )
-}
-

@@ -205,24 +205,25 @@ export function useSetlistDashboard({
         }
     }
 
-    const handleCreateFromTemplate = async (templateType: 'friday_night' | 'shabbat_morning') => {
+    const handleCreateFromTemplate = async (templateType: string) => {
         if (!setlistService || !user) return
 
-        const targetDate = templateType === 'friday_night' ? getNextFriday() : getNextSaturday()
+        const isFriday = templateType.includes('friday') || templateType === 'shir_shabbat'
+        const targetDate = isFriday ? getNextFriday() : getNextSaturday()
         const template = getTemplate(templateType)
         if (!template) return
 
         try {
             toast.loading('Building setlist from template...')
             const context = await getFullServiceContext(targetDate)
-            context.type = templateType
+            context.type = templateType as any
             const { allFiles } = useLibraryStore.getState()
             const tracks = buildSetlistFromTemplate(template, allFiles, context)
             const name = generateSetlistName(context)
 
             const id = await setlistService.createSetlist(name, tracks, true, {
                 eventDate: targetDate.toISOString(),
-                templateType,
+                templateType: templateType as any,
                 isTemplate: false,
             })
 
