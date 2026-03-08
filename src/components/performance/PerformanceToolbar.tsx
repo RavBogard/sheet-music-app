@@ -7,7 +7,7 @@ import { Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X } from "lucide-r
 import { TransposerMenu, ChordEditBar } from "../music/TransposerMenu"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
+import { SetlistDrawer } from "@/components/performance/SetlistDrawerLegacy"
 import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
