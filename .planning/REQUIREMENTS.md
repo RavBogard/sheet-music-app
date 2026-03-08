@@ -15,8 +15,8 @@
 
 ## Setlist Editor
 
-- [ ] **EDIT-01**: Band leader can create a new setlist from a service template that pre-fills the liturgical skeleton (16 templates: 7 regular, 9 holiday)
-- [ ] **EDIT-02**: Band leader can duplicate a previous setlist and modify it (the primary weekly workflow)
+- [x] **EDIT-01**: Band leader can create a new setlist from a service template that pre-fills the liturgical skeleton (16 templates: 7 regular, 9 holiday)
+- [x] **EDIT-02**: Band leader can duplicate a previous setlist and modify it (the primary weekly workflow)
 - [x] **EDIT-03**: Band leader can add songs from the library, set key, tempo/feel, lead musician, and notes for each song
 - [x] **EDIT-04**: Band leader can add, reorder, and edit non-song items (readings, prayers, transitions) in the service flow
 - [x] **EDIT-05**: Band leader can drag-drop to reorder all items in the service flow
@@ -127,8 +127,8 @@
 | SET-05 | Phase 3 | Complete |
 | SET-06 | Phase 3 | Complete |
 | SET-07 | Phase 3 | Complete |
-| EDIT-01 | Phase 4 | Pending |
-| EDIT-02 | Phase 4 | Pending |
+| EDIT-01 | Phase 4 | Complete |
+| EDIT-02 | Phase 4 | Complete |
 | EDIT-03 | Phase 4 | Complete |
 | EDIT-04 | Phase 4 | Complete |
 | EDIT-05 | Phase 4 | Complete |

@@ -74,7 +74,7 @@ Plans:
 **Goal**: Daniel can build a complete service — songs, readings, prayers, keys, tempos, leads — faster than a spreadsheet, using templates, duplication, and AI assistance
 **Depends on**: Phase 3 (performance view validates the setlist data model before building the editor on top of it)
 **Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 **Success Criteria:**
   1. Band leader selects a service template (from 16 options) and gets a pre-filled liturgical skeleton with the correct structure
   2. Band leader duplicates last week's setlist and swaps 2-3 songs in under 2 minutes
@@ -160,8 +160,7 @@ All 53 new requirements mapped to exactly one phase:
 | Phase | Requirements | Count |
 |-------|-------------|-------|
 | 1. Monitor Research + Code Audit | 3/3 | Complete   | 2026-03-08 | 2. Monitor Mixing Implementation | MIX-01..11 | 11 |
-| 3. Setlist Performance View | 2/3 | In Progress|  | 4. Setlist Editor | EDIT-01..10 | 10 |
-| 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
+| 3. Setlist Performance View | 2/3 | In Progress|  | 4. Setlist Editor | 2/3 | In Progress|  | 5. Backend Hardening & Library | LIB-01..04, PRINT-01..02, CODE-03..04 | 8 |
 | 6. Scheduling, Notifications & Polish | SCHED-01..02, NOTIF-01..02 | 4 |
 | **Total** | | **52** |
 
