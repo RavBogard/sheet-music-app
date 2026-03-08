@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
 import { Headphones, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const ROLE_HIERARCHY: Record<string, number> = {
     pending: 0,
@@ -135,14 +136,16 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
     return (
-        <div className={`flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50 ${isSelected ? 'bg-violet-500/5 hover:bg-violet-500/10' : ''}`}>
+        <div className={cn("flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50", isSelected && "bg-brand/5 hover:bg-brand/10")}>
             {/* Checkbox Column */}
-            <input
-                type="checkbox"
-                checked={isSelected || false}
-                onChange={onSelect}
-                className="h-4 w-4 rounded border-border accent-violet-600 shrink-0 cursor-pointer"
-            />
+            <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={isSelected || false}
+                    onChange={onSelect}
+                    className="h-4 w-4 rounded border-border accent-brand shrink-0 cursor-pointer"
+                />
+            </label>
 
             <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center pl-2">
                 {/* User Info Column (col-span-12 on mobile, col-span-5 on sm) */}
@@ -162,12 +165,12 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
 
                 {/* Attributes Column (hidden on mobile, col-span-3 on sm) */}
                 <div className="hidden sm:flex col-span-3 items-center gap-1.5 flex-wrap">
-                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[10px] h-5 px-1.5">Admin</Badge>}
-                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-blue-500/20 text-blue-300 border-blue-500/50 text-[10px] h-5 px-1.5">Leader</Badge>}
-                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-green-500/20 text-green-300 border-green-500/50 text-[10px] h-5 px-1.5">Musician</Badge>}
+                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[10px] h-5 px-1.5">Admin</Badge>}
+                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[10px] h-5 px-1.5">Leader</Badge>}
+                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[10px] h-5 px-1.5">Member</Badge>}
-                    {user.soundEngineer && <Badge variant="default" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
-                    {isPending && <Badge variant="destructive" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
+                    {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
+                    {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
 
                     <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={user.createdAt ? toDate(user.createdAt)?.toLocaleString() : ""}>
                         {user.createdAt ? formatDistanceToNow(toDate(user.createdAt) || new Date(), { addSuffix: true }) : ""}
@@ -180,13 +183,15 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
                         <button
                             onClick={handleSoundEngineerToggle}
-                            className={`p-1.5 rounded-lg border transition-colors ${user.soundEngineer
-                                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-500 dark:text-emerald-400'
-                                    : 'bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted'
-                                }`}
+                            className={cn(
+                                "min-h-11 min-w-11 flex items-center justify-center rounded-lg border transition-colors",
+                                user.soundEngineer
+                                    ? "bg-success/20 border-success/40 text-success"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
+                            )}
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
                         >
-                            <Headphones className="h-3.5 w-3.5" />
+                            <Headphones className="h-4 w-4" />
                         </button>
                     )}
 
@@ -194,13 +199,15 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {isCurrentAdmin && !isSelf && (
                         <button
                             onClick={handleDelete}
-                            className={`p-1.5 rounded-lg border transition-colors ${confirmDelete
-                                    ? 'bg-red-500/20 border-red-500/40 text-red-500 dark:text-red-400'
-                                    : 'bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20'
-                                }`}
+                            className={cn(
+                                "min-h-11 min-w-11 flex items-center justify-center rounded-lg border transition-colors",
+                                confirmDelete
+                                    ? "bg-destructive/20 border-destructive/40 text-destructive"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                            )}
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
                         >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                         </button>
                     )}
 
@@ -211,7 +218,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             value={effectiveRole}
                             onValueChange={handleRoleChange}
                         >
-                            <SelectTrigger className="w-[120px] bg-background border-border h-8 text-xs font-medium">
+                            <SelectTrigger className="w-[120px] bg-background border-border h-11 text-xs font-medium">
                                 <SelectValue placeholder="Role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -233,11 +240,11 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             {/* Mobile Actions (visible only < sm) */}
             <div className="sm:hidden basis-full flex items-center justify-between px-2 pt-2 mt-1 border-t border-border/50">
                 <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[9px] h-4 px-1.5">Admin</Badge>}
-                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-blue-500/20 text-blue-300 border-blue-500/50 text-[9px] h-4 px-1.5">Leader</Badge>}
-                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-green-500/20 text-green-300 border-green-500/50 text-[9px] h-4 px-1.5">Musician</Badge>}
+                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[9px] h-4 px-1.5">Admin</Badge>}
+                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[9px] h-4 px-1.5">Leader</Badge>}
+                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
-                    {user.soundEngineer && <Badge variant="default" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
+                    {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -247,7 +254,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             value={effectiveRole}
                             onValueChange={handleRoleChange}
                         >
-                            <SelectTrigger className="w-[100px] bg-background border-border h-7 text-[10px]">
+                            <SelectTrigger className="w-[100px] bg-background border-border h-11 text-[10px]">
                                 <SelectValue placeholder="Role" />
                             </SelectTrigger>
                             <SelectContent>
