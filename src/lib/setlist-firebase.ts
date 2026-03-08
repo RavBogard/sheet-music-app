@@ -39,10 +39,12 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false, additionalData: Partial<Setlist> = {}) {
             try {
+                // Sanitize tracks: Firebase rejects undefined values
+                const cleanTracks = JSON.parse(JSON.stringify(tracks))
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
-                    tracks,
+                    tracks: cleanTracks,
                     trackCount: tracks.length,
                     isPublic,
                     ownerId: userId,

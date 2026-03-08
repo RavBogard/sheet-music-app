@@ -15,7 +15,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music, Users } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -101,6 +101,14 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
+                {!isPublicView && (
+                    <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 shrink-0">
+                        <Link href={`/setlists/${setlistId}`}>
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* Who's playing */}
