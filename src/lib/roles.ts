@@ -1,8 +1,22 @@
 /**
  * Shared role hierarchy for the application.
  *
- * The hierarchy is: admin > band_leader > musician > member > pending
- * Backward compat: 'leader' is the legacy name for 'band_leader'.
+ * AUTH-04 Role Model (verified 2026-03):
+ *
+ * Hierarchy: admin > band_leader > musician > member > pending
+ *   - admin (100):       Full access — all booleans true. Daniel's role.
+ *   - band_leader (80):  Setlist management, edit access, musician capabilities.
+ *                        (Legacy alias: 'leader' = same level for backward compat.)
+ *   - musician (60):     Performance + profile: view setlists, set transposition, PDF access.
+ *   - member (40):       Basic membership — no special music capabilities.
+ *   - pending (0):       Awaiting approval — no access beyond public pages.
+ *
+ * Sound Engineer: NOT a role in this hierarchy.
+ *   - `soundEngineer: boolean` on UserProfile is orthogonal to role.
+ *   - Per research decision: "Keep the boolean flag approach. It's orthogonal to the role hierarchy."
+ *   - Sound engineers get monitor bus assignment access via useMonitorAccess():
+ *       hasAccess = isAdmin || isSoundEngineer || hasBusAssigned
+ *   - A musician with soundEngineer=true is still a musician in the role hierarchy.
  *
  * Used by both client-side (auth-context) and server-side (api-auth) code
  * to ensure consistent role checks across the entire application.
