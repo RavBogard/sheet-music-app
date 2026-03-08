@@ -108,10 +108,10 @@ export async function measureSingleRoundTrip(
         // These can't be imported at module level because they need Firebase config
         db: unknown
         auth: unknown
-        addDoc: Function
-        collection: Function
-        doc: Function
-        onSnapshot: Function
+        addDoc: (...args: unknown[]) => unknown
+        collection: (...args: unknown[]) => unknown
+        doc: (...args: unknown[]) => unknown
+        onSnapshot: (...args: unknown[]) => unknown
     }
 ): Promise<LatencyMeasurement> {
     const { busIndex, targetValue, timeoutMs, round, db, auth, addDoc, collection, doc, onSnapshot } = options
