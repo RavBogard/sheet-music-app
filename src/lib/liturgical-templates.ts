@@ -41,6 +41,12 @@ export interface TemplateSlot {
     estimatedMinutes?: number
     /** Default description text */
     description?: string
+    /** Direct Google Drive file ID — bypasses search when present */
+    fileId?: string
+    /** Cached file name for display in editor */
+    fileName?: string
+    /** Which page of a multi-page PDF to open to (1-indexed) */
+    pageNumber?: number
 }
 
 // ── Shared Slot Sequences ──
@@ -347,13 +353,24 @@ const FUSE_OPTIONS = {
 
 /**
  * Search the library for the best file match for a slot.
- * Tries each query in order; returns the first good match.
+ * If slot has a direct fileId, uses that first.
+ * Otherwise tries each query in order; returns the first good match.
  */
 function findBestMatch(
     slot: TemplateSlot,
     fuse: Fuse<DriveFile>,
-    usedFileIds: Set<string>
+    usedFileIds: Set<string>,
+    library: DriveFile[]
 ): DriveFile | null {
+    // Direct file association — bypass search entirely
+    if (slot.fileId) {
+        const direct = library.find(f => f.id === slot.fileId)
+        if (direct && !usedFileIds.has(direct.id)) {
+            return direct
+        }
+        // File not found or already used — fall through to query search
+    }
+
     for (const query of slot.queries) {
         const results = fuse.search(query)
         for (const result of results) {
@@ -446,7 +463,7 @@ export function buildSetlistFromTemplate(
         }
 
         // Songs — try to find a matching file
-        const match = findBestMatch(slot, fuse, usedFileIds)
+        const match = findBestMatch(slot, fuse, usedFileIds, library)
 
         if (match) {
             usedFileIds.add(match.id)
@@ -458,6 +475,7 @@ export function buildSetlistFromTemplate(
                 fileName: match.name,
                 key: match.metadata?.key,
                 type: 'song',
+                ...(slot.pageNumber ? { pageNumber: slot.pageNumber } : {}),
             })
         } else {
             // No match — create a placeholder track with the liturgical name
@@ -471,6 +489,37 @@ export function buildSetlistFromTemplate(
     }
 
     return tracks
+}
+
+/**
+ * Convert an existing setlist's tracks into TemplateSlot[] for saving as a template.
+ * Preserves direct file associations (fileId, fileName) and slot metadata.
+ */
+export function convertSetlistToTemplate(tracks: SetlistTrack[]): TemplateSlot[] {
+    return tracks.map(track => {
+        const effectiveType = track.type || 'song'
+        const slot: TemplateSlot = {
+            label: track.title,
+            type: effectiveType,
+            queries: [],
+        }
+
+        if (effectiveType === 'song') {
+            if (track.fileId) {
+                slot.fileId = track.fileId
+                slot.fileName = track.fileName
+            }
+            // Always set queries as fallback (lowercase title for fuzzy match)
+            slot.queries = [track.title.toLowerCase().replace(/\s*\(unmatched\)\s*$/, '')]
+            if (track.pageNumber) slot.pageNumber = track.pageNumber
+        }
+
+        if (track.performer) slot.defaultPerformer = track.performer
+        if (track.estimatedMinutes) slot.estimatedMinutes = track.estimatedMinutes
+        if (track.description) slot.description = track.description
+
+        return slot
+    })
 }
 
 /**

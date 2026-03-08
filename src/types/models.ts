@@ -50,6 +50,7 @@ export interface SetlistTrack {
     description?: string // Body text for readings/prayers (responsive reading text, stage directions)
     performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
+    pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
 }
 
 /** A musician assigned to play a specific service/setlist */
