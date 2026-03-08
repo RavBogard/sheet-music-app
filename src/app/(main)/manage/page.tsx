@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Radio } from "lucide-react"
+import { Loader2, ArrowLeft, ShieldAlert, Radio, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { PeopleSection } from "@/components/admin/PeopleSection"
@@ -71,8 +71,15 @@ export default function ManagePage() {
                     </SectionErrorBoundary>
                 </div>
 
-                {/* Footer link to Sound System settings */}
-                <div className="pt-4 border-t border-border">
+                {/* Footer links */}
+                <div className="pt-4 border-t border-border space-y-2">
+                    <Link
+                        href="/manage/templates"
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <FileText className="w-4 h-4" />
+                        Template Editor
+                    </Link>
                     <Link
                         href="/settings/sound"
                         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

@@ -291,9 +291,21 @@ const TEMPLATES: Record<string, TemplateSlot[]> = {
 
 /**
  * Get the appropriate template for a service type.
+ * If customTemplates contains an override for this key, use that instead.
  * Returns null if no template exists for that type.
  */
-export function getTemplate(serviceType: string): TemplateSlot[] | null {
+export function getTemplate(
+    serviceType: string,
+    customTemplates?: Record<string, TemplateSlot[]>,
+): TemplateSlot[] | null {
+    if (customTemplates?.[serviceType]) return customTemplates[serviceType]
+    return TEMPLATES[serviceType] || null
+}
+
+/**
+ * Get the hardcoded default template (ignores any custom overrides).
+ */
+export function getDefaultTemplate(serviceType: string): TemplateSlot[] | null {
     return TEMPLATES[serviceType] || null
 }
 

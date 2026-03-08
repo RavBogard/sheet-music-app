@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
+import { useCustomTemplates } from "@/lib/template-firebase"
 
 export type WizardStep = 'template' | 'details'
 
@@ -60,6 +61,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
     const [step, setStep] = useState<WizardStep>('template')
     const [creating, setCreating] = useState(false)
+    const { overrides: customTemplates } = useCustomTemplates()
 
     // Step 1: Template
     const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
@@ -158,7 +160,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             // If a template was selected, build tracks from template + library
             let finalTracks = tracks
             if (selectedTemplate && finalTracks.length === 0) {
-                const template = getTemplate(selectedTemplate)
+                const template = getTemplate(selectedTemplate, customTemplates)
                 if (template && eventDate) {
                     toast.loading('Building setlist from template...')
                     const context = await getFullServiceContext(eventDate)
@@ -219,7 +221,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, selectedTemplate, router])
+    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
 
     return {
         step,
