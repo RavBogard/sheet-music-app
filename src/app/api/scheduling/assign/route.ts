@@ -7,6 +7,7 @@ import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingAssignmentSMS } from "@/lib/sms"
 import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
 import { BASE_URL } from "@/lib/constants"
+import { sendPushToUsers } from "@/lib/push-send"
 
 const assignSchema = z.object({
     setlistId: z.string().min(1),
@@ -148,10 +149,10 @@ export const POST = createApiHandler(
                 }
 
                 // Create in-app notification — only if enabled
+                const instrumentText = musician.instrument ? ` on ${musician.instrument}` : ''
                 if (pushEnabled) {
                     try {
                         const notifRef = db.collection('users').doc(musician.uid).collection('notifications')
-                        const instrumentText = musician.instrument ? ` on ${musician.instrument}` : ''
                         await notifRef.add({
                             type: isCore ? 'scheduling_confirmed' : 'scheduling_request',
                             title: isCore ? 'You\'re confirmed to play' : 'You\'re scheduled to play',
@@ -168,6 +169,13 @@ export const POST = createApiHandler(
                     } catch (e) {
                         logger.warn(`[Scheduling] In-app notification failed for ${musician.uid}:`, e)
                     }
+
+                    // Send FCM push notification (fire-and-forget)
+                    sendPushToUsers([musician.uid], {
+                        title: isCore ? 'You\'re confirmed to play' : 'You\'re scheduled to play',
+                        body: `You've been assigned${instrumentText} for "${setlistName}"`,
+                        link: '/schedule',
+                    }).catch(err => logger.warn(`[Scheduling] FCM push failed for ${musician.uid}:`, err))
                 }
             } catch (e) {
                 logger.error(`[Scheduling] Failed to assign ${musician.name}:`, e)
