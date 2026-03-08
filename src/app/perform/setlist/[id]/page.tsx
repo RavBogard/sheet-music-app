@@ -44,8 +44,8 @@ export default function SetlistPerformPage() {
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
     const totalCount = tracks.filter((t) => t.type !== "header").length
 
-    // Back link: authenticated users go to /setlists, public users go to /
-    const backHref = isPublicView ? "/" : "/setlists"
+    // Back link: authenticated users go to /setlists, public users go to /perform (public listing)
+    const backHref = isPublicView ? "/perform" : "/setlists"
 
     // Error messages based on error type
     const errorMessage = (() => {
