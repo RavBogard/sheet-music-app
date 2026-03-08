@@ -325,7 +325,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             toast.error("Failed to save changes", { description, duration: 5000 })
         }
         setSaving(false)
-    }, [canEdit, setlistService, onSave])
+    }, [canEdit, setlistService, onSave, uid])
 
     // Track whether there are unsaved changes pending
     const hasPendingSave = useRef(false)

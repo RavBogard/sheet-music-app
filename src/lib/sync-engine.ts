@@ -152,7 +152,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             const chordDocs = await docRef.collection('chordData').get()
             if (!chordDocs.empty) {
                 const purgeBatch = db.batch()
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 chordDocs.forEach((d: any) => purgeBatch.delete(d.ref))
                 await purgeBatch.commit()
                 const fileName = allFiles.find(f => f.id === fileId)?.name || fileId

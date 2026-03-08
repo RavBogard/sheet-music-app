@@ -81,17 +81,17 @@ vi.mock('@/lib/firebase-admin', () => ({
     getFirestore: vi.fn(() => mockDb),
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockUploadToStorage = vi.fn<any>(async () => 'gs://bucket/library/test.pdf')
 
 vi.mock('@/lib/firebase-storage', () => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     uploadToStorage: (...args: any[]) => mockUploadToStorage(...args),
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockListAllFiles = vi.fn<any>(async () => [])
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockGetFile = vi.fn<any>(async () => new ArrayBuffer(100))
 
 vi.mock('@/lib/google-drive', () => ({

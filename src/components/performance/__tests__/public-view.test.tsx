@@ -74,7 +74,7 @@ describe("Public View", () => {
             // Dynamically import the page component
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: Function) => {
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
                 callback([
                     {
                         id: "setlist-1",
@@ -105,7 +105,7 @@ describe("Public View", () => {
         it("links setlists to /perform/setlist/{id}", async () => {
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: Function) => {
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
                 callback([
                     {
                         id: "setlist-abc",
@@ -160,7 +160,7 @@ describe("Public View", () => {
         it("does not show sign-in prompt in public view", async () => {
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: Function) => {
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
                 callback([], false)
                 return vi.fn()
             })

@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
         // Batch-fetch registered user docs to get emails and SMS preferences
         const registeredUids = musicians.filter(m => m.uid).map(m => m.uid!)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const userDataMap = new Map<string, Record<string, any>>()
         if (registeredUids.length > 0) {
             const userDocs = await Promise.all(
