@@ -47,9 +47,11 @@ export function useMonitorAccess(): {
         if (configData) {
             // Check if user has a bus assigned
             const assignments = configData.busAssignments || {}
-            const assigned = Object.values(assignments).some(
-                a => a && a.userId === user.uid
-            )
+            const assigned = Object.values(assignments).some(a => {
+                if (!a) return false
+                const list = Array.isArray(a) ? a : [a]
+                return list.some(entry => entry.userId === user.uid)
+            })
             setHasBusAssigned(assigned)
         } else {
             setHasBusAssigned(false)

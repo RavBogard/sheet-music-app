@@ -10,11 +10,27 @@ import { ConnectionStatus } from "@/lib/firestore-monitor-client"
 import {
     MonitorConfig,
     ChannelInfo,
+    BusAssignment,
     BusInfo,
     BusSend,
     MatrixInfo,
     MixerSnapshot,
 } from "@/types/monitor"
+
+/**
+ * Find the first bus assigned to the given user.
+ * Supports both legacy single-assignment and new multi-assignment (array) formats.
+ */
+function findUserBus(busAssignments: Record<string, BusAssignment | BusAssignment[] | null>, userId: string): number | null {
+    for (const [busStr, assignment] of Object.entries(busAssignments)) {
+        if (!assignment) continue
+        const assignments = Array.isArray(assignment) ? assignment : [assignment]
+        if (assignments.some(a => a.userId === userId)) {
+            return parseInt(busStr)
+        }
+    }
+    return null
+}
 
 /**
  * Pure function: compute visible channels for live mode.
@@ -79,16 +95,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     setStatus: (status, error) => set({ status, error: error || null }),
 
     setSnapshot: (snapshot, userId) => {
-        // Find the user's assigned bus
-        let myBusIndex: number | null = null
-        if (snapshot.config.busAssignments) {
-            for (const [busStr, assignment] of Object.entries(snapshot.config.busAssignments)) {
-                if (assignment && assignment.userId === userId) {
-                    myBusIndex = parseInt(busStr)
-                    break
-                }
-            }
-        }
+        const myBusIndex = snapshot.config.busAssignments
+            ? findUserBus(snapshot.config.busAssignments, userId)
+            : null
 
         set({
             channels: snapshot.channels,
@@ -164,15 +173,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
     setConfig: (config) => {
         const { userId } = get()
-        let myBusIndex: number | null = null
-        if (userId && config.busAssignments) {
-            for (const [busStr, assignment] of Object.entries(config.busAssignments)) {
-                if (assignment && assignment.userId === userId) {
-                    myBusIndex = parseInt(busStr)
-                    break
-                }
-            }
-        }
+        const myBusIndex = userId && config.busAssignments
+            ? findUserBus(config.busAssignments, userId)
+            : null
         // Only update defaultChannels if the config actually has the field;
         // otherwise preserve current value (bridge config lacks this field)
         const { defaultChannels: current } = get()

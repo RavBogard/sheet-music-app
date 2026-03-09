@@ -10,7 +10,7 @@ export interface MonitorConfig {
     x32Address: string
     x32Port: number
     monitorBuses: number[]
-    busAssignments: Record<string, BusAssignment | null>
+    busAssignments: Record<string, BusAssignment | BusAssignment[] | null>
     bridge?: BridgeStatus
     defaultChannels?: number[]
 }

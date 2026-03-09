@@ -101,7 +101,7 @@ export function DefaultChannelPicker() {
                             className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm transition-colors min-h-[44px] ${
                                 isSelected
                                     ? "bg-brand/10 border border-brand/30 text-foreground"
-                                    : "bg-zinc-900/40 border border-zinc-800 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/60"
+                                    : "bg-zinc-900/40 border border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800/60"
                             }`}
                         >
                             <div className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
