@@ -34,6 +34,7 @@ export function SongNavigation() {
                 onClick={handlePrev}
                 disabled={queueIndex <= 0}
                 className="text-muted-foreground hover:text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95"
+                aria-label="Previous song"
             >
                 <ChevronLeft className="h-10 w-10" />
             </Button>
@@ -53,6 +54,7 @@ export function SongNavigation() {
                 onClick={handleNext}
                 disabled={queueIndex >= playbackQueue.length - 1}
                 className="text-foreground hover:bg-brand/10 rounded-full h-14 w-14 shrink-0 transition-transform active:scale-95 bg-brand/10 border border-brand/20"
+                aria-label="Next song"
             >
                 <ChevronRight className="h-10 w-10" />
             </Button>

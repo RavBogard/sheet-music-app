@@ -135,6 +135,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         variant="ghost" size="icon"
                         onClick={() => setAnnotating(!isAnnotating)}
                         className={cn("h-11 w-11 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
+                        aria-label="Toggle annotation mode"
                     >
                         <Pencil className="h-5 w-5" />
                     </Button>
@@ -236,6 +237,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         onClick={() => setAnnotating(!isAnnotating)}
                         className={cn("h-11 w-11 rounded-xl transition-all hover:scale-105", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
                         title="Annotate"
+                        aria-label="Toggle annotation mode"
                     >
                         <Pencil className="h-5 w-5" />
                     </Button>
@@ -263,6 +265,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                             onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
                             className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                             title="Zoom Out"
+                            aria-label="Zoom out"
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
@@ -274,6 +277,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                             onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
                             className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                             title="Zoom In"
+                            aria-label="Zoom in"
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>

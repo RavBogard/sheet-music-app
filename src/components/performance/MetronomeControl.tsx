@@ -42,6 +42,7 @@ export function MetronomeControl() {
                         : "border-border hover:border-white/30 hover:bg-muted",
                 )}
                 title={isPlaying ? "Stop Metronome" : "Start Metronome"}
+                aria-label={isPlaying ? "Stop metronome" : "Start metronome"}
             >
                 <div className={cn(
                     "rounded-full transition-all duration-75 shrink-0",

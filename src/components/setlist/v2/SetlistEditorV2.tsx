@@ -450,7 +450,7 @@ export function SetlistEditorV2({
     }
 
     return (
-        <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100vh-5rem)]">
+        <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100dvh-5rem)]">
             {/* Name prompt for new setlists */}
             <NamePrompt
                 isOpen={showNamePrompt || showEditDetails}

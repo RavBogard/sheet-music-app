@@ -135,11 +135,48 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             {/* Vertical fader track */}
             <div
                 ref={sliderRef}
-                className="relative w-8 h-[200px] rounded-lg bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none"
+                className="relative w-8 h-[200px] rounded-lg bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
+                role="slider"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percentage}
+                aria-label={label}
+                aria-orientation="vertical"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    let newVal = displayValue
+                    switch (e.key) {
+                        case "ArrowUp":
+                        case "ArrowRight":
+                            newVal = Math.min(1, displayValue + 0.05)
+                            break
+                        case "ArrowDown":
+                        case "ArrowLeft":
+                            newVal = Math.max(0, displayValue - 0.05)
+                            break
+                        case "PageUp":
+                            newVal = Math.min(1, displayValue + 0.1)
+                            break
+                        case "PageDown":
+                            newVal = Math.max(0, displayValue - 0.1)
+                            break
+                        case "Home":
+                            newVal = 0
+                            break
+                        case "End":
+                            newVal = 1
+                            break
+                        default:
+                            return
+                    }
+                    e.preventDefault()
+                    setDisplayValue(newVal)
+                    throttledOnChange(newVal)
+                }}
             >
                 {/* Fill bar from bottom up */}
                 <div
@@ -172,6 +209,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                         : "bg-red-900/40 text-red-400 hover:bg-red-800/60"
                 }`}
                 title={on ? "Mute" : "Unmute"}
+                aria-label={on ? `Mute ${label}` : `Unmute ${label}`}
             >
                 {on ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
