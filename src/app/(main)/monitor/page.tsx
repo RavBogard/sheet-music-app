@@ -185,8 +185,8 @@ export default function MonitorPage() {
     }
 
     // Show ALL channel sends for the user's bus (configure mode = full channel list)
-    const allSends = myBus.sends
-    const channelMap = new Map(channels.map(c => [c.index, c]))
+    const allSends = Array.isArray(myBus.sends) ? myBus.sends : []
+    const channelMap = new Map((Array.isArray(channels) ? channels : []).map(c => [c.index, c]))
 
     return (
         <div className="max-w-lg mx-auto p-4 pb-24">

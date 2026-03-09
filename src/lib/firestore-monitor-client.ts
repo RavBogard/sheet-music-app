@@ -74,10 +74,18 @@ export class FirestoreMonitorClient {
                     this.options.onStatusChange("connected")
                 }
 
+                // Firestore may return arrays as objects with numeric keys —
+                // ensure we always pass real arrays to the store
+                const toArray = <T>(val: unknown): T[] =>
+                    Array.isArray(val) ? val : val && typeof val === "object" ? Object.values(val) : []
+
                 this.options.onStateUpdate({
-                    channels: data.channels || [],
-                    buses: data.buses || [],
-                    matrices: data.matrices || [],
+                    channels: toArray(data.channels),
+                    buses: toArray<Record<string, unknown>>(data.buses).map((b) => ({
+                        ...b,
+                        sends: toArray(b.sends),
+                    })) as MixerSnapshot["buses"],
+                    matrices: toArray(data.matrices),
                     config: data.config,
                 })
 
