@@ -89,9 +89,10 @@ export class FirestoreMonitorClient {
                     config: data.config,
                 })
 
-                if (data.config) {
-                    this.options.onConfigUpdate(data.config)
-                }
+                // Note: we intentionally do NOT call onConfigUpdate here.
+                // The dedicated config/monitor Firestore listener in useMonitorConnection
+                // handles config updates. Calling it here would reset defaultChannels
+                // on every bridge state push (since bridge config lacks that field).
             },
             (err) => {
                 logger.error("[MonitorFS] State listener error:", err.message)

@@ -173,7 +173,10 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
                 }
             }
         }
-        set({ config, myBusIndex, defaultChannels: config.defaultChannels || [] })
+        // Only update defaultChannels if the config actually has the field;
+        // otherwise preserve current value (bridge config lacks this field)
+        const { defaultChannels: current } = get()
+        set({ config, myBusIndex, defaultChannels: config.defaultChannels ?? current })
     },
 
     reset: () => set({

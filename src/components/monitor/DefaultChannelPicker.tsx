@@ -36,13 +36,12 @@ export function DefaultChannelPicker() {
         }).catch(() => setLoaded(true))
     }, [setDefaultChannels])
 
-    // Sync from store if it changes externally
+    // Sync from store if it changes externally (but not while we're saving)
     useEffect(() => {
-        if (loaded && storeDefaultChannels.length > 0 && JSON.stringify(storeDefaultChannels) !== JSON.stringify(selected)) {
+        if (loaded && !saving && storeDefaultChannels.length > 0 && JSON.stringify(storeDefaultChannels) !== JSON.stringify(selected)) {
             setSelected(storeDefaultChannels)
         }
-     
-    }, [storeDefaultChannels])
+    }, [storeDefaultChannels]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const toggleChannel = useCallback(async (channelIndex: number) => {
         const next = selected.includes(channelIndex)

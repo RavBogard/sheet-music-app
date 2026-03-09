@@ -42,4 +42,18 @@ describe("default channels (store state)", () => {
         // After setConfig, defaultChannels should reflect config value
         expect(useMonitorStore.getState().defaultChannels).toEqual([3, 4])
     })
+
+    it("defaultChannels preserved when setConfig receives config without the field", () => {
+        useMonitorStore.getState().setDefaultChannels([1, 2, 5])
+        // Bridge config push — no defaultChannels field
+        useMonitorStore.getState().setConfig({
+            bridgeUrl: "wss://test",
+            x32Address: "192.168.1.100",
+            x32Port: 10023,
+            monitorBuses: [1, 2],
+            busAssignments: {},
+        })
+        // defaultChannels should NOT be reset
+        expect(useMonitorStore.getState().defaultChannels).toEqual([1, 2, 5])
+    })
 })
