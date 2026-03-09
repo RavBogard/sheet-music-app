@@ -21,7 +21,7 @@ export class ConfigManager {
     private db: admin.firestore.Firestore
     private config: MonitorConfig = DEFAULT_CONFIG
     private unsubscribe: (() => void) | null = null
-    private listeners: Array<(config: MonitorConfig) => void> = []
+    private listeners: Array<(config: MonitorConfig, prev: MonitorConfig) => void> = []
 
     constructor() {
         // Initialize Firebase Admin
@@ -62,9 +62,10 @@ export class ConfigManager {
             .onSnapshot((snap) => {
                 if (snap.exists) {
                     const data = snap.data() as Partial<MonitorConfig>
+                    const prev = this.config
                     this.config = { ...DEFAULT_CONFIG, ...data }
                     console.log("[Config] Updated live — buses:", this.config.monitorBuses)
-                    this.listeners.forEach(fn => fn(this.config))
+                    this.listeners.forEach(fn => fn(this.config, prev))
                 }
             }, (err) => {
                 console.error("[Config] Watch error:", err.message)
@@ -82,7 +83,7 @@ export class ConfigManager {
         return this.config
     }
 
-    onChange(fn: (config: MonitorConfig) => void): void {
+    onChange(fn: (config: MonitorConfig, prev: MonitorConfig) => void): void {
         this.listeners.push(fn)
     }
 

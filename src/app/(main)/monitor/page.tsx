@@ -177,9 +177,18 @@ export default function MonitorPage() {
     // -- Main mixer view (Configure mode) --
     const myBus = buses.find(b => b.index === myBusIndex)
     if (!myBus) {
+        // Only show loading on initial load — not when we had data and it temporarily disappeared
+        if (buses.length === 0) {
+            return (
+                <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
+                    Waiting for mixer data...
+                </div>
+            )
+        }
+        // Bus index mismatch (stale state during config update) — show spinner briefly
         return (
-            <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
-                Waiting for mixer data...
+            <div className="flex items-center justify-center h-[60vh]">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
         )
     }
