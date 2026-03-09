@@ -76,7 +76,7 @@ export function NextServiceCard({
                         {musicians.map((m, i) => (
                             <span
                                 key={m.uid || `musician-${i}`}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand"
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-foreground"
                             >
                                 {m.name}
                             </span>
@@ -87,7 +87,7 @@ export function NextServiceCard({
                 {/* Action button — muted for past setlists */}
                 <button
                     onClick={onPerform}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors cursor-pointer bg-brand/10 hover:bg-brand/15 text-brand"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors cursor-pointer bg-brand/10 hover:bg-brand/15 text-foreground"
                 >
                     <PlayCircle className="h-4 w-4" />
                     Practice

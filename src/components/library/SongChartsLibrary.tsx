@@ -269,7 +269,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         <button
                             onClick={() => setTab("charts")}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "charts"
-                                ? "bg-brand/15 text-brand ring-1 ring-brand/30"
+                                ? "bg-brand/15 text-foreground ring-1 ring-brand/30"
                                 : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
                                 }`}
                         >
@@ -278,7 +278,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         <button
                             onClick={() => setTab("audio")}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${tab === "audio"
-                                ? "bg-brand/15 text-brand ring-1 ring-brand/30"
+                                ? "bg-brand/15 text-foreground ring-1 ring-brand/30"
                                 : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
                                 }`}
                         >

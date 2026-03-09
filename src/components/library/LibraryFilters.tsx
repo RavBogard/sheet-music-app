@@ -94,7 +94,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.keys.size > 0
-                                ? "bg-brand/15 text-brand border-brand/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -110,7 +110,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.topics.size > 0
-                                ? "bg-brand/15 text-brand border-brand/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -126,7 +126,7 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         className={cn(
                             "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
                             filters.recency !== 'all'
-                                ? "bg-brand/15 text-brand border-brand/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >

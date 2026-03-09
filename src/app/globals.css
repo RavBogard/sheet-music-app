@@ -51,6 +51,16 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/*
+ * Text Hierarchy (3-tier):
+ *   foreground  — primary text (highest contrast)
+ *   secondary-foreground — mid-tone labels/subheadings
+ *   muted-foreground — tertiary/placeholder text (WCAG AA 4.5:1)
+ *
+ *   Light: 0.15 > 0.35 > 0.40  (on ~0.965 background)
+ *   Dark:  0.97 > 0.82 > 0.72  (on ~0.13 background)
+ */
+
 :root {
   /* Rounded corners */
   --radius: 1rem;
@@ -72,7 +82,7 @@
 
   /* Vivid indigo secondary (#4338CA lighter for light mode) */
   --secondary: oklch(0.93 0.03 275 / 0.8);
-  --secondary-foreground: oklch(0.22 0.06 275);
+  --secondary-foreground: oklch(0.35 0.04 275);
 
   --muted: oklch(0.93 0.015 275 / 0.5);
   --muted-foreground: oklch(0.40 0.03 275);
@@ -127,10 +137,10 @@
 
   /* Vivid indigo secondary (#4338CA) */
   --secondary: oklch(0.45 0.18 275 / 0.4);
-  --secondary-foreground: oklch(0.97 0.005 260);
+  --secondary-foreground: oklch(0.82 0.01 265);
 
   --muted: oklch(0.22 0.03 270 / 0.5);
-  --muted-foreground: oklch(0.68 0.015 265);
+  --muted-foreground: oklch(0.72 0.015 265);
 
   --accent: oklch(0.22 0.04 275);
   --accent-foreground: oklch(0.97 0.005 260);

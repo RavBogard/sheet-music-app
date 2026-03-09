@@ -94,7 +94,7 @@ export function UpcomingTimeline({
                                                 <div className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
                                                     {s.name}
                                                     {isNew && (
-                                                        <span className="text-[9px] font-bold bg-brand/15 text-brand px-1.5 py-0.5 rounded-full shrink-0">
+                                                        <span className="text-[9px] font-bold bg-brand/15 text-foreground px-1.5 py-0.5 rounded-full shrink-0">
                                                             Updated
                                                         </span>
                                                     )}

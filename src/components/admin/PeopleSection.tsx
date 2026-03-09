@@ -129,7 +129,7 @@ export function PeopleSection() {
                             {isAdmin && (
                                 <button
                                     onClick={() => bulkSetRole('band_leader')}
-                                    className="text-xs bg-brand/10 hover:bg-brand/20 text-brand border border-brand/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
+                                    className="text-xs bg-brand/10 hover:bg-brand/20 text-foreground border border-brand/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
                                 >
                                     Make Band Leader
                                 </button>

@@ -57,7 +57,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
 
             <div className="relative z-10">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="inline-flex items-center gap-2 bg-brand/10 text-brand px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                    <div className="inline-flex items-center gap-2 bg-brand/10 text-foreground px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
                         {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="flex gap-1 items-center">
@@ -136,7 +136,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                             e.stopPropagation()
                             onCloneNextWeek(setlist, e)
                         }}
-                        className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-brand/10 hover:bg-brand/20 text-brand text-sm font-medium transition-colors cursor-pointer border border-brand/20"
+                        className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-brand/10 hover:bg-brand/20 text-foreground text-sm font-medium transition-colors cursor-pointer border border-brand/20"
                     >
                         <CalendarPlus className="h-4 w-4" />
                         Duplicate for Next Week
@@ -269,7 +269,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             onClick={() => onCreate(date)}
             className="border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-6 text-left fluid-interaction flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
         >
-            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/15 group-hover:text-brand transition-colors">
+            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/15 group-hover:text-foreground transition-colors">
                 <Plus className="h-6 w-6" />
             </div>
             <div className="text-center">
@@ -280,7 +280,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
                     {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </div>
             </div>
-            <div className="text-xs font-medium text-brand/80 bg-brand/10 px-3 py-1 rounded-full uppercase tracking-wider">
+            <div className="text-xs font-medium text-foreground bg-brand/10 px-3 py-1 rounded-full uppercase tracking-wider">
                 Plan Service
             </div>
         </button>

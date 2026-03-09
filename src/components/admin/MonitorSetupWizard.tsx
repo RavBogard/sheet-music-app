@@ -50,7 +50,7 @@ export function MonitorSetupWizard({
                         <div
                             key={i}
                             className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium transition-colors",
-                                i === step ? "bg-brand/10 text-brand border-b-2 border-brand"
+                                i === step ? "bg-brand/10 text-foreground border-b-2 border-brand"
                                     : i < step ? "text-success" : "text-muted-foreground"
                             )}
                         >

@@ -131,7 +131,7 @@ export function LiveServiceSection() {
                 <div className="bg-card border border-border p-4 rounded-xl shadow-sm relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-brand/10 rounded-lg text-brand">
+                        <div className="p-2 bg-brand/10 rounded-lg text-foreground">
                             <Radio className="w-5 h-5" />
                         </div>
                         {isBridgeOnline ? (
@@ -158,7 +158,7 @@ export function LiveServiceSection() {
                 <div className="bg-card border border-border p-4 rounded-xl shadow-sm relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-brand/10 rounded-lg text-brand">
+                        <div className="p-2 bg-brand/10 rounded-lg text-foreground">
                             <Users className="w-5 h-5" />
                         </div>
                     </div>

@@ -75,7 +75,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 className={cn(
                     "flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors",
                     isActive
-                        ? "bg-brand/10 text-brand border-l-2 border-brand"
+                        ? "bg-brand/10 text-foreground border-l-2 border-brand"
                         : "text-muted-foreground hover:bg-brand/5 hover:text-foreground"
                 )}
             >
@@ -111,7 +111,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                                 </div>
                             </div>
                             <div className="mt-2">
-                                <span className="inline-block text-[10px] font-bold text-brand uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
+                                <span className="inline-block text-[10px] font-bold text-foreground uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
                                     {roleLabels[profile?.role || ''] || 'MEMBER'}
                                 </span>
                             </div>

@@ -97,7 +97,7 @@ export function DesktopHeader() {
                             <Link key={link.href} href={link.href}
                                 className={cn(
                                     "px-4 py-1.5 rounded-full text-sm font-medium transition-all fluid-interaction",
-                                    isActive ? "bg-brand/15 text-brand shadow-[0_0_10px_oklch(0.50_0.20_275/0.2)] border border-brand/20" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
+                                    isActive ? "bg-brand/15 text-foreground shadow-[0_0_10px_oklch(0.50_0.20_275/0.2)] border border-brand/20" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
                                 )}>
                                 {link.label}
                             </Link>

@@ -142,14 +142,14 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 </div>
 
                                 {isAudio && (
-                                    <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md flex items-center gap-1">
                                         <Headphones className="w-3 h-3" />
                                         Audio
                                     </span>
                                 )}
 
                                 {!isFolder && !isAudio && item.metadata?.key && (
-                                    <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-md border border-brand/20 font-mono">
+                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md border border-brand/20 font-mono">
                                         {item.metadata.key}
                                     </span>
                                 )}
@@ -169,7 +169,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 {!isFolder && !isAudio && item.metadata?.topics && item.metadata.topics.length > 0 && (
                                     <div className="hidden sm:flex gap-1">
                                         {item.metadata.topics.slice(0, 2).map(topic => (
-                                            <span key={topic} className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-md">
+                                            <span key={topic} className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md">
                                                 {topic}
                                             </span>
                                         ))}

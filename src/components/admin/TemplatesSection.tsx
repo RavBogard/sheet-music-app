@@ -200,7 +200,7 @@ function TemplateGroup({
                             className={cn(
                                 "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors min-h-11",
                                 isSelected
-                                    ? "bg-brand/10 text-brand border border-brand/30"
+                                    ? "bg-brand/10 text-foreground border border-brand/30"
                                     : "hover:bg-accent border border-transparent"
                             )}
                         >
