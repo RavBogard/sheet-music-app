@@ -7,6 +7,7 @@ import { useOffline } from "@/hooks/use-offline"
 import { toast } from "sonner"
 import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
+import { useCustomTemplates } from "@/lib/template-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
@@ -89,6 +90,9 @@ export function useSetlistDashboard({
 
     // Load library in background
     useLibrary()
+
+    // Load custom templates from Firestore (overrides hardcoded defaults)
+    const { overrides: customTemplates } = useCustomTemplates()
 
     // Handlers
     const handleSelect = (setlist: Setlist) => {
@@ -194,7 +198,7 @@ export function useSetlistDashboard({
 
         // If we have a matching template, build a full setlist from it (like "From Template")
         if (templateType) {
-            const template = getTemplate(templateType)
+            const template = getTemplate(templateType, customTemplates)
             if (template) {
                 let toastId: string | number | undefined
                 try {
@@ -244,7 +248,7 @@ export function useSetlistDashboard({
 
         const isFriday = templateType.includes('friday') || templateType === 'shir_shabbat'
         const targetDate = isFriday ? getNextFriday() : getNextSaturday()
-        const template = getTemplate(templateType)
+        const template = getTemplate(templateType, customTemplates)
         if (!template) return
 
         let templateToastId: string | number | undefined
