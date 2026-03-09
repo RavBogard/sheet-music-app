@@ -41,7 +41,7 @@ export function DefaultChannelPicker() {
         if (loaded && !saving && storeDefaultChannels.length > 0 && JSON.stringify(storeDefaultChannels) !== JSON.stringify(selected)) {
             setSelected(storeDefaultChannels)
         }
-    }, [storeDefaultChannels]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [storeDefaultChannels, loaded, saving, selected])
 
     const toggleChannel = useCallback(async (channelIndex: number) => {
         const next = selected.includes(channelIndex)
