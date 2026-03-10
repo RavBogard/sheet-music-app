@@ -54,6 +54,10 @@ export function SetlistRow({
         if (isSong && hasFile) {
             onSongTap()
         }
+
+        if (track.notes) {
+            setShowNotes(prev => !prev)
+        }
     }
 
     // Header items render as inline dividers
@@ -76,7 +80,9 @@ export function SetlistRow({
     // Non-song rows and songs without files: non-interactive for non-leaders
     if (!isInteractive) {
         return (
-            <div>
+            <div
+                onClick={track.notes ? () => setShowNotes(prev => !prev) : undefined}
+            >
                 <div
                     className={cn(
                         "flex items-center gap-3 px-4 py-3 transition-colors cursor-default",
@@ -109,6 +115,11 @@ export function SetlistRow({
                         <span className="text-sm text-muted-foreground">{track.title}</span>
                     )}
                 </div>
+                {showNotes && track.notes && (
+                    <div className="px-4 pb-2 pt-0.5">
+                        <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
+                    </div>
+                )}
             </div>
         )
     }
@@ -157,8 +168,7 @@ export function SetlistRow({
                     <span className="text-sm text-muted-foreground">{track.title}</span>
                 )}
             </div>
-            {/* Notes revealed on tap — leader only */}
-            {isLeader && showNotes && track.notes && (
+            {showNotes && track.notes && (
                 <div className="px-4 pb-2 pt-0.5">
                     <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
                 </div>

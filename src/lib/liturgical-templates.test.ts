@@ -123,12 +123,13 @@ describe('Template structure', () => {
     })
 
     it('friday_night includes service flow items', () => {
-        const readings = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'reading')
         const prayers = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'prayer')
         const transitions = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'transition')
-        expect(readings.length).toBeGreaterThan(0)
         expect(prayers.length).toBeGreaterThan(0)
         expect(transitions.length).toBeGreaterThan(0)
+        // No readings in Friday Night (evening service has no Torah reading)
+        const readings = FRIDAY_NIGHT_TEMPLATE.filter(s => s.type === 'reading')
+        expect(readings.length).toBe(0)
     })
 
     it('service flow slots have performer and estimatedMinutes', () => {
@@ -316,10 +317,11 @@ describe('v5 — service flow types in templates', () => {
     it('Friday night template includes non-song types', () => {
         const types = FRIDAY_NIGHT_TEMPLATE.map(s => s.type).filter(Boolean)
         expect(types).toContain('header')
-        expect(types).toContain('reading')
         expect(types).toContain('prayer')
         expect(types).toContain('transition')
         expect(types).toContain('note')
+        // No readings in evening service (Torah is morning only)
+        expect(types).not.toContain('reading')
     })
 
     it('Shabbat morning template includes sermon as note', () => {
@@ -332,10 +334,8 @@ describe('v5 — service flow types in templates', () => {
 
     it('buildSetlistFromTemplate generates non-song tracks', () => {
         const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
-        const readings = tracks.filter(t => t.type === 'reading')
         const prayers = tracks.filter(t => t.type === 'prayer')
         const transitions = tracks.filter(t => t.type === 'transition')
-        expect(readings.length).toBeGreaterThan(0)
         expect(prayers.length).toBeGreaterThan(0)
         expect(transitions.length).toBeGreaterThan(0)
     })
@@ -351,7 +351,10 @@ describe('v5 — service flow types in templates', () => {
     })
 
     it('Torah reading gets parasha annotation', () => {
-        const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
+        const tracks = buildSetlistFromTemplate(SHABBAT_MORNING_TEMPLATE, mockLibrary, {
+            ...mockContext,
+            type: 'shabbat_morning',
+        })
         const reading = tracks.find(t => t.type === 'reading' && t.title.includes('Torah'))
         expect(reading).toBeDefined()
         expect(reading!.description).toContain('Parashat Mishpatim')

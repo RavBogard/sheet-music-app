@@ -87,8 +87,6 @@ export const FRIDAY_NIGHT_TEMPLATE: TemplateSlot[] = [
     { label: 'T\'filah', type: 'header', queries: [] },
     { label: 'Silent Prayer', type: 'prayer', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 2 },
     { label: 'Oseh Shalom', type: 'song', queries: ['oseh shalom', 'osse shalom'] },
-    { label: 'Torah Service', type: 'header', queries: [], skipOnHoliday: false },
-    { label: 'Torah Reading', type: 'reading', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 10 },
     ...CLOSING_SLOTS,
     { label: 'Closing Song', type: 'song', queries: ['adon olam', 'closing hymn', 'ein keloheinu'] },
     { label: 'Kiddush', type: 'transition', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 2, description: 'Blessing over wine' },

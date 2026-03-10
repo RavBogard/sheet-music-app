@@ -437,7 +437,7 @@ export function SetlistEditorV2({
             }
         }
         setShowSearchOverlay(false)
-    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex, detectKeyForFile])
+    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex, detectKeyForFile, tracks, initialTemplateType, user])
 
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
