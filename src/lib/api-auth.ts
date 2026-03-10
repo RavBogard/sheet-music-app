@@ -51,7 +51,12 @@ export async function requireAuth(
         )
     }
 
-    initAdmin()
+    if (!initAdmin()) {
+        throw NextResponse.json(
+            { error: "Firebase Admin not available" },
+            { status: 500 }
+        )
+    }
     const decoded = await verifyIdToken(rawToken)
 
     if (!decoded) {

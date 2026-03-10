@@ -93,6 +93,14 @@ export default function PerformPage() {
 
 
 
+    // Flush pending annotation saves on unmount so navigating away never loses data
+    useEffect(() => {
+        return () => {
+            useAnnotationStore.getState().clearSaveTimer()
+            useAnnotationStore.getState().save()
+        }
+    }, [])
+
     // Home navigates back to origin (setlist editor, library, or home)
     const handleHome = () => router.push(returnPath || '/')
 

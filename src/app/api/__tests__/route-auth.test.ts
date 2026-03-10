@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server'
 // ── Mocks ──
 
 vi.mock('@/lib/firebase-admin', () => ({
-    initAdmin: vi.fn(),
+    initAdmin: vi.fn().mockReturnValue(true),
     getFirestore: vi.fn(() => mockFirestore),
     verifyIdToken: vi.fn(),
 }))

@@ -39,18 +39,20 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.4 Phase 2: Prominent key display + 5 monitor buses
 - [x] v1.4 Phase 3: Print gig packet fixes (black screen, date, auth)
 - [x] v1.4 Phase 4: PDF health scanner false positives fixed
+- [x] v1.5 Phase 1: Critical bug fixes — AI slot safety, clearSaveTimer, transposition race, initAdmin, Firestore sanitization
 
 ### Active (In Progress)
 
-- None
+- [ ] v1.5 Security hardening — npm audit fix, CSP/HSTS headers, QR expiry, bridge credential redesign
+- [ ] v1.5 API consistency — migrate 23 withAuth routes to createApiHandler
+- [ ] v1.5 Architecture cleanup — split large components, remove dead code
+- [ ] v1.5 Quality & deps — vitest environment, dependency updates, font subsetting
+- [ ] v1.5 UI/UX polish — tablet layout, accessibility, reduced-motion
+- [ ] v1.5 Performance & monitoring — bundle analysis, Sentry, offline queue
 
 ### Planned (Next)
 
-- [ ] v1.5 Security hardening — npm audit fix, CSP/HSTS headers, QR expiry, bridge credential redesign
-- [ ] v1.5 Critical bug fixes — AI slot leak, clearSaveTimer wiring, musician-transposition race condition
-- [ ] v1.5 API consistency — migrate 23 withAuth routes to createApiHandler
-- [ ] v1.5 Data integrity — Firestore indexes, transactions, orphaned task cleanup
-- [ ] v1.5 Quality & deps — vitest environment, dependency updates, font subsetting
+- To be determined after v1.5
 
 ### Out of Scope
 
@@ -123,6 +125,8 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | BroadcastChannel for cross-tab cache invalidation | Phase 3 | Tabs stay in sync after library sync |
 | Ref-based callbacks for effect dep stability | Phase 4 | Pattern for all hooks with callback deps |
 | Broadened useSafeFirestoreSync ref type to DocumentData | Phase 4 | Eliminates all caller `as any` casts |
+| stripUndefined/Deep for Firestore sanitization (not JSON roundtrip) | v1.5 P1 | Preserves Timestamp instances, explicit filtering |
+| cancelled-flag before every state update after async boundaries | v1.5 P1 | Pattern for all hooks with async + state |
 | SectionErrorBoundary for admin crash isolation | Phase 4 | Sections fail independently |
 | pdfjs.version in worker URL for cache busting | v1.3.1 | Prevents stale worker mismatch after deploys |
 | Ref-based uid tracking in useMonitorConnection | v1.3.1 | Prevents effect churn during iPad auth token refresh |
@@ -131,4 +135,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after v1.4 milestone archived*
+*Last updated: 2026-03-10 after Phase 1 (v1.5)*

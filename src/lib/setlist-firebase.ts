@@ -30,6 +30,25 @@ import { getFullServiceContext } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
 export type { Setlist }
 
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([, v]) => v !== undefined)
+    ) as T
+}
+
+function stripUndefinedDeep(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(stripUndefinedDeep)
+    if (value && typeof value === 'object'
+        && !(typeof Timestamp === 'function' && value instanceof Timestamp)
+        && Object.getPrototypeOf(value) === Object.prototype)
+        return stripUndefined(
+            Object.fromEntries(
+                Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, stripUndefinedDeep(v)])
+            ) as Record<string, unknown>
+        )
+    return value
+}
+
 // User-specific setlist service
 export function createSetlistService(userId: string | null, userName?: string | null) {
     const COLLECTION_PATH = 'setlists';
@@ -40,7 +59,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false, additionalData: Partial<Setlist> = {}) {
             try {
                 // Sanitize tracks: Firebase rejects undefined values
-                const cleanTracks = JSON.parse(JSON.stringify(tracks))
+                const cleanTracks = stripUndefinedDeep(tracks) as SetlistTrack[]
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
@@ -49,7 +68,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     isPublic,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
-                    ...JSON.parse(JSON.stringify(additionalData)) // Sanitize undefined
+                    ...stripUndefined(additionalData as Record<string, unknown>)
                 });
                 logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length, isPublic })
                 return docRef.id;
@@ -97,7 +116,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Update a setlist (sanitize undefined → null for Firestore)
         async updateSetlist(id: string, _isPublic: boolean, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
-            const cleanData = JSON.parse(JSON.stringify(data));
+            const cleanData = stripUndefined(data as Record<string, unknown>);
             cleanData.updatedAt = serverTimestamp();
             await updateDoc(docRef, cleanData);
 

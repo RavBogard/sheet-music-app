@@ -1,8 +1,77 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v1.5 Codebase & UI/UX Hardening**
+Status: In Progress
+Phases: 1 of 6 complete
 
-No active milestone. Run `/paul:discuss-milestone` or `/paul:milestone` to define the next one.
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Critical Bug Fixes | 1/1 | Complete | 2026-03-10 |
+| 2 | Security & API Consistency | TBD | Not started | - |
+| 3 | Architecture Cleanup | TBD | Not started | - |
+| 4 | Quality & Deps | TBD | Not started | - |
+| 5 | UI/UX Polish | TBD | Not started | - |
+| 6 | Performance & Monitoring | TBD | Not started | - |
+
+### Phase 1: Critical Bug Fixes
+
+Focus: Stop active data loss and resource leaks
+- AI slot leak in use-smart-transposer.ts (early returns bypass releaseAiSlot)
+- clearSaveTimer() wiring into component cleanup (annotations lost on unmount)
+- Race condition in use-musician-transposition.ts (stale state after await)
+- initAdmin() return value checks (silent failures on missing credentials)
+- JSON.parse/stringify sanitization in setlist-firebase.ts (replace with Zod/explicit filtering)
+
+### Phase 2: Security & API Consistency
+
+Focus: Fix vulnerabilities and unify route patterns
+- npm audit fix (fast-xml-parser, ajv CVEs)
+- Security headers: CSP, HSTS, Permissions-Policy
+- QR code expiry enforcement at redemption
+- Error message sanitization (no internal details leaked)
+- Bridge credentials redesign (eliminate raw private key exposure)
+- Migrate 23 withAuth routes to createApiHandler
+- Fix HTTP status codes (201 for creation, 202 for async)
+- Add missing CORS headers on public endpoints
+
+### Phase 3: Architecture Cleanup
+
+Focus: Restructure before testing/measuring
+- Split SetlistEditorV2.tsx (708 LOC) into sub-components
+- Split MusicianPicker.tsx (824 LOC) into sub-components
+- Split SongChartsLibrary.tsx (473 LOC) into sub-components
+- Split TransposerMenu.tsx (411 LOC) into sub-components
+- Split useMusicStore into focused stores (playback, AI, performance, chordEdit)
+- Remove dead code: SetlistDrawerLegacy, PerformanceBottomBar
+
+### Phase 4: Quality & Deps
+
+Focus: Fix test environment and dependencies before adding new tests
+- Vitest environment fix (node → jsdom)
+- Dependency updates (pdfjs-dist, jsdom, @types/node)
+- Font subsetting (Poppins weights ~50KB savings)
+- Re-enable ESLint exhaustive-deps rule
+- Document all required Firestore composite indexes
+
+### Phase 5: UI/UX Polish
+
+Focus: Accessibility and tablet experience
+- Tablet landscape breakpoint (PDF left / toolbar right at 1024px)
+- prefers-reduced-motion support for all animations
+- Modal focus trapping (WCAG 2.4.3)
+- Replace hard-coded blue colors in LibraryFileRow with brand palette
+- Ghost button hover states (increase from 5% to 10-15% opacity)
+- Zoom level indicator in PDFViewer
+- Skip-to-main-content link for keyboard navigation
+
+### Phase 6: Performance & Monitoring
+
+Focus: Measure the final, clean codebase
+- Bundle analyzer setup (@next/bundle-analyzer)
+- Sentry client-side integration + Web Vitals tracking
+- Offline write queue (IndexedDB WAL + sync-on-reconnect for annotations)
+- Component test coverage for critical paths (SetlistEditor, PerformanceToolbar)
 
 ## Completed Milestones
 
@@ -111,4 +180,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-10 (v1.4 milestone complete)*
+*Last updated: 2026-03-10 (v1.5 milestone created)*

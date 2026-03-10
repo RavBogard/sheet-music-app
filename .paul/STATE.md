@@ -5,38 +5,45 @@
 See: .paul/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v1.4 complete — ready for next milestone
+**Current focus:** v1.5 Codebase & UI/UX Hardening
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v1.4 Fixes & Library Management complete — ready for next
-Last activity: 2026-03-10 — Milestone completed
+Milestone: v1.5 Codebase & UI/UX Hardening
+Phase: 2 of 6 (Security & API Consistency)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-10 — Phase 1 complete, transitioned to Phase 2
 
 Progress:
-- v1.4 Fixes & Library Management: [██████████] 100% ✓
+- v1.5 Codebase & UI/UX Hardening: [█░░░░░░░░░] 17%
+- Phase 2: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ○        ○        ○     [New loop — ready for PLAN]
 ```
 
 ## Accumulated Context
 
 ### Decisions
-- Archived with v1.4 milestone (see .paul/MILESTONES.md)
+- v1.5 scope: All high+medium codebase and UI/UX improvements from full project audit. No new features.
+- Phase order: bugs → security → architecture → quality → UI/UX → monitoring (dependency-driven)
+- Audit source: .paul/phases/05-backend-analysis-bug-scan/05-01-SUMMARY.md + fresh codebase/UI/UX analysis
+- Phase 1: stripUndefined/Deep for Firestore sanitization (not JSON roundtrip)
+- Phase 1: cancelled-flag before every state update after async boundaries
+- Phase 1: AI slot lifecycle already safe, documented with comments
 
-### Deferred Issues (reassessed in Phase 5 audit)
-- CRIT-003 (bridge credentials) — Still Critical, L effort. Redesign credential flow.
+### Deferred Issues (carried from v1.4)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
-- withAuth → createApiHandler migration (23 routes) — Upgraded to High, M effort
-- clearSaveTimer() wiring — Upgraded to Critical, S effort. Fix immediately.
-- See full audit: .paul/phases/05-backend-analysis-bug-scan/05-01-SUMMARY.md
+
+### Deferred Issues (resolved in v1.5 scope)
+- CRIT-003 (bridge credentials) — Phase 2
+- withAuth → createApiHandler migration (23 routes) — Phase 2
+- clearSaveTimer() wiring — Phase 1 ✅ Fixed
 
 ### Blockers/Concerns
 - None
@@ -49,9 +56,9 @@ Feature branches merged: none
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Milestone v1.4 complete
-Next action: /paul:discuss-milestone or /paul:milestone
-Resume file: .paul/MILESTONES.md
+Stopped at: Phase 1 complete, transitioned to Phase 2
+Next action: /paul:plan for Phase 2 (Security & API Consistency)
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*

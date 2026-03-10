@@ -217,6 +217,8 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         }
     }
 
+    // AI Slot Lifecycle: acquireAiSlot() → try/finally → releaseAiSlot()
+    // All early returns (no image, bad response) are inside try, so finally always runs.
     const runAiVisionExtration = async (
         pageEl: HTMLElement,
         userOverrides: CachedChord[]
@@ -322,6 +324,8 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         }
     }
 
+    // AI Slot Lifecycle: acquireAiSlot() → try/finally → releaseAiSlot()
+    // All early returns (no image, bad response) are inside try, so finally always runs.
     const executeBackgroundScan = async (targetFileId: string, targetPage: number, canvas: HTMLCanvasElement) => {
         await acquireAiSlot()
         // Signal we are scanning so multiple instances don't try
