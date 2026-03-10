@@ -25,7 +25,7 @@ export async function scanLibraryHealth(
 ): Promise<ScanResult[]> {
     // Filter to PDF files only
     const pdfFiles = files.filter(f =>
-        f.mimeType?.includes('pdf') || f.name?.toLowerCase().endsWith('.pdf')
+        f.mimeType === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
     )
 
     const results: ScanResult[] = []
@@ -80,12 +80,10 @@ async function scanSingleFile(file: DriveFile): Promise<ScanResult> {
         // Dynamically import pdfjs to avoid SSR issues (DOMMatrix not available in Node)
         const { pdfjs } = await import('react-pdf')
 
-        // Ensure worker is configured — PDFViewer sets this on render,
-        // but the scanner may run before any PDFViewer has mounted.
-        // Use versioned URL to match PDFViewer's cache-busted pattern.
-        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-            pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
-        }
+        // Disable worker for scanner — runs pdfjs in main thread.
+        // Scanner only validates PDFs (page count), not renders them,
+        // so worker overhead is unnecessary and avoids worker URL issues.
+        pdfjs.GlobalWorkerOptions.workerSrc = ""
 
         const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
         const pdf = await loadingTask.promise
