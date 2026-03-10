@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react"
 import { Loader2, Volume2, VolumeX } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface VerticalFaderStripProps {
     label: string
@@ -122,7 +123,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
 
     return (
         <div
-            className={`flex flex-col items-center w-14 min-w-[48px] transition-opacity ${!on ? "opacity-50" : ""}`}
+            className={`flex flex-col items-center w-14 min-w-[48px] transition-opacity snap-start ${!on ? "opacity-50" : ""}`}
         >
             {/* Channel name */}
             <div
@@ -200,10 +201,12 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             </div>
 
             {/* Mute button */}
-            <button
+            <Button
                 data-testid="mute-toggle"
+                variant="ghost"
+                size="icon-sm"
                 onClick={onMuteToggle}
-                className={`mt-1 w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+                className={`mt-1 ${
                     on
                         ? "bg-green-900/40 text-green-400 hover:bg-green-800/60"
                         : "bg-red-900/40 text-red-400 hover:bg-red-800/60"
@@ -212,7 +215,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 aria-label={on ? `Mute ${label}` : `Unmute ${label}`}
             >
                 {on ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
+            </Button>
         </div>
     )
 }

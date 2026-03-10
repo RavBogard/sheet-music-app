@@ -145,7 +145,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                     {/* Sync Button (if not broadcaster and session available) */}
                     {!isBroadcaster && availableSession && (
-                        <button
+                        <Button
+                            variant="ghost"
                             onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
                             className={cn(
                                 "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5 transition-all max-w-[110px]",
@@ -156,16 +157,16 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         >
                             {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
                             <span className="truncate">{syncedBroadcasterId ? "Following" : "Sync"}</span>
-                        </button>
+                        </Button>
                     )}
 
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-11 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
+                            <Button variant="ghost" className="h-11 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 <span>Audio</span>
-                            </button>
+                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="center" side="top">
                             <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
@@ -186,7 +187,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
                         <PopoverTrigger asChild>
-                            <button
+                            <Button
+                                variant="ghost"
                                 className={cn(
                                     "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
                                     aiState.isEnabled
@@ -199,8 +201,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                 ) : (
                                     <Sparkles className="h-4 w-4 shrink-0" />
                                 )}
-                                <span className="truncate max-w-[90px]">{buttonLabel}</span>
-                            </button>
+                                <span className="truncate">{buttonLabel}</span>
+                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
                             <TransposerMenu onRequestClose={() => setTransposerOpenMobile(false)} />
@@ -244,7 +246,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                     {/* Sync Button (Desktop) */}
                     {!isBroadcaster && availableSession && (
-                        <button
+                        <Button
+                            variant="ghost"
                             onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
                             className={cn(
                                 "h-11 px-4 rounded-xl text-xs font-bold uppercase tracking-wider fluid-interaction flex items-center gap-2 min-w-[120px]",
@@ -255,7 +258,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         >
                             {syncedBroadcasterId ? <LinkIcon className="h-4 w-4 shrink-0" /> : <Unlink className="h-4 w-4 shrink-0" />}
                             <span className="truncate">{syncedBroadcasterId ? `Following ${availableSession.broadcasterName.split(' ')[0]}` : "Sync to Leader"}</span>
-                        </button>
+                        </Button>
                     )}
 
                     {/* Scale Controls */}
@@ -299,10 +302,10 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Monitor Mix popover */}
                     <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
                         <PopoverTrigger asChild>
-                            <button className="h-10 px-4 rounded-xl glass-card fluid-interaction text-xs font-bold text-foreground/80 hover:text-foreground flex items-center gap-2 group" aria-label="Audio monitor mix">
+                            <Button variant="ghost" className="h-10 px-4 rounded-xl glass-card fluid-interaction text-xs font-bold text-foreground/80 hover:text-foreground flex items-center gap-2 group" aria-label="Audio monitor mix">
                                 <Speaker className="h-3.5 w-3.5" />
                                 AUDIO
-                            </button>
+                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="end" side="top">
                             <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
@@ -330,7 +333,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
                     }}>
                         <PopoverTrigger asChild>
-                            <button
+                            <Button
+                                variant="ghost"
                                 className={cn(
                                     "h-10 px-4 rounded-xl text-xs font-bold fluid-interaction flex items-center gap-2 min-w-[100px] justify-center",
                                     aiState.isEnabled
@@ -344,7 +348,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                                     <Sparkles className="h-3.5 w-3.5" />
                                 )}
                                 <span>{buttonLabel.toUpperCase()}</span>
-                            </button>
+                            </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
                             <TransposerMenu onRequestClose={() => setTransposerOpenDesktop(false)} />

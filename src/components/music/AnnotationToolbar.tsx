@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Pencil, Type, Highlighter, Undo2, Trash2, X } from "lucide-react"
 import { useAnnotationStore } from "@/lib/annotation-store"
 import { ANNOTATION_COLORS, type AnnotationTool } from "@/types/annotations"
@@ -18,6 +19,19 @@ const TOOLS: { tool: AnnotationTool; icon: typeof Pencil; label: string }[] = [
 
 export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarProps) {
     const { activeTool, setTool, activeColor, setColor, undoLastAnnotation, clearPage } = useAnnotationStore()
+    const [keyboardOpen, setKeyboardOpen] = useState(false)
+
+    useEffect(() => {
+        const vv = window.visualViewport
+        if (!vv) return
+        const handler = () => {
+            setKeyboardOpen(vv.height < window.innerHeight * 0.75)
+        }
+        vv.addEventListener("resize", handler)
+        return () => vv.removeEventListener("resize", handler)
+    }, [])
+
+    if (keyboardOpen) return null
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-toolbar-fixed bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-700 safe-area-bottom">

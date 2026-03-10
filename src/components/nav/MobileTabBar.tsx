@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Library, ListMusic, Radio, CalendarDays, Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useAuth } from "@/lib/auth-context"
@@ -23,6 +24,17 @@ export function MobileTabBar() {
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
     const [drawerOpen, setDrawerOpen] = useState(false)
+    const [keyboardOpen, setKeyboardOpen] = useState(false)
+
+    useEffect(() => {
+        const vv = window.visualViewport
+        if (!vv) return
+        const handler = () => {
+            setKeyboardOpen(vv.height < window.innerHeight * 0.75)
+        }
+        vv.addEventListener("resize", handler)
+        return () => vv.removeEventListener("resize", handler)
+    }, [])
 
     const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
     const showMonitor = hasMonitorAccess && congregation.features.monitor
@@ -74,7 +86,7 @@ export function MobileTabBar() {
 
     return (
         <>
-            <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
+            <nav className={cn("fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe", keyboardOpen && "hidden")}>
                 <div className="absolute inset-0 material-thick border-t border-brand/10" />
 
                 <div className="relative flex items-center justify-around h-16 sm:h-20 px-2">
@@ -112,12 +124,13 @@ export function MobileTabBar() {
                     })}
 
                     {/* Menu tab — opens drawer */}
-                    <button
+                    <Button
+                        variant="ghost"
                         aria-label="Menu"
                         onClick={() => setDrawerOpen(true)}
                         className={cn(
-                            "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
-                            isDrawerPageActive || drawerOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
+                            "flex flex-1 flex-col h-full py-2 rounded-none fluid-interaction group",
+                            isDrawerPageActive || drawerOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70 hover:bg-transparent"
                         )}
                     >
                         <div className={cn(
@@ -137,7 +150,7 @@ export function MobileTabBar() {
                         )}>
                             Menu
                         </span>
-                    </button>
+                    </Button>
                 </div>
             </nav>
 

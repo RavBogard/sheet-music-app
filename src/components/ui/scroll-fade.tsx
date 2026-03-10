@@ -7,9 +7,10 @@ interface ScrollFadeProps {
     children: React.ReactNode
     className?: string
     scrollClassName?: string
+    snap?: boolean
 }
 
-export function ScrollFade({ children, className, scrollClassName }: ScrollFadeProps) {
+export function ScrollFade({ children, className, scrollClassName, snap }: ScrollFadeProps) {
     const scrollRef = useRef<HTMLDivElement>(null)
     const [canScrollLeft, setCanScrollLeft] = useState(false)
     const [canScrollRight, setCanScrollRight] = useState(false)
@@ -42,7 +43,7 @@ export function ScrollFade({ children, className, scrollClassName }: ScrollFadeP
         <div className={cn("relative", className)}>
             <div
                 ref={scrollRef}
-                className={cn("overflow-x-auto", scrollClassName)}
+                className={cn("overflow-x-auto", snap && "snap-x snap-mandatory", scrollClassName)}
             >
                 {children}
             </div>

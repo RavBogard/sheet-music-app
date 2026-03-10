@@ -122,11 +122,11 @@ export function QuickMonitorPanel() {
     }
 
     return (
-        <div className="max-w-[504px]">
+        <div className="w-full">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div>
-                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[180px]">
+                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[140px]">
                         {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
@@ -149,7 +149,7 @@ export function QuickMonitorPanel() {
             </div>
 
             {/* Vertical faders in horizontal row */}
-            <ScrollFade scrollClassName="flex flex-row gap-1 p-3 min-h-[280px]">
+            <ScrollFade snap scrollClassName="flex flex-row gap-1 p-3 min-h-[280px]">
                 {/* Master bus fader (leftmost) */}
                 <VerticalFaderStrip
                     label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "Master" : "Master"}
