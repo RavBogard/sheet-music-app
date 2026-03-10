@@ -44,7 +44,8 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
     const { user, profile, cachedUser, signIn, isMember, loading: authLoading } = useAuth()
     const congregation = useCongregation()
 
-    const [upcomingSetlists, setUpcomingSetlists] = useState<Setlist[]>([])
+    const [upcomingPersonal, setUpcomingPersonal] = useState<Setlist[]>([])
+    const [upcomingPublic, setUpcomingPublic] = useState<Setlist[]>([])
     const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
     const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
     const [personalLoaded, setPersonalLoaded] = useState(false)
@@ -122,6 +123,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
 
         const unsub = setlistService.subscribeToPublicSetlists((setlists) => {
             const upcoming = filterUpcoming(setlists)
+            setUpcomingPublic(upcoming.slice(0, 5))
             const recent = setlists
                 .filter(s => s.eventDate)
                 .sort((a, b) => (toDate(b.eventDate)?.getTime() || 0) - (toDate(a.eventDate)?.getTime() || 0))
@@ -129,7 +131,6 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
             setRecentPublicSetlists(recent)
 
             if (!user?.uid) {
-                setUpcomingSetlists(upcoming.slice(0, 5))
                 setAllSetlists(setlists)
             }
             setPublicLoaded(true)
@@ -151,7 +152,7 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
         setPersonalLoaded(false)
 
         const unsub = setlistService.subscribeToPersonalSetlists((setlists) => {
-            setUpcomingSetlists(filterUpcoming(setlists).slice(0, 5))
+            setUpcomingPersonal(filterUpcoming(setlists).slice(0, 5))
             setAllSetlists(setlists)
             setPersonalLoaded(true)
         })
@@ -159,6 +160,18 @@ export default function DashboardClient({ serverGreeting, serverShortName }: Das
         return () => unsub()
     }, [setlistService, user?.uid, authLoading, filterUpcoming])
 
+
+    // Merge upcoming from personal + public, deduplicate by ID, sort by date
+    const upcomingSetlists = useMemo(() => {
+        const map = new Map<string, Setlist>()
+        // Personal first (higher priority)
+        for (const s of upcomingPersonal) map.set(s.id, s)
+        // Public fills in anything not already present
+        for (const s of upcomingPublic) if (!map.has(s.id)) map.set(s.id, s)
+        return Array.from(map.values())
+            .sort((a, b) => (toDate(a.eventDate)?.getTime() || 0) - (toDate(b.eventDate)?.getTime() || 0))
+            .slice(0, 5)
+    }, [upcomingPersonal, upcomingPublic])
 
     // Content is ready once public setlists have loaded.
     const setlistsReady = publicLoaded
