@@ -25,6 +25,8 @@ interface AnnotationState {
     undoLastAnnotation: (pageNumber: number) => void
     clearPage: (pageNumber: number) => void
     save: () => Promise<void>
+    /** Clear the debounce timer — call when the consuming component unmounts */
+    clearSaveTimer: () => void
 
     // UI actions
     setAnnotating: (v: boolean) => void
@@ -32,6 +34,7 @@ interface AnnotationState {
     setColor: (color: AnnotationColor) => void
 }
 
+// Timer scoped to this module — exposed via clearSaveTimer for lifecycle cleanup
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -44,7 +47,16 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     activeColor: "#ef4444",
     strokeWidth: 3,
 
+    clearSaveTimer: () => {
+        if (saveTimer) {
+            clearTimeout(saveTimer)
+            saveTimer = null
+        }
+    },
+
     loadAnnotations: async (uid, fileId) => {
+        // Clear any pending save for the previous file
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
         set({ loading: true, fileId, uid, pageAnnotations: {} })
         try {
             // Attempt network fetch
