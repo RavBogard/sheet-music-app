@@ -7,8 +7,8 @@ Deep-dive bugsweep and backend hardening pass on the production v1.2 codebase. R
 ## Current Milestone
 
 **v1.3 Bugsweep & Backend Hardening** (v1.3.0)
-Status: In progress
-Phases: 3 of 4 complete
+Status: Complete
+Phases: 4 of 4 complete
 
 ## Phases
 
@@ -17,7 +17,7 @@ Phases: 3 of 4 complete
 | 1 | Codebase Audit & Recommendations | 1 | Complete | 2026-03-10 |
 | 2 | Critical Fixes (Security & Data Integrity) | 2 | Complete | 2026-03-10 |
 | 3 | Backend Hardening (Error Handling & Consistency) | 2 | Complete | 2026-03-10 |
-| 4 | Frontend Robustness (Hooks, Types, Cleanup) | 2 | Not started | - |
+| 4 | Frontend Robustness (Hooks, Types, Cleanup) | 2 | Complete | 2026-03-10 |
 
 ## Phase Details
 
@@ -84,9 +84,9 @@ Phases: 3 of 4 complete
 - Fix memory leak patterns (annotation store, monitor connection)
 
 **Plans:**
-- [ ] 04-01: Hook dependency fixes and async safety
-- [ ] 04-02: Type normalization and error boundaries
+- [x] 04-01: Hook dependency fixes and async safety
+- [x] 04-02: Type normalization and error boundaries
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-10 (Phase 3 complete)*
+*Last updated: 2026-03-10 (Phase 4 complete — milestone complete)*

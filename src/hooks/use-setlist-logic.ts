@@ -330,7 +330,11 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     // Track whether there are unsaved changes pending
     const hasPendingSave = useRef(false)
 
-    // Trigger auto-save on changes (stable deps — only performSave identity matters)
+    // Keep a ref to performSave so the auto-save effect doesn't depend on its identity
+    const performSaveRef = useRef(performSave)
+    useEffect(() => { performSaveRef.current = performSave }, [performSave])
+
+    // Trigger auto-save on changes — reads performSave from ref to avoid circular dep
     useEffect(() => {
         if (!name || !canEdit) return
 
@@ -341,7 +345,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
         saveTimeoutRef.current = setTimeout(() => {
             hasPendingSave.current = false
-            performSave()
+            performSaveRef.current()
         }, 1000)
 
         return () => {
@@ -349,11 +353,9 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians, performSave, canEdit])
+    }, [name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians, canEdit])
 
     // Flush pending saves when user navigates away or switches apps
-    const performSaveRef = useRef(performSave)
-    useEffect(() => { performSaveRef.current = performSave }, [performSave])
 
     useEffect(() => {
         const flushSave = () => {
@@ -527,8 +529,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
         try {
             const newId = previousState
-                ? await setlistService.makePrivate(setlistId, {} as unknown as Setlist)
-                : await setlistService.makePublic(setlistId, {} as unknown as Setlist)
+                ? await setlistService.makePrivate(setlistId)
+                : await setlistService.makePublic(setlistId)
 
             setSetlistId(newId)
             toast.success(`Setlist is now ${!previousState ? 'public' : 'private'}!`)

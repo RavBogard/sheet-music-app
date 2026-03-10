@@ -82,11 +82,11 @@ export function useUpcomingPrep() {
         )
     }, [user, isMember])
 
-    const { data } = useSafeFirestoreSync<Setlist>(q as any)
+    const { data } = useSafeFirestoreSync<Setlist[]>(q)
 
     useEffect(() => {
         if (data) {
-            setSetlists(data as unknown as Setlist[])
+            setSetlists(data)
         } else {
             setSetlists([])
         }
@@ -96,6 +96,8 @@ export function useUpcomingPrep() {
     // Firestore `in` queries support up to 30 items per batch, so we chunk if needed.
     useEffect(() => {
         if (!user || setlists.length === 0) return
+
+        let cancelled = false
 
         const fileIds = new Set<string>()
         for (const s of setlists) {
@@ -112,6 +114,7 @@ export function useUpcomingPrep() {
             const prefs: Record<string, SongPref> = {}
 
             for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+                if (cancelled) return
                 const batch = allIds.slice(i, i + BATCH_SIZE)
                 try {
                     const colRef = collection(db, 'users', user.uid, 'songPreferences')
@@ -121,6 +124,7 @@ export function useUpcomingPrep() {
                 } catch {
                     // Fallback: read individually from cache on query failure
                     for (const fileId of batch) {
+                        if (cancelled) return
                         try {
                             const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
                             const snap = await getDocFromCache(ref).catch(() => getDoc(ref))
@@ -130,10 +134,11 @@ export function useUpcomingPrep() {
                 }
             }
 
-            setSongPrefs(prefs)
+            if (!cancelled) setSongPrefs(prefs)
         }
 
         loadBatches()
+        return () => { cancelled = true }
     }, [user, setlists])
 
     // Build enriched list

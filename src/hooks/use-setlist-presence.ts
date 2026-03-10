@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import {
     PresenceEntry,
@@ -27,10 +27,11 @@ export function useSetlistPresence(
     const [others, setOthers] = useState<PresenceEntry[]>([])
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-    // Write presence
+    // Write presence — use ref to avoid identity changes triggering effect re-runs
     const gigModeActive = useMusicStore(s => s.gigModeActive)
 
-    const write = useCallback(() => {
+    const writeRef = useRef(() => {})
+    writeRef.current = () => {
         if (!setlistId || !uid || gigModeActive) return
         writePresence(setlistId, uid, {
             uid,
@@ -39,7 +40,7 @@ export function useSetlistPresence(
             status,
             currentSongIndex: null,
         })
-    }, [setlistId, uid, displayName, photoURL, status, gigModeActive])
+    }
 
     useEffect(() => {
         if (!setlistId || !uid) return
@@ -51,10 +52,10 @@ export function useSetlistPresence(
         }
 
         // Initial write
-        write()
+        writeRef.current()
 
-        // Heartbeat
-        intervalRef.current = setInterval(write, HEARTBEAT_MS)
+        // Heartbeat — reads from ref so callback is always fresh
+        intervalRef.current = setInterval(() => writeRef.current(), HEARTBEAT_MS)
 
         // Subscribe to others
         const unsub = subscribeToPresence(setlistId, (entries) => {
@@ -78,7 +79,7 @@ export function useSetlistPresence(
             if (document.visibilityState === "hidden") {
                 removePresence(setlistId, uid)
             } else {
-                write()
+                writeRef.current()
             }
         }
 
@@ -90,11 +91,14 @@ export function useSetlistPresence(
             window.removeEventListener("beforeunload", handleUnload)
             window.removeEventListener("pagehide", handleUnload)
             document.removeEventListener("visibilitychange", handleVisibilityChange)
-            if (intervalRef.current) clearInterval(intervalRef.current)
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+            }
             if (unsub) unsub()
             handleUnload()
         }
-    }, [setlistId, uid, write, gigModeActive])
+    }, [setlistId, uid, gigModeActive])
 
     return others
 }

@@ -1,5 +1,5 @@
-/** Firestore Timestamp — may come as raw object or with toDate() method */
-export type FirestoreDate = string | Date | { seconds: number; nanoseconds: number; toDate?: () => Date }
+/** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
+export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
 // corrections for AI Transposer
 export interface OMRCorrection {

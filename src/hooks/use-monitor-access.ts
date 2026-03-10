@@ -30,7 +30,7 @@ export function useMonitorAccess(): {
     const [loading, setLoading] = useState(true)
 
     const ref = useMemo(() => user ? doc(db, "config", "monitor") : null, [user])
-    const { data: configData, loading: configLoading } = useSafeFirestoreSync<MonitorConfig>(ref as any)
+    const { data: configData, loading: configLoading } = useSafeFirestoreSync<MonitorConfig>(ref)
 
     useEffect(() => {
         if (!user) {

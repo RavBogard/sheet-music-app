@@ -37,7 +37,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         () => (setlistId ? doc(db, "setlists", setlistId) : null),
         [setlistId]
     )
-    const { data: setlistData, loading, error } = useSafeFirestoreSync<any>(setlistRef as any)
+    const { data: setlistData, loading, error } = useSafeFirestoreSync<any>(setlistRef)
 
     // Extract fields from setlist data
     const tracks: SetlistTrack[] = setlistData?.tracks || []

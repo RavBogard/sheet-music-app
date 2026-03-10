@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useOffline } from "@/hooks/use-offline"
 import { toast } from "sonner"
-import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
+import { getNextFriday, getNextSaturday, getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
 import { useCustomTemplates } from "@/lib/template-firebase"
 import { useLibraryStore } from "@/lib/library-store"
@@ -150,8 +150,7 @@ export function useSetlistDashboard({
         if (!setlistService || !user) return
         const toastId = toast.loading("Creating next week’s setlist…")
         try {
-            const currentSetlist = { ...setlist, date: setlist.eventDate } as unknown as Parameters<typeof setlistService.cloneForNextWeek>[0]
-            const newId = await setlistService.cloneForNextWeek(currentSetlist)
+            const newId = await setlistService.cloneForNextWeek(setlist)
             toast.success("Cloned for next week!", { id: toastId })
             router.push(`/setlists/${newId}`)
         } catch {
@@ -172,6 +171,8 @@ export function useSetlistDashboard({
     }
 
     const [transferring, setTransferring] = useState(false)
+    const isMountedRef = useRef(true)
+    useEffect(() => { return () => { isMountedRef.current = false } }, [])
 
     const handleTransfer = async () => {
         if (!selectedSetlistForTransfer || !transferEmail) return
@@ -182,14 +183,16 @@ export function useSetlistDashboard({
                 body: JSON.stringify({ setlistId: selectedSetlistForTransfer.id, newOwnerEmail: transferEmail })
             })
             if (!res.ok) throw new Error(await res.text())
+            if (!isMountedRef.current) return
             toast.success("Transfer Successful!")
             setShowTransferDialog(false)
             setTransferEmail("")
             setSelectedSetlistForTransfer(null)
         } catch (err: unknown) {
+            if (!isMountedRef.current) return
             toast.error(`Transfer Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
         } finally {
-            setTransferring(false)
+            if (isMountedRef.current) setTransferring(false)
         }
     }
 
@@ -209,14 +212,14 @@ export function useSetlistDashboard({
                 try {
                     toastId = toast.loading('Building setlist from template...')
                     const context = await getFullServiceContext(date)
-                    context.type = templateType as any
+                    context.type = templateType as ServiceType
                     const { allFiles } = useLibraryStore.getState()
                     const tracks = buildSetlistFromTemplate(template, allFiles, context)
                     const name = generateSetlistName(context)
 
                     const id = await setlistService.createSetlist(name, tracks, true, {
                         eventDate: date.toISOString(),
-                        templateType: templateType as any,
+                        templateType: templateType as Setlist['templateType'],
                         isTemplate: false,
                     })
 
@@ -260,14 +263,14 @@ export function useSetlistDashboard({
         try {
             templateToastId = toast.loading('Building setlist from template...')
             const context = await getFullServiceContext(targetDate)
-            context.type = templateType as any
+            context.type = templateType as ServiceType
             const { allFiles } = useLibraryStore.getState()
             const tracks = buildSetlistFromTemplate(template, allFiles, context)
             const name = generateSetlistName(context)
 
             const id = await setlistService.createSetlist(name, tracks, true, {
                 eventDate: targetDate.toISOString(),
-                templateType: templateType as any,
+                templateType: templateType as Setlist['templateType'],
                 isTemplate: false,
             })
 

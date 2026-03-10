@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { cn } from "@/lib/utils"
+import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 interface AuditLog {
     id: string
@@ -28,7 +29,7 @@ export function AccessAuditLog() {
         limit(20) // Only show the last 20 actions
     ), [])
 
-    const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q as any)
+    const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q)
 
     useEffect(() => {
         if (isLogsLoading) return
@@ -40,7 +41,7 @@ export function AccessAuditLog() {
         }
 
         if (rawLogs) {
-            const data = (rawLogs as any[]).map((doc: any) => ({ ...doc } as AuditLog))
+            const data = rawLogs.map((doc) => ({ ...doc } as AuditLog))
             setLogs(data)
         }
         setLoading(false)
@@ -51,6 +52,7 @@ export function AccessAuditLog() {
     )
 
     return (
+        <SectionErrorBoundary label="Access Audit Log">
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             {logs.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4 text-center bg-muted/20 rounded-lg">No audit records found.</p>
@@ -85,6 +87,7 @@ export function AccessAuditLog() {
                 </div>
             )}
         </div>
+        </SectionErrorBoundary>
     )
 }
 

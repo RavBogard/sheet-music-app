@@ -3,16 +3,16 @@
  *
  * Persistent singleton Firestore connection for live mixer data.
  * The connection is established once and persists across component
- * mount/unmount cycles — it is NOT ref-counted.
+ * mount/unmount cycles via ref counting with a 3s debounce.
  *
- * This prevents the "reload loop" where song navigation in performance
- * mode would unmount PerformanceToolbar, drop refCount to 0, tear down
- * the connection, then remount and reconnect (causing visible flicker).
+ * The debounce prevents the "reload loop" where song navigation in
+ * performance mode would unmount PerformanceToolbar, drop refCount
+ * to 0, tear down the connection, then remount and reconnect.
  *
  * Lifecycle:
  * - connect(): Called by useMonitorConnection() on first mount with a user
- * - disconnect(): Called on auth sign-out or page unload only
- * - Components mount/unmount freely without affecting the connection
+ * - disconnect(): Called on auth sign-out, page unload, or when all consumers unmount (debounced)
+ * - Re-mount after teardown reconnects automatically
  *
  * Uses Firestore as the transport — zero configuration on iPads.
  * The bridge writes mixer state to Firestore; iPads read it via onSnapshot.
@@ -31,7 +31,7 @@ import { MonitorConfig } from "@/types/monitor"
 import { logger } from "@/lib/logger"
 import { onAuthStateChanged } from "firebase/auth"
 
-// ─── Persistent singleton (NOT ref-counted) ───
+// ─── Persistent singleton with ref counting ───
 
 let activeClient: FirestoreMonitorClient | null = null
 let configUnsub: (() => void) | null = null
@@ -39,6 +39,8 @@ let connectedUserId: string | null = null
 let authUnsub: (() => void) | null = null
 let authTeardownTimer: ReturnType<typeof setTimeout> | null = null
 let unloadListenerAdded = false
+let refCount = 0
+let refCountTeardownTimer: ReturnType<typeof setTimeout> | null = null
 
 function getClient(): FirestoreMonitorClient | null {
     return activeClient
@@ -93,13 +95,21 @@ function ensureConnected(userId: string): void {
 }
 
 /**
- * Full teardown — only called on sign-out or page unload.
- * NOT called on component unmount.
+ * Full teardown — called on sign-out, page unload, or when all consumers unmount.
+ * Skips if consumers are still mounted (unless force=true for auth/unload).
  */
-function teardown(): void {
+function teardown(force = false): void {
+    if (!force && refCount > 0) {
+        logger.debug("[MonitorConn] Teardown skipped — %d consumers still mounted", refCount)
+        return
+    }
     logger.info("[MonitorConn] Tearing down connection (user was: %s)", connectedUserId)
     connectedUserId = null
 
+    if (refCountTeardownTimer) {
+        clearTimeout(refCountTeardownTimer)
+        refCountTeardownTimer = null
+    }
     if (configUnsub) {
         configUnsub()
         configUnsub = null
@@ -139,7 +149,7 @@ function registerTeardownListeners(): void {
                         authTeardownTimer = null
                         if (!auth.currentUser && activeClient) {
                             logger.info("[MonitorConn] User still null after 3s — tearing down")
-                            teardown()
+                            teardown(true)
                         }
                     }, 3000)
                 }
@@ -149,7 +159,7 @@ function registerTeardownListeners(): void {
 
     // Page unload listener
     if (!unloadListenerAdded && typeof window !== "undefined") {
-        window.addEventListener("beforeunload", teardown)
+        window.addEventListener("beforeunload", () => teardown(true))
         unloadListenerAdded = true
     }
 }
@@ -170,9 +180,33 @@ export function useMonitorConnection(): { client: FirestoreMonitorClient | null 
 
     useEffect(() => {
         if (!user) return
-        logger.debug("[MonitorConn] Hook mounted (connection already active: %s)", !!activeClient)
+
+        refCount++
+        logger.debug("[MonitorConn] Hook mounted — refCount=%d, active=%s", refCount, !!activeClient)
+
+        // Cancel any pending teardown from a previous unmount cycle
+        if (refCountTeardownTimer) {
+            clearTimeout(refCountTeardownTimer)
+            refCountTeardownTimer = null
+        }
+
         ensureConnected(user.uid)
-        // No cleanup — connection persists intentionally
+
+        return () => {
+            refCount = Math.max(0, refCount - 1)
+            logger.debug("[MonitorConn] Hook unmounted — refCount=%d", refCount)
+
+            if (refCount === 0 && activeClient) {
+                // Debounce teardown to avoid flicker during page transitions
+                refCountTeardownTimer = setTimeout(() => {
+                    refCountTeardownTimer = null
+                    if (refCount === 0) {
+                        logger.info("[MonitorConn] All consumers unmounted — tearing down")
+                        teardown(true)
+                    }
+                }, 3000)
+            }
+        }
     }, [user?.uid])
 
     return { client: activeClient }

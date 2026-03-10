@@ -5,6 +5,8 @@
  * Run `npm run check:types` to verify sync, or `npm run check:types -- --fix` to copy.
  */
 
+import { FirestoreDate } from "@/types/models"
+
 export interface MonitorConfig {
     bridgeUrl: string
     x32Address: string
@@ -17,7 +19,7 @@ export interface MonitorConfig {
 
 export interface BridgeStatus {
     status: "online" | "offline"
-    lastSeen: unknown // Firestore Timestamp
+    lastSeen: FirestoreDate | null
     x32Connected: boolean
     clients: number
     localIp: string | null

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { isFileCached } from '@/lib/cache-utils'
 import { SetlistTrack } from '@/types/models'
 import { toast } from 'sonner'
@@ -33,8 +33,11 @@ export function useOffline() {
     }, [])
 
     /** Download a single file to IndexedDB */
+    const downloadingRef = useRef(downloading)
+    downloadingRef.current = downloading
+
     const downloadFile = useCallback(async (fileId: string, fileName: string) => {
-        if (downloading[fileId]) return
+        if (downloadingRef.current[fileId]) return
 
         setDownloading(prev => ({ ...prev, [fileId]: true }))
         try {
@@ -48,7 +51,7 @@ export function useOffline() {
         } finally {
             setDownloading(prev => ({ ...prev, [fileId]: false }))
         }
-    }, [downloading])
+    }, [])
 
     /** Bulk download all files in a setlist to cache.
      *  Pass `silent: true` to suppress toast notifications (e.g., for background sync). */

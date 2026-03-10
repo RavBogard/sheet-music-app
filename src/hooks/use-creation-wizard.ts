@@ -6,7 +6,7 @@ import { assignMusicians } from "@/lib/scheduling-firebase"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
-import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
+import { getNextFriday, getNextSaturday, getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
 
@@ -100,7 +100,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         // Auto-generate name from liturgical context
         try {
             const context = await getFullServiceContext(targetDate)
-            context.type = key as any
+            context.type = key as ServiceType
             setName(generateSetlistName(context))
         } catch {
             const label = TEMPLATE_LABELS[key]?.label || 'Service'
@@ -163,9 +163,9 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 const template = getTemplate(selectedTemplate, customTemplates)
                 if (template && eventDate) {
                     toast.loading('Building setlist from template...')
-                    const context = await getFullServiceContext(eventDate)
-                    context.type = selectedTemplate as any
-                    if (rabbi) (context as any).rabbi = rabbi
+                    const baseContext = await getFullServiceContext(eventDate)
+                    baseContext.type = selectedTemplate as ServiceType
+                    const context = rabbi ? { ...baseContext, rabbi } : baseContext
                     const { allFiles } = useLibraryStore.getState()
                     finalTracks = buildSetlistFromTemplate(template, allFiles, context)
                     toast.dismiss()
@@ -177,7 +177,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 eventDate: eventDate?.toISOString() ?? undefined,
                 rabbi: rabbi || undefined,
                 musicians,
-                templateType: selectedTemplate as any,
+                templateType: selectedTemplate as Setlist['templateType'],
             })
 
             // Schedule musicians (if any selected and setlist is public)

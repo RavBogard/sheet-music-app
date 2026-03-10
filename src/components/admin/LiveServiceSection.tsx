@@ -9,8 +9,9 @@ import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
-import { formatEventDate } from "@/lib/firestore-helpers"
+import { formatEventDate, toDate } from "@/lib/firestore-helpers"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
+import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 export function LiveServiceSection() {
     const { isAdmin, isBandLeader } = useAuth()
@@ -25,7 +26,7 @@ export function LiveServiceSection() {
 
     // 1. Watch Monitor Config (Bridge Status)
     const monitorConfigRef = useMemo(() => doc(db, "config", "monitor"), [])
-    const { data: configData, error: configError } = useSafeFirestoreSync<MonitorConfig>(monitorConfigRef as any)
+    const { data: configData, error: configError } = useSafeFirestoreSync<MonitorConfig>(monitorConfigRef)
 
     useEffect(() => {
         if (configData) {
@@ -35,7 +36,7 @@ export function LiveServiceSection() {
 
     // 2. Watch Active Setlists (anything modified recently, or just grab all public ones for now, checking presence)
     const setlistsQuery = useMemo(() => query(collection(db, "setlists"), where("isPublic", "==", true)), [])
-    const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery as any)
+    const { data: setlistsData, loading: setlistsLoading } = useSafeFirestoreSync<any[]>(setlistsQuery)
 
     // Resolve loading once Firestore queries have returned (even if empty)
     useEffect(() => {
@@ -49,7 +50,7 @@ export function LiveServiceSection() {
 
         const fetchPresence = async () => {
             try {
-                const lists = setlistsData as any[]
+                const lists = setlistsData
                 setActiveSetlists(lists)
 
                 // For each setlist, fetch presence to see if it's "active"
@@ -84,12 +85,8 @@ export function LiveServiceSection() {
                 setIsBridgeOnline(false)
                 return
             }
-            // Handle both raw timestamps and Firestore Timestamp objects
-            const lastSeenMs = typeof bridgeStatus.lastSeen === 'number'
-                ? bridgeStatus.lastSeen
-                : typeof (bridgeStatus.lastSeen as any)?.toMillis === 'function'
-                    ? (bridgeStatus.lastSeen as any).toMillis()
-                    : 0
+            const lastSeenDate = toDate(bridgeStatus.lastSeen)
+            const lastSeenMs = lastSeenDate ? lastSeenDate.getTime() : 0
             setIsBridgeOnline((Date.now() - lastSeenMs) < 90000)
         }
 
@@ -110,6 +107,7 @@ export function LiveServiceSection() {
     }
 
     return (
+        <SectionErrorBoundary label="Live Service">
         <section className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-5 h-5 text-success" />
@@ -247,7 +245,7 @@ export function LiveServiceSection() {
                             <span>Bridge Heartbeat Check:</span>
                             <span className={cn(isBridgeOnline ? "text-success" : "text-muted-foreground/60")}>
                                 {bridgeStatus?.lastSeen
-                                    ? new Date(typeof bridgeStatus.lastSeen === 'number' ? bridgeStatus.lastSeen : typeof (bridgeStatus.lastSeen as any)?.toMillis === 'function' ? (bridgeStatus.lastSeen as any).toMillis() : 0).toLocaleTimeString()
+                                    ? (toDate(bridgeStatus.lastSeen)?.toLocaleTimeString() ?? 'N/A')
                                     : 'N/A'}
                             </span>
                         </div>
@@ -263,5 +261,6 @@ export function LiveServiceSection() {
                 </div>
             </div>
         </section>
+        </SectionErrorBoundary>
     )
 }

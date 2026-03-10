@@ -16,7 +16,7 @@ export function FeaturedSetlistCard({ activeSetlists }: { activeSetlists: any[] 
     const [saving, setSaving] = useState(false)
 
     const featuredRef = useMemo(() => doc(db, "config", "featured"), [])
-    const { data: featuredData, loading: isFeaturedLoading } = useSafeFirestoreSync<{ setlistId: string }>(featuredRef as any)
+    const { data: featuredData, loading: isFeaturedLoading } = useSafeFirestoreSync<{ setlistId: string }>(featuredRef)
 
     useEffect(() => {
         if (isFeaturedLoading) return

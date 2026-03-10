@@ -50,6 +50,8 @@ import { createSetlistService } from "@/lib/setlist-firebase"
 import { syncTemplateSlot } from "@/lib/template-firebase"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
+import { ErrorBoundary } from "react-error-boundary"
+import { FallbackError } from "@/components/ui/fallback-error"
 
 interface SetlistEditorV2Props {
     setlistId?: string
@@ -500,6 +502,7 @@ export function SetlistEditorV2({
     }
 
     return (
+        <ErrorBoundary FallbackComponent={(props) => <FallbackError {...props} title="Editor Error" />}>
         <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100dvh-5rem)]">
             {/* Name prompt for new setlists */}
             <NamePrompt
@@ -725,5 +728,6 @@ export function SetlistEditorV2({
                 currentTrackFileIds={currentTrackFileIds}
             />
         </div>
+        </ErrorBoundary>
     )
 }

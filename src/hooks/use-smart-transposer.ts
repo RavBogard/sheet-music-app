@@ -95,14 +95,22 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
 
     const nativeKeyWritten = useRef(false)
     const backgroundScanDispatched = useRef(false)
+    const isMountedRef = useRef(true)
     const pageData = aiState.pageData[pageNumber]
 
-    // ── Trigger scan when enabled and page is rendered ──
+    // Track mount state for async safety
     useEffect(() => {
-        if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !aiState.scanningPages.includes(pageNumber)) {
+        isMountedRef.current = true
+        return () => { isMountedRef.current = false }
+    }, [])
+
+    // ── Trigger scan when enabled and page is rendered ──
+    const isPageScanning = aiState.scanningPages.includes(pageNumber)
+    useEffect(() => {
+        if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !isPageScanning) {
             runScan()
         }
-    }, [aiState.isEnabled, isRendered, pageData, hasScanned, pageNumber, aiState.scanningPages])
+    }, [aiState.isEnabled, isRendered, pageData, hasScanned, pageNumber, isPageScanning])
 
     // ── Preemptively scan next page ──
     useEffect(() => {
@@ -193,11 +201,11 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
             // Schedule via idle callback if possible so rendering isn't blocked
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(() => {
-                    runAiVisionExtration(pageEl, userOverrides)
+                    if (isMountedRef.current) runAiVisionExtration(pageEl, userOverrides)
                 }, { timeout: 2000 })
             } else {
                 setTimeout(() => {
-                    runAiVisionExtration(pageEl, userOverrides)
+                    if (isMountedRef.current) runAiVisionExtration(pageEl, userOverrides)
                 }, 100)
             }
 
@@ -264,7 +272,9 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 }
             }
 
-            setPageData(pageNumber, { chords: mappedChords, strips: [] })
+            if (isMountedRef.current) {
+                setPageData(pageNumber, { chords: mappedChords, strips: [] })
+            }
 
             if (fileId) {
                 saveChordCache(fileId, pageNumber, mappedChords.map(toCache), 'ai', true)
@@ -272,7 +282,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         } catch (err) {
             logger.warn("[AI Vision Extraction] Failed (non-fatal):", err)
         } finally {
-            setPageScanning(pageNumber, false)
+            if (isMountedRef.current) setPageScanning(pageNumber, false)
             releaseAiSlot()
         }
     }

@@ -16,6 +16,7 @@ import {
     Loader2, Radio, CheckCircle,
     Radar, Save, Settings2, Download, Copy, KeyRound,
 } from "lucide-react"
+import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
     bridgeUrl: "wss://192.168.1.50:9001",
@@ -43,7 +44,7 @@ export function SoundSystemSection() {
     const [generatingCode, setGeneratingCode] = useState(false)
 
     const configRef = useMemo(() => doc(db, "config", "monitor"), [])
-    const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef as any)
+    const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef)
 
     useEffect(() => {
         if (configLoading) return
@@ -166,6 +167,7 @@ export function SoundSystemSection() {
     }, [bridgeUrl, x32Address, x32Port, monitorBusesStr])
 
     return (
+        <SectionErrorBoundary label="Sound System">
         <section className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -310,5 +312,6 @@ export function SoundSystemSection() {
                 )}
             </div>
         </section>
+        </SectionErrorBoundary>
     )
 }

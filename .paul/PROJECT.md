@@ -12,7 +12,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.2.0 |
+| Version | 1.3.0 |
 | Status | Production |
 | Last Updated | 2026-03-10 |
 
@@ -32,10 +32,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] Light/dark theme with auto dark mode for performance
 - [x] PWA offline support with 30-day Workbox caching
 - [x] AI chat assistant for natural language setlist management
+- [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
 
 ### Active (In Progress)
 
-- [ ] Frontend robustness: hook dependency fixes, async safety, type normalization, error boundaries
+- None (milestone complete)
 
 ### Planned (Next)
 
@@ -110,7 +111,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | uploadToStorage keeps throwing, reads get StorageResult | Phase 3 | Consistent pattern for Storage callers |
 | Missing context tracked in AI prompt (not silent) | Phase 3 | AI responses note missing data sources |
 | BroadcastChannel for cross-tab cache invalidation | Phase 3 | Tabs stay in sync after library sync |
+| Ref-based callbacks for effect dep stability | Phase 4 | Pattern for all hooks with callback deps |
+| Broadened useSafeFirestoreSync ref type to DocumentData | Phase 4 | Eliminates all caller `as any` casts |
+| SectionErrorBoundary for admin crash isolation | Phase 4 | Sections fail independently |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after Phase 3*
+*Last updated: 2026-03-10 after Phase 4 (milestone complete)*
