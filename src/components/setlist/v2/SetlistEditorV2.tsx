@@ -48,7 +48,7 @@ import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { syncTemplateSlot } from "@/lib/template-firebase"
-import { apiFetch } from "@/lib/api-client"
+
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
@@ -158,6 +158,7 @@ export function SetlistEditorV2({
         matchFile,
         addSongsFromLibrary,
         addServiceItem,
+        detectKeyForFile,
         togglePublic,
         undo,
         redo,
@@ -372,30 +373,6 @@ export function SetlistEditorV2({
         setShowSearchOverlay(true)
     }, [])
 
-    // Background key detection: fire-and-forget, updates track key if detected
-    const pendingKeyDetections = useRef<Set<string>>(new Set())
-
-    const detectKeyForFile = useCallback((fileId: string) => {
-        if (pendingKeyDetections.current.has(fileId)) return
-        pendingKeyDetections.current.add(fileId)
-
-        apiFetch('/api/library/detect-key', {
-            method: 'POST',
-            body: JSON.stringify({ fileId }),
-        })
-            .then(res => res.ok ? res.json() : null)
-            .then(data => {
-                if (data?.key) {
-                    // Find the track by fileId and update its key
-                    setTracks(prev => prev.map(t =>
-                        t.fileId === fileId && !t.key ? { ...t, key: data.key } : t
-                    ))
-                }
-            })
-            .catch(() => { /* best-effort, silently ignore */ })
-            .finally(() => pendingKeyDetections.current.delete(fileId))
-    }, [setTracks])
-
     const handleSearchSelect = useCallback((file: DriveFile) => {
         const cleanName = file.name
             .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
@@ -432,11 +409,8 @@ export function SetlistEditorV2({
             setExpandedTrackId(null)
         } else {
             // Add mode: insert after focused track, or append
+            // Key detection handled internally by addSongsFromLibrary
             addSongsFromLibrary([file], focusedTrackIndex ?? undefined)
-            // Detect key for newly added track if no metadata key
-            if (!hasKey && file.id) {
-                detectKeyForFile(file.id)
-            }
         }
         setShowSearchOverlay(false)
     }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex, detectKeyForFile, tracks, initialTemplateType, user])

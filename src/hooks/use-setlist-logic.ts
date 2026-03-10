@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { useLibraryStore } from "@/lib/library-store"
 import { notifySetlistUpdated } from "@/lib/notification-store"
+import { apiFetch } from "@/lib/api-client"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -386,6 +387,29 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
     }, [])
 
+    // --- Background key detection ---
+    const pendingKeyDetections = useRef<Set<string>>(new Set())
+
+    const detectKeyForFile = useCallback((fileId: string) => {
+        if (pendingKeyDetections.current.has(fileId)) return
+        pendingKeyDetections.current.add(fileId)
+
+        apiFetch('/api/library/detect-key', {
+            method: 'POST',
+            body: JSON.stringify({ fileId }),
+        })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data?.key) {
+                    setTracks(prev => prev.map(t =>
+                        t.fileId === fileId && !t.key ? { ...t, key: data.key } : t
+                    ))
+                }
+            })
+            .catch(() => { /* best-effort, silently ignore */ })
+            .finally(() => pendingKeyDetections.current.delete(fileId))
+    }, [])
+
     // --- Actions ---
 
     const moveTrack = (activeId: string, overId: string) => {
@@ -429,6 +453,8 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                     : t
             )
         })
+        // Auto-detect key for the matched file
+        detectKeyForFile(fileId)
     }
 
     const duplicateTrack = (originalTrackId: string, overrides: Partial<SetlistTrack> = {}) => {
@@ -481,6 +507,13 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
             return [...prev, ...newTracks]
         })
+
+        // Auto-detect keys for files that don't already have one
+        for (const file of files) {
+            if (!file.metadata?.key && file.id) {
+                detectKeyForFile(file.id)
+            }
+        }
     }
 
     /** Add a non-song service flow item (reading, prayer, transition, note, or header) */
@@ -567,6 +600,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         addSongsFromLibrary,
         addServiceItem,
         duplicateTrack,
+        detectKeyForFile,
         togglePublic,
         eventDate,
         setEventDate,
