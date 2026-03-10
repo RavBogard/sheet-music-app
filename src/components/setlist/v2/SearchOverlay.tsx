@@ -55,15 +55,13 @@ export function SearchOverlay({
         }
     }, [isOpen])
 
-    // Search results
+    // Search results — show all matches (no artificial limits)
     const results = useMemo(() => {
         if (!query.trim()) {
-            // Show recent/all files when no search query (limited to 20)
             return allFiles
                 .filter((f) => !f.mimeType.includes("folder") && isChartFile(f))
-                .slice(0, 20)
         }
-        return fuse.search(query).map((r) => r.item).slice(0, 30)
+        return fuse.search(query).map((r) => r.item)
     }, [query, fuse, allFiles])
 
     const handleSelect = (file: DriveFile) => {
@@ -105,7 +103,7 @@ export function SearchOverlay({
 
                     {results.length === 0 && !query.trim() && (
                         <div className="text-center py-12 text-muted-foreground">
-                            <p className="text-sm">Start typing to search your library</p>
+                            <p className="text-sm">No songs in your library yet</p>
                         </div>
                     )}
 

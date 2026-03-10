@@ -47,6 +47,8 @@ import { NamePrompt } from "../modals/NamePrompt"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
 import { createSetlistService } from "@/lib/setlist-firebase"
+import { syncTemplateSlot } from "@/lib/template-firebase"
+import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 
 interface SetlistEditorV2Props {
@@ -60,6 +62,7 @@ interface SetlistEditorV2Props {
     initialRabbi?: string
     initialServiceNotes?: string
     initialMusicians?: SetlistMusician[]
+    initialTemplateType?: string
     isNew?: boolean
     onBack?: () => void
     onSave?: (id: string) => void
@@ -77,6 +80,7 @@ export function SetlistEditorV2({
     initialRabbi,
     initialServiceNotes,
     initialMusicians,
+    initialTemplateType,
     isNew = false,
     onBack,
     onSave,
@@ -366,12 +370,38 @@ export function SetlistEditorV2({
         setShowSearchOverlay(true)
     }, [])
 
+    // Background key detection: fire-and-forget, updates track key if detected
+    const pendingKeyDetections = useRef<Set<string>>(new Set())
+
+    const detectKeyForFile = useCallback((fileId: string) => {
+        if (pendingKeyDetections.current.has(fileId)) return
+        pendingKeyDetections.current.add(fileId)
+
+        apiFetch('/api/library/detect-key', {
+            method: 'POST',
+            body: JSON.stringify({ fileId }),
+        })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data?.key) {
+                    // Find the track by fileId and update its key
+                    setTracks(prev => prev.map(t =>
+                        t.fileId === fileId && !t.key ? { ...t, key: data.key } : t
+                    ))
+                }
+            })
+            .catch(() => { /* best-effort, silently ignore */ })
+            .finally(() => pendingKeyDetections.current.delete(fileId))
+    }, [setTracks])
+
     const handleSearchSelect = useCallback((file: DriveFile) => {
         const cleanName = file.name
             .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
             .replace(/_/g, ' ')
             .replace(/-/g, ' ')
             .trim() || "Untitled"
+
+        const hasKey = !!file.metadata?.key
 
         if (replacingTrackId) {
             // Replace mode: update existing track with new file
@@ -381,14 +411,33 @@ export function SetlistEditorV2({
                 fileName: file.name,
                 key: file.metadata?.key || "",
             })
+            // Detect key in background if file doesn't already have one
+            if (!hasKey && file.id) {
+                detectKeyForFile(file.id)
+            }
+            // Sync to template if this setlist was created from one
+            if (initialTemplateType && user?.uid) {
+                const trackIndex = tracks.findIndex(t => t.id === replacingTrackId)
+                if (trackIndex >= 0) {
+                    syncTemplateSlot(initialTemplateType, trackIndex, {
+                        fileId: file.id,
+                        fileName: file.name,
+                        label: cleanName,
+                    }, user.uid).catch(() => { /* best-effort */ })
+                }
+            }
             setReplacingTrackId(null)
             setExpandedTrackId(null)
         } else {
             // Add mode: insert after focused track, or append
             addSongsFromLibrary([file], focusedTrackIndex ?? undefined)
+            // Detect key for newly added track if no metadata key
+            if (!hasKey && file.id) {
+                detectKeyForFile(file.id)
+            }
         }
         setShowSearchOverlay(false)
-    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex])
+    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex, detectKeyForFile])
 
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors

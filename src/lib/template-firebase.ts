@@ -63,6 +63,25 @@ export async function deleteCustomTemplate(key: string): Promise<void> {
 }
 
 /**
+ * Update a single slot in an existing custom template.
+ * If no custom template exists for this type, does nothing (won't auto-create).
+ * Fire-and-forget — caller should catch errors.
+ */
+export async function syncTemplateSlot(
+    templateType: string,
+    slotIndex: number,
+    updates: Partial<TemplateSlot>,
+    userId: string,
+): Promise<void> {
+    const slots = await getCustomTemplate(templateType)
+    if (!slots) return // No custom template — don't auto-create
+    if (slotIndex < 0 || slotIndex >= slots.length) return
+
+    slots[slotIndex] = { ...slots[slotIndex], ...updates }
+    await saveCustomTemplate(templateType, slots, userId)
+}
+
+/**
  * React hook: subscribe to all custom template overrides in real time.
  * Returns a map of templateKey → TemplateSlot[] for overridden templates only.
  */

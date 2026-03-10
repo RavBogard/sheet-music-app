@@ -64,6 +64,7 @@ export default async function SetlistEditorPage({
             initialRabbi={existingSetlist?.rabbi}
             initialServiceNotes={existingSetlist?.serviceNotes}
             initialMusicians={existingSetlist?.musicians}
+            initialTemplateType={existingSetlist?.templateType}
             isNew={isNew}
         />
     )
