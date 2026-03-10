@@ -1,4 +1,3 @@
-import { pdfjs } from 'react-pdf'
 import type { DriveFile } from '@/types/models'
 import { parseFileId } from '@/lib/utils'
 
@@ -78,7 +77,8 @@ async function scanSingleFile(file: DriveFile): Promise<ScanResult> {
             }
         }
 
-        // Attempt to load with pdfjs
+        // Dynamically import pdfjs to avoid SSR issues (DOMMatrix not available in Node)
+        const { pdfjs } = await import('react-pdf')
         const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
         const pdf = await loadingTask.promise
         const pages = pdf.numPages
