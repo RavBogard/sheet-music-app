@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { useMetronome } from "@/hooks/use-metronome"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export function MetronomeControl() {
@@ -32,10 +33,11 @@ export function MetronomeControl() {
             </div>
 
             {/* Blinking Light Button + Label */}
-            <button
+            <Button
+                variant="ghost"
                 onClick={togglePlay}
                 className={cn(
-                    "flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg cursor-pointer transition-all border",
+                    "h-9 px-3 sm:px-4 rounded-lg cursor-pointer border",
                     "bg-card lg:bg-black/50",
                     isPlaying
                         ? "border-red-500/50"
@@ -58,7 +60,7 @@ export function MetronomeControl() {
                 )}>
                     {isPlaying ? currentBpm : "Metronome"}
                 </span>
-            </button>
+            </Button>
         </div>
     )
 }

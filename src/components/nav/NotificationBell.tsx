@@ -11,6 +11,7 @@ import {
 } from "@/lib/notification-store"
 import { useMusicStore } from "@/lib/store"
 import { Bell, ListMusic, Upload, Shield, Calendar, CalendarCheck, CalendarX } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const ICON_MAP: Record<string, typeof Bell> = {
     setlist_published: ListMusic,
@@ -73,9 +74,11 @@ export function NotificationBell() {
     return (
         <div className="relative" ref={ref}>
             {/* Bell button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setOpen(!open)}
-                className="relative p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="relative"
                 aria-label="Notifications"
             >
                 <Bell className="w-5 h-5" />
@@ -84,7 +87,7 @@ export function NotificationBell() {
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
-            </button>
+            </Button>
 
             {/* Dropdown */}
             {open && (
@@ -93,12 +96,14 @@ export function NotificationBell() {
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                         <span className="text-sm font-semibold text-foreground">Notifications</span>
                         {unreadCount > 0 && (
-                            <button
+                            <Button
+                                variant="link"
+                                size="xs"
                                 onClick={handleMarkAllRead}
-                                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                             >
                                 Mark all read
-                            </button>
+                            </Button>
                         )}
                     </div>
 
@@ -116,10 +121,11 @@ export function NotificationBell() {
                                     : ''
 
                                 return (
-                                    <button
+                                    <Button
+                                        variant="ghost"
                                         key={notif.id}
                                         onClick={() => handleClick(notif)}
-                                        className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-accent/50 transition-colors text-left ${!notif.read ? 'bg-violet-500/5' : ''}`}
+                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-left hover:bg-accent/50 ${!notif.read ? 'bg-violet-500/5' : ''}`}
                                     >
                                         <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${!notif.read ? 'bg-violet-500/10 text-violet-500' : 'bg-muted text-muted-foreground'}`}>
                                             <Icon className="w-3.5 h-3.5" />
@@ -140,7 +146,7 @@ export function NotificationBell() {
                                         {!notif.read && (
                                             <div className="w-2 h-2 rounded-full bg-violet-500 mt-2 shrink-0" />
                                         )}
-                                    </button>
+                                    </Button>
                                 )
                             })
                         )}

@@ -13,6 +13,7 @@ import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Loader2, Radio, ChevronDown, ChevronUp, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function MonitorPage() {
     const { user, loading: authLoading, isAdmin } = useAuth()
@@ -237,17 +238,19 @@ export default function MonitorPage() {
                         const isDefault = defaultChannels.includes(send.channelIndex)
                         return (
                             <div key={send.channelIndex} className="flex items-center gap-1">
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => toggleStar(send.channelIndex)}
-                                    className={`shrink-0 p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                                    className={
                                         isStarred
                                             ? "text-yellow-500"
                                             : "text-zinc-700 hover:text-zinc-500"
-                                    }`}
+                                    }
                                     title={isStarred ? "Remove from live mix" : "Add to live mix"}
                                 >
                                     <Star className="w-4 h-4" fill={isStarred ? "currentColor" : "none"} />
-                                </button>
+                                </Button>
                                 <div className="flex-1 min-w-0">
                                     <FaderStrip
                                         label={name}
@@ -276,13 +279,14 @@ export default function MonitorPage() {
             {/* Sound Engineer Section -- collapsible, open by default */}
             {hasEngineerAccess && (
                 <div className="mt-4 space-y-4">
-                    <button
+                    <Button
+                        variant="ghost"
                         onClick={() => setShowEngSection(!showEngSection)}
-                        className="flex items-center gap-2 text-sm font-medium text-amber-500 hover:text-amber-400 transition-colors w-full"
+                        className="flex items-center gap-2 text-sm font-medium text-amber-500 hover:text-amber-400 w-full justify-start"
                     >
                         {showEngSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         Sound Engineer
-                    </button>
+                    </Button>
 
                     {showEngSection && (
                         <div className="space-y-4">

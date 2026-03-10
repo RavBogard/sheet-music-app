@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { Check, ListChecks, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
 /**
@@ -95,10 +96,11 @@ export function DefaultChannelPicker() {
                 {channels.map(ch => {
                     const isSelected = selected.includes(ch.index)
                     return (
-                        <button
+                        <Button
                             key={ch.index}
+                            variant="ghost"
                             onClick={() => toggleChannel(ch.index)}
-                            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm transition-colors min-h-[44px] ${
+                            className={`justify-start gap-2 px-3 py-2.5 h-auto rounded-lg text-left min-h-[44px] ${
                                 isSelected
                                     ? "bg-brand/10 border border-brand/30 text-foreground"
                                     : "bg-zinc-900/40 border border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800/60"
@@ -112,7 +114,7 @@ export function DefaultChannelPicker() {
                                 {isSelected && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <span className="truncate">{ch.name || `Ch ${ch.index}`}</span>
-                        </button>
+                        </Button>
                     )
                 })}
             </div>

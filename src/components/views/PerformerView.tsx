@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Loader2 } from 'lucide-react'
+import { Button } from "@/components/ui/button"
 import { useMusicStore } from '@/lib/store'
 import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
@@ -267,19 +268,21 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                                 <p className="text-sm">You can still use the Next/Prev arrows to continue the service.</p>
                                 <div className="flex gap-4 mt-6">
                                     {(isAdmin || isBandLeader) && (
-                                        <button
+                                        <Button
+                                            variant="ghost"
                                             onClick={() => router.push('/library')}
-                                            className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
+                                            className="px-6 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 shadow-lg shadow-blue-900/20"
                                         >
                                             Assign a chart
-                                        </button>
+                                        </Button>
                                     )}
-                                    <button
+                                    <Button
+                                        variant="outline"
                                         onClick={onHome}
-                                        className="px-6 py-2 bg-muted text-foreground rounded-full font-medium hover:bg-muted/80 transition-colors border border-border"
+                                        className="px-6 py-2 rounded-full"
                                     >
                                         Go Back
-                                    </button>
+                                    </Button>
                                 </div>
                                 <ChartSuggestions trackName={playbackQueue[queueIndex]?.name} />
                             </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { RefreshCw, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const DISMISS_KEY = 'crc-update-dismissed'
 const DISMISS_DURATION_MS = 4 * 60 * 60 * 1000 // Don't re-show for 4 hours after dismissal
@@ -128,20 +129,23 @@ export function UpdatePrompt() {
     return (
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
             <div className="flex items-center gap-1 bg-brand text-brand-foreground rounded-full shadow-lg text-sm font-medium">
-                <button
+                <Button
+                    variant="ghost"
                     onClick={handleUpdate}
-                    className="flex items-center gap-2 hover:bg-brand/90 px-4 py-2.5 rounded-l-full transition-colors"
+                    className="flex items-center gap-2 hover:bg-brand/90 px-4 py-2.5 rounded-l-full rounded-r-none text-brand-foreground"
                 >
                     <RefreshCw className="w-4 h-4" />
                     Update available — tap to refresh
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleDismiss}
-                    className="p-2.5 hover:bg-brand/80 rounded-r-full transition-colors"
+                    className="hover:bg-brand/80 rounded-r-full rounded-l-none text-brand-foreground size-auto p-2.5"
                     aria-label="Dismiss update prompt"
                 >
                     <X className="w-3.5 h-3.5" />
-                </button>
+                </Button>
             </div>
         </div>
     )

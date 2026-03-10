@@ -7,6 +7,7 @@ import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Users, X, ChevronDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useMonitorStore } from "@/lib/monitor-store"
 
 interface BusAssignmentPanelProps {
@@ -115,28 +116,32 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
                                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand/15 border border-brand/25 text-sm text-foreground"
                                     >
                                         {a.userName}
-                                        <button
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-xs"
                                             onClick={() => removeUser(busIdx, a.userId)}
-                                            className="ml-0.5 p-0.5 rounded hover:bg-brand/20 transition-colors"
+                                            className="ml-0.5 h-5 w-5 hover:bg-brand/20"
                                             title={`Remove ${a.userName}`}
                                         >
                                             <X className="w-3 h-3" />
-                                        </button>
+                                        </Button>
                                     </span>
                                 ))}
 
                                 {/* Add user button / dropdown */}
                                 <div className="relative">
-                                    <button
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             setOpenDropdown(isOpen ? null : busIdx)
                                         }}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-zinc-600 text-sm text-zinc-400 hover:text-zinc-200 hover:border-zinc-400 transition-colors"
+                                        className="px-2.5 py-1 rounded-lg border border-dashed border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-400"
                                     >
                                         Add
                                         <ChevronDown className="w-3 h-3" />
-                                    </button>
+                                    </Button>
 
                                     {isOpen && availableUsers.length > 0 && (
                                         <div
@@ -144,13 +149,15 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
                                             onClick={e => e.stopPropagation()}
                                         >
                                             {availableUsers.map(u => (
-                                                <button
+                                                <Button
                                                     key={u.uid}
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => addUser(busIdx, u)}
-                                                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                                                    className="w-full justify-start rounded-none px-3 py-2 h-auto"
                                                 >
                                                     {u.displayName}
-                                                </button>
+                                                </Button>
                                             ))}
                                         </div>
                                     )}

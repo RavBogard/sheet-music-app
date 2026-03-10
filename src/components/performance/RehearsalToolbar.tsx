@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { formatPlaybackTime } from "@/lib/format-utils"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
     Play, Pause, SkipBack, Volume2, VolumeX,
@@ -211,13 +212,15 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
 
     if (!toolbarVisible) {
         return (
-            <button
+            <Button
+                variant="brand"
+                size="icon"
                 onClick={toggleToolbar}
-                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full bg-brand shadow-[0_0_20px_oklch(0.50_0.20_275/0.3)] text-foreground hover:bg-brand/90 transition-all hover:scale-105 flex items-center justify-center border border-brand/20"
+                className="fixed bottom-24 right-4 md:bottom-20 z-40 p-3 rounded-full shadow-[0_0_20px_oklch(0.50_0.20_275/0.3)] hover:scale-105 border border-brand/20"
                 title="Open Rehearsal Audio"
             >
                 {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
-            </button>
+            </Button>
         )
     }
 
@@ -226,22 +229,22 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
             {/* Header / Collapse */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
                 <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Rehearsal Audio</span>
-                <button onClick={toggleToolbar} className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors">
+                <Button variant="ghost" size="icon-xs" onClick={toggleToolbar} className="text-muted-foreground hover:text-foreground hover:bg-muted">
                     <ChevronDown className="w-4 h-4" />
-                </button>
+                </Button>
             </div>
 
             {/* Compact bar */}
             <div className="flex items-center gap-2 px-3 py-3">
                 {/* Play/Pause */}
-                <button onClick={togglePlay} className="p-2.5 rounded-full bg-brand hover:bg-brand/90 text-foreground transition-colors shrink-0 shadow-lg shadow-brand/20">
+                <Button variant="brand" size="icon-sm" onClick={togglePlay} className="rounded-full p-2.5 shadow-lg shadow-brand/20">
                     {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                </button>
+                </Button>
 
                 {/* Restart */}
-                <button onClick={resetToStart} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                <Button variant="ghost" size="icon-xs" onClick={resetToStart} className="text-muted-foreground hover:text-foreground">
                     <SkipBack className="w-4 h-4" />
-                </button>
+                </Button>
 
                 {/* Progress bar */}
                 <div className="flex-1 flex flex-col gap-1.5">
@@ -290,15 +293,17 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 </div>
 
                 {/* Expand controls */}
-                <button
+                <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => setExpanded(!expanded)}
                     className={cn(
-                        "text-[10px] font-bold px-2 py-1 rounded-md transition-colors",
+                        "text-[10px] font-bold",
                         expanded ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                 >
                     {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
+                </Button>
             </div>
 
             {/* Expanded controls */}
@@ -307,27 +312,31 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                     {/* Speed options grid */}
                     <div className="flex gap-1">
                         {SPEED_OPTIONS.map(s => (
-                            <button
+                            <Button
                                 key={s}
+                                variant="ghost"
+                                size="xs"
                                 onClick={() => changeSpeed(s)}
                                 className={cn(
-                                    "flex-1 text-[10px] font-bold py-1.5 rounded-md transition-colors border",
+                                    "flex-1 text-[10px] font-bold py-1.5 border",
                                     speed === s
                                         ? "bg-brand/20 text-brand border-brand/30"
                                         : "bg-muted/80 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
                                 )}
                             >
                                 {s}x
-                            </button>
+                            </Button>
                         ))}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                         {/* Loop toggle */}
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={handleLoopToggle}
                             className={cn(
-                                "flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-colors border",
+                                "py-2 rounded-lg text-xs font-semibold border",
                                 loopActive
                                     ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
                                     : loopA !== null
@@ -338,13 +347,15 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         >
                             <Repeat className="w-3.5 h-3.5" />
                             {loopActive ? 'Clear Loop' : loopA !== null ? 'Set Point B' : 'A/B Loop'}
-                        </button>
+                        </Button>
 
                         {/* Mute toggle */}
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={toggleMute}
                             className={cn(
-                                "flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-colors border",
+                                "py-2 rounded-lg text-xs font-semibold border",
                                 muted
                                     ? "bg-red-500/10 border-red-500/30 text-red-400"
                                     : "bg-muted/80 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -352,7 +363,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                         >
                             {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                             {muted ? "Muted" : "Mute"}
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Volume slider */}
@@ -378,7 +389,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                             {loopA !== null && (
                                 <div className="text-[10px] flex items-center justify-between text-amber-500/80 bg-amber-500/5 px-2 py-1 rounded">
                                     <span>Looping: {formatPlaybackTime(loopA)} → {loopB !== null ? formatPlaybackTime(loopB) : '...'}</span>
-                                    <button onClick={() => { setLoopA(null); setLoopB(null) }} className="hover:text-amber-400 underline">Clear</button>
+                                    <Button variant="link" size="xs" onClick={() => { setLoopA(null); setLoopB(null) }} className="h-auto p-0 text-[10px] text-amber-500/80 hover:text-amber-400">Clear</Button>
                                 </div>
                             )}
                             {cumulativeStats && cumulativeStats.seconds > 0 && (

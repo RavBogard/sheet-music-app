@@ -6,6 +6,7 @@ import {
     Home, Library, ListMusic, ListTodo, Radio, Settings,
     ShieldAlert, FileText, LogOut, User, CalendarDays,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
@@ -149,13 +150,14 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     {/* Footer */}
                     <div className="border-t border-brand/10 p-3">
                         {user && (
-                            <button
+                            <Button
+                                variant="ghost"
                                 onClick={() => { signOut(); onOpenChange(false) }}
-                                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                                className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-500"
                             >
                                 <LogOut className="w-5 h-5 shrink-0" />
                                 Log Out
-                            </button>
+                            </Button>
                         )}
                         <p className="text-center text-[10px] text-muted-foreground/40 mt-2">
                             v{buildInfo.version} &middot; {buildInfo.commit?.slice(0, 7)}

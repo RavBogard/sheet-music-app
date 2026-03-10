@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface MetronomeProps {
@@ -55,13 +56,14 @@ export function Metronome({ bpm, className }: MetronomeProps) {
     }, [])
 
     return (
-        <button
+        <Button
+            variant="ghost"
             onClick={(e) => {
                 e.stopPropagation()
                 start()
             }}
             className={cn(
-                "relative overflow-hidden px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 transition-colors select-none",
+                "relative overflow-hidden px-1.5 py-0.5 h-auto rounded text-[10px] font-medium select-none",
                 isActive ? "bg-white/10 text-white/90 ring-1 ring-white/20" : "bg-muted/50 text-muted-foreground hover:bg-muted/80",
                 className
             )}
@@ -83,6 +85,6 @@ export function Metronome({ bpm, className }: MetronomeProps) {
                 )} />
                 {bpm} BPM
             </span>
-        </button>
+        </Button>
     )
 }

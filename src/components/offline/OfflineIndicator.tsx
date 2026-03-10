@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { WifiOff, Download, Check, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 /**
  * Compact offline status indicator.
@@ -54,39 +55,45 @@ export function OfflineDownloadButton({
 }) {
     if (isFullyOffline) {
         return (
-            <button
+            <Button
                 type="button"
-                className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 px-2 py-1 rounded bg-green-500/10"
+                variant="ghost"
+                size="xs"
+                className="text-green-600 dark:text-green-400 bg-green-500/10"
                 disabled
             >
                 <Check className="h-3 w-3" />
                 Available offline
-            </button>
+            </Button>
         )
     }
 
     if (isDownloading && progress) {
         return (
-            <button
+            <Button
                 type="button"
-                className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded bg-accent"
+                variant="ghost"
+                size="xs"
+                className="text-muted-foreground bg-accent"
                 disabled
             >
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {progress.current}/{progress.total}
-            </button>
+            </Button>
         )
     }
 
     return (
-        <button
+        <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={onDownload}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
+            className="text-muted-foreground hover:text-foreground"
             title="Download all charts for offline use"
         >
             <Download className="h-3 w-3" />
             Save offline
-        </button>
+        </Button>
     )
 }
