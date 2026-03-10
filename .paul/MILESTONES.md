@@ -10,6 +10,41 @@ Completed milestone log for this project.
 | v1.2 Library, Manage & Monitor Overhaul | 2026-03-09 | 1 day | 9 phases, 10 plans |
 | v1.3 Bugsweep & Backend Hardening | 2026-03-10 | ~76 min | 4 phases, 7 plans |
 | v1.3.1 Regression Fixes | 2026-03-10 | ~8 min | 1 phase, 1 plan |
+| v1.4 Fixes & Library Management | 2026-03-10 | ~1 hr | 5 phases, 5 plans |
+
+---
+
+## v1.4 Fixes & Library Management
+
+**Completed:** 2026-03-10
+**Duration:** ~1 hr across 5 plans
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 5 |
+| Plans | 5 |
+| Files changed | 14 |
+
+### Key Accomplishments
+
+- Library management: rename songs (displayName overlay), unlink charts from tracks, restore archived songs
+- Prominent key badge in setlist editor (text-sm, font-semibold, bg-brand/20)
+- 5 monitor buses as default for CRC's X32 setup
+- Print gig packet fixes: iframe-based printing (no black screen), eventDate support, token retry
+- PDF health scanner: workerless pdfjs eliminates false positives, strict mimeType filter
+- Full codebase audit: 7 critical, 11 high, 17 medium, 8 low findings catalogued
+- Recommended v1.5 phase structure based on audit findings
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| displayName overlay for song rename (Firestore, not Drive) | Phase 1 | Preserves Drive filenames |
+| Iframe over window.open for PDF printing | Phase 3 | Reliable cross-browser printing |
+| apiFetch throws on token failure | Phase 3 | Surfaces auth issues early |
+| Workerless pdfjs for scanner | Phase 4 | Eliminates worker URL dependency |
 
 ---
 

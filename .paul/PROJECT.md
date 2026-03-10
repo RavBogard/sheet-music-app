@@ -46,7 +46,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- None
+- [ ] v1.5 Security hardening — npm audit fix, CSP/HSTS headers, QR expiry, bridge credential redesign
+- [ ] v1.5 Critical bug fixes — AI slot leak, clearSaveTimer wiring, musician-transposition race condition
+- [ ] v1.5 API consistency — migrate 23 withAuth routes to createApiHandler
+- [ ] v1.5 Data integrity — Firestore indexes, transactions, orphaned task cleanup
+- [ ] v1.5 Quality & deps — vitest environment, dependency updates, font subsetting
 
 ### Out of Scope
 
@@ -127,4 +131,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after v1.4 milestone complete*
+*Last updated: 2026-03-10 after v1.4 milestone archived*
