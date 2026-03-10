@@ -32,17 +32,16 @@ export interface FetchedFile {
  */
 export async function fetchFileById(fileId: string, mimeType?: string): Promise<FetchedFile | null> {
     // 1. Try Firebase Storage first (fast, CDN-cached)
-    try {
-        const storageResult = await downloadFromStorage(fileId, mimeType)
-        if (storageResult) {
-            return {
-                buffer: storageResult.buffer,
-                contentType: storageResult.contentType,
-                source: 'firebase-storage',
-            }
+    const storageResult = await downloadFromStorage(fileId, mimeType)
+    if (storageResult.success) {
+        return {
+            buffer: storageResult.data.buffer,
+            contentType: storageResult.data.contentType,
+            source: 'firebase-storage',
         }
-    } catch (e) {
-        logger.warn(`[FileFetcher] Storage lookup failed for ${fileId}:`, e instanceof Error ? e.message : e)
+    }
+    if (storageResult.reason === 'network') {
+        logger.warn(`[FileFetcher] Storage lookup failed for ${fileId}: ${storageResult.message}`)
     }
 
     // 2. Fall back to Google Drive

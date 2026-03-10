@@ -66,14 +66,15 @@ export async function GET(request: NextRequest) {
         try {
             const { downloadFromStorage } = await import("@/lib/firebase-storage")
             const storageResult = await downloadFromStorage(testFileId)
+            const inStorage = storageResult.success
             ;(results.checks as Record<string, unknown>).testFile = {
                 fileId: testFileId,
-                inStorage: !!storageResult,
-                storageContentType: storageResult?.contentType,
-                storageSize: storageResult?.buffer.byteLength,
+                inStorage,
+                storageContentType: inStorage ? storageResult.data.contentType : undefined,
+                storageSize: inStorage ? storageResult.data.buffer.byteLength : undefined,
             }
 
-            if (!storageResult) {
+            if (!inStorage) {
                 // Try Drive
                 try {
                     const { DriveClient } = await import("@/lib/google-drive")

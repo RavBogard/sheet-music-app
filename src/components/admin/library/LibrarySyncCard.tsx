@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { apiFetch } from "@/lib/api-client"
+import { clearLibraryCache, broadcastCacheInvalidation } from "@/lib/library-cache"
 import { SyncStats } from "@/lib/sync-engine"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,9 @@ export function LibrarySyncCard() {
             const res = await apiFetch("/api/library/sync", { method: "POST" })
             if (!res.ok) throw new Error(await res.text())
             setLastStats((await res.json()).stats)
+            // Invalidate local cache so next library load fetches fresh data
+            await clearLibraryCache()
+            broadcastCacheInvalidation()
             toast.success("Library sync complete!")
         } catch (e: unknown) {
             toast.error("Sync failed: " + (e instanceof Error ? e.message : "Unknown"))

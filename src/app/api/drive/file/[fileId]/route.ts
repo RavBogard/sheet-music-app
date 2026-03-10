@@ -7,15 +7,17 @@ import { logger } from "@/lib/logger"
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://centralreform.live,https://www.centralreform.live').split(',').map(s => s.trim())
+
 function getAllowedOrigin(request: NextRequest): string {
     const origin = request.headers.get('origin') || ''
+    // Direct match against configured origins
+    if (ALLOWED_ORIGINS.includes(origin)) return origin
     // Parse origin to check hostname safely
     try {
         const url = new URL(origin)
         const host = url.hostname
         if (
-            host === 'centralreform.live' ||
-            host === 'www.centralreform.live' ||
             host === 'localhost' ||
             host === '127.0.0.1' ||
             host.endsWith('.vercel.app')

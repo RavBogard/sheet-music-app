@@ -4,11 +4,24 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { withAuth } from "@/lib/api-auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 import { getFullServiceContext, getNextFriday, getNextSaturday, ServiceContext } from "@/lib/liturgical-calendar"
 import { getUsageSummaries } from "@/lib/song-usage"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS, getAllTemplateKeys } from "@/lib/liturgical-templates"
 import { parseTemplateRequest } from "@/lib/template-parser"
+
+const chatBodySchema = z.object({
+    messages: z.array(z.object({
+        role: z.string(),
+        content: z.string(),
+    })).min(1),
+    currentSetlist: z.array(z.any()).optional().default([]),
+    libraryFiles: z.array(z.any()).optional().default([]),
+    setlistName: z.string().optional(),
+    rabbi: z.string().optional(),
+    matrixContext: z.any().optional(),
+})
 
 // New System Prompt Definition used for the 'Agent' persona
 const SYSTEM_PROMPT = `
@@ -109,12 +122,20 @@ export async function POST(request: NextRequest) {
     const auth = await withAuth(request)
     if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
 
-    const body = await request.json().catch(() => null)
-    if (!body) {
+    const rawBody = await request.json().catch(() => null)
+    if (!rawBody) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
     }
 
-    const { messages, currentSetlist = [], libraryFiles = [], setlistName, rabbi, matrixContext } = body
+    const validation = chatBodySchema.safeParse(rawBody)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.format() },
+        { status: 400 }
+      )
+    }
+
+    const { messages, currentSetlist, libraryFiles, setlistName, rabbi, matrixContext } = validation.data
 
     // ── Template Auto-Fill: detect "Create a X for Y" and use template engine ──
     const lastMessage = messages[messages.length - 1]?.content || ''
@@ -189,15 +210,12 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    if (!Array.isArray(messages) || messages.length === 0 || !messages[messages.length - 1]?.content) {
-      return NextResponse.json({ error: "messages array with content is required" }, { status: 400 })
-    }
-
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
     // 2. Check Role & Build User Context
     const userRole = auth.role || 'member'
     let userContext = ""
+    const missingContexts: string[] = []
 
     try {
       if (auth.isAdmin || auth.isBandLeader) {
@@ -209,7 +227,8 @@ export async function POST(request: NextRequest) {
         userContext = `\n--- ADMIN CONTEXT (USERS) ---\n${users}\n-----------------------------\n`
       }
     } catch (e) {
-      logger.warn("Admin context fetch failed:", e)
+      logger.warn("[Chat] Admin context fetch failed:", e)
+      missingContexts.push("admin users")
     }
 
     if (!apiKey) {
@@ -267,8 +286,8 @@ export async function POST(request: NextRequest) {
         allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
       }
     } catch (e) {
-      logger.warn("Failed to fetch setlists for AI context:", e)
-      // Best-effort — continue without setlist context
+      logger.warn("[Chat] Failed to fetch setlists for AI context:", e)
+      missingContexts.push("setlists")
     }
 
     // Add liturgical calendar context
@@ -286,8 +305,9 @@ Next Friday (${nextFri.toLocaleDateString('en-US', { month: 'long', day: 'numeri
 Next Saturday (${nextSat.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}): ${satCtx.holiday || 'Regular Shabbat'}${satCtx.parasha ? `, Parashat ${satCtx.parasha}` : ''}
 Hebrew Date: ${friCtx.hebrewDate.display}
 -------------------------------\n`
-    } catch {
-      // Liturgical context is best-effort
+    } catch (e) {
+      logger.warn("[Chat] Liturgical context fetch failed:", e)
+      missingContexts.push("calendar")
     }
 
     // Song usage context — helps AI avoid repeating songs too often
@@ -310,8 +330,9 @@ Hebrew Date: ${friCtx.hebrewDate.display}
           usageContext = `\n--- SONG USAGE HISTORY ---\n${lines.join('\n')}\n--------------------------\n`
         }
       }
-    } catch {
-      // Usage context is best-effort
+    } catch (e) {
+      logger.warn("[Chat] Song usage context fetch failed:", e)
+      missingContexts.push("song usage")
     }
 
     let matrixStr = ""
@@ -321,6 +342,10 @@ Hebrew Date: ${friCtx.hebrewDate.display}
       matrixStr += JSON.stringify(matrixContext, null, 2)
       matrixStr += `\n----------------------------------------\n`
     }
+
+    const missingContextNote = missingContexts.length > 0
+      ? `\n--- MISSING CONTEXT (failed to load) ---\n${missingContexts.join(', ')}\nPlease note these data sources are unavailable for this response.\n---------------------------------------\n`
+      : ''
 
     const prompt = `
 ${SYSTEM_PROMPT}
@@ -335,8 +360,7 @@ ${libraryContext}
 --- CURRENT SETLIST${setlistName ? ` ("${setlistName}")` : ''}${rabbi ? ` [Rabbi: ${rabbi}]` : ''} ---
 ${setlistContext}
 -----------------------
-${allSetlistsContext}${liturgicalContext}${usageContext}${matrixStr}${userContext}
-
+${allSetlistsContext}${liturgicalContext}${usageContext}${matrixStr}${userContext}${missingContextNote}
 USER MESSAGE:
 ${messages[messages.length - 1].content}
 `
@@ -421,9 +445,9 @@ ${messages[messages.length - 1].content}
     })
 
   } catch (error: unknown) {
-    logger.error("Chat API Error:", error)
+    logger.error("[Chat] Request failed:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal Server Error" },
+      { error: "Chat request failed" },
       { status: 500 }
     )
   }

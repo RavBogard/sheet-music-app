@@ -68,9 +68,10 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
 
             return await handler(ctx)
         } catch (error) {
-            logger.error(`[API Wrapper Error] ${req.method} ${req.url}`, error)
+            const pathname = new URL(req.url).pathname
+            logger.error(`[API ${req.method} ${pathname}]`, error)
             return NextResponse.json(
-                { error: "Internal Server Error" },
+                { error: "Internal server error", details: { route: `${req.method} ${pathname}` } },
                 { status: 500 }
             )
         }

@@ -1,11 +1,11 @@
 /**
  * Firebase Storage admin helpers.
- * 
+ *
  * Used server-side to:
  * 1. Copy files from Google Drive to Firebase Storage during sync
  * 2. Serve files from Storage with CDN caching
  * 3. Check if a file already exists in Storage
- * 
+ *
  * Architecture: Google Drive (intake) → Sync → Firebase Storage (serving) → CDN → Client
  */
 
@@ -13,6 +13,12 @@ import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
 
 const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+
+// ─── Discriminated Result Types ───
+
+export type StorageError = { success: false; reason: 'not_found' | 'network' | 'invalid_input'; message: string }
+type StorageSuccess<T> = { success: true; data: T }
+export type StorageResult<T> = StorageSuccess<T> | StorageError
 
 /**
  * Get the Firebase Storage bucket instance.
@@ -35,39 +41,49 @@ function getStoragePath(fileId: string, mimeType?: string): string {
 }
 
 /**
+ * Build the list of candidate paths for a file ID,
+ * trying both the original and hyphenated variant.
+ */
+function getCandidatePaths(fileId: string, mimeType?: string): string[] {
+    const altFileId = fileId.replace(/_/g, '-')
+    const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
+
+    const paths: string[] = []
+    for (const id of fileIdsToTry) {
+        if (mimeType) {
+            paths.push(getStoragePath(id, mimeType))
+        } else {
+            paths.push(getStoragePath(id))
+            paths.push(getStoragePath(id, 'pdf'))
+            paths.push(getStoragePath(id, 'xml'))
+            paths.push(getStoragePath(id, 'audio'))
+        }
+    }
+    return paths
+}
+
+/**
  * Check if a file exists in Firebase Storage.
  */
-export async function fileExistsInStorage(fileId: string, mimeType?: string): Promise<boolean> {
+export async function fileExistsInStorage(fileId: string, mimeType?: string): Promise<StorageResult<boolean>> {
     try {
         const bucket = getBucket()
-        const altFileId = fileId.replace(/_/g, '-')
-        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
-
-        const paths: string[] = []
-        for (const id of fileIdsToTry) {
-            if (mimeType) {
-                paths.push(getStoragePath(id, mimeType))
-            } else {
-                paths.push(getStoragePath(id))
-                paths.push(getStoragePath(id, 'pdf'))
-                paths.push(getStoragePath(id, 'xml'))
-                paths.push(getStoragePath(id, 'audio'))
-            }
-        }
+        const paths = getCandidatePaths(fileId, mimeType)
 
         for (const path of paths) {
             const [exists] = await bucket.file(path).exists()
-            if (exists) return true
+            if (exists) return { success: true, data: true }
         }
-        return false
-    } catch {
-        return false
+        return { success: true, data: false }
+    } catch (err) {
+        return { success: false, reason: 'network', message: (err as Error).message || 'Storage check failed' }
     }
 }
 
 /**
  * Upload a file buffer to Firebase Storage.
  * Returns the public/signed URL for serving.
+ * Throws on error (callers already handle throws).
  */
 export async function uploadToStorage(
     fileId: string,
@@ -95,61 +111,34 @@ export async function uploadToStorage(
 
 /**
  * Get the public URL for a file in Storage.
- * Returns null if the file doesn't exist.
+ * Returns discriminated result distinguishing not_found from network errors.
  */
-export async function getStorageUrl(fileId: string, mimeType?: string): Promise<string | null> {
+export async function getStorageUrl(fileId: string, mimeType?: string): Promise<StorageResult<string>> {
     try {
         const bucket = getBucket()
-        const altFileId = fileId.replace(/_/g, '-')
-        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
-
-        const paths: string[] = []
-        for (const id of fileIdsToTry) {
-            paths.push(getStoragePath(id, mimeType))
-            if (!mimeType) {
-                paths.push(getStoragePath(id, 'pdf'))
-                paths.push(getStoragePath(id, 'xml'))
-                paths.push(getStoragePath(id, 'audio'))
-            }
-        }
+        const paths = getCandidatePaths(fileId, mimeType)
 
         for (const path of paths) {
             const file = bucket.file(path)
             const [exists] = await file.exists()
-            if (exists) return `gs://${BUCKET_NAME}/${path}`
+            if (exists) return { success: true, data: `gs://${BUCKET_NAME}/${path}` }
         }
 
-        return null
-    } catch {
-        return null
+        return { success: false, reason: 'not_found', message: `File ${fileId} not found in storage` }
+    } catch (err) {
+        return { success: false, reason: 'network', message: (err as Error).message || 'Storage URL lookup failed' }
     }
 }
 
 /**
  * Download a file from Storage as a Buffer.
- * Returns null if the file doesn't exist.
+ * Returns discriminated result distinguishing not_found from network errors.
  * When mimeType is unknown, tries common extensions.
  */
-export async function downloadFromStorage(fileId: string, mimeType?: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+export async function downloadFromStorage(fileId: string, mimeType?: string): Promise<StorageResult<{ buffer: Buffer; contentType: string }>> {
     try {
         const bucket = getBucket()
-
-        // Some external migration scripts incorrectly saved UUIDs with underscores instead of hyphens.
-        // As a resilient fallback, we test both variants of the fileId.
-        const altFileId = fileId.replace(/_/g, '-')
-        const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
-
-        const paths: string[] = []
-        for (const id of fileIdsToTry) {
-            if (mimeType) {
-                paths.push(getStoragePath(id, mimeType))
-            } else {
-                paths.push(getStoragePath(id))
-                paths.push(getStoragePath(id, 'pdf'))
-                paths.push(getStoragePath(id, 'xml'))
-                paths.push(getStoragePath(id, 'audio'))
-            }
-        }
+        const paths = getCandidatePaths(fileId, mimeType)
 
         for (const path of paths) {
             const file = bucket.file(path)
@@ -158,14 +147,17 @@ export async function downloadFromStorage(fileId: string, mimeType?: string): Pr
                 const [buffer] = await file.download()
                 const [metadata] = await file.getMetadata()
                 return {
-                    buffer: Buffer.from(buffer),
-                    contentType: metadata.contentType || 'application/pdf'
+                    success: true,
+                    data: {
+                        buffer: Buffer.from(buffer),
+                        contentType: metadata.contentType || 'application/pdf'
+                    }
                 }
             }
         }
 
-        return null
-    } catch {
-        return null
+        return { success: false, reason: 'not_found', message: `File ${fileId} not found in storage` }
+    } catch (err) {
+        return { success: false, reason: 'network', message: (err as Error).message || 'Storage download failed' }
     }
 }

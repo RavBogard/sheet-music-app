@@ -59,6 +59,7 @@ export class FirestoreMonitorClient {
     private _firstSnapshot = true
     private _consecutiveErrors = 0
     private _retryTimer: ReturnType<typeof setTimeout> | null = null
+    private _lastCommandError = 0
 
     constructor(options: FirestoreMonitorClientOptions) {
         this.options = options
@@ -188,9 +189,11 @@ export class FirestoreMonitorClient {
         }
         this._pendingSnapshot = null
 
-        // Clear all throttled commands
+        // Flush any pending throttled commands before disconnecting
+        // This ensures the last fader position is always sent
         for (const [, throttled] of this.throttleMap) {
             clearTimeout(throttled.timer)
+            this.sendCommandImmediate(throttled.data).catch(() => {})
         }
         this.throttleMap.clear()
 
@@ -289,8 +292,13 @@ export class FirestoreMonitorClient {
                 createdAt: Date.now(),
             })
         } catch (err) {
+            this._lastCommandError = Date.now()
             logger.error("[MonitorFS] Command send failed:", (err as Error).message)
         }
+    }
+
+    get lastCommandError(): number {
+        return this._lastCommandError
     }
 
     get isConnected(): boolean {

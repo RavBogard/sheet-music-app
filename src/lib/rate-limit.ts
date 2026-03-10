@@ -72,6 +72,13 @@ function createLimiter(maxRequests: number, windowSec: number): LimiterLike {
 
 // ── Pre-configured limiters ──
 
+const limiterConfigs = {
+    api: { max: 60, window: 60 },
+    upload: { max: 10, window: 60 },
+    sync: { max: 3, window: 60 },
+    ai: { max: 20, window: 60 },
+} as const
+
 const limiters = {
     /** General API: 60 req/min */
     api: createLimiter(60, 60),
@@ -81,6 +88,16 @@ const limiters = {
     sync: createLimiter(3, 60),
     /** AI/expensive: 20/min */
     ai: createLimiter(20, 60),
+}
+
+// In-memory fallbacks used when Redis is unavailable (fail-closed)
+const fallbackLimiters: Record<string, InMemoryRateLimiter> = {}
+function getFallbackLimiter(tier: LimiterName): InMemoryRateLimiter {
+    if (!fallbackLimiters[tier]) {
+        const cfg = limiterConfigs[tier]
+        fallbackLimiters[tier] = new InMemoryRateLimiter(cfg.max, cfg.window * 1000)
+    }
+    return fallbackLimiters[tier]
 }
 
 export type LimiterName = keyof typeof limiters
@@ -144,9 +161,24 @@ export async function checkRateLimit(
         }
         return null
     } catch (err) {
-        // Rate limit failure should not block requests
-        logger.warn("[RateLimit] Check failed, allowing request:", err)
-        return null
+        // Redis unavailable — fail closed with in-memory fallback
+        logger.warn("[RateLimit] Redis failed, using in-memory fallback:", err)
+        try {
+            const key = `${tier}:${getKey(req)}`
+            const fallback = getFallbackLimiter(tier)
+            const result = await fallback.limit(key)
+            if (!result.success) {
+                return NextResponse.json(
+                    { error: "Too many requests. Please try again later." },
+                    { status: 429, headers: { 'Retry-After': '60' } }
+                )
+            }
+            return null
+        } catch {
+            // Both Redis and in-memory failed — allow as last resort
+            logger.error("[RateLimit] Both Redis and fallback failed, allowing request")
+            return null
+        }
     }
 }
 

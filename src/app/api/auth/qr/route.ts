@@ -107,12 +107,15 @@ export async function GET(req: NextRequest) {
         if (data.status === "approved" && data.customToken) {
             // Consume: delete session after delivering token
             await db.collection(COLLECTION).doc(code).delete().catch(() => {})
-            return NextResponse.json({
+            const response = NextResponse.json({
                 status: "approved",
                 token: data.customToken,
                 userName: data.userName,
                 userPhoto: data.userPhoto,
             })
+            // Prevent proxy/CDN caching of sensitive token response
+            response.headers.set("Cache-Control", "no-store")
+            return response
         }
 
         return NextResponse.json({ status: data.status })
@@ -149,8 +152,8 @@ export async function PUT(req: NextRequest) {
 
         const body = await req.json()
         const { code } = body
-        if (!code) {
-            return NextResponse.json({ error: "Missing code" }, { status: 400 })
+        if (!code || typeof code !== "string" || !/^[A-Z0-9]{6}$/.test(code)) {
+            return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 
         const db = getFirestore()

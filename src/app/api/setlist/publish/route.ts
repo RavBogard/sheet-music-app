@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
         // Step 3: In-app notifications — only for registered musicians (with uid), excluding publisher
         const registeredMusicians = musicians.filter(m => m.uid && m.uid !== auth.uid)
         const notifBatchSize = 50
+        const inAppResults = { sent: 0, failed: 0 }
+        const inAppPromises: Promise<void>[] = []
         for (let i = 0; i < registeredMusicians.length; i += notifBatchSize) {
             const batch = db.batch()
             const chunk = registeredMusicians.slice(i, i + notifBatchSize)
@@ -125,18 +127,34 @@ export async function POST(request: NextRequest) {
                     createdAt: FieldValue.serverTimestamp(),
                 })
             }
-            batch.commit().catch(err => logger.warn('[Publish] In-app notification batch failed:', err))
+            inAppPromises.push(
+                batch.commit()
+                    .then(() => { inAppResults.sent += chunk.length })
+                    .catch(err => {
+                        logger.warn('[Publish] In-app notification batch failed:', err)
+                        inAppResults.failed += chunk.length
+                    })
+            )
         }
 
-        // Step 3b: FCM push notifications (fire-and-forget, both publish and re-publish)
+        // Step 3b: FCM push notifications (tracked, both publish and re-publish)
+        const pushResults = { sent: 0, failed: 0 }
         const pushUids = registeredMusicians.map(m => m.uid!)
-        if (pushUids.length > 0) {
-            sendPushToUsers(pushUids, {
+        const pushPromise = pushUids.length > 0
+            ? sendPushToUsers(pushUids, {
                 title: 'New setlist published',
                 body: `"${setlistName}" is now available`,
                 link: `/perform/setlist/${setlistId}`,
-            }).catch(err => logger.warn('[Publish] FCM push failed:', err))
-        }
+            })
+                .then(result => {
+                    pushResults.sent = result?.sent ?? 0
+                    pushResults.failed = result?.failed ?? 0
+                })
+                .catch(err => {
+                    logger.warn('[Publish] FCM push failed:', err)
+                    pushResults.failed = pushUids.length
+                })
+            : Promise.resolve()
 
         // Step 4: Build email recipient list
         // Client sends emailRecipients — the subset of musicians who should receive email.
@@ -209,8 +227,10 @@ export async function POST(request: NextRequest) {
             })
             : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[], messageIds: [] as Array<{ email: string; messageId: string }> })
 
-        // Step 4b: SMS notifications for musicians with SMS preference (fire-and-forget)
+        // Step 4b: SMS notifications for musicians with SMS preference (tracked)
         // Only for initial publish, not re-publish (to control SMS costs)
+        const smsResults = { sent: 0, failed: 0 }
+        const smsPromises: Promise<void>[] = []
         if (!wasPublic) {
             for (const musician of registeredMusicians) {
                 try {
@@ -219,11 +239,18 @@ export async function POST(request: NextRequest) {
                     const prefs = userData.musicianProfile?.notificationPreferences || {}
                     const phone = userData.musicianProfile?.phone || userData.phone
                     if (prefs.sms === true && phone) {
-                        sendSMS(phone, `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
-                            .catch(err => logger.warn(`[Publish] SMS failed for ${musician.uid}:`, err))
+                        smsPromises.push(
+                            sendSMS(phone, `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
+                                .then(() => { smsResults.sent++ })
+                                .catch(err => {
+                                    logger.warn(`[Publish] SMS failed for ${musician.uid}:`, err)
+                                    smsResults.failed++
+                                })
+                        )
                     }
                 } catch (e) {
                     logger.warn(`[Publish] SMS pref check failed for ${musician.uid}:`, e)
+                    smsResults.failed++
                 }
             }
         }
@@ -242,8 +269,10 @@ export async function POST(request: NextRequest) {
             },
         }).catch(err => logger.warn('[Publish] Audit log failed:', err))
 
-        // Wait for usage + email results
+        // Wait for usage + email + all notification results
         const [usageResult, emailResult] = await Promise.all([usagePromise, emailPromise])
+        // Await tracked notification promises (best-effort — failures already caught)
+        await Promise.allSettled([...inAppPromises, pushPromise, ...smsPromises])
 
         const emailed = 'sent' in emailResult ? emailResult.sent : 0
         const emailError = 'error' in emailResult && emailResult.error
@@ -287,6 +316,12 @@ export async function POST(request: NextRequest) {
             emailError: emailError || undefined,
             emailTargets: emailRecipients.length,
             usageRecorded: usageResult.recorded,
+            notificationResults: {
+                inApp: inAppResults,
+                push: pushResults,
+                email: { sent: emailed, failed: emailRecipients.length - emailed },
+                sms: smsResults,
+            },
         })
     } catch (err) {
         logger.error('[Publish] Error:', err)

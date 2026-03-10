@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 const COOKIE_NAME = "__session"
@@ -18,6 +19,9 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 14 // 14 days in seconds
  */
 export async function POST(req: NextRequest) {
     try {
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         const body = await req.json()
         const idToken = body.idToken
 
