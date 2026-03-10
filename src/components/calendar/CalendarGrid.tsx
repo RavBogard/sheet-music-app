@@ -51,7 +51,7 @@ export function CalendarGrid({
                             className={
                                 mode === 'availability'
                                     ? "aspect-square bg-background/20 border-t border-r border-border/20"
-                                    : "min-h-[100px] bg-background/20 border-b border-r border-border/20"
+                                    : "min-h-[72px] sm:min-h-[100px] bg-background/20 border-b border-r border-border/20"
                             }
                         />
                     )

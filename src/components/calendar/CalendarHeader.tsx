@@ -69,7 +69,8 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
                         "p-2 text-xs font-semibold text-center",
                         (i === 5 || i === 6) ? 'text-brand' : 'text-muted-foreground'
                     )}>
-                        {day}
+                        <span className="sm:hidden">{day[0]}</span>
+                        <span className="hidden sm:inline">{day}</span>
                     </div>
                 ))}
             </div>

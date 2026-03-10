@@ -79,7 +79,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
     // ── Viewer / Planning mode ──
     return (
         <div className={cn(
-            "min-h-[100px] p-1.5 border-b border-r border-border/20 group transition-all duration-200",
+            "min-h-[72px] sm:min-h-[100px] p-1.5 border-b border-r border-border/20 group transition-all duration-200",
             isToday && "bg-brand/5 ring-1 ring-inset ring-brand/10",
             (isFriday || isSaturday) && !isToday && "bg-brand/[0.02]",
             "hover:bg-accent/30",
@@ -117,7 +117,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                             variant="ghost"
                             onClick={() => onSelectSetlist(setlist)}
                             className={cn(
-                                "w-full h-auto text-left p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
+                                "w-full h-auto min-h-11 text-left p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
                                 mode === 'planning' && coverage === 'full' && "bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40",
                                 mode === 'planning' && coverage === 'partial' && "bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-500/40",
                                 mode === 'planning' && coverage === 'empty' && "bg-red-500/10 border-red-500/25 hover:bg-red-500/20 hover:border-red-500/40",
