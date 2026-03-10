@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import buildInfo from "@/build-info.json"
-import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2 } from "lucide-react"
+import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 // ScrollArea removed — natural page scrolling so the layout footer works correctly
 import { ErrorState } from "@/components/ui/error-state"
@@ -100,6 +100,14 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                 <DropdownMenuItem onClick={onCreateNew || (() => router.push('/setlists/new'))} className="text-muted-foreground">
                                     Blank Setlist
                                 </DropdownMenuItem>
+                                {isBandLeader && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => router.push('/manage/templates')}>
+                                            <FileText className="h-4 w-4 mr-2" /> Manage Templates
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Button onClick={() => setShowWizard(true)} className="gap-2 bg-brand hover:bg-brand/90 shadow-lg shadow-brand/20 px-6">

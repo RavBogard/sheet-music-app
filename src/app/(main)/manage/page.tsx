@@ -2,14 +2,13 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Users, Database, FileText, Radio, History } from "lucide-react"
+import { Loader2, ArrowLeft, ShieldAlert, Users, Database, Radio, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { PeopleSection } from "@/components/admin/PeopleSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
-import { TemplatesSection } from "@/components/admin/TemplatesSection"
 import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
 import { DuplicateScanner } from "@/components/library/DuplicateScanner"
@@ -54,7 +53,7 @@ export default function ManagePage() {
                             Manage
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
-                            Band management, library, templates, and sound system
+                            Band management, library, and sound system
                         </p>
                     </div>
                 </div>
@@ -69,11 +68,7 @@ export default function ManagePage() {
                             <Database className="w-4 h-4" />
                             Library
                         </TabsTrigger>
-                        <TabsTrigger value="templates" className="min-h-11 gap-1.5">
-                            <FileText className="w-4 h-4" />
-                            Templates
-                        </TabsTrigger>
-                        <TabsTrigger value="sound" className="min-h-11 gap-1.5">
+<TabsTrigger value="sound" className="min-h-11 gap-1.5">
                             <Radio className="w-4 h-4" />
                             Sound
                         </TabsTrigger>
@@ -114,13 +109,7 @@ export default function ManagePage() {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="templates" className="mt-6">
-                        <SectionErrorBoundary label="Templates">
-                            <TemplatesSection />
-                        </SectionErrorBoundary>
-                    </TabsContent>
-
-                    <TabsContent value="sound" className="mt-6 space-y-8">
+<TabsContent value="sound" className="mt-6 space-y-8">
                         <SectionErrorBoundary label="Sound System">
                             <LiveServiceSection />
                             <SoundSystemSection />
