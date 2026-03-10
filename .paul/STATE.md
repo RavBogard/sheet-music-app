@@ -60,6 +60,11 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - LOW-002 (error logging policy) — ongoing enforcement
 - LOW-003 (toast policy) — ongoing enforcement
 
+### Git State
+Last commit: 0b708e0
+Branch: master
+Feature branches merged: none
+
 ### Blockers/Concerns
 None.
 
