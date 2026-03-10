@@ -16,6 +16,16 @@ import {
     MatrixInfo,
     MixerSnapshot,
 } from "@/types/monitor"
+import { logger } from "@/lib/logger"
+
+/** Shallow compare two arrays by length and element reference */
+function shallowEqualArray<T>(a: T[], b: T[]): boolean {
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false
+    }
+    return true
+}
 
 /**
  * Find the first bus assigned to the given user.
@@ -66,6 +76,10 @@ interface MonitorState {
     starredChannels: number[]
     defaultChannels: number[]
 
+    // Connection health
+    lastSnapshotAt: number
+    snapshotCount: number
+
     // Actions
     setStatus: (status: ConnectionStatus, error?: string) => void
     setSnapshot: (snapshot: MixerSnapshot, userId: string) => void
@@ -91,21 +105,45 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     userId: null,
     starredChannels: [],
     defaultChannels: [],
+    lastSnapshotAt: 0,
+    snapshotCount: 0,
 
     setStatus: (status, error) => set({ status, error: error || null }),
 
     setSnapshot: (snapshot, userId) => {
+        const state = get()
         const myBusIndex = snapshot.config.busAssignments
             ? findUserBus(snapshot.config.busAssignments, userId)
             : null
 
+        const matrices = snapshot.matrices || []
+
+        // Always update health tracking (even if data unchanged)
+        const healthUpdate = {
+            lastSnapshotAt: Date.now(),
+            snapshotCount: state.snapshotCount + 1,
+        }
+
+        // Shallow equality check — skip store update if nothing changed
+        const channelsSame = shallowEqualArray(state.channels, snapshot.channels)
+        const busesSame = shallowEqualArray(state.buses, snapshot.buses)
+        const matricesSame = shallowEqualArray(state.matrices, matrices)
+        const busIndexSame = state.myBusIndex === myBusIndex
+
+        if (channelsSame && busesSame && matricesSame && busIndexSame) {
+            logger.debug("[MonitorStore] Snapshot skipped (no changes)")
+            set(healthUpdate)
+            return
+        }
+
         set({
             channels: snapshot.channels,
             buses: snapshot.buses,
-            matrices: snapshot.matrices || [],
+            matrices,
             config: snapshot.config,
             myBusIndex,
             userId,
+            ...healthUpdate,
         })
     },
 
@@ -193,5 +231,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         userId: null,
         starredChannels: [],
         defaultChannels: [],
+        lastSnapshotAt: 0,
+        snapshotCount: 0,
     }),
 }))

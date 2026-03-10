@@ -60,7 +60,7 @@ function ensureConnected(userId: string): void {
     }
 
     connectedUserId = userId
-    logger.info("[MonitorConn] Establishing persistent connection")
+    logger.info("[MonitorConn] Establishing persistent connection for user %s", userId)
 
     // Watch config/monitor for bus assignments and bridge status
     configUnsub = onSnapshot(doc(db, "config", "monitor"), (snap) => {
@@ -85,6 +85,7 @@ function ensureConnected(userId: string): void {
 
     activeClient = client
     client.connect()
+    logger.info("[MonitorConn] Connected for user %s", userId)
 
     // Register one-time teardown listeners (sign-out + page unload)
     registerTeardownListeners()
@@ -95,7 +96,7 @@ function ensureConnected(userId: string): void {
  * NOT called on component unmount.
  */
 function teardown(): void {
-    logger.info("[MonitorConn] Tearing down connection")
+    logger.info("[MonitorConn] Tearing down connection (user was: %s)", connectedUserId)
     connectedUserId = null
 
     if (configUnsub) {
@@ -107,6 +108,7 @@ function teardown(): void {
         activeClient = null
     }
     useMonitorStore.getState().reset()
+    logger.info("[MonitorConn] Teardown complete")
 }
 
 /**
@@ -118,6 +120,7 @@ function registerTeardownListeners(): void {
     // Auth state listener — tear down on sign-out
     if (!authUnsub) {
         authUnsub = onAuthStateChanged(auth, (user) => {
+            logger.debug("[MonitorConn] Auth state changed — user: %s", user?.uid || "null")
             if (!user && activeClient) {
                 logger.info("[MonitorConn] User signed out — tearing down")
                 teardown()
@@ -148,6 +151,7 @@ export function useMonitorConnection(): { client: FirestoreMonitorClient | null 
 
     useEffect(() => {
         if (!user) return
+        logger.debug("[MonitorConn] Hook mounted (connection already active: %s)", !!activeClient)
         ensureConnected(user.uid)
         // No cleanup — connection persists intentionally
     }, [user?.uid])

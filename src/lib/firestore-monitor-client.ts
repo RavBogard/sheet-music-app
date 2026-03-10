@@ -34,6 +34,10 @@ export interface FirestoreMonitorClientOptions {
 // into at most 1 command per 50ms per parameter
 const COMMAND_THROTTLE_MS = 50
 
+// Snapshot debounce: coalesce rapid bridge writes into at most
+// 1 store update per 150ms (first snapshot fires immediately)
+const SNAPSHOT_DEBOUNCE_MS = 150
+
 interface ThrottledCommand {
     timer: ReturnType<typeof setTimeout>
     data: Record<string, unknown>
@@ -44,6 +48,11 @@ export class FirestoreMonitorClient {
     private stateUnsub: Unsubscribe | null = null
     private throttleMap = new Map<string, ThrottledCommand>()
     private _connected = false
+    private _snapshotCount = 0
+    private _lastSnapshotAt = 0
+    private _snapshotDebounceTimer: ReturnType<typeof setTimeout> | null = null
+    private _pendingSnapshot: MixerSnapshot | null = null
+    private _firstSnapshot = true
 
     constructor(options: FirestoreMonitorClientOptions) {
         this.options = options
@@ -54,6 +63,7 @@ export class FirestoreMonitorClient {
      */
     connect(): void {
         this.options.onStatusChange("connecting")
+        this._firstSnapshot = true
 
         // Listen to the live mixer state document
         this.stateUnsub = onSnapshot(
@@ -68,7 +78,7 @@ export class FirestoreMonitorClient {
                 }
 
                 const data = snap.data() as MixerSnapshot & { updatedAt?: unknown }
-                
+
                 if (!this._connected) {
                     this._connected = true
                     this.options.onStatusChange("connected")
@@ -79,7 +89,7 @@ export class FirestoreMonitorClient {
                 const toArray = <T>(val: unknown): T[] =>
                     Array.isArray(val) ? val : val && typeof val === "object" ? Object.values(val) : []
 
-                this.options.onStateUpdate({
+                const parsed: MixerSnapshot = {
                     channels: toArray(data.channels),
                     buses: toArray<Record<string, unknown>>(data.buses).map((b) => ({
                         ...b,
@@ -87,7 +97,31 @@ export class FirestoreMonitorClient {
                     })) as MixerSnapshot["buses"],
                     matrices: toArray(data.matrices),
                     config: data.config,
-                })
+                }
+
+                this._snapshotCount++
+
+                // First snapshot fires immediately so UI populates instantly
+                if (this._firstSnapshot) {
+                    this._firstSnapshot = false
+                    logger.debug("[MonitorFS] First snapshot — forwarding immediately")
+                    this.forwardSnapshot(parsed)
+                    return
+                }
+
+                // Debounce subsequent snapshots
+                logger.debug("[MonitorFS] Snapshot received (debouncing)")
+                this._pendingSnapshot = parsed
+                if (this._snapshotDebounceTimer) {
+                    clearTimeout(this._snapshotDebounceTimer)
+                }
+                this._snapshotDebounceTimer = setTimeout(() => {
+                    if (this._pendingSnapshot) {
+                        this.forwardSnapshot(this._pendingSnapshot)
+                        this._pendingSnapshot = null
+                    }
+                    this._snapshotDebounceTimer = null
+                }, SNAPSHOT_DEBOUNCE_MS)
 
                 // Note: we intentionally do NOT call onConfigUpdate here.
                 // The dedicated config/monitor Firestore listener in useMonitorConnection
@@ -102,6 +136,12 @@ export class FirestoreMonitorClient {
         )
     }
 
+    private forwardSnapshot(snapshot: MixerSnapshot): void {
+        this._lastSnapshotAt = Date.now()
+        logger.debug("[MonitorFS] Snapshot forwarded to store (total: %d)", this._snapshotCount)
+        this.options.onStateUpdate(snapshot)
+    }
+
     /**
      * Stop listening and clean up.
      */
@@ -110,6 +150,13 @@ export class FirestoreMonitorClient {
             this.stateUnsub()
             this.stateUnsub = null
         }
+
+        // Clear snapshot debounce timer
+        if (this._snapshotDebounceTimer) {
+            clearTimeout(this._snapshotDebounceTimer)
+            this._snapshotDebounceTimer = null
+        }
+        this._pendingSnapshot = null
 
         // Clear all throttled commands
         for (const [, throttled] of this.throttleMap) {
@@ -218,5 +265,13 @@ export class FirestoreMonitorClient {
 
     get isConnected(): boolean {
         return this._connected
+    }
+
+    get snapshotCount(): number {
+        return this._snapshotCount
+    }
+
+    get lastSnapshotAt(): number {
+        return this._lastSnapshotAt
     }
 }
