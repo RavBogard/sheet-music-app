@@ -3,15 +3,12 @@
 import { useMemo } from "react"
 import { CalendarDayCell } from "./CalendarDayCell"
 import type { CalendarMode, CalendarDayData } from "@/hooks/use-calendar-data"
-import type { UseBlockoutSelectionReturn } from "@/hooks/use-blockout-selection"
 import type { Setlist } from "@/lib/setlist-firebase"
 
 interface CalendarGridProps {
     currentDate: Date
     mode: CalendarMode
     dayMap: Map<string, CalendarDayData>
-    isMyBlockedDate: (dateKey: string) => boolean
-    blockoutSelection?: UseBlockoutSelectionReturn
     onSelectSetlist: (setlist: Setlist) => void
     onCreateSetlist?: (date: Date, type?: 'shabbat_morning') => void
 }
@@ -21,8 +18,8 @@ function todayKey(): string {
 }
 
 export function CalendarGrid({
-    currentDate, mode, dayMap, isMyBlockedDate,
-    blockoutSelection, onSelectSetlist, onCreateSetlist,
+    currentDate, mode, dayMap,
+    onSelectSetlist, onCreateSetlist,
 }: CalendarGridProps) {
     const { days } = useMemo(() => {
         const y = currentDate.getFullYear()
@@ -48,11 +45,7 @@ export function CalendarGrid({
                     return (
                         <div
                             key={`empty-${i}`}
-                            className={
-                                mode === 'availability'
-                                    ? "aspect-square bg-background/20 border-t border-r border-border/20"
-                                    : "min-h-[72px] sm:min-h-[100px] bg-background/20 border-b border-r border-border/20"
-                            }
+                            className="min-h-[72px] sm:min-h-[100px] bg-background/20 border-b border-r border-border/20"
                         />
                     )
                 }
@@ -70,12 +63,8 @@ export function CalendarGrid({
                         mode={mode}
                         isToday={isToday}
                         isPast={isPast}
-                        inSelection={blockoutSelection?.isInSelection(dateKey) ?? false}
-                        isMyBlocked={isMyBlockedDate(dateKey)}
                         onSelectSetlist={onSelectSetlist}
                         onCreateSetlist={onCreateSetlist}
-                        onDayClick={blockoutSelection?.handleDayClick}
-                        onDayHover={blockoutSelection?.handleDayHover}
                     />
                 )
             })}

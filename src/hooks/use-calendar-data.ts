@@ -3,40 +3,27 @@ import { useAuth } from "@/lib/auth-context"
 import {
     subscribeToMyAssignments,
     subscribeToAllUpcomingAssignments,
-    subscribeToMyBlockouts,
-    subscribeToAllBlockouts,
 } from "@/lib/scheduling-firebase"
 import { dateStr as toDateKey } from "@/lib/firestore-helpers"
-import type {
-    SchedulingAssignment,
-    MusicianBlockout,
-} from "@/types/models"
+import type { SchedulingAssignment } from "@/types/models"
 import type { Setlist } from "@/lib/setlist-firebase"
 
 // ── Public types ──
 
-export type CalendarMode = 'viewer' | 'planning' | 'availability'
+export type CalendarMode = 'viewer' | 'planning'
 
 export interface CalendarDayData {
     /** Setlists on this day */
     setlists: Setlist[]
     /** Scheduling assignments grouped by setlist */
     assignmentsBySetlist: Map<string, SchedulingAssignment[]>
-    /** Number of musicians blocked out on this day */
-    blockedCount: number
-    /** UIDs blocked on this day */
-    blockedUids: Set<string>
 }
 
 export interface UseCalendarDataReturn {
     /** Map of 'YYYY-MM-DD' → CalendarDayData */
     dayMap: Map<string, CalendarDayData>
-    /** All blockouts (for availability mode rendering) */
-    blockouts: MusicianBlockout[]
     /** All assignments (raw) */
     assignments: SchedulingAssignment[]
-    /** Is a given date-key blocked for the current user? */
-    isMyBlockedDate: (dateKey: string) => boolean
     /** Loading flag */
     loading: boolean
 }
@@ -44,9 +31,8 @@ export interface UseCalendarDataReturn {
 /**
  * Central data-aggregation hook for the unified calendar.
  * Conditionally subscribes based on role + mode:
- *   - viewer  → my assignments, my blockouts, setlists (passed in)
- *   - planning → all assignments, all blockouts, setlists (passed in)
- *   - availability → my blockouts only
+ *   - viewer  → my assignments, setlists (passed in)
+ *   - planning → all assignments, setlists (passed in)
  */
 export function useCalendarData(
     mode: CalendarMode,
@@ -55,66 +41,26 @@ export function useCalendarData(
     const { user, isBandLeader } = useAuth()
 
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
-    const [myBlockouts, setMyBlockouts] = useState<MusicianBlockout[]>([])
-    const [allBlockouts, setAllBlockouts] = useState<MusicianBlockout[]>([])
     const [loading, setLoading] = useState(true)
-
-    // Track individual stream completion
-    const [loaded, setLoaded] = useState({ assignments: false, blockouts: false })
 
     // ── Assignments subscription ──
     useEffect(() => {
-        if (!user) { setLoaded(p => ({ ...p, assignments: true })); return }
-        if (mode === 'availability') { setLoaded(p => ({ ...p, assignments: true })); return }
+        if (!user) { setLoading(false); return }
+
+        setLoading(true)
 
         const unsub = (mode === 'planning' && isBandLeader)
             ? subscribeToAllUpcomingAssignments((data) => {
                 setAssignments(data)
-                setLoaded(p => ({ ...p, assignments: true }))
+                setLoading(false)
             })
             : subscribeToMyAssignments(user.uid, (data) => {
                 setAssignments(data)
-                setLoaded(p => ({ ...p, assignments: true }))
+                setLoading(false)
             })
 
         return unsub
     }, [user, mode, isBandLeader])
-
-    // ── Blockouts subscription ──
-    useEffect(() => {
-        if (!user) { setLoaded(p => ({ ...p, blockouts: true })); return }
-
-        if (mode === 'planning' && isBandLeader) {
-            const unsub = subscribeToAllBlockouts((data) => {
-                setAllBlockouts(data)
-                setLoaded(p => ({ ...p, blockouts: true }))
-            })
-            return unsub
-        }
-
-        // viewer + availability both need own blockouts
-        const unsub = subscribeToMyBlockouts(user.uid, (data) => {
-            setMyBlockouts(data)
-            setLoaded(p => ({ ...p, blockouts: true }))
-        })
-        return unsub
-    }, [user, mode, isBandLeader])
-
-    // ── Loading state ──
-    useEffect(() => {
-        if (loaded.assignments && loaded.blockouts) {
-            setLoading(false)
-        }
-    }, [loaded])
-
-    // Reset loading on mode change
-    useEffect(() => {
-        setLoading(true)
-        setLoaded({ assignments: false, blockouts: false })
-    }, [mode])
-
-    // ── Resolve blockouts to use ──
-    const blockouts = (mode === 'planning' && isBandLeader) ? allBlockouts : myBlockouts
 
     // ── Build day map ──
     const dayMap = useMemo(() => {
@@ -125,8 +71,6 @@ export function useCalendarData(
                 map.set(key, {
                     setlists: [],
                     assignmentsBySetlist: new Map(),
-                    blockedCount: 0,
-                    blockedUids: new Set(),
                 })
             }
             return map.get(key)!
@@ -150,36 +94,12 @@ export function useCalendarData(
             day.assignmentsBySetlist.get(a.setlistId)!.push(a)
         }
 
-        // Blockouts → days
-        for (const b of blockouts) {
-            // Expand range
-            const start = new Date(b.startDate + 'T12:00:00')
-            const end = new Date(b.endDate + 'T12:00:00')
-            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const key = d.toISOString().split('T')[0]
-                const day = ensure(key)
-                if (!day.blockedUids.has(b.musicianUid)) {
-                    day.blockedUids.add(b.musicianUid)
-                    day.blockedCount++
-                }
-            }
-        }
-
         return map
-    }, [setlists, assignments, blockouts])
-
-    // ── Helper: is date blocked for current user ──
-    const isMyBlockedDate = useMemo(() => {
-        return (dateKey: string): boolean => {
-            return myBlockouts.some(b => dateKey >= b.startDate && dateKey <= b.endDate)
-        }
-    }, [myBlockouts])
+    }, [setlists, assignments])
 
     return {
         dayMap,
-        blockouts,
         assignments,
-        isMyBlockedDate,
         loading,
     }
 }

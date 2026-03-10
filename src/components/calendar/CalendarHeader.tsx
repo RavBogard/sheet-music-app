@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, Ban, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, CheckCircle2, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { CalendarMode } from "@/hooks/use-calendar-data"
@@ -18,13 +18,8 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
             {/* Month nav */}
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/50">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2.5">
-                    <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center",
-                        mode === 'availability' ? "bg-red-500/10" : "bg-brand/10",
-                    )}>
-                        {mode === 'availability'
-                            ? <Ban className="h-4 w-4 text-red-500" />
-                            : <CalendarIcon className="h-4 w-4 text-brand" />}
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand/10">
+                        <CalendarIcon className="h-4 w-4 text-brand" />
                     </div>
                     {monthLabel}
                 </h2>
@@ -50,15 +45,6 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
                     <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20" /> No musicians
                     </span>
-                </div>
-            )}
-
-            {/* Availability guidance */}
-            {mode === 'availability' && (
-                <div className="px-4 sm:px-5 py-2.5 border-b border-border/40 bg-muted/20">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                        Click dates when you are <strong className="text-foreground">unavailable</strong>. Band leaders will see these when scheduling.
-                    </p>
                 </div>
             )}
 

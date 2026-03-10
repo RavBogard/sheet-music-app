@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { CalendarDays, Clock, CheckCircle2, XCircle, Music, ChevronLeft, Ban, LayoutGrid } from "lucide-react"
+import { CalendarDays, Clock, CheckCircle2, XCircle, Music, ChevronLeft, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/auth-context"
@@ -15,7 +15,7 @@ import { ScheduleCard } from "@/components/scheduling/ScheduleCard"
 import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import type { SchedulingAssignment } from "@/types/models"
 
-type TabId = 'my_schedule' | 'calendar' | 'availability' | 'all'
+type TabId = 'my_schedule' | 'calendar' | 'all'
 
 export default function SchedulePage() {
     const router = useRouter()
@@ -27,7 +27,7 @@ export default function SchedulePage() {
     // Subscribe to assignments based on active tab
     useEffect(() => {
         if (!user) return
-        if (activeTab === 'availability' || activeTab === 'calendar') {
+        if (activeTab === 'calendar') {
             setLoading(false)
             return
         }
@@ -148,12 +148,6 @@ export default function SchedulePage() {
                             label="Planning"
                         />
                     )}
-                    <TabButton
-                        active={activeTab === 'availability'}
-                        onClick={() => setActiveTab('availability')}
-                        icon={<Ban className="h-4 w-4" />}
-                        label="Availability"
-                    />
                     {isBandLeader && (
                         <TabButton
                             active={activeTab === 'all'}
@@ -185,12 +179,7 @@ export default function SchedulePage() {
 
             {/* Content */}
             <div className="p-4 sm:p-6">
-                {activeTab === 'availability' ? (
-                    /* Availability Tab -- Unified Calendar in blockout mode */
-                    <div className="max-w-lg mx-auto">
-                        <UnifiedCalendar mode="availability" />
-                    </div>
-                ) : activeTab === 'calendar' ? (
+                {activeTab === 'calendar' ? (
                     /* Planning Calendar Tab (band leaders only) */
                     <UnifiedCalendar mode="planning" />
                 ) : loading ? (
