@@ -11,10 +11,17 @@ import { auth } from "@/lib/firebase"
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
     const user = auth.currentUser
     let token: string | null = null
-    try {
-        token = user ? await user.getIdToken() : null
-    } catch {
-        // Token refresh failed (expired session, network issue) — proceed without auth
+    if (user) {
+        try {
+            token = await user.getIdToken()
+        } catch {
+            // Cached token failed — force refresh
+            try {
+                token = await user.getIdToken(true)
+            } catch {
+                throw new Error("Authentication expired. Please sign in again.")
+            }
+        }
     }
 
     const headers = new Headers(options?.headers)

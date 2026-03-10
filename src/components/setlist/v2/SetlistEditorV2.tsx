@@ -672,6 +672,7 @@ export function SetlistEditorV2({
                     tracks={tracks}
                     setlistId={setlistId || undefined}
                     assignedMusicians={musicians}
+                    eventDate={eventDate?.toISOString() ?? null}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

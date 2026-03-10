@@ -41,14 +41,18 @@ interface PrintModalProps {
     onClose: () => void
     setlistId?: string
     assignedMusicians?: Array<{ uid?: string; name: string; displayName?: string }>
+    eventDate?: string | null
 }
 
-export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate }: PrintModalProps) {
     const { user, profile } = useAuth()
     const [title, setTitle] = useState(setlistName)
-    const [date, setDate] = useState(new Date().toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    }))
+    const [date, setDate] = useState(() => {
+        const d = eventDate ? new Date(eventDate) : new Date()
+        return d.toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        })
+    })
     const [eventName, setEventName] = useState("")
     const [generating, setGenerating] = useState(false)
     const [progressMsg, setProgressMsg] = useState("")
@@ -330,8 +334,29 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 URL.revokeObjectURL(url)
                 onClose()
             } else {
-                const printWindow = window.open(url)
-                if (printWindow) { printWindow.onload = () => printWindow.print() }
+                const iframe = document.createElement('iframe')
+                iframe.style.position = 'fixed'
+                iframe.style.top = '-10000px'
+                iframe.style.left = '-10000px'
+                iframe.style.width = '1px'
+                iframe.style.height = '1px'
+                iframe.src = url
+                document.body.appendChild(iframe)
+                iframe.onload = () => {
+                    try {
+                        iframe.contentWindow?.print()
+                    } catch {
+                        // Fallback: download if print fails (cross-origin restrictions)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                    }
+                    setTimeout(() => {
+                        document.body.removeChild(iframe)
+                        URL.revokeObjectURL(url)
+                    }, 1000)
+                }
             }
         } catch (e: unknown) {
             logger.error('Print generation failed:', e)
