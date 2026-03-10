@@ -10,13 +10,13 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.4 Fixes & Library Management
-Phase: 3 of 4 (Print Gig Packet Fixes) — Not started
+Phase: 4 of 4 (PDF Health Scanner) — Not started
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-10 — Phase 2 complete, transitioned to Phase 3
+Last activity: 2026-03-10 — Phase 3 complete, transitioned to Phase 4
 
 Progress:
-- v1.4 Fixes & Library Management: [█████░░░░░] 50%
+- v1.4 Fixes & Library Management: [███████░░░] 75%
 
 ## Loop Position
 
@@ -30,8 +30,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ### Decisions
 - displayName overlay for song rename (Firestore-only, preserves Drive filename)
-- Auto-key detection already fixed in c6375f4 — marked validated, not re-planned
 - Key badge: text-sm font-semibold bg-brand/20 for prominence
+- Iframe print pattern for PDF blob URLs (avoids black screen)
+- apiFetch throws on token failure instead of silent fallback
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — L effort, needs design discussion
@@ -43,15 +44,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - None
 
 ### Git State
-Last commit: cb78931
+Last commit: ce59e6b
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: /paul:plan for Phase 3
+Stopped at: Phase 3 complete, ready to plan Phase 4
+Next action: /paul:plan for Phase 4
 Resume file: .paul/ROADMAP.md
 
 ---

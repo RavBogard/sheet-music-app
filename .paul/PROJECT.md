@@ -37,10 +37,9 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.4 Phase 1: Library management — rename songs, unlink charts, archive restore
 - [x] Auto-key detection on all chart assignment paths (fixed in c6375f4)
 - [x] v1.4 Phase 2: Prominent key display + 5 monitor buses
+- [x] v1.4 Phase 3: Print gig packet fixes (black screen, date, auth)
 
 ### Active (In Progress)
-
-- [ ] Fix print gig packet (black screen, wrong date, 401 auth)
 - [ ] Support 5 monitor buses (currently limited to 4)
 - [ ] Fix PDF health scanner false positives
 
