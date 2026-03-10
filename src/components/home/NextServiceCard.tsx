@@ -3,6 +3,7 @@
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { PlayCircle, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /**
@@ -85,13 +86,14 @@ export function NextServiceCard({
                 )}
 
                 {/* Action button — muted for past setlists */}
-                <button
+                <Button
+                    variant="ghost"
                     onClick={onPerform}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors cursor-pointer bg-brand/10 hover:bg-brand/15 text-foreground"
+                    className="w-full py-3 rounded-xl font-semibold bg-brand/10 hover:bg-brand/15 text-foreground"
                 >
                     <PlayCircle className="h-4 w-4" />
                     Practice
-                </button>
+                </Button>
             </div>
         )
     }
@@ -130,13 +132,14 @@ export function NextServiceCard({
             )}
 
             {/* Primary CTA — white button on gradient */}
-            <button
+            <Button
+                variant="ghost"
                 onClick={onPerform}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all cursor-pointer bg-white text-brand hover:bg-white/90 active:scale-[0.98]"
+                className="w-full py-3 rounded-xl font-bold bg-white text-brand hover:bg-white/90 active:scale-[0.98]"
             >
                 <PlayCircle className="h-4 w-4" />
                 Perform
-            </button>
+            </Button>
         </div>
     )
 }

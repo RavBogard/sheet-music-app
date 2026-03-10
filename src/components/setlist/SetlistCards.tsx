@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
 import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
 import {
@@ -41,10 +42,11 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
         }).catch(() => setOfflineStatus('none'))
     }, [setlist.tracks])
     return (
-        <button
+        <Button
+            variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-6 text-left fluid-interaction group relative overflow-hidden shadow-sm ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
@@ -143,7 +145,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                     </div>
                 )}
             </div>
-        </button>
+        </Button>
     )
 }
 
@@ -165,10 +167,11 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
     const isLoading = navigatingTo === setlist.id
 
     return (
-        <button
+        <Button
+            variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-6 text-left fluid-interaction group relative shadow-sm ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
@@ -252,7 +255,7 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
                     <span>Duplicate for next week</span>
                 </div>
             )}
-        </button>
+        </Button>
     )
 }
 
@@ -265,9 +268,10 @@ interface PlaceholderCardProps {
 
 export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
     return (
-        <button
+        <Button
+            variant="ghost"
             onClick={() => onCreate(date)}
-            className="border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-6 text-left fluid-interaction flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100"
+            className="h-auto border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-6 text-left whitespace-normal flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100 active:scale-100"
         >
             <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/15 group-hover:text-foreground transition-colors">
                 <Plus className="h-6 w-6" />
@@ -283,6 +287,6 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             <div className="text-xs font-medium text-foreground bg-brand/10 px-3 py-1 rounded-full uppercase tracking-wider">
                 Plan Service
             </div>
-        </button>
+        </Button>
     )
 }

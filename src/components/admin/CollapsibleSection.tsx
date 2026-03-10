@@ -2,6 +2,7 @@
 
 import { useState, ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface CollapsibleSectionProps {
@@ -25,9 +26,10 @@ export function CollapsibleSection({
 
     return (
         <section className="space-y-4">
-            <button
+            <Button
+                variant="ghost"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-3 group cursor-pointer min-h-11"
+                className="w-full h-auto min-h-11 px-0 hover:bg-transparent group active:scale-100"
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {icon}
@@ -48,7 +50,7 @@ export function CollapsibleSection({
                         {action}
                     </div>
                 )}
-            </button>
+            </Button>
 
             <div
                 className={cn(

@@ -6,6 +6,7 @@ import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { Clock, ChevronRight, CheckCircle2, Circle } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /**
@@ -120,13 +121,15 @@ export function UpcomingTimeline({
                                             </div>
 
                                             {/* Expand toggle */}
-                                            <button
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(isExp ? null : s.id!) }}
                                                 aria-label={isExp ? "Collapse track list" : "Expand track list"}
-                                                className="p-2.5 rounded-lg hover:bg-brand/10 text-muted-foreground/50 shrink-0 flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                                className="text-muted-foreground/50 hover:bg-brand/10 shrink-0"
                                             >
                                                 <ChevronRight className={cn("w-4 h-4 transition-transform", isExp && "rotate-90")} />
-                                            </button>
+                                            </Button>
                                         </Link>
 
                                         {/* Expanded track list */}

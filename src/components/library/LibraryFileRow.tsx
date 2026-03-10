@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
@@ -85,7 +86,8 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={handleClick}
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEndOrMove}
@@ -94,7 +96,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     type="button"
                     aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
                     aria-pressed={selectMode ? isSelected : undefined}
-                    className={`w-full text-left transition-all group relative ${isSelected
+                    className={`w-full h-auto text-left rounded-none whitespace-normal group relative active:scale-100 ${isSelected
                         ? 'bg-brand/10'
                         : isFolder
                             ? ''
@@ -192,7 +194,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         </div>
                         {!isAudio && <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
-                </button>
+                </Button>
             </ContextMenuTrigger>
             <ContextMenuContent>
                 <ContextMenuItem onClick={onClick}>

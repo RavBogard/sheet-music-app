@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { Music2, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -50,12 +51,13 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
 
     if (onSelect) {
         return (
-            <button
+            <Button
+                variant="ghost"
                 onClick={handleSelect}
-                className={`w-full flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 transition-colors text-left group border border-brand/10 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`w-full h-auto flex items-center gap-3 bg-card hover:bg-brand/5 rounded-xl px-3 py-2.5 text-left group border border-brand/10 active:scale-100 ${navigatingTo ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 {content}
-            </button>
+            </Button>
         )
     }
 

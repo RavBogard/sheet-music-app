@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { SetlistTrack } from "@/types/models"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export interface SetlistDrawerProps {
     open: boolean
@@ -33,9 +34,9 @@ export function SetlistDrawer({
     return (
         <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
             <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-black/60 z-[70] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+                <Dialog.Overlay className="fixed inset-0 bg-black/60 z-drawer data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
                 <Dialog.Content
-                    className="fixed bottom-0 left-0 right-0 z-[80] max-h-[60vh] bg-zinc-900 rounded-t-2xl border-t border-white/10 flex flex-col data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom"
+                    className="fixed bottom-0 left-0 right-0 z-popover max-h-[60vh] bg-zinc-900 rounded-t-2xl border-t border-white/10 flex flex-col data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom"
                     aria-describedby={undefined}
                 >
                     {/* Drag handle visual */}
@@ -49,12 +50,14 @@ export function SetlistDrawer({
                             Setlist
                         </Dialog.Title>
                         <Dialog.Close asChild>
-                            <button
-                                className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="rounded-lg hover:bg-white/10"
                                 aria-label="Close drawer"
                             >
                                 <X className="h-4 w-4 text-zinc-400" />
-                            </button>
+                            </Button>
                         </Dialog.Close>
                     </div>
 
@@ -83,7 +86,8 @@ export function SetlistDrawer({
                             }
 
                             return (
-                                <button
+                                <Button
+                                    variant="ghost"
                                     key={track.id || `drawer-${index}`}
                                     onClick={() => {
                                         if (hasFile) {
@@ -92,10 +96,10 @@ export function SetlistDrawer({
                                     }}
                                     disabled={!hasFile}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-2 text-left transition-colors",
+                                        "w-full h-auto justify-start gap-3 px-4 py-2 rounded-none text-left",
                                         hasFile
                                             ? "hover:bg-white/5 cursor-pointer"
-                                            : "cursor-default opacity-50",
+                                            : "cursor-default",
                                         isCurrent && "bg-brand/15 border-l-2 border-brand"
                                     )}
                                 >
@@ -112,7 +116,7 @@ export function SetlistDrawer({
                                             {track.key}
                                         </span>
                                     )}
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>

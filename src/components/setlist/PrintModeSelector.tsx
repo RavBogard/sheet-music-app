@@ -1,6 +1,7 @@
 "use client"
 
 import { User, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { MusicianProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 
@@ -90,19 +91,23 @@ export function PrintModeSelector({
                     {printMode === "select-musicians" && (
                         <div className="px-3 pb-3 space-y-1">
                             <div className="flex gap-2 mb-2">
-                                <button
+                                <Button
+                                    variant="link"
+                                    size="xs"
                                     onClick={() => setSelectedUids(musicians.map(m => m.uid))}
-                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
                                     Select all
-                                </button>
+                                </Button>
                                 <span className="text-muted-foreground/30">·</span>
-                                <button
+                                <Button
+                                    variant="link"
+                                    size="xs"
                                     onClick={() => setSelectedUids([])}
-                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
                                     Deselect all
-                                </button>
+                                </Button>
                             </div>
                             {musicians.map(m => {
                                 const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null

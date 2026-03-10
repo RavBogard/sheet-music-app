@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Music, Sparkles, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { MIME_TYPES } from "@/lib/constants"
 import { DriveFile } from "@/types/models"
@@ -121,10 +122,11 @@ export function MatchFileModal({
                                     const isAudio = file.mimeType.startsWith('audio/') || /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)
                                     const Icon = isAudio ? Music : FileText
                                     return (
-                                        <button
+                                        <Button
                                             key={file.id}
+                                            variant="ghost"
                                             onClick={() => handleSelect(file.id)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-left group"
+                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-left group active:scale-100 whitespace-normal"
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <Icon className="h-4 w-4 text-primary" />
@@ -137,7 +139,7 @@ export function MatchFileModal({
                                                     {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                                 </p>
                                             </div>
-                                        </button>
+                                        </Button>
                                     )
                                 })}
                             </div>
@@ -156,11 +158,12 @@ export function MatchFileModal({
                     <div className="flex-1 overflow-y-auto -mx-2 px-2">
                         <div className="grid grid-cols-1 gap-2 pb-2">
                             {files.map(file => (
-                                <button
+                                <Button
                                     key={file.id}
+                                    variant="ghost"
                                     onClick={() => handleSelect(file.id)}
                                     className={cn(
-                                        "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
+                                        "w-full h-auto text-left p-3 rounded-lg flex items-center gap-3 active:scale-100 whitespace-normal",
                                         "bg-muted border border-border hover:bg-muted text-foreground"
                                     )}
                                 >
@@ -173,7 +176,7 @@ export function MatchFileModal({
                                             {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                         </div>
                                     </div>
-                                </button>
+                                </Button>
                             ))}
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import { UserProfile, subscribeToAllUsers, updateUserRole, UserRole } from "@/li
 import { UserRow } from "@/components/admin/UserRow"
 import { notifyRoleChanged } from "@/lib/notification-store"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Loader2, Search, FilterX } from "lucide-react"
 
@@ -114,36 +115,44 @@ export function PeopleSection() {
                         </span>
 
                         <div className="flex items-center gap-1.5 border-l border-brand/20 pl-3">
-                            <button
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => bulkSetRole('member')}
-                                className="text-xs bg-background/50 hover:bg-background text-foreground border border-border px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
+                                className="text-xs bg-background/50 hover:bg-background text-foreground"
                             >
                                 Make Member
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => bulkSetRole('musician')}
-                                className="text-xs bg-success/10 hover:bg-success/20 text-success border border-success/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
+                                className="text-xs bg-success/10 hover:bg-success/20 text-success border-success/20"
                             >
                                 Make Musician
-                            </button>
+                            </Button>
                             {isAdmin && (
-                                <button
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => bulkSetRole('band_leader')}
-                                    className="text-xs bg-brand/10 hover:bg-brand/20 text-foreground border border-brand/20 px-2.5 py-1.5 rounded-md font-medium transition-colors min-h-8"
+                                    className="text-xs bg-brand/10 hover:bg-brand/20 text-foreground border-brand/20"
                                 >
                                     Make Band Leader
-                                </button>
+                                </Button>
                             )}
-                            <button
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => bulkSetRole('denied')}
-                                className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 px-2.5 py-1.5 rounded-md font-medium transition-colors ml-2 min-h-8"
+                                className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 ml-2"
                                 title="Set role to denied (removes access)"
                             >
                                 Deny Access
-                            </button>
-                            <button onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2 px-2 min-h-8">
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2">
                                 Cancel
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -164,29 +173,33 @@ export function PeopleSection() {
 
                 <div className="flex items-center bg-card border border-border rounded-lg p-0.5 overflow-x-auto min-w-0 hide-scrollbar">
                     {(['all', 'pending', 'member', 'musician', 'band_leader', 'admin'] as const).map((role) => (
-                        <button
+                        <Button
                             key={role}
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setRoleFilter(role)}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors min-h-11",
+                                "text-xs font-medium rounded-md min-h-11",
                                 roleFilter === role
                                     ? "bg-brand/20 text-brand"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >
                             {role === 'band_leader' ? 'Leader' : role.charAt(0).toUpperCase() + role.slice(1)}
-                        </button>
+                        </Button>
                     ))}
                 </div>
 
                 {(searchQuery || roleFilter !== 'all') && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
-                        className="p-2.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted flex-shrink-0 min-h-11 min-w-11 flex items-center justify-center"
+                        className="text-muted-foreground hover:text-foreground flex-shrink-0"
                         title="Clear filters"
                     >
                         <FilterX className="w-4 h-4" />
-                    </button>
+                    </Button>
                 )}
             </div>
 

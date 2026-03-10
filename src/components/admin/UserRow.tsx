@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
 import { Headphones, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -181,10 +182,12 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 <div className="hidden sm:flex col-span-4 items-center justify-end gap-2 pr-2">
                     {/* Sound Engineer toggle */}
                     {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={handleSoundEngineerToggle}
                             className={cn(
-                                "min-h-11 min-w-11 flex items-center justify-center rounded-lg border transition-colors",
+                                "rounded-lg border",
                                 user.soundEngineer
                                     ? "bg-success/20 border-success/40 text-success"
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
@@ -192,15 +195,17 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
                         >
                             <Headphones className="h-4 w-4" />
-                        </button>
+                        </Button>
                     )}
 
                     {/* Delete (admin only, not self) */}
                     {isCurrentAdmin && !isSelf && (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={handleDelete}
                             className={cn(
-                                "min-h-11 min-w-11 flex items-center justify-center rounded-lg border transition-colors",
+                                "rounded-lg border",
                                 confirmDelete
                                     ? "bg-destructive/20 border-destructive/40 text-destructive"
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
@@ -208,7 +213,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
                         >
                             <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                     )}
 
                     {/* Role selector */}

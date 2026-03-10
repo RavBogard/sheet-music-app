@@ -17,6 +17,7 @@ import { signInWithCustomToken } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { QRCodeSVG } from "qrcode.react"
 import { Smartphone, RefreshCw, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
 
 type QRState = "active" | "registering" | "approved" | "signing-in" | "error"
@@ -179,12 +180,14 @@ export function QRSignIn() {
         return (
             <div className="flex flex-col items-center gap-3 py-4">
                 <p className="text-xs text-muted-foreground">Couldn&apos;t generate QR code</p>
-                <button
+                <Button
+                    variant="link"
+                    size="xs"
                     onClick={createSession}
-                    className="text-xs text-violet-500 hover:text-violet-400 flex items-center gap-1"
+                    className="text-xs text-violet-500 hover:text-violet-400"
                 >
                     <RefreshCw className="h-3 w-3" /> Try again
-                </button>
+                </Button>
             </div>
         )
     }
@@ -210,12 +213,14 @@ export function QRSignIn() {
 
             {/* Countdown + registration status */}
             {registerFailed ? (
-                <button
+                <Button
+                    variant="link"
+                    size="xs"
                     onClick={createSession}
-                    className="text-[10px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1"
+                    className="text-[10px] text-yellow-500 hover:text-yellow-400"
                 >
                     <RefreshCw className="h-2.5 w-2.5" /> Connection issue — tap to retry
-                </button>
+                </Button>
             ) : (
                 <p className="text-[10px] text-muted-foreground/60 tabular-nums">
                     Expires in {minutes}:{seconds.toString().padStart(2, "0")}

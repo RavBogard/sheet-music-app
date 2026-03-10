@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { List, Headphones, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export interface PerformanceBottomBarProps {
@@ -42,25 +43,29 @@ export function PerformanceBottomBar({
         currentSongPos < songIndices.length - 1 ? songIndices[currentSongPos + 1] : null
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 h-14 bg-zinc-950/95 backdrop-blur border-t border-white/10 flex items-center px-3 gap-2 z-[60] pb-safe">
+        <div className="fixed bottom-0 left-0 right-0 h-14 bg-zinc-950/95 backdrop-blur border-t border-white/10 flex items-center px-3 gap-2 z-toolbar-fixed pb-safe">
             {/* Setlist drawer button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={onDrawerToggle}
-                className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                className="h-10 w-10 rounded-lg hover:bg-white/10"
                 aria-label="Open setlist"
             >
                 <List className="h-5 w-5 text-zinc-300" />
-            </button>
+            </Button>
 
             {/* Monitor button (hidden for public) */}
             {!isPublicView && (
-                <button
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onMonitorToggle}
-                    className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                    className="h-10 w-10 rounded-lg hover:bg-white/10"
                     aria-label="Open monitor mixer"
                 >
                     <Headphones className="h-5 w-5 text-zinc-300" />
-                </button>
+                </Button>
             )}
 
             {/* Current song name (centered, truncated) */}
@@ -69,11 +74,13 @@ export function PerformanceBottomBar({
             </span>
 
             {/* Prev button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => prevSongIndex !== null && onNavigate(prevSongIndex)}
                 disabled={prevSongIndex === null}
                 className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-lg transition-colors",
+                    "h-10 w-10 rounded-lg",
                     prevSongIndex !== null
                         ? "hover:bg-white/10 text-zinc-300"
                         : "text-zinc-600 cursor-not-allowed"
@@ -81,14 +88,16 @@ export function PerformanceBottomBar({
                 aria-label="Previous song"
             >
                 <ChevronLeft className="h-5 w-5" />
-            </button>
+            </Button>
 
             {/* Next button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => nextSongIndex !== null && onNavigate(nextSongIndex)}
                 disabled={nextSongIndex === null}
                 className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-lg transition-colors",
+                    "h-10 w-10 rounded-lg",
                     nextSongIndex !== null
                         ? "hover:bg-white/10 text-zinc-300"
                         : "text-zinc-600 cursor-not-allowed"
@@ -96,16 +105,18 @@ export function PerformanceBottomBar({
                 aria-label="Next song"
             >
                 <ChevronRight className="h-5 w-5" />
-            </button>
+            </Button>
 
             {/* Close button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={onClose}
-                className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                className="h-10 w-10 rounded-lg hover:bg-white/10"
                 aria-label="Close PDF"
             >
                 <X className="h-5 w-5 text-zinc-300" />
-            </button>
+            </Button>
         </div>
     )
 }

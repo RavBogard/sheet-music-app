@@ -19,6 +19,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
+import { Button } from "@/components/ui/button"
 import { SetlistTrack, TrackType, SetlistMusician, DriveFile } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
 import { useAuth } from "@/lib/auth-context"
@@ -539,12 +540,14 @@ export function SetlistEditorV2({
             {(canEdit || serviceNotes) && (
                 <div className="border-b border-brand/10 px-4 py-2">
                     {!serviceNotes && canEdit ? (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="xs"
                             onClick={() => setServiceNotes(" ")}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-muted-foreground hover:text-foreground hover:bg-transparent"
                         >
-                            <span>+ Add service notes</span>
-                        </button>
+                            + Add service notes
+                        </Button>
                     ) : (
                         <div className="space-y-1">
                             <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>

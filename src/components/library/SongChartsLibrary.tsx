@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
@@ -265,27 +266,23 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
                 {/* Tabs -- only show if audio files exist */}
                 {hasAudio && (
-                    <div className="flex gap-2 max-w-xl mx-auto">
-                        <button
-                            onClick={() => setTab("charts")}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${tab === "charts"
-                                ? "bg-brand/15 text-foreground ring-1 ring-brand/30"
-                                : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
-                                }`}
-                        >
-                            Charts ({files.length})
-                        </button>
-                        <button
-                            onClick={() => setTab("audio")}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${tab === "audio"
-                                ? "bg-brand/15 text-foreground ring-1 ring-brand/30"
-                                : "bg-muted/50 text-muted-foreground hover:text-foreground border border-border"
-                                }`}
-                        >
-                            <Music className="w-3.5 h-3.5" />
-                            Audio ({audioFiles.length})
-                        </button>
-                    </div>
+                    <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="max-w-xl mx-auto">
+                        <TabsList variant="line" className="bg-transparent gap-2 h-auto p-0">
+                            <TabsTrigger
+                                value="charts"
+                                className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                            >
+                                Charts ({files.length})
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="audio"
+                                className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                            >
+                                <Music className="w-3.5 h-3.5" />
+                                Audio ({audioFiles.length})
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 )}
             </div>
 

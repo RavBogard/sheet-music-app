@@ -1,6 +1,7 @@
 "use client"
 
 import { Minus, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 
@@ -31,20 +32,24 @@ export function TransposeTrackList({
             <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">Quick:</span>
                 {[-2, -1, 1, 2, 3, 5, 7].map(s => (
-                    <button
+                    <Button
                         key={s}
+                        variant="ghost"
+                        size="xs"
                         onClick={() => onApplyGlobal(s)}
-                        className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                        className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
                     >
                         {s > 0 ? `+${s}` : s}
-                    </button>
+                    </Button>
                 ))}
-                <button
+                <Button
+                    variant="ghost"
+                    size="xs"
                     onClick={() => onApplyGlobal(0)}
-                    className="px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
                     Reset
-                </button>
+                </Button>
             </div>
 
             {/* Per-Track List */}
@@ -77,8 +82,10 @@ export function TransposeTrackList({
 
                             {/* Transpose stepper */}
                             <div className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
-                                <button
-                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,
                                         'transposition',
@@ -86,14 +93,16 @@ export function TransposeTrackList({
                                     )}
                                 >
                                     <Minus className="h-3 w-3" />
-                                </button>
+                                </Button>
                                 <span className={`w-8 text-center text-xs font-mono ${
                                     tp.transposition !== 0 ? 'text-violet-500 dark:text-violet-400' : 'text-muted-foreground'
                                 }`}>
                                     {tp.transposition > 0 ? `+${tp.transposition}` : tp.transposition}
                                 </span>
-                                <button
-                                    className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,
                                         'transposition',
@@ -101,7 +110,7 @@ export function TransposeTrackList({
                                     )}
                                 >
                                     <Plus className="h-3 w-3" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )

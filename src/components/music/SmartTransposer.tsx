@@ -84,7 +84,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             >
                 {/* Edit mode hint */}
                 {isEditingChords && (
-                    <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-[101]">
+                    <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-splash">
                         <span className="bg-zinc-900/80 text-zinc-400 text-[10px] px-3 py-1 rounded-full border border-zinc-700/50 backdrop-blur-sm">
                             Tap chord to edit &middot; Double-click empty space to add
                         </span>
@@ -156,7 +156,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                         lineHeight: 1, // Minimize internal box padding
                                         transform: 'translateY(-0.15em)', // Counteract web-font descender gap to align mathematically to bounds top
                                         whiteSpace: 'nowrap' as const,
-                                        zIndex: showPopover ? 150 : 100,
+                                        zIndex: showPopover ? 'var(--z-popover)' : 'var(--z-splash)',
                                         pointerEvents: 'auto' as const,
                                     }}
                                 >

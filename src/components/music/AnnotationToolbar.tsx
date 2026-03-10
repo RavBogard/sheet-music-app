@@ -20,7 +20,7 @@ export function AnnotationToolbar({ currentPage, onClose }: AnnotationToolbarPro
     const { activeTool, setTool, activeColor, setColor, undoLastAnnotation, clearPage } = useAnnotationStore()
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[60] bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-700 safe-area-bottom">
+        <div className="fixed bottom-0 left-0 right-0 z-toolbar-fixed bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-700 safe-area-bottom">
             <div className="flex items-center justify-center gap-1 px-3 py-2 max-w-lg mx-auto" role="toolbar" aria-label="Annotation tools">
                 {/* Tools */}
                 {TOOLS.map(({ tool, icon: Icon, label }) => (

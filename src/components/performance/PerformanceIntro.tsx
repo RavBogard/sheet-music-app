@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowRight, ArrowDown, Hand } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const STORAGE_KEY = "cr-perform-intro-seen"
 
 export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
     return (
         <div
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+            className="fixed inset-0 z-splash bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={onDismiss}
         >
             <div className="max-w-xs space-y-6 text-center" onClick={e => e.stopPropagation()}>
@@ -52,12 +53,13 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
                 </div>
 
-                <button
+                <Button
+                    variant="brand"
                     onClick={onDismiss}
-                    className="w-full py-3 bg-brand text-white font-semibold rounded-xl hover:bg-brand/90 transition-colors"
+                    className="w-full py-3 rounded-xl"
                 >
                     Got it
-                </button>
+                </Button>
             </div>
         </div>
     )

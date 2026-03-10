@@ -4,6 +4,7 @@ import { memo } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Music, ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SetlistTrack } from "@/types/models"
 import { SongInlineFields } from "./InlineFields"
@@ -110,12 +111,14 @@ export const SongRow = memo(function SongRow({
                     <div className="flex items-center gap-2 text-xs text-muted-foreground/60 mt-0.5">
                         <span className="truncate">
                             {hasFile ? (
-                                <button
-                                    className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors hover:underline"
+                                <Button
+                                    variant="link"
+                                    size="xs"
+                                    className="h-auto p-0 text-inherit hover:text-blue-500 dark:hover:text-blue-400"
                                     onClick={handleFileClick}
                                 >
                                     {track.fileName || "Linked chart"}
-                                </button>
+                                </Button>
                             ) : canEdit ? (
                                 "Tap to link a chart"
                             ) : (

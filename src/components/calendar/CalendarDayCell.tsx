@@ -4,6 +4,7 @@ import React from "react"
 import {
     Plus, CheckCircle2, Clock, Users, AlertCircle,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { CalendarMode, CalendarDayData } from "@/hooks/use-calendar-data"
 import type { SchedulingAssignment } from "@/types/models"
@@ -48,17 +49,18 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
     // ── Availability mode ──
     if (mode === 'availability') {
         return (
-            <button
+            <Button
+                variant="ghost"
                 onClick={() => onDayClick?.(dateKey)}
                 onMouseEnter={() => onDayHover?.(dateKey)}
                 disabled={isPast}
                 className={cn(
-                    "aspect-square flex items-center justify-center text-sm border-t border-r border-border/20 transition-all duration-200 relative",
+                    "h-auto aspect-square flex items-center justify-center text-sm border-t border-r border-border/20 rounded-none relative active:scale-100",
                     isPast && "opacity-30 cursor-not-allowed",
                     isToday && "font-bold",
                     isMyBlocked && "bg-red-500/15 text-red-700 dark:text-red-300 cursor-default",
                     inSelection && !isMyBlocked && "bg-red-500/25 text-red-800 dark:text-red-200",
-                    !isPast && !isMyBlocked && !inSelection && "hover:bg-accent/50 cursor-pointer active:scale-95",
+                    !isPast && !isMyBlocked && !inSelection && "hover:bg-accent/50 active:scale-95",
                 )}
             >
                 <span className={cn(
@@ -70,7 +72,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                 {isMyBlocked && (
                     <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-500" />
                 )}
-            </button>
+            </Button>
         )
     }
 
@@ -110,11 +112,12 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                     const pending = setlistAssignments.filter(a => a.status === 'pending').length
 
                     return (
-                        <button
+                        <Button
                             key={setlist.id}
+                            variant="ghost"
                             onClick={() => onSelectSetlist(setlist)}
                             className={cn(
-                                "w-full text-left p-1.5 rounded-lg text-[11px] border transition-all duration-200 active:scale-[0.97]",
+                                "w-full h-auto text-left p-1.5 rounded-lg text-[11px] border active:scale-[0.97] whitespace-normal flex-col items-start",
                                 mode === 'planning' && coverage === 'full' && "bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40",
                                 mode === 'planning' && coverage === 'partial' && "bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20 hover:border-amber-500/40",
                                 mode === 'planning' && coverage === 'empty' && "bg-red-500/10 border-red-500/25 hover:bg-red-500/20 hover:border-red-500/40",
@@ -140,20 +143,22 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                                     )}
                                 </div>
                             )}
-                        </button>
+                        </Button>
                     )
                 })}
 
                 {/* Placeholder for empty Shabbat cells */}
                 {setlists.length === 0 && (isFriday || isSaturday) && onCreateSetlist && (
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="xs"
                             onClick={() => onCreateSetlist(date, isSaturday ? 'shabbat_morning' : undefined)}
-                            className="w-full text-left p-1 rounded-md text-[10px] text-muted-foreground/40 hover:text-muted-foreground border border-dashed border-border/40 hover:border-brand/30 hover:bg-brand/5 flex items-center gap-1 transition-all duration-200"
+                            className="w-full h-auto text-left p-1 rounded-md text-[10px] text-muted-foreground/40 hover:text-muted-foreground border border-dashed border-border/40 hover:border-brand/30 hover:bg-brand/5 justify-start"
                         >
                             <Plus className="h-2.5 w-2.5" />
                             {isSaturday ? 'Shabbat AM' : 'Friday Eve'}
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>

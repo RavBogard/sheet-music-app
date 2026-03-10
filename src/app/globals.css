@@ -4,6 +4,18 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Z-Index Scale */
+  --z-content: 10;
+  --z-sticky: 20;
+  --z-overlay-bg: 30;
+  --z-nav: 40;
+  --z-modal: 50;
+  --z-toolbar-fixed: 60;
+  --z-drawer: 70;
+  --z-popover: 80;
+  --z-toast: 90;
+  --z-splash: 100;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
