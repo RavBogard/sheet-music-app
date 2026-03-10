@@ -31,13 +31,11 @@ export function SetlistRow({
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
 
-    // Compute transposed key: only for non-public views with non-zero transposition
+    // Compute display key: show original key always, transposed key when applicable
     const displayKey = (() => {
         if (!isSong || !track.key) return null
         if (!isPublicView && defaultTransposition !== 0) {
-            // getTransposedKeyName returns "Bb (+2)" format; extract just the key name
             const fullName = getTransposedKeyName(track.key, defaultTransposition)
-            // Strip the semitone offset for dense display -- show just "Bb"
             const parenIdx = fullName.indexOf(" (")
             return parenIdx > -1 ? fullName.substring(0, parenIdx) : fullName
         }
@@ -45,25 +43,16 @@ export function SetlistRow({
     })()
 
     const hasFile = isSong && !!track.fileId
-    const isClickable = hasFile
+    // Interactive only for songs with charts, or leaders (who can set position on any row)
+    const isInteractive = hasFile || isLeader
 
     const handleClick = () => {
-        // Leader tap: set position on any row
         if (isLeader) {
             onLeaderSetPosition()
         }
 
-        // Song tap: toggle notes or open PDF
-        if (isSong) {
-            if (hasFile) {
-                onSongTap()
-            } else {
-                // Toggle notes for songs without files
-                if (track.notes) setShowNotes((prev) => !prev)
-            }
-        } else {
-            // Non-song: toggle notes if available
-            if (track.notes) setShowNotes((prev) => !prev)
+        if (isSong && hasFile) {
+            onSongTap()
         }
     }
 
@@ -84,6 +73,46 @@ export function SetlistRow({
         )
     }
 
+    // Non-song rows and songs without files: non-interactive for non-leaders
+    if (!isInteractive) {
+        return (
+            <div>
+                <div
+                    className={cn(
+                        "flex items-center gap-3 px-4 py-3 transition-colors cursor-default",
+                        isCurrentPosition && "bg-brand/15 border-l-[3px] border-brand",
+                        !isSong && "opacity-60"
+                    )}
+                >
+                    {isSong ? (
+                        <>
+                            <span className="font-semibold text-lg lg:text-xl text-foreground truncate flex-1 min-w-0">
+                                {track.title}
+                            </span>
+                            {displayKey && (
+                                <span className="font-mono text-sm font-bold px-2 py-1 bg-brand/10 text-brand rounded shrink-0">
+                                    {displayKey}
+                                </span>
+                            )}
+                            {track.bpm && (
+                                <span className="text-sm text-muted-foreground tabular-nums shrink-0">
+                                    {track.bpm}
+                                </span>
+                            )}
+                            {(track.leadMusician || track.performer) && (
+                                <span className="text-sm text-blue-400 truncate max-w-[80px] shrink-0">
+                                    {track.leadMusician || track.performer}
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <span className="text-sm text-muted-foreground">{track.title}</span>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div>
             <div
@@ -97,29 +126,29 @@ export function SetlistRow({
                     }
                 }}
                 className={cn(
-                    "flex items-center gap-3 px-4 py-2 transition-colors",
-                    isCurrentPosition && "bg-brand/15 border-l-2 border-brand",
-                    isClickable ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
-                    !isSong && "opacity-70"
+                    "flex items-center gap-3 px-4 py-3 transition-colors",
+                    isCurrentPosition && "bg-brand/15 border-l-[3px] border-brand",
+                    hasFile ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
+                    !isSong && "opacity-60"
                 )}
             >
                 {isSong ? (
                     <>
-                        <span className="font-semibold text-base truncate flex-1 min-w-0">
+                        <span className="font-semibold text-lg lg:text-xl text-foreground truncate flex-1 min-w-0">
                             {track.title}
                         </span>
                         {displayKey && (
-                            <span className="font-mono text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded shrink-0">
+                            <span className="font-mono text-sm font-bold px-2 py-1 bg-brand/10 text-brand rounded shrink-0">
                                 {displayKey}
                             </span>
                         )}
                         {track.bpm && (
-                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                            <span className="text-sm text-muted-foreground tabular-nums shrink-0">
                                 {track.bpm}
                             </span>
                         )}
                         {(track.leadMusician || track.performer) && (
-                            <span className="text-xs text-blue-400 truncate max-w-[60px] shrink-0">
+                            <span className="text-sm text-blue-400 truncate max-w-[80px] shrink-0">
                                 {track.leadMusician || track.performer}
                             </span>
                         )}
@@ -128,8 +157,8 @@ export function SetlistRow({
                     <span className="text-sm text-muted-foreground">{track.title}</span>
                 )}
             </div>
-            {/* Notes revealed on tap */}
-            {showNotes && track.notes && (
+            {/* Notes revealed on tap — leader only */}
+            {isLeader && showNotes && track.notes && (
                 <div className="px-4 pb-2 pt-0.5">
                     <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
                 </div>

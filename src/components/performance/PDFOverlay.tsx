@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { SetlistTrack } from "@/types/models"
 import { PerformanceToolbar } from "./PerformanceToolbar"
+import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -41,6 +42,17 @@ export function PDFOverlay({
     const setQueue = useMusicStore(s => s.setQueue)
     const queueIndex = useMusicStore(s => s.queueIndex)
     const prevQueueIndexRef = useRef(queueIndex)
+    const [showTempoFlash, setShowTempoFlash] = useState(false)
+
+    // Show tempo flash on initial mount and when queueIndex changes
+    useEffect(() => {
+        const currentTrack = useMusicStore.getState().playbackQueue[queueIndex]
+        if (currentTrack?.bpm && currentTrack.bpm > 0) {
+            setShowTempoFlash(true)
+        } else {
+            setShowTempoFlash(false)
+        }
+    }, [queueIndex])
 
     // Build playback queue from setlist tracks (only songs with fileIds)
     // Map track indices so we can translate between queue and setlist positions
@@ -116,9 +128,12 @@ export function PDFOverlay({
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* PDF content area */}
-            <div className="flex-1 overflow-auto pb-28">
+            <div className="flex-1 overflow-auto pb-28 relative">
                 {pdfUrl && (
                     <PDFViewer url={pdfUrl} trackName={track.title} />
+                )}
+                {showTempoFlash && track.bpm && track.bpm > 0 && (
+                    <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
                 )}
             </div>
 

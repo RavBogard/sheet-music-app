@@ -37,7 +37,7 @@ export function SetlistView({
                 {/* Service notes banner */}
                 {serviceNotes && (
                     <div className="mx-3 mt-2 mb-1 p-3 bg-brand/10 border border-brand/20 rounded-lg">
-                        <p className="text-sm text-brand whitespace-pre-wrap">{serviceNotes}</p>
+                        <p className="text-base text-brand whitespace-pre-wrap">{serviceNotes}</p>
                     </div>
                 )}
 
@@ -58,7 +58,7 @@ export function SetlistView({
 
                 {tracks.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                        <p className="text-lg font-medium">No tracks yet</p>
+                        <p className="text-xl font-medium">No tracks yet</p>
                     </div>
                 )}
             </div>

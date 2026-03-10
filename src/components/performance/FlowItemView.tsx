@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { ServiceFlowCard } from "@/components/performance/ServiceFlowCard"
 import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
+import { TempoFlash } from "@/components/performance/TempoFlash"
 
 /**
  * Full-screen wrapper for non-song items (readings, prayers, headers, etc.)
@@ -21,6 +22,16 @@ export function FlowItemView({
     const router = useRouter()
     const { playbackQueue, queueIndex, nextSong, prevSong } = useMusicStore()
     const currentTrack = playbackQueue[queueIndex]
+    const [showTempoFlash, setShowTempoFlash] = useState(false)
+
+    // Show tempo flash when track changes and has BPM
+    useEffect(() => {
+        if (currentTrack?.bpm && currentTrack.bpm > 0) {
+            setShowTempoFlash(true)
+        } else {
+            setShowTempoFlash(false)
+        }
+    }, [queueIndex, currentTrack?.bpm])
 
     // Gather the next 3 items for the "Up Next" preview
     const upNext = useMemo(() => {
@@ -97,13 +108,16 @@ export function FlowItemView({
         >
             <PerformanceStatusStrip />
 
-            <div className="flex-1 flex items-center justify-center overflow-y-auto">
+            <div className="flex-1 flex items-center justify-center overflow-y-auto relative">
                 <ServiceFlowCard
                     item={currentTrack}
                     index={queueIndex}
                     total={playbackQueue.length}
                     upNext={upNext}
                 />
+                {showTempoFlash && currentTrack?.bpm && currentTrack.bpm > 0 && (
+                    <TempoFlash bpm={currentTrack.bpm} onDismiss={() => setShowTempoFlash(false)} />
+                )}
             </div>
 
             <PerformanceToolbar
