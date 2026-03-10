@@ -39,6 +39,7 @@ interface AuthContextType {
     isMusician: boolean
     isMember: boolean
     isSoundEngineer: boolean
+    canUpload: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -56,6 +57,7 @@ const AuthContext = createContext<AuthContextType>({
     isMusician: false,
     isMember: false,
     isSoundEngineer: false,
+    canUpload: false,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Derived roles — uses shared hierarchy from @/lib/roles
     const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(profile?.role)
     const isSoundEngineer = !!profile?.soundEngineer
+    const canUpload = isAdmin || isBandLeader || !!profile?.canUpload
 
     useEffect(() => {
         // Build-time safety: If auth is mock (empty object), return
@@ -212,7 +215,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isMusician,
         isMember,
         isSoundEngineer,
-    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer])
+        canUpload,
+    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
 
     return (
         <AuthContext.Provider value={value}>

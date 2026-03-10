@@ -24,6 +24,7 @@ import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
+import { DuplicateScanner } from "./DuplicateScanner"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { logger } from "@/lib/logger"
 
@@ -51,6 +52,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const { setFile } = useMusicStore()
 
     const {
+        allFiles,
         displayedFiles,
         loading: filtering,
         setFilter,
@@ -135,7 +137,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
     // AI Digitize
-    const { isAdmin, isBandLeader, profile } = useAuth()
+    const { isAdmin, isBandLeader, profile, canUpload } = useAuth()
     const congregation = useCongregation()
     const [digitizing, setDigitizing] = useState<string | null>(null)
 
@@ -221,12 +223,17 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
-                {profile?.canUpload && (
-                    <UploadDialog onUploadComplete={() => {
-                        // Trigger a re-fetch of the library
-                        loadLibrary()
-                        toast.success("Library updated with your upload")
-                    }} />
+                {canUpload && (
+                    <>
+                        <UploadDialog onUploadComplete={() => {
+                            loadLibrary()
+                            toast.success("Library updated with your upload")
+                        }} />
+                        <DuplicateScanner
+                            files={allFiles.filter(isChartFile)}
+                            onArchiveComplete={() => loadLibrary()}
+                        />
+                    </>
                 )}
                 <Button
                     variant={selectMode ? "default" : "ghost"}
