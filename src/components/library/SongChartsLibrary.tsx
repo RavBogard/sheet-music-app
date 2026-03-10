@@ -24,7 +24,6 @@ import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
-import { DuplicateScanner } from "./DuplicateScanner"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { logger } from "@/lib/logger"
 
@@ -224,16 +223,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
                 {canUpload && (
-                    <>
-                        <UploadDialog onUploadComplete={() => {
-                            loadLibrary()
-                            toast.success("Library updated with your upload")
-                        }} />
-                        <DuplicateScanner
-                            files={allFiles.filter(isChartFile)}
-                            onArchiveComplete={() => loadLibrary()}
-                        />
-                    </>
+                    <UploadDialog onUploadComplete={() => {
+                        loadLibrary()
+                        toast.success("Library updated with your upload")
+                    }} />
                 )}
                 <Button
                     variant={selectMode ? "default" : "ghost"}
