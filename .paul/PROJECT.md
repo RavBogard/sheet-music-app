@@ -12,7 +12,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.3.1 |
+| Version | 1.4.0 |
 | Status | Production |
 | Last Updated | 2026-03-10 |
 
@@ -38,10 +38,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] Auto-key detection on all chart assignment paths (fixed in c6375f4)
 - [x] v1.4 Phase 2: Prominent key display + 5 monitor buses
 - [x] v1.4 Phase 3: Print gig packet fixes (black screen, date, auth)
+- [x] v1.4 Phase 4: PDF health scanner false positives fixed
 
 ### Active (In Progress)
-- [ ] Support 5 monitor buses (currently limited to 4)
-- [ ] Fix PDF health scanner false positives
+
+- None
 
 ### Planned (Next)
 
@@ -126,4 +127,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after v1.4 Phase 1 (Library Management)*
+*Last updated: 2026-03-10 after v1.4 milestone complete*

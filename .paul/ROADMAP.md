@@ -4,14 +4,14 @@
 
 **v1.4 Fixes & Library Management** (v1.4.0)
 Status: In Progress
-Phases: 3 of 4 complete
+Phases: 4 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Library Management | 1/1 | Complete | 2026-03-10 |
 | 2 | Setlist & Editor Fixes | 1/1 | Complete | 2026-03-10 |
 | 3 | Print Gig Packet Fixes | 1/1 | Complete | 2026-03-10 |
-| 4 | PDF Health Scanner | TBD | Not started | - |
+| 4 | PDF Health Scanner | 1/1 | Complete | 2026-03-10 |
 
 ### Phase 1: Library Management
 Focus: Remove chart from track/song, rename chart title in library, unarchive songs UI
