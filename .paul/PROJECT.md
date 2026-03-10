@@ -12,7 +12,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.3.0 |
+| Version | 1.3.1 |
 | Status | Production |
 | Last Updated | 2026-03-10 |
 

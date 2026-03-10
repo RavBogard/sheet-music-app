@@ -2,30 +2,20 @@
 
 ## Current Milestone
 
-**v1.3.1 Regression Fixes** (v1.3.1)
-Status: Complete
-Phases: 1 of 1 complete
-
-## Phases
-
-| Phase | Name | Plans | Status | Completed |
-|-------|------|-------|--------|-----------|
-| 1 | Regression Fixes | 1 | Complete | 2026-03-10 |
-
-## Phase Details
-
-### Phase 1: Regression Fixes
-
-**Focus:** Fix regressions introduced during v1.3 bugsweep — PDF viewer version mismatch breaking rendering, and monitor tab not loading on iPad.
-
-**Issues:**
-- PDF pdfjs-dist API version "5.4.296" does not match Worker version "5.4.530"
-- Monitor tab fails to load on iPad (works on laptop)
-
-Plans:
-- [x] 01-01: PDF version assertion + cache busting, iPad monitor connection stabilization
+None active. Run /paul:discuss-milestone or /paul:milestone to define.
 
 ## Completed Milestones
+
+<details>
+<summary>v1.3.1 Regression Fixes - 2026-03-10 (1 phase, 1 plan)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Regression Fixes | 1/1 | 2026-03-10 |
+
+Archive: `.paul/milestones/v1.3.1-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>v1.3 Bugsweep & Backend Hardening - 2026-03-10 (4 phases, 7 plans)</summary>
@@ -43,4 +33,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-10 (v1.3.1 milestone created)*
+*Last updated: 2026-03-10 (v1.3.1 milestone complete)*

@@ -4,7 +4,39 @@ Completed milestone log for this project.
 
 | Milestone | Completed | Duration | Stats |
 |-----------|-----------|----------|-------|
+| v1.3.1 Regression Fixes | 2026-03-10 | ~8 min | 1 phase, 1 plan |
 | v1.3 Bugsweep & Backend Hardening | 2026-03-10 | ~76 min | 4 phases, 7 plans |
+
+---
+
+## v1.3.1 Regression Fixes
+
+**Completed:** 2026-03-10
+**Duration:** ~8 min across 1 plan
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 1 |
+| Plans | 1 |
+| Files changed | 6 |
+
+### Key Accomplishments
+
+- Cache-busted PDF worker URL (`pdf.worker.min.{version}.mjs`) eliminates stale worker mismatch after deploys
+- Ref-based uid tracking in useMonitorConnection prevents effect churn during iPad auth token refresh
+- visibilitychange listener reconnects monitor after iOS Safari tab suspension
+- 5s teardown debounce accommodates iPad suspension timing
+- Dev script parity with build (copy-pdf-worker runs in both)
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| pdfjs.version in worker URL for cache busting | Phase 1 | Prevents stale worker mismatch after deploys |
+| Ref-based uid tracking in useMonitorConnection | Phase 1 | Prevents effect churn during iPad auth token refresh |
+| visibilitychange as iOS Safari reconnection trigger | Phase 1 | beforeunload doesn't fire on iOS Safari |
 
 ---
 
