@@ -4,8 +4,12 @@ Completed milestone log for this project.
 
 | Milestone | Completed | Duration | Stats |
 |-----------|-----------|----------|-------|
-| v1.3.1 Regression Fixes | 2026-03-10 | ~8 min | 1 phase, 1 plan |
+| v0.1 UI/UX Redesign | 2026-03-08 | 1 day | 6 phases, 12 plans |
+| v1.0 Full Launch | 2026-03-08 | 1 day | 5 phases, 12 plans |
+| v1.1 UI/UX Hardening | 2026-03-09 | 1 day | 11 phases, 19 plans |
+| v1.2 Library, Manage & Monitor Overhaul | 2026-03-09 | 1 day | 9 phases, 10 plans |
 | v1.3 Bugsweep & Backend Hardening | 2026-03-10 | ~76 min | 4 phases, 7 plans |
+| v1.3.1 Regression Fixes | 2026-03-10 | ~8 min | 1 phase, 1 plan |
 
 ---
 

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { KeyPicker } from "@/components/ui/key-picker"
-import { Trash2, Replace } from "lucide-react"
+import { Trash2, Replace, Unlink } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 
 interface SongInlineFieldsProps {
@@ -83,6 +83,17 @@ export function SongInlineFields({ track, onUpdate, onReplace, onDelete }: SongI
                     <Replace className="h-3.5 w-3.5" />
                     Replace
                 </Button>
+                {track.fileId && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => onUpdate(track.id, { fileId: "", fileName: "" })}
+                    >
+                        <Unlink className="h-3.5 w-3.5" />
+                        Unlink Chart
+                    </Button>
+                )}
                 <Button
                     variant="outline"
                     size="sm"

@@ -350,6 +350,26 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                             )
                                         }
                                     }}
+                                    onRename={(file) => {
+                                        const currentName = file.displayName || getCleanName(file.name)
+                                        const newName = prompt("Rename chart:", currentName)
+                                        if (newName && newName.trim() && newName.trim() !== currentName) {
+                                            toast.promise(
+                                                apiFetch('/api/library/rename', {
+                                                    method: 'PATCH',
+                                                    body: JSON.stringify({ fileId: file.id, displayName: newName.trim() })
+                                                }).then(res => {
+                                                    if (!res.ok) throw new Error("Failed to rename chart")
+                                                    loadLibrary()
+                                                }),
+                                                {
+                                                    loading: 'Renaming...',
+                                                    success: 'Chart renamed',
+                                                    error: 'Failed to rename chart'
+                                                }
+                                            )
+                                        }
+                                    }}
                                     getCleanName={getCleanName}
                                     isPlaying={playingFile?.id === item.id}
                                     selectMode={selectMode}

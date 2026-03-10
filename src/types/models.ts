@@ -14,6 +14,7 @@ export interface OMRCorrection {
 export interface DriveFile {
     id: string
     name: string
+    displayName?: string
     mimeType: string
     parents?: string[]
     webContentLink?: string

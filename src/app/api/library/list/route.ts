@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger"
  *   GET /api/library/list?cursor=XXXX        → Next page
  *   GET /api/library/list?folderId=XXXX      → Files in folder
  *   GET /api/library/list?all=true           → Full dump for client-side search (cached)
+ *   GET /api/library/list?status=archived   → Archived files only
  */
 export async function GET(req: NextRequest) {
     try {
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
         const folderId = url.searchParams.get("folderId")
         const cursor = url.searchParams.get("cursor")
         const all = url.searchParams.get("all") === "true"
+        const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
         initAdmin()
@@ -66,7 +68,11 @@ export async function GET(req: NextRequest) {
         let maxModified = ''
 
         const files = snapshot.docs
-            .filter(doc => doc.data().status !== 'archived')
+            .filter(doc => {
+                const status = doc.data().status
+                if (statusFilter === 'archived') return status === 'archived'
+                return status !== 'archived'
+            })
             .map(doc => {
                 const data = doc.data()
                 // Track latest modification for cache staleness
@@ -76,12 +82,17 @@ export async function GET(req: NextRequest) {
                 return {
                     id: doc.id,
                     name: data.name,
+                    ...(data.displayName ? { displayName: data.displayName } : {}),
                     mimeType: data.mimeType,
                     parents: data.parents,
                     modifiedTime: data.modifiedTime || null,
                     webViewLink: data.webViewLink,
                     metadata: data.metadata || null,
-                    status: (data.status as string) || 'active'
+                    status: (data.status as string) || 'active',
+                    ...(statusFilter === 'archived' ? {
+                        archivedAt: data.archivedAt || null,
+                        archivedBy: data.archivedBy || null,
+                    } : {}),
                 }
             })
 

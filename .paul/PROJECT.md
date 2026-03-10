@@ -37,11 +37,18 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- None (milestone complete)
+- [ ] Remove chart from track/song
+- [ ] Rename chart/song title in library
+- [ ] Unarchive songs UI (view and restore archived items)
+- [ ] Prominent key display in setlist editor
+- [ ] Fix auto-key detection on chart assignment
+- [ ] Fix print gig packet (black screen, wrong date, 401 auth)
+- [ ] Support 5 monitor buses (currently limited to 4)
+- [ ] Fix PDF health scanner false positives
 
 ### Planned (Next)
 
-- [ ] To be defined during planning
+- None
 
 ### Out of Scope
 

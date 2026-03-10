@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
+import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
@@ -14,6 +14,7 @@ interface LibraryFileRowProps {
     isAdmin: boolean
     onDigitize?: () => void
     onArchive?: () => void
+    onRename?: (item: DriveFile) => void
     getCleanName: (name: string) => string
     isPlaying?: boolean
     selectMode?: boolean
@@ -35,7 +36,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -47,9 +48,11 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
     const displayName = isFolder
         ? item.name
-        : isAudio
-            ? getAudioCleanName(item.name)
-            : getCleanName(item.name)
+        : item.displayName
+            ? item.displayName
+            : isAudio
+                ? getAudioCleanName(item.name)
+                : getCleanName(item.name)
 
     const handleClick = () => {
         if (selectMode && !isFolder && onToggleSelect) {
@@ -218,6 +221,16 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                         <Wand2 className="h-4 w-4" /> Digitize (AI)
                                     </span>
                                 )}
+                            </ContextMenuItem>
+                        )}
+
+                        {isAdmin && onRename && (
+                            <ContextMenuItem
+                                onClick={() => onRename(item)}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Pencil className="h-4 w-4" /> Rename
+                                </span>
                             </ContextMenuItem>
                         )}
 

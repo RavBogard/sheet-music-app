@@ -1,12 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { Loader2, CheckCircle, AlertCircle, Clock, ArchiveRestore, ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
 import { collection, query, orderBy, limit, getDocs, getCountFromServer } from "firebase/firestore"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
+import { Button } from "@/components/ui/button"
+import { apiFetch } from "@/lib/api-client"
+import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
+
+interface ArchivedFile {
+    id: string
+    name: string
+    displayName?: string
+    archivedAt?: string
+    archivedBy?: string
+}
 
 interface SyncRunData {
     startedAt: string
@@ -27,6 +38,40 @@ export function LibraryDataSection() {
     const [lastSync, setLastSync] = useState<SyncRunData | null>(null)
     const [fileCount, setFileCount] = useState<number | null>(null)
     const [loading, setLoading] = useState(true)
+    const [archivedFiles, setArchivedFiles] = useState<ArchivedFile[]>([])
+    const [archivedExpanded, setArchivedExpanded] = useState(false)
+    const [archivedLoading, setArchivedLoading] = useState(false)
+    const [restoringId, setRestoringId] = useState<string | null>(null)
+
+    const loadArchived = useCallback(async () => {
+        setArchivedLoading(true)
+        try {
+            const res = await apiFetch('/api/library/list?status=archived&all=true')
+            if (res.ok) {
+                const data = await res.json()
+                setArchivedFiles(data.files || [])
+            }
+        } catch { /* silent */ } finally {
+            setArchivedLoading(false)
+        }
+    }, [])
+
+    const handleRestore = async (fileId: string) => {
+        setRestoringId(fileId)
+        try {
+            const res = await apiFetch('/api/library/archive', {
+                method: 'PATCH',
+                body: JSON.stringify({ fileId, archive: false })
+            })
+            if (!res.ok) throw new Error("Failed to restore")
+            toast.success("Song restored to library")
+            setArchivedFiles(prev => prev.filter(f => f.id !== fileId))
+        } catch {
+            toast.error("Failed to restore song")
+        } finally {
+            setRestoringId(null)
+        }
+    }
 
     useEffect(() => {
         const load = async () => {
@@ -114,6 +159,70 @@ export function LibraryDataSection() {
                     <LibrarySyncCard />
                 </div>
             )}
+
+            {/* Archived Songs Section */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <button
+                    onClick={() => {
+                        setArchivedExpanded(!archivedExpanded)
+                        if (!archivedExpanded && archivedFiles.length === 0) loadArchived()
+                    }}
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                >
+                    <div className="flex items-center gap-2">
+                        {archivedExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        <h3 className="font-semibold text-sm text-foreground">Archived Songs</h3>
+                        {archivedFiles.length > 0 && (
+                            <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                                {archivedFiles.length}
+                            </span>
+                        )}
+                    </div>
+                </button>
+
+                {archivedExpanded && (
+                    <div className="border-t border-border">
+                        {archivedLoading ? (
+                            <div className="flex justify-center p-6">
+                                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : archivedFiles.length === 0 ? (
+                            <p className="text-sm text-muted-foreground p-4">No archived songs.</p>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {archivedFiles.map(file => (
+                                    <div key={file.id} className="flex items-center justify-between px-4 py-3">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium truncate text-foreground">
+                                                {file.displayName || file.name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')}
+                                            </p>
+                                            {file.archivedAt && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Archived {formatDistanceToNow(new Date(file.archivedAt), { addSuffix: true })}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-1.5 text-xs shrink-0 ml-3"
+                                            disabled={restoringId === file.id}
+                                            onClick={() => handleRestore(file.id)}
+                                        >
+                                            {restoringId === file.id ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <ArchiveRestore className="h-3.5 w-3.5" />
+                                            )}
+                                            Restore
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

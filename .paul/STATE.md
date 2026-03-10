@@ -5,41 +5,31 @@
 See: .paul/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** None — milestone complete
+**Current focus:** v1.4 Fixes & Library Management
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v1.3.1 Regression Fixes complete — ready for next
-Last activity: 2026-03-10 — Milestone completed
+Milestone: v1.4 Fixes & Library Management
+Phase: 1 of 4 (Library Management) — Planning
+Plan: 01-01 executed
+Status: APPLY complete, ready for UNIFY
+Last activity: 2026-03-10 — Executed 01-01 (Library Management)
 
 Progress:
-- v1.3.1 Regression Fixes: [██████████] 100% ✓
+- v1.4 Fixes & Library Management: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ✓        ✓        ○     [Apply complete, ready for UNIFY]
 ```
-
-## Performance Metrics
-
-**Milestone velocity:**
-- v1.3: 7 plans in ~76 min (~11 min/plan)
-- v1.3.1: 1 plan in ~8 min
 
 ## Accumulated Context
 
 ### Decisions
-| Decision | Phase | Impact |
-|----------|-------|--------|
-| pdfjs.version in worker URL for cache busting | v1.3.1 Phase 1 | Prevents stale worker mismatch after deploys |
-| Ref-based uid tracking in useMonitorConnection | v1.3.1 Phase 1 | Prevents effect churn during iPad auth token refresh |
-| visibilitychange as iOS Safari reconnection trigger | v1.3.1 Phase 1 | beforeunload doesn't fire on iOS Safari |
+- (none yet for v1.4)
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — L effort, needs design discussion
@@ -47,20 +37,20 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Full withAuth → createApiHandler migration (30 routes) — tracked for future work
 - clearSaveTimer() wiring into consuming components — deferred from v1.3 Phase 4
 
-### Git State
-Last commit: bef4972
-Branch: master
-Feature branches merged: none
-
 ### Blockers/Concerns
 - None
+
+### Git State
+Last commit: c6375f4
+Branch: master
+Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Milestone v1.3.1 complete
-Next action: /paul:discuss-milestone or /paul:milestone
-Resume file: .paul/MILESTONES.md
+Stopped at: Plan 01-01 executed
+Next action: /paul:unify
+Resume file: .paul/phases/01-library-management/01-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*
