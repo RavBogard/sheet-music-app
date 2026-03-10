@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -76,10 +77,11 @@ interface TransferDialogProps {
     setlistName?: string
     email: string
     onEmailChange: (email: string) => void
-    onConfirm: () => void
+    onConfirm: () => Promise<void> | void
+    transferring?: boolean
 }
 
-export function TransferSetlistDialog({ open, onClose, setlistName, email, onEmailChange, onConfirm }: TransferDialogProps) {
+export function TransferSetlistDialog({ open, onClose, setlistName, email, onEmailChange, onConfirm, transferring }: TransferDialogProps) {
     if (!open) return null
 
     return (
@@ -96,10 +98,14 @@ export function TransferSetlistDialog({ open, onClose, setlistName, email, onEma
                     className="w-full bg-background border border-border p-3 rounded-lg text-foreground"
                     value={email}
                     onChange={(e) => onEmailChange(e.target.value)}
+                    disabled={transferring}
                 />
                 <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button onClick={onConfirm} disabled={!email}>Transfer</Button>
+                    <Button variant="ghost" onClick={onClose} disabled={transferring}>Cancel</Button>
+                    <Button onClick={onConfirm} disabled={!email || transferring}>
+                        {transferring && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {transferring ? "Transferring..." : "Transfer"}
+                    </Button>
                 </div>
             </div>
         </div>

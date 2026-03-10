@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
+import { LiveRegion } from "@/components/ui/live-region"
 
 const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
@@ -92,6 +93,7 @@ export default function RootLayout({
               {children}
             </ClientProviders>
             <Toaster richColors position="top-center" theme="system" />
+            <LiveRegion />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

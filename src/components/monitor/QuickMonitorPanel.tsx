@@ -9,6 +9,7 @@ import { VerticalFaderStrip } from "@/components/monitor/VerticalFaderStrip"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Loader2, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
+import { ScrollFade } from "@/components/ui/scroll-fade"
 import { isBridgeOnline, getBridgeStatusMessage } from "@/components/monitor/ConnectionIndicator"
 
 /**
@@ -148,7 +149,7 @@ export function QuickMonitorPanel() {
             </div>
 
             {/* Vertical faders in horizontal row */}
-            <div className="flex flex-row overflow-x-auto gap-1 p-3 min-h-[280px]">
+            <ScrollFade scrollClassName="flex flex-row gap-1 p-3 min-h-[280px]">
                 {/* Master bus fader (leftmost) */}
                 <VerticalFaderStrip
                     label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "Master" : "Master"}
@@ -185,7 +186,7 @@ export function QuickMonitorPanel() {
                         )
                     })
                 )}
-            </div>
+            </ScrollFade>
         </div>
     )
 }

@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Loader2, Search, FilterX } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin'
 
@@ -17,6 +18,7 @@ export function PeopleSection() {
     const [users, setUsers] = useState<UserProfile[]>([])
     const [usersLoading, setUsersLoading] = useState(true)
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+    const [bulkLoading, setBulkLoading] = useState(false)
 
     // Filtering and Search State
     const [searchQuery, setSearchQuery] = useState("")
@@ -71,27 +73,32 @@ export function PeopleSection() {
     const clearSelection = () => setSelectedUsers(new Set())
 
     const bulkSetRole = async (role: string) => {
-        const uids = Array.from(selectedUsers)
-        let success = 0
-        let failed = 0
-        for (const uid of uids) {
-            try {
-                await updateUserRole(uid, role as UserRole)
-                notifyRoleChanged(uid, role).catch(() => { })
-                success++
-            } catch {
-                failed++
+        setBulkLoading(true)
+        try {
+            const uids = Array.from(selectedUsers)
+            let success = 0
+            let failed = 0
+            for (const uid of uids) {
+                try {
+                    await updateUserRole(uid, role as UserRole)
+                    notifyRoleChanged(uid, role).catch(() => { })
+                    success++
+                } catch {
+                    failed++
+                }
             }
+            const labels: Record<string, string> = { member: 'Member', musician: 'Musician', band_leader: 'Band Leader' }
+            if (failed === 0) {
+                toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
+            } else if (success > 0) {
+                toast.warning(`Updated ${success} user${success !== 1 ? 's' : ''}, but ${failed} failed`)
+            } else {
+                toast.error(`Failed to update ${failed} user${failed !== 1 ? 's' : ''}`)
+            }
+            clearSelection()
+        } finally {
+            setBulkLoading(false)
         }
-        const labels: Record<string, string> = { member: 'Member', musician: 'Musician', band_leader: 'Band Leader' }
-        if (failed === 0) {
-            toast.success(`Updated ${success} user${success !== 1 ? 's' : ''} to ${labels[role] || role}`)
-        } else if (success > 0) {
-            toast.warning(`Updated ${success} user${success !== 1 ? 's' : ''}, but ${failed} failed`)
-        } else {
-            toast.error(`Failed to update ${failed} user${failed !== 1 ? 's' : ''}`)
-        }
-        clearSelection()
     }
 
     return (
@@ -119,16 +126,20 @@ export function PeopleSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => bulkSetRole('member')}
+                                disabled={bulkLoading}
                                 className="text-xs bg-background/50 hover:bg-background text-foreground"
                             >
+                                {bulkLoading ? <Spinner size="sm" /> : null}
                                 Make Member
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => bulkSetRole('musician')}
+                                disabled={bulkLoading}
                                 className="text-xs bg-success/10 hover:bg-success/20 text-success border-success/20"
                             >
+                                {bulkLoading ? <Spinner size="sm" /> : null}
                                 Make Musician
                             </Button>
                             {isAdmin && (
@@ -136,8 +147,10 @@ export function PeopleSection() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => bulkSetRole('band_leader')}
+                                    disabled={bulkLoading}
                                     className="text-xs bg-brand/10 hover:bg-brand/20 text-foreground border-brand/20"
                                 >
+                                    {bulkLoading ? <Spinner size="sm" /> : null}
                                     Make Band Leader
                                 </Button>
                             )}
@@ -145,9 +158,11 @@ export function PeopleSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => bulkSetRole('denied')}
+                                disabled={bulkLoading}
                                 className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 ml-2"
                                 title="Set role to denied (removes access)"
                             >
+                                {bulkLoading ? <Spinner size="sm" /> : null}
                                 Deny Access
                             </Button>
                             <Button variant="ghost" size="sm" onClick={clearSelection} className="text-xs text-muted-foreground hover:text-foreground ml-2">

@@ -6,7 +6,7 @@ import { MusicianProfile } from "@/types/models"
 import { saveMusicianProfile, subscribeToMusicianProfile, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star } from "lucide-react"
+import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { SchedulingTier } from "@/types/models"
 
@@ -14,6 +14,7 @@ export function MusicianProfileSettings() {
     const { user } = useAuth()
     const [profile, setProfile] = useState<MusicianProfile>({})
     const [saving, setSaving] = useState(false)
+    const [generatingCal, setGeneratingCal] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [loaded, setLoaded] = useState(false)
 
@@ -333,8 +334,10 @@ export function MusicianProfileSettings() {
                                 size="sm"
                                 variant="outline"
                                 className="text-xs gap-1.5 rounded-lg fluid-interaction"
+                                disabled={generatingCal}
                                 onClick={async () => {
                                     if (!user) return
+                                    setGeneratingCal(true)
                                     try {
                                         const { generateCalendarFeedToken } = await import('@/lib/scheduling-firebase')
                                         const token = await generateCalendarFeedToken(user.uid)
@@ -342,11 +345,13 @@ export function MusicianProfileSettings() {
                                         toast.success('Calendar feed URL generated!')
                                     } catch {
                                         toast.error('Failed to generate calendar URL')
+                                    } finally {
+                                        setGeneratingCal(false)
                                     }
                                 }}
                             >
-                                <CalendarDays className="h-3.5 w-3.5" />
-                                Generate Calendar URL
+                                {generatingCal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarDays className="h-3.5 w-3.5" />}
+                                {generatingCal ? "Generating..." : "Generate Calendar URL"}
                             </Button>
                             <p className="text-xs text-muted-foreground mt-1.5">
                                 Generate a URL to subscribe to your CRC schedule in your personal calendar app.

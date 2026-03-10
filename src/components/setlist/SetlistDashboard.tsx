@@ -42,7 +42,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleTransfer, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
@@ -122,7 +122,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
             <ImporterModal open={showImporterModal} onOpenChange={setShowImporterModal} onComplete={(id: string) => router.push(`/setlists/${id}`)} />
             <DeleteSetlistDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} setlistName={setlistToDelete?.name} onConfirm={confirmDelete} />
             <DuplicateSetlistDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen} setlistName={setlistToDuplicate?.name} onConfirm={confirmDuplicate} />
-            <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} />
+            <TransferSetlistDialog open={showTransferDialog} onClose={() => setShowTransferDialog(false)} setlistName={selectedSetlistForTransfer?.name} email={transferEmail} onEmailChange={setTransferEmail} onConfirm={handleTransfer} transferring={transferring} />
 
             {/* Tabs & View Toggle */}
             <SetlistToolbar

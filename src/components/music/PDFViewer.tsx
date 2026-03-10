@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2, RefreshCw } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useMusicStore } from '@/lib/store'
 import { PDFPageWrapper } from './PDFPageWrapper'
 import { ChartSuggestions } from './ChartSuggestions'
@@ -144,9 +146,10 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             <div ref={containerRef} className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-center relative pb-32">
                 <div className="relative">
                     {loading && (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
-                            <Loader2 className="animate-spin h-10 w-10" />
-                            <p>Loading Chart...</p>
+                        <div className="flex flex-col items-center mt-4 gap-3">
+                            <Skeleton className="w-full max-w-[600px] aspect-[8.5/11] rounded-lg" />
+                            <Skeleton className="h-4 w-32 rounded" />
+                            <p className="text-sm text-muted-foreground">Loading Chart...</p>
                         </div>
                     )}
 
@@ -156,13 +159,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
                                 {error}
                             </p>
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={handleRetry}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
                             >
                                 <RefreshCw className="h-4 w-4" />
                                 Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current})` : ''}
-                            </button>
+                            </Button>
                             <ChartSuggestions
                                 trackName={trackName}
                                 currentFileId={url.split('/').pop()}
@@ -185,13 +188,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             error={
                                 <div className="text-destructive p-10 text-center space-y-2">
                                     <p className="font-semibold">PDF render error</p>
-                                    <button
+                                    <Button
+                                        variant="secondary"
                                         onClick={handleRetry}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
                                     >
                                         <RefreshCw className="h-4 w-4" />
                                         Retry
-                                    </button>
+                                    </Button>
                                 </div>
                             }
                             className="flex flex-col items-center min-h-screen"

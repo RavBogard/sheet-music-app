@@ -89,9 +89,9 @@ export function TemplatesSection() {
         <div className="space-y-4">
             {/* Import button */}
             <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={openImportPicker} disabled={!selectedKey} className="min-h-11">
-                    <Import className="h-4 w-4 mr-1.5" />
-                    Import from Setlist
+                <Button variant="outline" size="sm" onClick={openImportPicker} disabled={!selectedKey || loadingSetlists} className="min-h-11">
+                    {loadingSetlists ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Import className="h-4 w-4 mr-1.5" />}
+                    {loadingSetlists ? "Loading..." : "Import from Setlist"}
                 </Button>
             </div>
 

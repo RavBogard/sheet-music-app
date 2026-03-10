@@ -16,7 +16,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
-import { Headphones, Trash2 } from "lucide-react"
+import { Headphones, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -47,6 +47,8 @@ interface UserRowProps {
 
 export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onSelect }: UserRowProps) {
     const [loading, setLoading] = useState(false)
+    const [soundEngLoading, setSoundEngLoading] = useState(false)
+    const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
@@ -81,6 +83,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     }
 
     const handleSoundEngineerToggle = async () => {
+        setSoundEngLoading(true)
         try {
             const { auth: firebaseAuth } = await import("@/lib/firebase")
             const currentUser = firebaseAuth.currentUser
@@ -96,6 +99,8 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         } catch (e) {
             logger.error(e)
             toast.error("Failed to update sound engineer flag")
+        } finally {
+            setSoundEngLoading(false)
         }
     }
 
@@ -105,6 +110,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             setTimeout(() => setConfirmDelete(false), 3000)
             return
         }
+        setDeleteLoading(true)
         try {
             // Use server-side Admin SDK route for proper cleanup
             // (deletes both Firestore doc and Firebase Auth user)
@@ -125,8 +131,10 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         } catch (e) {
             logger.error(e)
             toast.error("Failed to remove user")
+        } finally {
+            setDeleteLoading(false)
+            setConfirmDelete(false)
         }
-        setConfirmDelete(false)
     }
 
     const isPending = user.role === 'pending'
@@ -186,6 +194,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             variant="ghost"
                             size="icon"
                             onClick={handleSoundEngineerToggle}
+                            disabled={soundEngLoading}
                             className={cn(
                                 "rounded-lg border",
                                 user.soundEngineer
@@ -194,7 +203,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             )}
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
                         >
-                            <Headphones className="h-4 w-4" />
+                            {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
                         </Button>
                     )}
 
@@ -204,6 +213,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             variant="ghost"
                             size="icon"
                             onClick={handleDelete}
+                            disabled={deleteLoading}
                             className={cn(
                                 "rounded-lg border",
                                 confirmDelete
@@ -212,7 +222,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             )}
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
                         >
-                            <Trash2 className="h-4 w-4" />
+                            {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                     )}
 

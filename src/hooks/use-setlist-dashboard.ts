@@ -171,8 +171,11 @@ export function useSetlistDashboard({
         }
     }
 
+    const [transferring, setTransferring] = useState(false)
+
     const handleTransfer = async () => {
         if (!selectedSetlistForTransfer || !transferEmail) return
+        setTransferring(true)
         try {
             const res = await apiFetch('/api/setlist/transfer', {
                 method: 'POST',
@@ -185,6 +188,8 @@ export function useSetlistDashboard({
             setSelectedSetlistForTransfer(null)
         } catch (err: unknown) {
             toast.error(`Transfer Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+        } finally {
+            setTransferring(false)
         }
     }
 
@@ -364,7 +369,7 @@ export function useSetlistDashboard({
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleTransfer, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
