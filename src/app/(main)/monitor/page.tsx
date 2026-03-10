@@ -1,25 +1,22 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useMonitorStore } from "@/lib/monitor-store"
-import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
+import { MonitorTabs } from "@/components/monitor/MonitorTabs"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { Loader2, Radio, ChevronDown, ChevronUp, Star } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2, Radio } from "lucide-react"
 
 export default function MonitorPage() {
     const { user, loading: authLoading, isAdmin } = useAuth()
     const { hasAccess, isSoundEngineer, loading: accessLoading } = useMonitorAccess()
-    // Sound engineers see their section open by default
-    const [showEngSection, setShowEngSection] = useState(true)
 
     // Persistent connection -- shared with QuickMonitorPanel
     const { client } = useMonitorConnection()
@@ -187,7 +184,7 @@ export default function MonitorPage() {
         )
     }
 
-    // -- Main mixer view (Configure mode) --
+    // -- Main mixer view (Tabbed mode) --
     const myBus = buses.find(b => b.index === myBusIndex)
     if (!myBus) {
         // Only show loading on initial load — not when we had data and it temporarily disappeared
@@ -206,113 +203,26 @@ export default function MonitorPage() {
         )
     }
 
-    // Show ALL channel sends for the user's bus (configure mode = full channel list)
     const allSends = Array.isArray(myBus.sends) ? myBus.sends : []
-    const channelMap = new Map((Array.isArray(channels) ? channels : []).map(c => [c.index, c]))
 
     return (
-        <div className="max-w-lg mx-auto p-4 pb-24">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-bold truncate pr-4">
-                    {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
-                </h1>
-                <ConnectionIndicator status={status} error={error} />
-            </div>
-            <p className="text-sm text-muted-foreground mb-6">
-                Bus {myBusIndex}
-            </p>
-
-            {/* Master fader */}
-            <div className="bg-card border border-brand/10 rounded-xl p-4 mb-4">
-                <FaderStrip
-                    label="Master"
-                    value={myBus.fader}
-                    on={true}
-                    isMaster
-                    onChange={handleBusMaster}
-                />
-            </div>
-
-            {/* Channel sends -- all channels with star toggle */}
-            <div className="bg-card border border-brand/10 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-medium text-muted-foreground">Channels</h2>
-                    <p className="text-xs text-muted-foreground">
-                        Tap <Star className="w-3 h-3 inline text-yellow-500" /> to add to your live mix
-                    </p>
-                </div>
-                <div className="space-y-1">
-                    {allSends.map(send => {
-                        const ch = channelMap.get(send.channelIndex)
-                        const name = ch?.name || `Ch ${send.channelIndex}`
-                        const isStarred = starredChannels.includes(send.channelIndex)
-                        const isDefault = defaultChannels.includes(send.channelIndex)
-                        return (
-                            <div key={send.channelIndex} className="flex items-center gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => toggleStar(send.channelIndex)}
-                                    className={
-                                        isStarred
-                                            ? "text-yellow-500"
-                                            : "text-zinc-700 hover:text-zinc-500"
-                                    }
-                                    title={isStarred ? "Remove from live mix" : "Add to live mix"}
-                                >
-                                    <Star className="w-4 h-4" fill={isStarred ? "currentColor" : "none"} />
-                                </Button>
-                                <div className="flex-1 min-w-0">
-                                    <FaderStrip
-                                        label={name}
-                                        value={send.level}
-                                        on={send.on}
-                                        onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                        onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
-                                    />
-                                </div>
-                                {isDefault && (
-                                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-brand/20 text-brand border border-brand/20">
-                                        default
-                                    </span>
-                                )}
-                            </div>
-                        )
-                    })}
-                    {allSends.length === 0 && (
-                        <p className="text-sm text-muted-foreground py-4 text-center">
-                            No channels routed to this bus yet.
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* Sound Engineer Section -- collapsible, open by default */}
-            {hasEngineerAccess && (
-                <div className="mt-4 space-y-4">
-                    <Button
-                        variant="ghost"
-                        onClick={() => setShowEngSection(!showEngSection)}
-                        className="flex items-center gap-2 text-sm font-medium text-amber-500 hover:text-amber-400 w-full justify-start"
-                    >
-                        {showEngSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        Sound Engineer
-                    </Button>
-
-                    {showEngSection && (
-                        <div className="space-y-4">
-                            <BusAssignmentPanel config={config!} />
-                            <DefaultChannelPicker />
-                            <MatrixPanel
-                                matrices={matrices}
-                                onFaderChange={handleMatrixFader}
-                                onToggle={handleMatrixOn}
-                            />
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+        <MonitorTabs
+            myBus={myBus}
+            channels={Array.isArray(channels) ? channels : []}
+            allSends={allSends}
+            starredChannels={starredChannels}
+            defaultChannels={defaultChannels}
+            hasEngineerAccess={hasEngineerAccess}
+            config={config}
+            matrices={matrices}
+            status={status}
+            error={error}
+            onBusMaster={handleBusMaster}
+            onSendLevel={handleSendLevel}
+            onSendOn={handleSendOn}
+            onMatrixFader={handleMatrixFader}
+            onMatrixOn={handleMatrixOn}
+            onToggleStar={toggleStar}
+        />
     )
 }
