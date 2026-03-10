@@ -96,7 +96,7 @@ export const SongRow = memo(function SongRow({
                             {track.title || "Untitled"}
                         </span>
                         {track.key && (
-                            <span className="shrink-0 text-xs font-mono bg-brand/10 px-1.5 py-0.5 rounded text-brand">
+                            <span className="shrink-0 text-sm font-mono font-semibold bg-brand/20 px-2 py-0.5 rounded text-brand">
                                 {track.key}
                             </span>
                         )}

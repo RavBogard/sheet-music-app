@@ -22,7 +22,7 @@ const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
     bridgeUrl: "wss://192.168.1.50:9001",
     x32Address: "192.168.1.100",
     x32Port: 10023,
-    monitorBuses: [1, 2, 3, 4],
+    monitorBuses: [1, 2, 3, 4, 5],
     busAssignments: {},
 }
 
@@ -302,7 +302,7 @@ export function SoundSystemSection() {
 
                             <div>
                                 <label className="text-sm text-muted-foreground mb-1 block">Monitor Buses</label>
-                                <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4" />
+                                <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4, 5" />
                                 <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
                             </div>
                         </div>

@@ -113,7 +113,7 @@ export function MonitorSetupWizard({
                         <Input
                             value={monitorBusesStr}
                             onChange={e => setMonitorBusesStr(e.target.value)}
-                            placeholder="1, 2, 3, 4"
+                            placeholder="1, 2, 3, 4, 5"
                         />
                     </div>
                 )}
