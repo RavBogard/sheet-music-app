@@ -34,12 +34,10 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] AI chat assistant for natural language setlist management
 - [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
 - [x] v1.3.1 Regression fixes: cache-busted PDF worker, iPad monitor connection stability
+- [x] v1.4 Phase 1: Library management — rename songs, unlink charts, archive restore
 
 ### Active (In Progress)
 
-- [ ] Remove chart from track/song
-- [ ] Rename chart/song title in library
-- [ ] Unarchive songs UI (view and restore archived items)
 - [ ] Prominent key display in setlist editor
 - [ ] Fix auto-key detection on chart assignment
 - [ ] Fix print gig packet (black screen, wrong date, 401 auth)
@@ -125,7 +123,8 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | pdfjs.version in worker URL for cache busting | v1.3.1 | Prevents stale worker mismatch after deploys |
 | Ref-based uid tracking in useMonitorConnection | v1.3.1 | Prevents effect churn during iPad auth token refresh |
 | visibilitychange as iOS Safari reconnection trigger | v1.3.1 | beforeunload doesn't fire on iOS Safari |
+| displayName overlay for song rename (Firestore, not Drive) | v1.4 P1 | Preserves Drive filenames, rename is Firestore-only |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after v1.3.1 Phase 1 (regression fixes)*
+*Last updated: 2026-03-10 after v1.4 Phase 1 (Library Management)*

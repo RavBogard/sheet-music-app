@@ -1,45 +1,118 @@
-# Summary: 01-01 Library Management
+---
+phase: 01-library-management
+plan: 01
+subsystem: ui, api
+tags: [firestore, react, library, archive, rename]
 
-## What Was Done
+requires:
+  - phase: none
+    provides: existing library/archive API infrastructure
+provides:
+  - Library song rename via displayName field
+  - Chart unlink from setlist tracks
+  - Archived songs viewer with restore
+affects: []
 
-### Task 1: Rename songs in library
-- Added `displayName` field to `DriveFile` interface
-- Created `/api/library/rename` PATCH endpoint (auth-gated to band_leader+)
-- Updated `LibraryFileRow` to prefer `displayName` over cleaned filename
-- Added "Rename" context menu item (admin-only) using `window.prompt`
-- Updated `SongChartsLibrary` to wire rename handler with toast feedback
-- List API now returns `displayName` when set in Firestore
+tech-stack:
+  added: []
+  patterns: [displayName overlay pattern for Firestore metadata]
 
-### Task 2: Unlink chart from setlist track
-- Added "Unlink Chart" button in `SongInlineFields` between Replace and Delete
-- Button only shows when `track.fileId` is set
-- Clears `fileId` and `fileName` while preserving title, key, BPM, notes, lead
+key-files:
+  created:
+    - src/app/api/library/rename/route.ts
+  modified:
+    - src/types/models.ts
+    - src/app/api/library/list/route.ts
+    - src/components/library/LibraryFileRow.tsx
+    - src/components/library/SongChartsLibrary.tsx
+    - src/components/setlist/v2/InlineFields.tsx
+    - src/components/admin/LibraryDataSection.tsx
 
-### Task 3: Archived songs viewer with restore
-- Updated `/api/library/list` to support `?status=archived` query param
-- Added archived file metadata (archivedAt, archivedBy) to response when status=archived
-- Added expandable "Archived Songs" section to `LibraryDataSection` on manage page
-- Shows archived song count, names, and archive date
-- Each song has a "Restore" button that calls archive API with `archive: false`
-- Restored songs removed from list immediately
+key-decisions:
+  - "window.prompt for rename input (minimal, no new dialog component)"
+  - "displayName stored separately from Drive filename in Firestore"
+  - "Archived section lazy-loads on expand (no upfront API call)"
 
-## Files Modified
-- `src/types/models.ts` — added `displayName` to DriveFile
-- `src/app/api/library/rename/route.ts` — **new** rename endpoint
-- `src/app/api/library/list/route.ts` — added status filter + displayName in response
-- `src/components/library/LibraryFileRow.tsx` — rename context menu + displayName display
-- `src/components/library/SongChartsLibrary.tsx` — rename handler wiring
-- `src/components/setlist/v2/InlineFields.tsx` — unlink chart button
-- `src/components/admin/LibraryDataSection.tsx` — archived songs viewer + restore
+patterns-established:
+  - "displayName overlay: Firestore displayName preferred over Drive filename"
 
-## Verification
-- [x] npx tsc --noEmit passes
-- [x] Rename context menu item added for admin users
-- [x] Unlink Chart button clears fileId without deleting track
-- [x] Archived songs section renders on manage page
-- [x] Restore button calls archive API with archive=false
+duration: ~30min
+completed: 2026-03-10
+---
 
-## Decisions
-- Used `window.prompt` for rename (minimal, no new dialog component)
-- `displayName` stored in Firestore separately from `name` (Drive filename preserved)
-- Archived section lazy-loads on expand (no upfront API call)
+# Phase 1 Plan 01: Library Management Summary
+
+**Rename songs, unlink charts from tracks, and view/restore archived songs — three missing library management capabilities shipped.**
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Duration | ~30min |
+| Completed | 2026-03-10 |
+| Tasks | 3 completed |
+| Files modified | 7 |
+
+## Acceptance Criteria Results
+
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| AC-1: Rename Song Title in Library | Pass | Context menu + window.prompt + Firestore displayName |
+| AC-2: Unlink Chart from Setlist Track | Pass | Unlink button clears fileId/fileName, preserves track |
+| AC-3: View and Restore Archived Songs | Pass | Expandable section on manage page with restore buttons |
+
+## Accomplishments
+
+- Songs can be renamed via context menu with displayName persisted to Firestore
+- Charts can be unlinked from setlist tracks without deleting the track row
+- Archived songs visible and restorable from manage page Library tab
+
+## Task Commits
+
+| Task | Commit | Type | Description |
+|------|--------|------|-------------|
+| Task 1-3: Library Management | `7c2583b` | feat | Rename, unlink chart, archive restore |
+
+## Files Created/Modified
+
+| File | Change | Purpose |
+|------|--------|---------|
+| `src/types/models.ts` | Modified | Added `displayName` to DriveFile interface |
+| `src/app/api/library/rename/route.ts` | Created | PATCH endpoint for renaming songs (band_leader+) |
+| `src/app/api/library/list/route.ts` | Modified | Added `?status=archived` filter + displayName in response |
+| `src/components/library/LibraryFileRow.tsx` | Modified | Rename context menu item + displayName display |
+| `src/components/library/SongChartsLibrary.tsx` | Modified | Rename handler wiring with toast feedback |
+| `src/components/setlist/v2/InlineFields.tsx` | Modified | Unlink Chart button between Replace and Delete |
+| `src/components/admin/LibraryDataSection.tsx` | Modified | Archived songs expandable section with restore |
+
+## Decisions Made
+
+| Decision | Rationale | Impact |
+|----------|-----------|--------|
+| window.prompt for rename | Minimal UI, no new dialog component needed | Simple but functional |
+| displayName in Firestore only | Preserves original Drive filename | No Drive API calls needed |
+| Lazy-load archived section | No upfront API call on page load | Better manage page performance |
+
+## Deviations from Plan
+
+None - plan executed as written.
+
+## Issues Encountered
+
+None.
+
+## Next Phase Readiness
+
+**Ready:**
+- Library management capabilities complete
+- Phase 2 (Setlist & Editor Fixes) can proceed independently
+
+**Concerns:**
+- None
+
+**Blockers:**
+- None
+
+---
+*Phase: 01-library-management, Plan: 01*
+*Completed: 2026-03-10*

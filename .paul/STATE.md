@@ -10,26 +10,28 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.4 Fixes & Library Management
-Phase: 1 of 4 (Library Management) — Planning
-Plan: 01-01 executed
-Status: APPLY complete, ready for UNIFY
-Last activity: 2026-03-10 — Executed 01-01 (Library Management)
+Phase: 2 of 4 (Setlist & Editor Fixes) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-10 — Phase 1 complete, transitioned to Phase 2
 
 Progress:
-- v1.4 Fixes & Library Management: [░░░░░░░░░░] 0%
+- v1.4 Fixes & Library Management: [██░░░░░░░░] 25%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [Apply complete, ready for UNIFY]
+  ○        ○        ○     [Ready for new PLAN]
 ```
 
 ## Accumulated Context
 
 ### Decisions
-- (none yet for v1.4)
+- displayName overlay for song rename (Firestore-only, preserves Drive filename)
+- window.prompt for rename input (minimal, no new dialog component)
+- Archived section lazy-loads on expand (no upfront API call)
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — L effort, needs design discussion
@@ -41,16 +43,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - None
 
 ### Git State
-Last commit: c6375f4
+Last commit: 7c2583b
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Plan 01-01 executed
-Next action: /paul:unify
-Resume file: .paul/phases/01-library-management/01-01-SUMMARY.md
+Stopped at: Phase 1 complete, ready to plan Phase 2
+Next action: /paul:plan for Phase 2
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*

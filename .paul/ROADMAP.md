@@ -4,11 +4,11 @@
 
 **v1.4 Fixes & Library Management** (v1.4.0)
 Status: In Progress
-Phases: 0 of 4 complete
+Phases: 1 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Library Management | 1 | Planning | - |
+| 1 | Library Management | 1/1 | Complete | 2026-03-10 |
 | 2 | Setlist & Editor Fixes | TBD | Not started | - |
 | 3 | Print Gig Packet Fixes | TBD | Not started | - |
 | 4 | PDF Health Scanner | TBD | Not started | - |
