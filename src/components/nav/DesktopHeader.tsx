@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert, ListTodo } from "lucide-react"
+import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -183,11 +183,6 @@ export function DesktopHeader() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />
-                                <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
-                                    <Link href="/tasks">
-                                        <ListTodo className="mr-2 h-4 w-4" /> Tasks
-                                    </Link>
-                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
                                     <Link href="/settings">
                                         <Settings className="mr-2 h-4 w-4" /> Settings

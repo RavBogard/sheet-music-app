@@ -79,6 +79,13 @@ async function scanSingleFile(file: DriveFile): Promise<ScanResult> {
 
         // Dynamically import pdfjs to avoid SSR issues (DOMMatrix not available in Node)
         const { pdfjs } = await import('react-pdf')
+
+        // Ensure worker is configured — PDFViewer sets this on render,
+        // but the scanner may run before any PDFViewer has mounted.
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+            pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+        }
+
         const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
         const pdf = await loadingTask.promise
         const pages = pdf.numPages

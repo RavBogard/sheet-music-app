@@ -58,7 +58,7 @@
     "opensheetmusicdisplay": "^1.9.4",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.530",
+    "pdfjs-dist": "5.4.296",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-day-picker": "^9.13.0",

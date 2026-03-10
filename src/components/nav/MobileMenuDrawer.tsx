@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-    Home, Library, ListMusic, ListTodo, Radio, Settings,
+    Home, Library, ListMusic, Radio, Settings,
     ShieldAlert, FileText, LogOut, User, CalendarDays,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -51,8 +51,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
         { label: "Setlists", href: "/setlists", icon: ListMusic, show: true },
         { label: "Schedule", href: "/schedule", icon: CalendarDays, show: isMusician },
         { label: "Library", href: "/library", icon: Library, show: isMember },
-        { label: "Tasks", href: "/tasks", icon: ListTodo, show: !!user },
-        { label: "Monitor", href: "/monitor", icon: Radio, show: hasMonitorAccess && congregation.features.monitor },
+{ label: "Monitor", href: "/monitor", icon: Radio, show: hasMonitorAccess && congregation.features.monitor },
     ]
 
     const secondaryItems: MenuItem[] = [

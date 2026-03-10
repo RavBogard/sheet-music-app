@@ -77,7 +77,6 @@ export function MobileTabBar() {
 
     // Check if current path is active in the drawer (not in tabs)
     const isDrawerPageActive = pathname === "/"
-        || pathname.startsWith("/tasks")
         || pathname.startsWith("/settings")
         || pathname.startsWith("/manage")
         || pathname.startsWith("/changelog")

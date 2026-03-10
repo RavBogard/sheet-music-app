@@ -21,14 +21,14 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
     const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Check for reduced motion preference
-    const prefersReducedMotion = useRef(false)
+    const [reducedMotion, setReducedMotion] = useState(false)
     useEffect(() => {
-        prefersReducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     }, [])
 
     // Beat pulse interval
     useEffect(() => {
-        if (prefersReducedMotion.current) return
+        if (reducedMotion) return
 
         const intervalMs = 60000 / bpm
         intervalRef.current = setInterval(() => {
@@ -78,7 +78,7 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
                 <div
                     className={cn(
                         "rounded-full transition-all duration-75 shrink-0",
-                        prefersReducedMotion.current
+                        reducedMotion
                             ? "h-5 w-5 bg-brand"
                             : isBeat
                                 ? "h-6 w-6 bg-brand shadow-[0_0_20px_var(--brand)] scale-110"

@@ -1,16 +1,9 @@
 {
   "version": "0.1.0",
-  "commit": "fc5156e",
+  "commit": "8284a9b",
   "branch": "master",
-  "buildDate": "3/8/2026",
+  "buildDate": "3/9/2026",
   "changelog": [
-    "0.1.0 - fix: filter import setlist query to public setlists only",
-    "0.1.0 - fix: strip undefined values before Firestore writes in template save",
-    "0.1.0 - feat: direct chart association + page numbers on template slots (Tasks 1-2 data layer)",
-    "0.1.0 - feat: AI template creation (BUILD_TEMPLATE) + Import from Setlist",
-    "0.1.0 - fix: add Firestore rules for templates collection + handle permission errors",
-    "0.1.0 - feat: in-app template editor with Firebase persistence",
-    "0.1.0 - fix: PDFOverlay test mocks handle dual mobile/desktop layout",
-    "0.1.0 - feat: filter MP3s from song picker, insert-at-position, full toolbar in PDFOverlay"
+    "0.1.0 - fix: Commit previously unstaged component consistency changes"
   ]
 }

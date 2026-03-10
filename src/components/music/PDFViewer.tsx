@@ -13,11 +13,10 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 
-// Configure PDF.js worker — version MUST match react-pdf's bundled pdfjs-dist.
-// react-pdf re-exports pdfjs, so pdfjs.version gives us the exact version it uses.
-// Using unpkg CDN with pinned version guarantees version match and eliminates
-// the worker/library mismatch that caused AbortErrors.
-const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
+// Configure PDF.js worker — use local copy from public/ (copied by
+// scripts/copy-pdf-worker.js during postinstall + build). Local worker
+// eliminates CDN dependency and guarantees version match with react-pdf's
+// bundled pdfjs-dist.
 
 interface PDFViewerProps {
     url: string
@@ -33,7 +32,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
 
     // Sandbox PDF Worker init to prevent main-thread execution on non-perform routes
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
+        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
     }
 
     // Track which URL we've resolved to avoid re-running
@@ -94,10 +93,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
 
     // Resolve source when URL changes
     useEffect(() => {
-        // Cache-bust v2: forces CDN cache invalidation after fix for
-        // stale error responses being cached. Can be removed after 2026-02-20.
-        const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-        fetchPdf(bustUrl)
+        fetchPdf(url)
     }, [url, fetchPdf])
 
     const handleRetry = () => {
