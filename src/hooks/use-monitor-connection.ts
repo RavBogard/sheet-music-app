@@ -21,7 +21,7 @@
 
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { FirestoreMonitorClient } from "@/lib/firestore-monitor-client"
@@ -160,6 +160,16 @@ function registerTeardownListeners(): void {
     // Page unload listener
     if (!unloadListenerAdded && typeof window !== "undefined") {
         window.addEventListener("beforeunload", () => teardown(true))
+
+        // iOS Safari doesn't reliably fire beforeunload. Use visibilitychange
+        // to reconnect when the user returns from a suspended tab.
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && refCount > 0 && !activeClient && auth.currentUser) {
+                logger.info("[MonitorConn] Tab became visible — reconnecting")
+                ensureConnected(auth.currentUser.uid)
+            }
+        })
+
         unloadListenerAdded = true
     }
 }
@@ -177,9 +187,19 @@ function registerTeardownListeners(): void {
  */
 export function useMonitorConnection(): { client: FirestoreMonitorClient | null } {
     const { user } = useAuth()
+    const userUid = user?.uid ?? null
+
+    // Track previous uid to avoid effect churn during transient auth nulls.
+    // Firebase Auth can briefly report null during token refresh on iPad —
+    // the auth listener's 3s debounce handles that case, so the effect
+    // should only fire on genuine uid changes.
+    const prevUidRef = useRef<string | null>(null)
 
     useEffect(() => {
-        if (!user) return
+        if (userUid === prevUidRef.current) return // No genuine change
+        prevUidRef.current = userUid
+
+        if (!userUid) return // User signed out — auth listener handles teardown
 
         refCount++
         logger.debug("[MonitorConn] Hook mounted — refCount=%d, active=%s", refCount, !!activeClient)
@@ -190,24 +210,26 @@ export function useMonitorConnection(): { client: FirestoreMonitorClient | null 
             refCountTeardownTimer = null
         }
 
-        ensureConnected(user.uid)
+        ensureConnected(userUid)
 
         return () => {
             refCount = Math.max(0, refCount - 1)
             logger.debug("[MonitorConn] Hook unmounted — refCount=%d", refCount)
 
             if (refCount === 0 && activeClient) {
-                // Debounce teardown to avoid flicker during page transitions
+                // Debounce teardown to avoid flicker during page transitions.
+                // 5s accommodates iPad tab suspension/restoration which is
+                // slower than desktop navigation transitions.
                 refCountTeardownTimer = setTimeout(() => {
                     refCountTeardownTimer = null
                     if (refCount === 0) {
                         logger.info("[MonitorConn] All consumers unmounted — tearing down")
                         teardown(true)
                     }
-                }, 3000)
+                }, 5000)
             }
         }
-    }, [user?.uid])
+    }, [userUid])
 
     return { client: activeClient }
 }

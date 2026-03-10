@@ -30,9 +30,10 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Sandbox PDF Worker init to prevent main-thread execution on non-perform routes
+    // Use versioned worker URL for cache busting — prevents stale Service Worker
+    // or CDN cache from serving a mismatched worker after deploys.
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+        pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
     }
 
     // Track which URL we've resolved to avoid re-running

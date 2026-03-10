@@ -82,8 +82,9 @@ async function scanSingleFile(file: DriveFile): Promise<ScanResult> {
 
         // Ensure worker is configured — PDFViewer sets this on render,
         // but the scanner may run before any PDFViewer has mounted.
+        // Use versioned URL to match PDFViewer's cache-busted pattern.
         if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-            pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+            pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
         }
 
         const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })

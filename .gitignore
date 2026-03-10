@@ -51,8 +51,9 @@ bridge/service-account-key.json
 bridge/certs/
 bridge/bridge-config.json
 
-# PDF.js worker — copied from node_modules by postinstall
+# PDF.js worker — copied from node_modules by postinstall/build
 public/pdf.worker.min.mjs
+public/pdf.worker.min.*.mjs
 
 # next-pwa generated service worker (regenerated at build time)
 public/sw.js

@@ -33,6 +33,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] PWA offline support with 30-day Workbox caching
 - [x] AI chat assistant for natural language setlist management
 - [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
+- [x] v1.3.1 Regression fixes: cache-busted PDF worker, iPad monitor connection stability
 
 ### Active (In Progress)
 
@@ -114,7 +115,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Ref-based callbacks for effect dep stability | Phase 4 | Pattern for all hooks with callback deps |
 | Broadened useSafeFirestoreSync ref type to DocumentData | Phase 4 | Eliminates all caller `as any` casts |
 | SectionErrorBoundary for admin crash isolation | Phase 4 | Sections fail independently |
+| pdfjs.version in worker URL for cache busting | v1.3.1 | Prevents stale worker mismatch after deploys |
+| Ref-based uid tracking in useMonitorConnection | v1.3.1 | Prevents effect churn during iPad auth token refresh |
+| visibilitychange as iOS Safari reconnection trigger | v1.3.1 | beforeunload doesn't fire on iOS Safari |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after Phase 4 (milestone complete)*
+*Last updated: 2026-03-10 after v1.3.1 Phase 1 (regression fixes)*
