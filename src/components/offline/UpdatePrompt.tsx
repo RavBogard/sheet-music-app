@@ -100,9 +100,11 @@ export function UpdatePrompt() {
                 autoActivated = false
                 return
             }
-            // User-triggered update (via banner or another tab) — reload
+            // A new SW activated (from another tab or external trigger).
+            // Never auto-reload — show the update banner instead so the user
+            // controls when to refresh. Critical during live performances.
             refreshing = true
-            window.location.reload()
+            setWaitingSW(navigator.serviceWorker.controller as ServiceWorker)
         })
 
         return () => {
@@ -114,8 +116,12 @@ export function UpdatePrompt() {
 
     const handleUpdate = useCallback(() => {
         if (waitingSW) {
-            waitingSW.postMessage({ type: "SKIP_WAITING" })
-            setWaitingSW(null)
+            // If the SW is still waiting (installed but not active), tell it to activate
+            if (waitingSW.state === "installed") {
+                waitingSW.postMessage({ type: "SKIP_WAITING" })
+            }
+            // Reload to pick up the new service worker's resources
+            window.location.reload()
         }
     }, [waitingSW])
 

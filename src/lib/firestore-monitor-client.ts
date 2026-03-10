@@ -43,6 +43,10 @@ interface ThrottledCommand {
     data: Record<string, unknown>
 }
 
+// Retry constants for transient Firestore errors
+const ERROR_RETRY_DELAY_MS = 2000
+const MAX_CONSECUTIVE_ERRORS = 3
+
 export class FirestoreMonitorClient {
     private options: FirestoreMonitorClientOptions
     private stateUnsub: Unsubscribe | null = null
@@ -53,6 +57,8 @@ export class FirestoreMonitorClient {
     private _snapshotDebounceTimer: ReturnType<typeof setTimeout> | null = null
     private _pendingSnapshot: MixerSnapshot | null = null
     private _firstSnapshot = true
+    private _consecutiveErrors = 0
+    private _retryTimer: ReturnType<typeof setTimeout> | null = null
 
     constructor(options: FirestoreMonitorClientOptions) {
         this.options = options
@@ -83,6 +89,7 @@ export class FirestoreMonitorClient {
                     this._connected = true
                     this.options.onStatusChange("connected")
                 }
+                this._consecutiveErrors = 0
 
                 // Firestore may return arrays as objects with numeric keys —
                 // ensure we always pass real arrays to the store
@@ -129,9 +136,25 @@ export class FirestoreMonitorClient {
                 // on every bridge state push (since bridge config lacks that field).
             },
             (err) => {
-                logger.error("[MonitorFS] State listener error:", err.message)
-                this._connected = false
-                this.options.onStatusChange("error", err.message)
+                this._consecutiveErrors++
+                logger.error("[MonitorFS] State listener error (%d/%d):", this._consecutiveErrors, MAX_CONSECUTIVE_ERRORS, err.message)
+
+                if (this._consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    // Too many consecutive errors — surface to UI
+                    this._connected = false
+                    this.options.onStatusChange("error", err.message)
+                } else {
+                    // Transient error — retry after delay without flashing error UI
+                    logger.info("[MonitorFS] Retrying listener in %dms...", ERROR_RETRY_DELAY_MS)
+                    this._retryTimer = setTimeout(() => {
+                        this._retryTimer = null
+                        if (this.stateUnsub) {
+                            this.stateUnsub()
+                            this.stateUnsub = null
+                        }
+                        this.connect()
+                    }, ERROR_RETRY_DELAY_MS)
+                }
             }
         )
     }
@@ -150,6 +173,13 @@ export class FirestoreMonitorClient {
             this.stateUnsub()
             this.stateUnsub = null
         }
+
+        // Clear retry timer
+        if (this._retryTimer) {
+            clearTimeout(this._retryTimer)
+            this._retryTimer = null
+        }
+        this._consecutiveErrors = 0
 
         // Clear snapshot debounce timer
         if (this._snapshotDebounceTimer) {

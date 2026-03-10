@@ -37,6 +37,7 @@ let activeClient: FirestoreMonitorClient | null = null
 let configUnsub: (() => void) | null = null
 let connectedUserId: string | null = null
 let authUnsub: (() => void) | null = null
+let authTeardownTimer: ReturnType<typeof setTimeout> | null = null
 let unloadListenerAdded = false
 
 function getClient(): FirestoreMonitorClient | null {
@@ -117,13 +118,31 @@ function teardown(): void {
  * - Page unload (tab close / navigation away)
  */
 function registerTeardownListeners(): void {
-    // Auth state listener — tear down on sign-out
+    // Auth state listener — tear down on sign-out (debounced)
+    // Firebase auth can briefly report null during token refresh.
+    // Wait 3s before tearing down to avoid transient disconnects.
     if (!authUnsub) {
         authUnsub = onAuthStateChanged(auth, (user) => {
             logger.debug("[MonitorConn] Auth state changed — user: %s", user?.uid || "null")
-            if (!user && activeClient) {
-                logger.info("[MonitorConn] User signed out — tearing down")
-                teardown()
+            if (user) {
+                // User is present — cancel any pending teardown
+                if (authTeardownTimer) {
+                    logger.debug("[MonitorConn] Auth restored — cancelling teardown")
+                    clearTimeout(authTeardownTimer)
+                    authTeardownTimer = null
+                }
+            } else if (activeClient) {
+                // User became null — debounce before tearing down
+                logger.info("[MonitorConn] User null — scheduling teardown in 3s")
+                if (!authTeardownTimer) {
+                    authTeardownTimer = setTimeout(() => {
+                        authTeardownTimer = null
+                        if (!auth.currentUser && activeClient) {
+                            logger.info("[MonitorConn] User still null after 3s — tearing down")
+                            teardown()
+                        }
+                    }, 3000)
+                }
             }
         })
     }
