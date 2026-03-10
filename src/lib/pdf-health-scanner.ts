@@ -1,0 +1,101 @@
+import { pdfjs } from 'react-pdf'
+import type { DriveFile } from '@/types/models'
+import { parseFileId } from '@/lib/utils'
+
+export interface ScanResult {
+    fileId: string
+    fileName: string
+    status: 'healthy' | 'corrupt' | 'fetch-error'
+    error?: string
+    pages?: number
+}
+
+export interface ScanProgress {
+    current: number
+    total: number
+    fileName: string
+}
+
+/**
+ * Scans library PDF files for health by attempting to load each via pdfjs.
+ * Processes files sequentially to avoid overwhelming the server.
+ */
+export async function scanLibraryHealth(
+    files: DriveFile[],
+    onProgress?: (progress: ScanProgress) => void
+): Promise<ScanResult[]> {
+    // Filter to PDF files only
+    const pdfFiles = files.filter(f =>
+        f.mimeType?.includes('pdf') || f.name?.toLowerCase().endsWith('.pdf')
+    )
+
+    const results: ScanResult[] = []
+
+    for (let i = 0; i < pdfFiles.length; i++) {
+        const file = pdfFiles[i]
+        onProgress?.({ current: i + 1, total: pdfFiles.length, fileName: file.name })
+
+        const result = await scanSingleFile(file)
+        results.push(result)
+    }
+
+    return results
+}
+
+async function scanSingleFile(file: DriveFile): Promise<ScanResult> {
+    const { apiUrl } = parseFileId(file.id)
+
+    try {
+        const res = await fetch(apiUrl)
+
+        if (!res.ok) {
+            return {
+                fileId: file.id,
+                fileName: file.name,
+                status: 'fetch-error',
+                error: `HTTP ${res.status}`
+            }
+        }
+
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('text/html') || contentType.includes('application/json')) {
+            return {
+                fileId: file.id,
+                fileName: file.name,
+                status: 'fetch-error',
+                error: `Unexpected content type: ${contentType}`
+            }
+        }
+
+        const arrayBuffer = await res.arrayBuffer()
+
+        if (arrayBuffer.byteLength < 100) {
+            return {
+                fileId: file.id,
+                fileName: file.name,
+                status: 'corrupt',
+                error: `File too small (${arrayBuffer.byteLength} bytes)`
+            }
+        }
+
+        // Attempt to load with pdfjs
+        const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
+        const pdf = await loadingTask.promise
+        const pages = pdf.numPages
+        pdf.destroy()
+
+        return {
+            fileId: file.id,
+            fileName: file.name,
+            status: 'healthy',
+            pages
+        }
+    } catch (err) {
+        return {
+            fileId: file.id,
+            fileName: file.name,
+            status: 'corrupt',
+            error: err instanceof Error ? err.message : String(err)
+        }
+    }
+}

@@ -65,22 +65,25 @@ export async function GET(req: NextRequest) {
         // Track the most recent modification across all documents
         let maxModified = ''
 
-        const files = snapshot.docs.map(doc => {
-            const data = doc.data()
-            // Track latest modification for cache staleness
-            if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
-                maxModified = data.lastSyncedAt
-            }
-            return {
-                id: doc.id,
-                name: data.name,
-                mimeType: data.mimeType,
-                parents: data.parents,
-                modifiedTime: data.modifiedTime || null,
-                webViewLink: data.webViewLink,
-                metadata: data.metadata || null
-            }
-        })
+        const files = snapshot.docs
+            .filter(doc => doc.data().status !== 'archived')
+            .map(doc => {
+                const data = doc.data()
+                // Track latest modification for cache staleness
+                if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
+                    maxModified = data.lastSyncedAt
+                }
+                return {
+                    id: doc.id,
+                    name: data.name,
+                    mimeType: data.mimeType,
+                    parents: data.parents,
+                    modifiedTime: data.modifiedTime || null,
+                    webViewLink: data.webViewLink,
+                    metadata: data.metadata || null,
+                    status: (data.status as string) || 'active'
+                }
+            })
 
         // 5. Build response with caching headers
         const lastDoc = snapshot.docs[snapshot.docs.length - 1]
