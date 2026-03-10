@@ -23,7 +23,7 @@ function getAssignments(raw: BusAssignment | BusAssignment[] | null | undefined)
 /**
  * Sound engineer panel for assigning musicians to monitor buses.
  * Supports multiple users per bus (e.g., shared wedge monitor).
- * All users with any role appear in the dropdown — admins/superusers included.
+ * Only active roles (admin, band_leader, musician) appear in the dropdown.
  */
 export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
     const [users, setUsers] = useState<UserProfile[]>([])
@@ -33,10 +33,12 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((all) => {
-            // Show everyone — any user might need a monitor bus
-            setUsers(all.filter(u => !!u.displayName).sort((a, b) =>
-                (a.displayName || "").localeCompare(b.displayName || "")
-            ))
+            // Only show active roles — exclude member, pending, denied
+            const activeRoles = ['admin', 'band_leader', 'musician']
+            setUsers(all
+                .filter(u => !!u.displayName && activeRoles.includes(u.role))
+                .sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""))
+            )
         })
         return unsub
     }, [])

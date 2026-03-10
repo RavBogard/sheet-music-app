@@ -121,7 +121,7 @@ export function MonitorTabs({
                     </TabsTrigger>
                     {hasEngineerAccess && (
                         <TabsTrigger value="bus" className="min-h-[44px] text-sm font-medium">
-                            Bus
+                            Configure
                         </TabsTrigger>
                     )}
                     {hasEngineerAccess && (
