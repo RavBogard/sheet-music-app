@@ -31,16 +31,18 @@ export function useSetlistPresence(
     const gigModeActive = useMusicStore(s => s.gigModeActive)
 
     const writeRef = useRef(() => {})
-    writeRef.current = () => {
-        if (!setlistId || !uid || gigModeActive) return
-        writePresence(setlistId, uid, {
-            uid,
-            displayName,
-            photoURL,
-            status,
-            currentSongIndex: null,
-        })
-    }
+    useEffect(() => {
+        writeRef.current = () => {
+            if (!setlistId || !uid || gigModeActive) return
+            writePresence(setlistId, uid, {
+                uid,
+                displayName,
+                photoURL,
+                status,
+                currentSongIndex: null,
+            })
+        }
+    }, [setlistId, uid, displayName, photoURL, status, gigModeActive])
 
     useEffect(() => {
         if (!setlistId || !uid) return
