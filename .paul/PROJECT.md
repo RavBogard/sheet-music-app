@@ -35,11 +35,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
 - [x] v1.3.1 Regression fixes: cache-busted PDF worker, iPad monitor connection stability
 - [x] v1.4 Phase 1: Library management — rename songs, unlink charts, archive restore
+- [x] Auto-key detection on all chart assignment paths (fixed in c6375f4)
+- [x] v1.4 Phase 2: Prominent key display + 5 monitor buses
 
 ### Active (In Progress)
 
-- [ ] Prominent key display in setlist editor
-- [ ] Fix auto-key detection on chart assignment
 - [ ] Fix print gig packet (black screen, wrong date, 401 auth)
 - [ ] Support 5 monitor buses (currently limited to 4)
 - [ ] Fix PDF health scanner false positives

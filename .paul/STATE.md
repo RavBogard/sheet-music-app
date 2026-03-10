@@ -10,13 +10,13 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.4 Fixes & Library Management
-Phase: 2 of 4 (Setlist & Editor Fixes) — Not started
+Phase: 3 of 4 (Print Gig Packet Fixes) — Not started
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-10 — Phase 1 complete, transitioned to Phase 2
+Last activity: 2026-03-10 — Phase 2 complete, transitioned to Phase 3
 
 Progress:
-- v1.4 Fixes & Library Management: [██░░░░░░░░] 25%
+- v1.4 Fixes & Library Management: [█████░░░░░] 50%
 
 ## Loop Position
 
@@ -30,8 +30,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ### Decisions
 - displayName overlay for song rename (Firestore-only, preserves Drive filename)
-- window.prompt for rename input (minimal, no new dialog component)
-- Archived section lazy-loads on expand (no upfront API call)
+- Auto-key detection already fixed in c6375f4 — marked validated, not re-planned
+- Key badge: text-sm font-semibold bg-brand/20 for prominence
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — L effort, needs design discussion
@@ -43,15 +43,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - None
 
 ### Git State
-Last commit: 7c2583b
+Last commit: cb78931
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 1 complete, ready to plan Phase 2
-Next action: /paul:plan for Phase 2
+Stopped at: Phase 2 complete, ready to plan Phase 3
+Next action: /paul:plan for Phase 3
 Resume file: .paul/ROADMAP.md
 
 ---
