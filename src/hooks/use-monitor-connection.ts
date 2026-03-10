@@ -1,9 +1,18 @@
 /**
  * Monitor Connection Manager
  *
- * Singleton Firestore connection for live mixer data.
- * Ref-counted: first consumer opens the connection, last consumer closes it.
- * Both MonitorPage and QuickMonitorPanel share this.
+ * Persistent singleton Firestore connection for live mixer data.
+ * The connection is established once and persists across component
+ * mount/unmount cycles — it is NOT ref-counted.
+ *
+ * This prevents the "reload loop" where song navigation in performance
+ * mode would unmount PerformanceToolbar, drop refCount to 0, tear down
+ * the connection, then remount and reconnect (causing visible flicker).
+ *
+ * Lifecycle:
+ * - connect(): Called by useMonitorConnection() on first mount with a user
+ * - disconnect(): Called on auth sign-out or page unload only
+ * - Components mount/unmount freely without affecting the connection
  *
  * Uses Firestore as the transport — zero configuration on iPads.
  * The bridge writes mixer state to Firestore; iPads read it via onSnapshot.
@@ -12,98 +21,82 @@
 
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { FirestoreMonitorClient } from "@/lib/firestore-monitor-client"
 import { doc, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { MonitorConfig } from "@/types/monitor"
 import { logger } from "@/lib/logger"
+import { onAuthStateChanged } from "firebase/auth"
 
-// Module-level singleton state
+// ─── Persistent singleton (NOT ref-counted) ───
+
 let activeClient: FirestoreMonitorClient | null = null
-let refCount = 0
 let configUnsub: (() => void) | null = null
+let connectedUserId: string | null = null
+let authUnsub: (() => void) | null = null
+let unloadListenerAdded = false
 
 function getClient(): FirestoreMonitorClient | null {
     return activeClient
 }
 
 /**
- * Hook that manages the shared Firestore connection to the bridge.
- * Mount this in any component that needs live mixer data.
- * The connection opens on first mount and closes when the last consumer unmounts.
- *
- * Returns the client for sending commands.
+ * Establish the monitor connection for a given user.
+ * Idempotent — does nothing if already connected for this user.
  */
-export function useMonitorConnection(): { client: FirestoreMonitorClient | null } {
-    const { user } = useAuth()
-    const { hasAccess } = useMonitorAccess()
-    const clientRef = useRef<FirestoreMonitorClient | null>(null)
+function ensureConnected(userId: string): void {
+    // Already connected for this user — nothing to do
+    if (activeClient && connectedUserId === userId) {
+        return
+    }
 
-    useEffect(() => {
-        if (!user || !hasAccess) return
+    // Different user — tear down old connection first
+    if (activeClient && connectedUserId !== userId) {
+        logger.info("[MonitorConn] User changed — reconnecting")
+        teardown()
+    }
 
-        refCount++
-        logger.info(`[MonitorConn] Consumer mounted (refCount: ${refCount})`)
+    connectedUserId = userId
+    logger.info("[MonitorConn] Establishing persistent connection")
 
-        // If connection already exists, just grab it
-        if (activeClient) {
-            clientRef.current = activeClient
-            return () => {
-                refCount--
-                logger.info(`[MonitorConn] Consumer unmounted (refCount: ${refCount})`)
-                if (refCount <= 0) {
-                    teardown()
-                }
-            }
-        }
+    // Watch config/monitor for bus assignments and bridge status
+    configUnsub = onSnapshot(doc(db, "config", "monitor"), (snap) => {
+        if (!snap.exists()) return
+        const config = snap.data() as MonitorConfig
+        useMonitorStore.getState().setConfig(config)
+    })
 
-        // First consumer — watch config + connect
+    // Create and start the Firestore monitor client
+    const client = new FirestoreMonitorClient({
+        onStateUpdate: (snapshot) => {
+            const uid = useMonitorStore.getState().userId || userId
+            useMonitorStore.getState().setSnapshot(snapshot, uid)
+        },
+        onConfigUpdate: (cfg) => {
+            useMonitorStore.getState().setConfig(cfg)
+        },
+        onStatusChange: (status, err) => {
+            useMonitorStore.getState().setStatus(status, err)
+        },
+    })
 
-        // Watch config/monitor for bus assignments and bridge status
-        configUnsub = onSnapshot(doc(db, "config", "monitor"), (snap) => {
-            if (!snap.exists()) return
-            const config = snap.data() as MonitorConfig
-            useMonitorStore.getState().setConfig(config)
-        })
+    activeClient = client
+    client.connect()
 
-        // Create and start the Firestore monitor client
-        const client = new FirestoreMonitorClient({
-            onStateUpdate: (snapshot) => {
-                const uid = useMonitorStore.getState().userId || user.uid
-                useMonitorStore.getState().setSnapshot(snapshot, uid)
-            },
-            onConfigUpdate: (cfg) => {
-                useMonitorStore.getState().setConfig(cfg)
-            },
-            onStatusChange: (status, err) => {
-                useMonitorStore.getState().setStatus(status, err)
-            },
-        })
-
-        activeClient = client
-        clientRef.current = client
-        client.connect()
-
-        return () => {
-            refCount--
-            logger.info(`[MonitorConn] Consumer unmounted (refCount: ${refCount})`)
-            if (refCount <= 0) {
-                teardown()
-            }
-        }
-
-    }, [user?.uid, hasAccess])
-
-    return { client: activeClient }
+    // Register one-time teardown listeners (sign-out + page unload)
+    registerTeardownListeners()
 }
 
-function teardown() {
-    logger.info("[MonitorConn] Last consumer gone — closing connection")
-    refCount = 0
+/**
+ * Full teardown — only called on sign-out or page unload.
+ * NOT called on component unmount.
+ */
+function teardown(): void {
+    logger.info("[MonitorConn] Tearing down connection")
+    connectedUserId = null
 
     if (configUnsub) {
         configUnsub()
@@ -114,6 +107,52 @@ function teardown() {
         activeClient = null
     }
     useMonitorStore.getState().reset()
+}
+
+/**
+ * Register listeners that trigger teardown:
+ * - Firebase auth sign-out (user becomes null)
+ * - Page unload (tab close / navigation away)
+ */
+function registerTeardownListeners(): void {
+    // Auth state listener — tear down on sign-out
+    if (!authUnsub) {
+        authUnsub = onAuthStateChanged(auth, (user) => {
+            if (!user && activeClient) {
+                logger.info("[MonitorConn] User signed out — tearing down")
+                teardown()
+            }
+        })
+    }
+
+    // Page unload listener
+    if (!unloadListenerAdded && typeof window !== "undefined") {
+        window.addEventListener("beforeunload", teardown)
+        unloadListenerAdded = true
+    }
+}
+
+// ─── React Hook ───
+
+/**
+ * Hook that ensures the persistent monitor connection is active.
+ * Mount this in any component that needs live mixer data.
+ *
+ * The connection persists across component mount/unmount cycles.
+ * Components can freely mount and unmount without affecting the connection.
+ *
+ * Returns the client for sending commands.
+ */
+export function useMonitorConnection(): { client: FirestoreMonitorClient | null } {
+    const { user } = useAuth()
+
+    useEffect(() => {
+        if (!user) return
+        ensureConnected(user.uid)
+        // No cleanup — connection persists intentionally
+    }, [user?.uid])
+
+    return { client: activeClient }
 }
 
 /** Expose the client for imperative access (e.g., from callbacks) */

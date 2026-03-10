@@ -21,14 +21,26 @@ export default function MonitorPage() {
     // Sound engineers see their section open by default
     const [showEngSection, setShowEngSection] = useState(true)
 
-    // Singleton connection -- shared with QuickMonitorPanel
+    // Persistent connection -- shared with QuickMonitorPanel
     const { client } = useMonitorConnection()
 
-    const {
-        status, error, channels, buses, matrices, config, myBusIndex,
-        updateBusFader, updateSendLevel, updateSendOn, updateMatrixFader, updateMatrixOn,
-        starredChannels, defaultChannels, setStarredChannels, setDefaultChannels,
-    } = useMonitorStore()
+    // Granular selectors — only re-render when the specific data changes
+    const status = useMonitorStore(s => s.status)
+    const error = useMonitorStore(s => s.error)
+    const channels = useMonitorStore(s => s.channels)
+    const buses = useMonitorStore(s => s.buses)
+    const matrices = useMonitorStore(s => s.matrices)
+    const config = useMonitorStore(s => s.config)
+    const myBusIndex = useMonitorStore(s => s.myBusIndex)
+    const starredChannels = useMonitorStore(s => s.starredChannels)
+    const defaultChannels = useMonitorStore(s => s.defaultChannels)
+    const updateBusFader = useMonitorStore(s => s.updateBusFader)
+    const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
+    const updateSendOn = useMonitorStore(s => s.updateSendOn)
+    const updateMatrixFader = useMonitorStore(s => s.updateMatrixFader)
+    const updateMatrixOn = useMonitorStore(s => s.updateMatrixOn)
+    const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
+    const setDefaultChannels = useMonitorStore(s => s.setDefaultChannels)
 
     // Admins or sound engineers get full controls
     const hasEngineerAccess = isSoundEngineer || isAdmin
@@ -203,18 +215,18 @@ export default function MonitorPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-bold truncate pr-4">
-                    {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
+                    {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                 </h1>
                 <ConnectionIndicator status={status} error={error} />
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-                Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `\u2014 ${myBus.name}`}
+                Bus {myBusIndex}
             </p>
 
             {/* Master fader */}
             <div className="bg-card border border-brand/10 rounded-xl p-4 mb-4">
                 <FaderStrip
-                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `Master` : "Master"}
+                    label="Master"
                     value={myBus.fader}
                     on={true}
                     isMaster

@@ -101,11 +101,10 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
 
                     return (
                         <div key={busIdx} className="space-y-1.5">
-                            <div className="flex flex-col shrink-0 text-sm">
-                                <span className="font-medium text-foreground">Bus {busIdx}</span>
-                                {busName && busName !== `Bus ${busIdx}` && (
-                                    <span className="text-xs text-muted-foreground">{busName}</span>
-                                )}
+                            <div className="shrink-0 text-sm font-medium text-foreground">
+                                {busName && busName !== `Bus ${busIdx}`
+                                    ? `${busName} \u2014 Bus ${busIdx}`
+                                    : `Bus ${busIdx}`}
                             </div>
 
                             {/* Assigned user chips */}

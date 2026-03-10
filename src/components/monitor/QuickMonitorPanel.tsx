@@ -24,12 +24,18 @@ export function QuickMonitorPanel() {
     const { user } = useAuth()
     const { hasAccess } = useMonitorAccess()
 
-    const {
-        status, channels, buses, config, myBusIndex,
-        starredChannels, defaultChannels,
-        setStarredChannels,
-        updateBusFader, updateSendLevel, updateSendOn,
-    } = useMonitorStore()
+    // Granular selectors — only re-render when specific data changes
+    const status = useMonitorStore(s => s.status)
+    const channels = useMonitorStore(s => s.channels)
+    const buses = useMonitorStore(s => s.buses)
+    const config = useMonitorStore(s => s.config)
+    const myBusIndex = useMonitorStore(s => s.myBusIndex)
+    const starredChannels = useMonitorStore(s => s.starredChannels)
+    const defaultChannels = useMonitorStore(s => s.defaultChannels)
+    const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
+    const updateBusFader = useMonitorStore(s => s.updateBusFader)
+    const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
+    const updateSendOn = useMonitorStore(s => s.updateSendOn)
 
     // Load starred channels from Firestore (backward compat: pinnedChannels field)
     useEffect(() => {
@@ -127,10 +133,10 @@ export function QuickMonitorPanel() {
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div>
                     <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[140px]">
-                        {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
+                        {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                        Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `\u2014 ${myBus.name}`}
+                        Bus {myBusIndex}
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -152,7 +158,7 @@ export function QuickMonitorPanel() {
             <ScrollFade snap scrollClassName="flex flex-row gap-1 p-3 min-h-[280px]">
                 {/* Master bus fader (leftmost) */}
                 <VerticalFaderStrip
-                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "Master" : "Master"}
+                    label="Master"
                     value={myBus.fader}
                     on={true}
                     isMaster
