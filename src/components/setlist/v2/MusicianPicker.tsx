@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { SetlistMusician, UserProfile, SchedulingAssignment, MusicianBlockout } from "@/types/models"
+import { SetlistMusician, UserProfile, SchedulingAssignment } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -10,12 +10,12 @@ import { db } from "@/lib/firebase"
 import { doc, updateDoc, collection } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, Ban, UserSearch, Sparkles } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, UserSearch, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
-import { subscribeToSetlistAssignments, subscribeToAllBlockouts, assignMusicians, getAvailabilityStatus } from "@/lib/scheduling-firebase"
+import { subscribeToSetlistAssignments, assignMusicians } from "@/lib/scheduling-firebase"
 import { RabbiBanner } from "@/components/scheduling/RabbiBanner"
 
 interface MusicianPickerProps {
@@ -52,7 +52,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
     const instrumentRef = useRef<HTMLDivElement>(null)
     const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailStatus>>(new Map())
     const [schedulingAssignments, setSchedulingAssignments] = useState<SchedulingAssignment[]>([])
-    const [allBlockouts, setAllBlockouts] = useState<MusicianBlockout[]>([])
     const [isSendingRequests, setIsSendingRequests] = useState(false)
     const [suggestingFor, setSuggestingFor] = useState<string | null>(null) // declined musician instrument
     const [suggestions, setSuggestions] = useState<Array<{ uid: string; name: string; email: string; instrument: string | null; instrumentMatch: boolean | null }>>([])
@@ -62,7 +61,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
     const [bandSuggestions, setBandSuggestions] = useState<Array<{
         uid: string; name: string; email: string; phone: string | null;
         instrumentKey: string | null; instrumentLabel: string | null;
-        schedulingTier: string; score: number; isBlocked: boolean;
+        schedulingTier: string; score: number;
         reasons: string[];
     }>>([])
     const [bandSuggestionsGap, setBandSuggestionsGap] = useState<string[]>([])
@@ -99,13 +98,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         const unsub = subscribeToSetlistAssignments(setlistId, setSchedulingAssignments)
         return unsub
     }, [setlistId])
-
-    // Subscribe to all blockouts for availability indicators (band leaders only)
-    useEffect(() => {
-        if (!isBandLeader) return
-        const unsub = subscribeToAllBlockouts(setAllBlockouts)
-        return unsub
-    }, [isBandLeader])
 
     // Get scheduling status for a musician
     const getSchedulingStatus = useCallback((uid: string): SchedulingAssignment | undefined => {
@@ -160,13 +152,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
             setIsSendingRequests(false)
         }
     }, [setlistId, setlistName, eventDate, musicians, allUsers, getSchedulingStatus])
-
-    // Get availability status for a musician on the event date
-    const getMusicianAvailability = useCallback((uid: string): 'available' | 'blocked' | 'unknown' => {
-        if (!eventDate || !isBandLeader) return 'unknown'
-        const dateOnly = eventDate.split('T')[0]
-        return getAvailabilityStatus(allBlockouts, uid, dateOnly)
-    }, [eventDate, isBandLeader, allBlockouts])
 
     // Fetch replacement suggestions when a musician declines
     const handleSuggestReplacement = useCallback(async (instrument?: string) => {
@@ -448,7 +433,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                         const showInstrumentPicker = editingInstrumentUid === user.uid
                                         const isDefault = defaultUids.has(user.uid)
                                         const schedulingStatus = getSchedulingStatus(user.uid)
-                                        const availability = getMusicianAvailability(user.uid)
 
                                         return (
                                             <div key={user.uid} className="relative">
@@ -460,23 +444,12 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                                         transition-all duration-150 border
                                                         ${selected
                                                             ? 'bg-primary/15 border-primary/40 text-foreground'
-                                                            : availability === 'blocked'
-                                                                ? 'bg-red-500/5 border-red-500/30 text-muted-foreground'
-                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
+                                                            : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
                                                         }
                                                         ${!canEdit ? 'opacity-60 cursor-default' : 'cursor-pointer'}
                                                     `}
                                                 >
-                                                    {/* Availability dot (band leaders only) */}
-                                                    {isBandLeader && availability !== 'unknown' && (
-                                                        <span
-                                                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                                                availability === 'blocked' ? 'bg-red-500' : 'bg-emerald-500'
-                                                            }`}
-                                                            title={availability === 'blocked' ? 'Unavailable (blockout)' : 'Available'}
-                                                        />
-                                                    )}
-                                                    {selected && availability === 'unknown' && (
+                                                    {selected && (
                                                         <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                                                     )}
                                                     <span>{user.displayName || user.email?.split('@')[0]}</span>
@@ -530,10 +503,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                                                 <X className="h-3 w-3 text-red-500" />
                                                             ) : null}
                                                         </span>
-                                                    )}
-                                                    {/* Blocked indicator */}
-                                                    {availability === 'blocked' && !selected && (
-                                                        <Ban className="h-3 w-3 text-red-400" />
                                                     )}
                                                     {/* Email delivery status */}
                                                     {selected && (() => {
@@ -748,7 +717,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                                     <p className="text-xs text-muted-foreground text-center py-3">No suggestions available</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-1.5">
-                                        {bandSuggestions.filter(s => !s.isBlocked).map(s => {
+                                        {bandSuggestions.map(s => {
                                             const alreadySelected = musicians.some(m => m.uid === s.uid)
                                             return (
                                                 <button

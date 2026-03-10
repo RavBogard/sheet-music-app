@@ -156,17 +156,6 @@ export interface SchedulingAssignment {
     notifiedVia?: ('email' | 'sms' | 'push' | 'in_app')[]
 }
 
-/** Musician availability blockout */
-export interface MusicianBlockout {
-    id: string
-    musicianUid: string
-    startDate: string             // 'YYYY-MM-DD' for date-only comparison
-    endDate: string               // 'YYYY-MM-DD' (inclusive)
-    reason?: string               // Optional note: "vacation", "out of town"
-    recurring?: boolean           // Future: weekly recurring unavailability
-    createdAt: FirestoreDate
-}
-
 /** Rabbi musical profile for scheduling guidance */
 export interface RabbiProfile {
     name: string                  // "Rabbi Daniel", "Rabbi Randy", "Rabbi Karen"

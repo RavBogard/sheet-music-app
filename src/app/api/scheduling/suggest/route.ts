@@ -7,7 +7,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
  * GET /api/scheduling/suggest?setlistId=xxx&instrument=Guitar&date=2026-03-15
  *
  * Suggests available replacement musicians for a declined/empty slot.
- * Filters by instrument match and availability (no blockouts, not already assigned).
+ * Filters by instrument match and existing assignments.
  * Band leaders only.
  */
 export const GET = createApiHandler(
@@ -16,7 +16,6 @@ export const GET = createApiHandler(
         const url = new URL(ctx.req.url)
         const setlistId = url.searchParams.get('setlistId')
         const instrument = url.searchParams.get('instrument')
-        const date = url.searchParams.get('date')
 
         if (!setlistId) {
             return NextResponse.json(
@@ -51,26 +50,11 @@ export const GET = createApiHandler(
 
         const assignedUids = new Set(assignmentsSnap.docs.map(d => d.data().musicianUid))
 
-        // 3. Get blockouts for the date (if provided)
-        let blockedUids = new Set<string>()
-        if (date) {
-            const blockoutsSnap = await db.collection('musician_availability')
-                .where('startDate', '<=', date)
-                .get()
-
-            blockedUids = new Set(
-                blockoutsSnap.docs
-                    .filter(d => d.data().endDate >= date)
-                    .map(d => d.data().musicianUid)
-            )
-        }
-
-        // 4. Filter: available musicians not already assigned and not blocked
+        // 3. Filter: available musicians not already assigned
         let suggestions = musicians
             .filter(m => !assignedUids.has(m.uid))
-            .filter(m => !blockedUids.has(m.uid))
 
-        // 5. If instrument filter provided, try to match
+        // 4. If instrument filter provided, try to match
         // Instrument in the request could be the display label (e.g., "Acoustic Guitar")
         // Musician profile stores the key (e.g., "acoustic_guitar")
         if (instrument) {
@@ -97,7 +81,7 @@ export const GET = createApiHandler(
             ] as any
         }
 
-        // 6. Sort by scheduling tier (core > regular > guest)
+        // 5. Sort by scheduling tier (core > regular > guest)
         const tierOrder = { core: 0, regular: 1, guest: 2 }
         suggestions.sort((a, b) =>
             (tierOrder[a.schedulingTier as keyof typeof tierOrder] || 1) -
