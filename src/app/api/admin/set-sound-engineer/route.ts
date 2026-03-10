@@ -1,31 +1,29 @@
 /**
  * POST /api/admin/set-sound-engineer
- * 
+ *
  * Toggles the soundEngineer flag for a user.
  * Updates both Firestore profile and Firebase Auth custom claims
  * so Firestore rules can check the claim.
- * 
+ *
  * Body: { targetUserId: string, soundEngineer: boolean }
  * Requires band_leader role or above.
  */
 
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
 
-export async function POST(request: NextRequest) {
-    try {
-        const auth = await withAuth(request, "band_leader")
-        if (auth instanceof NextResponse) return auth
+const schema = z.object({
+    targetUserId: z.string().min(1),
+    soundEngineer: z.boolean(),
+})
 
-        const body = await request.json()
-        const { targetUserId, soundEngineer } = body
-
-        if (!targetUserId || typeof soundEngineer !== "boolean") {
-            return NextResponse.json({ error: "Missing targetUserId or soundEngineer" }, { status: 400 })
-        }
+export const POST = createApiHandler(
+    async (ctx) => {
+        const { targetUserId, soundEngineer } = ctx.body!
 
         initAdmin()
         const db = getFirestore()
@@ -47,8 +45,6 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ success: true, soundEngineer })
-    } catch (err) {
-        logger.error("[SetSoundEngineer] Error:", err)
-        return NextResponse.json({ error: "Failed to update" }, { status: 500 })
-    }
-}
+    },
+    { role: 'band_leader', schema }
+)

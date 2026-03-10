@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
@@ -32,21 +32,17 @@ const ALLOWED_TYPES: Record<string, string> = {
  *
  * Requires canUpload flag on user profile.
  */
-export async function POST(req: NextRequest) {
-    try {
+export const POST = createApiHandler(
+    async (ctx) => {
         // Rate limit: 10 uploads/min
-        const limited = await checkRateLimit(req, 'upload')
+        const limited = await checkRateLimit(ctx.req, 'upload')
         if (limited) return limited
-
-        // Auth check: any authenticated user
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
 
         // Check canUpload flag on user profile
         initAdmin()
         const db = getFirestore()
 
-        const userDoc = await db.collection('users').doc(auth.uid).get()
+        const userDoc = await db.collection('users').doc(ctx.auth.uid).get()
         if (!userDoc.exists || !userDoc.data()?.canUpload) {
             return NextResponse.json(
                 { error: "Upload permission required. Ask an admin to enable uploads for your account." },
@@ -54,7 +50,7 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const formData = await req.formData()
+        const formData = await ctx.req.formData()
         const file = formData.get('file') as File | null
 
         if (!file) {
@@ -146,8 +142,8 @@ export async function POST(req: NextRequest) {
             mimeType: contentType,
             fileSize: file.size,
             source: 'upload' as const,
-            uploadedBy: auth.uid,
-            uploadedByEmail: auth.email || 'unknown',
+            uploadedBy: ctx.auth.uid,
+            uploadedByEmail: ctx.auth.email || 'unknown',
             uploadedAt: new Date().toISOString(),
             modifiedTime: new Date().toISOString(),
             // Optional musical metadata
@@ -173,13 +169,6 @@ export async function POST(req: NextRequest) {
             fileId,
             title,
             message: `"${title}" uploaded to library`
-        })
-
-    } catch (error: unknown) {
-        logger.error("[Upload] Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Upload failed" },
-            { status: 500 }
-        )
+        }, { status: 201 })
     }
-}
+)

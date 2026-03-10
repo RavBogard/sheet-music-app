@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 
 /**
@@ -13,15 +13,12 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
  * Batch migration (set canUpload=true for all existing band_leaders and admins):
  *   Body: { migrate: true }
  */
-export async function POST(req: NextRequest) {
-    const auth = await withAuth(req, 'admin')
-    if (auth instanceof NextResponse) return auth
+export const POST = createApiHandler(
+    async (ctx) => {
+        initAdmin()
+        const db = getFirestore()
 
-    initAdmin()
-    const db = getFirestore()
-
-    try {
-        const body = await req.json()
+        const body = ctx.body!
 
         if (body.migrate) {
             // Migration: set canUpload=true for existing band_leaders and admins
@@ -46,11 +43,6 @@ export async function POST(req: NextRequest) {
 
         await db.collection('users').doc(body.uid).update({ canUpload: body.canUpload })
         return NextResponse.json({ success: true, uid: body.uid, canUpload: body.canUpload })
-
-    } catch (error: unknown) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to update upload permission" },
-            { status: 500 }
-        )
-    }
-}
+    },
+    { role: 'admin' }
+)

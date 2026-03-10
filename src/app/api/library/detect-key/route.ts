@@ -1,31 +1,27 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { detectKeyFromPdf } from "@/lib/key-detection"
 import { getFirestore } from "firebase-admin/firestore"
-import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 export const maxDuration = 30
+
+const schema = z.object({
+    fileId: z.string().min(1),
+})
 
 /**
  * POST /api/library/detect-key
  * Detect the native key of a PDF chart using text layer extraction.
  * Returns { key: string | null }
  */
-export async function POST(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const body = await req.json()
-        const { fileId } = body
-
-        if (!fileId || typeof fileId !== "string") {
-            return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
-        }
+        const { fileId } = ctx.body!
 
         // Check if we already have a cached native key
         const db = getFirestore()
@@ -46,9 +42,6 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ key, source: key ? "detected" : null })
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("[DetectKey] Error:", error)
-        return NextResponse.json({ error: "Key detection failed" }, { status: 500 })
-    }
-}
+    },
+    { schema }
+)

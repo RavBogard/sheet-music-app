@@ -1,34 +1,28 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { requireAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/library/search-content?q=bridge&q=modulation
- * 
+ *
  * Searches extracted chord/text data across the library.
  * Looks in library_index/chordData subcollections for matching content.
- * 
+ *
  * Returns matching file IDs with the context of where the match was found.
  */
-export async function GET(req: NextRequest) {
-    try {
-        await requireAuth(req)
-    } catch (response) {
-        return response as NextResponse
-    }
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
 
-    const limited = await checkRateLimit(req, 'api')
-    if (limited) return limited
+        const searchTerm = ctx.req.nextUrl.searchParams.get('q')?.trim()
+        if (!searchTerm || searchTerm.length < 2) {
+            return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 })
+        }
 
-    const searchTerm = req.nextUrl.searchParams.get('q')?.trim()
-    if (!searchTerm || searchTerm.length < 2) {
-        return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 })
-    }
-
-    try {
         initAdmin()
         const db = getFirestore()
         const termLower = searchTerm.toLowerCase()
@@ -107,10 +101,5 @@ export async function GET(req: NextRequest) {
             results,
             totalMatches: results.reduce((sum, r) => sum + r.matches.length, 0),
         })
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Search failed" },
-            { status: 500 }
-        )
     }
-}
+)

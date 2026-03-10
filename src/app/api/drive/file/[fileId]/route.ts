@@ -116,10 +116,9 @@ export async function GET(
             }
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        logger.error(`[FileProxy] Unexpected error for ${fileId}:`, message)
+        logger.error(`[FileProxy] Unexpected error for ${fileId}:`, error)
         return NextResponse.json(
-            { error: 'File unavailable', fileId, reason: message },
+            { error: 'File unavailable', fileId },
             { status: 502, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request), 'Cache-Control': 'no-store' } }
         )
     }

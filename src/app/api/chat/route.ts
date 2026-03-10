@@ -428,8 +428,8 @@ ${messages[messages.length - 1].content}
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, message: accumulated, commands: [] })}\n\n`))
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Stream error"
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+          logger.error("[Chat] Stream error:", err)
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`))
         } finally {
           controller.close()
         }
