@@ -15,6 +15,32 @@ import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
 
+/** Detect mobile browsers that block popups — use redirect for these */
+function isMobileBrowser(): boolean {
+    if (typeof window === 'undefined') return false
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+}
+
+/** Sync session cookie to server. Returns true on success, false on failure/timeout. */
+async function syncSessionCookie(user: User): Promise<boolean> {
+    try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+        const idToken = await user.getIdToken(true)
+        const res = await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+            signal: controller.signal,
+        })
+        clearTimeout(timeout)
+        return res.ok
+    } catch (err) {
+        logger.warn("Session cookie sync failed:", err)
+        return false
+    }
+}
+
 interface CachedUser {
     displayName: string | null
     photoURL: string | null
@@ -27,7 +53,7 @@ interface AuthContextType {
     profile: UserProfile | null
     cachedUser: CachedUser | null
     loading: boolean
-    signIn: () => Promise<void>
+    signIn: () => Promise<"popup" | "redirect">
     signOut: () => Promise<void>
     isAdmin: boolean
     isBandLeader: boolean
@@ -42,7 +68,7 @@ const AuthContext = createContext<AuthContextType>({
     profile: null,
     cachedUser: null,
     loading: true,
-    signIn: async () => { },
+    signIn: async () => "popup" as const,
     signOut: async () => { },
     isAdmin: false,
     isBandLeader: false,
@@ -81,26 +107,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         let unsubscribeProfile: (() => void) | null = null
+        let sessionReady = false
+        let profileReady = false
 
-        // Handle redirect sign-in result (from signInWithRedirect fallback on mobile)
+        // Handle redirect sign-in result (from signInWithRedirect on mobile).
+        // The result itself is handled by onAuthStateChanged — we just need to
+        // catch errors so they don't become unhandled rejections.
         getRedirectResult(auth).catch((err) => {
-            logger.warn("Redirect sign-in result:", err)
+            if (err?.code !== 'auth/popup-closed-by-user') {
+                logger.warn("Redirect sign-in result:", err)
+            }
         })
 
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
+            sessionReady = false
+            profileReady = false
 
             setUser(currentUser)
             if (currentUser) {
-                // Sync session cookie for SSR — force refresh (true) to prevent 401s on stale cached tokens
-                currentUser.getIdToken(true).then((idToken) => {
-                    fetch("/api/auth/session", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ idToken }),
-                    }).catch(() => {/* non-critical: SSR just won't have auth */ })
-                }).catch(err => logger.warn("Token refresh failed:", err))
+                // Sync session cookie BEFORE allowing loading to complete.
+                // This prevents the race where middleware redirects before cookie exists.
+                syncSessionCookie(currentUser).then((ok) => {
+                    if (!ok) logger.warn("Session cookie sync failed — SSR auth may not work")
+                    sessionReady = true
+                    if (profileReady) setLoading(false)
+                })
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
@@ -114,7 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     lastClaimsUpdate.current = claimsTs
 
                     setProfile(p)
-                    setLoading(false)
+                    profileReady = true
+                    if (sessionReady) setLoading(false)
 
                     // Cache for instant greeting on next visit
                     if (p) {
@@ -158,12 +192,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }).catch(() => {})
     }, [user])
 
-    const signIn = async () => {
+    const signIn = async (): Promise<"popup" | "redirect"> => {
+        // Mobile browsers almost always block popups — skip straight to redirect
+        if (isMobileBrowser()) {
+            await signInWithRedirect(auth, googleProvider)
+            return "redirect"
+        }
+
+        // Desktop: try popup first, fall back to redirect if blocked
         try {
             await signInWithPopup(auth, googleProvider)
+            return "popup"
         } catch (error: unknown) {
             const code = (error as { code?: string })?.code
-            // Popup blocked (common on mobile) or COOP killed the popup — fall back to redirect
             if (
                 code === "auth/popup-blocked" ||
                 code === "auth/popup-closed-by-user" ||
@@ -171,9 +212,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ) {
                 logger.warn("Popup sign-in failed, falling back to redirect:", code)
                 await signInWithRedirect(auth, googleProvider)
-            } else {
-                logger.error("Sign in error:", error)
+                return "redirect"
             }
+            logger.error("Sign in error:", error)
+            throw error
         }
     }
 

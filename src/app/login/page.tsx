@@ -23,22 +23,23 @@ export default function LoginPage() {
     const { user, loading, signIn } = useAuth()
     const congregation = useCongregation()
     const router = useRouter()
-    const [signingIn, setSigningIn] = useState(false)
+    const [signInState, setSignInState] = useState<"idle" | "popup" | "redirect">("idle")
 
     useEffect(() => {
         if (!loading && user) {
-            router.replace("/")
+            router.replace("/setlists")
         }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, loading, router])
 
     const handleGoogleSignIn = async () => {
-        setSigningIn(true)
+        setSignInState("popup") // optimistic — will update to "redirect" if needed
         try {
-            await signIn()
-        } finally {
-            setSigningIn(false)
+            const method = await signIn()
+            setSignInState(method)
+        } catch {
+            setSignInState("idle")
         }
     }
 
@@ -81,14 +82,14 @@ export default function LoginPage() {
                         size="lg"
                         className="w-full bg-foreground text-background hover:opacity-90 transition-opacity h-12 text-base font-medium rounded-xl"
                         onClick={handleGoogleSignIn}
-                        disabled={signingIn}
+                        disabled={signInState !== "idle"}
                     >
-                        {signingIn ? (
+                        {signInState !== "idle" ? (
                             <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                         ) : (
                             <GoogleIcon className="h-5 w-5 mr-3" />
                         )}
-                        {signingIn ? "Opening Google..." : "Sign in with Google"}
+                        {signInState === "redirect" ? "Redirecting to Google..." : signInState === "popup" ? "Signing in..." : "Sign in with Google"}
                     </Button>
 
                     <p className="text-xs text-muted-foreground/60">
