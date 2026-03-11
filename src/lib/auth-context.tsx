@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactN
 import {
     User,
     onAuthStateChanged,
-    signInWithRedirect,
+    signInWithPopup,
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signIn = async () => {
         try {
-            await signInWithRedirect(auth, googleProvider)
+            await signInWithPopup(auth, googleProvider)
         } catch (error) {
             logger.error("Sign in error:", error)
         }

@@ -13,11 +13,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   // preventing critical fixes from reaching users.
   workboxOptions: {
     disableDevLogs: true,
-    // TEMPORARY: skipWaiting true to force-deploy critical auth CSP fix.
-    // Old SWs serve cached HTML with old CSP headers that block Google sign-in.
-    // Revert to false after all users have picked up this fix.
-    skipWaiting: true,
-    clientsClaim: true,
+    skipWaiting: false,
     runtimeCaching: [
       {
         // Must bypass Service Worker for PDF/Audio Range Requests (206 Partial Content)
