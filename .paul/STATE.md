@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 
 Milestone: v1.5 Codebase & UI/UX Hardening
 Phase: 2 of 6 (Security & API Consistency) — In Progress
-Plan: 02-03 complete, more plans needed
-Status: Loop complete, ready for next PLAN
-Last activity: 2026-03-10 — Unified 02-03 (withAuth migration: 11 setlist/print/push/library routes)
+Plan: 02-04 applied, needs UNIFY
+Status: APPLY complete, UNIFY pending
+Last activity: 2026-03-10 — Applied 02-04 (withAuth migration: 7 AI/drive routes)
 
 Progress:
 - v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 30%
@@ -24,7 +24,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ✓        ○     [Apply complete, UNIFY pending]
 ```
 
 ## Accumulated Context
@@ -56,9 +56,10 @@ Feature branches merged: none
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Plan 02-03 loop complete (PLAN→APPLY→UNIFY)
-Next action: Run /paul:plan for Phase 2's next plan (remaining 10 withAuth routes: drive/4, AI/4, bridge/1, chat/1 + bridge credentials, QR expiry, CORS, security headers)
-Resume file: .paul/phases/02-security-api-consistency-v15/02-03-SUMMARY.md
+Stopped at: Plan 02-04 applied, needs UNIFY
+Next action: Run /paul:unify .paul/phases/02-security-api-consistency-v15/02-04-PLAN.md
+Resume file: .paul/phases/02-security-api-consistency-v15/02-04-PLAN.md
+Resume context: 7 AI+drive routes migrated, tsc clean, withAuth down to 4 files. Commit ca21211.
 
 ---
 *STATE.md — Updated after every significant action*
