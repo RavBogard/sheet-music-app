@@ -1,9 +1,11 @@
 {
-  "version": "0.1.0",
-  "commit": "8284a9b",
+  "version": "1.6.0",
+  "commit": "1c0b8b0",
   "branch": "master",
-  "buildDate": "3/9/2026",
+  "buildDate": "3/11/2026",
   "changelog": [
-    "0.1.0 - fix: Commit previously unstaged component consistency changes"
+    "1.6.0 - feat: v1.6 Stability & Regression Audit complete (auth/CSP, Firebase-only files, performance view, regression sweep)",
+    "1.5.0 - fix: CSP connect-src for Google APIs, redirect auth, first-install toast",
+    "1.5.0 - fix: Google sign-in CSP block, remove email/password auth, QR polling backoff"
   ]
 }
