@@ -3,7 +3,7 @@
 ## Current Milestone
 **v1.7 Critical Bug Fixes**
 Status: In Progress
-Phases: 4 of 5 complete
+Phases: 5 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -11,7 +11,7 @@ Phases: 4 of 5 complete
 | 2 | Quick Fixes (Avatar, Changelog) | 1/1 | ✅ Complete | 2026-03-11 |
 | 3 | Print Pipeline & Gig Packet Overhaul | 1/1 | ✅ Complete | 2026-03-11 |
 | 4 | Key Signature Position | 1/1 | ✅ Complete | 2026-03-11 |
-| 5 | Monitor Buses Investigation | TBD | Not started | - |
+| 5 | Monitor Buses Investigation | 1/1 | ✅ Complete | 2026-03-11 |
 
 ### Phase 1: Mobile Sign-In Fix
 
@@ -181,4 +181,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v1.7 — Phase 4 complete)*
+*Last updated: 2026-03-11 (v1.7 — all 5 phases complete)*

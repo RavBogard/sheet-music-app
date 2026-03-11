@@ -57,10 +57,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.7 Phase 2: Google OAuth profile scope for avatar + changelog page
 - [x] v1.7 Phase 3: Print pipeline overhaul — sync PDF generation, simplified PrintModal
 - [x] v1.7 Phase 4: Key signature position — moved key badge right of title in performance view
+- [x] v1.7 Phase 5: Monitor buses — Firestore data fix, bus count badge, self-assignment fix
 
 ### Planned (Next)
 
-- v1.7 Phase 5: Monitor buses investigation
+- v1.8: Mobile UX overhaul (nav, setlist responsive, schedule redesign)
 
 ### Out of Scope
 
@@ -155,4 +156,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 4 (v1.7)*
+*Last updated: 2026-03-11 after Phase 5 (v1.7 complete)*
