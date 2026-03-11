@@ -10,14 +10,14 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 3 of 6 (Architecture Cleanup) — Complete
-Plan: 03-03 complete (final plan in phase)
-Status: Phase 3 complete, ready for Phase 4
-Last activity: 2026-03-10 — Phase 3 transition complete
+Phase: 4 of 6 (Quality & Deps) — Complete
+Plan: 04-01 complete (final plan in phase)
+Status: Phase 4 complete, ready for Phase 5
+Last activity: 2026-03-10 — Phase 4 transition complete
 
 Progress:
-- v1.5 Codebase & UI/UX Hardening: [█████░░░░░] 50%
-- Phase 3: [██████████] 100%
+- v1.5 Codebase & UI/UX Hardening: [██████░░░░] 67%
+- Phase 4: [██████████] 100%
 
 ## Loop Position
 
@@ -38,6 +38,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Phase 2: 18 routes migrated, 4 remain on withAuth (justified)
 - Phase 3: useMusicStore (279 LOC) too small to split — skip
 - Phase 3: SetlistDrawerLegacy NOT dead code (imported by PerformanceToolbar) — skip removal
+- Phase 4: deps/fonts/indexes all already current — no updates needed
 
 ### Deferred Issues (carried from v1.4)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
@@ -47,21 +48,24 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - withAuth → createApiHandler migration — Phase 2 ✅
 - clearSaveTimer() wiring — Phase 1 ✅
 
+### Known Issues
+- route-auth.test.ts: POST /api/setlist/publish expects 403 but gets 400 (pre-existing)
+
 ### Blockers/Concerns
 - None
 
 ### Git State
-Last commit: 05c3b01
+Last commit: eb35807
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 3 complete, transition done
-Next action: /paul:plan for Phase 4 (Quality & Deps)
-Resume file: .paul/phases/03-architecture-cleanup-v15/03-03-SUMMARY.md
-Resume context: Phase 3 complete (3 plans). All large components split. Ready for Phase 4: vitest env fix, dependency updates, font subsetting, ESLint exhaustive-deps, Firestore indexes.
+Stopped at: Phase 4 complete, transition done
+Next action: /paul:plan for Phase 5 (UI/UX Polish)
+Resume file: .paul/phases/04-quality-deps-v15/04-01-SUMMARY.md
+Resume context: Phase 4 complete (1 plan). vitest jsdom default, ESLint exhaustive-deps re-enabled. Ready for Phase 5: tablet layout, accessibility, reduced-motion, brand palette fixes, hover states, zoom indicator, skip-to-main.
 
 ---
 *STATE.md — Updated after every significant action*
