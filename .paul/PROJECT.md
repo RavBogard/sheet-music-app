@@ -52,13 +52,15 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v2.0: Schedule & workflow fixes (schedule visibility, gig packet layout)
+- (none — v2.0 complete, next milestone TBD)
 
 ### Validated (Recently Shipped)
 
-- [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
+- [x] v2.0: Schedule & workflow fixes — all 3 phases complete
 - [x] v2.0 Phase 1: Schedule visibility fix — setlists with future dates appear regardless of assignment status
 - [x] v2.0 Phase 2: Gig packet modal layout fix — modal starts near top on mobile, tighter padding
+- [x] v2.0 Phase 3: Print PDF layout fixes — Key column before Lead, non-song items excluded from charts
+- [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
 - [x] v1.7: Print pipeline overhaul, key signature position, monitor buses — Phases 1-5
 - [x] v1.8 Phase 1: Mobile navigation redesign — hamburger menu moved to upper-left header
 - [x] v1.8 Phase 2: Setlist mobile responsive layout — responsive padding, touch-visible menus
@@ -66,7 +68,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.0 Phase 2: Gig packet modal layout fix
+- TBD — next milestone not yet defined
 
 ### Out of Scope
 
@@ -161,7 +163,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | All services as schedule default (not personal) | v1.8 P3 | Everyone sees full schedule; "Mine" toggle for personal filter |
 | Single subscription with client-side filter | v1.8 P3 | subscribeToAllUpcomingAssignments for all users, filter locally |
 | Dual subscription merge for schedule page | v2.0 P1 | Subscribe to both setlists and assignments; setlists-first ensures all services visible |
+| Key column before Lead on gig packet cover page | v2.0 P3 | Key is most glanceable info after song title for musicians |
+| Non-song items excluded from PDF charts section | v2.0 P3 | Readings/prayers don't have charts; saves paper, reduces confusion |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 2 (v2.0 gig packet modal layout fix)*
+*Last updated: 2026-03-11 after Phase 3 (v2.0 print PDF layout fixes — milestone complete)*

@@ -2,14 +2,14 @@
 
 ## Current Milestone
 **v2.0 Schedule & Workflow Fixes**
-Status: In progress
-Phases: 3 total
+Status: Complete
+Phases: 3 of 3 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Schedule Visibility Fix | 1 | Complete | 2026-03-11 |
 | 2 | Gig Packet Modal Layout Fix | 1 | Complete | 2026-03-11 |
-| 3 | Print PDF Layout Fixes | 0 | Not started | — |
+| 3 | Print PDF Layout Fixes | 1 | Complete | 2026-03-11 |
 
 ### Phase 1: Schedule Visibility Fix
 

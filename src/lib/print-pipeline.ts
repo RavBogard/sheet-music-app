@@ -266,16 +266,16 @@ async function buildCoverPage(
     // Column positions
     const colNum = 50
     const colTitle = 75
-    const colLead = hasTranspositions ? 280 : 310
-    const colKey = hasTranspositions ? 380 : 430
+    const colKey = hasTranspositions ? 280 : 310
+    const colLead = hasTranspositions ? 380 : 430
     const colTransKey = 430
     const colNotes = hasTranspositions ? 490 : 475
 
     // Header
     coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     if (hasTranspositions) {
         coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     }
@@ -551,9 +551,8 @@ export async function generatePrintPdf(
     // ── Step 3: Process each track ──
     let trackIndex = 0
     for (const track of req.tracks) {
-        // Render non-song service flow items as formatted labels
+        // Skip non-song service flow items (they appear on cover page only)
         if (!track.fileId && track.type && track.type !== 'song') {
-            await renderServiceFlowItem(mergedPdf, track)
             continue
         }
 
