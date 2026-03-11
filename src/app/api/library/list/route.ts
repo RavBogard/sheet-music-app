@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
 
 /**
  * Library List API — Optimized with pagination + ETag caching
- * 
+ *
  * Modes:
  *   GET /api/library/list                    → All files, paginated (default 200)
  *   GET /api/library/list?cursor=XXXX        → Next page
@@ -14,17 +13,13 @@ import { logger } from "@/lib/logger"
  *   GET /api/library/list?all=true           → Full dump for client-side search (cached)
  *   GET /api/library/list?status=archived   → Archived files only
  */
-export async function GET(req: NextRequest) {
-    try {
-        // 1. Auth
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
         // 2. Parse params
-        const url = new URL(req.url)
+        const url = new URL(ctx.req.url)
         const folderId = url.searchParams.get("folderId")
         const cursor = url.searchParams.get("cursor")
         const all = url.searchParams.get("all") === "true"
@@ -117,9 +112,5 @@ export async function GET(req: NextRequest) {
         }
 
         return response
-
-    } catch (error: unknown) {
-        logger.error("Library List Error:", error)
-        return NextResponse.json({ error: "Failed to load library" }, { status: 500 })
     }
-}
+)

@@ -1,28 +1,20 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
 
-export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    // Auth
-    const auth = await withAuth(req)
-    if (auth instanceof NextResponse) return auth
+export const GET = createApiHandler(
+    async (ctx) => {
+        // Rate limit
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
 
-    // Rate limit
-    const limited = await checkRateLimit(req, 'api')
-    if (limited) return limited
+        const id = ctx.params?.id
 
-    const { id } = await params
+        if (!id || !id.startsWith('db-')) {
+            return NextResponse.json({ error: "Invalid ID format" }, { status: 400 })
+        }
 
-    if (!id || !id.startsWith('db-')) {
-        return NextResponse.json({ error: "Invalid ID format" }, { status: 400 })
-    }
-
-    try {
         initAdmin()
         const db = getFirestore()
 
@@ -49,9 +41,5 @@ export async function GET(
                 'Content-Disposition': `inline; filename="${data.title}.musicxml"`
             }
         })
-
-    } catch (error: unknown) {
-        logger.error("Fetch Generated Error:", error)
-        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal error" }, { status: 500 })
     }
-}
+)

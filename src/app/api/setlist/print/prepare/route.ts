@@ -1,10 +1,14 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { preExtractChords } from "@/lib/print-pipeline"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 export const maxDuration = 120
+
+const schema = z.object({
+    fileIds: z.array(z.string()).min(1),
+})
 
 /**
  * POST /api/setlist/print/prepare
@@ -12,19 +16,12 @@ export const maxDuration = 120
  * Called when a setlist is opened so print is fast later.
  * Body: { fileIds: string[] }
  */
-export async function POST(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const { fileIds } = await req.json()
-
-        if (!Array.isArray(fileIds) || fileIds.length === 0) {
-            return NextResponse.json({ error: "Missing fileIds" }, { status: 400 })
-        }
+        const { fileIds } = ctx.body!
 
         // Limit to 30 files per request to stay within timeout
         const capped = fileIds.filter(Boolean).slice(0, 30)
@@ -35,8 +32,6 @@ export async function POST(req: NextRequest) {
             success: true,
             ...result,
         })
-    } catch (error: unknown) {
-        logger.error("[Prepare] Error:", error)
-        return NextResponse.json({ error: "Pre-extraction failed" }, { status: 500 })
-    }
-}
+    },
+    { schema }
+)

@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
-import { withAuth } from "@/lib/api-auth";
+import { createApiHandler } from "@/lib/api-wrapper";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
-export const maxDuration = 60; // 1 min (Vercel max for Hobby is 10, Pro is 300)
+export const maxDuration = 60;
 
 export const config = {
     api: {
@@ -14,19 +14,16 @@ export const config = {
     },
 };
 
-export async function POST(request: NextRequest) {
-    const auth = await withAuth(request);
-    if (auth instanceof NextResponse) return auth;
+export const POST = createApiHandler(
+    async (ctx) => {
+        if (!apiKey) {
+            return NextResponse.json(
+                { error: "GEMINI_API_KEY environment variable is missing" },
+                { status: 500 }
+            );
+        }
 
-    if (!apiKey) {
-        return NextResponse.json(
-            { error: "GEMINI_API_KEY environment variable is missing" },
-            { status: 500 }
-        );
-    }
-
-    try {
-        const body = await request.json();
+        const body = await ctx.req.json();
         const { base64Image } = body;
 
         if (!base64Image) {
@@ -36,7 +33,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Initialize the Gemini SDK
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: "gemini-3.1-pro-preview",
@@ -77,12 +73,12 @@ export async function POST(request: NextRequest) {
       I am providing you with an image of a single page of sheet music.
 
       Your task is to identify EVERY musical chord symbol written on this page (e.g., C, G7, F#m, Bdim, etc.).
-      
+
       For every chord you find, provide its exact bounding box coordinates.
       CRITICAL: All coordinates (x, y, w, h) MUST be calculated as a PERCENTAGE (from 0 to 100) relative to the total width and height of the provided image.
       - "x" and "y" represent the top-left corner of the chord text.
       - "w" and "h" represent the width and height of the chord text.
-      
+
       If there are no chords on the page, return an empty array [].
     `;
 
@@ -112,12 +108,5 @@ export async function POST(request: NextRequest) {
         const chords = JSON.parse(responseText);
 
         return NextResponse.json({ chords });
-
-    } catch (error) {
-        console.error("Vision API extraction failed:", error);
-        return NextResponse.json(
-            { error: "Failed to process image with Vision API" },
-            { status: 500 }
-        );
     }
-}
+)

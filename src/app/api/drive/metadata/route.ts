@@ -1,30 +1,29 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { DriveClient } from "@/lib/google-drive"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 export const maxDuration = 30
 
-export async function POST(request: NextRequest) {
-    try {
-        // Auth
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
+const schema = z.object({
+    fileIds: z.array(z.string()),
+})
 
-        // Rate limit
-        const limited = await checkRateLimit(request, 'api')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const { fileIds } = await request.json()
+        const { fileIds } = ctx.body!
 
-        if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        if (fileIds.length === 0) {
             return NextResponse.json({ files: [] })
         }
 
         const drive = new DriveClient()
 
-        // Fetch metadata for each file
         const metadataPromises = fileIds.map(async (id) => {
             try {
                 const file = await drive.getFileMetadata(id)
@@ -43,8 +42,6 @@ export async function POST(request: NextRequest) {
         const files = results.filter(f => f !== null)
 
         return NextResponse.json({ files })
-    } catch (error) {
-        logger.error("Metadata fetch error:", error)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
-    }
-}
+    },
+    { schema }
+)

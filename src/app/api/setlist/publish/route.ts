@@ -8,8 +8,8 @@
  * 4. Email notifications to all assigned musicians
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/api-auth'
+import { NextResponse } from 'next/server'
+import { createApiHandler } from '@/lib/api-wrapper'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
@@ -19,6 +19,22 @@ import { sendPushToUsers } from '@/lib/push-send'
 import { sendSMS } from '@/lib/sms'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+
+const musicianSchema = z.object({
+    uid: z.string().optional(),
+    name: z.string(),
+    email: z.string(),
+    instrument: z.string().optional(),
+})
+
+const schema = z.object({
+    setlistId: z.string().min(1),
+    musicians: z.array(musicianSchema),
+    emailRecipients: z.array(musicianSchema).optional(),
+    note: z.string().optional(),
+    subject: z.string().optional(),
+})
 
 interface MusicianPayload {
     uid?: string
@@ -27,20 +43,13 @@ interface MusicianPayload {
     instrument?: string
 }
 
-export async function POST(request: NextRequest) {
-    try {
-        // Auth
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
-
+export const POST = createApiHandler(
+    async (ctx) => {
         // Rate limit: 5 publish requests per minute
-        const limited = await checkRateLimit(request, 'api')
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note, subject } = await request.json()
-        if (!setlistId || typeof setlistId !== 'string') {
-            return NextResponse.json({ error: 'setlistId is required' }, { status: 400 })
-        }
+        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note, subject } = ctx.body!
 
         // Validate musicians array
         const musicians: MusicianPayload[] = Array.isArray(rawMusicians) ? rawMusicians : []
@@ -62,8 +71,8 @@ export async function POST(request: NextRequest) {
         const setlist = setlistDoc.data()!
 
         // Auth check: owner, band leader, or admin
-        const isOwner = setlist.ownerId === auth.uid
-        if (!isOwner && !auth.isBandLeader) {
+        const isOwner = setlist.ownerId === ctx.auth.uid
+        if (!isOwner && !ctx.auth.isBandLeader) {
             return NextResponse.json({ error: 'Unauthorized — must be owner, band leader, or admin' }, { status: 403 })
         }
 
@@ -108,7 +117,7 @@ export async function POST(request: NextRequest) {
             })
 
         // Step 3: In-app notifications — only for registered musicians (with uid), excluding publisher
-        const registeredMusicians = musicians.filter(m => m.uid && m.uid !== auth.uid)
+        const registeredMusicians = musicians.filter(m => m.uid && m.uid !== ctx.auth.uid)
         const notifBatchSize = 50
         const inAppResults = { sent: 0, failed: 0 }
         const inAppPromises: Promise<void>[] = []
@@ -167,7 +176,7 @@ export async function POST(request: NextRequest) {
 
         // Batch-fetch registered user docs to get emails and SMS preferences
         const registeredUids = musicians.filter(m => m.uid).map(m => m.uid!)
-         
+
         const userDataMap = new Map<string, Record<string, any>>()
         if (registeredUids.length > 0) {
             const userDocs = await Promise.all(
@@ -207,8 +216,8 @@ export async function POST(request: NextRequest) {
         // Determine base URL and publisher name
         const origin = process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'
         // Use publisher's displayName from Firestore (respects custom names)
-        const publisherDoc = await db.collection('users').doc(auth.uid).get()
-        const publisherName = publisherDoc.data()?.displayName || auth.email?.split('@')[0] || 'A band member'
+        const publisherDoc = await db.collection('users').doc(ctx.auth.uid).get()
+        const publisherName = publisherDoc.data()?.displayName || ctx.auth.email?.split('@')[0] || 'A band member'
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
         const publishNote = typeof note === 'string' ? note.trim().slice(0, 2000) : undefined
         const publishSubject = typeof subject === 'string' ? subject.trim().slice(0, 200) : undefined
@@ -259,8 +268,8 @@ export async function POST(request: NextRequest) {
         const historyRef = setlistRef.collection('history').doc()
         historyRef.set({
             action: 'published',
-            userId: auth.uid,
-            userName: auth.email || 'unknown',
+            userId: ctx.auth.uid,
+            userName: ctx.auth.email || 'unknown',
             timestamp: FieldValue.serverTimestamp(),
             details: {
                 wasAlreadyPublic: wasPublic,
@@ -323,8 +332,6 @@ export async function POST(request: NextRequest) {
                 sms: smsResults,
             },
         })
-    } catch (err) {
-        logger.error('[Publish] Error:', err)
-        return NextResponse.json({ error: 'Failed to publish setlist' }, { status: 500 })
-    }
-}
+    },
+    { schema }
+)

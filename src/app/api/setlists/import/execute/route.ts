@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
+import { z } from "zod"
 
 interface ParsedItem {
     type: 'header' | 'song'
@@ -20,21 +21,18 @@ interface ParsedItem {
 
 export const maxDuration = 60 // Allow up to 60s for Vercel downloads
 
-export async function POST(req: NextRequest) {
-    try {
-        const limited = await checkRateLimit(req, 'upload')
+const schema = z.object({
+    items: z.array(z.any()).min(1),
+    name: z.string().optional(),
+})
+
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'upload')
         if (limited) return limited
 
-        const auth = await withAuth(req, 'band_leader')
-        if (auth instanceof NextResponse) return auth
-
-        const body = await req.json()
-        const items: ParsedItem[] = body.items || []
-        const setName = body.name || "Imported Setlist"
-
-        if (items.length === 0) {
-            return NextResponse.json({ error: "No items to import." }, { status: 400 })
-        }
+        const items: ParsedItem[] = ctx.body!.items || []
+        const setName = ctx.body!.name || "Imported Setlist"
 
         initAdmin()
         const db = getFirestore()
@@ -98,8 +96,8 @@ export async function POST(req: NextRequest) {
                                     mimeType: 'application/pdf',
                                     fileSize: buffer.length,
                                     source: 'upload' as const,
-                                    uploadedBy: auth.uid,
-                                    uploadedByEmail: auth.email || 'unknown',
+                                    uploadedBy: ctx.auth.uid,
+                                    uploadedByEmail: ctx.auth.email || 'unknown',
                                     uploadedAt: new Date().toISOString(),
                                     modifiedTime: new Date().toISOString(),
                                     storageUrl: `library/${newLibraryId}.pdf`,
@@ -135,8 +133,8 @@ export async function POST(req: NextRequest) {
             tracks: resolvedTracks,
             trackCount: resolvedTracks.length,
             isPublic: false, // Default to private until reviewed
-            ownerId: auth.uid,
-            ownerName: auth.email || "Unknown",
+            ownerId: ctx.auth.uid,
+            ownerName: ctx.auth.email || "Unknown",
         }
 
         await db.collection('setlists').doc(setlistId).set(setlistPayload)
@@ -147,13 +145,7 @@ export async function POST(req: NextRequest) {
             success: true,
             setlistId,
             message: "Import executed successfully."
-        })
-
-    } catch (error: unknown) {
-        logger.error("[Setlist Importer] Execute Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to execute import." },
-            { status: 500 }
-        )
-    }
-}
+        }, { status: 201 })
+    },
+    { role: 'band_leader', schema }
+)
