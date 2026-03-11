@@ -53,6 +53,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 ### Active (In Progress)
 
 - [ ] v2.5: Bugsweep & test coverage (type safety, error handling, comprehensive tests)
+- [x] v2.5 Phase 1: Type safety fixes — all `as any` casts eliminated across 9 files
 
 ### Validated (Recently Shipped)
 
@@ -68,7 +69,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.5 Phase 1: Type safety fixes (~15 `as any` casts)
+- v2.5 Phase 2: Silent failure & error handling
 
 ### Out of Scope
 
@@ -165,7 +166,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Dual subscription merge for schedule page | v2.0 P1 | Subscribe to both setlists and assignments; setlists-first ensures all services visible |
 | Key column before Lead on gig packet cover page | v2.0 P3 | Key is most glanceable info after song title for musicians |
 | Non-song items excluded from PDF charts section | v2.0 P3 | Readings/prayers don't have charts; saves paper, reduces confusion |
+| TemplateContext with type:string instead of widening ServiceType | v2.5 P1 | Template keys are superset of ServiceType; avoids breaking union |
+| hasSeconds() type guard for Firestore Timestamp-like fields | v2.5 P1 | Pattern for safely checking Timestamp objects in scheduling routes |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 3 (v2.0 print PDF layout fixes — milestone complete)*
+*Last updated: 2026-03-11 after Phase 1 (v2.5 type safety fixes)*

@@ -2,12 +2,12 @@
 
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
-Status: Not started
+Status: In progress
 Phases: 8 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Type Safety Fixes | 0 | Not started | — |
+| 1 | Type Safety Fixes | 1 | Complete | 2026-03-11 |
 | 2 | Silent Failure & Error Handling | 0 | Not started | — |
 | 3 | Test Infrastructure & Flaky Fix | 0 | Not started | — |
 | 4 | Data Layer Tests | 0 | Not started | — |
