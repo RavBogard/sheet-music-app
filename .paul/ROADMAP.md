@@ -2,15 +2,15 @@
 
 ## Current Milestone
 **v1.6 Stability & Regression Audit**
-Status: In Progress
-Phases: 3 of 4 complete
+Status: Complete
+Phases: 4 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Auth & CSP Hardening | 1 | Complete | 2026-03-11 |
 | 2 | Firebase-Only File Serving | 1 | Complete | 2026-03-11 |
 | 3 | Performance View Overhaul | 1 | Complete | 2026-03-11 |
-| 4 | Regression Sweep & Deferred Fixes | TBD | Not started | - |
+| 4 | Regression Sweep & Deferred Fixes | 1 | Complete | 2026-03-11 |
 
 ### Phase 1: Auth & CSP Hardening
 
@@ -174,4 +174,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-10 (v1.6 milestone finalized — 4 phases)*
+*Last updated: 2026-03-11 (v1.6 milestone complete — all 4 phases)*

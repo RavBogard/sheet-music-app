@@ -12,9 +12,9 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.4.0 |
+| Version | 1.6.0 |
 | Status | Production |
-| Last Updated | 2026-03-10 |
+| Last Updated | 2026-03-11 |
 
 **Production URLs:**
 - CentralReform.live: Main application
@@ -45,14 +45,18 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.5 Phase 4: Quality & deps — vitest jsdom default, ESLint exhaustive-deps re-enabled, deps/fonts/indexes already current
 - [x] v1.5 Phase 5: UI/UX polish — skip-to-main-content link, mobile zoom indicator, tablet landscape sidebar toolbar
 - [x] v1.5 Phase 6: Performance & monitoring — bundle analyzer, Sentry source maps + Web Vitals, component tests for PerformanceToolbar + SetlistEditorV2
+- [x] v1.6 Phase 1: Auth & CSP hardening — signInWithPopup finalized, CSP audit, static PWA icon fallbacks
+- [x] v1.6 Phase 2: Firebase-only file serving — removed Drive fallback, Storage is sole source of truth
+- [x] v1.6 Phase 3: Performance view overhaul — key-left setlist redesign, removed tablet sidebar toolbar
+- [x] v1.6 Phase 4: Regression sweep — route-auth test fix, 2 withAuth migrations, 23 ESLint suppress comments, CI green
 
 ### Active (In Progress)
 
-- None — v1.5 complete
+- None — v1.6 complete
 
 ### Planned (Next)
 
-- To be determined after v1.5
+- To be determined after v1.6
 
 ### Out of Scope
 
@@ -104,7 +108,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 648+ tests |
+| Testing | Vitest + Playwright | 660+ tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -135,7 +139,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | displayName overlay for song rename (Firestore, not Drive) | v1.4 P1 | Preserves Drive filenames, rename is Firestore-only |
 | Conditional withSentryConfig (only when DSN set) | v1.5 P6 | Zero build overhead without Sentry |
 | Offline write queue not needed (Firebase native persistence) | v1.5 P6 | Firestore SDK handles offline writes natively |
+| Firebase Storage is sole file source (Drive = intake only) | v1.6 P2 | Simplified file serving, removed Drive fallback |
+| Key-left setlist layout for live performance | v1.6 P3 | Keys prominent next to song names for tablet glanceability |
+| chat + drive/file routes stay on withAuth permanently | v1.6 P4 | SSE streaming and mixed browser auth don't fit createApiHandler |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after Phase 6 (v1.5 complete)*
+*Last updated: 2026-03-11 after Phase 4 (v1.6 complete)*
