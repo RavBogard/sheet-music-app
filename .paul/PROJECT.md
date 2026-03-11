@@ -55,6 +55,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [ ] v2.5: Bugsweep & test coverage (type safety, error handling, comprehensive tests)
 - [x] v2.5 Phase 1: Type safety fixes — all `as any` casts eliminated across 9 files
 - [x] v2.5 Phase 2: Silent failure & error handling — empty catches logged, notification tracking logged, CORS env-only
+- [x] v2.5 Phase 3: Test infrastructure & flaky fix — shared factories, Firebase mocks, API helpers, flaky publish test fixed (367ms → 4ms)
 
 ### Validated (Recently Shipped)
 
@@ -70,7 +71,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.5 Phase 3: Test infrastructure & flaky fix
+- v2.5 Phase 4: Data layer tests
 
 ### Out of Scope
 
@@ -122,7 +123,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 660+ tests |
+| Testing | Vitest + Playwright | 657+ tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -169,7 +170,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Non-song items excluded from PDF charts section | v2.0 P3 | Readings/prayers don't have charts; saves paper, reduces confusion |
 | TemplateContext with type:string instead of widening ServiceType | v2.5 P1 | Template keys are superset of ServiceType; avoids breaking union |
 | hasSeconds() type guard for Firestore Timestamp-like fields | v2.5 P1 | Pattern for safely checking Timestamp objects in scheduling routes |
+| Mock objects exported from helpers, vi.mock() stays in test file | v2.5 P3 | Vitest hoisting requires vi.mock at file scope; helpers provide objects only |
+| beforeAll dynamic import for route handlers | v2.5 P3 | Eliminates cold-start flakiness in API route tests |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 2 (v2.5 silent failure & error handling)*
+*Last updated: 2026-03-11 after Phase 3 (v2.5 test infrastructure & flaky fix)*
