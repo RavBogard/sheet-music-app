@@ -10,21 +10,21 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 3 of 6 (Architecture Cleanup) — Planning
-Plan: 03-02 complete, evaluating if 03-03 needed
-Status: Ready for next PLAN (or phase transition)
-Last activity: 2026-03-10 — Unified 03-02 (MusicianPicker split)
+Phase: 3 of 6 (Architecture Cleanup) — Complete
+Plan: 03-03 complete (final plan in phase)
+Status: Phase 3 complete, ready for Phase 4
+Last activity: 2026-03-10 — Phase 3 transition complete
 
 Progress:
-- v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 33%
-- Phase 3: [██████░░░░] 60%
+- v1.5 Codebase & UI/UX Hardening: [█████░░░░░] 50%
+- Phase 3: [██████████] 100%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN or phase transition]
+  ✓        ✓        ✓     [Loop complete - ready for next phase]
 ```
 
 ## Accumulated Context
@@ -36,6 +36,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Phase 1: cancelled-flag before every state update after async boundaries
 - Phase 2: All standard auth routes use createApiHandler; withAuth reserved for complex patterns
 - Phase 2: 18 routes migrated, 4 remain on withAuth (justified)
+- Phase 3: useMusicStore (279 LOC) too small to split — skip
+- Phase 3: SetlistDrawerLegacy NOT dead code (imported by PerformanceToolbar) — skip removal
 
 ### Deferred Issues (carried from v1.4)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
@@ -56,10 +58,10 @@ Feature branches merged: none
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Plans 03-01 and 03-02 complete. Context limit reached.
-Next action: Decide if Phase 3 needs 03-03 (SongChartsLibrary 473, TransposerMenu 411, useMusicStore 279 LOC) or mark phase complete.
-Resume file: .paul/phases/03-architecture-cleanup-v15/03-02-SUMMARY.md
-Resume context: Dead code removed, SetlistEditorV2 708→667, MusicianPicker 824→612. Remaining candidates are moderate-sized — diminishing returns. Recommend evaluating whether to split or skip.
+Stopped at: Phase 3 complete, transition done
+Next action: /paul:plan for Phase 4 (Quality & Deps)
+Resume file: .paul/phases/03-architecture-cleanup-v15/03-03-SUMMARY.md
+Resume context: Phase 3 complete (3 plans). All large components split. Ready for Phase 4: vitest env fix, dependency updates, font subsetting, ESLint exhaustive-deps, Firestore indexes.
 
 ---
 *STATE.md — Updated after every significant action*

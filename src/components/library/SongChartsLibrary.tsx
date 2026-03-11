@@ -25,7 +25,8 @@ import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
 import { LibraryFileRow } from "./LibraryFileRow"
-import { logger } from "@/lib/logger"
+import { SelectionActionBar } from "./SelectionActionBar"
+import { useLibraryActions } from "./useLibraryActions"
 
 type LibraryTab = "charts" | "audio"
 
@@ -135,52 +136,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const getCleanName = (name: string) =>
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
-    // AI Digitize
     const { isAdmin, isBandLeader, profile, canUpload } = useAuth()
     const congregation = useCongregation()
-    const [digitizing, setDigitizing] = useState<string | null>(null)
-
-    const handleDigitize = async (file: DriveFile) => {
-        try {
-            setDigitizing(file.id)
-            toast.info(`Digitizing "${file.name}"... This may take ~20s`)
-
-            const omrRes = await apiFetch('/api/ai/omr', {
-                method: 'POST',
-                body: JSON.stringify({ fileId: file.id })
-            })
-
-            if (!omrRes.ok) {
-                if (omrRes.status === 504) throw new Error("The AI took too long. The file might be too complex or large.")
-                const text = await omrRes.text()
-                let errorMsg = "Digitization failed"
-                try { const json = JSON.parse(text); if (json.error) errorMsg = json.error }
-                catch { errorMsg = `Server Error (${omrRes.status}): ${text.substring(0, 50)}...` }
-                throw new Error(errorMsg)
-            }
-
-            const omrData = await omrRes.json()
-            toast.info("Saving MusicXML...")
-
-            const saveRes = await apiFetch('/api/drive/save', {
-                method: 'POST',
-                body: JSON.stringify({ sourceFileId: file.id, xmlContent: omrData.xml })
-            })
-
-            if (!saveRes.ok) {
-                const saveError = await saveRes.json()
-                throw new Error(saveError.error || "Failed to save XML")
-            }
-
-            toast.success("Saved! The MusicXML file is now in the library.")
-            loadLibrary()
-        } catch (e: unknown) {
-            logger.error("Digitize Error:", e)
-            toast.error(e instanceof Error ? e.message : "Digitize failed")
-        } finally {
-            setDigitizing(null)
-        }
-    }
+    const { digitizing, handleDigitize, handleArchive, handleRename } = useLibraryActions({ loadLibrary, getCleanName })
 
     // Song usage data
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
@@ -332,44 +290,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                     isDigitizing={digitizing === item.id}
                                     isAdmin={!!isAdmin}
                                     onDigitize={() => handleDigitize(item)}
-                                    onArchive={() => {
-                                        if (confirm(`Are you sure you want to archive "${getCleanName(item.name)}"? It will be hidden from the main library.`)) {
-                                            toast.promise(
-                                                apiFetch(`/api/library/archive`, {
-                                                    method: 'PATCH',
-                                                    body: JSON.stringify({ fileId: item.id, archive: true })
-                                                }).then(res => {
-                                                    if (!res.ok) throw new Error("Failed to archive chart")
-                                                    loadLibrary()
-                                                }),
-                                                {
-                                                    loading: 'Archiving chart...',
-                                                    success: 'Chart archived successfully',
-                                                    error: 'Failed to archive chart'
-                                                }
-                                            )
-                                        }
-                                    }}
-                                    onRename={(file) => {
-                                        const currentName = file.displayName || getCleanName(file.name)
-                                        const newName = prompt("Rename chart:", currentName)
-                                        if (newName && newName.trim() && newName.trim() !== currentName) {
-                                            toast.promise(
-                                                apiFetch('/api/library/rename', {
-                                                    method: 'PATCH',
-                                                    body: JSON.stringify({ fileId: file.id, displayName: newName.trim() })
-                                                }).then(res => {
-                                                    if (!res.ok) throw new Error("Failed to rename chart")
-                                                    loadLibrary()
-                                                }),
-                                                {
-                                                    loading: 'Renaming...',
-                                                    success: 'Chart renamed',
-                                                    error: 'Failed to rename chart'
-                                                }
-                                            )
-                                        }
-                                    }}
+                                    onArchive={() => handleArchive(item)}
+                                    onRename={(file) => handleRename(file)}
                                     getCleanName={getCleanName}
                                     isPlaying={playingFile?.id === item.id}
                                     selectMode={selectMode}
@@ -397,64 +319,15 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             </ScrollArea>
 
             {/* Selection Action Bar */}
-            {selectMode && selectedIds.size > 0 && (
-                <div className="border-t border-border bg-brand/10 backdrop-blur-sm px-4 py-3">
-                    <div className="max-w-2xl mx-auto flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                            {selectedIds.size} file{selectedIds.size !== 1 ? 's' : ''} selected
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                    // Select all visible files
-                                    const allIds = new Set(
-                                        combinedItems.map(i => i.id)
-                                    )
-                                    setSelectedIds(allIds)
-                                }}
-                            >
-                                Select All
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setSelectedIds(new Set())}
-                            >
-                                Clear
-                            </Button>
-                            <Button
-                                size="sm"
-                                onClick={() => {
-                                    // Copy selected file names to clipboard for use elsewhere
-                                    const names = combinedItems
-                                        .filter(i => selectedIds.has(i.id))
-                                        .map(i => getCleanName(i.name))
-                                    navigator.clipboard.writeText(names.join('\n')).then(() => {
-                                        toast.success(`Copied ${names.length} file names`)
-                                    })
-                                }}
-                            >
-                                Copy Names
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="default"
-                                className="bg-brand hover:bg-brand/90 text-white"
-                                onClick={() => {
-                                    const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
-                                    toast.info(`${selectedItems.length} songs selected. Use the setlist editor to add songs directly.`)
-                                    setSelectedIds(new Set())
-                                    setSelectMode(false)
-                                }}
-                            >
-                                Add {selectedIds.size} to Setlist
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <SelectionActionBar
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                combinedItems={combinedItems}
+                getCleanName={getCleanName}
+                onSelectAll={() => setSelectedIds(new Set(combinedItems.map(i => i.id)))}
+                onClear={() => setSelectedIds(new Set())}
+                onDismiss={() => { setSelectedIds(new Set()); setSelectMode(false) }}
+            />
 
             {/* Sticky Audio Player */}
             {playingFile && audioUrl && (

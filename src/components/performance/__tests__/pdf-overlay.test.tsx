@@ -68,6 +68,8 @@ vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => (
 // Mock sub-components of PerformanceToolbar
 vi.mock("@/components/music/TransposerMenu", () => ({
     TransposerMenu: () => <div>Transposer</div>,
+}))
+vi.mock("@/components/music/ChordEditBar", () => ({
     ChordEditBar: () => null,
 }))
 vi.mock("@/components/performance/MetronomeControl", () => ({
