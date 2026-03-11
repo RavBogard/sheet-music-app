@@ -11,20 +11,20 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 
 Milestone: v1.5 Codebase & UI/UX Hardening
 Phase: 3 of 6 (Architecture Cleanup) — Planning
-Plan: 03-01 applied, needs UNIFY
-Status: APPLY complete, UNIFY pending
-Last activity: 2026-03-10 — Applied 03-01 (dead code removal + batch selection hook)
+Plan: 03-02 complete, evaluating if 03-03 needed
+Status: Ready for next PLAN (or phase transition)
+Last activity: 2026-03-10 — Unified 03-02 (MusicianPicker split)
 
 Progress:
 - v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 33%
-- Phase 3: [░░░░░░░░░░] 0%
+- Phase 3: [██████░░░░] 60%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [Apply complete, UNIFY pending]
+  ✓        ✓        ✓     [Loop complete - ready for next PLAN or phase transition]
 ```
 
 ## Accumulated Context
@@ -49,17 +49,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - None
 
 ### Git State
-Last commit: 8fedb64
+Last commit: 05c3b01
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Plan 03-01 applied, needs UNIFY
-Next action: Run /paul:unify .paul/phases/03-architecture-cleanup-v15/03-01-PLAN.md
-Resume file: .paul/phases/03-architecture-cleanup-v15/03-01-PLAN.md
-Resume context: PerformanceBottomBar deleted, useBatchSelection hook extracted, SetlistEditorV2 708→667 LOC.
+Stopped at: Plans 03-01 and 03-02 complete. Context limit reached.
+Next action: Decide if Phase 3 needs 03-03 (SongChartsLibrary 473, TransposerMenu 411, useMusicStore 279 LOC) or mark phase complete.
+Resume file: .paul/phases/03-architecture-cleanup-v15/03-02-SUMMARY.md
+Resume context: Dead code removed, SetlistEditorV2 708→667, MusicianPicker 824→612. Remaining candidates are moderate-sized — diminishing returns. Recommend evaluating whether to split or skip.
 
 ---
 *STATE.md — Updated after every significant action*
