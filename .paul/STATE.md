@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-03-11)
 
 Milestone: v2.5 Bugsweep & Test Coverage
 Phase: 5 of 8 (API Route Tests) — Planning
-Plan: 05-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-03-11 — Created phases/05-api-route-tests/05-01-PLAN.md
+Plan: 05-01 applied, ready for UNIFY
+Status: APPLY complete, ready for UNIFY
+Last activity: 2026-03-11 — Applied 05-01: scheduling route tests (26 new, 760 total)
 
 Progress:
 - Milestone: [█████░░░░░] 50%
@@ -24,7 +24,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 05-01 created, awaiting approval]
+  ✓        ✓        ○     [Plan 05-01 applied, ready for UNIFY]
 ```
 
 ## Accumulated Context
@@ -43,21 +43,21 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Session cookie never refreshed after initial login (low priority, 14-day expiry)
 
 ### Git State
-Last commit: 6f3b266
+Last commit: f998b8d
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Plan 05-01 created
-Next action: /paul:apply phases/05-api-route-tests/05-01-PLAN.md
+Stopped at: Plan 05-01 APPLY complete (context limit)
+Next action: /paul:unify phases/05-api-route-tests/05-01-PLAN.md
 Resume file: .paul/phases/05-api-route-tests/05-01-PLAN.md
 Resume context:
-- Plan 05-01: scheduling route tests (respond, unassign, suggest, history, calendar-feed)
-- Plan 05-02 will cover assign + remind (complex routes with email/SMS/push)
-- Plan 05-03 will cover setlist + library routes
-- 734 tests passing baseline
-- Uses established test helpers: makeReq, mockAuth, firebaseAdminMock
+- 26 new tests: respond(6), unassign(6), suggest(5), history(4), calendar-feed(5)
+- 760 total tests passing, 0 TS errors, zero deviations
+- Commit f998b8d pushed to master
+- Plan 05-02 next: assign + remind routes
+- Plan 05-03: setlist + library routes
 
 ---
 *STATE.md — Updated after every significant action*
