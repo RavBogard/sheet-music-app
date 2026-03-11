@@ -7,6 +7,7 @@ import {
     ShieldAlert, FileText, LogOut, User, CalendarDays,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
@@ -96,14 +97,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     {user ? (
                         <div className="p-5 pb-4 border-b border-brand/10 bg-brand/5">
                             <div className="flex items-center gap-3">
-                                {user.photoURL ? (
-                                    <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border border-border"
-                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
-                                    />
-                                ) : null}
-                                <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center border border-border ${user.photoURL ? 'hidden' : ''}`}>
-                                    <User className="w-5 h-5 text-muted-foreground" />
-                                </div>
+                                <Avatar className="h-10 w-10 border border-border">
+                                    <AvatarImage src={user.photoURL ?? undefined} alt="Profile" />
+                                    <AvatarFallback className="bg-muted">
+                                        <User className="w-5 h-5 text-muted-foreground" />
+                                    </AvatarFallback>
+                                </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold text-foreground truncate">
                                         {profile?.displayName || user.displayName || "Musician"}

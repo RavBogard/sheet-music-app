@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert } from "lucide-react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -167,12 +168,10 @@ export function DesktopHeader() {
                                 <Button variant="ghost" size="icon"
                                     className={cn("text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all", !isOnline && "ring-2 ring-red-500")}
                                     aria-label="User menu">
-                                    {user?.photoURL ? (
-                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border"
-                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
-                                        />
-                                    ) : null}
-                                    <UserCircle className={user?.photoURL ? "w-6 h-6 hidden" : "w-6 h-6"} />
+                                    <Avatar className="h-8 w-8 border border-border">
+                                        <AvatarImage src={user?.photoURL ?? undefined} alt="Profile" />
+                                        <AvatarFallback><UserCircle className="w-5 h-5" /></AvatarFallback>
+                                    </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56 bg-popover border-border text-popover-foreground" align="end">

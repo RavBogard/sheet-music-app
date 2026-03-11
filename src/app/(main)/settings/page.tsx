@@ -16,6 +16,7 @@ import {
     LogOut, Pencil, Check, Lock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import {
     EmailAuthProvider,
@@ -113,13 +114,12 @@ export default function SettingsPage() {
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account</h2>
 
                     <div className="bg-card border border-border p-5 rounded-2xl flex items-center gap-4">
-                        {user?.photoURL ? (
-                            <img src={user.photoURL} alt="Profile" className="w-14 h-14 rounded-full border border-border" />
-                        ) : (
-                            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border border-border">
+                        <Avatar className="h-14 w-14 border border-border">
+                            <AvatarImage src={user?.photoURL ?? undefined} alt="Profile" />
+                            <AvatarFallback className="bg-muted">
                                 <User className="w-7 h-7 text-muted-foreground" />
-                            </div>
-                        )}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                             {editingName ? (
                                 <form
