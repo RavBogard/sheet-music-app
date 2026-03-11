@@ -77,6 +77,7 @@ export function PDFOverlay({
 
         setQueue(queueItems, Math.max(0, queueStart), undefined, undefined)
     // Re-init queue when tracks change (identity-based, not just length)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trackIds])
 
     // Sync currentIndex → queueIndex when parent navigates (e.g., from setlist view)
@@ -93,6 +94,7 @@ export function PDFOverlay({
                 undefined
             )
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentIndex])
 
     // When toolbar navigates (queueIndex changes), translate back to setlist index

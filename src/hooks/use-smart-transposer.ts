@@ -110,6 +110,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
         if (aiState.isEnabled && isRendered && !pageData && !hasScanned && !isPageScanning) {
             runScan()
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [aiState.isEnabled, isRendered, pageData, hasScanned, pageNumber, isPageScanning])
 
     // ── Preemptively scan next page ──
@@ -121,6 +122,7 @@ export function useSmartTransposer({ pageRef, pageNumber, isRendered }: UseSmart
                 dispatchBackgroundScan(pageNumber + 1)
             }, 3000)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isRendered, pageData, hasScanned, pageNumber, aiState.isEnabled])
 
     // ── Write native key when we have enough data (once per file) ──

@@ -98,6 +98,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
         }, 8000)
         return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // ── Keyboard shortcuts ──
@@ -182,6 +183,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [playbackQueue, nextSong, prevSong, router, onHome, toggleBars])
 
     // ── Tap anywhere to toggle bars ──

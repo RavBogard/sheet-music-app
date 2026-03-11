@@ -120,6 +120,7 @@ export function ChatPanel() {
             const timer = setTimeout(() => handleSend(pendingPrompt), 100)
             return () => clearTimeout(timer)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, pendingPrompt])
 
     const handleSend = async (overrideInput?: string) => {

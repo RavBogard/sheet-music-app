@@ -35,6 +35,7 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
     // Reset wizard state each time the dialog opens
     useEffect(() => {
         if (open) wizard.reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
     const isLastStep = wizard.stepIndex === wizard.totalSteps - 1

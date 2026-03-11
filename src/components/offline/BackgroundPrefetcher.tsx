@@ -47,6 +47,7 @@ export function BackgroundPrefetcher() {
 
         return () => clearTimeout(timer)
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, isMember])
 
     return null // No UI

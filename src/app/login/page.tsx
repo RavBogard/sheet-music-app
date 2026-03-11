@@ -30,6 +30,7 @@ export default function LoginPage() {
             router.replace("/")
         }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, loading, router])
 
     const handleGoogleSignIn = async () => {

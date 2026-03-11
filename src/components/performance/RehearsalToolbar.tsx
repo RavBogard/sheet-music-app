@@ -121,6 +121,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 onPracticeTime(Math.round(totalPracticed.current))
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioUrl])
 
     // Handle A-B loop

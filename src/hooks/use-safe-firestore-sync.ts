@@ -131,6 +131,7 @@ export function useSafeFirestoreSync<T = any>(
                 unsubRef.current = null
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ref, options.timeoutMs]) // Intentionally not including options.onError to prevent thrashing
 
     return state

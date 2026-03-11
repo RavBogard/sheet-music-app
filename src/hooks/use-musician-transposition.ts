@@ -112,6 +112,7 @@ export function useMusicianTransposition() {
         loadPref()
         return () => { cancelled = true }
      
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, fileId, profile, trackTransposition])
 
     // Auto-save when user manually changes transposition (debounced)

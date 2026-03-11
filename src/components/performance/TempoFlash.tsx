@@ -39,6 +39,7 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bpm])
 
     // Auto-dismiss after ~10 seconds (fade at 9.7s, remove at 10s)

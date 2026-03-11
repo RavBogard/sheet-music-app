@@ -58,6 +58,7 @@ export function useMonitorAccess(): {
         }
         setLoading(false)
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, configData, configLoading])
 
     const hasAccess = isAdmin || isSoundEngineer || hasBusAssigned
