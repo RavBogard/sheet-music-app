@@ -15,12 +15,6 @@ import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
 
-/** Detect mobile browsers that block popups — use redirect for these */
-function isMobileBrowser(): boolean {
-    if (typeof window === 'undefined') return false
-    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-}
-
 /** Sync session cookie to server. Retries once on failure. Returns true on success. */
 async function syncSessionCookie(user: User): Promise<boolean> {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -204,13 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [user])
 
     const signIn = async (): Promise<"popup" | "redirect"> => {
-        // Mobile browsers almost always block popups — skip straight to redirect
-        if (isMobileBrowser()) {
-            await signInWithRedirect(auth, googleProvider)
-            return "redirect"
-        }
-
-        // Desktop: try popup first, fall back to redirect if blocked
+        // Always try popup first. signInWithRedirect is broken on modern Chrome
+        // and Safari due to third-party cookie blocking — the auth domain
+        // (firebaseapp.com) differs from the app domain, so the redirect result
+        // is lost. Popup uses postMessage instead of cookies, avoiding this.
+        // Popup from a user click gesture works on mobile browsers too.
         try {
             await signInWithPopup(auth, googleProvider)
             return "popup"
