@@ -1,57 +1,53 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v1.6 Stability & Regression Audit**
-Status: Complete
-Phases: 4 of 4 complete
+**v1.7 Critical Bug Fixes**
+Status: In Progress
+Phases: 1 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Auth & CSP Hardening | 1 | Complete | 2026-03-11 |
-| 2 | Firebase-Only File Serving | 1 | Complete | 2026-03-11 |
-| 3 | Performance View Overhaul | 1 | Complete | 2026-03-11 |
-| 4 | Regression Sweep & Deferred Fixes | 1 | Complete | 2026-03-11 |
+| 1 | Mobile Sign-In Fix | 1/1 | ✅ Complete | 2026-03-11 |
+| 2 | Service Worker Update Notification | TBD | Not started | - |
+| 3 | User Avatar Display | TBD | Not started | - |
+| 4 | Key Signature Position | TBD | Not started | - |
 
-### Phase 1: Auth & CSP Hardening
+### Phase 1: Mobile Sign-In Fix
 
-Focus: Finalize auth fix (signInWithPopup deployed, skipWaiting reverted), comprehensive CSP audit, verify manifest icons with static fallbacks.
-Notes: Auth already fixed via hotfix (commit 89572e5). This phase closes remaining loose ends.
-Plans: 1 (01-01-PLAN.md created)
-
-### Phase 2: Firebase-Only File Serving
-
-Focus: Firebase Storage becomes the sole source of truth for serving files. Google Drive is intake-only.
-Tasks:
-- Remove or raise MAX_COPIES_PER_RUN (currently 20) so all files sync in one run
-- Verify all library files are copied to Firebase Storage
-- Remove Drive fallback from file-fetcher (Storage-only, fail if not found)
-- Fix PDF health scanner: bypass rate limiter or use server-side direct Storage check
-- Admin sync button UX: show copy progress, warn if files still pending
-Skill: Use /ui-ux-pro-max for admin sync UX
+Focus: Tapping "Sign In" on mobile devices results in nothing happening. Likely signInWithPopup blocked on mobile browsers — may need signInWithRedirect fallback or popup blocker handling.
 Plans: TBD (defined during /paul:plan)
 
-### Phase 3: Performance View Overhaul
+### Phase 2: Service Worker Update Notification
 
-Focus: Combined UI regression revert + setlist view redesign. Same components, same concern — make the live performance view right.
-Tasks:
-- Remove tablet sidebar toolbar (restore bottom toolbar on all viewports)
-- Rethink setlist view for live performance — keys prominent next to track names, clear song order, optimized for tablet glanceability
-- Verify no other unwanted visual regressions from v1.5
-- This is the essential "live visual view" for the band
-Skill: Use /ui-ux-pro-max for all design decisions
-Plans: 1 (03-01-PLAN.md)
+Focus: "Update available — tap to refresh" banner appears on freshly loaded pages. Service worker is incorrectly detecting updates on fresh loads — needs to only show when an actual new version is available after a prior cached version existed.
+Plans: TBD (defined during /paul:plan)
 
-### Phase 4: Regression Sweep & Deferred Fixes
+### Phase 3: User Avatar Display
 
-Focus: Deep audit + close out deferred items carried since v1.3/v1.5:
-- Run full test suite, fix the publish 403→400 test failure (pre-existing since v1.3)
-- Complete withAuth → createApiHandler migration (12 remaining routes)
-- Wire clearSaveTimer() into consuming components (deferred from v1.3)
-- Verify PWA/offline, manifest icons, edge cases
-- Investigate build time increase (1.5m → 2.5m) — check if Sentry source maps are the cause
+Focus: User icon in upper-right shows generic blue avatar instead of Google profile photo. Need to verify Google profile photo URL is being fetched and rendered correctly.
+Plans: TBD (defined during /paul:plan)
+
+### Phase 4: Key Signature Position
+
+Focus: Move key signature from left of song title to immediately right of it in setlist/performance views. Use /ui-ux-pro-max for design decisions.
 Plans: TBD (defined during /paul:plan)
 
 ## Completed Milestones
+
+<details>
+<summary>v1.6 Stability & Regression Audit - 2026-03-11 (4 phases, 4 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Auth & CSP Hardening | 1/1 | 2026-03-11 |
+| 2 | Firebase-Only File Serving | 1/1 | 2026-03-11 |
+| 3 | Performance View Overhaul | 1/1 | 2026-03-11 |
+| 4 | Regression Sweep & Deferred Fixes | 1/1 | 2026-03-11 |
+
+Archive: `.paul/milestones/v1.6-ROADMAP.md`
+
+</details>
+
 
 <details>
 <summary>v1.5 Codebase & UI/UX Hardening - 2026-03-10 (6 phases, 11 plans)</summary>
@@ -174,4 +170,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v1.6 milestone complete — all 4 phases)*
+*Last updated: 2026-03-11 (v1.7 — Phase 1 complete)*

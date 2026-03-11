@@ -12,7 +12,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.6.0 |
+| Version | 1.7.0 |
 | Status | Production |
 | Last Updated | 2026-03-11 |
 
@@ -52,11 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- None — v1.6 complete
+- [ ] v1.7: Fix mobile sign-in, SW update banner, avatar display, key signature position
+- [x] v1.7 Phase 1: Mobile sign-in redirect fallback + SW banner suppress + avatar onError fallback
 
 ### Planned (Next)
 
-- To be determined after v1.6
+- v1.7 Phase 2-4: SW notification, avatar display, key signature position (Phases 2-3 may be skippable)
 
 ### Out of Scope
 
@@ -142,7 +143,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Firebase Storage is sole file source (Drive = intake only) | v1.6 P2 | Simplified file serving, removed Drive fallback |
 | Key-left setlist layout for live performance | v1.6 P3 | Keys prominent next to song names for tablet glanceability |
 | chat + drive/file routes stay on withAuth permanently | v1.6 P4 | SSE streaming and mixed browser auth don't fit createApiHandler |
+| COOP: same-origin-allow-popups for Google sign-in | v1.7 P1 | Allows popup sign-in while maintaining isolation |
+| signInWithRedirect as popup fallback | v1.7 P1 | Mobile browsers that block popups get working sign-in |
+| 10s suppress window for SW update banner | v1.7 P1 | Prevents false "update available" on fresh page load |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 4 (v1.6 complete)*
+*Last updated: 2026-03-11 after Phase 1 (v1.7)*
