@@ -23,8 +23,7 @@ service cloud.firestore {
 
     // Band Leader: Can Create/Edit/Publish Setlists, Manage People
     function isBandLeader() {
-      return isAdmin() || request.auth.token.role == 'band_leader'
-          || request.auth.token.role == 'leader'; // backward compat
+      return isAdmin() || request.auth.token.role == 'band_leader';
     }
 
     // Musician: Band member — appears in picker, receives emails, performs

@@ -42,7 +42,7 @@ export async function getServerUser(): Promise<ServerUser | null> {
 
         const role = (profile?.role as string) || null
         const isAdmin = role === "admin"
-        const isBandLeader = isAdmin || role === "band_leader" || role === "leader"
+        const isBandLeader = isAdmin || role === "band_leader"
         const isMember = isBandLeader || role === "musician" || role === "member"
 
         return {

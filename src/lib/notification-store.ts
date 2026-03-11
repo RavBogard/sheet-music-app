@@ -195,7 +195,7 @@ async function getActiveMemberUids(excludeUid?: string): Promise<string[]> {
     // M2 fix: Use filtered query instead of fetching all users
     const q = query(
         collection(db, 'users'),
-        where('role', 'in', ['admin', 'band_leader', 'leader', 'musician', 'member'])
+        where('role', 'in', ['admin', 'band_leader', 'musician', 'member'])
     )
     const snap = await getDocs(q)
     const uids: string[] = []

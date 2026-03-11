@@ -6,7 +6,7 @@
  * Hierarchy: admin > band_leader > musician > member > pending
  *   - admin (100):       Full access — all booleans true. Daniel's role.
  *   - band_leader (80):  Setlist management, edit access, musician capabilities.
- *                        (Legacy alias: 'leader' = same level for backward compat.)
+ *
  *   - musician (60):     Performance + profile: view setlists, set transposition, PDF access.
  *   - member (40):       Basic membership — no special music capabilities.
  *   - pending (0):       Awaiting approval — no access beyond public pages.
@@ -22,12 +22,11 @@
  * to ensure consistent role checks across the entire application.
  */
 
-export type UserRole = 'admin' | 'band_leader' | 'leader' | 'musician' | 'member' | 'pending'
+export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending'
 
 const ROLE_HIERARCHY: Record<string, number> = {
     admin: 100,
     band_leader: 80,
-    leader: 80, // backward compat
     musician: 60,
     member: 40,
     pending: 0,
@@ -39,7 +38,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
  * @example
  *   hasRole('admin', 'band_leader')  // true — admin outranks band_leader
  *   hasRole('musician', 'band_leader')  // false — musician is below band_leader
- *   hasRole('leader', 'band_leader')  // true — 'leader' is legacy alias for band_leader
+ *   hasRole('member', 'musician')     // false — member is below musician
  */
 export function hasRole(userRole: string | null | undefined, minimumRole: UserRole): boolean {
     if (!userRole) return false

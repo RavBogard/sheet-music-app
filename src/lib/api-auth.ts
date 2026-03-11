@@ -69,8 +69,7 @@ export async function requireAuth(
     const userRole = (decoded.role as string) || undefined
     const superAdminUid = getSuperAdminUid()
     const isAdmin = (superAdminUid && decoded.uid === superAdminUid) || userRole === 'admin'
-    // Backward compat: old 'leader' maps to band_leader
-    const isBandLeader = isAdmin || userRole === 'band_leader' || userRole === 'leader'
+    const isBandLeader = isAdmin || userRole === 'band_leader'
     const isMusician = isBandLeader || userRole === 'musician'
 
     // Role hierarchy: admin > band_leader > musician > member > pending
@@ -99,9 +98,6 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
     if (isAdmin) return true
     if (required === 'admin') return false
 
-    // Backward compat: old 'leader' = band_leader
-    const effectiveRole = userRole === 'leader' ? 'band_leader' : userRole
-
     const hierarchy: Record<string, number> = {
         'admin': 4,
         'band_leader': 3,
@@ -110,7 +106,7 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
         'pending': 0,
     }
 
-    const userLevel = hierarchy[effectiveRole || ''] ?? -1
+    const userLevel = hierarchy[userRole || ''] ?? -1
     const requiredLevel = hierarchy[required] ?? 99
     return userLevel >= requiredLevel
 }

@@ -10,8 +10,6 @@ import { hasRole, deriveRoles } from '../roles'
  *   - band_leader: Setlist management (isBandLeader, isMusician, isMember)
  *   - musician: Performance + profile (isMusician, isMember)
  *   - sound_engineer: Boolean flag (soundEngineer), NOT a hierarchy level
- *
- * Legacy alias: 'leader' maps to 'band_leader' level
  */
 
 describe('hasRole', () => {
@@ -133,22 +131,6 @@ describe('hasRole', () => {
         it('pending does not meet pending requirement (level 0)', () => {
             // pending is level 0, pending minimum is also 0 — should be true
             expect(hasRole('pending', 'pending')).toBe(true)
-        })
-    })
-
-    // ── Legacy alias ─────────────────────────────────────────────────────────
-
-    describe('leader legacy alias', () => {
-        it("'leader' is equivalent to 'band_leader'", () => {
-            expect(hasRole('leader', 'band_leader')).toBe(true)
-        })
-
-        it("'leader' outranks musician", () => {
-            expect(hasRole('leader', 'musician')).toBe(true)
-        })
-
-        it("'leader' does not meet admin requirement", () => {
-            expect(hasRole('leader', 'admin')).toBe(false)
         })
     })
 

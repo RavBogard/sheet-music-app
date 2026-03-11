@@ -3,14 +3,14 @@
 ## Current Milestone
 **v1.9 Auth Stability & Deferred Cleanup**
 Status: In progress
-Phases: 1 of 5 complete
+Phases: 3 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Auth & Routing Regression Audit | 1 | Complete | 2026-03-11 |
-| 2 | Auth Flow Rebuild | TBD | Not started | - |
-| 3 | Avatar System Fix | TBD | Not started | - |
-| 4 | Bridge Credentials Security | TBD | Not started | - |
+| 2 | Auth Flow Rebuild | 1 | Complete | 2026-03-11 |
+| 3 | Avatar System Fix | 1 | Complete | 2026-03-11 |
+| 4 | ~~Bridge Credentials Security~~ | 0 | Skipped (accepted risk) | 2026-03-11 |
 | 5 | Deferred Cleanup Batch | TBD | Not started | - |
 
 ### Phase 1: Auth & Routing Regression Audit

@@ -70,10 +70,8 @@ export function middleware(request: NextRequest) {
 
     // Role Verification via Claims
     if (isLeaderRoute && session) {
-        // Check if the user possesses the admin or leader role
-        // Backward compat: 'leader' is the legacy name for 'band_leader'
         const role = decodedSession?.role
-        if (role !== 'admin' && role !== 'band_leader' && role !== 'leader') {
+        if (role !== 'admin' && role !== 'band_leader') {
             // Unprivileged user trying to access leader/admin routes
             const redirectUrl = new URL('/setlists', request.url)
             return NextResponse.redirect(redirectUrl)

@@ -138,7 +138,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     }
 
     const isPending = user.role === 'pending'
-    const effectiveRole = user.role === ('leader' as string) ? 'band_leader' : user.role
+    const effectiveRole = user.role
 
     // Roles this user can see/assign (up to their own level)
     const assignableRoles = (['pending', 'member', 'musician', 'band_leader', 'admin'] as const)

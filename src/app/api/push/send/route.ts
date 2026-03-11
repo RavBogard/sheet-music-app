@@ -18,7 +18,7 @@ const schema = z.object({
  * POST /api/push/send
  *
  * Sends push notifications to specified users via FCM.
- * Requires admin or band_leader auth (handles legacy 'leader' role).
+ * Requires admin or band_leader auth.
  *
  * Reads FCM tokens from each user's `fcmTokens` array in Firestore,
  * then dispatches via Firebase Admin Messaging.

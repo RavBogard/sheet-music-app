@@ -200,9 +200,8 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         const unsub = subscribeToAllUsers((users) => {
             // Only show musicians, band leaders, and admins in the picker
             // (not plain members — they're community, not band)
-            // Backward compat: old 'leader' role maps to band_leader
             let active = users.filter(u =>
-                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
+                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin'
             )
             if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
                 active = [{

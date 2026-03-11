@@ -45,7 +45,7 @@ export const POST = createApiHandler(
 
         // Load band members (musicians and above — not plain community members)
         const usersSnap = await db.collection('users')
-            .where('role', 'in', ['admin', 'band_leader', 'musician', 'leader'])
+            .where('role', 'in', ['admin', 'band_leader', 'musician'])
             .get()
 
         interface MemberData { uid: string; email?: string; displayName?: string }

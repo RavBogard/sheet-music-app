@@ -52,7 +52,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- (none — ready for next milestone)
+- [ ] v1.9: Auth stability & deferred cleanup (login regressions, avatar fix, bridge creds, housekeeping)
 
 ### Validated (Recently Shipped)
 
@@ -63,7 +63,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v1.9: TBD
+- v2.0: TBD
 
 ### Out of Scope
 

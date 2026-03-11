@@ -1,11 +1,13 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    plugins: { "react-hooks": reactHooksPlugin },
     rules: {
       // All 11 instances are intentional data-fetching patterns (onSnapshot callbacks,
       // WebSocket handlers, auth state listeners). React itself recommends this pattern.

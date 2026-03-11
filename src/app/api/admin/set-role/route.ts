@@ -6,7 +6,7 @@ import { z } from "zod"
 
 const setRoleSchema = z.object({
     targetUserId: z.string().min(1),
-    newRole: z.enum(['admin', 'band_leader', 'leader', 'musician', 'member', 'pending'])
+    newRole: z.enum(['admin', 'band_leader', 'musician', 'member', 'pending'])
 })
 
 export const POST = createApiHandler(
