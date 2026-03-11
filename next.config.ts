@@ -13,11 +13,10 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   // preventing critical fixes from reaching users.
   workboxOptions: {
     disableDevLogs: true,
-    // skipWaiting explicitly false: new service workers wait until user accepts
-    // the update, preventing mid-performance page reloads. The
-    // UpdatePrompt component shows a non-intrusive toast when a new
-    // version is available.
-    skipWaiting: false,
+    // TEMPORARY: skipWaiting true to force-deploy critical auth CSP fix.
+    // Old SWs serve cached HTML with old CSP headers that block Google sign-in.
+    // Revert to false after all users have picked up this fix.
+    skipWaiting: true,
     clientsClaim: true,
     runtimeCaching: [
       {
@@ -36,6 +35,13 @@ const withPWA = require("@ducanh2912/next-pwa").default({
             maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
           },
         },
+      },
+      {
+        // Google Auth & profile — SW must NOT intercept these.
+        // Workbox's default cross-origin rules try to cache/fetch them,
+        // which triggers CSP connect-src violations and breaks sign-in.
+        urlPattern: /^https:\/\/(apis\.google\.com|accounts\.google\.com|lh3\.googleusercontent\.com|.*\.firebaseapp\.com)/,
+        handler: 'NetworkOnly',
       },
     ],
   },
@@ -82,7 +88,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob: https://*.firebasestorage.app",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.googleusercontent.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob: https://*.firebasestorage.app",
           },
           {
             key: 'Strict-Transport-Security',
