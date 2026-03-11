@@ -3,12 +3,13 @@
 ## Current Milestone
 **v2.0 Schedule & Workflow Fixes**
 Status: In progress
-Phases: 2 total
+Phases: 3 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Schedule Visibility Fix | 1 | Complete | 2026-03-11 |
-| 2 | Gig Packet Modal Layout Fix | 0 | Not started | — |
+| 2 | Gig Packet Modal Layout Fix | 1 | Complete | 2026-03-11 |
+| 3 | Print PDF Layout Fixes | 0 | Not started | — |
 
 ### Phase 1: Schedule Visibility Fix
 
@@ -17,6 +18,10 @@ Focus: Schedule page only shows services with musician assignments. Setlists wit
 ### Phase 2: Gig Packet Modal Layout Fix
 
 Focus: PrintModal has excessive empty space above the configuration form, requiring users to scroll down to reach the controls. Root cause: modal uses `items-center justify-center` centering with `max-h-[90vh]`, `p-6` content padding, and a tall footer — cramping the scrollable content area. Fix the modal layout so content is immediately visible when opened, especially on mobile.
+
+### Phase 3: Print PDF Layout Fixes
+
+Focus: Two fixes to the generated gig packet PDF. (1) On the setlist page, swap the key and lead columns so key is the 2nd column and lead is the 3rd. (2) Non-song items (readings, prayers, etc.) that don't have charts should not be included in the printed charts section of the PDF, but should still appear on the setlist page.
 
 ## Previous Milestone
 **v1.9 Auth Stability & Deferred Cleanup**

@@ -58,6 +58,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 - [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
 - [x] v2.0 Phase 1: Schedule visibility fix — setlists with future dates appear regardless of assignment status
+- [x] v2.0 Phase 2: Gig packet modal layout fix — modal starts near top on mobile, tighter padding
 - [x] v1.7: Print pipeline overhaul, key signature position, monitor buses — Phases 1-5
 - [x] v1.8 Phase 1: Mobile navigation redesign — hamburger menu moved to upper-left header
 - [x] v1.8 Phase 2: Setlist mobile responsive layout — responsive padding, touch-visible menus
@@ -163,4 +164,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 1 (v2.0 schedule visibility fix)*
+*Last updated: 2026-03-11 after Phase 2 (v2.0 gig packet modal layout fix)*
