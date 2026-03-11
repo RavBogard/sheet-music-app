@@ -79,6 +79,10 @@ const nextConfig = {
         // Security headers for all routes
         source: '/(.*)',
         headers: [
+          // Allow signInWithPopup to detect popup closure without COOP errors.
+          // 'same-origin-allow-popups' permits cross-origin popups (Google sign-in)
+          // while still providing same-origin isolation for the main window.
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

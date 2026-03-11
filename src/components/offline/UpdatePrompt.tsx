@@ -52,6 +52,9 @@ export function UpdatePrompt() {
         // If not, this is a first install — controllerchange from clientsClaim
         // should not show the update banner.
         const hadControllerOnLoad = !!navigator.serviceWorker.controller
+        // Suppress controllerchange banners during initial page load window.
+        // Any SW activation in the first 10 seconds is normal startup, not a mid-session update.
+        const pageLoadTime = Date.now()
 
         const activateOrPrompt = (sw: ServiceWorker) => {
             if (!userHasInteracted) {
@@ -107,6 +110,11 @@ export function UpdatePrompt() {
                 // Don't reload — the page is already loaded with current resources.
                 // The new SW will serve content on the next navigation.
                 autoActivated = false
+                return
+            }
+            // Suppress banners during initial page load (first 10 seconds).
+            // Any SW activation in this window is normal startup behavior.
+            if (Date.now() - pageLoadTime < 10_000) {
                 return
             }
             // A new SW activated (from another tab or external trigger).

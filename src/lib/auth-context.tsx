@@ -5,6 +5,8 @@ import {
     User,
     onAuthStateChanged,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
@@ -80,6 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         let unsubscribeProfile: (() => void) | null = null
 
+        // Handle redirect sign-in result (from signInWithRedirect fallback on mobile)
+        getRedirectResult(auth).catch((err) => {
+            logger.warn("Redirect sign-in result:", err)
+        })
+
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
@@ -154,8 +161,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signIn = async () => {
         try {
             await signInWithPopup(auth, googleProvider)
-        } catch (error) {
-            logger.error("Sign in error:", error)
+        } catch (error: unknown) {
+            const code = (error as { code?: string })?.code
+            // Popup blocked (common on mobile) or COOP killed the popup — fall back to redirect
+            if (
+                code === "auth/popup-blocked" ||
+                code === "auth/popup-closed-by-user" ||
+                code === "auth/cancelled-popup-request"
+            ) {
+                logger.warn("Popup sign-in failed, falling back to redirect:", code)
+                await signInWithRedirect(auth, googleProvider)
+            } else {
+                logger.error("Sign in error:", error)
+            }
         }
     }
 

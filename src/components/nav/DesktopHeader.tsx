@@ -168,10 +168,11 @@ export function DesktopHeader() {
                                     className={cn("text-muted-foreground hover:text-foreground rounded-full overflow-hidden transition-all", !isOnline && "ring-2 ring-red-500")}
                                     aria-label="User menu">
                                     {user?.photoURL ? (
-                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border" />
-                                    ) : (
-                                        <UserCircle className="w-6 h-6" />
-                                    )}
+                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-border"
+                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
+                                        />
+                                    ) : null}
+                                    <UserCircle className={user?.photoURL ? "w-6 h-6 hidden" : "w-6 h-6"} />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56 bg-popover border-border text-popover-foreground" align="end">
