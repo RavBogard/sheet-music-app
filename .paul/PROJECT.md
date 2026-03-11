@@ -54,6 +54,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 - [ ] v2.5: Bugsweep & test coverage (type safety, error handling, comprehensive tests)
 - [x] v2.5 Phase 1: Type safety fixes — all `as any` casts eliminated across 9 files
+- [x] v2.5 Phase 2: Silent failure & error handling — empty catches logged, notification tracking logged, CORS env-only
 
 ### Validated (Recently Shipped)
 
@@ -69,7 +70,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.5 Phase 2: Silent failure & error handling
+- v2.5 Phase 3: Test infrastructure & flaky fix
 
 ### Out of Scope
 
@@ -171,4 +172,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 1 (v2.5 type safety fixes)*
+*Last updated: 2026-03-11 after Phase 2 (v2.5 silent failure & error handling)*

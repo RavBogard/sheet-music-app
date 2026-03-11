@@ -100,13 +100,13 @@ export async function GET(req: NextRequest) {
         // Expired
         if (Date.now() > data.expiresAt) {
             // Clean up expired doc
-            await db.collection(COLLECTION).doc(code).delete().catch(() => {})
+            await db.collection(COLLECTION).doc(code).delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
             return NextResponse.json({ error: "Session expired" }, { status: 410 })
         }
 
         if (data.status === "approved" && data.customToken) {
             // Consume: delete session after delivering token
-            await db.collection(COLLECTION).doc(code).delete().catch(() => {})
+            await db.collection(COLLECTION).doc(code).delete().catch(e => logger.warn('[QR] Failed to clean up consumed session:', e))
             const response = NextResponse.json({
                 status: "approved",
                 token: data.customToken,
@@ -167,7 +167,7 @@ export async function PUT(req: NextRequest) {
         const data = doc.data()!
 
         if (Date.now() > data.expiresAt) {
-            await docRef.delete().catch(() => {})
+            await docRef.delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
             return NextResponse.json({ error: "Session expired" }, { status: 410 })
         }
 

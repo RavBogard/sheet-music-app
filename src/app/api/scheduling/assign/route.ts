@@ -120,7 +120,7 @@ export const POST = createApiHandler(
                         // Update notifiedVia
                         db.collection('scheduling_assignments').doc(ref.id).update({
                             notifiedVia: FieldValue.arrayUnion('email')
-                        }).catch(() => { /* best effort */ })
+                        }).catch(e => logger.warn(`[Scheduling] Failed to track email delivery for assignment ${ref.id}:`, e))
                     }
                 }).catch(e => {
                     logger.warn(`[Scheduling] Email failed for ${musician.email}:`, e)
@@ -141,7 +141,7 @@ export const POST = createApiHandler(
                         if (result.ok) {
                             db.collection('scheduling_assignments').doc(ref.id).update({
                                 notifiedVia: FieldValue.arrayUnion('sms')
-                            }).catch(() => { /* best effort */ })
+                            }).catch(e => logger.warn(`[Scheduling] Failed to track SMS delivery for assignment ${ref.id}:`, e))
                         }
                     }).catch(e => {
                         logger.warn(`[Scheduling] SMS failed for ${musician.phone}:`, e)

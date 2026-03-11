@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://centralreform.live,https://www.centralreform.live').split(',').map(s => s.trim())
+const ALLOWED_HOSTNAMES = ALLOWED_ORIGINS.map(o => { try { return new URL(o).hostname } catch { return '' } }).filter(Boolean)
 
 function getAllowedOrigin(request: NextRequest): string {
     const origin = request.headers.get('origin') || ''
@@ -30,7 +31,7 @@ function getAllowedOrigin(request: NextRequest): string {
     } catch {
         // Invalid URL — fall through to default
     }
-    return 'https://centralreform.live'
+    return ALLOWED_ORIGINS[0]
 }
 
 /**
@@ -54,8 +55,7 @@ function isTrustedBrowserRequest(req: NextRequest): boolean {
     if (referer) {
         try {
             const url = new URL(referer)
-            return url.hostname === 'centralreform.live' ||
-                url.hostname === 'www.centralreform.live' ||
+            return ALLOWED_HOSTNAMES.includes(url.hostname) ||
                 url.hostname === 'localhost' ||
                 url.hostname.endsWith('.vercel.app')
         } catch { /* invalid referer */ }

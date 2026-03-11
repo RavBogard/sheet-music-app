@@ -132,7 +132,7 @@ function parseEventDate(eventDate: unknown): Date | null {
             return new Date(eventDate.seconds * 1000)
         }
         if (eventDate instanceof Date) return eventDate
-    } catch { }
+    } catch (e) { logger.warn('[Calendar] Failed to parse eventDate:', e) }
     return null
 }
 
