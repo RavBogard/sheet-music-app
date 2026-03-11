@@ -83,8 +83,8 @@ describe("SetlistView", () => {
         expect(screen.getByText("Amazing Grace")).toBeDefined()
         // Key badge
         expect(screen.getByText("C")).toBeDefined()
-        // BPM
-        expect(screen.getByText("72")).toBeDefined()
+        // BPM (displayed as "72 BPM")
+        expect(screen.getByText("72 BPM")).toBeDefined()
         // Lead musician
         expect(screen.getByText("Sarah")).toBeDefined()
     })
@@ -107,7 +107,7 @@ describe("SetlistView", () => {
         // The 3rd track (index 2) is the song "Amazing Grace"
         const songRow = screen.getByText("Amazing Grace").closest("[role='button']")
         expect(songRow).toBeDefined()
-        expect(songRow?.className).toContain("bg-brand/15")
+        expect(songRow?.className).toContain("bg-brand/20")
     })
 
     it("shows transposed key when defaultTransposition is non-zero", () => {

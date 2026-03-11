@@ -43,8 +43,8 @@ export function SetlistRow({
     })()
 
     const hasFile = isSong && !!track.fileId
-    // Interactive only for songs with charts, or leaders (who can set position on any row)
     const isInteractive = hasFile || isLeader
+    const hasSecondLine = !!(track.leadMusician || track.performer)
 
     const handleClick = () => {
         if (isLeader) {
@@ -77,53 +77,70 @@ export function SetlistRow({
         )
     }
 
-    // Non-song rows and songs without files: non-interactive for non-leaders
-    if (!isInteractive) {
-        return (
-            <div
-                onClick={track.notes ? () => setShowNotes(prev => !prev) : undefined}
-            >
-                <div
-                    className={cn(
-                        "flex items-center gap-3 px-4 py-3 transition-colors cursor-default",
-                        isCurrentPosition && "bg-brand/15 border-l-[3px] border-brand",
-                        !isSong && "opacity-60"
-                    )}
+    // Song content — shared between interactive and non-interactive rows
+    const songContent = isSong ? (
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* Key badge — LEFT of title, prominent and fixed-width for alignment */}
+            {displayKey ? (
+                <span
+                    data-testid="key-badge"
+                    className="font-mono text-base font-bold px-2.5 py-1 bg-brand/15 text-brand rounded-lg shrink-0 min-w-[3rem] text-center leading-tight mt-0.5"
                 >
-                    {isSong ? (
-                        <>
-                            <span className="font-semibold text-lg lg:text-xl text-foreground truncate flex-1 min-w-0">
-                                {track.title}
-                            </span>
-                            {displayKey && (
-                                <span className="font-mono text-sm font-bold px-2 py-1 bg-brand/10 text-brand rounded shrink-0">
-                                    {displayKey}
-                                </span>
-                            )}
-                            {track.bpm && (
-                                <span className="text-sm text-muted-foreground tabular-nums shrink-0">
-                                    {track.bpm}
-                                </span>
-                            )}
-                            {(track.leadMusician || track.performer) && (
-                                <span className="text-sm text-blue-400 truncate max-w-[80px] shrink-0">
-                                    {track.leadMusician || track.performer}
-                                </span>
-                            )}
-                        </>
-                    ) : (
-                        <span className="text-sm text-muted-foreground">{track.title}</span>
+                    {displayKey}
+                </span>
+            ) : (
+                /* Spacer when no key — keeps titles aligned */
+                <span className="shrink-0 min-w-[3rem]" aria-hidden="true" />
+            )}
+
+            {/* Title + metadata */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                    <span className="font-semibold text-lg text-foreground truncate flex-1 min-w-0">
+                        {track.title}
+                    </span>
+                    {track.bpm && (
+                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                            {track.bpm} BPM
+                        </span>
                     )}
                 </div>
-                {showNotes && track.notes && (
-                    <div className="px-4 pb-2 pt-0.5">
-                        <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
-                    </div>
+                {hasSecondLine && (
+                    <p className="text-sm text-blue-400 truncate mt-0.5">
+                        {track.leadMusician || track.performer}
+                    </p>
                 )}
+            </div>
+        </div>
+    ) : (
+        <span className="text-sm text-muted-foreground ml-[3.75rem]">{track.title}</span>
+    )
+
+    const rowClasses = cn(
+        "flex items-center px-4 py-3 transition-colors",
+        isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
+        !isSong && "opacity-60"
+    )
+
+    const notesBlock = showNotes && track.notes && (
+        <div className="px-4 pb-2 pt-0.5">
+            <p className="text-xs text-muted-foreground/80 ml-[3.75rem]">{track.notes}</p>
+        </div>
+    )
+
+    // Non-interactive rows
+    if (!isInteractive) {
+        return (
+            <div onClick={track.notes ? () => setShowNotes(prev => !prev) : undefined}>
+                <div className={cn(rowClasses, "cursor-default")}>
+                    {songContent}
+                </div>
+                {notesBlock}
             </div>
         )
     }
 
+    // Interactive rows
     return (
         <div>
             <div
@@ -137,42 +154,15 @@ export function SetlistRow({
                     }
                 }}
                 className={cn(
-                    "flex items-center gap-3 px-4 py-3 transition-colors",
-                    isCurrentPosition && "bg-brand/15 border-l-[3px] border-brand",
-                    hasFile ? "cursor-pointer hover:bg-muted/50" : "cursor-default",
-                    !isSong && "opacity-60"
+                    rowClasses,
+                    hasFile
+                        ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70"
+                        : "cursor-default"
                 )}
             >
-                {isSong ? (
-                    <>
-                        <span className="font-semibold text-lg lg:text-xl text-foreground truncate flex-1 min-w-0">
-                            {track.title}
-                        </span>
-                        {displayKey && (
-                            <span className="font-mono text-sm font-bold px-2 py-1 bg-brand/10 text-brand rounded shrink-0">
-                                {displayKey}
-                            </span>
-                        )}
-                        {track.bpm && (
-                            <span className="text-sm text-muted-foreground tabular-nums shrink-0">
-                                {track.bpm}
-                            </span>
-                        )}
-                        {(track.leadMusician || track.performer) && (
-                            <span className="text-sm text-blue-400 truncate max-w-[80px] shrink-0">
-                                {track.leadMusician || track.performer}
-                            </span>
-                        )}
-                    </>
-                ) : (
-                    <span className="text-sm text-muted-foreground">{track.title}</span>
-                )}
+                {songContent}
             </div>
-            {showNotes && track.notes && (
-                <div className="px-4 pb-2 pt-0.5">
-                    <p className="text-xs text-muted-foreground/80 pl-0.5">{track.notes}</p>
-                </div>
-            )}
+            {notesBlock}
         </div>
     )
 }

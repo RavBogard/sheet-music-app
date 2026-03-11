@@ -86,26 +86,26 @@ export default function SetlistPerformPage() {
 
     return (
         <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 glass border-b-0 z-20 relative">
+            {/* Header — compact for maximum setlist visibility */}
+            <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
                 <Link
                     href={backHref}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+                    className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
                 >
-                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+                    <ArrowLeft className="h-4.5 w-4.5 text-muted-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-lg font-bold truncate">{name}</h1>
-                    <p className="text-xs text-muted-foreground">
+                    <h1 className="text-base font-bold truncate">{name}</h1>
+                    <p className="text-[11px] text-muted-foreground">
                         {songCount} song{songCount !== 1 ? "s" : ""}
                         {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
                 {!isPublicView && (
-                    <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 shrink-0">
+                    <Button asChild size="sm" variant="ghost" className="h-7 gap-1 shrink-0 text-muted-foreground">
                         <Link href={`/setlists/${setlistId}`}>
-                            <Pencil className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Edit</span>
+                            <Pencil className="h-3 w-3" />
+                            <span className="hidden sm:inline text-xs">Edit</span>
                         </Link>
                     </Button>
                 )}

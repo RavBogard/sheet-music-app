@@ -3,13 +3,13 @@
 ## Current Milestone
 **v1.6 Stability & Regression Audit**
 Status: In Progress
-Phases: 0 of 4 complete
+Phases: 3 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Auth & CSP Hardening | 1 | Planning | - |
-| 2 | Firebase-Only File Serving | TBD | Not started | - |
-| 3 | Performance View Overhaul | TBD | Not started | - |
+| 1 | Auth & CSP Hardening | 1 | Complete | 2026-03-11 |
+| 2 | Firebase-Only File Serving | 1 | Complete | 2026-03-11 |
+| 3 | Performance View Overhaul | 1 | Complete | 2026-03-11 |
 | 4 | Regression Sweep & Deferred Fixes | TBD | Not started | - |
 
 ### Phase 1: Auth & CSP Hardening
@@ -39,7 +39,7 @@ Tasks:
 - Verify no other unwanted visual regressions from v1.5
 - This is the essential "live visual view" for the band
 Skill: Use /ui-ux-pro-max for all design decisions
-Plans: TBD (defined during /paul:plan)
+Plans: 1 (03-01-PLAN.md)
 
 ### Phase 4: Regression Sweep & Deferred Fixes
 

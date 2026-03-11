@@ -10,21 +10,23 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.6 Stability & Regression Audit
-Phase: 1 of 4 (Auth & CSP Hardening) — Planning
-Plan: 01-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-03-10 — Created .paul/phases/01-auth-csp-hardening/01-01-PLAN.md
+Phase: 3 of 4 (Performance View Overhaul) — COMPLETE
+Plan: 03-01 (Performance View Overhaul)
+Status: Phases 1-3 COMPLETE, ready for Phase 4 planning
+Last activity: 2026-03-11 — Phase 3 unified (03-01-SUMMARY.md written)
 
 Progress:
-- v1.6 Stability & Regression Audit: [░░░░░░░░░░] 0% (4 phases)
-- Phase 1: [░░░░░░░░░░] 0%
+- v1.6 Stability & Regression Audit: [███████░░░] 75% (4 phases, 3 complete)
+- Phase 1: COMPLETE
+- Phase 2: COMPLETE
+- Phase 3: COMPLETE
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ○        ○        ○     [Phase 4 — ready for PLAN]
 ```
 
 ## Accumulated Context
@@ -38,35 +40,37 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - COOP console warnings are cosmetic (Firebase SDK known issue) — no fix needed
 - Setlist view redesign added as Phase 3 — keys next to tracks, glanceable live view
 - Phases 2, 3 (UI work) will use /ui-ux-pro-max skill
+- Phase 3: Removed tablet sidebar toolbar entirely — bottom bar on all viewports
+- Phase 3: SetlistRow key badge moved left of title for glanceability
+- Phase 3: Two-line song rows (title+BPM / lead musician)
 
 ### Deferred Issues (carried from v1.5)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.7+.
 
 ### Known Issues
 - route-auth.test.ts: POST /api/setlist/publish expects 403 but gets 400 (pre-existing)
-- Manifest icon: /icon dynamic route may not serve in all PWA install contexts
-- PDF health scanner: all scans failing with 429 Too Many Requests from /api/drive/file (3rd attempt at fix)
+- Manifest icon: now uses static PNGs (icon-192.png, icon-512.png) — dynamic /icon route kept for favicon/OG
 
 ### Blockers/Concerns
-- PDF health scan 429s — rate limiting issue, needs investigation
+- None active
 
 ### Git State
-Last commit: 89572e5
+Last commit: cdb5df9 (not yet committed — Phase 3 changes unstaged)
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
-Last session: 2026-03-10
-Stopped at: Executing Phase 1 APPLY — Task 1 (CSP audit) in progress
-Next action: /paul:apply .paul/phases/01-auth-csp-hardening/01-01-PLAN.md (resume mid-execution)
-Resume file: .paul/phases/01-auth-csp-hardening/01-01-PLAN.md
+Last session: 2026-03-11
+Stopped at: Phase 3 complete, changes not yet committed
+Next action: Commit Phase 3, then /paul:plan for Phase 4 (Regression Sweep & Deferred Fixes)
+Resume file: .paul/ROADMAP.md
 Resume context:
-- Plan approved, APPLY started
-- Task 1 (CSP audit): audit complete, CSP is actually correct for client-side — server-side APIs (Twilio, Resend, Inngest, hebcal) don't need CSP entries. Only cleanup: add accounts.google.com to connect-src, add comments documenting each domain.
-- Task 2 (static PWA icons): not started
-- Task 3 (checkpoint: human-verify): not started
-- Milestone finalized at 4 phases (was 5, combined UI revert + setlist redesign into Phase 3)
+- Phase 1 complete: CSP audit + static PWA icons (commit d5245d2)
+- Phase 2 complete: Storage-only file serving, removed Drive fallback (commit cdb5df9)
+- Phase 3 complete: Sidebar removed, SetlistRow redesigned, 12 new tests
+- Build passes, 660 tests total, 1 pre-existing failure (route-auth)
+- Changes NOT yet committed — commit + deploy, then start Phase 4
 
 ---
 *STATE.md — Updated after every significant action*

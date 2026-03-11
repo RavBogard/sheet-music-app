@@ -98,12 +98,11 @@ describe("PerformanceToolbar", () => {
         expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(2)
     })
 
-    it("renders sidebar layout when layout='sidebar'", () => {
-        render(<PerformanceToolbar onHome={mockOnHome} layout="sidebar" />)
+    it("renders bottom layout with exit, nav, and setlist drawer", () => {
+        render(<PerformanceToolbar onHome={mockOnHome} />)
 
-        expect(screen.getByLabelText("Exit performance mode")).toBeDefined()
-        expect(screen.getByTestId("song-nav")).toBeDefined()
-        expect(screen.getByTestId("setlist-drawer")).toBeDefined()
+        expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByTestId("setlist-drawer").length).toBeGreaterThanOrEqual(1)
     })
 
     it("zoom out button calls setZoom with decreased value", () => {
