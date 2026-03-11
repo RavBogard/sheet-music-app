@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { db } from "@/lib/firebase"
-import { doc, onSnapshot } from "firebase/firestore"
 import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
 import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
@@ -56,7 +54,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const [eventName, setEventName] = useState("")
     const [generating, setGenerating] = useState(false)
     const [progressMsg, setProgressMsg] = useState("")
-    const [progressPct, setProgressPct] = useState(0)
     const [error, setError] = useState<string | null>(null)
 
     // Musicians
@@ -78,7 +75,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     const [selectedUids, setSelectedUids] = useState<string[]>(() => {
         if (saved?.selectedUids?.length) return saved.selectedUids
-        // Pre-check assigned musicians by default
         if (assignedMusicians?.length) return assignedMusicians.filter(m => m.uid).map(m => m.uid!)
         return []
     })
@@ -150,10 +146,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [myProfile, user?.uid])
 
-    // ── PDF Generation ──
+    // ── PDF Generation (direct blob fetch — no Inngest, no Firestore polling) ──
     const generateForMusician = async (
-        name: string, transposition: number, preferFlats: boolean, capoFret: number,
-        onProgress?: (msg: string, pct: number) => void
+        name: string, transposition: number, preferFlats: boolean, capoFret: number
     ): Promise<Blob> => {
         const response = await apiFetch('/api/setlist/print', {
             method: 'POST',
@@ -180,37 +175,18 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         })
 
         if (!response.ok) {
-            const err = await response.json()
-            throw new Error(err.error || 'Failed to start PDF generation')
+            let errorMsg = 'Failed to generate PDF'
+            try {
+                const err = await response.json()
+                errorMsg = err.error || errorMsg
+            } catch {
+                // Response might be non-JSON for 500s
+                errorMsg = `Server error (${response.status})`
+            }
+            throw new Error(errorMsg)
         }
 
-        const { jobId } = await response.json()
-
-        return new Promise((resolve, reject) => {
-            const unsub = onSnapshot(doc(db, "print_jobs", jobId), async (snap) => {
-                const data = snap.data()
-                if (!data) return
-
-                if (data.status === 'error') {
-                    unsub()
-                    reject(new Error(data.message || 'Generation failed'))
-                } else if (data.status === 'complete') {
-                    unsub()
-                    try {
-                        onProgress?.('Downloading PDF...', 100)
-                        const pdfRes = await fetch(data.downloadUrl)
-                        resolve(await pdfRes.blob())
-                    } catch (e) {
-                        reject(new Error('Failed to download generated PDF'))
-                    }
-                } else {
-                    onProgress?.(data.message || 'Processing...', data.progress || 0)
-                }
-            }, (err) => {
-                unsub()
-                reject(err)
-            })
-        })
+        return response.blob()
     }
 
     const handleEmailPackets = async () => {
@@ -221,7 +197,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         setSendingEmails(true)
         try {
             const emailBody: Record<string, unknown> = { setlistId }
-            // Send to selected recipients when in select-musicians mode
             if (printMode === "select-musicians" && selectedUids.length > 0) {
                 emailBody.recipientUids = selectedUids
             }
@@ -248,11 +223,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const handleGenerate = async (mode: 'download' | 'print') => {
         setGenerating(true)
         setError(null)
+        setProgressMsg("Generating gig packet...")
 
         try {
-            setProgressMsg("Starting background jobs...")
-            setProgressPct(0)
-
             if (printMode === "select-musicians" && selectedUids.length > 1) {
                 const JSZip = (await import("jszip")).default
                 const zip = new JSZip()
@@ -260,7 +233,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 let completed = 0
                 const total = selectedUids.length
 
-                // Run jobs concurrently
                 const promises = selectedUids.map(async (uid) => {
                     const m = musicians.find(x => x.uid === uid)
                     if (!m) return
@@ -270,16 +242,12 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                     const blob = await generateForMusician(
                         name, m.profile.defaultTransposition || 0,
-                        m.profile.preferFlats || false, m.profile.preferredCapoFret || 0,
-                        () => {
-                            // Only update UI with overall progress in batch mode
-                            setProgressMsg(`Processing packets... (${completed}/${total})`)
-                        }
+                        m.profile.preferFlats || false, m.profile.preferredCapoFret || 0
                     )
 
                     zip.file(`${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`, blob)
                     completed++
-                    setProgressPct(Math.round((completed / total) * 100))
+                    setProgressMsg(`Processing packets... (${completed}/${total})`)
                 })
 
                 await Promise.all(promises)
@@ -318,13 +286,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 }
             }
 
-            const blob = await generateForMusician(name, transposition, preferFlats, capoFret, (msg, pct) => {
-                setProgressMsg(msg)
-                setProgressPct(pct)
-            })
+            const blob = await generateForMusician(name, transposition, preferFlats, capoFret)
 
-            setProgressMsg("Ready!")
-            setProgressPct(100)
             const url = URL.createObjectURL(blob)
 
             if (mode === 'download') {
@@ -347,7 +310,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     try {
                         iframe.contentWindow?.print()
                     } catch {
-                        // Fallback: download if print fails (cross-origin restrictions)
                         const a = document.createElement('a')
                         a.href = url
                         a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
@@ -371,8 +333,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         (printMode !== "select-musicians" || selectedUids.length > 0)
 
     return (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                     <h2 className="text-xl font-bold">Print Gig Packet</h2>
@@ -384,18 +346,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 p-6 space-y-5">
                     {generating ? (
-                        <div className="flex flex-col items-center justify-center py-12 space-y-6">
-                            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                            <div className="text-center space-y-2 w-full max-w-xs">
-                                <h3 className="font-semibold text-lg">Generating PDF...</h3>
-                                <p className="text-sm text-muted-foreground">{progressMsg || 'Processing...'}</p>
-                                <div className="h-2 w-full bg-muted rounded-full overflow-hidden mt-4">
-                                    <div
-                                        className="h-full bg-primary transition-all duration-300 ease-out"
-                                        style={{ width: `${progressPct}%` }}
-                                    />
-                                </div>
-                            </div>
+                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                            <p className="text-sm text-muted-foreground">{progressMsg || 'Generating...'}</p>
                         </div>
                     ) : (
                         <>
