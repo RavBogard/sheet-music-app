@@ -108,9 +108,7 @@ export async function GET(
             status: 200,
             headers: {
                 'Access-Control-Allow-Origin': getAllowedOrigin(request),
-                'Cache-Control': result.source === 'firebase-storage'
-                    ? 'public, max-age=86400, s-maxage=604800'
-                    : 'public, max-age=3600, s-maxage=86400',
+                'Cache-Control': 'public, max-age=86400, s-maxage=604800',
                 'Content-Type': result.contentType,
                 'X-Served-From': result.source,
             }

@@ -6,7 +6,7 @@ import { uploadToStorage } from "@/lib/firebase-storage"
 import { getStorage } from 'firebase-admin/storage'
 import { logger } from "@/lib/logger"
 
-const MAX_COPIES_PER_RUN = 20
+const COPY_DELAY_MS = 200 // Gentle pacing between Storage uploads
 
 export interface SyncStats {
     totalScanned: number
@@ -133,7 +133,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             if (seen.has(f.id)) return false
             seen.add(f.id)
             return true
-        }).slice(0, MAX_COPIES_PER_RUN)
+        })
 
         // 4. Pre-detect which files need chord cache purging (modified since last sync)
         const filesToPurge: string[] = []
@@ -199,7 +199,12 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         }
 
         // Phase B: Copy files to Storage (after metadata batch write)
-        for (const file of copyList) {
+        if (copyList.length > 0) {
+            logger.info(`[Sync] Copying ${copyList.length} files to Storage...`)
+        }
+        for (let ci = 0; ci < copyList.length; ci++) {
+            const file = copyList[ci]
+            if (ci > 0) await new Promise(r => setTimeout(r, COPY_DELAY_MS))
             try {
                 const fileData = await drive.getFile(file.id)
                 const buffer = Buffer.from(fileData as ArrayBuffer)

@@ -51,7 +51,13 @@ export function LibrarySyncCard() {
                     </span>
                     <span className="text-muted-foreground">
                         Scanned: {lastStats.totalScanned} · New: {lastStats.added} · Updated: {lastStats.updated}
+                        {lastStats.copiedToStorage > 0 && ` · Copied to Storage: ${lastStats.copiedToStorage}`}
                     </span>
+                    {lastStats.copyErrors > 0 && (
+                        <span className="text-destructive">
+                            ⚠ {lastStats.copyErrors} file{lastStats.copyErrors > 1 ? 's' : ''} failed to copy — unavailable until next sync
+                        </span>
+                    )}
                     {(lastStats.addedFiles?.length || lastStats.deletedFiles?.length) ? (
                         <details className="mt-1">
                             <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-[10px]">

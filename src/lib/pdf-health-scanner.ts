@@ -34,6 +34,10 @@ export async function scanLibraryHealth(
         const file = pdfFiles[i]
         onProgress?.({ current: i + 1, total: pdfFiles.length, fileName: file.name })
 
+        // Pace requests to stay within app-level rate limit (60 req/min).
+        // 1100ms delay = ~54 req/min, safely under the limit.
+        if (i > 0) await new Promise(r => setTimeout(r, 1100))
+
         const result = await scanSingleFile(file)
         results.push(result)
     }

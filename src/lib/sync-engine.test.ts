@@ -190,8 +190,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         expect(stats.retriedCopies).toBeGreaterThanOrEqual(1)
     })
 
-    it('copies at most MAX_COPIES_PER_RUN (20) files per invocation', async () => {
-        const files = Array.from({ length: 30 }, (_, i) =>
+    it('copies all new files to Storage without a cap', async () => {
+        const files = Array.from({ length: 5 }, (_, i) =>
             makeDriveFile({ id: `file-${i}`, name: `Song ${i}.pdf` })
         )
         mockListAllFiles.mockResolvedValue(files)
@@ -199,8 +199,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         const { syncLibraryIndex } = await import('./sync-engine')
         const stats = await syncLibraryIndex()
 
-        expect(mockUploadToStorage).toHaveBeenCalledTimes(20)
-        expect(stats.copiedToStorage + stats.copyErrors).toBeLessThanOrEqual(20)
+        expect(mockUploadToStorage).toHaveBeenCalledTimes(5)
+        expect(stats.copiedToStorage).toBe(5)
     })
 
     it('marks storageFailed=true on individual copy failure without aborting sync', async () => {
