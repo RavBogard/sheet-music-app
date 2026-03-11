@@ -61,7 +61,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                     <h1 className="text-title">My Setlists</h1>
                 </div>
                 {user && isMember ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Button
                             variant="outline"
                             className="gap-2 hidden md:flex hover:bg-muted"
@@ -143,7 +143,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
             />
 
             {view === 'calendar' ? (
-                <div className="flex-1 p-6 overflow-hidden">
+                <div className="flex-1 p-3 md:p-6 overflow-hidden">
                     <UnifiedCalendar
                         mode={isBandLeader ? 'planning' : 'viewer'}
                         setlists={displayedSetlists}
@@ -152,11 +152,11 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                     />
                 </div>
             ) : view === 'matrix' ? (
-                <div className="flex-1 p-6 overflow-hidden">
+                <div className="flex-1 p-3 md:p-6 overflow-hidden">
                     <SetlistMatrixView />
                 </div>
             ) : (
-                <div className="p-6">
+                <div className="p-3 md:p-6">
                     {!loading && error && (
                         <div className="max-w-md mx-auto mt-20">
                             <ErrorState title="Unable to Load Setlists" description={error} onRetry={() => window.location.reload()} />

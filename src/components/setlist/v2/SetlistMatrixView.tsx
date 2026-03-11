@@ -80,8 +80,8 @@ export function SetlistMatrixView() {
     }
 
     return (
-        <div className="flex flex-col w-full h-full bg-background overflow-hidden p-6 rounded-xl border border-border">
-            <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col w-full h-full bg-background overflow-hidden p-3 md:p-6 rounded-xl border border-border">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
                 <div>
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-blue-500" /> Liturgical Matrix
@@ -96,7 +96,7 @@ export function SetlistMatrixView() {
                 <div className="flex flex-col min-w-max">
                     {/* Header Row */}
                     <div className="flex sticky top-0 z-20 bg-background/95 backdrop-blur border-b shadow-sm">
-                        <div className="w-64 shrink-0 flex items-center px-4 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground sticky left-0 z-30 bg-background/95 backdrop-blur border-r">
+                        <div className="w-40 md:w-64 shrink-0 flex items-center px-3 md:px-4 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground sticky left-0 z-30 bg-background/95 backdrop-blur border-r">
                             Service Elements
                         </div>
                         {data.columns.map(col => {
@@ -123,7 +123,7 @@ export function SetlistMatrixView() {
                         // Let's calculate repetition threshold (e.g., if >3 times in last 4 weeks)
                         return (
                             <div key={row.id} className="flex border-b last:border-b-0 group">
-                                <div className="w-64 shrink-0 flex items-center px-4 py-4 font-medium sticky left-0 z-10 bg-background/95 backdrop-blur border-r group-hover:bg-muted/20 transition-colors">
+                                <div className="w-40 md:w-64 shrink-0 flex items-center px-3 md:px-4 py-4 font-medium sticky left-0 z-10 bg-background/95 backdrop-blur border-r group-hover:bg-muted/20 transition-colors">
                                     <span className="truncate">{row.label}</span>
                                 </div>
                                 {data.columns.map(col => {

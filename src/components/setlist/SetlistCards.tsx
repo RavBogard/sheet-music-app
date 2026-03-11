@@ -46,7 +46,7 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
             variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
@@ -74,8 +74,8 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                             <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
                         </div>
 
-                        {/* Overflow Menu */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        {/* Overflow Menu — always visible on touch, hover-reveal on desktop */}
+                        <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <div className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer -mr-2 text-muted-foreground hover:text-foreground">
@@ -171,7 +171,7 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
             variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
@@ -186,7 +186,7 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
                         <Lock className="h-4 w-4 text-muted-foreground/60" />
                     )}
                     <div className="flex flex-col">
-                        <h3 className="text-xl font-semibold truncate max-w-[200px] text-foreground">{setlist.name}</h3>
+                        <h3 className="text-xl font-semibold truncate text-foreground">{setlist.name}</h3>
                         {setlist.eventDate && (
                             <span className="text-xs text-muted-foreground">
                                 {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
@@ -196,7 +196,7 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
                 </div>
 
                 {/* Action Menu (MoreVertical) */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     {(canDuplicate || canDelete) && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -271,7 +271,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
         <Button
             variant="ghost"
             onClick={() => onCreate(date)}
-            className="h-auto border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-6 text-left whitespace-normal flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100 active:scale-100"
+            className="h-auto border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-4 md:p-6 text-left whitespace-normal flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100 active:scale-100"
         >
             <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/15 group-hover:text-foreground transition-colors">
                 <Plus className="h-6 w-6" />

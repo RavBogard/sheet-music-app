@@ -26,8 +26,8 @@ export function SetlistToolbar({
     const [searchOpen, setSearchOpen] = useState(!!searchQuery)
 
     return (
-        <div className="px-6 pt-6 shrink-0 space-y-3">
-            <div className="flex items-center justify-between">
+        <div className="px-3 pt-4 md:px-6 md:pt-6 shrink-0 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex bg-card p-1 rounded-xl w-fit">
                     <Button
                         variant={activeTab === 'public' ? 'secondary' : 'ghost'}
