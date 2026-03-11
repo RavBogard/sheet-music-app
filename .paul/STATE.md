@@ -5,26 +5,26 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 3 ready to plan
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 3 planned
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 3 of 8 (Test Infrastructure & Flaky Fix) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-11 — Phase 2 complete, transitioned to Phase 3
+Phase: 3 of 8 (Test Infrastructure & Flaky Fix) — Planning
+Plan: 03-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-03-11 — Created phases/03-test-infrastructure-flaky-fix/03-01-PLAN.md
 
 Progress:
 - Milestone: [██░░░░░░░░] 25%
-- Phase 2: [██████████] 100% (complete)
+- Phase 3: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete - ready for next PLAN]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -33,7 +33,6 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - CRIT-003 (bridge credentials) accepted as low risk — single venue, single admin, HTTPS delivery, revisit if multi-tenant
 - withAuth migration already complete (only 2 intentional holdouts)
 - clearSaveTimer already wired at page level — no additional wiring needed (resolved)
-- publish/route.ts CORS fallback left as-is — low severity, env var set in production
 - ALLOWED_HOSTNAMES derived from ALLOWED_ORIGINS for hostname validation
 
 ### Deferred Issues
@@ -44,19 +43,20 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Session cookie never refreshed after initial login (low priority, 14-day expiry)
 
 ### Git State
-Last commit: 72a7aca
+Last commit: 3d1b993
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: /paul:plan for Phase 3
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 03-01 created
+Next action: Review and approve plan, then run /paul:apply phases/03-test-infrastructure-flaky-fix/03-01-PLAN.md
+Resume file: .paul/phases/03-test-infrastructure-flaky-fix/03-01-PLAN.md
 Resume context:
-- Phase 1: type safety fixes complete
-- Phase 2: silent failure & error handling complete
-- Phase 3 focus: flaky route-auth test fix, shared test helpers, mock factories, API route test patterns
+- 3 tasks: factories, shared mocks/helpers, refactor route-auth test
+- Flaky cause: 367ms cold dynamic import in first publish test
+- Fix: beforeAll import pattern
+- New files: factories.ts, mock-firebase-admin.ts, api-test-helpers.ts
 
 ---
 *STATE.md — Updated after every significant action*
