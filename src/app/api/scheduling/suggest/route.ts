@@ -51,7 +51,8 @@ export const GET = createApiHandler(
         const assignedUids = new Set(assignmentsSnap.docs.map(d => d.data().musicianUid))
 
         // 3. Filter: available musicians not already assigned
-        let suggestions = musicians
+        type MusicianSuggestion = typeof musicians[number] & { instrumentMatch?: boolean }
+        let suggestions: MusicianSuggestion[] = musicians
             .filter(m => !assignedUids.has(m.uid))
 
         // 4. If instrument filter provided, try to match
@@ -76,9 +77,9 @@ export const GET = createApiHandler(
             )
 
             suggestions = [
-                ...instrumentMatches.map(m => ({ ...m, instrumentMatch: true })),
-                ...nonMatches.map(m => ({ ...m, instrumentMatch: false })),
-            ] as any
+                ...instrumentMatches.map(m => ({ ...m, instrumentMatch: true as const })),
+                ...nonMatches.map(m => ({ ...m, instrumentMatch: false as const })),
+            ]
         }
 
         // 5. Sort by scheduling tier (core > regular > guest)
@@ -97,7 +98,7 @@ export const GET = createApiHandler(
                 instrument: m.instrumentKey,
                 schedulingTier: m.schedulingTier,
                 phone: m.phone,
-                instrumentMatch: (m as any).instrumentMatch ?? null,
+                instrumentMatch: m.instrumentMatch ?? null,
             })),
         })
     },

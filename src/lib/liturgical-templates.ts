@@ -16,6 +16,9 @@ import { DriveFile, SetlistTrack, TrackType } from '@/types/models'
 import { ServiceContext } from './liturgical-calendar'
 import Fuse from 'fuse.js'
 
+/** Wider context for template engine — accepts any template key as type, not just ServiceType */
+export type TemplateContext = Omit<ServiceContext, 'type'> & { type: string }
+
 // ── Slot Definition ──
 
 export interface TemplateSlot {
@@ -411,14 +414,13 @@ function findBestMatch(
 export function buildSetlistFromTemplate(
     template: TemplateSlot[],
     library: DriveFile[],
-    context: ServiceContext
+    context: TemplateContext
 ): SetlistTrack[] {
     const fuse = new Fuse(library, FUSE_OPTIONS)
     const usedFileIds = new Set<string>()
     const tracks: SetlistTrack[] = []
 
-    // Extract rabbi from context (may be on extended context)
-    const rabbi = (context as any).rabbi as string | undefined
+    const rabbi = context.rabbi
 
     for (const slot of template) {
         // Rabbi-variant filtering: skip slots not meant for this rabbi
@@ -524,7 +526,7 @@ export function convertSetlistToTemplate(tracks: SetlistTrack[]): TemplateSlot[]
  * Generate a setlist name from the service context.
  * e.g., "Shabbat Morning — Parashat Ki Tisa — February 21"
  */
-export function generateSetlistName(context: ServiceContext): string {
+export function generateSetlistName(context: TemplateContext): string {
     const dateStr = context.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
     const typeLabels: Record<string, string> = {
@@ -552,7 +554,7 @@ export function generateSetlistName(context: ServiceContext): string {
     const label = typeLabels[context.type] || 'Service'
     const parts = [label]
 
-    if (context.parasha && (context.type === 'friday_night' || context.type === 'shabbat_morning' || (context.type as string) === 'shir_shabbat')) {
+    if (context.parasha && (context.type === 'friday_night' || context.type === 'shabbat_morning' || context.type === 'shir_shabbat')) {
         parts.push(`Parashat ${context.parasha}`)
     }
 

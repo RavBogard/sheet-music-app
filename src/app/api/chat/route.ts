@@ -10,9 +10,9 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
 
-import { getFullServiceContext, getNextFriday, getNextSaturday, ServiceContext } from "@/lib/liturgical-calendar"
+import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
 import { getUsageSummaries } from "@/lib/song-usage"
-import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS, getAllTemplateKeys } from "@/lib/liturgical-templates"
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS, getAllTemplateKeys, TemplateContext } from "@/lib/liturgical-templates"
 import { parseTemplateRequest } from "@/lib/template-parser"
 
 const chatBodySchema = z.object({
@@ -150,13 +150,13 @@ export async function POST(request: NextRequest) {
         if (template) {
             // Build service context for the template engine
             const targetDate = templateRequest.date || new Date()
-            let serviceContext: ServiceContext & { rabbi?: string }
+            let serviceContext: TemplateContext
             try {
                 const fullCtx = await getFullServiceContext(targetDate)
-                serviceContext = { ...fullCtx, type: templateRequest.templateKey as any, rabbi: templateRequest.rabbi }
+                serviceContext = { ...fullCtx, type: templateRequest.templateKey, rabbi: templateRequest.rabbi }
             } catch {
                 serviceContext = {
-                    type: templateRequest.templateKey as any,
+                    type: templateRequest.templateKey,
                     date: targetDate,
                     hebrewDate: { display: '', year: '', month: '', day: 0 },
                     parasha: null,

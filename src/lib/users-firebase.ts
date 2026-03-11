@@ -44,13 +44,13 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
             uid: user.uid,
             email: user.email || "",
             displayName: user.displayName || "Unknown",
-            photoURL: user.photoURL || undefined,
+            photoURL: user.photoURL ?? undefined,
             role: 'pending',
             createdAt: Timestamp.now(),
             lastLoginAt: Timestamp.now()
         }
 
-        await setDoc(ref, newProfile as any)
+        await setDoc(doc(db, "users", user.uid), { ...newProfile })
         return newProfile
     }
 }

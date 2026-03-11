@@ -44,7 +44,15 @@ export async function GET(
             .where('status', 'in', ['confirmed', 'pending'])
             .get()
 
-        const assignments = assignmentsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        interface CalendarAssignment {
+            id: string
+            eventDate: unknown
+            instrument: string
+            status: string
+            setlistName: string
+            setlistId: string
+        }
+        const assignments: CalendarAssignment[] = assignmentsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as CalendarAssignment)
 
         // Generate iCal
         const now = new Date()
@@ -60,7 +68,7 @@ export async function GET(
             'X-WR-TIMEZONE:America/Chicago',
         ]
 
-        for (const a of assignments as any[]) {
+        for (const a of assignments) {
             const eventDate = parseEventDate(a.eventDate)
             if (!eventDate) continue
 
@@ -112,12 +120,16 @@ export async function GET(
     }
 }
 
+function hasSeconds(v: unknown): v is { seconds: number } {
+    return typeof v === 'object' && v !== null && 'seconds' in v && typeof (v as Record<string, unknown>).seconds === 'number'
+}
+
 function parseEventDate(eventDate: unknown): Date | null {
     if (!eventDate) return null
     try {
         if (typeof eventDate === 'string') return new Date(eventDate)
-        if (eventDate && typeof eventDate === 'object' && 'seconds' in (eventDate as any)) {
-            return new Date((eventDate as any).seconds * 1000)
+        if (hasSeconds(eventDate)) {
+            return new Date(eventDate.seconds * 1000)
         }
         if (eventDate instanceof Date) return eventDate
     } catch { }

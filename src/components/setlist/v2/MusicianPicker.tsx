@@ -68,7 +68,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
 
     // Subscribe to email delivery status after publish
     const emailEventsRef = useMemo(() => setlistId && isPublished ? collection(db, "setlists", setlistId, "emailEvents") : null, [setlistId, isPublished])
-    const { data: emailEventsData } = useSafeFirestoreSync(emailEventsRef as any)
+    const { data: emailEventsData } = useSafeFirestoreSync(emailEventsRef)
 
     useEffect(() => {
         if (!emailEventsData) {

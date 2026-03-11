@@ -39,8 +39,8 @@ export const POST = createApiHandler(
         try {
             const setlistDoc = await db.collection('setlists').doc(setlistId).get()
             if (setlistDoc.exists) {
-                setlistTracks = ((setlistDoc.data()?.tracks ?? []) as any[]).map(
-                    (t: any) => ({ fileId: t.fileId, title: t.title || '' })
+                setlistTracks = (setlistDoc.data()?.tracks ?? []).map(
+                    (t: { fileId?: string; title?: string }) => ({ fileId: t.fileId, title: t.title || '' })
                 )
             }
         } catch (e) {
