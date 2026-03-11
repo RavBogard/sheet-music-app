@@ -13,6 +13,7 @@ if (dsn) {
         Sentry.init({
             dsn,
             environment: process.env.NODE_ENV,
+            integrations: [Sentry.browserTracingIntegration()],
             tracesSampleRate: 0.1,
             replaysSessionSampleRate: 0,
             replaysOnErrorSampleRate: 1.0,

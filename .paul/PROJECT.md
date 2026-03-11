@@ -44,10 +44,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.5 Phase 3: Architecture cleanup — SetlistEditorV2, MusicianPicker, TransposerMenu, SongChartsLibrary split into sub-components
 - [x] v1.5 Phase 4: Quality & deps — vitest jsdom default, ESLint exhaustive-deps re-enabled, deps/fonts/indexes already current
 - [x] v1.5 Phase 5: UI/UX polish — skip-to-main-content link, mobile zoom indicator, tablet landscape sidebar toolbar
+- [x] v1.5 Phase 6: Performance & monitoring — bundle analyzer, Sentry source maps + Web Vitals, component tests for PerformanceToolbar + SetlistEditorV2
 
 ### Active (In Progress)
 
-- [ ] v1.5 Performance & monitoring — bundle analysis, Sentry, offline queue
+- None — v1.5 complete
 
 ### Planned (Next)
 
@@ -103,7 +104,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 640+ tests |
+| Testing | Vitest + Playwright | 648+ tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -132,7 +133,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Ref-based uid tracking in useMonitorConnection | v1.3.1 | Prevents effect churn during iPad auth token refresh |
 | visibilitychange as iOS Safari reconnection trigger | v1.3.1 | beforeunload doesn't fire on iOS Safari |
 | displayName overlay for song rename (Firestore, not Drive) | v1.4 P1 | Preserves Drive filenames, rename is Firestore-only |
+| Conditional withSentryConfig (only when DSN set) | v1.5 P6 | Zero build overhead without Sentry |
+| Offline write queue not needed (Firebase native persistence) | v1.5 P6 | Firestore SDK handles offline writes natively |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-10 after Phase 2 (v1.5)*
+*Last updated: 2026-03-10 after Phase 6 (v1.5 complete)*
