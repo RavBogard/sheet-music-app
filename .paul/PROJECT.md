@@ -52,10 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v1.9: Auth stability & deferred cleanup (login regressions, avatar fix, bridge creds, housekeeping)
+- [ ] v2.0: Schedule & workflow fixes (schedule visibility, gig packet layout)
 
 ### Validated (Recently Shipped)
 
+- [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
+- [x] v2.0 Phase 1: Schedule visibility fix — setlists with future dates appear regardless of assignment status
 - [x] v1.7: Print pipeline overhaul, key signature position, monitor buses — Phases 1-5
 - [x] v1.8 Phase 1: Mobile navigation redesign — hamburger menu moved to upper-left header
 - [x] v1.8 Phase 2: Setlist mobile responsive layout — responsive padding, touch-visible menus
@@ -63,7 +65,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.0: TBD
+- v2.0 Phase 2: Gig packet modal layout fix
 
 ### Out of Scope
 
@@ -157,7 +159,8 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Key badge right of title (reversed key-left) | v1.7 P4 | User preference; inline after title is cleaner |
 | All services as schedule default (not personal) | v1.8 P3 | Everyone sees full schedule; "Mine" toggle for personal filter |
 | Single subscription with client-side filter | v1.8 P3 | subscribeToAllUpcomingAssignments for all users, filter locally |
+| Dual subscription merge for schedule page | v2.0 P1 | Subscribe to both setlists and assignments; setlists-first ensures all services visible |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 3 (v1.8 complete)*
+*Last updated: 2026-03-11 after Phase 1 (v2.0 schedule visibility fix)*

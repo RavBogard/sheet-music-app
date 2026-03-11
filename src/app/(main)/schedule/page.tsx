@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { subscribeToAllUpcomingAssignments } from "@/lib/scheduling-firebase"
+import { subscribeToAllUpcomingAssignments, subscribeToUpcomingSetlists } from "@/lib/scheduling-firebase"
 import { ScheduleCard } from "@/components/scheduling/ScheduleCard"
 import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import type { SchedulingAssignment } from "@/types/models"
@@ -20,22 +20,37 @@ export default function SchedulePage() {
     const [viewMode, setViewMode] = useState<ViewMode>('services')
     const [mineOnly, setMineOnly] = useState(false)
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
-    const [loading, setLoading] = useState(true)
+    const [upcomingSetlists, setUpcomingSetlists] = useState<Array<{ id: string; name: string; eventDate: unknown }>>([])
+    const [loadingAssignments, setLoadingAssignments] = useState(true)
+    const [loadingSetlists, setLoadingSetlists] = useState(true)
+    const loading = loadingAssignments || loadingSetlists
 
-    // Always subscribe to all upcoming assignments
+    // Subscribe to both assignments and upcoming setlists
     useEffect(() => {
         if (!user) return
         if (viewMode === 'calendar') {
-            setLoading(false)
+            setLoadingAssignments(false)
+            setLoadingSetlists(false)
             return
         }
 
-        setLoading(true)
-        const unsubscribe = subscribeToAllUpcomingAssignments((data) => {
+        setLoadingAssignments(true)
+        setLoadingSetlists(true)
+
+        const unsubAssignments = subscribeToAllUpcomingAssignments((data) => {
             setAssignments(data)
-            setLoading(false)
+            setLoadingAssignments(false)
         })
-        return unsubscribe
+
+        const unsubSetlists = subscribeToUpcomingSetlists((data) => {
+            setUpcomingSetlists(data)
+            setLoadingSetlists(false)
+        })
+
+        return () => {
+            unsubAssignments()
+            unsubSetlists()
+        }
     }, [user, viewMode])
 
     // Group assignments by setlist
@@ -56,14 +71,26 @@ export default function SchedulePage() {
             .sort((a, b) => getDateMs(a.eventDate) - getDateMs(b.eventDate))
     }, [assignments, user, mineOnly])
 
-    // All services grouped by setlist (default view)
+    // All services grouped by setlist (default view) — merges setlists + assignments
     const servicesBySetlist = useMemo(() => {
         if (mineOnly) return []
-        const setlists = new Map<string, { name: string; eventDate: unknown; assignments: SchedulingAssignment[] }>()
+        const setlists = new Map<string, { id: string; name: string; eventDate: unknown; assignments: SchedulingAssignment[] }>()
 
+        // Start with all upcoming setlists (even those without assignments)
+        for (const s of upcomingSetlists) {
+            setlists.set(s.id, {
+                id: s.id,
+                name: s.name,
+                eventDate: s.eventDate,
+                assignments: [],
+            })
+        }
+
+        // Layer in assignment data
         for (const a of assignments) {
             if (!setlists.has(a.setlistId)) {
                 setlists.set(a.setlistId, {
+                    id: a.setlistId,
                     name: a.setlistName,
                     eventDate: a.eventDate,
                     assignments: [],
@@ -75,7 +102,7 @@ export default function SchedulePage() {
         return Array.from(setlists.values()).sort((a, b) =>
             getDateMs(a.eventDate) - getDateMs(b.eventDate)
         )
-    }, [assignments, mineOnly])
+    }, [assignments, upcomingSetlists, mineOnly])
 
     function getOtherMusicians(assignment: SchedulingAssignment) {
         const setlistAssignments = groupedBySetlist.get(assignment.setlistId) || []
@@ -205,11 +232,18 @@ export default function SchedulePage() {
                                             {formatDateShort(eventDate)}
                                         </span>
                                     </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {setlistAssignments.map(a => (
-                                            <MusicianStatusCard key={a.id} assignment={a} />
-                                        ))}
-                                    </div>
+                                    {setlistAssignments.length === 0 ? (
+                                        <div className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
+                                            <User className="h-4 w-4 shrink-0" />
+                                            No musicians assigned yet
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {setlistAssignments.map(a => (
+                                                <MusicianStatusCard key={a.id} assignment={a} />
+                                            ))}
+                                        </div>
+                                    )}
                                 </section>
                             ))}
                         </div>

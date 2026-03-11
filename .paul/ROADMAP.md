@@ -1,9 +1,27 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v1.9 Auth Stability & Deferred Cleanup**
+**v2.0 Schedule & Workflow Fixes**
 Status: In progress
-Phases: 3 of 5 complete
+Phases: 2 total
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Schedule Visibility Fix | 1 | Complete | 2026-03-11 |
+| 2 | Gig Packet Modal Layout Fix | 0 | Not started | — |
+
+### Phase 1: Schedule Visibility Fix
+
+Focus: Schedule page only shows services with musician assignments. Setlists with future eventDates but no assignments are invisible. Fix the page to subscribe to upcoming setlists directly and merge with assignment data, so all scheduled services appear.
+
+### Phase 2: Gig Packet Modal Layout Fix
+
+Focus: PrintModal has excessive empty space above the configuration form, requiring users to scroll down to reach the controls. Root cause: modal uses `items-center justify-center` centering with `max-h-[90vh]`, `p-6` content padding, and a tall footer — cramping the scrollable content area. Fix the modal layout so content is immediately visible when opened, especially on mobile.
+
+## Previous Milestone
+**v1.9 Auth Stability & Deferred Cleanup**
+Status: Complete
+Phases: 5 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -11,7 +29,7 @@ Phases: 3 of 5 complete
 | 2 | Auth Flow Rebuild | 1 | Complete | 2026-03-11 |
 | 3 | Avatar System Fix | 1 | Complete | 2026-03-11 |
 | 4 | ~~Bridge Credentials Security~~ | 0 | Skipped (accepted risk) | 2026-03-11 |
-| 5 | Deferred Cleanup Batch | TBD | Not started | - |
+| 5 | Deferred Cleanup Batch | 1 | Complete | 2026-03-11 |
 
 ### Phase 1: Auth & Routing Regression Audit
 

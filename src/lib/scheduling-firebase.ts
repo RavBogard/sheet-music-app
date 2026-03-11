@@ -8,7 +8,7 @@
 import { db } from '@/lib/firebase'
 import {
     collection, query, where, orderBy, onSnapshot,
-    updateDoc, doc,
+    updateDoc, doc, Timestamp,
 } from 'firebase/firestore'
 import type { SchedulingAssignment } from '@/types/models'
 import { logger } from '@/lib/logger'
@@ -86,6 +86,36 @@ export function subscribeToAllUpcomingAssignments(
         callback(assignments)
     }, (err) => {
         logger.warn('[Scheduling] Subscribe to all assignments failed:', err)
+        callback([])
+    })
+}
+
+/**
+ * Subscribe to all public setlists with upcoming event dates.
+ * Used by the schedule page to show services even without assignments.
+ */
+export function subscribeToUpcomingSetlists(
+    callback: (setlists: Array<{ id: string; name: string; eventDate: unknown }>) => void
+): () => void {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+
+    const q = query(
+        collection(db, 'setlists'),
+        where('isPublic', '==', true),
+        where('eventDate', '>=', Timestamp.fromDate(now)),
+        orderBy('eventDate', 'asc'),
+    )
+
+    return onSnapshot(q, (snap) => {
+        const setlists = snap.docs.map(d => ({
+            id: d.id,
+            name: (d.data().name as string) || 'Untitled',
+            eventDate: d.data().eventDate,
+        }))
+        callback(setlists)
+    }, (err) => {
+        logger.warn('[Scheduling] Subscribe to upcoming setlists failed:', err)
         callback([])
     })
 }
