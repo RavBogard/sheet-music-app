@@ -16,7 +16,7 @@ export default function MainLayout({
                 - Mobile: pb-24 to clear bottom tab bar
                 - Desktop: pt-20 to clear top sticky header
             */}
-            <main className="flex-1 pb-24 md:pb-0 md:pt-20">
+            <main id="main-content" className="flex-1 pb-24 md:pb-0 md:pt-20">
                 <PageTransition>
                     {children}
                 </PageTransition>

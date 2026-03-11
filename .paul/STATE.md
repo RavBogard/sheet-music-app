@@ -10,14 +10,14 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 4 of 6 (Quality & Deps) — Complete
-Plan: 04-01 complete (final plan in phase)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-03-10 — Phase 4 transition complete
+Phase: 6 of 6 (Performance & Monitoring)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-10 — Phase 5 complete, transitioned to Phase 6
 
 Progress:
-- v1.5 Codebase & UI/UX Hardening: [██████░░░░] 67%
-- Phase 4: [██████████] 100%
+- v1.5 Codebase & UI/UX Hardening: [████████░░] 83%
+- Phase 6: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
@@ -39,6 +39,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Phase 3: useMusicStore (279 LOC) too small to split — skip
 - Phase 3: SetlistDrawerLegacy NOT dead code (imported by PerformanceToolbar) — skip removal
 - Phase 4: deps/fonts/indexes all already current — no updates needed
+- Phase 5: 4 of 7 roadmap items already satisfied (reduced-motion, focus trapping, LibraryFileRow colors, ghost hover) — only 3 tasks needed
 
 ### Deferred Issues (carried from v1.4)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
@@ -62,10 +63,10 @@ Feature branches merged: none
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 4 complete, transition done
-Next action: /paul:plan for Phase 5 (UI/UX Polish)
-Resume file: .paul/phases/04-quality-deps-v15/04-01-SUMMARY.md
-Resume context: Phase 4 complete (1 plan). vitest jsdom default, ESLint exhaustive-deps re-enabled. Ready for Phase 5: tablet layout, accessibility, reduced-motion, brand palette fixes, hover states, zoom indicator, skip-to-main.
+Stopped at: Phase 5 complete, ready to plan Phase 6
+Next action: /paul:plan for Phase 6 (Performance & Monitoring)
+Resume file: .paul/phases/05-ui-ux-polish-v15/05-01-SUMMARY.md
+Resume context: Phase 5 complete (1 plan). Skip-to-main link, mobile zoom indicator, tablet sidebar layout. Phase 6 scope: bundle analyzer, Sentry, offline write queue, component test coverage.
 
 ---
 *STATE.md — Updated after every significant action*

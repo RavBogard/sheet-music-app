@@ -28,6 +28,10 @@ export interface PDFOverlayProps {
  * Uses the full PerformanceToolbar (transpose, annotate, zoom, metronome,
  * monitor) — same experience as opening a chart from the library.
  *
+ * Layout adapts by viewport:
+ * - Mobile (< 1024px): PDF stacked above bottom toolbar
+ * - Tablet landscape (≥ 1024px): PDF left + toolbar sidebar right
+ *
  * The setlist DOM stays mounted underneath (fixed positioning) so scroll
  * position is preserved when the overlay closes (per RESEARCH.md Pitfall 3).
  */
@@ -126,9 +130,9 @@ export function PDFOverlay({
     const [, setMenuOpen] = useState(false)
 
     return (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="fixed inset-0 z-50 bg-background flex flex-col lg:flex-row">
             {/* PDF content area */}
-            <div className="flex-1 overflow-auto pb-28 relative">
+            <div className="flex-1 overflow-auto pb-28 lg:pb-0 relative">
                 {pdfUrl && (
                     <PDFViewer url={pdfUrl} trackName={track.title} />
                 )}
@@ -137,11 +141,23 @@ export function PDFOverlay({
                 )}
             </div>
 
-            {/* Full performance toolbar (transpose, annotate, zoom, metronome, monitor) */}
-            <PerformanceToolbar
-                onHome={onClose}
-                onMenuOpenChange={setMenuOpen}
-            />
+            {/* Mobile/Desktop: bottom toolbar */}
+            <div className="lg:hidden">
+                <PerformanceToolbar
+                    onHome={onClose}
+                    onMenuOpenChange={setMenuOpen}
+                    layout="bottom"
+                />
+            </div>
+
+            {/* Tablet landscape (≥ 1024px): sidebar toolbar */}
+            <div className="hidden lg:flex">
+                <PerformanceToolbar
+                    onHome={onClose}
+                    onMenuOpenChange={setMenuOpen}
+                    layout="sidebar"
+                />
+            </div>
         </div>
     )
 }

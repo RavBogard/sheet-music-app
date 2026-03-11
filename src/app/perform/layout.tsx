@@ -9,7 +9,7 @@ export default function PerformLayout({
 }) {
     // Allow theme inheritance
     return (
-        <div className="min-h-screen">
+        <div id="main-content" className="min-h-screen">
             {/* PDF worker is loaded from CDN (unpkg) with version pinned to react-pdf's pdfjs */}
             {/* No preload needed — CDN has excellent caching and worker loads fast */}
             <PerformanceOfflineIndicator />

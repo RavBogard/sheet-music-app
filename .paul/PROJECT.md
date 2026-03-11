@@ -43,10 +43,10 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v1.5 Phase 2: Security & API consistency — npm audit, CSP/HSTS, error sanitization, 18 routes migrated to createApiHandler
 - [x] v1.5 Phase 3: Architecture cleanup — SetlistEditorV2, MusicianPicker, TransposerMenu, SongChartsLibrary split into sub-components
 - [x] v1.5 Phase 4: Quality & deps — vitest jsdom default, ESLint exhaustive-deps re-enabled, deps/fonts/indexes already current
+- [x] v1.5 Phase 5: UI/UX polish — skip-to-main-content link, mobile zoom indicator, tablet landscape sidebar toolbar
 
 ### Active (In Progress)
 
-- [ ] v1.5 UI/UX polish — tablet layout, accessibility, reduced-motion
 - [ ] v1.5 Performance & monitoring — bundle analysis, Sentry, offline queue
 
 ### Planned (Next)

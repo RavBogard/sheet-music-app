@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X } from "lucide-react"
+import { Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X, List } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -25,9 +25,10 @@ import { Link as LinkIcon, Unlink } from "lucide-react"
 interface PerformanceToolbarProps {
     onHome: () => void
     onMenuOpenChange?: (open: boolean) => void
+    layout?: "bottom" | "sidebar"
 }
 
-export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
+export function PerformanceToolbar({ onHome, onMenuOpenChange, layout = "bottom" }: PerformanceToolbarProps) {
     const {
         aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom,
         currentSetlistId, syncedBroadcasterId, setSyncedBroadcasterId, jumpToSong, setCurrentVisiblePage, playbackQueue, queueIndex
@@ -39,7 +40,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
     const isBroadcaster = (isAdmin || isBandLeader) && !!user?.uid
 
-    // Establish WebSocket connection immediately so the bridge is 
+    // Establish WebSocket connection immediately so the bridge is
     // ready *before* the user opens the Audio popover (zero latency).
     useMonitorConnection()
 
@@ -50,6 +51,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     // (the hidden breakpoint's portal fires onOpenChange(false) immediately)
     const [transposerOpenMobile, setTransposerOpenMobile] = useState(false)
     const [transposerOpenDesktop, setTransposerOpenDesktop] = useState(false)
+    const [transposerOpenTablet, setTransposerOpenTablet] = useState(false)
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -122,93 +124,298 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
     const availableSession = activeSessions[0]
 
+    // ── Shared sub-components ──
+
+    const zoomControls = (compact = false) => (
+        <div className={cn(
+            "flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1",
+            compact ? "h-9" : "h-11"
+        )}>
+            <Button
+                variant="ghost" size="icon"
+                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                className={cn(
+                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
+                    compact ? "h-7 w-7" : "h-10 w-10"
+                )}
+                aria-label="Zoom out"
+            >
+                <ZoomOut className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+            </Button>
+            <span className={cn(
+                "font-medium text-foreground text-center",
+                compact ? "text-[10px] w-8" : "text-xs w-10"
+            )}>
+                {Math.round(zoom * 100)}%
+            </span>
+            <Button
+                variant="ghost" size="icon"
+                onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+                className={cn(
+                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
+                    compact ? "h-7 w-7" : "h-10 w-10"
+                )}
+                aria-label="Zoom in"
+            >
+                <ZoomIn className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+            </Button>
+        </div>
+    )
+
+    const syncButton = (compact = false) => (
+        !isBroadcaster && availableSession ? (
+            <Button
+                variant="ghost"
+                onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
+                className={cn(
+                    "rounded-xl font-semibold fluid-interaction flex items-center transition-all",
+                    compact
+                        ? "h-11 px-3 text-xs gap-1.5 max-w-[110px]"
+                        : "h-11 px-4 text-xs font-bold uppercase tracking-wider gap-2 min-w-[120px]",
+                    syncedBroadcasterId
+                        ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
+                        : "glass-card text-foreground hover:bg-muted animate-pulse"
+                )}
+            >
+                {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
+                <span className="truncate">
+                    {syncedBroadcasterId
+                        ? (compact ? "Following" : `Following ${availableSession.broadcasterName.split(' ')[0]}`)
+                        : (compact ? "Sync" : "Sync to Leader")
+                    }
+                </span>
+            </Button>
+        ) : null
+    )
+
+    const monitorPopover = (id: string, compact = false, side: "top" | "left" = "top") => (
+        <Popover onOpenChange={(open) => trackPopover(id, open)}>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" className={cn(
+                    "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center gap-1.5",
+                    compact ? "h-11 px-3 text-xs font-semibold" : "h-10 px-4 text-xs font-bold gap-2 group"
+                )} aria-label="Audio monitor mix">
+                    <Speaker className="h-3.5 w-3.5" />
+                    <span>{compact ? "Audio" : "AUDIO"}</span>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
+                <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                    <Speaker className="h-3 w-3" /> Monitor Mix
+                </div>
+                {hasMonitorAccess ? (
+                    <QuickMonitorPanel />
+                ) : (
+                    <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
+                )}
+            </PopoverContent>
+        </Popover>
+    )
+
+    const transposerPopover = (
+        openState: boolean,
+        setOpenState: (open: boolean) => void,
+        id: string,
+        compact = false,
+        side: "top" | "left" = "top"
+    ) => (
+        <Popover open={openState} onOpenChange={(open) => {
+            setOpenState(open)
+            trackPopover(id, open)
+            if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
+        }}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="ghost"
+                    className={cn(
+                        "rounded-xl font-semibold fluid-interaction flex items-center",
+                        compact
+                            ? "h-11 px-3 text-xs gap-1.5"
+                            : "h-10 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
+                        aiState.isEnabled
+                            ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
+                            : "glass-card text-foreground/80 hover:text-foreground"
+                    )}
+                >
+                    {aiState.scanningPages.length > 0 ? (
+                        <Loader2 className={cn("animate-spin shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
+                    ) : (
+                        <Sparkles className={cn("shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
+                    )}
+                    <span className="truncate">{compact ? buttonLabel : buttonLabel.toUpperCase()}</span>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
+                <TransposerMenu onRequestClose={() => setOpenState(false)} />
+            </PopoverContent>
+        </Popover>
+    )
+
+    const annotateButton = (showLabel = false) => (
+        <Button
+            variant="ghost" size="icon"
+            onClick={() => setAnnotating(!isAnnotating)}
+            className={cn(
+                "h-11 w-11 rounded-xl",
+                isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+            title="Annotate"
+            aria-label="Toggle annotation mode"
+        >
+            <Pencil className="h-5 w-5" />
+        </Button>
+    )
+
+    // ── TABLET SIDEBAR LAYOUT ──
+    if (layout === "sidebar") {
+        return (
+            <div className="material-thick border-l border-t-0 shrink-0 w-20 flex flex-col items-center py-4 gap-3 shadow-2xl overflow-y-auto">
+                {/* Exit */}
+                <Button
+                    variant="ghost" size="icon"
+                    onClick={onHome}
+                    className="h-11 w-11 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl"
+                    title="Exit Gig Mode"
+                    aria-label="Exit performance mode"
+                >
+                    <X className="h-5 w-5" />
+                </Button>
+
+                <div className="w-10 h-px bg-border/30" />
+
+                {/* Song Navigation (vertical) */}
+                <SongNavigation />
+
+                <div className="w-10 h-px bg-border/30" />
+
+                {/* Zoom Controls (vertical) */}
+                <div className="flex flex-col items-center bg-muted/50 border border-border/10 rounded-xl p-1.5 gap-1">
+                    <Button
+                        variant="ghost" size="icon"
+                        onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                        aria-label="Zoom in"
+                    >
+                        <ZoomIn className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="text-[10px] font-medium text-foreground">
+                        {Math.round(zoom * 100)}%
+                    </span>
+                    <Button
+                        variant="ghost" size="icon"
+                        onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                        aria-label="Zoom out"
+                    >
+                        <ZoomOut className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+
+                <div className="w-10 h-px bg-border/30" />
+
+                {/* Annotate */}
+                {annotateButton()}
+
+                {/* Metronome */}
+                <MetronomeControl />
+
+                {/* Sync */}
+                {syncButton(true)}
+
+                {/* Audio */}
+                <Popover onOpenChange={(open) => trackPopover('tools-tablet', open)}>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-card text-foreground/80 hover:text-foreground" aria-label="Audio monitor mix">
+                            <Speaker className="h-4 w-4" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="start" side="left">
+                        <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                            <Speaker className="h-3 w-3" /> Monitor Mix
+                        </div>
+                        {hasMonitorAccess ? (
+                            <QuickMonitorPanel />
+                        ) : (
+                            <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
+                        )}
+                    </PopoverContent>
+                </Popover>
+
+                {/* Transposer */}
+                <Popover open={transposerOpenTablet} onOpenChange={(open) => {
+                    setTransposerOpenTablet(open)
+                    trackPopover('transposer-tablet', open)
+                    if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
+                }}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost" size="icon"
+                            className={cn(
+                                "h-11 w-11 rounded-xl",
+                                aiState.isEnabled
+                                    ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
+                                    : "glass-card text-foreground/80 hover:text-foreground"
+                            )}
+                            aria-label="Transpose chords"
+                        >
+                            {aiState.scanningPages.length > 0 ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Sparkles className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0 bg-popover border-border" align="start" side="left">
+                        <TransposerMenu onRequestClose={() => setTransposerOpenTablet(false)} />
+                    </PopoverContent>
+                </Popover>
+
+                <div className="flex-1" />
+
+                {/* Setlist drawer at bottom */}
+                <SetlistDrawer />
+
+                {/* Annotation toolbar overlay */}
+                {isAnnotating && (
+                    <AnnotationToolbar
+                        currentPage={currentVisiblePage}
+                        onClose={() => setAnnotating(false)}
+                    />
+                )}
+
+                {/* Chord edit floating bar */}
+                <ChordEditBar />
+            </div>
+        )
+    }
+
+    // ── BOTTOM BAR LAYOUT (mobile + desktop) ──
     return (
         <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
 
-            {/* ── MOBILE/TABLET: Two-row layout ── */}
+            {/* ── MOBILE: Two-row layout (< lg) ── */}
             <div className="lg:hidden w-full">
 
-                {/* Row 1 (top): Annotate | Metronome | Audio | Transposer — evenly spread */}
+                {/* Row 1 (top): Zoom | Annotate | Metronome | Audio | Transposer */}
                 <div className="w-full h-14 flex items-center justify-between px-3 border-b border-brand/10">
 
+                    {/* Zoom controls (compact) */}
+                    {zoomControls(true)}
+
                     {/* Annotate */}
-                    <Button
-                        variant="ghost" size="icon"
-                        onClick={() => setAnnotating(!isAnnotating)}
-                        className={cn("h-11 w-11 rounded-xl", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
-                        aria-label="Toggle annotation mode"
-                    >
-                        <Pencil className="h-5 w-5" />
-                    </Button>
+                    {annotateButton()}
 
                     {/* Metronome */}
                     <MetronomeControl />
 
                     {/* Sync Button (if not broadcaster and session available) */}
-                    {!isBroadcaster && availableSession && (
-                        <Button
-                            variant="ghost"
-                            onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
-                            className={cn(
-                                "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5 transition-all max-w-[110px]",
-                                syncedBroadcasterId
-                                    ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
-                                    : "glass-card text-foreground hover:bg-muted animate-pulse"
-                            )}
-                        >
-                            {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
-                            <span className="truncate">{syncedBroadcasterId ? "Following" : "Sync"}</span>
-                        </Button>
-                    )}
+                    {syncButton(true)}
 
                     {/* Monitor Mix popover */}
-                    <Popover onOpenChange={(open) => trackPopover('tools', open)}>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" className="h-11 px-3 rounded-xl fluid-interaction glass-card text-xs font-semibold text-foreground/80 hover:text-foreground flex items-center gap-1.5" aria-label="Audio monitor mix">
-                                <Speaker className="h-3.5 w-3.5" />
-                                <span>Audio</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="center" side="top">
-                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
-                                <Speaker className="h-3 w-3" /> Monitor Mix
-                            </div>
-                            {hasMonitorAccess ? (
-                                <QuickMonitorPanel />
-                            ) : (
-                                <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
-                            )}
-                        </PopoverContent>
-                    </Popover>
+                    {monitorPopover('tools', true)}
 
                     {/* Transposer */}
-                    <Popover open={transposerOpenMobile} onOpenChange={(open) => {
-                        setTransposerOpenMobile(open)
-                        trackPopover('transposer', open)
-                        if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
-                    }}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "h-11 px-3 rounded-xl text-xs font-semibold fluid-interaction flex items-center gap-1.5",
-                                    aiState.isEnabled
-                                        ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
-                                        : "glass-card text-foreground/80 hover:text-foreground"
-                                )}
-                            >
-                                {aiState.scanningPages.length > 0 ? (
-                                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                                ) : (
-                                    <Sparkles className="h-4 w-4 shrink-0" />
-                                )}
-                                <span className="truncate">{buttonLabel}</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
-                            <TransposerMenu onRequestClose={() => setTransposerOpenMobile(false)} />
-                        </PopoverContent>
-                    </Popover>
+                    {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true)}
                 </div>
 
                 {/* Row 2 (bottom): Home + Song Navigation (centered) + Setlist */}
@@ -226,7 +433,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                 </div>
             </div>
 
-            {/* ── DESKTOP: Single row ── */}
+            {/* ── DESKTOP: Single row (≥ lg) ── */}
             <div className="hidden lg:flex w-full h-16 items-center justify-between px-6 relative">
 
                 {/* LEFT: System & Navigation */}
@@ -235,57 +442,13 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <X className="h-5 w-5" />
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
-                    <Button
-                        variant="ghost" size="icon"
-                        onClick={() => setAnnotating(!isAnnotating)}
-                        className={cn("h-11 w-11 rounded-xl transition-all hover:scale-105", isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted")}
-                        title="Annotate"
-                        aria-label="Toggle annotation mode"
-                    >
-                        <Pencil className="h-5 w-5" />
-                    </Button>
+                    {annotateButton()}
 
                     {/* Sync Button (Desktop) */}
-                    {!isBroadcaster && availableSession && (
-                        <Button
-                            variant="ghost"
-                            onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
-                            className={cn(
-                                "h-11 px-4 rounded-xl text-xs font-bold uppercase tracking-wider fluid-interaction flex items-center gap-2 min-w-[120px]",
-                                syncedBroadcasterId
-                                    ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
-                                    : "glass-card text-foreground hover:bg-muted animate-pulse"
-                            )}
-                        >
-                            {syncedBroadcasterId ? <LinkIcon className="h-4 w-4 shrink-0" /> : <Unlink className="h-4 w-4 shrink-0" />}
-                            <span className="truncate">{syncedBroadcasterId ? `Following ${availableSession.broadcasterName.split(' ')[0]}` : "Sync to Leader"}</span>
-                        </Button>
-                    )}
+                    {syncButton(false)}
 
                     {/* Scale Controls */}
-                    <div className="flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1 h-11">
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
-                            title="Zoom Out"
-                            aria-label="Zoom out"
-                        >
-                            <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-xs font-medium text-foreground w-10 text-center">
-                            {Math.round(zoom * 100)}%
-                        </span>
-                        <Button
-                            variant="ghost" size="icon"
-                            onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
-                            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
-                            title="Zoom In"
-                            aria-label="Zoom in"
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    {zoomControls(false)}
 
                     <SetlistDrawer />
                 </div>
@@ -301,24 +464,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                 <div className="flex items-center justify-end gap-3 z-10 w-1/4">
 
                     {/* Monitor Mix popover */}
-                    <Popover onOpenChange={(open) => trackPopover('tools-desktop', open)}>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" className="h-10 px-4 rounded-xl glass-card fluid-interaction text-xs font-bold text-foreground/80 hover:text-foreground flex items-center gap-2 group" aria-label="Audio monitor mix">
-                                <Speaker className="h-3.5 w-3.5" />
-                                AUDIO
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="end" side="top">
-                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
-                                <Speaker className="h-3 w-3" /> Monitor Mix
-                            </div>
-                            {hasMonitorAccess ? (
-                                <QuickMonitorPanel />
-                            ) : (
-                                <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
-                            )}
-                        </PopoverContent>
-                    </Popover>
+                    {monitorPopover('tools-desktop', false)}
 
                     <div className="w-px h-8 bg-border/50" />
 
@@ -328,33 +474,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     </div>
 
                     {/* Transposer */}
-                    <Popover open={transposerOpenDesktop} onOpenChange={(open) => {
-                        setTransposerOpenDesktop(open)
-                        trackPopover('transposer-desktop', open)
-                        if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
-                    }}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "h-10 px-4 rounded-xl text-xs font-bold fluid-interaction flex items-center gap-2 min-w-[100px] justify-center",
-                                    aiState.isEnabled
-                                        ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
-                                        : "glass-card text-foreground/80 hover:text-foreground"
-                                )}
-                            >
-                                {aiState.scanningPages.length > 0 ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                    <Sparkles className="h-3.5 w-3.5" />
-                                )}
-                                <span>{buttonLabel.toUpperCase()}</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0 bg-popover border-border" align="end" side="top">
-                            <TransposerMenu onRequestClose={() => setTransposerOpenDesktop(false)} />
-                        </PopoverContent>
-                    </Popover>
+                    {transposerPopover(transposerOpenDesktop, setTransposerOpenDesktop, 'transposer-desktop', false)}
                 </div>
             </div>
 
