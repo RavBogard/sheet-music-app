@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2, Mail, ArrowLeft } from "lucide-react"
-import { FirebaseError } from "firebase/app"
+import { Loader2 } from "lucide-react"
 
 /** Inline Google logo — avoids DNS+TLS to svgrepo.com */
 function GoogleIcon({ className }: { className?: string }) {
@@ -22,57 +19,11 @@ function GoogleIcon({ className }: { className?: string }) {
     )
 }
 
-/** Map Firebase auth error codes to user-friendly messages */
-function getAuthErrorMessage(error: unknown): string {
-    if (error instanceof FirebaseError) {
-        switch (error.code) {
-            case "auth/invalid-email":
-                return "Please enter a valid email address."
-            case "auth/user-disabled":
-                return "This account has been disabled. Contact an administrator."
-            case "auth/user-not-found":
-                return "No account found with this email address."
-            case "auth/wrong-password":
-                return "Incorrect password. Please try again."
-            case "auth/invalid-credential":
-                return "Invalid email or password. Please try again."
-            case "auth/email-already-in-use":
-                return "An account with this email already exists. Try signing in instead."
-            case "auth/weak-password":
-                return "Password must be at least 6 characters."
-            case "auth/too-many-requests":
-                return "Too many failed attempts. Please try again later."
-            case "auth/network-request-failed":
-                return "Network error. Please check your connection."
-            case "auth/operation-not-allowed":
-                return "Email/password sign-in is not enabled. Contact an administrator."
-            default:
-                return error.message || "An unexpected error occurred."
-        }
-    }
-    return "An unexpected error occurred. Please try again."
-}
-
 export default function LoginPage() {
-    const { user, loading, signIn, signInWithEmail, signUpWithEmail, resetPassword } = useAuth()
+    const { user, loading, signIn } = useAuth()
     const congregation = useCongregation()
     const router = useRouter()
     const [signingIn, setSigningIn] = useState(false)
-
-    // Email form state
-    const [mode, setMode] = useState<"signin" | "signup">("signin")
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [displayName, setDisplayName] = useState("")
-    const [emailLoading, setEmailLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-
-    // Password reset state
-    const [showResetForm, setShowResetForm] = useState(false)
-    const [resetEmail, setResetEmail] = useState("")
-    const [resetLoading, setResetLoading] = useState(false)
-    const [resetSuccess, setResetSuccess] = useState(false)
-    const [resetError, setResetError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!loading && user) {
@@ -87,38 +38,6 @@ export default function LoginPage() {
             await signIn()
         } finally {
             setSigningIn(false)
-        }
-    }
-
-    const handleEmailSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setError(null)
-        setEmailLoading(true)
-        try {
-            if (mode === "signup") {
-                await signUpWithEmail(email, password, displayName.trim() || email.split("@")[0])
-            } else {
-                await signInWithEmail(email, password)
-            }
-        } catch (err) {
-            setError(getAuthErrorMessage(err))
-        } finally {
-            setEmailLoading(false)
-        }
-    }
-
-    const handleResetPassword = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setResetError(null)
-        setResetSuccess(false)
-        setResetLoading(true)
-        try {
-            await resetPassword(resetEmail)
-            setResetSuccess(true)
-        } catch (err) {
-            setResetError(getAuthErrorMessage(err))
-        } finally {
-            setResetLoading(false)
         }
     }
 
@@ -157,12 +76,11 @@ export default function LoginPage() {
                 </div>
 
                 <div className="glass-card rounded-2xl p-6 space-y-5">
-                    {/* Google Sign-In */}
                     <Button
                         size="lg"
                         className="w-full bg-foreground text-background hover:opacity-90 transition-opacity h-12 text-base font-medium rounded-xl"
                         onClick={handleGoogleSignIn}
-                        disabled={signingIn || emailLoading}
+                        disabled={signingIn}
                     >
                         {signingIn ? (
                             <Loader2 className="h-5 w-5 mr-3 animate-spin" />
@@ -171,185 +89,6 @@ export default function LoginPage() {
                         )}
                         {signingIn ? "Opening Google..." : "Sign in with Google"}
                     </Button>
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-border" />
-                        <span className="text-xs text-muted-foreground font-medium">or</span>
-                        <div className="flex-1 h-px bg-border" />
-                    </div>
-
-                    {/* Password Reset Form */}
-                    {showResetForm ? (
-                        <div className="space-y-4 text-left">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowResetForm(false)
-                                    setResetSuccess(false)
-                                    setResetError(null)
-                                }}
-                                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                <ArrowLeft className="h-3.5 w-3.5" />
-                                Back to sign in
-                            </button>
-
-                            <div>
-                                <h3 className="font-semibold text-foreground">Reset password</h3>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Enter your email and we will send you a reset link.
-                                </p>
-                            </div>
-
-                            {resetSuccess ? (
-                                <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
-                                    Password reset email sent! Check your inbox.
-                                </div>
-                            ) : (
-                                <form onSubmit={handleResetPassword} className="space-y-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="reset-email">Email</Label>
-                                        <Input
-                                            id="reset-email"
-                                            type="email"
-                                            placeholder="you@example.com"
-                                            value={resetEmail}
-                                            onChange={(e) => setResetEmail(e.target.value)}
-                                            required
-                                            autoFocus
-                                        />
-                                    </div>
-
-                                    {resetError && (
-                                        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl p-3">
-                                            {resetError}
-                                        </div>
-                                    )}
-
-                                    <Button
-                                        type="submit"
-                                        size="lg"
-                                        className="w-full h-11 rounded-xl"
-                                        disabled={resetLoading}
-                                    >
-                                        {resetLoading ? (
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <Mail className="h-4 w-4 mr-2" />
-                                        )}
-                                        Send reset link
-                                    </Button>
-                                </form>
-                            )}
-                        </div>
-                    ) : (
-                        /* Email/Password Form */
-                        <form onSubmit={handleEmailSubmit} className="space-y-4 text-left">
-                            {/* Mode toggle */}
-                            <div className="flex rounded-xl bg-muted/50 p-1 border border-border">
-                                <button
-                                    type="button"
-                                    onClick={() => { setMode("signin"); setError(null) }}
-                                    className={`flex-1 text-sm font-medium py-2 rounded-lg transition-all ${
-                                        mode === "signin"
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    Sign in
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { setMode("signup"); setError(null) }}
-                                    className={`flex-1 text-sm font-medium py-2 rounded-lg transition-all ${
-                                        mode === "signup"
-                                            ? "bg-background text-foreground shadow-sm"
-                                            : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    Create account
-                                </button>
-                            </div>
-
-                            {/* Display Name (signup only) */}
-                            {mode === "signup" && (
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="display-name">Display name</Label>
-                                    <Input
-                                        id="display-name"
-                                        type="text"
-                                        placeholder="Your name"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        autoComplete="name"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="space-y-1.5">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    autoComplete="email"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                                />
-                            </div>
-
-                            {/* Error display */}
-                            {error && (
-                                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl p-3">
-                                    {error}
-                                </div>
-                            )}
-
-                            <Button
-                                type="submit"
-                                size="lg"
-                                className="w-full h-11 rounded-xl"
-                                disabled={emailLoading || signingIn}
-                            >
-                                {emailLoading ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Mail className="h-4 w-4 mr-2" />
-                                )}
-                                {mode === "signup" ? "Create account" : "Sign in with email"}
-                            </Button>
-
-                            {/* Forgot password link (sign-in mode only) */}
-                            {mode === "signin" && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowResetForm(true)
-                                        setResetEmail(email)
-                                    }}
-                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-center"
-                                >
-                                    Forgot password?
-                                </button>
-                            )}
-                        </form>
-                    )}
 
                     <p className="text-xs text-muted-foreground/60">
                         Only authorized accounts can access the full library.

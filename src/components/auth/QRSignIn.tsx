@@ -97,41 +97,53 @@ export function QRSignIn() {
     useEffect(() => {
         if (state !== "active" || !session) return
 
-        pollRef.current = setInterval(async () => {
-            try {
-                const res = await fetch(`/api/auth/qr?code=${session.code}`)
+        let pollInterval = 2000
+        const startPolling = () => {
+            pollRef.current = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/auth/qr?code=${session.code}`)
 
-                if (res.status === 503) {
-                    // Firebase Admin not available — stop polling entirely
-                    cleanup()
-                    setState("error")
-                    return
+                    if (res.status === 503) {
+                        // Firebase Admin not available — stop polling entirely
+                        cleanup()
+                        setState("error")
+                        return
+                    }
+
+                    if (res.status === 429) {
+                        // Rate limited — back off: stop current interval, restart slower
+                        if (pollRef.current) clearInterval(pollRef.current)
+                        pollInterval = Math.min(pollInterval * 2, 30000)
+                        startPolling()
+                        return
+                    }
+
+                    if (res.status === 410 || res.status === 404) {
+                        // Expired or not found — auto-refresh
+                        createSession()
+                        return
+                    }
+
+                    if (!res.ok) return
+
+                    const data = await res.json()
+
+                    if (data.status === "approved" && data.token) {
+                        cleanup()
+                        setApprovedName(data.userName || null)
+                        setState("signing-in")
+
+                        // Sign in on this device
+                        await signInWithCustomToken(auth, data.token)
+                        setState("approved")
+                        // Auth state change will trigger the app to reload/redirect
+                    }
+                } catch {
+                    // Silent — will retry on next poll
                 }
-
-                if (res.status === 410 || res.status === 404) {
-                    // Expired or not found — auto-refresh
-                    createSession()
-                    return
-                }
-
-                if (!res.ok) return
-
-                const data = await res.json()
-
-                if (data.status === "approved" && data.token) {
-                    cleanup()
-                    setApprovedName(data.userName || null)
-                    setState("signing-in")
-
-                    // Sign in on this device
-                    await signInWithCustomToken(auth, data.token)
-                    setState("approved")
-                    // Auth state change will trigger the app to reload/redirect
-                }
-            } catch {
-                // Silent — will retry on next poll
-            }
-        }, 2000)
+            }, pollInterval)
+        }
+        startPolling()
 
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, [state, session, createSession, cleanup])
