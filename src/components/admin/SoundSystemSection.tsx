@@ -301,7 +301,12 @@ export function SoundSystemSection() {
                             </div>
 
                             <div>
-                                <label className="text-sm text-muted-foreground mb-1 block">Monitor Buses</label>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <label className="text-sm text-muted-foreground">Monitor Buses</label>
+                                    <span className="text-xs bg-brand/15 text-brand px-1.5 py-0.5 rounded font-mono">
+                                        {monitorBusesStr.split(",").map(s => s.trim()).filter(Boolean).length} buses
+                                    </span>
+                                </div>
                                 <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4, 5" />
                                 <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
                             </div>

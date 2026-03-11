@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { Users, X, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMonitorStore } from "@/lib/monitor-store"
+import { useAuth } from "@/lib/auth-context"
 
 interface BusAssignmentPanelProps {
     config: MonitorConfig
@@ -30,18 +31,30 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
     const [openDropdown, setOpenDropdown] = useState<number | null>(null)
 
     const buses = useMonitorStore(state => state.buses)
+    const { user: currentUser } = useAuth()
 
     useEffect(() => {
         const unsub = subscribeToAllUsers((all) => {
             // Only show active roles — exclude member, pending, denied
             const activeRoles = ['admin', 'band_leader', 'musician']
-            setUsers(all
+            let filtered = all
                 .filter(u => !!u.displayName && activeRoles.includes(u.role))
                 .sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""))
-            )
+
+            // Ensure current user is always in the list
+            if (currentUser && !filtered.some(u => u.uid === currentUser.uid)) {
+                filtered = [{
+                    uid: currentUser.uid,
+                    email: currentUser.email || '',
+                    displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Me',
+                    role: 'musician' as const,
+                } as UserProfile, ...filtered]
+            }
+
+            setUsers(filtered)
         })
         return unsub
-    }, [])
+    }, [currentUser])
 
     // Close dropdown when clicking outside
     useEffect(() => {
