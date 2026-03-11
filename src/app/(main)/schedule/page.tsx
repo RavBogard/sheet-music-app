@@ -1,81 +1,64 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { CalendarDays, Clock, CheckCircle2, XCircle, Music, ChevronLeft, LayoutGrid } from "lucide-react"
+import { CalendarDays, ChevronLeft, LayoutGrid, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import {
-    subscribeToMyAssignments,
-    subscribeToAllUpcomingAssignments,
-} from "@/lib/scheduling-firebase"
+import { subscribeToAllUpcomingAssignments } from "@/lib/scheduling-firebase"
 import { ScheduleCard } from "@/components/scheduling/ScheduleCard"
 import { UnifiedCalendar } from "@/components/calendar/UnifiedCalendar"
 import type { SchedulingAssignment } from "@/types/models"
 
-type TabId = 'my_schedule' | 'calendar' | 'all'
+type ViewMode = 'services' | 'calendar'
 
 export default function SchedulePage() {
     const router = useRouter()
-    const { user, profile, isBandLeader } = useAuth()
-    const [activeTab, setActiveTab] = useState<TabId>('my_schedule')
+    const { user, isBandLeader } = useAuth()
+    const [viewMode, setViewMode] = useState<ViewMode>('services')
+    const [mineOnly, setMineOnly] = useState(false)
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Subscribe to assignments based on active tab
+    // Always subscribe to all upcoming assignments
     useEffect(() => {
         if (!user) return
-        if (activeTab === 'calendar') {
+        if (viewMode === 'calendar') {
             setLoading(false)
             return
         }
 
         setLoading(true)
-
-        const unsubscribe = activeTab === 'my_schedule'
-            ? subscribeToMyAssignments(user.uid, (data) => {
-                setAssignments(data)
-                setLoading(false)
-            })
-            : subscribeToAllUpcomingAssignments((data) => {
-                setAssignments(data)
-                setLoading(false)
-            })
-
+        const unsubscribe = subscribeToAllUpcomingAssignments((data) => {
+            setAssignments(data)
+            setLoading(false)
+        })
         return unsubscribe
-    }, [user, activeTab])
+    }, [user, viewMode])
 
-    // Group assignments by setlist to show other musicians
+    // Group assignments by setlist
     const groupedBySetlist = useMemo(() => {
         const map = new Map<string, SchedulingAssignment[]>()
         for (const a of assignments) {
-            const key = a.setlistId
-            if (!map.has(key)) map.set(key, [])
-            map.get(key)!.push(a)
+            if (!map.has(a.setlistId)) map.set(a.setlistId, [])
+            map.get(a.setlistId)!.push(a)
         }
         return map
     }, [assignments])
 
-    // For "My Schedule" tab: show just my assignments with other musician context
+    // Filtered assignments for "Mine only" mode
     const myAssignments = useMemo(() => {
-        if (!user) return []
-        if (activeTab === 'all') return assignments
-
+        if (!user || !mineOnly) return []
         return assignments
             .filter(a => a.musicianUid === user.uid)
-            .sort((a, b) => {
-                const dateA = getDateMs(a.eventDate)
-                const dateB = getDateMs(b.eventDate)
-                if (dateA !== dateB) return dateA - dateB
-                return 0
-            })
-    }, [assignments, user, activeTab])
+            .sort((a, b) => getDateMs(a.eventDate) - getDateMs(b.eventDate))
+    }, [assignments, user, mineOnly])
 
-    // For overview mode: group by setlist
-    const allBySetlist = useMemo(() => {
-        if (activeTab !== 'all') return []
+    // All services grouped by setlist (default view)
+    const servicesBySetlist = useMemo(() => {
+        if (mineOnly) return []
         const setlists = new Map<string, { name: string; eventDate: unknown; assignments: SchedulingAssignment[] }>()
 
         for (const a of assignments) {
@@ -89,12 +72,10 @@ export default function SchedulePage() {
             setlists.get(a.setlistId)!.assignments.push(a)
         }
 
-        return Array.from(setlists.values()).sort((a, b) => {
-            const dateA = getDateMs(a.eventDate)
-            const dateB = getDateMs(b.eventDate)
-            return dateA - dateB
-        })
-    }, [assignments, activeTab])
+        return Array.from(setlists.values()).sort((a, b) =>
+            getDateMs(a.eventDate) - getDateMs(b.eventDate)
+        )
+    }, [assignments, mineOnly])
 
     function getOtherMusicians(assignment: SchedulingAssignment) {
         const setlistAssignments = groupedBySetlist.get(assignment.setlistId) || []
@@ -107,9 +88,12 @@ export default function SchedulePage() {
             }))
     }
 
-    // Stats
-    const confirmedCount = assignments.filter(a => a.status === 'confirmed' && (activeTab === 'all' || a.musicianUid === user?.uid)).length
-    const pendingCount = assignments.filter(a => a.status === 'pending' && (activeTab === 'all' || a.musicianUid === user?.uid)).length
+    // Stats based on current filter
+    const visibleAssignments = mineOnly
+        ? assignments.filter(a => a.musicianUid === user?.uid)
+        : assignments
+    const confirmedCount = visibleAssignments.filter(a => a.status === 'confirmed').length
+    const pendingCount = visibleAssignments.filter(a => a.status === 'pending').length
 
     if (!user) {
         return (
@@ -122,46 +106,49 @@ export default function SchedulePage() {
     return (
         <div className="flex flex-col bg-background text-foreground min-h-screen">
             {/* Header */}
-            <div className="h-20 border-b border-border/60 flex items-center px-4 sm:px-6 gap-4 shrink-0 bg-card/50 backdrop-blur-sm">
+            <div className="h-20 border-b border-border/60 flex items-center px-3 md:px-6 gap-3 md:gap-4 shrink-0 bg-card/50 backdrop-blur-sm">
                 <Button size="icon" variant="ghost" className="h-10 w-10 rounded-xl fluid-interaction" onClick={() => router.back()}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <div className="flex-1">
                     <h1 className="text-title">Schedule</h1>
                 </div>
-            </div>
 
-            {/* Tabs */}
-            <div className="border-b border-border/60 px-4 sm:px-6 overflow-x-auto bg-card/30 backdrop-blur-sm">
-                <div className="flex items-center gap-1 min-w-max">
-                    <TabButton
-                        active={activeTab === 'my_schedule'}
-                        onClick={() => setActiveTab('my_schedule')}
-                        icon={<CalendarDays className="h-4 w-4" />}
-                        label="My Schedule"
-                    />
-                    {isBandLeader && (
-                        <TabButton
-                            active={activeTab === 'calendar'}
-                            onClick={() => setActiveTab('calendar')}
-                            icon={<LayoutGrid className="h-4 w-4" />}
-                            label="Planning"
-                        />
+                {/* Controls */}
+                <div className="flex items-center gap-2">
+                    {viewMode === 'services' && (
+                        <button
+                            onClick={() => setMineOnly(!mineOnly)}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
+                                mineOnly
+                                    ? "bg-brand/15 text-brand border border-brand/30"
+                                    : "bg-muted/50 text-muted-foreground border border-border/40 hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            <User className="h-3.5 w-3.5" />
+                            Mine
+                        </button>
                     )}
                     {isBandLeader && (
-                        <TabButton
-                            active={activeTab === 'all'}
-                            onClick={() => setActiveTab('all')}
-                            icon={<Music className="h-4 w-4" />}
-                            label="Overview"
-                        />
+                        <Button
+                            size="icon"
+                            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                            className={cn(
+                                "h-9 w-9 rounded-xl",
+                                viewMode === 'calendar' && "bg-brand text-white"
+                            )}
+                            onClick={() => setViewMode(viewMode === 'calendar' ? 'services' : 'calendar')}
+                        >
+                            <LayoutGrid className="h-4 w-4" />
+                        </Button>
                     )}
                 </div>
             </div>
 
-            {/* Stats bar -- only for schedule/overview tabs */}
-            {!loading && (activeTab === 'my_schedule' || activeTab === 'all') && (confirmedCount > 0 || pendingCount > 0) && (
-                <div className="flex items-center gap-5 px-4 sm:px-6 py-3 text-sm text-muted-foreground border-b border-border/40 bg-muted/20">
+            {/* Stats bar */}
+            {!loading && viewMode === 'services' && (confirmedCount > 0 || pendingCount > 0) && (
+                <div className="flex items-center gap-5 px-3 md:px-6 py-3 text-sm text-muted-foreground border-b border-border/40 bg-muted/20">
                     <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                         <span className="font-medium">{confirmedCount}</span>
@@ -178,9 +165,8 @@ export default function SchedulePage() {
             )}
 
             {/* Content */}
-            <div className="p-4 sm:p-6">
-                {activeTab === 'calendar' ? (
-                    /* Planning Calendar Tab (band leaders only) */
+            <div className="p-3 md:p-6">
+                {viewMode === 'calendar' ? (
                     <UnifiedCalendar mode="planning" />
                 ) : loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -188,10 +174,10 @@ export default function SchedulePage() {
                             <Skeleton key={i} className="h-44 rounded-xl bg-card/50 border border-border/40" />
                         ))}
                     </div>
-                ) : activeTab === 'my_schedule' ? (
-                    /* My Schedule View */
+                ) : mineOnly ? (
+                    /* My Assignments (filtered) */
                     myAssignments.length === 0 ? (
-                        <EmptySchedule />
+                        <EmptySchedule mineOnly />
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {myAssignments.map((assignment, i) => (
@@ -205,12 +191,12 @@ export default function SchedulePage() {
                         </div>
                     )
                 ) : (
-                    /* Overview (Band Leader) */
-                    allBySetlist.length === 0 ? (
-                        <EmptySchedule isOverview />
+                    /* All Services (default) */
+                    servicesBySetlist.length === 0 ? (
+                        <EmptySchedule />
                     ) : (
                         <div className="space-y-8">
-                            {allBySetlist.map(({ name, eventDate, assignments: setlistAssignments }, sectionIdx) => (
+                            {servicesBySetlist.map(({ name, eventDate, assignments: setlistAssignments }, sectionIdx) => (
                                 <section key={name + String(eventDate)} className={`dash-stagger dash-stagger-${Math.min(sectionIdx, 5)}`}>
                                     <h2 className="text-eyebrow mb-3 flex items-center gap-2">
                                         <CalendarDays className="h-4 w-4" />
@@ -236,25 +222,7 @@ export default function SchedulePage() {
 
 // ── Sub-components ──
 
-function TabButton({ active, onClick, icon, label }: {
-    active: boolean; onClick: () => void; icon: React.ReactNode; label: string
-}) {
-    return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap",
-                active
-                    ? "border-brand text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            )}
-        >
-            {icon} {label}
-        </button>
-    )
-}
-
-/** Compact card showing a single musician's status in overview mode */
+/** Compact card showing a single musician's status */
 function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }) {
     return (
         <div className={cn(
@@ -285,19 +253,19 @@ function MusicianStatusCard({ assignment }: { assignment: SchedulingAssignment }
     )
 }
 
-function EmptySchedule({ isOverview }: { isOverview?: boolean }) {
+function EmptySchedule({ mineOnly }: { mineOnly?: boolean }) {
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center dash-stagger dash-stagger-0">
             <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
                 <CalendarDays className="h-8 w-8 text-muted-foreground/40" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-1.5">
-                {isOverview ? 'No upcoming assignments' : 'No services scheduled'}
+                {mineOnly ? 'No services scheduled for you' : 'No upcoming services'}
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-                {isOverview
-                    ? 'Assign musicians to setlists using the musician picker in the setlist editor.'
-                    : 'When you\'re scheduled for a service, it will appear here. You\'ll receive a notification when assigned.'}
+                {mineOnly
+                    ? 'You haven\'t been assigned to any upcoming services yet. You\'ll receive a notification when assigned.'
+                    : 'No upcoming services found. Assign musicians to setlists using the musician picker in the setlist editor.'}
             </p>
         </div>
     )

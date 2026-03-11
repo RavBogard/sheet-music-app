@@ -12,7 +12,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.7.0 |
+| Version | 1.8.0 |
 | Status | Production |
 | Last Updated | 2026-03-11 |
 
@@ -52,16 +52,18 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v1.7: Print pipeline overhaul, key signature position, monitor buses
-- [x] v1.7 Phase 1: Mobile sign-in redirect fallback + SW banner suppress + avatar onError fallback
-- [x] v1.7 Phase 2: Google OAuth profile scope for avatar + changelog page
-- [x] v1.7 Phase 3: Print pipeline overhaul — sync PDF generation, simplified PrintModal
-- [x] v1.7 Phase 4: Key signature position — moved key badge right of title in performance view
-- [x] v1.7 Phase 5: Monitor buses — Firestore data fix, bus count badge, self-assignment fix
+- (none — ready for next milestone)
+
+### Validated (Recently Shipped)
+
+- [x] v1.7: Print pipeline overhaul, key signature position, monitor buses — Phases 1-5
+- [x] v1.8 Phase 1: Mobile navigation redesign — hamburger menu moved to upper-left header
+- [x] v1.8 Phase 2: Setlist mobile responsive layout — responsive padding, touch-visible menus
+- [x] v1.8 Phase 3: Schedule page redesign — all-services-first default, personal filter toggle
 
 ### Planned (Next)
 
-- v1.8: Mobile UX overhaul (nav, setlist responsive, schedule redesign)
+- v1.9: TBD
 
 ### Out of Scope
 
@@ -153,7 +155,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Direct sync PDF generation (bypass Inngest) | v1.7 P3 | Inngest not configured on Vercel; sync matches working personal/public routes |
 | Remove Firestore polling from PrintModal | v1.7 P3 | No background job = no job status to poll |
 | Key badge right of title (reversed key-left) | v1.7 P4 | User preference; inline after title is cleaner |
+| All services as schedule default (not personal) | v1.8 P3 | Everyone sees full schedule; "Mine" toggle for personal filter |
+| Single subscription with client-side filter | v1.8 P3 | subscribeToAllUpcomingAssignments for all users, filter locally |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 5 (v1.7 complete)*
+*Last updated: 2026-03-11 after Phase 3 (v1.8 complete)*
