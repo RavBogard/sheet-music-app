@@ -5,28 +5,25 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.0 Schedule & Workflow Fixes — MILESTONE COMPLETE
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 1 ready to plan
 
 ## Current Position
 
-Milestone: v2.0 Schedule & Workflow Fixes — COMPLETE
-Phase: 3 of 3 (Print PDF Layout Fixes) — Complete
-Plan: 03-01 complete
-Status: Milestone complete, ready for next milestone
-Last activity: 2026-03-11 — Phase 3 complete, v2.0 milestone finished
+Milestone: v2.5 Bugsweep & Test Coverage
+Phase: 1 of 8 (Type Safety Fixes) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-11 — Milestone created
 
 Progress:
-- Milestone: [██████████] 100%
-- Phase 1: [██████████] 100% — Schedule Visibility Fix
-- Phase 2: [██████████] 100% — Gig Packet Modal Layout Fix
-- Phase 3: [██████████] 100% — Print PDF Layout Fixes
+- Milestone: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — milestone finished]
+  ○        ○        ○     [Ready for first PLAN]
 ```
 
 ## Accumulated Context
@@ -49,15 +46,19 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Session cookie never refreshed after initial login (low priority, 14-day expiry)
 
 ### Git State
-Last commit: 90d6460
+Last commit: 7733441
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: v2.0 milestone complete
-Next action: /paul:complete-milestone or /paul:discuss-milestone for next milestone
-Resume file: .paul/ROADMAP.md
+Stopped at: v2.5 milestone created, paused before Phase 1 planning
+Next action: /paul:plan for Phase 1 (Type Safety Fixes)
+Resume file: .paul/HANDOFF-2026-03-11.md
+Resume context:
+- Bugsweep identified ~15 `as any` casts, empty catches, fire-and-forget promises
+- Test coverage at 15% — phases 3-8 will bring it to 50-60%
+- Specific file/line locations documented in handoff
 
 ---
 *STATE.md — Updated after every significant action*

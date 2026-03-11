@@ -1,6 +1,54 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v2.5 Bugsweep & Test Coverage**
+Status: Not started
+Phases: 8 total
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Type Safety Fixes | 0 | Not started | — |
+| 2 | Silent Failure & Error Handling | 0 | Not started | — |
+| 3 | Test Infrastructure & Flaky Fix | 0 | Not started | — |
+| 4 | Data Layer Tests | 0 | Not started | — |
+| 5 | API Route Tests | 0 | Not started | — |
+| 6 | Hook Tests | 0 | Not started | — |
+| 7 | Component Tests | 0 | Not started | — |
+| 8 | AI & Integration Tests | 0 | Not started | — |
+
+### Phase 1: Type Safety Fixes
+
+Focus: Eliminate ~15 `as any` casts with proper Firestore/API types across scheduling routes (assign, calendar-feed, remind, suggest), chat route, users-firebase, MusicianPicker, and liturgical-templates. Replace each cast with correct typed interfaces.
+
+### Phase 2: Silent Failure & Error Handling
+
+Focus: Fix empty catch blocks in QR auth and scheduling routes — add logging at minimum, proper error handling where needed. Fix fire-and-forget promises in scheduling assign route — track notification delivery failures so musicians know if email/push failed. Wire clearSaveTimer() in all annotation consumers. Move hardcoded CORS origins to env-only config.
+
+### Phase 3: Test Infrastructure & Flaky Fix
+
+Focus: Fix the flaky route-auth publish test (timeout). Set up shared test helpers and fixtures for Firebase mocking (Firestore snapshots, collection queries, auth tokens). Establish API route test patterns that can be reused across phases 4-5. Create mock factories for common types (SetlistTrack, UserProfile, SchedulingAssignment).
+
+### Phase 4: Data Layer Tests
+
+Focus: Tests for firebase helpers, users-firebase, setlist-firebase, scheduling-firebase, server-auth, server-setlists, server-library. Test CRUD operations, permission checks, data validation, and error paths. Use mock factories from Phase 3.
+
+### Phase 5: API Route Tests
+
+Focus: Tests for scheduling routes (assign, respond, suggest, remind), setlist operations (publish, email-packets, print), library operations (list, upload, sync, rename), and email/push delivery modules. Test request validation, authorization, business logic, and error responses.
+
+### Phase 6: Hook Tests
+
+Focus: Tests for all 19 untested hooks — use-setlist-logic, use-library, useMonitorConnection, use-offline, use-setlist-performance, use-setlist-presence, use-smart-transposer, use-metronome, use-wake-lock, use-media-query, use-batch-selection, use-calendar-data, use-content-search, use-creation-wizard, use-monitor-access, use-safe-firestore-sync, use-setlist-dashboard, use-upcoming-prep. Skip monitor hooks already covered.
+
+### Phase 7: Component Tests
+
+Focus: Tests for critical UI components — PrintModal, library views (SongChartsLibrary, LibraryFileRow, UploadDialog), scheduling UI (ScheduleCard, RabbiBanner), dashboard (NextServiceCard interactions, PrepRecommendations), SetlistEditor complex interactions (drag-and-drop, inline editing). Skip admin panels and basic UI primitives.
+
+### Phase 8: AI & Integration Tests
+
+Focus: Tests for gemini.ts (chat completions, error handling), key-detection.ts (key extraction accuracy), pdf-chord-extractor.ts (chord parsing from PDF), enrichment-engine.ts (metadata enrichment), print-pipeline edge cases (empty setlists, missing files, transposition combos). Mock external APIs (Gemini, Firebase Storage).
+
+## Previous Milestone
 **v2.0 Schedule & Workflow Fixes**
 Status: Complete
 Phases: 3 of 3 complete
@@ -11,52 +59,31 @@ Phases: 3 of 3 complete
 | 2 | Gig Packet Modal Layout Fix | 1 | Complete | 2026-03-11 |
 | 3 | Print PDF Layout Fixes | 1 | Complete | 2026-03-11 |
 
-### Phase 1: Schedule Visibility Fix
-
-Focus: Schedule page only shows services with musician assignments. Setlists with future eventDates but no assignments are invisible. Fix the page to subscribe to upcoming setlists directly and merge with assignment data, so all scheduled services appear.
-
-### Phase 2: Gig Packet Modal Layout Fix
-
-Focus: PrintModal has excessive empty space above the configuration form, requiring users to scroll down to reach the controls. Root cause: modal uses `items-center justify-center` centering with `max-h-[90vh]`, `p-6` content padding, and a tall footer — cramping the scrollable content area. Fix the modal layout so content is immediately visible when opened, especially on mobile.
-
-### Phase 3: Print PDF Layout Fixes
-
-Focus: Two fixes to the generated gig packet PDF. (1) On the setlist page, swap the key and lead columns so key is the 2nd column and lead is the 3rd. (2) Non-song items (readings, prayers, etc.) that don't have charts should not be included in the printed charts section of the PDF, but should still appear on the setlist page.
-
-## Previous Milestone
-**v1.9 Auth Stability & Deferred Cleanup**
-Status: Complete
-Phases: 5 of 5 complete
-
-| Phase | Name | Plans | Status | Completed |
-|-------|------|-------|--------|-----------|
-| 1 | Auth & Routing Regression Audit | 1 | Complete | 2026-03-11 |
-| 2 | Auth Flow Rebuild | 1 | Complete | 2026-03-11 |
-| 3 | Avatar System Fix | 1 | Complete | 2026-03-11 |
-| 4 | ~~Bridge Credentials Security~~ | 0 | Skipped (accepted risk) | 2026-03-11 |
-| 5 | Deferred Cleanup Batch | 1 | Complete | 2026-03-11 |
-
-### Phase 1: Auth & Routing Regression Audit
-
-Focus: Investigate and document all auth-related bugs introduced by recent changes. Known issues: (1) Monitor page redirects to homepage after fresh login — auth state/session not ready when middleware checks. (2) Login flow feels buggy — popup-then-redirect fallback cascade, dual session cookie + ID token state. (3) Avatars not displaying properly — inconsistent error handling, Google photo URL failures. Audit the full auth lifecycle: login → session creation → middleware routing → auth context hydration → protected page access. Identify root causes before fixing.
-
-### Phase 2: Auth Flow Rebuild
-
-Focus: Based on Phase 1 findings, simplify and stabilize the login flow. Potential scope: single auth path (eliminate popup/redirect cascade), proper session cookie timing so post-login navigation works immediately, fix middleware redirect logic for fresh sessions. Goal: login once, everything works — no refresh needed.
-
-### Phase 3: Avatar System Fix
-
-Focus: Create one unified avatar component with proper error handling and use it everywhere. Current state: 4 different files roll their own `<img>` with ad-hoc fallback (some have onError, some don't). Fix: standardize on Radix Avatar component, add global error/fallback, handle Google photo URL expiry/CORS.
-
-### Phase 4: Bridge Credentials Security
-
-Focus: CRIT-003 — `src/app/api/bridge/setup-code/route.ts` returns raw Firebase Admin service account private key in JSON response. Replace with short-lived tokens or service account impersonation. Deferred since v1.3.
-
-### Phase 5: Deferred Cleanup Batch
-
-Focus: LOW-004 (leader → band_leader Firestore migration), ESLint 9 config fix (broken `npm run lint`), LOW-005/006/007 audit items. All small mechanical fixes batched into one phase.
-
 ## Completed Milestones
+
+<details>
+<summary>v2.0 Schedule & Workflow Fixes - 2026-03-11 (3 phases, 3 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Schedule Visibility Fix | 1/1 | 2026-03-11 |
+| 2 | Gig Packet Modal Layout Fix | 1/1 | 2026-03-11 |
+| 3 | Print PDF Layout Fixes | 1/1 | 2026-03-11 |
+
+</details>
+
+<details>
+<summary>v1.9 Auth Stability & Deferred Cleanup - 2026-03-11 (5 phases, 4 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Auth & Routing Regression Audit | 1/1 | 2026-03-11 |
+| 2 | Auth Flow Rebuild | 1/1 | 2026-03-11 |
+| 3 | Avatar System Fix | 1/1 | 2026-03-11 |
+| 4 | ~~Bridge Credentials Security~~ | 0 | Skipped |
+| 5 | Deferred Cleanup Batch | 1/1 | 2026-03-11 |
+
+</details>
 
 <details>
 <summary>v1.8 Mobile UX Overhaul - 2026-03-11 (3 phases, 3 plans)</summary>
@@ -223,4 +250,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v1.9 milestone created)*
+*Last updated: 2026-03-11 (v2.5 milestone created)*

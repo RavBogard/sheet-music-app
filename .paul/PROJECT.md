@@ -52,7 +52,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- (none — v2.0 complete, next milestone TBD)
+- [ ] v2.5: Bugsweep & test coverage (type safety, error handling, comprehensive tests)
 
 ### Validated (Recently Shipped)
 
@@ -68,7 +68,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- TBD — next milestone not yet defined
+- v2.5 Phase 1: Type safety fixes (~15 `as any` casts)
 
 ### Out of Scope
 
