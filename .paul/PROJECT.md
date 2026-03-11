@@ -55,10 +55,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [ ] v1.7: Print pipeline overhaul, key signature position, monitor buses
 - [x] v1.7 Phase 1: Mobile sign-in redirect fallback + SW banner suppress + avatar onError fallback
 - [x] v1.7 Phase 2: Google OAuth profile scope for avatar + changelog page
+- [x] v1.7 Phase 3: Print pipeline overhaul — sync PDF generation, simplified PrintModal
 
 ### Planned (Next)
 
-- v1.7 Phases 3-5: Print pipeline overhaul, key signature position, monitor buses
+- v1.7 Phases 4-5: Key signature position, monitor buses
 
 ### Out of Scope
 
@@ -147,7 +148,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | COOP: same-origin-allow-popups for Google sign-in | v1.7 P1 | Allows popup sign-in while maintaining isolation |
 | signInWithRedirect as popup fallback | v1.7 P1 | Mobile browsers that block popups get working sign-in |
 | 10s suppress window for SW update banner | v1.7 P1 | Prevents false "update available" on fresh page load |
+| Direct sync PDF generation (bypass Inngest) | v1.7 P3 | Inngest not configured on Vercel; sync matches working personal/public routes |
+| Remove Firestore polling from PrintModal | v1.7 P3 | No background job = no job status to poll |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 2 (v1.7)*
+*Last updated: 2026-03-11 after Phase 3 (v1.7)*
