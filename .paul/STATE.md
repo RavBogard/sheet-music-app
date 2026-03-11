@@ -10,21 +10,21 @@ See: .paul/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 4 of 8 (Data Layer Tests) — Complete
-Plan: 04-02 complete (2/2 plans done)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-03-11 — Phase 4 complete: data layer tests (server + client)
+Phase: 5 of 8 (API Route Tests) — Planning
+Plan: 05-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-03-11 — Created phases/05-api-route-tests/05-01-PLAN.md
 
 Progress:
 - Milestone: [█████░░░░░] 50%
-- Phase 4: [██████████] 100%
+- Phase 5: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — Phase 4 done, ready for Phase 5]
+  ✓        ○        ○     [Plan 05-01 created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -43,19 +43,21 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Session cookie never refreshed after initial login (low priority, 14-day expiry)
 
 ### Git State
-Last commit: e420f39
+Last commit: 6f3b266
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Phase 4 complete, transition done
-Next action: /paul:plan (Phase 5 — API Route Tests)
-Resume file: .paul/phases/04-data-layer-tests/04-02-SUMMARY.md
+Stopped at: Plan 05-01 created
+Next action: /paul:apply phases/05-api-route-tests/05-01-PLAN.md
+Resume file: .paul/phases/05-api-route-tests/05-01-PLAN.md
 Resume context:
-- Phase 4 complete: 2 plans, all data layer tests written
-- 734 total tests passing, 0 TS errors
-- Phase 5 focus: API route tests (scheduling, setlist, library, email/push)
+- Plan 05-01: scheduling route tests (respond, unassign, suggest, history, calendar-feed)
+- Plan 05-02 will cover assign + remind (complex routes with email/SMS/push)
+- Plan 05-03 will cover setlist + library routes
+- 734 tests passing baseline
+- Uses established test helpers: makeReq, mockAuth, firebaseAdminMock
 
 ---
 *STATE.md — Updated after every significant action*

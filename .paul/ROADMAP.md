@@ -11,7 +11,7 @@ Phases: 8 total
 | 2 | Silent Failure & Error Handling | 1 | Complete | 2026-03-11 |
 | 3 | Test Infrastructure & Flaky Fix | 1 | Complete | 2026-03-11 |
 | 4 | Data Layer Tests | 2 | Complete | 2026-03-11 |
-| 5 | API Route Tests | 0 | Not started | — |
+| 5 | API Route Tests | 3 | In progress | — |
 | 6 | Hook Tests | 0 | Not started | — |
 | 7 | Component Tests | 0 | Not started | — |
 | 8 | AI & Integration Tests | 0 | Not started | — |
