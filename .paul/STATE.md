@@ -5,26 +5,26 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 4 next
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 5 next
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 4 of 8 (Data Layer Tests) — Apply complete
-Plan: 04-02 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-03-11 — Created phases/04-data-layer-tests/04-02-PLAN.md
+Phase: 4 of 8 (Data Layer Tests) — Complete
+Plan: 04-02 complete (2/2 plans done)
+Status: Phase 4 complete, ready for Phase 5
+Last activity: 2026-03-11 — Phase 4 complete: data layer tests (server + client)
 
 Progress:
-- Milestone: [███░░░░░░░] 37%
-- Phase 4: [█████░░░░░] 50%
+- Milestone: [█████░░░░░] 50%
+- Phase 4: [██████████] 100%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 04-02 created, awaiting approval]
+  ✓        ✓        ✓     [Loop complete — Phase 4 done, ready for Phase 5]
 ```
 
 ## Accumulated Context
@@ -43,21 +43,19 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Session cookie never refreshed after initial login (low priority, 14-day expiry)
 
 ### Git State
-Last commit: 85e1edc
+Last commit: e420f39
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Plan 04-02 created, APPLY not yet started (context limit)
-Next action: /paul:apply phases/04-data-layer-tests/04-02-PLAN.md
-Resume file: .paul/phases/04-data-layer-tests/04-02-PLAN.md
+Stopped at: Phase 4 complete, transition done
+Next action: /paul:plan (Phase 5 — API Route Tests)
+Resume file: .paul/phases/04-data-layer-tests/04-02-SUMMARY.md
 Resume context:
-- 2 tasks: users-firebase tests, scheduling-firebase tests
-- Client-side Firebase SDK mocking (different from server-side admin mocks)
-- userProfileConverter uses createZodConverter pattern (src/types/schemas.ts:184)
-- 690 tests passing baseline
-- ROADMAP shows Phase 4 plan count as 1 — update to 2 on next session
+- Phase 4 complete: 2 plans, all data layer tests written
+- 734 total tests passing, 0 TS errors
+- Phase 5 focus: API route tests (scheduling, setlist, library, email/push)
 
 ---
 *STATE.md — Updated after every significant action*
