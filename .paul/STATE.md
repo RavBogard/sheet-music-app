@@ -10,21 +10,21 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 2 of 6 (Security & API Consistency) — In Progress
-Plan: 02-04 applied, needs UNIFY
-Status: APPLY complete, UNIFY pending
-Last activity: 2026-03-10 — Applied 02-04 (withAuth migration: 7 AI/drive routes)
+Phase: 3 of 6 (Architecture Cleanup) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-10 — Phase 2 complete, transitioned to Phase 3
 
 Progress:
-- v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 30%
-- Phase 2: [████████░░] 80%
+- v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 33%
+- Phase 3: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [Apply complete, UNIFY pending]
+  ○        ○        ○     [Ready for new PLAN]
 ```
 
 ## Accumulated Context
@@ -32,34 +32,34 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ### Decisions
 - v1.5 scope: All high+medium codebase and UI/UX improvements from full project audit. No new features.
 - Phase order: bugs → security → architecture → quality → UI/UX → monitoring (dependency-driven)
-- Audit source: .paul/phases/05-backend-analysis-bug-scan/05-01-SUMMARY.md + fresh codebase/UI/UX analysis
 - Phase 1: stripUndefined/Deep for Firestore sanitization (not JSON roundtrip)
 - Phase 1: cancelled-flag before every state update after async boundaries
-- Phase 1: AI slot lifecycle already safe, documented with comments
+- Phase 2: All standard auth routes use createApiHandler; withAuth reserved for complex patterns
+- Phase 2: 18 routes migrated, 4 remain on withAuth (justified)
 
 ### Deferred Issues (carried from v1.4)
 - LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
 
-### Deferred Issues (resolved in v1.5 scope)
-- CRIT-003 (bridge credentials) — Phase 2
-- withAuth → createApiHandler migration (23 routes) — Phase 2
-- clearSaveTimer() wiring — Phase 1 ✅ Fixed
+### Deferred Issues (resolved in v1.5)
+- CRIT-003 (bridge credentials) — Phase 2 ✅
+- withAuth → createApiHandler migration — Phase 2 ✅
+- clearSaveTimer() wiring — Phase 1 ✅
 
 ### Blockers/Concerns
 - None
 
 ### Git State
-Last commit: 6efd320
+Last commit: ca21211
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Plan 02-04 applied, needs UNIFY
-Next action: Run /paul:unify .paul/phases/02-security-api-consistency-v15/02-04-PLAN.md
-Resume file: .paul/phases/02-security-api-consistency-v15/02-04-PLAN.md
-Resume context: 7 AI+drive routes migrated, tsc clean, withAuth down to 4 files. Commit ca21211.
+Stopped at: Phase 2 complete, ready to plan Phase 3
+Next action: /paul:plan for Phase 3
+Resume file: .paul/ROADMAP.md
+Resume context: Phase 2 (Security & API Consistency) complete. 4 plans executed. Ready for Architecture Cleanup.
 
 ---
 *STATE.md — Updated after every significant action*

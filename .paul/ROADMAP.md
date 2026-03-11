@@ -3,12 +3,12 @@
 ## Current Milestone
 **v1.5 Codebase & UI/UX Hardening**
 Status: In Progress
-Phases: 1 of 6 complete
+Phases: 2 of 6 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Critical Bug Fixes | 1/1 | Complete | 2026-03-10 |
-| 2 | Security & API Consistency | 2/3+ | In Progress | - |
+| 2 | Security & API Consistency | 4/4 | Complete | 2026-03-10 |
 | 3 | Architecture Cleanup | TBD | Not started | - |
 | 4 | Quality & Deps | TBD | Not started | - |
 | 5 | UI/UX Polish | TBD | Not started | - |
