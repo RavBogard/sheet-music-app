@@ -84,7 +84,6 @@ vi.mock("@/components/music/AnnotationToolbar", () => ({
 }))
 
 import { PDFOverlay } from "../PDFOverlay"
-import { PerformanceBottomBar } from "../PerformanceBottomBar"
 
 const songA: SetlistTrack = {
     id: "song-a",
@@ -124,48 +123,6 @@ const songNoFile: SetlistTrack = {
 }
 
 const allTracks = [songA, prayer, songB, header, songNoFile]
-
-describe("PerformanceBottomBar", () => {
-    const defaultProps = {
-        track: songA,
-        tracks: allTracks,
-        currentIndex: 0,
-        isPublicView: false,
-        onDrawerToggle: vi.fn(),
-        onMonitorToggle: vi.fn(),
-        onNavigate: vi.fn(),
-        onClose: vi.fn(),
-    }
-
-    beforeEach(() => {
-        vi.clearAllMocks()
-    })
-
-    it("shows current song title", () => {
-        render(<PerformanceBottomBar {...defaultProps} />)
-        expect(screen.getByText("Ma Tovu")).toBeDefined()
-    })
-
-    it("prev/next navigation skips non-song items", () => {
-        render(<PerformanceBottomBar {...defaultProps} currentIndex={0} />)
-        const prevBtn = screen.getByLabelText("Previous song")
-        expect(prevBtn).toHaveProperty("disabled", true)
-        const nextBtn = screen.getByLabelText("Next song")
-        expect(nextBtn).toHaveProperty("disabled", false)
-        fireEvent.click(nextBtn)
-        expect(defaultProps.onNavigate).toHaveBeenCalledWith(2)
-    })
-
-    it("hides monitor button when isPublicView is true", () => {
-        render(<PerformanceBottomBar {...defaultProps} isPublicView={true} />)
-        expect(screen.queryByLabelText("Open monitor mixer")).toBeNull()
-    })
-
-    it("shows monitor button when isPublicView is false", () => {
-        render(<PerformanceBottomBar {...defaultProps} isPublicView={false} />)
-        expect(screen.getByLabelText("Open monitor mixer")).toBeDefined()
-    })
-})
 
 describe("PDFOverlay", () => {
     const defaultProps = {

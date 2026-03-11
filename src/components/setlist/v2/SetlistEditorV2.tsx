@@ -48,6 +48,7 @@ import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { syncTemplateSlot } from "@/lib/template-firebase"
+import { useBatchSelection } from "@/hooks/use-batch-selection"
 
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
@@ -227,8 +228,10 @@ export function SetlistEditorV2({
     const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
 
     // Batch select mode
-    const [selectMode, setSelectMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const {
+        selectMode, setSelectMode, selectedIds, setSelectedIds,
+        toggleSelectId, handleBatchDelete, handleBatchDuplicate, exitSelectMode,
+    } = useBatchSelection({ tracks, addToHistory, setTracks, undo })
 
     // Service for delete/duplicate operations
     const editorService = useMemo(
@@ -309,50 +312,6 @@ export function SetlistEditorV2({
             moveTrack(active.id as string, over.id as string)
         }
     }
-
-    // ── Batch select operations ──
-
-    const toggleSelectId = useCallback((id: string) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }, [])
-
-    const handleBatchDelete = useCallback(() => {
-        if (selectedIds.size === 0) return
-        addToHistory(tracks)
-        setTracks(prev => prev.filter(t => !selectedIds.has(t.id)))
-        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} deleted`, {
-            action: { label: "Undo", onClick: () => undo() },
-            duration: 5000,
-        })
-        setSelectedIds(new Set())
-    }, [selectedIds, tracks, addToHistory, setTracks, undo])
-
-    const handleBatchDuplicate = useCallback(() => {
-        if (selectedIds.size === 0) return
-        addToHistory(tracks)
-        const newTracks = [...tracks]
-        // Insert duplicates after the last selected item
-        const selectedArr = tracks.filter(t => selectedIds.has(t.id))
-        const lastSelectedIdx = tracks.findIndex(t => t.id === selectedArr[selectedArr.length - 1]?.id)
-        const duplicates = selectedArr.map(t => ({
-            ...t,
-            id: crypto.randomUUID(),
-        }))
-        newTracks.splice(lastSelectedIdx + 1, 0, ...duplicates)
-        setTracks(newTracks)
-        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} duplicated`)
-        setSelectedIds(new Set())
-    }, [selectedIds, tracks, addToHistory, setTracks])
-
-    const exitSelectMode = useCallback(() => {
-        setSelectMode(false)
-        setSelectedIds(new Set())
-    }, [])
 
     // ── Track rendering ──
 

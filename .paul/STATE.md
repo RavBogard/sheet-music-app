@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 3 of 6 (Architecture Cleanup) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-10 — Phase 2 complete, transitioned to Phase 3
+Phase: 3 of 6 (Architecture Cleanup) — Planning
+Plan: 03-01 applied, needs UNIFY
+Status: APPLY complete, UNIFY pending
+Last activity: 2026-03-10 — Applied 03-01 (dead code removal + batch selection hook)
 
 Progress:
 - v1.5 Codebase & UI/UX Hardening: [███░░░░░░░] 33%
@@ -24,7 +24,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready for new PLAN]
+  ✓        ✓        ○     [Apply complete, UNIFY pending]
 ```
 
 ## Accumulated Context
@@ -49,17 +49,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - None
 
 ### Git State
-Last commit: ca21211
+Last commit: 8fedb64
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: /paul:plan for Phase 3
-Resume file: .paul/ROADMAP.md
-Resume context: Phase 2 (Security & API Consistency) complete. 4 plans executed. Ready for Architecture Cleanup.
+Stopped at: Plan 03-01 applied, needs UNIFY
+Next action: Run /paul:unify .paul/phases/03-architecture-cleanup-v15/03-01-PLAN.md
+Resume file: .paul/phases/03-architecture-cleanup-v15/03-01-PLAN.md
+Resume context: PerformanceBottomBar deleted, useBatchSelection hook extracted, SetlistEditorV2 708→667 LOC.
 
 ---
 *STATE.md — Updated after every significant action*
