@@ -48,6 +48,10 @@ export function UpdatePrompt() {
 
         // Track if we auto-activated a SW (suppress the controllerchange reload)
         let autoActivated = false
+        // Track if there was already a controller when the page loaded.
+        // If not, this is a first install — controllerchange from clientsClaim
+        // should not show the update banner.
+        const hadControllerOnLoad = !!navigator.serviceWorker.controller
 
         const activateOrPrompt = (sw: ServiceWorker) => {
             if (!userHasInteracted) {
@@ -93,6 +97,11 @@ export function UpdatePrompt() {
         let refreshing = false
         navigator.serviceWorker.addEventListener("controllerchange", () => {
             if (refreshing) return
+            if (!hadControllerOnLoad) {
+                // First install — clientsClaim triggered controllerchange.
+                // Not an update, don't show the banner.
+                return
+            }
             if (autoActivated) {
                 // We triggered this via auto-activation on page load.
                 // Don't reload — the page is already loaded with current resources.
