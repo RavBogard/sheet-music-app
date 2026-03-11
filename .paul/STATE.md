@@ -5,69 +5,68 @@
 See: .paul/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v1.5 Codebase & UI/UX Hardening — COMPLETE
+**Current focus:** v1.6 Stability & Regression Audit
 
 ## Current Position
 
-Milestone: v1.5 Codebase & UI/UX Hardening
-Phase: 6 of 6 (Performance & Monitoring) — Complete
-Plan: 06-01 complete (SUMMARY created)
-Status: v1.5 MILESTONE COMPLETE — all 6 phases done
-Last activity: 2026-03-10 — Phase 6 transition complete, milestone finished
+Milestone: v1.6 Stability & Regression Audit
+Phase: 1 of 4 (Auth & CSP Hardening) — Planning
+Plan: 01-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-03-10 — Created .paul/phases/01-auth-csp-hardening/01-01-PLAN.md
 
 Progress:
-- v1.5 Codebase & UI/UX Hardening: [██████████] 100%
-- Phase 6: [██████████] 100%
+- v1.6 Stability & Regression Audit: [░░░░░░░░░░] 0% (4 phases)
+- Phase 1: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v1.5 milestone complete]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
 
 ### Decisions
-- v1.5 scope: All high+medium codebase and UI/UX improvements from full project audit. No new features.
-- Phase order: bugs → security → architecture → quality → UI/UX → monitoring (dependency-driven)
-- Phase 1: stripUndefined/Deep for Firestore sanitization (not JSON roundtrip)
-- Phase 1: cancelled-flag before every state update after async boundaries
-- Phase 2: All standard auth routes use createApiHandler; withAuth reserved for complex patterns
-- Phase 2: 18 routes migrated, 4 remain on withAuth (justified)
-- Phase 3: useMusicStore (279 LOC) too small to split — skip
-- Phase 3: SetlistDrawerLegacy NOT dead code (imported by PerformanceToolbar) — skip removal
-- Phase 4: deps/fonts/indexes all already current — no updates needed
-- Phase 5: 4 of 7 roadmap items already satisfied (reduced-motion, focus trapping, LibraryFileRow colors, ghost hover) — only 3 tasks needed
-- Phase 6: Offline write queue already satisfied by Firebase native offline persistence — no custom IndexedDB WAL needed
+- v1.6 scope: Deep audit of v1.5 regressions — auth/CSP/SW, UI revert, setlist redesign, full sweep
+- Phase order: auth first, then UI revert, then setlist redesign, then comprehensive sweep
+- Auth fixed: signInWithRedirect reverted back to signInWithPopup (commit 89572e5)
+- skipWaiting reverted to false (commit 89572e5)
+- Email/password auth removed — Google-only sign-in
+- COOP console warnings are cosmetic (Firebase SDK known issue) — no fix needed
+- Setlist view redesign added as Phase 3 — keys next to tracks, glanceable live view
+- Phases 2, 3 (UI work) will use /ui-ux-pro-max skill
 
-### Deferred Issues (carried from v1.4)
-- LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.6+.
-
-### Deferred Issues (resolved in v1.5)
-- CRIT-003 (bridge credentials) — Phase 2 ✅
-- withAuth → createApiHandler migration — Phase 2 ✅
-- clearSaveTimer() wiring — Phase 1 ✅
+### Deferred Issues (carried from v1.5)
+- LOW-004 (leader → band_leader migration) — Still Low, S effort. Defer to v1.7+.
 
 ### Known Issues
 - route-auth.test.ts: POST /api/setlist/publish expects 403 but gets 400 (pre-existing)
+- Manifest icon: /icon dynamic route may not serve in all PWA install contexts
+- PDF health scanner: all scans failing with 429 Too Many Requests from /api/drive/file (3rd attempt at fix)
 
 ### Blockers/Concerns
-- None
+- PDF health scan 429s — rate limiting issue, needs investigation
 
 ### Git State
-Last commit: 431239a
+Last commit: 89572e5
 Branch: master
 Feature branches merged: none
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: v1.5 milestone complete — all 6 phases transitioned
-Next action: /paul:complete-milestone or start next milestone
-Resume file: .paul/ROADMAP.md
-Resume context: v1.5 Codebase & UI/UX Hardening fully complete. 6 phases: bugs, security, architecture, quality, UI/UX, monitoring. Git commit pending. Ready for milestone archive or next milestone planning.
+Stopped at: Executing Phase 1 APPLY — Task 1 (CSP audit) in progress
+Next action: /paul:apply .paul/phases/01-auth-csp-hardening/01-01-PLAN.md (resume mid-execution)
+Resume file: .paul/phases/01-auth-csp-hardening/01-01-PLAN.md
+Resume context:
+- Plan approved, APPLY started
+- Task 1 (CSP audit): audit complete, CSP is actually correct for client-side — server-side APIs (Twilio, Resend, Inngest, hebcal) don't need CSP entries. Only cleanup: add accounts.google.com to connect-src, add comments documenting each domain.
+- Task 2 (static PWA icons): not started
+- Task 3 (checkpoint: human-verify): not started
+- Milestone finalized at 4 phases (was 5, combined UI revert + setlist redesign into Phase 3)
 
 ---
 *STATE.md — Updated after every significant action*

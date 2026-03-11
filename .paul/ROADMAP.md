@@ -1,79 +1,73 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v1.5 Codebase & UI/UX Hardening**
-Status: Complete
-Phases: 6 of 6 complete
+**v1.6 Stability & Regression Audit**
+Status: In Progress
+Phases: 0 of 4 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Critical Bug Fixes | 1/1 | Complete | 2026-03-10 |
-| 2 | Security & API Consistency | 4/4 | Complete | 2026-03-10 |
-| 3 | Architecture Cleanup | 3/3 | Complete | 2026-03-10 |
-| 4 | Quality & Deps | 1/1 | Complete | 2026-03-10 |
-| 5 | UI/UX Polish | 1/1 | Complete | 2026-03-10 |
-| 6 | Performance & Monitoring | 1/1 | Complete | 2026-03-10 |
+| 1 | Auth & CSP Hardening | 1 | Planning | - |
+| 2 | Firebase-Only File Serving | TBD | Not started | - |
+| 3 | Performance View Overhaul | TBD | Not started | - |
+| 4 | Regression Sweep & Deferred Fixes | TBD | Not started | - |
 
-### Phase 1: Critical Bug Fixes
+### Phase 1: Auth & CSP Hardening
 
-Focus: Stop active data loss and resource leaks
-- AI slot leak in use-smart-transposer.ts (early returns bypass releaseAiSlot)
-- clearSaveTimer() wiring into component cleanup (annotations lost on unmount)
-- Race condition in use-musician-transposition.ts (stale state after await)
-- initAdmin() return value checks (silent failures on missing credentials)
-- JSON.parse/stringify sanitization in setlist-firebase.ts (replace with Zod/explicit filtering)
+Focus: Finalize auth fix (signInWithPopup deployed, skipWaiting reverted), comprehensive CSP audit, verify manifest icons with static fallbacks.
+Notes: Auth already fixed via hotfix (commit 89572e5). This phase closes remaining loose ends.
+Plans: 1 (01-01-PLAN.md created)
 
-### Phase 2: Security & API Consistency
+### Phase 2: Firebase-Only File Serving
 
-Focus: Fix vulnerabilities and unify route patterns
-- npm audit fix (fast-xml-parser, ajv CVEs)
-- Security headers: CSP, HSTS, Permissions-Policy
-- QR code expiry enforcement at redemption
-- Error message sanitization (no internal details leaked)
-- Bridge credentials redesign (eliminate raw private key exposure)
-- Migrate 23 withAuth routes to createApiHandler
-- Fix HTTP status codes (201 for creation, 202 for async)
-- Add missing CORS headers on public endpoints
+Focus: Firebase Storage becomes the sole source of truth for serving files. Google Drive is intake-only.
+Tasks:
+- Remove or raise MAX_COPIES_PER_RUN (currently 20) so all files sync in one run
+- Verify all library files are copied to Firebase Storage
+- Remove Drive fallback from file-fetcher (Storage-only, fail if not found)
+- Fix PDF health scanner: bypass rate limiter or use server-side direct Storage check
+- Admin sync button UX: show copy progress, warn if files still pending
+Skill: Use /ui-ux-pro-max for admin sync UX
+Plans: TBD (defined during /paul:plan)
 
-### Phase 3: Architecture Cleanup
+### Phase 3: Performance View Overhaul
 
-Focus: Restructure before testing/measuring
-- Split SetlistEditorV2.tsx (708 LOC) into sub-components
-- Split MusicianPicker.tsx (824 LOC) into sub-components
-- Split SongChartsLibrary.tsx (473 LOC) into sub-components
-- Split TransposerMenu.tsx (411 LOC) into sub-components
-- Split useMusicStore into focused stores (playback, AI, performance, chordEdit)
-- Remove dead code: SetlistDrawerLegacy, PerformanceBottomBar
+Focus: Combined UI regression revert + setlist view redesign. Same components, same concern — make the live performance view right.
+Tasks:
+- Remove tablet sidebar toolbar (restore bottom toolbar on all viewports)
+- Rethink setlist view for live performance — keys prominent next to track names, clear song order, optimized for tablet glanceability
+- Verify no other unwanted visual regressions from v1.5
+- This is the essential "live visual view" for the band
+Skill: Use /ui-ux-pro-max for all design decisions
+Plans: TBD (defined during /paul:plan)
 
-### Phase 4: Quality & Deps
+### Phase 4: Regression Sweep & Deferred Fixes
 
-Focus: Fix test environment and dependencies before adding new tests
-- Vitest environment fix (node → jsdom)
-- Dependency updates (pdfjs-dist, jsdom, @types/node)
-- Font subsetting (Poppins weights ~50KB savings)
-- Re-enable ESLint exhaustive-deps rule
-- Document all required Firestore composite indexes
-
-### Phase 5: UI/UX Polish
-
-Focus: Accessibility and tablet experience
-- Tablet landscape breakpoint (PDF left / toolbar right at 1024px)
-- prefers-reduced-motion support for all animations
-- Modal focus trapping (WCAG 2.4.3)
-- Replace hard-coded blue colors in LibraryFileRow with brand palette
-- Ghost button hover states (increase from 5% to 10-15% opacity)
-- Zoom level indicator in PDFViewer
-- Skip-to-main-content link for keyboard navigation
-
-### Phase 6: Performance & Monitoring
-
-Focus: Measure the final, clean codebase
-- Bundle analyzer setup (@next/bundle-analyzer)
-- Sentry client-side integration + Web Vitals tracking
-- Offline write queue (IndexedDB WAL + sync-on-reconnect for annotations)
-- Component test coverage for critical paths (SetlistEditor, PerformanceToolbar)
+Focus: Deep audit + close out deferred items carried since v1.3/v1.5:
+- Run full test suite, fix the publish 403→400 test failure (pre-existing since v1.3)
+- Complete withAuth → createApiHandler migration (12 remaining routes)
+- Wire clearSaveTimer() into consuming components (deferred from v1.3)
+- Verify PWA/offline, manifest icons, edge cases
+- Investigate build time increase (1.5m → 2.5m) — check if Sentry source maps are the cause
+Plans: TBD (defined during /paul:plan)
 
 ## Completed Milestones
+
+<details>
+<summary>v1.5 Codebase & UI/UX Hardening - 2026-03-10 (6 phases, 11 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Critical Bug Fixes | 1/1 | 2026-03-10 |
+| 2 | Security & API Consistency | 4/4 | 2026-03-10 |
+| 3 | Architecture Cleanup | 3/3 | 2026-03-10 |
+| 4 | Quality & Deps | 1/1 | 2026-03-10 |
+| 5 | UI/UX Polish | 1/1 | 2026-03-10 |
+| 6 | Performance & Monitoring | 1/1 | 2026-03-10 |
+
+Archive: `.paul/milestones/v1.5-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>v1.4 Fixes & Library Management - 2026-03-10 (5 phases, 5 plans)</summary>
@@ -180,4 +174,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-10 (v1.5 milestone complete)*
+*Last updated: 2026-03-10 (v1.6 milestone finalized — 4 phases)*
