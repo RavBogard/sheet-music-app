@@ -52,12 +52,13 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v1.7: Fix mobile sign-in, SW update banner, avatar display, key signature position
+- [ ] v1.7: Print pipeline overhaul, key signature position, monitor buses
 - [x] v1.7 Phase 1: Mobile sign-in redirect fallback + SW banner suppress + avatar onError fallback
+- [x] v1.7 Phase 2: Google OAuth profile scope for avatar + changelog page
 
 ### Planned (Next)
 
-- v1.7 Phase 2-4: SW notification, avatar display, key signature position (Phases 2-3 may be skippable)
+- v1.7 Phases 3-5: Print pipeline overhaul, key signature position, monitor buses
 
 ### Out of Scope
 
@@ -149,4 +150,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 1 (v1.7)*
+*Last updated: 2026-03-11 after Phase 2 (v1.7)*

@@ -3,34 +3,45 @@
 ## Current Milestone
 **v1.7 Critical Bug Fixes**
 Status: In Progress
-Phases: 1 of 4 complete
+Phases: 2 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Mobile Sign-In Fix | 1/1 | ✅ Complete | 2026-03-11 |
-| 2 | Service Worker Update Notification | TBD | Not started | - |
-| 3 | User Avatar Display | TBD | Not started | - |
+| 2 | Quick Fixes (Avatar, Changelog) | 1/1 | ✅ Complete | 2026-03-11 |
+| 3 | Print Pipeline & Gig Packet Overhaul | TBD | Not started | - |
 | 4 | Key Signature Position | TBD | Not started | - |
+| 5 | Monitor Buses Investigation | TBD | Not started | - |
 
 ### Phase 1: Mobile Sign-In Fix
 
-Focus: Tapping "Sign In" on mobile devices results in nothing happening. Likely signInWithPopup blocked on mobile browsers — may need signInWithRedirect fallback or popup blocker handling.
-Plans: TBD (defined during /paul:plan)
+Focus: signInWithRedirect fallback, COOP header, SW banner 10s suppress, avatar onError fallback.
+Plans: 1/1 complete.
 
-### Phase 2: Service Worker Update Notification
+### Phase 2: Quick Fixes (Avatar, Changelog, SW Check)
 
-Focus: "Update available — tap to refresh" banner appears on freshly loaded pages. Service worker is incorrectly detecting updates on fresh loads — needs to only show when an actual new version is available after a prior cached version existed.
-Plans: TBD (defined during /paul:plan)
+Focus: Three targeted fixes:
+1. **Avatar**: GoogleAuthProvider missing `profile` scope — `user.photoURL` is always null. Add scope, users re-sign-in to get photo.
+2. **Changelog link**: `src/app/(main)/changelog/page.tsx` redirects to `/manage` instead of showing changelog.
+3. **SW banner**: Verify Phase 1 fix resolved false "update available" banners (may already be done).
 
-### Phase 3: User Avatar Display
+Note: Phase 1 already added onError fallback on avatar img, but root cause is missing OAuth scope.
 
-Focus: User icon in upper-right shows generic blue avatar instead of Google profile photo. Need to verify Google profile photo URL is being fetched and rendered correctly.
-Plans: TBD (defined during /paul:plan)
+### Phase 3: Print Pipeline & Gig Packet Overhaul
+
+Focus: Essential feature — must be bulletproof and simple. Current issues:
+- `/api/setlist/print` returns 500 error (likely auth/token issue)
+- Black background (bg-black/90 overlay) with print menu buried below scroll
+- Full UI/UX review of print flow needed (use /ui-ux-pro-max)
+- Previous v1.4 fix (hidden iframe approach) may have regressed
 
 ### Phase 4: Key Signature Position
 
 Focus: Move key signature from left of song title to immediately right of it in setlist/performance views. Use /ui-ux-pro-max for design decisions.
-Plans: TBD (defined during /paul:plan)
+
+### Phase 5: Monitor Buses Investigation
+
+Focus: User expected 5 monitor buses but only 4 are visible. Investigate and fix.
 
 ## Completed Milestones
 

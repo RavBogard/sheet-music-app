@@ -59,10 +59,12 @@ try {
         }
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
+        googleProvider.addScope('profile');
     } else {
         db = {} as unknown as Firestore
         auth = {} as unknown as Auth
         googleProvider = new GoogleAuthProvider()
+        googleProvider.addScope('profile');
     }
 
 } catch (e) {
@@ -71,6 +73,7 @@ try {
     db = {} as unknown as Firestore;
     auth = {} as unknown as Auth;
     googleProvider = new GoogleAuthProvider();
+    googleProvider.addScope('profile');
 }
 
 export { app, db, auth, googleProvider };
