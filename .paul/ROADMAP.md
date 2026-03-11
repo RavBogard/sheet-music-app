@@ -1,49 +1,44 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v1.7 Critical Bug Fixes**
+**v1.8 Mobile UX Overhaul**
 Status: In Progress
-Phases: 5 of 5 complete
+Phases: 0 of 3 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Mobile Sign-In Fix | 1/1 | ✅ Complete | 2026-03-11 |
-| 2 | Quick Fixes (Avatar, Changelog) | 1/1 | ✅ Complete | 2026-03-11 |
-| 3 | Print Pipeline & Gig Packet Overhaul | 1/1 | ✅ Complete | 2026-03-11 |
-| 4 | Key Signature Position | 1/1 | ✅ Complete | 2026-03-11 |
-| 5 | Monitor Buses Investigation | 1/1 | ✅ Complete | 2026-03-11 |
+| 1 | Mobile Navigation Redesign | TBD | Not started | - |
+| 2 | Setlist Mobile Responsive Layout | TBD | Not started | - |
+| 3 | Schedule Page Redesign | TBD | Not started | - |
 
-### Phase 1: Mobile Sign-In Fix
+### Phase 1: Mobile Navigation Redesign
 
-Focus: signInWithRedirect fallback, COOP header, SW banner 10s suppress, avatar onError fallback.
-Plans: 1/1 complete.
+Focus: Move hamburger menu from bottom-right tab bar to upper-left header position, following standard mobile nav conventions. Currently in `MobileTabBar.tsx` as the last tab — drawer already opens from left. Restructure mobile nav to use a top header bar with hamburger icon.
 
-### Phase 2: Quick Fixes (Avatar, Changelog, SW Check)
+### Phase 2: Setlist Mobile Responsive Layout
 
-Focus: Three targeted fixes:
-1. **Avatar**: GoogleAuthProvider missing `profile` scope — `user.photoURL` is always null. Add scope, users re-sign-in to get photo.
-2. **Changelog link**: `src/app/(main)/changelog/page.tsx` redirects to `/manage` instead of showing changelog.
-3. **SW banner**: Verify Phase 1 fix resolved false "update available" banners (may already be done).
+Focus: Fix squashed setlist views on mobile phones. Multiple components have fixed widths (`max-w-[200px]`, `w-64`, `w-48`), non-responsive padding (`p-6`, `px-6`), and toolbar layouts that don't stack on narrow screens. Key files: `SetlistDashboard.tsx`, `SetlistCards.tsx`, `SetlistToolbar.tsx`, `SetlistMatrixView.tsx`.
 
-Note: Phase 1 already added onError fallback on avatar img, but root cause is missing OAuth scope.
+### Phase 3: Schedule Page Redesign
 
-### Phase 3: Print Pipeline & Gig Packet Overhaul
-
-Focus: Essential feature — must be bulletproof and simple. Current issues:
-- `/api/setlist/print` returns 500 error (likely auth/token issue)
-- Black background (bg-black/90 overlay) with print menu buried below scroll
-- Full UI/UX review of print flow needed (use /ui-ux-pro-max)
-- Previous v1.4 fix (hidden iframe approach) may have regressed
-
-### Phase 4: Key Signature Position
-
-Focus: Move key signature from left of song title to immediately right of it in setlist/performance views. Use /ui-ux-pro-max for design decisions.
-
-### Phase 5: Monitor Buses Investigation
-
-Focus: User expected 5 monitor buses but only 4 are visible. Investigate and fix.
+Focus: Replace "My Schedule" personal view as default with all upcoming scheduled services. Current page has 3 tabs (My Schedule, Planning, Overview) — user wants: all upcoming services as primary view with optional monthly calendar. Simplify tab structure. Key file: `src/app/(main)/schedule/page.tsx`.
 
 ## Completed Milestones
+
+<details>
+<summary>v1.7 Critical Bug Fixes - 2026-03-11 (5 phases, 5 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Mobile Sign-In Fix | 1/1 | 2026-03-11 |
+| 2 | Quick Fixes (Avatar, Changelog) | 1/1 | 2026-03-11 |
+| 3 | Print Pipeline & Gig Packet Overhaul | 1/1 | 2026-03-11 |
+| 4 | Key Signature Position | 1/1 | 2026-03-11 |
+| 5 | Monitor Buses Investigation | 1/1 | 2026-03-11 |
+
+Archive: `.paul/milestones/v1.7-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>v1.6 Stability & Regression Audit - 2026-03-11 (4 phases, 4 plans)</summary>
@@ -181,4 +176,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v1.7 — all 5 phases complete)*
+*Last updated: 2026-03-11 (v1.8 milestone created)*
