@@ -1,3 +1,7 @@
+// NOTE: This route uses withAuth directly instead of createApiHandler because:
+// 1. Rate limiting runs before auth (reject spam before token verification)
+// 2. Returns streaming Response (not NextResponse) for SSE
+// 3. Custom body parsing with early return pattern
 import { NextResponse, NextRequest } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { getFirestore } from "@/lib/firebase-admin"

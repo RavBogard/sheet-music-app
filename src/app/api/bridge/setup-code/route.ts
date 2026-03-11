@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { randomBytes } from "crypto"
@@ -27,50 +27,42 @@ function generateCode(): string {
 }
 
 // POST: Admin generates a setup code
-export async function POST(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
+export const POST = createApiHandler(async (ctx) => {
+    initAdmin()
+    const db = getFirestore()
 
-        initAdmin()
-        const db = getFirestore()
-
-        // Verify the user is an admin
-        const userDoc = await db.collection("users").doc(auth.uid).get()
-        const userData = userDoc.data()
-        if (!userData?.role || !["admin", "band_leader", "leader"].includes(userData.role)) {
-            return NextResponse.json({ error: "Admin access required" }, { status: 403 })
-        }
-
-        // Invalidate any existing unused codes from this user
-        const existing = await db.collection("bridge-setup-codes")
-            .where("createdBy", "==", auth.uid)
-            .where("used", "==", false)
-            .get()
-        if (!existing.empty) {
-            const batch = db.batch()
-            existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
-            await batch.commit()
-        }
-
-        // Generate a new code
-        const code = generateCode()
-        const now = Date.now()
-        const expiresAt = now + 10 * 60 * 1000 // 10 minutes
-
-        await db.collection("bridge-setup-codes").doc(code).set({
-            createdBy: auth.uid,
-            createdAt: now,
-            expiresAt,
-            used: false,
-        })
-
-        return NextResponse.json({ code, expiresAt })
-    } catch (error) {
-        logger.error("Setup code generation error:", error)
-        return NextResponse.json({ error: "Failed to generate code" }, { status: 500 })
+    // Verify the user is an admin
+    const userDoc = await db.collection("users").doc(ctx.auth.uid).get()
+    const userData = userDoc.data()
+    if (!userData?.role || !["admin", "band_leader", "leader"].includes(userData.role)) {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 })
     }
-}
+
+    // Invalidate any existing unused codes from this user
+    const existing = await db.collection("bridge-setup-codes")
+        .where("createdBy", "==", ctx.auth.uid)
+        .where("used", "==", false)
+        .get()
+    if (!existing.empty) {
+        const batch = db.batch()
+        existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
+        await batch.commit()
+    }
+
+    // Generate a new code
+    const code = generateCode()
+    const now = Date.now()
+    const expiresAt = now + 10 * 60 * 1000 // 10 minutes
+
+    await db.collection("bridge-setup-codes").doc(code).set({
+        createdBy: ctx.auth.uid,
+        createdAt: now,
+        expiresAt,
+        used: false,
+    })
+
+    return NextResponse.json({ code, expiresAt })
+})
 
 // GET: Bridge redeems a setup code for credentials
 export async function GET(req: NextRequest) {

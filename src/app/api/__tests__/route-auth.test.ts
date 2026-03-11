@@ -168,7 +168,7 @@ describe('POST /api/setlist/publish', () => {
             token: 'valid-token',
             body: {
                 setlistId: 'test',
-                musicians: [{ name: 'Alice', uid: 'u1' }],
+                musicians: [{ name: 'Alice', uid: 'u1', email: 'alice@test.com' }],
                 emailRecipients: [],
             },
         }))
@@ -194,7 +194,7 @@ describe('POST /api/setlist/publish', () => {
         const res = await POST(makeReq('/api/setlist/publish', {
             method: 'POST',
             token: 'valid-token',
-            body: { setlistId: 'test', musicians: [{ name: 'Alice', uid: 'u1' }], emailRecipients: [] },
+            body: { setlistId: 'test', musicians: [{ name: 'Alice', uid: 'u1', email: 'alice@test.com' }], emailRecipients: [] },
         }))
 
         expect(res.status).toBe(403)

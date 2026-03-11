@@ -1,3 +1,6 @@
+// NOTE: This route uses withAuth directly instead of createApiHandler because
+// it accepts BOTH Bearer token auth AND same-origin browser requests (no token).
+// createApiHandler would reject all browser requests with 401.
 import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { withAuth } from "@/lib/api-auth"
