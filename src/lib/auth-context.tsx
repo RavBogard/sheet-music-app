@@ -21,24 +21,27 @@ function isMobileBrowser(): boolean {
     return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 }
 
-/** Sync session cookie to server. Returns true on success, false on failure/timeout. */
+/** Sync session cookie to server. Retries once on failure. Returns true on success. */
 async function syncSessionCookie(user: User): Promise<boolean> {
-    try {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
-        const idToken = await user.getIdToken(true)
-        const res = await fetch("/api/auth/session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-            signal: controller.signal,
-        })
-        clearTimeout(timeout)
-        return res.ok
-    } catch (err) {
-        logger.warn("Session cookie sync failed:", err)
-        return false
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 8000)
+            const idToken = await user.getIdToken(attempt > 0) // force refresh on retry
+            const res = await fetch("/api/auth/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken }),
+                signal: controller.signal,
+            })
+            clearTimeout(timeout)
+            if (res.ok) return true
+            logger.warn(`Session cookie sync attempt ${attempt + 1} failed: ${res.status}`)
+        } catch (err) {
+            logger.warn(`Session cookie sync attempt ${attempt + 1} error:`, err)
+        }
     }
+    return false
 }
 
 interface CachedUser {
@@ -127,6 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setUser(currentUser)
             if (currentUser) {
+                // CRITICAL: Re-enter loading state while session cookie syncs.
+                // Without this, signInWithRedirect causes a redirect loop:
+                // onAuthStateChanged fires with null first (loading→false), then
+                // fires again with user — but loading is already false, so the
+                // login page navigates to /setlists before the cookie exists,
+                // and middleware bounces back to /login.
+                setLoading(true)
+
                 // Sync session cookie BEFORE allowing loading to complete.
                 // This prevents the race where middleware redirects before cookie exists.
                 syncSessionCookie(currentUser).then((ok) => {
