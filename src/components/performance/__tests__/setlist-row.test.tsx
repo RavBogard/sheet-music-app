@@ -45,7 +45,7 @@ describe("SetlistRow", () => {
         expect(screen.getByText("C")).toBeDefined()
     })
 
-    it("key badge appears before title (has data-testid)", () => {
+    it("key badge appears after title (has data-testid)", () => {
         render(<SetlistRow track={baseSong} {...defaultProps} />)
         const keyBadge = screen.getByTestId("key-badge")
         expect(keyBadge).toBeDefined()
@@ -130,7 +130,7 @@ describe("SetlistRow", () => {
         expect(screen.getByText("Play softly during verse 2")).toBeDefined()
     })
 
-    it("songs without keys render spacer for alignment", () => {
+    it("songs without keys render title without key badge", () => {
         const noKey: SetlistTrack = { ...baseSong, key: undefined }
         render(<SetlistRow track={noKey} {...defaultProps} />)
         expect(screen.queryByTestId("key-badge")).toBeNull()

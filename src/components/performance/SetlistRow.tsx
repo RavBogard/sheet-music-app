@@ -79,41 +79,33 @@ export function SetlistRow({
 
     // Song content — shared between interactive and non-interactive rows
     const songContent = isSong ? (
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-            {/* Key badge — LEFT of title, prominent and fixed-width for alignment */}
-            {displayKey ? (
-                <span
-                    data-testid="key-badge"
-                    className="font-mono text-base font-bold px-2.5 py-1 bg-brand/15 text-brand rounded-lg shrink-0 min-w-[3rem] text-center leading-tight mt-0.5"
-                >
-                    {displayKey}
+        <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2">
+                <span className="font-semibold text-lg text-foreground truncate flex-1 min-w-0">
+                    {track.title}
                 </span>
-            ) : (
-                /* Spacer when no key — keeps titles aligned */
-                <span className="shrink-0 min-w-[3rem]" aria-hidden="true" />
-            )}
-
-            {/* Title + metadata */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-lg text-foreground truncate flex-1 min-w-0">
-                        {track.title}
+                {displayKey && (
+                    <span
+                        data-testid="key-badge"
+                        className="font-mono text-sm font-bold px-2 py-0.5 bg-brand/15 text-brand rounded-lg shrink-0 text-center"
+                    >
+                        {displayKey}
                     </span>
-                    {track.bpm && (
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                            {track.bpm} BPM
-                        </span>
-                    )}
-                </div>
-                {hasSecondLine && (
-                    <p className="text-sm text-blue-400 truncate mt-0.5">
-                        {track.leadMusician || track.performer}
-                    </p>
+                )}
+                {track.bpm && (
+                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        {track.bpm} BPM
+                    </span>
                 )}
             </div>
+            {hasSecondLine && (
+                <p className="text-sm text-blue-400 truncate mt-0.5">
+                    {track.leadMusician || track.performer}
+                </p>
+            )}
         </div>
     ) : (
-        <span className="text-sm text-muted-foreground ml-[3.75rem]">{track.title}</span>
+        <span className="text-sm text-muted-foreground">{track.title}</span>
     )
 
     const rowClasses = cn(
@@ -124,7 +116,7 @@ export function SetlistRow({
 
     const notesBlock = showNotes && track.notes && (
         <div className="px-4 pb-2 pt-0.5">
-            <p className="text-xs text-muted-foreground/80 ml-[3.75rem]">{track.notes}</p>
+            <p className="text-xs text-muted-foreground/80">{track.notes}</p>
         </div>
     )
 
