@@ -1,29 +1,53 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v1.8 Mobile UX Overhaul**
-Status: Complete
-Phases: 3 of 3 complete
+**v1.9 Auth Stability & Deferred Cleanup**
+Status: In progress
+Phases: 1 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Mobile Navigation Redesign | 1 | Complete | 2026-03-11 |
-| 2 | Setlist Mobile Responsive Layout | 1 | Complete | 2026-03-11 |
-| 3 | Schedule Page Redesign | 1 | Complete | 2026-03-11 |
+| 1 | Auth & Routing Regression Audit | 1 | Complete | 2026-03-11 |
+| 2 | Auth Flow Rebuild | TBD | Not started | - |
+| 3 | Avatar System Fix | TBD | Not started | - |
+| 4 | Bridge Credentials Security | TBD | Not started | - |
+| 5 | Deferred Cleanup Batch | TBD | Not started | - |
 
-### Phase 1: Mobile Navigation Redesign
+### Phase 1: Auth & Routing Regression Audit
 
-Focus: Move hamburger menu from bottom-right tab bar to upper-left header position, following standard mobile nav conventions. Currently in `MobileTabBar.tsx` as the last tab — drawer already opens from left. Restructure mobile nav to use a top header bar with hamburger icon.
+Focus: Investigate and document all auth-related bugs introduced by recent changes. Known issues: (1) Monitor page redirects to homepage after fresh login — auth state/session not ready when middleware checks. (2) Login flow feels buggy — popup-then-redirect fallback cascade, dual session cookie + ID token state. (3) Avatars not displaying properly — inconsistent error handling, Google photo URL failures. Audit the full auth lifecycle: login → session creation → middleware routing → auth context hydration → protected page access. Identify root causes before fixing.
 
-### Phase 2: Setlist Mobile Responsive Layout
+### Phase 2: Auth Flow Rebuild
 
-Focus: Fix squashed setlist views on mobile phones. Multiple components have fixed widths (`max-w-[200px]`, `w-64`, `w-48`), non-responsive padding (`p-6`, `px-6`), and toolbar layouts that don't stack on narrow screens. Key files: `SetlistDashboard.tsx`, `SetlistCards.tsx`, `SetlistToolbar.tsx`, `SetlistMatrixView.tsx`.
+Focus: Based on Phase 1 findings, simplify and stabilize the login flow. Potential scope: single auth path (eliminate popup/redirect cascade), proper session cookie timing so post-login navigation works immediately, fix middleware redirect logic for fresh sessions. Goal: login once, everything works — no refresh needed.
 
-### Phase 3: Schedule Page Redesign
+### Phase 3: Avatar System Fix
 
-Focus: Replace "My Schedule" personal view as default with all upcoming scheduled services. Current page has 3 tabs (My Schedule, Planning, Overview) — user wants: all upcoming services as primary view with optional monthly calendar. Simplify tab structure. Key file: `src/app/(main)/schedule/page.tsx`.
+Focus: Create one unified avatar component with proper error handling and use it everywhere. Current state: 4 different files roll their own `<img>` with ad-hoc fallback (some have onError, some don't). Fix: standardize on Radix Avatar component, add global error/fallback, handle Google photo URL expiry/CORS.
+
+### Phase 4: Bridge Credentials Security
+
+Focus: CRIT-003 — `src/app/api/bridge/setup-code/route.ts` returns raw Firebase Admin service account private key in JSON response. Replace with short-lived tokens or service account impersonation. Deferred since v1.3.
+
+### Phase 5: Deferred Cleanup Batch
+
+Focus: LOW-004 (leader → band_leader Firestore migration), ESLint 9 config fix (broken `npm run lint`), LOW-005/006/007 audit items. All small mechanical fixes batched into one phase.
 
 ## Completed Milestones
+
+<details>
+<summary>v1.8 Mobile UX Overhaul - 2026-03-11 (3 phases, 3 plans)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 1 | Mobile Navigation Redesign | 1/1 | 2026-03-11 |
+| 2 | Setlist Mobile Responsive Layout | 1/1 | 2026-03-11 |
+| 3 | Schedule Page Redesign | 1/1 | 2026-03-11 |
+
+Archive: `.paul/milestones/v1.8-ROADMAP.md`
+
+</details>
+
 
 <details>
 <summary>v1.7 Critical Bug Fixes - 2026-03-11 (5 phases, 5 plans)</summary>
@@ -176,4 +200,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v1.8 milestone created)*
+*Last updated: 2026-03-11 (v1.9 milestone created)*
