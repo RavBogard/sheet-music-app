@@ -84,7 +84,14 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.googleusercontent.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob: https://*.firebasestorage.app",
+            // CSP Audit (v1.6 Phase 1) — each domain documented:
+            // script-src: apis.google.com = Google Identity Services (sign-in)
+            // style-src: fonts.googleapis.com = Google Fonts CSS
+            // font-src: fonts.gstatic.com = Google Fonts files
+            // img-src: *.googleapis.com = Firebase Storage thumbnails; *.firebasestorage.app = Firebase Storage CDN; *.googleusercontent.com = Google profile pics
+            // connect-src: *.googleapis.com = Firestore, Firebase Storage, Cloud Vision; apis.google.com = Google Identity Services; accounts.google.com = Google sign-in token exchange; *.googleusercontent.com = profile pics; *.firebaseio.com = Realtime DB; *.firebasestorage.app = Storage CDN; firestore.googleapis.com = Firestore REST; wss://*.firebaseio.com = Realtime DB websocket; generativelanguage.googleapis.com = Gemini AI; *.ingest.sentry.io + *.sentry.io = error reporting
+            // frame-src: accounts.google.com = Google sign-in popup; *.firebaseapp.com = Firebase auth
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://apis.google.com https://accounts.google.com https://*.googleusercontent.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob: https://*.firebasestorage.app",
           },
           {
             key: 'Strict-Transport-Security',
