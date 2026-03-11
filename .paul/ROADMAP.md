@@ -3,11 +3,11 @@
 ## Current Milestone
 **v1.8 Mobile UX Overhaul**
 Status: In Progress
-Phases: 0 of 3 complete
+Phases: 0 of 3 complete (Phase 1 planning)
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Mobile Navigation Redesign | TBD | Not started | - |
+| 1 | Mobile Navigation Redesign | 1 | Planning | - |
 | 2 | Setlist Mobile Responsive Layout | TBD | Not started | - |
 | 3 | Schedule Page Redesign | TBD | Not started | - |
 

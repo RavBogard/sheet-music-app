@@ -1,6 +1,7 @@
 "use client"
 
 import { MobileTabBar } from "./MobileTabBar"
+import { MobileHeader } from "./MobileHeader"
 import { DesktopHeader } from "./DesktopHeader"
 import { GlobalAlertBanner } from "@/components/layout/GlobalAlertBanner"
 
@@ -12,6 +13,7 @@ export function AppNavigation() {
         <div className="z-40 w-full relative print:hidden">
             <GlobalAlertBanner />
             <DesktopHeader />
+            <MobileHeader />
             <MobileTabBar />
         </div>
     )
