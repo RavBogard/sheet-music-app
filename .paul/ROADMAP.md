@@ -12,7 +12,7 @@ Phases: 9 total
 | 3 | Test Infrastructure & Flaky Fix | 1 | Complete | 2026-03-11 |
 | 4 | Data Layer Tests | 2 | Complete | 2026-03-11 |
 | 5 | API Route Tests | 3 | Complete | 2026-03-11 |
-| 6 | Hook Tests | 0 | Not started | — |
+| 6 | Hook Tests | 2 | In progress | — |
 | 7 | Component Tests | 0 | Not started | — |
 | 8 | AI & Integration Tests | 0 | Not started | — |
 | 9 | Public Setlist Access | 0 | Not started | — |
