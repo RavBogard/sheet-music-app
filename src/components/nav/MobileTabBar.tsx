@@ -145,7 +145,7 @@ export function MobileTabBar() {
                             <div className={cn(
                                 "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
                                 searchOpen
-                                    ? "bg-brand/15 shadow-[0_0_12px_oklch(0.50_0.20_275/0.3)] scale-100"
+                                    ? "bg-brand/15 shadow-[var(--shadow-brand-glow)] scale-100"
                                     : "bg-transparent scale-90"
                             )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
                                 <Search className={cn(
@@ -164,7 +164,7 @@ export function MobileTabBar() {
                     <PopoverContent
                         side="top"
                         align="start"
-                        className="w-[min(360px,calc(100vw-2rem))] p-3 bg-popover border-border mb-2"
+                        className="w-[min(360px,calc(100vw-2rem))] p-0 bg-popover border-border mb-2"
                     >
                         <Input
                             ref={inputRef}
@@ -200,7 +200,7 @@ export function MobileTabBar() {
                     className="flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group text-muted-foreground hover:text-brand/70"
                 >
                     <div
-                        className="relative flex items-center justify-center w-16 h-11 rounded-2xl transition-all duration-300 bg-brand/10 shadow-[0_0_14px_oklch(0.50_0.20_275/0.15)] scale-100"
+                        className="relative flex items-center justify-center w-16 h-11 rounded-2xl transition-all duration-300 bg-brand/10 shadow-[var(--shadow-brand-glow-soft)] scale-100"
                         style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
                     >
                         <ListMusic className="w-7 h-7 text-brand stroke-[2.25px] transition-all duration-300" />
@@ -224,7 +224,7 @@ export function MobileTabBar() {
                                 <div className={cn(
                                     "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
                                     monitorOpen
-                                        ? "bg-brand/15 shadow-[0_0_12px_oklch(0.50_0.20_275/0.3)] scale-100"
+                                        ? "bg-brand/15 shadow-[var(--shadow-brand-glow)] scale-100"
                                         : "bg-transparent scale-90"
                                 )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
                                     <Radio className={cn(

@@ -36,7 +36,7 @@ export function SetlistDrawer({
             <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 bg-black/60 z-drawer data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
                 <Dialog.Content
-                    className="fixed bottom-0 left-0 right-0 z-popover max-h-[60vh] bg-zinc-900 rounded-t-2xl border-t border-white/10 flex flex-col data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom"
+                    className="fixed bottom-0 left-0 right-0 z-popover max-h-[calc(100vh-120px)] bg-zinc-900 rounded-t-2xl border-t border-white/10 flex flex-col data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom"
                     aria-describedby={undefined}
                 >
                     {/* Drag handle visual */}

@@ -5,31 +5,32 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 16 complete, ready to plan Phase 17
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 17 complete, ready to plan Phase 18
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 16 of 22 (Design Token Cleanup & Accessibility) — Complete
-Plan: 16-01 complete
-Status: Phase 16 complete, ready for Phase 17
-Last activity: 2026-03-12 — Phase 16 complete (design tokens + accessibility)
+Phase: 17 of 22 (iPad Safe Areas & Spacing) — Complete
+Plan: 17-01 complete
+Status: Phase 17 complete, ready for Phase 18
+Last activity: 2026-03-12 — Phase 17 complete (iPad safe areas + spacing)
 
 Progress:
-- Milestone: [████████░░] 73% (16 of 22 phases complete)
-- Phase 16: [██████████] 100%
+- Milestone: [████████░░] 77% (17 of 22 phases complete)
+- Phase 17: [██████████] 100%
 
 ## Loop Position
 
-Plan 16-01:
+Plan 17-01:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [16-01 COMPLETE — tokens + 20 aria-labels, 1117 tests pass]
+  ✓        ✓        ✓     [17-01 COMPLETE — safe areas, drawer, popovers, shadows]
 ```
 
 ## Accumulated Context
 
 ### Decisions
+- Phase 17: viewport-fit: cover added for safe area insets; p-0 for custom-content popovers; CSS custom properties for brand glow shadows
 - Phase 16: bg-background/40 for semi-transparent overlays; aria-label preferred over sr-only for icon buttons; UserRow already had title attrs
 - Phase 15: coverOnly early-return in print pipeline skips all PDF fetch/merge; included in content hash for cache isolation
 - Phase 14: use-offline test assertion too strict for new AbortController signal — 1 test expects `fetch(url)` but code now correctly passes `fetch(url, { signal })`. Test update needed in UNIFY.
@@ -47,16 +48,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 263883c
+Last commit: cc15a5a
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 16 complete
-Next action: /paul:plan for Phase 17
-Resume file: .paul/phases/16-design-token-accessibility/16-01-SUMMARY.md
-Resume context: Phase 16 done (design tokens + a11y). Continue autonomously through 17-19.
+Stopped at: Phase 17 complete
+Next action: /paul:plan for Phase 18
+Resume file: .paul/phases/17-ipad-safe-areas-spacing/17-01-SUMMARY.md
+Resume context: Phase 17 done (iPad safe areas + spacing). Continue autonomously through 18-19.
 
 ---
 *STATE.md — Updated after every significant action*

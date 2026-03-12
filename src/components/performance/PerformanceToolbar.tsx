@@ -194,7 +194,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     <span>{compact ? "Monitor" : "MONITOR"}</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
+            <PopoverContent className="w-auto p-0 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
                 <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
                     <Speaker className="h-3 w-3" /> Monitor Mix
                 </div>

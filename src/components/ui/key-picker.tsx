@@ -59,7 +59,7 @@ export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
                     {value || "Key"}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-3" align="start">
+            <PopoverContent className="w-64 p-0" align="start">
                 {/* Major / Minor toggle */}
                 <div className="flex gap-1 mb-3">
                     {QUALITIES.map((q) => (
