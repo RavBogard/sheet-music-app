@@ -52,6 +52,8 @@ export const GET = createApiHandler(
                 nativeKeySource: data?.nativeKeySource || undefined,
                 chordsVerified: data?.chordsVerified || false,
                 chordsVerifiedBy: data?.chordsVerifiedBy || undefined,
+                lastUsedKey: data?.lastUsedKey || undefined,
+                lastUsedTransposition: data?.lastUsedTransposition ?? undefined,
             })
         }
 
@@ -131,6 +133,8 @@ const patchSchema = z.object({
     nativeKeySource: z.string().optional(),
     chordsVerified: z.boolean().optional(),
     chordsVerifiedBy: z.string().nullable().optional(),
+    lastUsedKey: z.string().optional(),
+    lastUsedTransposition: z.number().optional(),
 })
 
 /**
@@ -139,7 +143,7 @@ const patchSchema = z.object({
  */
 export const PATCH = createApiHandler(
     async (ctx) => {
-        const { fileId, nativeKey, nativeKeySource, chordsVerified, chordsVerifiedBy } = ctx.body!
+        const { fileId, nativeKey, nativeKeySource, chordsVerified, chordsVerifiedBy, lastUsedKey, lastUsedTransposition } = ctx.body!
 
         const db = getFirestore()
         const updates: Record<string, unknown> = {}
@@ -151,6 +155,10 @@ export const PATCH = createApiHandler(
         if (chordsVerified !== undefined) {
             updates.chordsVerified = chordsVerified
             updates.chordsVerifiedBy = chordsVerifiedBy || null
+        }
+        if (lastUsedKey !== undefined) {
+            updates.lastUsedKey = lastUsedKey
+            updates.lastUsedTransposition = lastUsedTransposition ?? 0
         }
 
         if (Object.keys(updates).length > 0) {

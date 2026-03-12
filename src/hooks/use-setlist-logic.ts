@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger"
 import { useLibraryStore } from "@/lib/library-store"
 import { notifySetlistUpdated } from "@/lib/notification-store"
 import { apiFetch } from "@/lib/api-client"
+import { saveLastUsedKey, loadLibraryMeta } from "@/lib/chord-cache"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -428,7 +429,15 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         if (!canEdit) return
         setTracks(currentTracks => {
             addToHistory(currentTracks)
-            return currentTracks.map(t => t.id === id ? { ...t, ...data } : t)
+            const updated = currentTracks.map(t => t.id === id ? { ...t, ...data } : t)
+            // Persist sticky key when key is changed on a chart-bearing track
+            if (data.key !== undefined) {
+                const track = currentTracks.find(t => t.id === id)
+                if (track?.fileId) {
+                    saveLastUsedKey(track.fileId, data.key, data.transposition ?? track.transposition ?? 0)
+                }
+            }
+            return updated
         })
     }
 
@@ -509,11 +518,23 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             return [...prev, ...newTracks]
         })
 
-        // Auto-detect keys for files that don't already have one
+        // Auto-detect keys for files that don't already have one,
+        // and apply sticky keys from library_index
         for (const file of files) {
-            if (!file.metadata?.key && file.id) {
+            if (!file.id) continue
+            if (!file.metadata?.key) {
                 detectKeyForFile(file.id)
             }
+            // Check for a sticky key (last-used key from a previous setlist)
+            loadLibraryMeta(file.id).then(meta => {
+                if (meta?.lastUsedKey) {
+                    setTracks(prev => prev.map(t =>
+                        t.fileId === file.id && (!t.key || t.key === '')
+                            ? { ...t, key: meta.lastUsedKey!, transposition: meta.lastUsedTransposition ?? 0 }
+                            : t
+                    ))
+                }
+            }).catch(() => {})
         }
     }
 

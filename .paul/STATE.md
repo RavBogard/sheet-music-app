@@ -11,8 +11,8 @@ See: .paul/PROJECT.md (updated 2026-03-11)
 
 Milestone: v2.5 Bugsweep & Test Coverage
 Phase: 9 of 14 (Print View & Sticky Keys)
-Plan: None yet
-Status: Ready to plan
+Plan: 09-01 APPLY in progress
+Status: Executing plan
 Last activity: 2026-03-12 — Phase 8 complete (monitor popover on tab bar)
 
 Progress:
@@ -23,7 +23,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [New phase — needs planning]
+  ✓        ◐        ○     [APPLY in progress]
 ```
 
 ## Accumulated Context

@@ -288,8 +288,10 @@ async function buildCoverPage(
     })
     yOffset -= 16
 
-    // Rows
-    req.tracks.forEach((track, index) => {
+    // Rows — only show tracks with charts (plus section headers for structure)
+    const printableTracks = req.tracks.filter(t => t.type === 'header' || !!t.fileId)
+    let songNum = 0
+    printableTracks.forEach((track) => {
         if (yOffset < 60) return
 
         const trackType = track.type || 'song'
@@ -326,11 +328,13 @@ async function buildCoverPage(
             return
         }
 
+        songNum++
+
         // Use italic font for non-song service flow items
         const titleFont = isServiceFlow ? helveticaOblique : helvetica
         const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
 
-        coverPage.drawText(`${index + 1}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        coverPage.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: titleFont, color: titleColor })
         if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
@@ -343,7 +347,7 @@ async function buildCoverPage(
     })
 
     // Footer
-    const songCount = req.tracks.filter(t => !t.type || t.type === 'song').length
+    const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
     const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
     if (hasTranspositions) footerParts.push("transposed")
     footerParts.push(printFooter)
