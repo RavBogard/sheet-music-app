@@ -76,21 +76,30 @@ export function SetlistDrawer() {
     // Calculate if we should show the empty state (Public Setlists)
     const showPublicPicker = playbackQueue.length === 0
 
-    // Auto-scroll to current song when drawer opens
+    // Re-measure virtualizer after sheet animation completes
     useEffect(() => {
         if (open && !showPublicPicker) {
-            // Find index in 1D array
+            // Sheet open animation is 500ms — re-measure after it settles
+            const measureTimer = setTimeout(() => {
+                rowVirtualizer.measure()
+            }, 520)
+
+            // Find index in 1D array for auto-scroll
             const targetVirtualIdx = virtualItemsData.findIndex(
                 v => v.type === 'track' && v.globalIndex === queueIndex
             )
 
             if (targetVirtualIdx !== -1) {
-                // Brief delay to let the sheet animation start
-                const timer = setTimeout(() => {
+                // Scroll after re-measure
+                const scrollTimer = setTimeout(() => {
                     rowVirtualizer.scrollToIndex(targetVirtualIdx, { align: 'center', behavior: 'smooth' })
-                }, 150)
-                return () => clearTimeout(timer)
+                }, 550)
+                return () => {
+                    clearTimeout(measureTimer)
+                    clearTimeout(scrollTimer)
+                }
             }
+            return () => clearTimeout(measureTimer)
         }
     }, [open, showPublicPicker, queueIndex, virtualItemsData, rowVirtualizer])
 
@@ -232,7 +241,7 @@ export function SetlistDrawer() {
                             )}
 
                             <div
-                                className="flex-1 overflow-auto"
+                                className="flex-1 min-h-0 overflow-auto"
                                 ref={parentRef}
                             >
                                 <div
