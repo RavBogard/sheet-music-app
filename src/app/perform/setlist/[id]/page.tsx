@@ -101,11 +101,11 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
-                {!isPublicView && (
-                    <Button asChild size="sm" variant="ghost" className="h-7 gap-1 shrink-0 text-muted-foreground">
+                {isLeader && (
+                    <Button asChild size="sm" variant="ghost" className="h-8 gap-1.5 shrink-0 text-muted-foreground">
                         <Link href={`/setlists/${setlistId}`}>
-                            <Pencil className="h-3 w-3" />
-                            <span className="hidden sm:inline text-xs">Edit</span>
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="text-xs">Edit</span>
                         </Link>
                     </Button>
                 )}
