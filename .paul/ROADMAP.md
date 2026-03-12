@@ -8,7 +8,7 @@ Phases: 3 total
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Setlist Row Layout & Readability | 1/1 | ✅ Complete | 2026-03-12 |
-| 2 | Next.js & Sentry Deprecation Cleanup | TBD | Not started | - |
+| 2 | Next.js & Sentry Deprecation Cleanup | 1/1 | ✅ Complete | 2026-03-12 |
 | 3 | Technical Debt Cleanup | TBD | Not started | - |
 
 ### Phase 1: Setlist Row Layout & Readability

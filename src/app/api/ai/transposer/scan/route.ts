@@ -6,14 +6,6 @@ const apiKey = process.env.GEMINI_API_KEY;
 
 export const maxDuration = 60;
 
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '10mb',
-        },
-    },
-};
-
 export const POST = createApiHandler(
     async (ctx) => {
         if (!apiKey) {

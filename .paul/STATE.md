@@ -10,20 +10,20 @@ See: .paul/PROJECT.md (updated 2026-03-12)
 ## Current Position
 
 Milestone: v2.6 Deprecation Cleanup, Tech Debt & Setlist UX
-Phase: 2 of 3 (Next.js & Sentry Deprecation Cleanup)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-12 — Phase 1 complete, transitioned to Phase 2
+Phase: 2 of 3 — Complete (Next.js & Sentry Deprecation Cleanup)
+Plan: 02-01 complete
+Status: Phase 2 complete, ready for Phase 3
+Last activity: 2026-03-12 — Phase 2 complete (deprecation cleanup)
 
 Progress:
-- v2.6 Deprecation Cleanup, Tech Debt & Setlist UX: [███░░░░░░░] 33%
+- v2.6 Deprecation Cleanup, Tech Debt & Setlist UX: [███████░░░] 67%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Fresh loop — ready to PLAN]
+  ✓        ✓        ✓     [Loop complete — ready for next phase]
 ```
 
 ## Accumulated Context
@@ -31,6 +31,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ### Decisions
 - bg-white/[opacity] for dark-mode alternating rows (not bg-muted which has baked-in alpha)
 - Dual-tint rows (0.03/0.07) instead of tint/pure-black for readability
+- Next.js 16 proxy requires `export function proxy()` (not just file rename) — discovered during build
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -46,9 +47,9 @@ Branch: master
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 1 complete, ready to plan Phase 2
-Next action: /paul:plan for Phase 2 (Next.js & Sentry Deprecation Cleanup)
-Resume file: .paul/ROADMAP.md
+Stopped at: Phase 2 complete, loop closed
+Next action: /paul:plan for Phase 3 (Technical Debt Cleanup)
+Resume file: .paul/phases/02-nextjs-sentry-deprecations/02-01-SUMMARY.md
 
 ---
 *STATE.md — Updated after every significant action*

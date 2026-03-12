@@ -26,7 +26,7 @@ const publicExactRoutes = ['/login', '/']
 // /qr/*     — QR code sign-in flow (used *before* having a session)
 const publicPrefixes = ['/perform', '/qr']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const session = request.cookies.get('__session')?.value
     const decodedSession = session ? decodeJwtPayload(session) : null
