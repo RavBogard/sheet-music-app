@@ -5,18 +5,18 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 10 (Public Setlist Access) next
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 11 (Component Tests) next
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 10 of 14 (Public Setlist Access)
+Phase: 11 of 14 (Component Tests)
 Plan: None yet
 Status: Ready to plan
-Last activity: 2026-03-12 — Phase 9 complete (print filtering + sticky keys)
+Last activity: 2026-03-12 — Phase 10 verified complete (already implemented)
 
 Progress:
-- Milestone: [████████░░] 79% (11 of 14 phases complete, counting 6.1 and 8.1)
+- Milestone: [████████░░] 86% (12 of 14 phases complete, counting 6.1 and 8.1)
 
 ## Loop Position
 
@@ -40,6 +40,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Band leaders should be able to read non-public setlists (add isBandLeader() to read rule)
 - Phase 8: Monitor tab on mobile opens popover (QuickMonitorPanel) instead of navigating to /monitor
 - Phase 9: Print cover page filters to chart-bearing tracks only; sticky keys via library_index lastUsedKey
+- Phase 10: Already implemented — no code changes needed
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -49,16 +50,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 3c6a372
+Last commit: c700f1b
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 9 complete, starting Phase 10
-Next action: /paul:plan for Phase 10
+Stopped at: Phase 10 complete, starting Phase 11
+Next action: /paul:plan for Phase 11 (Component Tests)
 Resume file: —
-Resume context: Phase 10 focus is public setlist access — allow unauthenticated users to view public setlists and their PDFs
+Resume context: Phase 11 is component tests — PrintModal, library views, scheduling UI, dashboard, SetlistEditor interactions
 
 ---
 *STATE.md — Updated after every significant action*
