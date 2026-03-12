@@ -1,12 +1,33 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v2.6 Deprecation Cleanup, Tech Debt & Setlist UX**
+Status: In Progress
+Phases: 3 total
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Setlist Row Layout & Readability | 1/1 | ✅ Complete | 2026-03-12 |
+| 2 | Next.js & Sentry Deprecation Cleanup | TBD | Not started | - |
+| 3 | Technical Debt Cleanup | TBD | Not started | - |
+
+### Phase 1: Setlist Row Layout & Readability
+
+Focus: Fix setlist perform view layout — move key badge directly next to song title (not far right), show notes inline next to key in a distinct color (e.g. amber/warm muted), and add subtle alternating row backgrounds for visual lane separation. Apply consistently across SetlistRow (main perform view) and SetlistDrawer (compact PDF overlay drawer).
+Skills required: /ui-ux-pro-max
+
+### Phase 2: Next.js & Sentry Deprecation Cleanup
+
+Focus: Address all build deprecation warnings. (a) Rename `middleware.ts` → `proxy.ts` per Next.js 16 convention. (b) Move `sentry.client.config.ts` → `instrumentation-client.ts` for Turbopack compatibility. (c) Add `global-error.js` with Sentry instrumentation for React render errors. (d) Add `onRequestError` hook via `Sentry.captureRequestError` in instrumentation file for server component errors.
+
+### Phase 3: Technical Debt Cleanup
+
+Focus: Clean up accumulated tech debt. (a) Migrate Firestore `leader` field to `band_leader` (LOW-004 from v1.3 — update all reads/writes, add migration script for existing docs). (b) Remove nested `sheet-music-app/` directory artifact from git. (c) Clean up `build-info.json` git describe warnings in Vercel build log.
+
+## Previous Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: Complete
 Completed: 2026-03-12
-
-## Next Milestone
-Run /paul:discuss-milestone or /paul:milestone to define.
 
 ## Completed Milestones
 
@@ -231,4 +252,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-12 (v2.5 milestone complete)*
+*Last updated: 2026-03-12 (Phase 1 complete)*

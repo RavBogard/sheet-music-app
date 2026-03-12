@@ -52,10 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- None — ready for next milestone
+- [ ] v2.6 Phase 2: Next.js & Sentry deprecation cleanup
+- [ ] v2.6 Phase 3: Technical debt cleanup
 
 ### Validated (Recently Shipped)
 
+- [x] v2.6 Phase 1: Setlist row layout — key next to title, inline amber notes, dual-tint alternating rows
 - [x] v2.5: Bugsweep & test coverage — 19 phases, 1117 tests, zero warnings, full backend hardening
 - [x] v2.0: Schedule & workflow fixes — all 3 phases complete
 - [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
@@ -187,7 +189,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | ApiErrorResponse {error, code?, details?} standard shape | v2.5 P18 | Consistent error responses via apiError() helper |
 | config/admins Firestore doc for super-admin bootstrap | v2.5 P18 | Replaces hardcoded UID in firestore.rules; manageable without redeploy |
 | CRON_SECRET/SUPER_ADMIN_UID optional in env.mjs | v2.5 P18 | Runtime guards still enforce; dev envs don't break on missing vars |
+| bg-white/[opacity] for dark-mode alternating rows | v2.6 P1 | --muted OKLCH has baked-in alpha; bg-white is predictable |
+| Dual-tint rows (0.03/0.07) instead of tint/black | v2.6 P1 | Both rows readable on dark backgrounds |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after v2.5 Bugsweep & Test Coverage milestone complete*
+*Last updated: 2026-03-12 after Phase 1 (Setlist Row Layout)*

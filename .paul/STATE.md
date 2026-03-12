@@ -5,31 +5,32 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** Milestone v2.5 complete — ready for next milestone
+**Current focus:** v2.6 Deprecation Cleanup, Tech Debt & Setlist UX
 
 ## Current Position
 
-Milestone: Awaiting next milestone
-Phase: None active
-Plan: None
-Status: Milestone v2.5 Bugsweep & Test Coverage complete — ready for next
-Last activity: 2026-03-12 — Milestone completed
+Milestone: v2.6 Deprecation Cleanup, Tech Debt & Setlist UX
+Phase: 2 of 3 (Next.js & Sentry Deprecation Cleanup)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-12 — Phase 1 complete, transitioned to Phase 2
 
 Progress:
-- v2.5 Bugsweep & Test Coverage: [██████████] 100%
+- v2.6 Deprecation Cleanup, Tech Debt & Setlist UX: [███░░░░░░░] 33%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone complete - ready for next]
+  ○        ○        ○     [Fresh loop — ready to PLAN]
 ```
 
 ## Accumulated Context
 
 ### Decisions
-- See .paul/MILESTONES.md for v2.5 key decisions
+- bg-white/[opacity] for dark-mode alternating rows (not bg-muted which has baked-in alpha)
+- Dual-tint rows (0.03/0.07) instead of tint/pure-black for readability
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -39,15 +40,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 1a808a8
+Last commit: a1ccfa9
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Milestone v2.5 Bugsweep & Test Coverage complete
-Next action: /paul:discuss-milestone or /paul:milestone
-Resume file: .paul/MILESTONES.md
+Stopped at: Phase 1 complete, ready to plan Phase 2
+Next action: /paul:plan for Phase 2 (Next.js & Sentry Deprecation Cleanup)
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*
