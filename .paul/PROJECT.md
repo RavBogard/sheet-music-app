@@ -62,6 +62,10 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
 - [x] v2.5 Phase 7: Remove annotation feature — 5 annotation files deleted, 6 files cleaned, toolbar simplified
 - [x] v2.5 Phase 8.1: Setlist access bug fixes — Firestore rules admin/band-leader fallback, server ownerId guard, backfill script, error messaging
+- [x] v2.5 Phase 8: Performance UX fixes — monitor popover on setlist view, BPM/Monitor label rename, setlist popup fix
+- [x] v2.5 Phase 9: Print view & sticky keys — chartless items excluded from print, lastUsedKey/lastUsedTransposition saved to library_index
+- [x] v2.5 Phase 10: Public setlist access — already working, verified no code changes needed
+- [x] v2.5 Phase 10.1: Mobile action bar redesign — MobileTabBar rewritten as Search/Setlist/Monitor action bar with Fuse.js search and session-aware setlist navigation
 
 ### Validated (Recently Shipped)
 
@@ -185,7 +189,11 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | All existing setlists assigned to admin UID | v2.5 P8.1 | Rabbi Daniel created all setlists; backfill script sets ownerId |
 | Band leaders granted read access to all setlists | v2.5 P8.1 | isBandLeader() added to Firestore read rule |
 | Missing ownerId treated as legacy accessible data | v2.5 P8.1 | Truthiness guard prevents redirect on legacy docs |
+| Fuse.js for MobileTabBar search over library store | v2.5 P10.1 | Reuses hydrated library data; no API round-trip for song search |
+| sessionStorage for last-opened setlist tracking | v2.5 P10.1 | Tab-scoped, auto-clears on close; Setlist button navigates to most-relevant setlist |
+| Hidden placeholder for balanced 3-col layout without monitor | v2.5 P10.1 | Invisible div maintains spacing when monitor feature unavailable |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
+*Last updated: 2026-03-12 after Phase 10.1 (Mobile Action Bar Redesign complete)*
 *Last updated: 2026-03-11 after Phase 8.1 (Setlist Access Bug Fixes complete)*
