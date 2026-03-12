@@ -11,10 +11,22 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   // cacheOnFrontEndNav and aggressiveFrontEndNavCaching REMOVED.
   // They caused the SW to serve stale HTML/JS after Vercel deploys,
   // preventing critical fixes from reaching users.
+  // Exclude PDF worker from SW precache — module workers and dynamic import()
+  // fail on mobile browsers when served through a Service Worker's precache.
+  // The browser must fetch the .mjs file directly from the server.
+  publicExcludes: ['!pdf.worker.min.mjs', '!pdf.worker.min.*.mjs'],
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: false,
     runtimeCaching: [
+      {
+        // PDF.js worker — must bypass Service Worker entirely.
+        // Mobile browsers fail to load ES module workers (.mjs) through SW
+        // precache/cache, causing "Failed to fetch dynamically imported module"
+        // errors. NetworkOnly ensures direct server fetch.
+        urlPattern: /\/pdf\.worker\..*\.mjs$/i,
+        handler: 'NetworkOnly',
+      },
       {
         // Must bypass Service Worker for PDF/Audio Range Requests (206 Partial Content)
         // Otherwise, Workbox intercepts with no-response or ERR_FAILED
