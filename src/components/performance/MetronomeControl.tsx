@@ -58,7 +58,7 @@ export function MetronomeControl() {
                     "text-xs font-semibold lg:hidden",
                     isPlaying ? "text-red-400" : "text-muted-foreground"
                 )}>
-                    {isPlaying ? currentBpm : "Metronome"}
+                    {isPlaying ? currentBpm : "BPM"}
                 </span>
             </Button>
         </div>

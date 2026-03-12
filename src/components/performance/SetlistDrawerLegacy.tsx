@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ListMusic, PlayCircle, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -172,7 +171,7 @@ export function SetlistDrawer() {
                     </SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1 h-full bg-background">
+                <div className="flex-1 overflow-hidden bg-background">
                     {showPublicPicker ? (
                         <div className="p-4 grid gap-3">
                             {loading && <div className="text-muted-foreground text-center py-10">Loading active setlists...</div>}
@@ -343,7 +342,7 @@ export function SetlistDrawer() {
                             </div>
                         </div>
                     )}
-                </ScrollArea>
+                </div>
 
                 <div className="p-4 border-t border-border bg-muted">
                     <Button

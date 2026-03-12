@@ -15,9 +15,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music, Users, Pencil } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users, Pencil, Speaker } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
+import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useMonitorConnection } from "@/hooks/use-monitor-connection"
+import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
 
@@ -38,6 +42,9 @@ export default function SetlistPerformPage() {
         setCurrentPosition,
         musicians,
     } = useSetlistPerformance(setlistId)
+
+    const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    useMonitorConnection()
 
     // Hook point for Plan 02's PDF overlay
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
@@ -101,6 +108,25 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
+                {!isPublicView && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-9 w-9 shrink-0" aria-label="Monitor mix">
+                                <Speaker className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="end">
+                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
+                                <Speaker className="h-3 w-3" /> Monitor Mix
+                            </div>
+                            {hasMonitorAccess ? (
+                                <QuickMonitorPanel />
+                            ) : (
+                                <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
+                            )}
+                        </PopoverContent>
+                    </Popover>
+                )}
                 {!isPublicView && (
                     <Button asChild size="sm" variant="ghost" className="h-7 gap-1 shrink-0 text-muted-foreground">
                         <Link href={`/setlists/${setlistId}`}>

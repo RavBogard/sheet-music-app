@@ -189,9 +189,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                 <Button variant="ghost" className={cn(
                     "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center gap-1.5",
                     compact ? "h-11 px-3 text-xs font-semibold" : "h-10 px-4 text-xs font-bold gap-2 group"
-                )} aria-label="Audio monitor mix">
+                )} aria-label="Monitor mix">
                     <Speaker className="h-3.5 w-3.5" />
-                    <span>{compact ? "Audio" : "AUDIO"}</span>
+                    <span>{compact ? "Monitor" : "MONITOR"}</span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
