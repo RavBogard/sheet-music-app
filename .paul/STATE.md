@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 8.1 of 14 (Setlist Access Bug Fixes)
-Plan: 08.1-01 complete
-Status: Phase 8.1 complete, ready for Phase 8
-Last activity: 2026-03-11 — Phase 8.1 complete (UNIFY done)
+Phase: 8 of 14 (Performance UX Fixes)
+Plan: 08-01 APPLY in progress (3/4 tasks done, checkpoint pending)
+Status: APPLY in progress — awaiting human verification
+Last activity: 2026-03-11 — Fixed drawer scroll + speaker icon visibility
 
 Progress:
 - Milestone: [██████░░░░] 64% (9 of 14 phases complete, counting 6.1 and 8.1)
@@ -24,7 +24,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — Phase 8.1 done]
+  ✓        ◐        ○     [APPLY in progress — checkpoint pending]
 ```
 
 ## Accumulated Context
@@ -48,19 +48,20 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 84a99ef
+Last commit: 31d5185
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Phase 8.1 complete, loop closed
-Next action: Commit, deploy, run backfill script, then resume Phase 8 with existing plan 08-01
-Resume file: .paul/phases/08.1-setlist-access-bug-fixes/08.1-01-SUMMARY.md
+Stopped at: Phase 8 APPLY — fixes deployed, awaiting human verification
+Next action: Verify drawer scroll + speaker icon on production, then complete checkpoint
+Resume file: .paul/HANDOFF-2026-03-11-phase8b.md
 Resume context:
-- Phase 8.1 complete — Firestore rules + server page + backfill script + error messaging
-- Must deploy and run `node scripts/backfill-owner-id.js` against production
-- Phase 8 plan 08-01 already exists at .paul/phases/08-performance-ux-fixes/08-01-PLAN.md
+- Drawer scroll fix: added min-h-0 + virtualizer.measure() after animation (31d5185)
+- Speaker icon fix: bumped to h-5 w-5 + explicit text-foreground (31d5185)
+- Both fixes pushed to master, deployed on Vercel
+- If verification passes: complete checkpoint → /paul:unify → Phase 9
 
 ---
 *STATE.md — Updated after every significant action*
