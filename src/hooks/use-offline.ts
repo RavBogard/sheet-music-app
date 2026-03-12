@@ -39,11 +39,12 @@ export function useOffline() {
 
     // Abort all in-progress downloads on unmount
     useEffect(() => {
+        const controllers = controllersRef.current
         return () => {
-            for (const controller of controllersRef.current.values()) {
+            for (const controller of controllers.values()) {
                 controller.abort()
             }
-            controllersRef.current.clear()
+            controllers.clear()
         }
     }, [])
 

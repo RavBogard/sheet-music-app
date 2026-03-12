@@ -5,31 +5,32 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 18 complete, ready for Phase 19
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 19 complete, milestone at 86%
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 19 of 22 (Final Audit & Clean Sweep)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-12 — Phase 18 complete, transitioned to Phase 19
+Phase: 19 of 22 (Final Audit & Clean Sweep) — Complete
+Plan: 19-01 complete
+Status: Phase 19 complete, ready for next phase
+Last activity: 2026-03-12 — Phase 19 complete (zero warnings, full verification)
 
 Progress:
-- Milestone: [█████████░] 82% (18 of 22 phases complete)
-- Phase 19: [░░░░░░░░░░] 0%
+- Milestone: [█████████░] 86% (19 of 22 phases complete)
+- Phase 19: [██████████] 100%
 
 ## Loop Position
 
-Plan 18-01:
+Plan 19-01:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [18-01 COMPLETE — transactions, rate limiting, error standardization, env, config]
+  ✓        ✓        ✓     [19-01 COMPLETE — zero warnings, 1117 tests, build verified]
 ```
 
 ## Accumulated Context
 
 ### Decisions
+- Phase 19: All 22 eslint-disable comments audited and confirmed valid (ref-based callback pattern)
 - Phase 18: WriteBatch for delete-user, runTransaction for set-role; ApiErrorResponse standard shape; config/admins replaces hardcoded UID; CRON_SECRET in env.mjs
 - Phase 17: viewport-fit: cover added for safe area insets; p-0 for custom-content popovers; CSS custom properties for brand glow shadows
 - Phase 16: bg-background/40 for semi-transparent overlays; aria-label preferred over sr-only for icon buttons; UserRow already had title attrs
@@ -49,16 +50,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 04de2c3
+Last commit: e94617d
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
 Stopped at: Phase 18 complete, ready to plan Phase 19
-Next action: /paul:plan for Phase 19 (Final Audit & Clean Sweep)
+Next action: /paul:plan for remaining phases (20-22 are removed — milestone has 22 phases but only 19 defined in ROADMAP)
 Resume file: .paul/ROADMAP.md
-Resume context: Phase 18 done (backend hardening). IMPORTANT: Must seed config/admins Firestore doc with { uids: ["93Xn3DbS0bSNb8zmfzLyfOMX1Ai3"] } before deploying updated firestore.rules. Phase 19 is final audit — full tsc strict, ESLint, test suite, fix all warnings/errors, verify production build. Continue autonomously.
+Resume context: Phase 19 done. Codebase is totally clean: 0 tsc errors, 0 ESLint warnings, 1117 tests, build verified. ROADMAP shows phases 18-19 complete, phases 20-22 don't exist in roadmap table (milestone originally had 22 phases but was scoped to 19). Context window low — handoff needed.
 
 ---
 *STATE.md — Updated after every significant action*
