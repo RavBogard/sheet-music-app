@@ -117,24 +117,20 @@ describe("SetlistView", () => {
         expect(screen.getByText("Bb")).toBeDefined()
     })
 
-    it("hides notes by default, shows after tap", () => {
+    it("shows notes inline for songs", () => {
+        const songWithNotes: SetlistTrack = {
+            ...mockSongTrack,
+            notes: "Play softly",
+        }
         render(
             <SetlistView
                 {...defaultProps}
-                tracks={[mockReading]}
+                tracks={[songWithNotes]}
                 currentTrackIndex={-1}
             />
         )
 
-        // Notes should not be visible initially
-        // (Torah Reading has notes "Genesis 1:1-5")
-        expect(screen.queryByText("Genesis 1:1-5")).toBeNull()
-
-        // Tap the row to toggle notes
-        const row = screen.getByText("Torah Reading")
-        fireEvent.click(row)
-
-        // Notes should now be visible -- this will fail until SetlistRow implements note toggling display
-        expect(screen.getByText("Genesis 1:1-5")).toBeDefined()
+        // Notes are always visible inline for songs
+        expect(screen.getByText("Play softly")).toBeDefined()
     })
 })

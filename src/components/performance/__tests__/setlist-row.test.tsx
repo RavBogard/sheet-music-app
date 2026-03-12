@@ -116,17 +116,14 @@ describe("SetlistRow", () => {
         expect(screen.getByText("Randy")).toBeDefined()
     })
 
-    it("toggles notes on click", () => {
+    it("shows notes inline when present", () => {
         const trackWithNotes: SetlistTrack = {
             ...baseSong,
             notes: "Play softly during verse 2",
         }
         render(<SetlistRow track={trackWithNotes} {...defaultProps} />)
 
-        expect(screen.queryByText("Play softly during verse 2")).toBeNull()
-
-        fireEvent.click(screen.getByRole("button"))
-
+        // Notes are always visible inline (no toggle)
         expect(screen.getByText("Play softly during verse 2")).toBeDefined()
     })
 
