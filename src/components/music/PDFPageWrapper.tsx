@@ -5,7 +5,6 @@ import { Page } from "react-pdf"
 
 import { useMusicStore } from "@/lib/store"
 import { SmartTransposer } from "./SmartTransposer"
-import { AnnotationLayer } from "./AnnotationLayer"
 
 interface PDFPageWrapperProps {
     pageNumber: number
@@ -16,18 +15,9 @@ interface PDFPageWrapperProps {
 export function PDFPageWrapper({ pageNumber, width, transposition: _transposition }: PDFPageWrapperProps) {
     const pageRef = useRef<HTMLDivElement>(null)
     const [rendered, setRendered] = useState(false)
-    const [pageHeight, setPageHeight] = useState(0)
     const setCurrentVisiblePage = useMusicStore(s => s.setCurrentVisiblePage)
 
-    // Measure page height after render
-    useEffect(() => {
-        if (rendered && pageRef.current) {
-            const canvas = pageRef.current.querySelector("canvas")
-            if (canvas) setPageHeight(canvas.height / (window.devicePixelRatio || 1))
-        }
-    }, [rendered])
-
-    // Track which page is most visible for annotation toolbar
+    // Track which page is most visible for live session broadcasting
     useEffect(() => {
         const el = pageRef.current
         if (!el) return
@@ -60,15 +50,6 @@ export function PDFPageWrapper({ pageNumber, width, transposition: _transpositio
                 pageNumber={pageNumber}
                 isRendered={rendered}
             />
-
-            {/* D2: Chart annotation overlay */}
-            {rendered && pageHeight > 0 && (
-                <AnnotationLayer
-                    pageNumber={pageNumber}
-                    width={width}
-                    height={pageHeight}
-                />
-            )}
         </div>
     )
 }

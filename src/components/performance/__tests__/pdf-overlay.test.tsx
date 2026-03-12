@@ -59,7 +59,6 @@ vi.mock("@/lib/store", () => ({
 // Mock hooks used by PerformanceToolbar
 vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
 vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
-vi.mock("@/lib/annotation-store", () => ({ useAnnotationStore: () => ({ isAnnotating: false, setAnnotating: vi.fn() }) }))
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
@@ -80,10 +79,6 @@ vi.mock("@/components/performance/SongNavigation", () => ({
 vi.mock("@/components/performance/SetlistDrawerLegacy", () => ({
     SetlistDrawer: () => <div>Drawer</div>,
 }))
-vi.mock("@/components/music/AnnotationToolbar", () => ({
-    AnnotationToolbar: () => null,
-}))
-
 import { PDFOverlay } from "../PDFOverlay"
 
 const songA: SetlistTrack = {

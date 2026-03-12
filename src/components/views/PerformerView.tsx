@@ -6,7 +6,6 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useMusicStore } from '@/lib/store'
-import { useAnnotationStore } from '@/lib/annotation-store'
 import { PerformanceToolbar } from "@/components/performance/PerformanceToolbar"
 import { PerformanceStatusStrip } from "@/components/performance/PerformanceStatusStrip"
 import { FileType } from "@/lib/store"
@@ -26,7 +25,6 @@ interface PerformerViewProps {
 export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps) {
     const { nextSong, prevSong, aiXmlContent, zoom, playbackQueue, queueIndex, currentSetlistId, currentVisiblePage, syncedBroadcasterId, setSyncedBroadcasterId } = useMusicStore()
     const { user, isAdmin, isBandLeader } = useAuth()
-    const isAnnotating = useAnnotationStore(s => s.isAnnotating)
     const [barsVisible, setBarsVisible] = useState(true)
     const router = useRouter()
     const viewRef = useRef<HTMLDivElement>(null)
@@ -188,24 +186,23 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
 
     // ── Tap anywhere to toggle bars ──
     const handleContentTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        if (isAnnotating) return
         const target = e.target as HTMLElement
         if (target.closest('button') || target.closest('.performance-toolbar') || target.closest('[role="dialog"]')) return
 
         toggleBars()
-    }, [isAnnotating, toggleBars])
+    }, [toggleBars])
 
     // ── Touch-based swipe detection (replaces framer-motion drag) ──
     const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        if (isAnnotating || zoom > 1.1) return
+        if (zoom > 1.1) return
         const touch = e.touches[0]
         touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() }
-    }, [isAnnotating, zoom])
+    }, [zoom])
 
     const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        if (!touchStartRef.current || isAnnotating || zoom > 1.1) return
+        if (!touchStartRef.current || zoom > 1.1) return
         const touch = e.changedTouches[0]
         const dx = touch.clientX - touchStartRef.current.x
         const dy = touch.clientY - touchStartRef.current.y
@@ -224,7 +221,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             const prev = prevSong()
             if (prev) router.push(`/perform/${prev.fileId}`)
         }
-    }, [isAnnotating, zoom, nextSong, prevSong, router, syncedBroadcasterId, setSyncedBroadcasterId])
+    }, [zoom, nextSong, prevSong, router, syncedBroadcasterId, setSyncedBroadcasterId])
 
     return (
         <div className="h-[100dvh] flex flex-col bg-background text-foreground relative">

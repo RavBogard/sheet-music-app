@@ -40,10 +40,6 @@ vi.mock("@/lib/store", () => ({
 vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
 vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
 
-const mockSetAnnotating = vi.fn()
-vi.mock("@/lib/annotation-store", () => ({
-    useAnnotationStore: () => ({ isAnnotating: false, setAnnotating: mockSetAnnotating }),
-}))
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
@@ -64,9 +60,6 @@ vi.mock("@/components/performance/SongNavigation", () => ({
 vi.mock("@/components/performance/SetlistDrawerLegacy", () => ({
     SetlistDrawer: () => <div data-testid="setlist-drawer">Drawer</div>,
 }))
-vi.mock("@/components/music/AnnotationToolbar", () => ({
-    AnnotationToolbar: () => null,
-}))
 vi.mock("@/components/monitor/QuickMonitorPanel", () => ({
     QuickMonitorPanel: () => <div data-testid="monitor-panel">Monitor</div>,
 }))
@@ -81,12 +74,11 @@ describe("PerformanceToolbar", () => {
         mockStoreState.zoom = 1
     })
 
-    it("renders mobile layout with zoom controls, annotate, metronome, and exit", () => {
+    it("renders mobile layout with zoom controls, metronome, and exit", () => {
         render(<PerformanceToolbar onHome={mockOnHome} />)
 
         expect(screen.getAllByLabelText("Zoom in").length).toBeGreaterThanOrEqual(1)
         expect(screen.getAllByLabelText("Zoom out").length).toBeGreaterThanOrEqual(1)
-        expect(screen.getAllByLabelText("Toggle annotation mode").length).toBeGreaterThanOrEqual(1)
         expect(screen.getAllByTestId("metronome").length).toBeGreaterThanOrEqual(1)
         expect(screen.getAllByText("Exit").length).toBeGreaterThanOrEqual(1)
     })
@@ -119,14 +111,6 @@ describe("PerformanceToolbar", () => {
         const zoomInButtons = screen.getAllByLabelText("Zoom in")
         fireEvent.click(zoomInButtons[0])
         expect(mockSetZoom).toHaveBeenCalledWith(expect.closeTo(1.1, 1))
-    })
-
-    it("annotate button toggles annotation mode", () => {
-        render(<PerformanceToolbar onHome={mockOnHome} />)
-
-        const annotateButtons = screen.getAllByLabelText("Toggle annotation mode")
-        fireEvent.click(annotateButtons[0])
-        expect(mockSetAnnotating).toHaveBeenCalledWith(true)
     })
 
     it("exit button calls onHome", () => {

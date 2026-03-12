@@ -60,6 +60,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 5: API route tests — 56 tests across 10 scheduling + library routes
 - [x] v2.5 Phase 6: Hook tests — 221 tests across 17 hooks (3 plans)
 - [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
+- [x] v2.5 Phase 7: Remove annotation feature — 5 annotation files deleted, 6 files cleaned, toolbar simplified
 
 ### Validated (Recently Shipped)
 
@@ -75,7 +76,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Planned (Next)
 
-- v2.5 Phase 4: Data layer tests
+- v2.5 Phase 8: Performance UX Fixes
 
 ### Out of Scope
 
@@ -178,7 +179,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | beforeAll dynamic import for route handlers | v2.5 P3 | Eliminates cold-start flakiness in API route tests |
 | clearFirestoreIndexedDB() for corrupted persistence recovery | v2.5 P6.1 | Shared helper used by SwCleanup, ErrorBoundary, and unhandledrejection listener |
 | PWA/SW fully removed, next-pwa uninstalled | v2.5 P6.1 | SW caused stale deploys, PDF worker failures, cache breaks; venue has wifi |
+| Annotation feature removed entirely | v2.5 P7 | Unused by worship band; simplifies toolbar before Phase 8 UX fixes |
+| react-pdf AnnotationLayer.css preserved | v2.5 P7 | PDF.js built-in, not custom annotation code |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 6 (Hook Tests complete)*
+*Last updated: 2026-03-11 after Phase 7 (Remove Annotation Feature complete)*

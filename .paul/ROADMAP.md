@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 10 total
+Phases: 13 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -14,9 +14,12 @@ Phases: 10 total
 | 5 | API Route Tests | 3 | Complete | 2026-03-11 |
 | 6 | Hook Tests | 3 | Complete | 2026-03-11 |
 | 6.1 | SW Removal & Firestore Recovery | 2 | Complete | 2026-03-11 |
-| 7 | Component Tests | 0 | Not started | — |
-| 8 | AI & Integration Tests | 0 | Not started | — |
-| 9 | Public Setlist Access | 0 | Not started | — |
+| 7 | Remove Annotation Feature | 1 | Complete | 2026-03-11 |
+| 8 | Performance UX Fixes | 0 | Not started | — |
+| 9 | Print View & Sticky Keys | 0 | Not started | — |
+| 10 | Public Setlist Access | 0 | Not started | — |
+| 11 | Component Tests | 0 | Not started | — |
+| 12 | AI & Integration Tests | 0 | Not started | — |
 
 ### Phase 1: Type Safety Fixes
 
@@ -48,19 +51,40 @@ Focus: Fix production Firestore crash on mobile caused by corrupted IndexedDB fr
 Plans: TBD (defined during /paul:plan)
 Status: Not started
 
-### Phase 7: Component Tests
+### Phase 7: Remove Annotation Feature
 
-Focus: Tests for critical UI components — PrintModal, library views (SongChartsLibrary, LibraryFileRow, UploadDialog), scheduling UI (ScheduleCard, RabbiBanner), dashboard (NextServiceCard interactions, PrepRecommendations), SetlistEditor complex interactions (drag-and-drop, inline editing). Skip admin panels and basic UI primitives.
+Focus: Completely remove the PDF annotation/drawing feature from chart viewing. The ability to edit and draw notes on top of PDF charts won't be meaningfully used. Remove all annotation UI, tools, state management, and related code paths from the performance/chart view.
+Plans: TBD (defined during /paul:plan)
+Status: Not started
+Skills required: /ui-ux-pro-max
 
-### Phase 8: AI & Integration Tests
+### Phase 8: Performance UX Fixes
 
-Focus: Tests for gemini.ts (chat completions, error handling), key-detection.ts (key extraction accuracy), pdf-chord-extractor.ts (chord parsing from PDF), enrichment-engine.ts (metadata enrichment), print-pipeline edge cases (empty setlists, missing files, transposition combos). Mock external APIs (Gemini, Firebase Storage).
+Focus: Fix and improve the chart/setlist performance experience. (a) Add monitor popup trigger to setlist perform view — same monitor control available when viewing a chart should be accessible from the setlist view. (b) Relabel "Metronome" to "BPM" and "Audio" to "Monitor" in PerformanceToolbar to conserve space and match musician terminology. (c) Fix broken setlist popup — clicking "Setlist" button in bottom-right while viewing a chart shows blank instead of the setlist with keys next to each piece.
+Plans: TBD (defined during /paul:plan)
+Status: Not started
+Skills required: /ui-ux-pro-max
 
-### Phase 9: Public Setlist Access
+### Phase 9: Print View & Sticky Keys
+
+Focus: Two data-flow improvements. (a) Remove chartless items from print view — items without charts (e.g., "Pre Service", "V'ahavta") should remain in the setlist but NOT generate blank pages when printing. (b) Sticky key assignments — when a chart is assigned a key on a setlist, that key should persist to the next setlist it's added to, until manually changed. The key follows the chart, not the setlist.
+Plans: TBD (defined during /paul:plan)
+Status: Not started
+Skills required: /ui-ux-pro-max
+
+### Phase 10: Public Setlist Access
 
 Focus: Allow unauthenticated users to view public setlists and their PDFs without signing in. Update middleware to allow unauthenticated access to public setlist detail pages. Update file proxy to serve PDFs for public setlist tracks without auth. Ensure Firestore queries for public setlists work without auth context. Anyone with a link to a public setlist should be able to view it and all its charts.
 Plans: TBD (defined during /paul:plan)
 Status: Not started
+
+### Phase 11: Component Tests
+
+Focus: Tests for critical UI components — PrintModal, library views (SongChartsLibrary, LibraryFileRow, UploadDialog), scheduling UI (ScheduleCard, RabbiBanner), dashboard (NextServiceCard interactions, PrepRecommendations), SetlistEditor complex interactions (drag-and-drop, inline editing). Skip admin panels and basic UI primitives.
+
+### Phase 12: AI & Integration Tests
+
+Focus: Tests for gemini.ts (chat completions, error handling), key-detection.ts (key extraction accuracy), pdf-chord-extractor.ts (chord parsing from PDF), enrichment-engine.ts (metadata enrichment), print-pipeline edge cases (empty setlists, missing files, transposition combos). Mock external APIs (Gemini, Firebase Storage).
 
 ## Previous Milestone
 **v2.0 Schedule & Workflow Fixes**
@@ -264,4 +288,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (Phase 6 complete)*
+*Last updated: 2026-03-11 (Phase 7 complete)*

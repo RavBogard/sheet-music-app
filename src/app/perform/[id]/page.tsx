@@ -7,8 +7,6 @@ import { PerformerView } from "@/components/views/PerformerView"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { useMusicianTransposition } from "@/hooks/use-musician-transposition"
 import { prefetchUpcoming } from "@/lib/prefetch"
-import { useAnnotationStore } from "@/lib/annotation-store"
-import { useAuth } from "@/lib/auth-context"
 
 import { PerformanceIntro, usePerformanceIntro } from "@/components/performance/PerformanceIntro"
 import { RehearsalToolbar } from "@/components/performance/RehearsalToolbar"
@@ -26,9 +24,6 @@ export default function PerformPage() {
 
     // Auto-apply musician profile transposition
     useMusicianTransposition()
-
-    const { user: authUser } = useAuth()
-    const { loadAnnotations } = useAnnotationStore()
 
     const fileId = params?.id as string
 
@@ -83,23 +78,6 @@ export default function PerformPage() {
         }
     }
 
-
-    // Load annotations for current file
-    useEffect(() => {
-        if (authUser?.uid && fileId) {
-            loadAnnotations(authUser.uid, fileId)
-        }
-    }, [authUser?.uid, fileId, loadAnnotations])
-
-
-
-    // Flush pending annotation saves on unmount so navigating away never loses data
-    useEffect(() => {
-        return () => {
-            useAnnotationStore.getState().clearSaveTimer()
-            useAnnotationStore.getState().save()
-        }
-    }, [])
 
     // Home navigates back to origin (setlist editor, library, or home)
     const handleHome = () => router.push(returnPath || '/')

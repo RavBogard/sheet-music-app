@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, Pencil, ZoomIn, ZoomOut, X, List } from "lucide-react"
+import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -14,8 +14,6 @@ import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
-import { useAnnotationStore } from "@/lib/annotation-store"
-import { AnnotationToolbar } from "@/components/music/AnnotationToolbar"
 import { cn } from "@/lib/utils"
 import { LiveSession, subscribeToLiveSessions } from "@/lib/live-session-firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -33,7 +31,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         currentSetlistId, syncedBroadcasterId, setSyncedBroadcasterId, jumpToSong, setCurrentVisiblePage, playbackQueue, queueIndex
     } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
-    const { isAnnotating, setAnnotating } = useAnnotationStore()
     const { user, isAdmin, isBandLeader } = useAuth()
     const router = useRouter()
 
@@ -249,21 +246,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         </Popover>
     )
 
-    const annotateButton = (showLabel = false) => (
-        <Button
-            variant="ghost" size="icon"
-            onClick={() => setAnnotating(!isAnnotating)}
-            className={cn(
-                "h-11 w-11 rounded-xl",
-                isAnnotating ? "text-amber-400 bg-amber-500/20" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-            title="Annotate"
-            aria-label="Toggle annotation mode"
-        >
-            <Pencil className="h-5 w-5" />
-        </Button>
-    )
-
     // ── BOTTOM BAR LAYOUT (all viewports) ──
     return (
         <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
@@ -276,9 +258,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                     {/* Zoom controls (compact) */}
                     {zoomControls(true)}
-
-                    {/* Annotate */}
-                    {annotateButton()}
 
                     {/* Metronome */}
                     <MetronomeControl />
@@ -317,7 +296,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <X className="h-5 w-5" />
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
-                    {annotateButton()}
 
                     {/* Sync Button (Desktop) */}
                     {syncButton(false)}
@@ -352,14 +330,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {transposerPopover(transposerOpenDesktop, setTransposerOpenDesktop, 'transposer-desktop', false)}
                 </div>
             </div>
-
-            {/* Annotation toolbar overlay */}
-            {isAnnotating && (
-                <AnnotationToolbar
-                    currentPage={currentVisiblePage}
-                    onClose={() => setAnnotating(false)}
-                />
-            )}
 
             {/* Chord edit floating bar */}
             <ChordEditBar />
