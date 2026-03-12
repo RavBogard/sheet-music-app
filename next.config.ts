@@ -5,55 +5,15 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
+// PWA / Service Worker DISABLED.
+// The SW caching layer caused repeated production issues:
+// 1. Stale HTML/JS served after deploys (cacheOnFrontEndNav)
+// 2. PDF worker module loading broken on mobile (precache interference)
+// 3. Clearing cache breaks entire app (SW serves from empty cache)
+// Venue always has wifi — offline support not needed. Re-enable if that changes.
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  // cacheOnFrontEndNav and aggressiveFrontEndNavCaching REMOVED.
-  // They caused the SW to serve stale HTML/JS after Vercel deploys,
-  // preventing critical fixes from reaching users.
-  // Exclude PDF worker from SW precache — module workers and dynamic import()
-  // fail on mobile browsers when served through a Service Worker's precache.
-  // The browser must fetch the .mjs file directly from the server.
-  publicExcludes: ['!pdf.worker.min.mjs', '!pdf.worker.min.*.mjs'],
-  workboxOptions: {
-    disableDevLogs: true,
-    skipWaiting: false,
-    runtimeCaching: [
-      {
-        // PDF.js worker — must bypass Service Worker entirely.
-        // Mobile browsers fail to load ES module workers (.mjs) through SW
-        // precache/cache, causing "Failed to fetch dynamically imported module"
-        // errors. NetworkOnly ensures direct server fetch.
-        urlPattern: /\/pdf\.worker\..*\.mjs$/i,
-        handler: 'NetworkOnly',
-      },
-      {
-        // Must bypass Service Worker for PDF/Audio Range Requests (206 Partial Content)
-        // Otherwise, Workbox intercepts with no-response or ERR_FAILED
-        urlPattern: /\/api\/(drive|library)\/file(.*)/i,
-        handler: 'NetworkOnly',
-      },
-      {
-        urlPattern: /\/api\/library\/list(.*)/i,
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'library-api-swr-cache',
-          expiration: {
-            maxEntries: 4,
-            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-          },
-        },
-      },
-      {
-        // Google Auth & profile — SW must NOT intercept these.
-        // Workbox's default cross-origin rules try to cache/fetch them,
-        // which triggers CSP connect-src violations and breaks sign-in.
-        urlPattern: /^https:\/\/(apis\.google\.com|accounts\.google\.com|lh3\.googleusercontent\.com|.*\.firebaseapp\.com)/,
-        handler: 'NetworkOnly',
-      },
-    ],
-  },
-  extendDefaultRuntimeCaching: true,
+  disable: true,
 });
 
 const nextConfig = {

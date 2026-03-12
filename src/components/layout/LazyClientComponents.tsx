@@ -20,8 +20,8 @@ const BackgroundPrefetcher = dynamic(
     { ssr: false }
 )
 
-const UpdatePrompt = dynamic(
-    () => import("@/components/offline/UpdatePrompt").then(m => m.UpdatePrompt),
+const SwCleanup = dynamic(
+    () => import("@/components/offline/SwCleanup").then(m => m.SwCleanup),
     { ssr: false }
 )
 
@@ -31,7 +31,7 @@ export function LazyClientComponents() {
             <ChatPanel />
             <OfflineIndicator />
             <BackgroundPrefetcher />
-            <UpdatePrompt />
+            <SwCleanup />
         </>
     )
 }
