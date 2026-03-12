@@ -84,7 +84,8 @@ export const POST = createApiHandler(
         const rawTitle = formData.get('title') as string | null
         const title = rawTitle?.trim() || file.name.replace(/\.[^/.]+$/, '')
         const key = (formData.get('key') as string | null)?.trim() || undefined
-        const bpm = formData.get('bpm') ? Number(formData.get('bpm')) : undefined
+        const bpmRaw = formData.get('bpm') ? Number(formData.get('bpm')) : undefined
+        const bpm = bpmRaw != null && !isNaN(bpmRaw) && bpmRaw > 0 ? bpmRaw : undefined
         const tagsRaw = (formData.get('tags') as string | null)?.trim()
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
 

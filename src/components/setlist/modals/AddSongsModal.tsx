@@ -72,6 +72,7 @@ export function AddSongsModal({
 
         fetchUsageData(allFiles.map(f => f.id))
             .then(setUsageMap)
+            .catch(() => {})
             .finally(() => setSuggestionsLoading(false))
     }, [isOpen, displayedFiles])
 

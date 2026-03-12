@@ -72,7 +72,7 @@ service cloud.firestore {
         allow read: if isSignedIn() && request.auth.uid == userId;
         allow update: if isSignedIn() && request.auth.uid == userId
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        allow create: if isSignedIn(); // Other users/admin can create notifications
+        allow create: if isSignedIn() && (isAdmin() || isBandLeader()); // Server writes via admin SDK; client-side only for admin/leader
         allow delete: if isSignedIn() && request.auth.uid == userId;
       }
     }

@@ -36,6 +36,27 @@ export async function GET(req: Request) {
         let emailsSent = 0
         let smsSent = 0
 
+        // Batch-fetch musician preferences to avoid N+1 reads
+        const uniqueUids = [...new Set(snap.docs.map(d => d.data().musicianUid as string).filter(Boolean))]
+        const prefsMap = new Map<string, { email: boolean; sms: boolean; push: boolean }>()
+        if (uniqueUids.length > 0) {
+            try {
+                const refs = uniqueUids.map(uid => db.collection('users').doc(uid))
+                const musicianDocs = await db.getAll(...refs)
+                for (const musicianDoc of musicianDocs) {
+                    if (!musicianDoc.exists) continue
+                    const prefs = musicianDoc.data()?.musicianProfile?.notificationPreferences
+                    prefsMap.set(musicianDoc.id, {
+                        email: prefs?.email !== false,
+                        sms: prefs?.sms === true,
+                        push: prefs?.push !== false,
+                    })
+                }
+            } catch {
+                // If batch fetch fails, defaults will be used
+            }
+        }
+
         for (const doc of snap.docs) {
             const a = doc.data()
 
@@ -65,21 +86,11 @@ export async function GET(req: Request) {
                 weekday: 'long', month: 'long', day: 'numeric',
             })
 
-            // Check musician's notification preferences
-            let emailEnabled = true
-            let smsEnabled = false
-            let pushEnabled = true
-            try {
-                const musicianDoc = await db.collection('users').doc(a.musicianUid).get()
-                const prefs = musicianDoc.data()?.musicianProfile?.notificationPreferences
-                if (prefs) {
-                    emailEnabled = prefs.email !== false
-                    smsEnabled = prefs.sms === true
-                    pushEnabled = prefs.push !== false
-                }
-            } catch {
-                // If can't fetch prefs, use defaults
-            }
+            // Look up musician's notification preferences from batch result
+            const musicianPrefs = prefsMap.get(a.musicianUid)
+            const emailEnabled = musicianPrefs?.email ?? true
+            const smsEnabled = musicianPrefs?.sms ?? false
+            const pushEnabled = musicianPrefs?.push ?? true
 
             // Send email
             if (emailEnabled) try {

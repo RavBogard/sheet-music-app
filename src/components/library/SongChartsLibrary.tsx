@@ -183,7 +183,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
                 {canUpload && (
                     <UploadDialog onUploadComplete={() => {
-                        loadLibrary()
+                        void Promise.resolve(loadLibrary()).catch(() => {})
                         toast.success("Library updated with your upload")
                     }} />
                 )}

@@ -138,6 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     if (!ok) logger.warn("Session cookie sync failed — SSR auth may not work")
                     sessionReady = true
                     if (profileReady) setLoading(false)
+                }).catch((err) => {
+                    logger.error("syncSessionCookie rejected:", err)
+                    sessionReady = true
+                    if (profileReady) setLoading(false)
                 })
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)

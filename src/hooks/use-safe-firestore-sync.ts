@@ -62,7 +62,7 @@ export function useSafeFirestoreSync<T = any>(
 
         setState(prev => ({ ...prev, loading: true, error: null }))
 
-        let timeoutId: ReturnType<typeof setTimeout>
+        let timeoutId: ReturnType<typeof setTimeout> | undefined
 
         if (options.timeoutMs) {
             timeoutId = setTimeout(() => {
@@ -116,7 +116,7 @@ export function useSafeFirestoreSync<T = any>(
                 }
             )
         } catch (setupError: any) {
-            if (timeoutId!) clearTimeout(timeoutId!)
+            if (timeoutId) clearTimeout(timeoutId)
             logger.error("[useSafeFirestoreSync] Setup error:", setupError)
             setState(prev => ({ ...prev, loading: false, error: setupError }))
             if (options.onError) options.onError(setupError)

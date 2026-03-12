@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { isFileCached } from '@/lib/cache-utils'
 import { SetlistTrack } from '@/types/models'
 import { toast } from 'sonner'
@@ -35,21 +35,41 @@ export function useOffline() {
     /** Download a single file to IndexedDB */
     const downloadingRef = useRef(downloading)
     downloadingRef.current = downloading
+    const controllersRef = useRef<Map<string, AbortController>>(new Map())
+
+    // Abort all in-progress downloads on unmount
+    useEffect(() => {
+        return () => {
+            for (const controller of controllersRef.current.values()) {
+                controller.abort()
+            }
+            controllersRef.current.clear()
+        }
+    }, [])
 
     const downloadFile = useCallback(async (fileId: string, fileName: string) => {
         if (downloadingRef.current[fileId]) return
 
+        const controller = new AbortController()
+        controllersRef.current.set(fileId, controller)
+
         setDownloading(prev => ({ ...prev, [fileId]: true }))
         try {
-            const res = await fetch(`/api/drive/file/${fileId}`)
+            const res = await fetch(`/api/drive/file/${fileId}`, { signal: controller.signal })
             if (!res.ok) throw new Error('Download failed')
 
-            // Fetch caching saves this transparently in the background
-            setOfflineStatus(prev => ({ ...prev, [fileId]: true }))
+            if (!controller.signal.aborted) {
+                setOfflineStatus(prev => ({ ...prev, [fileId]: true }))
+            }
         } catch (error) {
-            logger.error(`Failed to download ${fileName}:`, error)
+            if (!controller.signal.aborted) {
+                logger.error(`Failed to download ${fileName}:`, error)
+            }
         } finally {
-            setDownloading(prev => ({ ...prev, [fileId]: false }))
+            controllersRef.current.delete(fileId)
+            if (!controller.signal.aborted) {
+                setDownloading(prev => ({ ...prev, [fileId]: false }))
+            }
         }
     }, [])
 

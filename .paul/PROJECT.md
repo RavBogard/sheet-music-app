@@ -69,6 +69,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 11: Component tests — critical UI components tested
 - [x] v2.5 Phase 12: AI & integration tests — gemini, key-detection, enrichment, print-pipeline tested
 - [x] v2.5 Phase 13: Tablet Performance UX — 44px touch targets, md: tablet breakpoint, PDF padding fix, swipe-while-zoomed 1.5x, 15s auto-hide, wider title truncation
+- [x] v2.5 Phase 14: Bug Fixes & Race Conditions — Firestore notification rule tightened, N+1 batch fetch, AbortController for offline, syncSessionCookie catch, BPM validation, non-null fix, 3 missing .catch() handlers
 
 ### Validated (Recently Shipped)
 
@@ -198,7 +199,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Three-tier responsive: default → md: (768px) → lg: (1024px) | v2.5 P13 | Tablet gets dedicated single-row toolbar between phone two-row and desktop |
 | Swipe threshold 1.5x (up from 1.1x) for zoomed navigation | v2.5 P13 | Musicians who zoom slightly can still swipe between charts |
 | Auto-hide timeout 15s (up from 8s) for live performance | v2.5 P13 | More time for stage musicians to interact with toolbar |
+| Batch musician prefs via db.getAll() in scheduling cron | v2.5 P14 | Eliminates N+1 reads; single batch for up to 100 musicians |
+| AbortController per-file via Map ref in use-offline | v2.5 P14 | Prevents state updates after unmount during downloads |
+| Notification create restricted to admin/band_leader | v2.5 P14 | Server writes via admin SDK; client-side only for privileged roles |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 13 (Tablet Performance UX complete)*
+*Last updated: 2026-03-12 after Phase 14 (Bug Fixes & Race Conditions complete)*

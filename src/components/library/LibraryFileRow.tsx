@@ -43,7 +43,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
     useEffect(() => {
         if (isFolder || !item.id) return
-        isFileCached(item.id).then(setIsCached)
+        isFileCached(item.id).then(setIsCached).catch(() => {})
     }, [item.id, isFolder])
 
     const displayName = isFolder
