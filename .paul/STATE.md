@@ -5,7 +5,7 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 17 complete, ready to plan Phase 18
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 17 complete, context low, resume at Phase 18
 
 ## Current Position
 
@@ -48,16 +48,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: cc15a5a
+Last commit: 04de2c3
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 17 complete
-Next action: /paul:plan for Phase 18
-Resume file: .paul/phases/17-ipad-safe-areas-spacing/17-01-SUMMARY.md
-Resume context: Phase 17 done (iPad safe areas + spacing). Continue autonomously through 18-19.
+Stopped at: Context window low after completing Phases 16+17. Phase 18 planning started but not written.
+Next action: /paul:plan for Phase 18 (Backend Hardening)
+Resume file: .paul/ROADMAP.md
+Resume context: Phases 16-17 done and pushed. Phase 18 is backend-heavy (Firestore transactions, error standardization, rate limiting, config migration, env validation). 43 routes use createApiHandler already. Admin routes (delete-user, set-role) need transaction wrapping. Super-admin UID hardcoded in firestore.rules line 20. CRON_SECRET missing from env.mjs. Continue autonomously through 18-19.
 
 ---
 *STATE.md — Updated after every significant action*
