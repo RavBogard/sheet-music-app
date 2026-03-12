@@ -5,26 +5,25 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 8 (Performance UX Fixes) next
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 9 (Print View & Sticky Keys) next
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 8 of 14 (Performance UX Fixes)
-Plan: 08-01 APPLY in progress (3/4 tasks done, checkpoint pending)
-Status: APPLY in progress — awaiting human verification
-Last activity: 2026-03-11 — Fixed drawer scroll + speaker icon visibility
+Phase: 9 of 14 (Print View & Sticky Keys)
+Plan: None yet
+Status: Ready to plan
+Last activity: 2026-03-12 — Phase 8 complete (monitor popover on tab bar)
 
 Progress:
-- Milestone: [██████░░░░] 64% (9 of 14 phases complete, counting 6.1 and 8.1)
-- Phase 8.1: Complete (1/1 plans)
+- Milestone: [███████░░░] 71% (10 of 14 phases complete, counting 6.1 and 8.1)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ◐        ○     [APPLY in progress — checkpoint pending]
+  ○        ○        ○     [New phase — needs planning]
 ```
 
 ## Accumulated Context
@@ -39,6 +38,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Phase 8.1 inserted: urgent production bug fixes before Phase 8 UX work
 - All existing setlists owned by Rabbi Daniel — backfill ownerId to admin UID
 - Band leaders should be able to read non-public setlists (add isBandLeader() to read rule)
+- Phase 8: Monitor tab on mobile opens popover (QuickMonitorPanel) instead of navigating to /monitor; full page via hamburger menu
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -48,20 +48,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 31d5185
+Last commit: 5c624b4
 Branch: master
 
 ## Session Continuity
 
-Last session: 2026-03-11
-Stopped at: Phase 8 APPLY — fixes deployed, awaiting human verification
-Next action: Verify drawer scroll + speaker icon on production, then complete checkpoint
-Resume file: .paul/HANDOFF-2026-03-11-phase8b.md
-Resume context:
-- Drawer scroll fix: added min-h-0 + virtualizer.measure() after animation (31d5185)
-- Speaker icon fix: bumped to h-5 w-5 + explicit text-foreground (31d5185)
-- Both fixes pushed to master, deployed on Vercel
-- If verification passes: complete checkpoint → /paul:unify → Phase 9
+Last session: 2026-03-12
+Stopped at: Phase 8 complete, starting Phase 9 planning
+Next action: /paul:plan for Phase 9
+Resume file: —
+Resume context: Phase 9 focus is (a) removing chartless items from print view and (b) sticky key assignments across setlists
 
 ---
 *STATE.md — Updated after every significant action*

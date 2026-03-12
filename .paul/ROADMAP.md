@@ -15,7 +15,7 @@ Phases: 14 total
 | 6 | Hook Tests | 3 | Complete | 2026-03-11 |
 | 6.1 | SW Removal & Firestore Recovery | 2 | Complete | 2026-03-11 |
 | 7 | Remove Annotation Feature | 1 | Complete | 2026-03-11 |
-| 8 | Performance UX Fixes | 1 | In progress | — |
+| 8 | Performance UX Fixes | 1 | Complete | 2026-03-12 |
 | 8.1 | Setlist Access Bug Fixes | 1 | Complete | 2026-03-11 |
 | 9 | Print View & Sticky Keys | 0 | Not started | — |
 | 10 | Public Setlist Access | 0 | Not started | — |
