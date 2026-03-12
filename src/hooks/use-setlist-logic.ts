@@ -318,11 +318,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         } catch (e) {
             logger.error("Auto-save failed:", e)
             const msg = e instanceof Error ? e.message : String(e)
-            const description = msg.includes("permission")
+            const isPermissionError = msg.includes("permission") || msg.includes("PERMISSION_DENIED")
+            const description = isPermissionError
                 ? "You may not have permission to edit this setlist."
                 : msg.includes("not-found")
                     ? "This setlist may have been deleted."
-                    : "Please check your internet connection and try again."
+                    : "An unexpected error occurred. Please try again."
             toast.error("Failed to save changes", { description, duration: 5000 })
         }
         setSaving(false)

@@ -79,8 +79,8 @@ service cloud.firestore {
 
     // SETLISTS Collection (The new root collection)
     match /setlists/{setlistId} {
-      // 1. READ: Allow if Public OR User is Owner
-      allow read: if (resource.data.isPublic == true) || isOwner(resource);
+      // 1. READ: Allow if Public OR User is Owner OR Admin OR Band Leader
+      allow read: if (resource.data.isPublic == true) || isOwner(resource) || isAdmin() || isBandLeader();
 
       // 2. CREATE: 
       //    - Members can create private setlists.
@@ -92,8 +92,9 @@ service cloud.firestore {
       // 3. UPDATE: 
       //    - Owner can always update.
       //    - Leaders/Admins can update ANY Public setlist.
-      allow update: if isOwner(resource) 
-                    || (resource.data.isPublic == true && isBandLeader());
+      allow update: if isOwner(resource)
+                    || (resource.data.isPublic == true && isBandLeader())
+                    || isAdmin();
 
       // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
       allow delete: if isOwner(resource) || isAdmin();

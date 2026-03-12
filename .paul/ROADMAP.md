@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 13 total
+Phases: 14 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -15,7 +15,8 @@ Phases: 13 total
 | 6 | Hook Tests | 3 | Complete | 2026-03-11 |
 | 6.1 | SW Removal & Firestore Recovery | 2 | Complete | 2026-03-11 |
 | 7 | Remove Annotation Feature | 1 | Complete | 2026-03-11 |
-| 8 | Performance UX Fixes | 0 | Not started | — |
+| 8 | Performance UX Fixes | 1 | In progress | — |
+| 8.1 | Setlist Access Bug Fixes | 1 | Complete | 2026-03-11 |
 | 9 | Print View & Sticky Keys | 0 | Not started | — |
 | 10 | Public Setlist Access | 0 | Not started | — |
 | 11 | Component Tests | 0 | Not started | — |
@@ -57,6 +58,12 @@ Focus: Completely remove the PDF annotation/drawing feature from chart viewing. 
 Plans: TBD (defined during /paul:plan)
 Status: Not started
 Skills required: /ui-ux-pro-max
+
+### Phase 8.1: Setlist Access Bug Fixes
+
+Focus: Fix two production-breaking bugs affecting band member access to setlists. (1) Firestore security rules missing admin fallback — old setlists with no ownerId are unreadable/unwritable by anyone via client SDK. (2) Server-side ownership check redirects users on legacy setlists with missing ownerId. Also: backfill ownerId on all existing setlists (assign to admin), and improve error messaging from catch-all "check internet" to actual Firestore errors.
+Plans: 1/1 complete
+Status: Complete
 
 ### Phase 8: Performance UX Fixes
 
@@ -288,4 +295,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (Phase 7 complete)*
+*Last updated: 2026-03-11 (Phase 8.1 complete)*

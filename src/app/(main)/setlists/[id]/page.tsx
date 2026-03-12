@@ -37,14 +37,14 @@ export default async function SetlistEditorPage({
         const data = doc.data() as any
 
         if (isPublic) {
-            if (!data.isPublic && data.ownerId !== user?.uid && !user?.isAdmin) {
+            if (!data.isPublic && data.ownerId && data.ownerId !== user?.uid && !user?.isAdmin) {
                 // Unauthorized for public view if it's not actually public and we don't own it
                 redirect("/setlists")
             }
         } else {
             // Personal setlist
             if (!user) redirect("/login")
-            if (data.ownerId !== user.uid && !user.isAdmin) {
+            if (data.ownerId && data.ownerId !== user.uid && !user.isAdmin) {
                 redirect("/setlists")
             }
         }

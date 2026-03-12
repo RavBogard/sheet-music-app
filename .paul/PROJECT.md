@@ -61,6 +61,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 6: Hook tests — 221 tests across 17 hooks (3 plans)
 - [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
 - [x] v2.5 Phase 7: Remove annotation feature — 5 annotation files deleted, 6 files cleaned, toolbar simplified
+- [x] v2.5 Phase 8.1: Setlist access bug fixes — Firestore rules admin/band-leader fallback, server ownerId guard, backfill script, error messaging
 
 ### Validated (Recently Shipped)
 
@@ -181,7 +182,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | PWA/SW fully removed, next-pwa uninstalled | v2.5 P6.1 | SW caused stale deploys, PDF worker failures, cache breaks; venue has wifi |
 | Annotation feature removed entirely | v2.5 P7 | Unused by worship band; simplifies toolbar before Phase 8 UX fixes |
 | react-pdf AnnotationLayer.css preserved | v2.5 P7 | PDF.js built-in, not custom annotation code |
+| All existing setlists assigned to admin UID | v2.5 P8.1 | Rabbi Daniel created all setlists; backfill script sets ownerId |
+| Band leaders granted read access to all setlists | v2.5 P8.1 | isBandLeader() added to Firestore read rule |
+| Missing ownerId treated as legacy accessible data | v2.5 P8.1 | Truthiness guard prevents redirect on legacy docs |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 7 (Remove Annotation Feature complete)*
+*Last updated: 2026-03-11 after Phase 8.1 (Setlist Access Bug Fixes complete)*
