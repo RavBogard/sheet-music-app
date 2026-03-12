@@ -63,7 +63,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: cdaa800
+Last commit: 735ee2b
 Branch: master
 
 ## Session Continuity
