@@ -5,55 +5,32 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 15 complete, ready to plan Phase 16
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 16 complete, ready to plan Phase 17
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 16 of 22 (Design Token Cleanup & Accessibility) — Not started
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-12 — Phase 15 complete, transitioned to Phase 16
+Phase: 16 of 22 (Design Token Cleanup & Accessibility) — Complete
+Plan: 16-01 complete
+Status: Phase 16 complete, ready for Phase 17
+Last activity: 2026-03-12 — Phase 16 complete (design tokens + accessibility)
 
 Progress:
-- Milestone: [███████░░░] 68% (15 of 22 phases complete)
-- Phase 16: [░░░░░░░░░░] 0%
+- Milestone: [████████░░] 73% (16 of 22 phases complete)
+- Phase 16: [██████████] 100%
 
 ## Loop Position
 
-Plan 12-01:
+Plan 16-01:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [12-01 COMPLETE — 35 tests]
-```
-
-Plan 12-02:
-```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [12-02 COMPLETE — 9 new tests]
-```
-
-Plan 13-01:
-```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [13-01 COMPLETE — tablet UX optimized]
-```
-
-Plan 14-01:
-```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [14-01 COMPLETE — 8 bug fixes, 1112/1113 tests pass]
-```
-
-Plan 15-01:
-```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [15-01 COMPLETE — coverOnly toggle + 4 tests]
+  ✓        ✓        ✓     [16-01 COMPLETE — tokens + 20 aria-labels, 1117 tests pass]
 ```
 
 ## Accumulated Context
 
 ### Decisions
+- Phase 16: bg-background/40 for semi-transparent overlays; aria-label preferred over sr-only for icon buttons; UserRow already had title attrs
 - Phase 15: coverOnly early-return in print pipeline skips all PDF fetch/merge; included in content hash for cache isolation
 - Phase 14: use-offline test assertion too strict for new AbortController signal — 1 test expects `fetch(url)` but code now correctly passes `fetch(url, { signal })`. Test update needed in UNIFY.
 - Phase 13: Three-tier responsive (phone→tablet→desktop), kept prevQueueIndexRef (plan wrong about dead code), swipe 1.5x threshold, 15s auto-hide
@@ -70,16 +47,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
 
 ### Git State
-Last commit: 735ee2b
+Last commit: 263883c
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 15 complete, ready to plan Phase 16
-Next action: /paul:plan for Phase 16
-Resume file: .paul/ROADMAP.md
-Resume context: Phase 15 done (coverOnly print). Continue autonomously through 16-19.
+Stopped at: Phase 16 complete
+Next action: /paul:plan for Phase 17
+Resume file: .paul/phases/16-design-token-accessibility/16-01-SUMMARY.md
+Resume context: Phase 16 done (design tokens + a11y). Continue autonomously through 17-19.
 
 ---
 *STATE.md — Updated after every significant action*

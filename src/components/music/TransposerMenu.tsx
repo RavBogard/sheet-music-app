@@ -208,6 +208,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Transpose down"
                     onClick={() => {
                         setTransposition(transposition - 1)
                         setCapoFret(null)
@@ -232,6 +233,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                 <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Transpose up"
                     onClick={() => {
                         setTransposition(transposition + 1)
                         setCapoFret(null)

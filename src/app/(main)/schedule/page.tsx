@@ -134,7 +134,7 @@ export default function SchedulePage() {
         <div className="flex flex-col bg-background text-foreground min-h-screen">
             {/* Header */}
             <div className="h-20 border-b border-border/60 flex items-center px-3 md:px-6 gap-3 md:gap-4 shrink-0 bg-card/50 backdrop-blur-sm">
-                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-xl fluid-interaction" onClick={() => router.back()}>
+                <Button size="icon" variant="ghost" aria-label="Back" className="h-10 w-10 rounded-xl fluid-interaction" onClick={() => router.back()}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <div className="flex-1">
@@ -161,6 +161,7 @@ export default function SchedulePage() {
                         <Button
                             size="icon"
                             variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                            aria-label={viewMode === 'calendar' ? 'Switch to list view' : 'Switch to calendar view'}
                             className={cn(
                                 "h-9 w-9 rounded-xl",
                                 viewMode === 'calendar' && "bg-brand text-white"

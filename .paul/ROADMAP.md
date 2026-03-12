@@ -25,7 +25,7 @@ Phases: 22 total
 | 13 | Tablet Performance UX | 1 | Complete | 2026-03-12 |
 | 14 | Bug Fixes & Race Conditions | 1 | Complete | 2026-03-12 |
 | 15 | Setlist-Only Print Option | 1 | Complete | 2026-03-12 |
-| 16 | Design Token Cleanup & Accessibility | TBD | Not started | |
+| 16 | Design Token Cleanup & Accessibility | 1 | Complete | 2026-03-12 |
 | 17 | iPad Safe Areas & Spacing | TBD | Not started | |
 | 18 | Backend Hardening | TBD | Not started | |
 | 19 | Final Audit & Clean Sweep | TBD | Not started | |

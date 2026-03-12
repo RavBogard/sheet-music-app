@@ -24,10 +24,10 @@ export function CalendarHeader({ monthLabel, mode, onPrev, onNext }: CalendarHea
                     {monthLabel}
                 </h2>
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={onPrev} className="h-8 w-8 rounded-lg fluid-interaction">
+                    <Button variant="ghost" size="icon" aria-label="Previous month" onClick={onPrev} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={onNext} className="h-8 w-8 rounded-lg fluid-interaction">
+                    <Button variant="ghost" size="icon" aria-label="Next month" onClick={onNext} className="h-8 w-8 rounded-lg fluid-interaction">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>

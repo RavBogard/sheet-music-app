@@ -173,7 +173,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         <div className="h-screen flex flex-col bg-background text-foreground">
             {/* Header */}
             <div className="h-20 border-b border-border flex items-center px-4 gap-4">
-                <Button size="icon" variant="ghost" className="h-12 w-12" onClick={handleBack}>
+                <Button size="icon" variant="ghost" aria-label="Back to library" className="h-12 w-12" onClick={handleBack}>
                     <ChevronLeft className="h-8 w-8" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">

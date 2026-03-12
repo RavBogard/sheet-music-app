@@ -22,7 +22,7 @@ export function MetronomeControl() {
 
     return (
         <div className="flex items-center gap-2 lg:gap-3 px-1">
-            <div className="hidden lg:flex items-center gap-1 bg-black/40 rounded-lg pl-2 pr-1 h-8 border border-border">
+            <div className="hidden lg:flex items-center gap-1 bg-background/40 rounded-lg pl-2 pr-1 h-8 border border-border">
                 <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
@@ -38,7 +38,7 @@ export function MetronomeControl() {
                 onClick={togglePlay}
                 className={cn(
                     "h-9 px-3 sm:px-4 rounded-lg cursor-pointer border",
-                    "bg-card lg:bg-black/50",
+                    "bg-card lg:bg-background/50",
                     isPlaying
                         ? "border-red-500/50"
                         : "border-border hover:border-white/30 hover:bg-muted",

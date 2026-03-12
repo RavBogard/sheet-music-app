@@ -71,6 +71,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 13: Tablet Performance UX — 44px touch targets, md: tablet breakpoint, PDF padding fix, swipe-while-zoomed 1.5x, 15s auto-hide, wider title truncation
 - [x] v2.5 Phase 14: Bug Fixes & Race Conditions — Firestore notification rule tightened, N+1 batch fetch, AbortController for offline, syncSessionCookie catch, BPM validation, non-null fix, 3 missing .catch() handlers
 - [x] v2.5 Phase 15: Setlist-Only Print Option — coverOnly toggle in PrintModal, single-page song list PDF without chart PDFs
+- [x] v2.5 Phase 16: Design Token Cleanup & Accessibility — hardcoded colors replaced with tokens, 20 icon-only buttons labeled, dark mode variants added to GlobalAlertBanner
 
 ### Validated (Recently Shipped)
 

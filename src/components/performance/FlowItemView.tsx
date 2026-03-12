@@ -102,7 +102,7 @@ export function FlowItemView({
 
     return (
         <div
-            className="h-[100dvh] flex flex-col bg-black text-white relative"
+            className="h-[100dvh] flex flex-col bg-background text-foreground relative"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >

@@ -44,7 +44,7 @@ export default function ManagePage() {
             <div className="max-w-5xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
+                    <Button variant="ghost" size="icon" aria-label="Back" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>

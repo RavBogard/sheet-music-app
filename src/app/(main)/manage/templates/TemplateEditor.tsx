@@ -336,6 +336,7 @@ function SlotRow({
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    aria-label="Remove linked chart"
                                     className="min-h-11 min-w-11 shrink-0 text-muted-foreground hover:text-destructive"
                                     onClick={() => onUpdate({ fileId: undefined, fileName: undefined, pageNumber: undefined })}
                                 >

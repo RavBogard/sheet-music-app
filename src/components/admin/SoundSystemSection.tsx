@@ -219,7 +219,7 @@ export function SoundSystemSection() {
                                         <code className="bg-muted px-4 py-2 rounded-lg text-lg font-mono font-bold tracking-[0.3em] select-all">
                                             {setupCode}
                                         </code>
-                                        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={() => {
+                                        <Button variant="ghost" size="icon" aria-label="Copy setup code" className="min-h-11 min-w-11" onClick={() => {
                                             navigator.clipboard.writeText(setupCode)
                                             toast.success("Copied!")
                                         }}>

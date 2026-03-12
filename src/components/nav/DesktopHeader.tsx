@@ -87,7 +87,7 @@ export function DesktopHeader() {
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105" />
+                    <img src="/logo.jpg" alt="Central Reform Congregation logo" className="w-8 h-8 rounded-full border border-border transition-transform group-hover:scale-105" />
                     <span className="font-display font-bold text-lg text-foreground">{congregation.shortName}</span>
                 </Link>
 

@@ -100,7 +100,7 @@ export default function SettingsPage() {
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
+                    <Button variant="ghost" size="icon" aria-label="Back" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
@@ -142,7 +142,7 @@ export default function SettingsPage() {
                                         className="h-8 text-sm font-semibold"
                                         autoFocus
                                     />
-                                    <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={savingName}>
+                                    <Button type="submit" size="icon" variant="ghost" aria-label="Save name" className="h-8 w-8 shrink-0" disabled={savingName}>
                                         <Check className="h-4 w-4" />
                                     </Button>
                                 </form>
