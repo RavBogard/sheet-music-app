@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
+import { env } from "@/env.mjs"
 
 /**
  * GET /api/cron/scheduling-reminder
@@ -14,7 +15,7 @@ import { BASE_URL } from "@/lib/constants"
 export async function GET(req: Request) {
     // Verify cron secret
     const authHeader = req.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = env.CRON_SECRET
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

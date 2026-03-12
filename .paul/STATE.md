@@ -5,31 +5,32 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 17 complete, context low, resume at Phase 18
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 18 complete, ready for Phase 19
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 17 of 22 (iPad Safe Areas & Spacing) — Complete
-Plan: 17-01 complete
-Status: Phase 17 complete, ready for Phase 18
-Last activity: 2026-03-12 — Phase 17 complete (iPad safe areas + spacing)
+Phase: 19 of 22 (Final Audit & Clean Sweep)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-12 — Phase 18 complete, transitioned to Phase 19
 
 Progress:
-- Milestone: [████████░░] 77% (17 of 22 phases complete)
-- Phase 17: [██████████] 100%
+- Milestone: [█████████░] 82% (18 of 22 phases complete)
+- Phase 19: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
-Plan 17-01:
+Plan 18-01:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [17-01 COMPLETE — safe areas, drawer, popovers, shadows]
+  ✓        ✓        ✓     [18-01 COMPLETE — transactions, rate limiting, error standardization, env, config]
 ```
 
 ## Accumulated Context
 
 ### Decisions
+- Phase 18: WriteBatch for delete-user, runTransaction for set-role; ApiErrorResponse standard shape; config/admins replaces hardcoded UID; CRON_SECRET in env.mjs
 - Phase 17: viewport-fit: cover added for safe area insets; p-0 for custom-content popovers; CSS custom properties for brand glow shadows
 - Phase 16: bg-background/40 for semi-transparent overlays; aria-label preferred over sr-only for icon buttons; UserRow already had title attrs
 - Phase 15: coverOnly early-return in print pipeline skips all PDF fetch/merge; included in content hash for cache isolation
@@ -54,10 +55,10 @@ Branch: master
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Context window low after completing Phases 16+17. Phase 18 planning started but not written.
-Next action: /paul:plan for Phase 18 (Backend Hardening)
+Stopped at: Phase 18 complete, ready to plan Phase 19
+Next action: /paul:plan for Phase 19 (Final Audit & Clean Sweep)
 Resume file: .paul/ROADMAP.md
-Resume context: Phases 16-17 done and pushed. Phase 18 is backend-heavy (Firestore transactions, error standardization, rate limiting, config migration, env validation). 43 routes use createApiHandler already. Admin routes (delete-user, set-role) need transaction wrapping. Super-admin UID hardcoded in firestore.rules line 20. CRON_SECRET missing from env.mjs. Continue autonomously through 18-19.
+Resume context: Phase 18 done (backend hardening). IMPORTANT: Must seed config/admins Firestore doc with { uids: ["93Xn3DbS0bSNb8zmfzLyfOMX1Ai3"] } before deploying updated firestore.rules. Phase 19 is final audit — full tsc strict, ESLint, test suite, fix all warnings/errors, verify production build. Continue autonomously.
 
 ---
 *STATE.md — Updated after every significant action*

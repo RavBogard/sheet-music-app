@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { runPendingMigrations } from "@/lib/firebase/migrations"
 import { z } from "zod"
 
@@ -7,11 +8,14 @@ import { z } from "zod"
  * POST /api/admin/migrations
  * Body: {}
  * Requires: 'admin' role
- * 
+ *
  * Executes any pending sequential Firestore migrations defined in src/lib/firebase/migrations.ts
  */
 export const POST = createApiHandler(
-    async () => {
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const result = await runPendingMigrations()
         return NextResponse.json({
             success: true,

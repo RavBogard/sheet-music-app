@@ -13,6 +13,8 @@ export const env = createEnv({
         UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
         RESEND_API_KEY: z.string().optional(),
         RESEND_FROM_EMAIL: z.string().email().optional(),
+        CRON_SECRET: z.string().optional(),
+        SUPER_ADMIN_UID: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -45,6 +47,8 @@ export const env = createEnv({
         UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
         RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+        CRON_SECRET: process.env.CRON_SECRET,
+        SUPER_ADMIN_UID: process.env.SUPER_ADMIN_UID,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

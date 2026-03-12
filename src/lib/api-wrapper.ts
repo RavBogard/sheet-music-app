@@ -3,6 +3,21 @@ import { z } from "zod"
 import { AuthRole, AuthResult, withAuth } from "./api-auth"
 import { logger } from "./logger"
 
+/** Standard error response shape for all API routes */
+export type ApiErrorResponse = {
+    error: string
+    code?: string
+    details?: unknown
+}
+
+/** Helper to create consistent error responses */
+export function apiError(error: string, status: number, code?: string, details?: unknown): NextResponse {
+    const body: ApiErrorResponse = { error }
+    if (code) body.code = code
+    if (details !== undefined) body.details = details
+    return NextResponse.json(body, { status })
+}
+
 export interface ProtectedApiContext<P = any, B = any> {
     req: NextRequest
     auth: AuthResult
@@ -41,17 +56,11 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
                     const validation = options.schema.safeParse(rawBody)
 
                     if (!validation.success) {
-                        return NextResponse.json(
-                            { error: "Validation failed", details: validation.error.format() },
-                            { status: 400 }
-                        )
+                        return apiError("Validation failed", 400, "VALIDATION_ERROR", validation.error.format())
                     }
                     parsedBody = validation.data
                 } catch (err) {
-                    return NextResponse.json(
-                        { error: "Invalid JSON format" },
-                        { status: 400 }
-                    )
+                    return apiError("Invalid JSON format", 400, "INVALID_JSON")
                 }
             }
 
@@ -70,10 +79,7 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
         } catch (error) {
             const pathname = new URL(req.url).pathname
             logger.error(`[API ${req.method} ${pathname}]`, error)
-            return NextResponse.json(
-                { error: "Internal server error", details: { route: `${req.method} ${pathname}` } },
-                { status: 500 }
-            )
+            return apiError("Internal server error", 500, "INTERNAL_ERROR")
         }
     }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { createApiHandler } from "@/lib/api-wrapper"
+import { createApiHandler, apiError } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 
 /**
@@ -15,6 +16,9 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
  */
 export const POST = createApiHandler(
     async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         initAdmin()
         const db = getFirestore()
 
@@ -35,10 +39,7 @@ export const POST = createApiHandler(
 
         // Single user toggle
         if (!body.uid || typeof body.canUpload !== 'boolean') {
-            return NextResponse.json(
-                { error: "uid and canUpload required" },
-                { status: 400 }
-            )
+            return apiError("uid and canUpload required", 400, "MISSING_FIELDS")
         }
 
         await db.collection('users').doc(body.uid).update({ canUpload: body.canUpload })

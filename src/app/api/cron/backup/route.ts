@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { env } from "@/env.mjs"
 
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -30,7 +31,7 @@ export const maxDuration = 300
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization')
-        const cronSecret = process.env.CRON_SECRET
+        const cronSecret = env.CRON_SECRET
 
         if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

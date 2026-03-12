@@ -73,6 +73,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 15: Setlist-Only Print Option — coverOnly toggle in PrintModal, single-page song list PDF without chart PDFs
 - [x] v2.5 Phase 16: Design Token Cleanup & Accessibility — hardcoded colors replaced with tokens, 20 icon-only buttons labeled, dark mode variants added to GlobalAlertBanner
 - [x] v2.5 Phase 17: iPad Safe Areas & Spacing — all-edge safe area insets, setlist drawer calc height, popover padding standardized, BPM touch target 44px, shadow tokens
+- [x] v2.5 Phase 18: Backend Hardening — Firestore transactions for admin ops, rate limiting on all admin routes, ApiErrorResponse standardization, CRON_SECRET env validation, super-admin UID moved to config/admins doc
 
 ### Validated (Recently Shipped)
 
@@ -207,7 +208,11 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Notification create restricted to admin/band_leader | v2.5 P14 | Server writes via admin SDK; client-side only for privileged roles |
 | coverOnly early-return in print pipeline | v2.5 P15 | Skips all PDF fetch/merge/transposition for cover-page-only prints |
 | coverOnly included in content hash | v2.5 P15 | Prevents full-packet cache from serving as cover-only and vice versa |
+| WriteBatch for delete-user, runTransaction for set-role | v2.5 P18 | Firestore ops atomic; Auth ops best-effort after commit |
+| ApiErrorResponse {error, code?, details?} standard shape | v2.5 P18 | Consistent error responses via apiError() helper |
+| config/admins Firestore doc for super-admin bootstrap | v2.5 P18 | Replaces hardcoded UID in firestore.rules; manageable without redeploy |
+| CRON_SECRET/SUPER_ADMIN_UID optional in env.mjs | v2.5 P18 | Runtime guards still enforce; dev envs don't break on missing vars |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 15 (Setlist-Only Print Option complete)*
+*Last updated: 2026-03-12 after Phase 18 (Backend Hardening complete)*

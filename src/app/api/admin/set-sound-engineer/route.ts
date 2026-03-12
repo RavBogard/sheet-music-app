@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
@@ -23,6 +24,9 @@ const schema = z.object({
 
 export const POST = createApiHandler(
     async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { targetUserId, soundEngineer } = ctx.body!
 
         initAdmin()

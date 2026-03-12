@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { syncLibraryIndex } from "@/lib/sync-engine"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
+import { env } from "@/env.mjs"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     try {
         // Verify cron secret to prevent unauthorized triggers
         const authHeader = req.headers.get('authorization')
-        const cronSecret = process.env.CRON_SECRET
+        const cronSecret = env.CRON_SECRET
 
         if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -15,10 +15,10 @@ service cloud.firestore {
 
     // Helper to check if the CURRENT user is an Admin
     function isAdmin() {
-      // 1. Check strict UID (Bootstrap)
-      // 2. Check Custom Claim
-      return request.auth.uid == '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3' 
-          || request.auth.token.role == 'admin';
+      // 1. Check Custom Claim (primary path)
+      // 2. Check config/admins document (bootstrap fallback, replaces hardcoded UID)
+      return request.auth.token.role == 'admin'
+          || request.auth.uid in get(/databases/$(database)/documents/config/admins).data.uids;
     }
 
     // Band Leader: Can Create/Edit/Publish Setlists, Manage People
@@ -143,6 +143,13 @@ service cloud.firestore {
 
     // CONGREGATION CONFIG (branding, feature flags)
     match /config/congregation {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ADMIN BOOTSTRAP CONFIG (super-admin UIDs for isAdmin() fallback)
+    // Seeded via Firebase Admin SDK or console. isAdmin() reads this doc.
+    match /config/admins {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
