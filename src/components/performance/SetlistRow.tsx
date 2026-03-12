@@ -110,7 +110,7 @@ export function SetlistRow({
     const rowClasses = cn(
         "flex items-center px-4 py-3 transition-colors",
         isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
-        !isCurrentPosition && isSong && index % 2 === 0 && "bg-white/[0.07]",
+        !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-white/[0.07]" : "bg-white/[0.03]"),
         !isSong && "opacity-60"
     )
 
