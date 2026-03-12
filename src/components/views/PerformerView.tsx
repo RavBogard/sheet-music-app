@@ -75,7 +75,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             const next = !prev
             if (autoHideRef.current) clearTimeout(autoHideRef.current)
             if (next && !menuOpen) {
-                autoHideRef.current = setTimeout(() => setBarsVisible(false), 8000)
+                autoHideRef.current = setTimeout(() => setBarsVisible(false), 15000)
             }
             return next
         })
@@ -93,7 +93,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
     useEffect(() => {
         autoHideRef.current = setTimeout(() => {
             if (!menuOpen) setBarsVisible(false)
-        }, 8000)
+        }, 15000)
         return () => { if (autoHideRef.current) clearTimeout(autoHideRef.current) }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,13 +196,13 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
     const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        if (zoom > 1.1) return
+        if (zoom > 1.5) return
         const touch = e.touches[0]
         touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() }
     }, [zoom])
 
     const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        if (!touchStartRef.current || zoom > 1.1) return
+        if (!touchStartRef.current || zoom > 1.5) return
         const touch = e.changedTouches[0]
         const dx = touch.clientX - touchStartRef.current.x
         const dy = touch.clientY - touchStartRef.current.y

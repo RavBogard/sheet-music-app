@@ -66,6 +66,9 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 9: Print view & sticky keys — chartless items excluded from print, lastUsedKey/lastUsedTransposition saved to library_index
 - [x] v2.5 Phase 10: Public setlist access — already working, verified no code changes needed
 - [x] v2.5 Phase 10.1: Mobile action bar redesign — MobileTabBar rewritten as Search/Setlist/Monitor action bar with Fuse.js search and session-aware setlist navigation
+- [x] v2.5 Phase 11: Component tests — critical UI components tested
+- [x] v2.5 Phase 12: AI & integration tests — gemini, key-detection, enrichment, print-pipeline tested
+- [x] v2.5 Phase 13: Tablet Performance UX — 44px touch targets, md: tablet breakpoint, PDF padding fix, swipe-while-zoomed 1.5x, 15s auto-hide, wider title truncation
 
 ### Validated (Recently Shipped)
 
@@ -133,7 +136,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 712+ tests |
+| Testing | Vitest + Playwright | 1113+ tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -192,8 +195,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Fuse.js for MobileTabBar search over library store | v2.5 P10.1 | Reuses hydrated library data; no API round-trip for song search |
 | sessionStorage for last-opened setlist tracking | v2.5 P10.1 | Tab-scoped, auto-clears on close; Setlist button navigates to most-relevant setlist |
 | Hidden placeholder for balanced 3-col layout without monitor | v2.5 P10.1 | Invisible div maintains spacing when monitor feature unavailable |
+| Three-tier responsive: default → md: (768px) → lg: (1024px) | v2.5 P13 | Tablet gets dedicated single-row toolbar between phone two-row and desktop |
+| Swipe threshold 1.5x (up from 1.1x) for zoomed navigation | v2.5 P13 | Musicians who zoom slightly can still swipe between charts |
+| Auto-hide timeout 15s (up from 8s) for live performance | v2.5 P13 | More time for stage musicians to interact with toolbar |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 10.1 (Mobile Action Bar Redesign complete)*
-*Last updated: 2026-03-11 after Phase 8.1 (Setlist Access Bug Fixes complete)*
+*Last updated: 2026-03-12 after Phase 13 (Tablet Performance UX complete)*

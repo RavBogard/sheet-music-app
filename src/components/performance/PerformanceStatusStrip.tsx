@@ -27,7 +27,7 @@ export function PerformanceStatusStrip() {
             aria-live="polite"
         >
             <span className="tabular-nums opacity-60">{queueIndex + 1}/{playbackQueue.length}</span>
-            <span className="truncate max-w-[150px] sm:max-w-[200px] text-foreground/90">{current.name}</span>
+            <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] text-foreground/90">{current.name}</span>
 
             {(current.key || transposition !== 0 || (capoFret && capoFret > 0)) && (
                 <div className="flex items-center gap-1.5 ml-1 relative">

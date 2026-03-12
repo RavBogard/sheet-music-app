@@ -124,22 +124,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     const zoomControls = (compact = false) => (
         <div className={cn(
             "flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1",
-            compact ? "h-9" : "h-11"
+            compact ? "h-12" : "h-11"
         )}>
             <Button
                 variant="ghost" size="icon"
                 onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
                 className={cn(
                     "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
-                    compact ? "h-7 w-7" : "h-10 w-10"
+                    compact ? "h-11 w-11" : "h-10 w-10"
                 )}
                 aria-label="Zoom out"
             >
-                <ZoomOut className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                <ZoomOut className={compact ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
             <span className={cn(
                 "font-medium text-foreground text-center",
-                compact ? "text-[10px] w-8" : "text-xs w-10"
+                compact ? "text-xs w-10" : "text-xs w-10"
             )}>
                 {Math.round(zoom * 100)}%
             </span>
@@ -148,11 +148,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                 onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
                 className={cn(
                     "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
-                    compact ? "h-7 w-7" : "h-10 w-10"
+                    compact ? "h-11 w-11" : "h-10 w-10"
                 )}
                 aria-label="Zoom in"
             >
-                <ZoomIn className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                <ZoomIn className={compact ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
         </div>
     )
@@ -240,7 +240,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     <span className="truncate">{compact ? buttonLabel : buttonLabel.toUpperCase()}</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
+            <PopoverContent className="w-80 max-w-[85vw] p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
                 <TransposerMenu onRequestClose={() => setOpenState(false)} />
             </PopoverContent>
         </Popover>
@@ -250,8 +250,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     return (
         <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
 
-            {/* ── MOBILE: Two-row layout (< lg) ── */}
-            <div className="lg:hidden w-full">
+            {/* ── MOBILE: Two-row layout (< md) ── */}
+            <div className="md:hidden w-full">
 
                 {/* Row 1 (top): Zoom | Annotate | Metronome | Audio | Transposer */}
                 <div className="w-full h-14 flex items-center justify-between px-3 border-b border-brand/10">
@@ -284,6 +284,34 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     <div className="shrink-0">
                         <SetlistDrawer />
                     </div>
+                </div>
+            </div>
+
+            {/* ── TABLET: Single row (md to lg) ── */}
+            <div className="hidden md:flex lg:hidden w-full h-16 items-center justify-between px-4 relative">
+                {/* LEFT: Exit + Zoom + Setlist */}
+                <div className="flex items-center gap-2 z-10">
+                    <Button variant="ghost" onClick={onHome} className="h-11 px-3 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl shrink-0 flex items-center gap-2" title="Exit Gig Mode">
+                        <X className="h-5 w-5" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
+                    </Button>
+                    {zoomControls(false)}
+                    <SetlistDrawer />
+                </div>
+
+                {/* CENTER: Song Navigation */}
+                <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
+                    <div className="pointer-events-auto">
+                        <SongNavigation />
+                    </div>
+                </div>
+
+                {/* RIGHT: Sync + Monitor + Metronome + Transposer */}
+                <div className="flex items-center gap-2 z-10">
+                    {syncButton(true)}
+                    {monitorPopover('tools-tablet', true)}
+                    <MetronomeControl />
+                    {transposerPopover(transposerOpenDesktop, setTransposerOpenDesktop, 'transposer-tablet', true)}
                 </div>
             </div>
 

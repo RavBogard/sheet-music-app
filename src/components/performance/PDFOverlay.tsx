@@ -132,7 +132,7 @@ export function PDFOverlay({
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* PDF content area */}
-            <div className="flex-1 overflow-auto pb-28 relative">
+            <div className="flex-1 overflow-auto pb-0 relative">
                 {pdfUrl && (
                     <PDFViewer url={pdfUrl} trackName={track.title} />
                 )}
