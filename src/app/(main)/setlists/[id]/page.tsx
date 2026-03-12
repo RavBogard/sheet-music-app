@@ -44,7 +44,7 @@ export default async function SetlistEditorPage({
         } else {
             // Personal setlist
             if (!user) redirect("/login")
-            if (data.ownerId && data.ownerId !== user.uid && !user.isAdmin) {
+            if (data.ownerId && data.ownerId !== user.uid && !user.isAdmin && !data.isPublic) {
                 redirect("/setlists")
             }
         }
