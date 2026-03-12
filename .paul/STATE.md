@@ -5,19 +5,19 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 6 (Hook Tests) resuming
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 7 (Component Tests) next
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 6 of 10 (Hook Tests) — Resuming at plan 03
+Phase: 7 of 10 (Component Tests)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-11 — Phase 6.1 complete, transitioned back to Phase 6
+Last activity: 2026-03-11 — Phase 6 complete (221 hook tests), transitioned to Phase 7
 
 Progress:
-- Milestone: [██████░░░░] 60% (6 of 10 phases complete, counting 6.1)
-- Phase 6: Plans 01-02 complete (166 hook tests), plan 03 next
+- Milestone: [███████░░░] 70% (7 of 10 phases complete, counting 6.1)
+- Phase 6: Complete (3/3 plans — 221 hook tests)
 - Phase 6.1: Complete (2/2 plans — crash fix + SW removal)
 
 ## Loop Position
@@ -25,7 +25,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready to plan Phase 6 plan 03]
+  ✓        ✓        ✓     [Phase 6 loop complete - ready for next PLAN]
 ```
 
 ## Accumulated Context
@@ -35,14 +35,11 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - withAuth migration already complete (only 2 intentional holdouts)
 - clearSaveTimer already wired at page level — no additional wiring needed (resolved)
 - ALLOWED_HOSTNAMES derived from ALLOWED_ORIGINS for hostname validation
-- Chainable query mock kept local per test file (not added to shared helpers)
-- Remind route "no setlistId" 48-hour filtering path is unreachable through API wrapper; tested reachable paths only
 - Typed mock fn signatures: vi.fn((_opts?: unknown) => ...) avoids TS spread errors
 - Phase 5 scope: scheduling routes (plans 01-02) + library routes (plan 03); setlist publish/print/email-packets deferred
 - Added Phase 9: Public Setlist Access — unauthenticated viewing of public setlists and their PDFs
-- Inserted Phase 6.1: SW Removal & Firestore Recovery — production crash on mobile, corrupted IndexedDB from old SW
 - Phase 6.1: clearFirestoreIndexedDB() for IDB recovery; PWA/SW fully removed, next-pwa uninstalled
-- Kept all actively-used offline code (cache-utils, prefetch, use-offline, OfflineIndicator, offline-manager)
+- Phase 6: singleton hook testing via dynamic re-import, ref-count testing with multiple renderHook instances
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -51,24 +48,22 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ### Known Issues
 - ~~Session cookie never refreshed after initial login~~ — Fixed: daily refresh via visibilitychange (commit 5724201)
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper (minor design gap)
+- ~~Firestore INTERNAL ASSERTION FAILED on mobile after sign-in~~ — Fixed: auto-recovery via clearFirestoreIndexedDB() (plan 06.1-01)
 
 ### Git State
-Last commit: 5724201
+Last commit: (pending phase 6 commit)
 Branch: master
-
-### Known Issues
-- ~~Firestore INTERNAL ASSERTION FAILED on mobile after sign-in~~ — Fixed: auto-recovery via clearFirestoreIndexedDB() (plan 06.1-01)
 
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Phase 6.1 complete, transitioned back to Phase 6
-Next action: /paul:plan for Phase 6 plan 03 (remaining hook tests)
+Stopped at: Phase 6 complete, ready to plan Phase 7
+Next action: /paul:plan for Phase 7
 Resume file: .paul/ROADMAP.md
 Resume context:
-- Phase 6.1 complete: Firestore crash fix + SW dead code removal
-- Phase 6 (Hook Tests): plans 01-02 complete (166 hook tests), plan 03 next
-- 877 tests passing, build clean
+- Phase 6 complete: 221 hook tests across 17 hooks
+- User requested new phases to add (monitor popup, print view, sticky keys, labels, setlist popup fix, remove annotations)
+- Ready to add new phases then plan Phase 7
 
 ---
 *STATE.md — Updated after every significant action*

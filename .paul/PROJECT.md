@@ -58,6 +58,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 3: Test infrastructure & flaky fix — shared factories, Firebase mocks, API helpers, flaky publish test fixed (367ms → 4ms)
 - [x] v2.5 Phase 4: Data layer tests — firebase helpers, users, setlists, scheduling, server-auth, server-library
 - [x] v2.5 Phase 5: API route tests — 56 tests across 10 scheduling + library routes
+- [x] v2.5 Phase 6: Hook tests — 221 tests across 17 hooks (3 plans)
 - [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
 
 ### Validated (Recently Shipped)
@@ -126,7 +127,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 657+ tests |
+| Testing | Vitest + Playwright | 712+ tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -180,4 +181,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 6.1 (SW removal & Firestore recovery)*
+*Last updated: 2026-03-11 after Phase 6 (Hook Tests complete)*

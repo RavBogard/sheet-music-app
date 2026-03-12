@@ -12,7 +12,7 @@ Phases: 10 total
 | 3 | Test Infrastructure & Flaky Fix | 1 | Complete | 2026-03-11 |
 | 4 | Data Layer Tests | 2 | Complete | 2026-03-11 |
 | 5 | API Route Tests | 3 | Complete | 2026-03-11 |
-| 6 | Hook Tests | 2 | In progress | — |
+| 6 | Hook Tests | 3 | Complete | 2026-03-11 |
 | 6.1 | SW Removal & Firestore Recovery | 2 | Complete | 2026-03-11 |
 | 7 | Component Tests | 0 | Not started | — |
 | 8 | AI & Integration Tests | 0 | Not started | — |
@@ -264,4 +264,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-11 (v2.5 milestone created)*
+*Last updated: 2026-03-11 (Phase 6 complete)*
