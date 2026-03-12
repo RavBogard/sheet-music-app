@@ -63,62 +63,72 @@ export function SetlistDrawer({
 
                     {/* Track list */}
                     <div className="overflow-y-auto flex-1 pb-4">
-                        {tracks.map((track, index) => {
-                            const isSong = !track.type || track.type === "song"
-                            const isHeader = track.type === "header"
-                            const hasFile = isSong && !!track.fileId
-                            const isCurrent = index === currentIndex
+                        {(() => {
+                            let songIndex = 0
+                            return tracks.map((track, index) => {
+                                const isSong = !track.type || track.type === "song"
+                                const isHeader = track.type === "header"
+                                const hasFile = isSong && !!track.fileId
+                                const isCurrent = index === currentIndex
+                                const currentSongIndex = isSong ? songIndex++ : -1
 
-                            // Header items render as inline dividers
-                            if (isHeader) {
+                                // Header items render as inline dividers
+                                if (isHeader) {
+                                    return (
+                                        <div
+                                            key={track.id || `drawer-${index}`}
+                                            className="flex items-center gap-3 px-4 py-1 my-0.5"
+                                        >
+                                            <div className="h-px flex-1 bg-brand/10" />
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+                                                {track.title}
+                                            </span>
+                                            <div className="h-px flex-1 bg-brand/10" />
+                                        </div>
+                                    )
+                                }
+
                                 return (
-                                    <div
+                                    <Button
+                                        variant="ghost"
                                         key={track.id || `drawer-${index}`}
-                                        className="flex items-center gap-3 px-4 py-1 my-0.5"
-                                    >
-                                        <div className="h-px flex-1 bg-brand/10" />
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
-                                            {track.title}
-                                        </span>
-                                        <div className="h-px flex-1 bg-brand/10" />
-                                    </div>
-                                )
-                            }
-
-                            return (
-                                <Button
-                                    variant="ghost"
-                                    key={track.id || `drawer-${index}`}
-                                    onClick={() => {
-                                        if (hasFile) {
-                                            onSelect(index)
-                                        }
-                                    }}
-                                    disabled={!hasFile}
-                                    className={cn(
-                                        "w-full h-auto justify-start gap-3 px-4 py-2 rounded-none text-left",
-                                        hasFile
-                                            ? "hover:bg-white/5 cursor-pointer"
-                                            : "cursor-default",
-                                        isCurrent && "bg-brand/15 border-l-2 border-brand"
-                                    )}
-                                >
-                                    <span
+                                        onClick={() => {
+                                            if (hasFile) {
+                                                onSelect(index)
+                                            }
+                                        }}
+                                        disabled={!hasFile}
                                         className={cn(
-                                            "truncate flex-1 text-sm",
-                                            isSong ? "font-medium text-zinc-200" : "text-zinc-400"
+                                            "w-full h-auto justify-start gap-2 px-4 py-2 rounded-none text-left",
+                                            hasFile
+                                                ? "hover:bg-white/5 cursor-pointer"
+                                                : "cursor-default",
+                                            isCurrent && "bg-brand/15 border-l-2 border-brand",
+                                            !isCurrent && isSong && currentSongIndex % 2 === 0 && "bg-white/[0.02]"
                                         )}
                                     >
-                                        {track.title}
-                                    </span>
-                                    {isSong && track.key && (
-                                        <span className="font-mono text-[10px] px-1 py-0.5 bg-brand/10 rounded text-brand shrink-0">
-                                            {track.key}
+                                        <span
+                                            className={cn(
+                                                "truncate shrink min-w-0 text-sm",
+                                                isSong ? "font-medium text-zinc-200" : "text-zinc-400"
+                                            )}
+                                        >
+                                            {track.title}
                                         </span>
-                                    )}
-                                </Button>
-                            )
-                        })}
+                                        {isSong && track.key && (
+                                            <span className="font-mono text-[10px] px-1 py-0.5 bg-brand/10 rounded text-brand shrink-0">
+                                                {track.key}
+                                            </span>
+                                        )}
+                                        {isSong && track.notes && (
+                                            <span className="text-[10px] text-amber-400/60 truncate max-w-[120px] shrink">
+                                                {track.notes}
+                                            </span>
+                                        )}
+                                    </Button>
+                                )
+                            })
+                        })()}
                     </div>
                 </Dialog.Content>
             </Dialog.Portal>

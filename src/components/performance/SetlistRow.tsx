@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { cn } from "@/lib/utils"
@@ -26,8 +25,6 @@ export function SetlistRow({
     isLeader,
     onLeaderSetPosition,
 }: SetlistRowProps) {
-    const [showNotes, setShowNotes] = useState(false)
-
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
 
@@ -54,10 +51,6 @@ export function SetlistRow({
         if (isSong && hasFile) {
             onSongTap()
         }
-
-        if (track.notes) {
-            setShowNotes(prev => !prev)
-        }
     }
 
     // Header items render as inline dividers
@@ -77,11 +70,11 @@ export function SetlistRow({
         )
     }
 
-    // Song content — shared between interactive and non-interactive rows
+    // Song content — key and notes directly after title, BPM pushed right
     const songContent = isSong ? (
         <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-lg text-foreground truncate flex-1 min-w-0">
+                <span className="font-semibold text-lg text-foreground truncate shrink min-w-0">
                     {track.title}
                 </span>
                 {displayKey && (
@@ -92,6 +85,12 @@ export function SetlistRow({
                         {displayKey}
                     </span>
                 )}
+                {track.notes && (
+                    <span className="text-xs text-amber-400/70 truncate max-w-[200px] md:max-w-[300px] shrink">
+                        {track.notes}
+                    </span>
+                )}
+                <span className="flex-1" />
                 {track.bpm && (
                     <span className="text-xs text-muted-foreground tabular-nums shrink-0">
                         {track.bpm} BPM
@@ -111,50 +110,39 @@ export function SetlistRow({
     const rowClasses = cn(
         "flex items-center px-4 py-3 transition-colors",
         isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
+        !isCurrentPosition && isSong && index % 2 === 0 && "bg-muted/5",
         !isSong && "opacity-60"
-    )
-
-    const notesBlock = showNotes && track.notes && (
-        <div className="px-4 pb-2 pt-0.5">
-            <p className="text-xs text-muted-foreground/80">{track.notes}</p>
-        </div>
     )
 
     // Non-interactive rows
     if (!isInteractive) {
         return (
-            <div onClick={track.notes ? () => setShowNotes(prev => !prev) : undefined}>
-                <div className={cn(rowClasses, "cursor-default")}>
-                    {songContent}
-                </div>
-                {notesBlock}
+            <div className={cn(rowClasses, "cursor-default")}>
+                {songContent}
             </div>
         )
     }
 
     // Interactive rows
     return (
-        <div>
-            <div
-                role="button"
-                tabIndex={0}
-                onClick={handleClick}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        handleClick()
-                    }
-                }}
-                className={cn(
-                    rowClasses,
-                    hasFile
-                        ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70"
-                        : "cursor-default"
-                )}
-            >
-                {songContent}
-            </div>
-            {notesBlock}
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={handleClick}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    handleClick()
+                }
+            }}
+            className={cn(
+                rowClasses,
+                hasFile
+                    ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70"
+                    : "cursor-default"
+            )}
+        >
+            {songContent}
         </div>
     )
 }
