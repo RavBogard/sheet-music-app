@@ -104,7 +104,7 @@ export function SetlistDrawer({
                                                 ? "hover:bg-white/5 cursor-pointer"
                                                 : "cursor-default",
                                             isCurrent && "bg-brand/15 border-l-2 border-brand",
-                                            !isCurrent && isSong && (currentSongIndex % 2 === 0 ? "bg-white/[0.08]" : "bg-white/[0.03]")
+                                            !isCurrent && isSong && (currentSongIndex % 2 === 0 ? "bg-zinc-800/60" : "bg-zinc-900/40")
                                         )}
                                     >
                                         <span
