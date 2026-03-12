@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 14 total
+Phases: 15 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -19,6 +19,7 @@ Phases: 14 total
 | 8.1 | Setlist Access Bug Fixes | 1 | Complete | 2026-03-11 |
 | 9 | Print View & Sticky Keys | 1 | Complete | 2026-03-12 |
 | 10 | Public Setlist Access | 1 | Complete | 2026-03-12 |
+| 10.1 | Mobile Action Bar Redesign | 0 | Not started | — |
 | 11 | Component Tests | 0 | Not started | — |
 | 12 | AI & Integration Tests | 0 | Not started | — |
 
@@ -84,6 +85,13 @@ Skills required: /ui-ux-pro-max
 Focus: Allow unauthenticated users to view public setlists and their PDFs without signing in. Update middleware to allow unauthenticated access to public setlist detail pages. Update file proxy to serve PDFs for public setlist tracks without auth. Ensure Firestore queries for public setlists work without auth context. Anyone with a link to a public setlist should be able to view it and all its charts.
 Plans: TBD (defined during /paul:plan)
 Status: Not started
+
+### Phase 10.1: Mobile Action Bar Redesign
+
+Focus: Transform mobile bottom tab bar from redundant navigation links into a live-resources action bar. Three buttons: (1) Search — popover with library song search for finding any chart fast mid-service, (2) Setlist — slightly larger center button, navigates to current/upcoming setlist in perform mode (session-opened setlist takes priority, otherwise nearest future eventDate), (3) Monitor — popover with QuickMonitorPanel (already built). Mobile only, hidden during PDF view. Aesthetic consistency with PerformanceToolbar (material-thick, border-brand/10, same icon sizing). Setlist button gets subtle glow/elevation to emphasize it as the primary action.
+Plans: TBD (defined during /paul:plan)
+Status: Not started
+Skills required: /ui-ux-pro-max
 
 ### Phase 11: Component Tests
 
