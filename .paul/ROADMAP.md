@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 9 total
+Phases: 10 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -13,6 +13,7 @@ Phases: 9 total
 | 4 | Data Layer Tests | 2 | Complete | 2026-03-11 |
 | 5 | API Route Tests | 3 | Complete | 2026-03-11 |
 | 6 | Hook Tests | 2 | In progress | — |
+| 6.1 | SW Removal & Firestore Recovery | 2 | Complete | 2026-03-11 |
 | 7 | Component Tests | 0 | Not started | — |
 | 8 | AI & Integration Tests | 0 | Not started | — |
 | 9 | Public Setlist Access | 0 | Not started | — |
@@ -40,6 +41,12 @@ Focus: Tests for scheduling routes (assign, respond, suggest, remind), setlist o
 ### Phase 6: Hook Tests
 
 Focus: Tests for all 19 untested hooks — use-setlist-logic, use-library, useMonitorConnection, use-offline, use-setlist-performance, use-setlist-presence, use-smart-transposer, use-metronome, use-wake-lock, use-media-query, use-batch-selection, use-calendar-data, use-content-search, use-creation-wizard, use-monitor-access, use-safe-firestore-sync, use-setlist-dashboard, use-upcoming-prep. Skip monitor hooks already covered.
+
+### Phase 6.1: SW Removal & Firestore Recovery
+
+Focus: Fix production Firestore crash on mobile caused by corrupted IndexedDB from old service worker, then fully remove all SW/PWA remnants. Plan 1: Firestore crash fix (IndexedDB recovery on assertion error + clear stale persistence). Plan 2: Full SW/offline dead code removal (remove next-pwa package, public/sw.js, public/workbox-ad66f20e.js, dead offline code in offline-manager.ts, cache-utils.ts, prefetch.ts, UpdatePrompt.tsx, BackgroundPrefetcher.tsx, clean up SW references across source files).
+Plans: TBD (defined during /paul:plan)
+Status: Not started
 
 ### Phase 7: Component Tests
 

@@ -30,7 +30,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] Auto-transposition with musician profiles and instrument presets
 - [x] Print gig packets with per-musician transpositions
 - [x] Light/dark theme with auto dark mode for performance
-- [x] PWA offline support with 30-day Workbox caching
+- [x] ~~PWA offline support with 30-day Workbox caching~~ — Removed: SW caused production issues, venue has wifi
 - [x] AI chat assistant for natural language setlist management
 - [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
 - [x] v1.3.1 Regression fixes: cache-busted PDF worker, iPad monitor connection stability
@@ -58,6 +58,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 3: Test infrastructure & flaky fix — shared factories, Firebase mocks, API helpers, flaky publish test fixed (367ms → 4ms)
 - [x] v2.5 Phase 4: Data layer tests — firebase helpers, users, setlists, scheduling, server-auth, server-library
 - [x] v2.5 Phase 5: API route tests — 56 tests across 10 scheduling + library routes
+- [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
 
 ### Validated (Recently Shipped)
 
@@ -174,7 +175,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | hasSeconds() type guard for Firestore Timestamp-like fields | v2.5 P1 | Pattern for safely checking Timestamp objects in scheduling routes |
 | Mock objects exported from helpers, vi.mock() stays in test file | v2.5 P3 | Vitest hoisting requires vi.mock at file scope; helpers provide objects only |
 | beforeAll dynamic import for route handlers | v2.5 P3 | Eliminates cold-start flakiness in API route tests |
+| clearFirestoreIndexedDB() for corrupted persistence recovery | v2.5 P6.1 | Shared helper used by SwCleanup, ErrorBoundary, and unhandledrejection listener |
+| PWA/SW fully removed, next-pwa uninstalled | v2.5 P6.1 | SW caused stale deploys, PDF worker failures, cache breaks; venue has wifi |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-11 after Phase 3 (v2.5 test infrastructure & flaky fix)*
+*Last updated: 2026-03-11 after Phase 6.1 (SW removal & Firestore recovery)*

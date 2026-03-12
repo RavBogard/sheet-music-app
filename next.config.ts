@@ -5,17 +5,6 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
-// PWA / Service Worker DISABLED.
-// The SW caching layer caused repeated production issues:
-// 1. Stale HTML/JS served after deploys (cacheOnFrontEndNav)
-// 2. PDF worker module loading broken on mobile (precache interference)
-// 3. Clearing cache breaks entire app (SW serves from empty cache)
-// Venue always has wifi — offline support not needed. Re-enable if that changes.
-const withPWA = require("@ducanh2912/next-pwa").default({
-  dest: "public",
-  disable: true,
-});
-
 const nextConfig = {
   turbopack: {},
   serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist'],
@@ -83,7 +72,7 @@ const nextConfig = {
   },
 };
 
-const combinedConfig = withBundleAnalyzer(withPWA(nextConfig));
+const combinedConfig = withBundleAnalyzer(nextConfig);
 
 export default process.env.NEXT_PUBLIC_SENTRY_DSN
   ? withSentryConfig(combinedConfig, {

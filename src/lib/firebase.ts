@@ -76,4 +76,54 @@ try {
     googleProvider.addScope('profile');
 }
 
+/**
+ * Delete all Firestore-related IndexedDB databases.
+ * Used to recover from corrupted persistence state left by the old PWA service worker.
+ * Safe to call on server (no-ops) and in browsers without indexedDB.databases() support.
+ */
+export async function clearFirestoreIndexedDB(): Promise<void> {
+    if (typeof window === "undefined" || !window.indexedDB) return
+
+    try {
+        // Modern browsers: enumerate all IDB databases
+        if (typeof indexedDB.databases === "function") {
+            const dbs = await indexedDB.databases()
+            for (const dbInfo of dbs) {
+                if (dbInfo.name && /firestore/i.test(dbInfo.name)) {
+                    indexedDB.deleteDatabase(dbInfo.name)
+                    logger.info(`[FirestoreRecovery] Deleted IndexedDB: ${dbInfo.name}`)
+                }
+            }
+        } else {
+            // Safari <17 fallback: delete known Firestore DB name pattern
+            const projectId = firebaseConfig.projectId
+            if (projectId) {
+                const knownName = `firestore/[default]/${projectId}/main`
+                indexedDB.deleteDatabase(knownName)
+                logger.info(`[FirestoreRecovery] Deleted IndexedDB (fallback): ${knownName}`)
+            }
+        }
+    } catch (e) {
+        logger.warn("[FirestoreRecovery] Failed to clear Firestore IndexedDB", e)
+    }
+}
+
+// Auto-recovery: detect Firestore assertion failures at runtime and clear corrupted IDB
+if (typeof window !== "undefined") {
+    const RECOVERY_FLAG = "firestore-idb-recovery-attempted"
+
+    window.addEventListener("unhandledrejection", async (event) => {
+        const msg = String(event.reason?.message || event.reason || "")
+        if (
+            (msg.includes("INTERNAL ASSERTION FAILED") || msg.includes("Unexpected state")) &&
+            !sessionStorage.getItem(RECOVERY_FLAG)
+        ) {
+            logger.warn("[FirestoreRecovery] Detected Firestore assertion failure, clearing IndexedDB and reloading")
+            sessionStorage.setItem(RECOVERY_FLAG, "1")
+            await clearFirestoreIndexedDB()
+            window.location.reload()
+        }
+    })
+}
+
 export { app, db, auth, googleProvider };

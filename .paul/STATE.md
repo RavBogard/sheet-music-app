@@ -5,26 +5,27 @@
 See: .paul/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 6 in progress
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 6 (Hook Tests) resuming
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 6 of 9 (Hook Tests) — In progress
-Plan: 06-02 complete, ready for 06-03
-Status: Plans 01-02 loop closed — 87 new tests for 12 hooks
-Last activity: 2026-03-11 — Plan 06-02 UNIFY complete
+Phase: 6 of 10 (Hook Tests) — Resuming at plan 03
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-11 — Phase 6.1 complete, transitioned back to Phase 6
 
 Progress:
-- Milestone: [██████░░░░] 56% (5 of 9 phases complete)
-- Phase 6: [█████░░░░░] 50% — Plans 01-02 complete, plans 03-04 remaining
+- Milestone: [██████░░░░] 60% (6 of 10 phases complete, counting 6.1)
+- Phase 6: Plans 01-02 complete (166 hook tests), plan 03 next
+- Phase 6.1: Complete (2/2 plans — crash fix + SW removal)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Plan 06-02 loop closed — ready for 06-03]
+  ○        ○        ○     [Ready to plan Phase 6 plan 03]
 ```
 
 ## Accumulated Context
@@ -39,6 +40,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Typed mock fn signatures: vi.fn((_opts?: unknown) => ...) avoids TS spread errors
 - Phase 5 scope: scheduling routes (plans 01-02) + library routes (plan 03); setlist publish/print/email-packets deferred
 - Added Phase 9: Public Setlist Access — unauthenticated viewing of public setlists and their PDFs
+- Inserted Phase 6.1: SW Removal & Firestore Recovery — production crash on mobile, corrupted IndexedDB from old SW
+- Phase 6.1: clearFirestoreIndexedDB() for IDB recovery; PWA/SW fully removed, next-pwa uninstalled
+- Kept all actively-used offline code (cache-utils, prefetch, use-offline, OfflineIndicator, offline-manager)
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -52,20 +56,19 @@ PLAN ──▶ APPLY ──▶ UNIFY
 Last commit: 5724201
 Branch: master
 
+### Known Issues
+- ~~Firestore INTERNAL ASSERTION FAILED on mobile after sign-in~~ — Fixed: auto-recovery via clearFirestoreIndexedDB() (plan 06.1-01)
+
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Plan 06-02 loop closed
-Next action: /paul:plan (Plan 06-03: large hooks — use-upcoming-prep, useMonitorConnection, use-creation-wizard, use-setlist-dashboard)
-Resume file: .paul/phases/06-hook-tests/06-02-SUMMARY.md
+Stopped at: Phase 6.1 complete, transitioned back to Phase 6
+Next action: /paul:plan for Phase 6 plan 03 (remaining hook tests)
+Resume file: .paul/ROADMAP.md
 Resume context:
-- Plan 06-01: 39 tests for 6 simple hooks (media-query, wake-lock, metronome, library, batch-selection, monitor-access)
-- Plan 06-02: 48 tests for 6 medium hooks (content-search, setlist-presence, setlist-performance, safe-firestore-sync, offline, calendar-data)
-- 166 total hook tests passing, 0 TS errors
-- Plans 03-04 remaining: 6 large/complex hooks
-  - Plan 03: use-upcoming-prep (205), useMonitorConnection (238), use-creation-wizard (255), use-setlist-dashboard (380)
-  - Plan 04: use-setlist-logic (622), use-smart-transposer (583)
-- PDF worker mobile issue: user accessing www.centralreform.live — needs www domain in Vercel or redirect
+- Phase 6.1 complete: Firestore crash fix + SW dead code removal
+- Phase 6 (Hook Tests): plans 01-02 complete (166 hook tests), plan 03 next
+- 877 tests passing, build clean
 
 ---
 *STATE.md — Updated after every significant action*
