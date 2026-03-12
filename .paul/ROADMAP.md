@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 8 total
+Phases: 9 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -11,10 +11,11 @@ Phases: 8 total
 | 2 | Silent Failure & Error Handling | 1 | Complete | 2026-03-11 |
 | 3 | Test Infrastructure & Flaky Fix | 1 | Complete | 2026-03-11 |
 | 4 | Data Layer Tests | 2 | Complete | 2026-03-11 |
-| 5 | API Route Tests | 3 | In progress | — |
+| 5 | API Route Tests | 3 | Complete | 2026-03-11 |
 | 6 | Hook Tests | 0 | Not started | — |
 | 7 | Component Tests | 0 | Not started | — |
 | 8 | AI & Integration Tests | 0 | Not started | — |
+| 9 | Public Setlist Access | 0 | Not started | — |
 
 ### Phase 1: Type Safety Fixes
 
@@ -47,6 +48,12 @@ Focus: Tests for critical UI components — PrintModal, library views (SongChart
 ### Phase 8: AI & Integration Tests
 
 Focus: Tests for gemini.ts (chat completions, error handling), key-detection.ts (key extraction accuracy), pdf-chord-extractor.ts (chord parsing from PDF), enrichment-engine.ts (metadata enrichment), print-pipeline edge cases (empty setlists, missing files, transposition combos). Mock external APIs (Gemini, Firebase Storage).
+
+### Phase 9: Public Setlist Access
+
+Focus: Allow unauthenticated users to view public setlists and their PDFs without signing in. Update middleware to allow unauthenticated access to public setlist detail pages. Update file proxy to serve PDFs for public setlist tracks without auth. Ensure Firestore queries for public setlists work without auth context. Anyone with a link to a public setlist should be able to view it and all its charts.
+Plans: TBD (defined during /paul:plan)
+Status: Not started
 
 ## Previous Milestone
 **v2.0 Schedule & Workflow Fixes**

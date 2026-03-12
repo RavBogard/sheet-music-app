@@ -56,6 +56,8 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 1: Type safety fixes — all `as any` casts eliminated across 9 files
 - [x] v2.5 Phase 2: Silent failure & error handling — empty catches logged, notification tracking logged, CORS env-only
 - [x] v2.5 Phase 3: Test infrastructure & flaky fix — shared factories, Firebase mocks, API helpers, flaky publish test fixed (367ms → 4ms)
+- [x] v2.5 Phase 4: Data layer tests — firebase helpers, users, setlists, scheduling, server-auth, server-library
+- [x] v2.5 Phase 5: API route tests — 56 tests across 10 scheduling + library routes
 
 ### Validated (Recently Shipped)
 
