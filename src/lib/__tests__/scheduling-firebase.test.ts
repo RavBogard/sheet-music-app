@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ── Mock state ──
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 let capturedOnNext: Function
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 let capturedOnError: Function | undefined
 
 const mockOnSnapshot = vi.fn((...args: any[]) => {

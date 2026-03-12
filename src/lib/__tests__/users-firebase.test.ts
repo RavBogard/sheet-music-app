@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ── Mock state ──
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 let latestOnNext: Function
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 let latestOnError: Function | undefined
 
 const mockGetDoc = vi.fn()
