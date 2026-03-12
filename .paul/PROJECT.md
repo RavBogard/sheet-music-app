@@ -12,9 +12,9 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.8.0 |
+| Version | 2.5.0 |
 | Status | Production |
-| Last Updated | 2026-03-11 |
+| Last Updated | 2026-03-12 |
 
 **Production URLs:**
 - CentralReform.live: Main application
@@ -52,45 +52,19 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v2.5: Bugsweep & test coverage (type safety, error handling, comprehensive tests)
-- [x] v2.5 Phase 1: Type safety fixes — all `as any` casts eliminated across 9 files
-- [x] v2.5 Phase 2: Silent failure & error handling — empty catches logged, notification tracking logged, CORS env-only
-- [x] v2.5 Phase 3: Test infrastructure & flaky fix — shared factories, Firebase mocks, API helpers, flaky publish test fixed (367ms → 4ms)
-- [x] v2.5 Phase 4: Data layer tests — firebase helpers, users, setlists, scheduling, server-auth, server-library
-- [x] v2.5 Phase 5: API route tests — 56 tests across 10 scheduling + library routes
-- [x] v2.5 Phase 6: Hook tests — 221 tests across 17 hooks (3 plans)
-- [x] v2.5 Phase 6.1: SW removal & Firestore recovery — IndexedDB crash fix, 5 dead SW files removed, next-pwa uninstalled
-- [x] v2.5 Phase 7: Remove annotation feature — 5 annotation files deleted, 6 files cleaned, toolbar simplified
-- [x] v2.5 Phase 8.1: Setlist access bug fixes — Firestore rules admin/band-leader fallback, server ownerId guard, backfill script, error messaging
-- [x] v2.5 Phase 8: Performance UX fixes — monitor popover on setlist view, BPM/Monitor label rename, setlist popup fix
-- [x] v2.5 Phase 9: Print view & sticky keys — chartless items excluded from print, lastUsedKey/lastUsedTransposition saved to library_index
-- [x] v2.5 Phase 10: Public setlist access — already working, verified no code changes needed
-- [x] v2.5 Phase 10.1: Mobile action bar redesign — MobileTabBar rewritten as Search/Setlist/Monitor action bar with Fuse.js search and session-aware setlist navigation
-- [x] v2.5 Phase 11: Component tests — critical UI components tested
-- [x] v2.5 Phase 12: AI & integration tests — gemini, key-detection, enrichment, print-pipeline tested
-- [x] v2.5 Phase 13: Tablet Performance UX — 44px touch targets, md: tablet breakpoint, PDF padding fix, swipe-while-zoomed 1.5x, 15s auto-hide, wider title truncation
-- [x] v2.5 Phase 14: Bug Fixes & Race Conditions — Firestore notification rule tightened, N+1 batch fetch, AbortController for offline, syncSessionCookie catch, BPM validation, non-null fix, 3 missing .catch() handlers
-- [x] v2.5 Phase 15: Setlist-Only Print Option — coverOnly toggle in PrintModal, single-page song list PDF without chart PDFs
-- [x] v2.5 Phase 16: Design Token Cleanup & Accessibility — hardcoded colors replaced with tokens, 20 icon-only buttons labeled, dark mode variants added to GlobalAlertBanner
-- [x] v2.5 Phase 17: iPad Safe Areas & Spacing — all-edge safe area insets, setlist drawer calc height, popover padding standardized, BPM touch target 44px, shadow tokens
-- [x] v2.5 Phase 18: Backend Hardening — Firestore transactions for admin ops, rate limiting on all admin routes, ApiErrorResponse standardization, CRON_SECRET env validation, super-admin UID moved to config/admins doc
-- [x] v2.5 Phase 19: Final Audit & Clean Sweep — zero tsc errors, zero ESLint warnings, 1117 tests passing, production build verified
+- None — ready for next milestone
 
 ### Validated (Recently Shipped)
 
+- [x] v2.5: Bugsweep & test coverage — 19 phases, 1117 tests, zero warnings, full backend hardening
 - [x] v2.0: Schedule & workflow fixes — all 3 phases complete
-- [x] v2.0 Phase 1: Schedule visibility fix — setlists with future dates appear regardless of assignment status
-- [x] v2.0 Phase 2: Gig packet modal layout fix — modal starts near top on mobile, tighter padding
-- [x] v2.0 Phase 3: Print PDF layout fixes — Key column before Lead, non-song items excluded from charts
 - [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
+- [x] v1.8: Mobile UX overhaul — navigation, responsive layout, schedule redesign
 - [x] v1.7: Print pipeline overhaul, key signature position, monitor buses — Phases 1-5
-- [x] v1.8 Phase 1: Mobile navigation redesign — hamburger menu moved to upper-left header
-- [x] v1.8 Phase 2: Setlist mobile responsive layout — responsive padding, touch-visible menus
-- [x] v1.8 Phase 3: Schedule page redesign — all-services-first default, personal filter toggle
 
 ### Planned (Next)
 
-- v2.5 Phase 8: Performance UX Fixes
+- To be defined in next milestone
 
 ### Out of Scope
 
@@ -123,7 +97,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ### Technical Constraints
 - Must run on Vercel serverless
-- Must work offline (PWA) for unreliable venue WiFi
+- Venue has wifi; PWA/SW removed in v2.5 (caused stale deploy issues)
 - Must perform well on tablets and phones (touch-first)
 - Firebase ecosystem for auth, database, storage
 
@@ -142,7 +116,7 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Database | Firestore | |
 | Storage | Firebase Storage (CDN) + Google Drive (intake) | |
 | AI | Google Gemini | OCR, chat |
-| Testing | Vitest + Playwright | 1113+ tests |
+| Testing | Vitest + Playwright | 1117 tests |
 | Deploy | Vercel | |
 
 ## Links
@@ -216,4 +190,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 18 (Backend Hardening complete)*
+*Last updated: 2026-03-12 after v2.5 Bugsweep & Test Coverage milestone complete*

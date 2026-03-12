@@ -11,6 +11,55 @@ Completed milestone log for this project.
 | v1.3 Bugsweep & Backend Hardening | 2026-03-10 | ~76 min | 4 phases, 7 plans |
 | v1.3.1 Regression Fixes | 2026-03-10 | ~8 min | 1 phase, 1 plan |
 | v1.4 Fixes & Library Management | 2026-03-10 | ~1 hr | 5 phases, 5 plans |
+| v1.5 Codebase & UI/UX Hardening | 2026-03-10 | 1 day | 6 phases, 11 plans |
+| v1.6 Stability & Regression Audit | 2026-03-11 | 1 day | 4 phases, 4 plans |
+| v1.7 Critical Bug Fixes | 2026-03-11 | 1 day | 5 phases, 5 plans |
+| v1.8 Mobile UX Overhaul | 2026-03-11 | 1 day | 3 phases, 3 plans |
+| v1.9 Auth Stability & Deferred Cleanup | 2026-03-11 | 1 day | 5 phases, 4 plans |
+| v2.0 Schedule & Workflow Fixes | 2026-03-11 | 1 day | 3 phases, 3 plans |
+| v2.5 Bugsweep & Test Coverage | 2026-03-12 | 2 days | 19 phases, 30 plans |
+
+---
+
+## ✅ v2.5 Bugsweep & Test Coverage
+
+**Completed:** 2026-03-12
+**Duration:** ~2 days across 30 plans
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 19 |
+| Plans | 30 |
+| Commits | 55 |
+
+### Key Accomplishments
+
+- **Type safety & error handling:** Eliminated all `as any` casts, fixed empty catches, added notification tracking, moved CORS to env
+- **Comprehensive test coverage:** 1117 tests — data layer, API routes, hooks (221 tests across 17 hooks), components (116 tests), AI/integration (53 tests)
+- **SW removal & Firestore recovery:** Fixed production IndexedDB crash, fully removed PWA/service worker, uninstalled next-pwa
+- **Annotation feature removed:** Simplified chart viewer by removing unused drawing tools
+- **Mobile action bar redesign:** MobileTabBar rewritten as Search/Setlist/Monitor action bar with Fuse.js search
+- **Tablet performance UX:** Three-tier responsive layout, 44px touch targets, swipe-while-zoomed, 15s auto-hide
+- **Bug fixes & race conditions:** Firestore notification rule tightened, N+1 batch fetch, AbortController for offline, 8 bugs fixed
+- **Setlist-only print option:** Cover page toggle for quick one-page song list prints
+- **Design tokens & accessibility:** Hardcoded colors replaced with tokens, 20 icon-only buttons labeled
+- **Backend hardening:** Firestore transactions for admin ops, rate limiting, ApiErrorResponse standardization, config/admins doc
+- **Final audit:** Zero tsc errors, zero ESLint warnings, 1117 tests passing, production build verified
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| Mock objects exported from helpers, vi.mock() stays in test file | P3 | Vitest hoisting compatibility |
+| PWA/SW fully removed, next-pwa uninstalled | P6.1 | SW caused stale deploys; venue has wifi |
+| Annotation feature removed entirely | P7 | Unused; simplifies toolbar |
+| Fuse.js for MobileTabBar search over library store | P10.1 | No API round-trip for song search |
+| Three-tier responsive: default → md: → lg: | P13 | Tablet gets dedicated layout |
+| coverOnly early-return in print pipeline | P15 | Skips all PDF processing for cover-only prints |
+| WriteBatch for delete-user, runTransaction for set-role | P18 | Atomic admin operations |
+| config/admins Firestore doc for super-admin bootstrap | P18 | Replaces hardcoded UID in rules |
 
 ---
 
