@@ -65,7 +65,12 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
     if (!db || Object.keys(db).length === 0) return () => { }
     const ref = doc(db, "users", uid).withConverter(userProfileConverter)
-    let lastProfile: string | null = null
+    // Use sentinel to distinguish "never fired" from "fired with null".
+    // Without this, a new user whose profile doc doesn't exist yet would
+    // never get the initial null callback (lastProfile starts null, guard
+    // `lastProfile !== null` would be false), leaving loading stuck forever.
+    const NEVER_FIRED = '__NEVER_FIRED__'
+    let lastProfile: string | null = NEVER_FIRED as string | null
 
     return onSnapshot(ref, (snap) => {
         if (snap.exists()) {

@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger"
 
 const COOKIE_NAME = "__session"
 // Session cookie lives for 14 days (Firebase maximum).
-// The client refreshes it well before expiry (see auth-context).
+// The client refreshes it daily via visibilitychange (see auth-context).
 const SESSION_MAX_AGE = 60 * 60 * 24 * 14 // 14 days in seconds
 
 /**

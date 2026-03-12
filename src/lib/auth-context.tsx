@@ -186,6 +186,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Refresh session cookie when user returns to the app.
+    // The cookie expires after 14 days (Firebase max). Without refresh, mobile
+    // users who open the app weekly would hit expired cookies — middleware
+    // redirects to /login while Firebase client auth is still valid, and static
+    // assets (like the PDF worker) get served as login HTML instead of JS.
+    // Throttled to once per day to avoid spamming the server.
+    useEffect(() => {
+        if (!user || typeof document === 'undefined') return
+
+        const REFRESH_INTERVAL = 24 * 60 * 60 * 1000 // 1 day
+        const STORAGE_KEY = 'crc_session_refreshed_at'
+
+        const maybeRefreshSession = () => {
+            if (document.visibilityState !== 'visible') return
+            const lastRefresh = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
+            if (Date.now() - lastRefresh < REFRESH_INTERVAL) return
+
+            localStorage.setItem(STORAGE_KEY, String(Date.now()))
+            syncSessionCookie(user).catch(() => {})
+        }
+
+        // Check on mount (covers first page load after days away)
+        maybeRefreshSession()
+
+        document.addEventListener('visibilitychange', maybeRefreshSession)
+        return () => document.removeEventListener('visibilitychange', maybeRefreshSession)
+    }, [user])
+
     // Re-register push token if user previously opted in (once per session).
     // Separated from the auth listener to keep concerns clean.
     useEffect(() => {
@@ -225,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signOut = async () => {
         try {
             localStorage.removeItem('crc_cached_user')
+            localStorage.removeItem('crc_session_refreshed_at')
             // Clear server session cookie
             fetch("/api/auth/session", { method: "DELETE" }).catch(() => { })
             await firebaseSignOut(auth)
