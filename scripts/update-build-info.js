@@ -19,8 +19,10 @@ const { execSync } = require('child_process');
  * To "release" a version: just `git tag v4.2.0` — subsequent builds auto-increment from there.
  */
 
-function run(cmd) {
-    return execSync(cmd, { encoding: 'utf-8' }).trim();
+function run(cmd, { silent = false } = {}) {
+    const opts = { encoding: 'utf-8' };
+    if (silent) opts.stdio = ['pipe', 'pipe', 'ignore'];
+    return execSync(cmd, opts).trim();
 }
 
 function parseVersion(tag) {
@@ -38,8 +40,8 @@ try {
     let latestTag;
     try {
         // First try to unshallow if needed (Vercel does shallow clones)
-        try { run('git fetch --tags --depth=1 2>/dev/null || true'); } catch { /* ok */ }
-        latestTag = run('git describe --tags --abbrev=0 --match "v*"');
+        try { run('git fetch --tags --depth=1', { silent: true }); } catch { /* ok */ }
+        latestTag = run('git describe --tags --abbrev=0 --match "v*"', { silent: true });
     } catch {
         latestTag = null;
     }

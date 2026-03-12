@@ -52,12 +52,14 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v2.6 Phase 2: Next.js & Sentry deprecation cleanup
-- [ ] v2.6 Phase 3: Technical debt cleanup
+- To be defined in next milestone
 
 ### Validated (Recently Shipped)
 
+- [x] v2.6: Deprecation cleanup, tech debt & setlist UX — 3 phases complete
 - [x] v2.6 Phase 1: Setlist row layout — key next to title, inline amber notes, dual-tint alternating rows
+- [x] v2.6 Phase 2: Next.js & Sentry deprecation cleanup — proxy rename, instrumentation-client, global-error
+- [x] v2.6 Phase 3: Technical debt cleanup — leader→band_leader migration script, build-info silence
 - [x] v2.5: Bugsweep & test coverage — 19 phases, 1117 tests, zero warnings, full backend hardening
 - [x] v2.0: Schedule & workflow fixes — all 3 phases complete
 - [x] v1.9: Auth stability & deferred cleanup — Phases 1-5
