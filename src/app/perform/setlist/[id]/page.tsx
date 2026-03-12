@@ -111,8 +111,8 @@ export default function SetlistPerformPage() {
                 {!isPublicView && (
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 shrink-0" aria-label="Monitor mix">
-                                <Speaker className="h-4 w-4 text-muted-foreground" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Monitor mix">
+                                <Speaker className="h-4 w-4" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3 bg-popover border-border space-y-3" align="end">

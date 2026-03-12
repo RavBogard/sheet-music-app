@@ -171,9 +171,9 @@ export function SetlistDrawer() {
                     </SheetTitle>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-hidden bg-background">
+                <div className="flex-1 min-h-0 flex flex-col bg-background">
                     {showPublicPicker ? (
-                        <div className="p-4 grid gap-3">
+                        <div className="p-4 grid gap-3 flex-1 overflow-auto">
                             {loading && <div className="text-muted-foreground text-center py-10">Loading active setlists...</div>}
 
                             {!loading && publicSetlists.length === 0 && (
@@ -210,7 +210,7 @@ export function SetlistDrawer() {
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col flex-1 min-h-0">
                             <div className="border-t border-border">
                                 {/* Deprecated AutoFollow here */}
                             </div>
