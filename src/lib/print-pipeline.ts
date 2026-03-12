@@ -42,6 +42,7 @@ export interface PrintRequest {
     musicianName?: string
     eventName?: string
     tracks: PrintTrack[]
+    coverOnly?: boolean
 }
 
 export interface PrintProgress {
@@ -75,6 +76,7 @@ function computeContentHash(req: PrintRequest): string {
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
+        coverOnly: req.coverOnly || false,
         tracks: req.tracks.map(t => ({
             fileId: t.fileId,
             transposition: t.transposition || 0,
@@ -536,6 +538,15 @@ export async function generatePrintPdf(
     // ── Step 1: Build merged PDF with cover page ──
     const mergedPdf = await PDFDocument.create()
     await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter)
+
+    // ── Step 1b: Cover-only mode — skip all track processing ──
+    if (req.coverOnly) {
+        const finalPdfBytes = await mergedPdf.save()
+        const pdf = new Uint8Array(finalPdfBytes)
+        cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
+        logger.info(`[PrintPipeline] Cover-only complete for "${req.title}"`)
+        return { pdf, stats }
+    }
 
     // ── Step 2: Lazy-load transposition modules ──
     let extractChordsFromPdf: typeof import("@/lib/pdf-chord-extractor")["extractChordsFromPdf"] | null = null

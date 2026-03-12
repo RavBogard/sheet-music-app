@@ -5,19 +5,19 @@
 See: .paul/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 14 complete, ready to plan Phase 15
+**Current focus:** v2.5 Bugsweep & Test Coverage — Phase 15 complete, ready to plan Phase 16
 
 ## Current Position
 
 Milestone: v2.5 Bugsweep & Test Coverage
-Phase: 15 of 22 (Setlist-Only Print Option) — Not started
+Phase: 16 of 22 (Design Token Cleanup & Accessibility) — Not started
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-12 — Phase 14 complete, transitioned to Phase 15
+Last activity: 2026-03-12 — Phase 15 complete, transitioned to Phase 16
 
 Progress:
-- Milestone: [██████░░░░] 64% (14 of 22 phases complete)
-- Phase 15: [░░░░░░░░░░] 0%
+- Milestone: [███████░░░] 68% (15 of 22 phases complete)
+- Phase 16: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
@@ -45,9 +45,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [14-01 COMPLETE — 8 bug fixes, 1112/1113 tests pass]
 ```
 
+Plan 15-01:
+```
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [15-01 COMPLETE — coverOnly toggle + 4 tests]
+```
+
 ## Accumulated Context
 
 ### Decisions
+- Phase 15: coverOnly early-return in print pipeline skips all PDF fetch/merge; included in content hash for cache isolation
 - Phase 14: use-offline test assertion too strict for new AbortController signal — 1 test expects `fetch(url)` but code now correctly passes `fetch(url, { signal })`. Test update needed in UNIFY.
 - Phase 13: Three-tier responsive (phone→tablet→desktop), kept prevQueueIndexRef (plan wrong about dead code), swipe 1.5x threshold, 15s auto-hide
 - Phase 10.1: MobileTabBar rewritten as action bar — Fuse.js search over library store, sessionStorage for setlist tracking, hidden placeholder for balanced layout
@@ -69,10 +76,10 @@ Branch: master
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 14 complete, ready to plan Phase 15
-Next action: /paul:plan for Phase 15
+Stopped at: Phase 15 complete, ready to plan Phase 16
+Next action: /paul:plan for Phase 16
 Resume file: .paul/ROADMAP.md
-Resume context: Phase 14 done (8 bug fixes). 1 test deviation (use-offline assertion needs updating for AbortController). Continue autonomously through 15-19.
+Resume context: Phase 15 done (coverOnly print). Continue autonomously through 16-19.
 
 ---
 *STATE.md — Updated after every significant action*

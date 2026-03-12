@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { X, Printer, Download, Loader2, Mail } from "lucide-react"
+import { X, Printer, Download, Loader2, Mail, FileStack, ListChecks } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
@@ -98,6 +98,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         return init
     })
 
+    // Cover-only toggle
+    const [coverOnly, setCoverOnly] = useState(false)
+
     // Email packets
     const [sendingEmails, setSendingEmails] = useState(false)
 
@@ -156,6 +159,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 title, date,
                 musicianName: name || undefined,
                 eventName: eventName || undefined,
+                coverOnly,
                 tracks: tracks.map(t => {
                     const useTransposition = printMode === "just-me"
                     const tp = useTransposition ? trackTranspositions[t.id] : null
@@ -329,7 +333,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         }
     }
 
-    const canGenerate = linkedPdfTracks.length > 0 && !generating &&
+    const canGenerate = (coverOnly || linkedPdfTracks.length > 0) && !generating &&
         (printMode !== "select-musicians" || selectedUids.length > 0)
 
     return (
@@ -379,6 +383,40 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 toggleMusician={toggleMusician}
                             />
 
+                            {/* Packet Type Toggle */}
+                            <div className="flex rounded-lg border border-border overflow-hidden">
+                                <button
+                                    type="button"
+                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                                        !coverOnly
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                    }`}
+                                    onClick={() => setCoverOnly(false)}
+                                >
+                                    <FileStack className="h-4 w-4" />
+                                    Full Packet
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                                        coverOnly
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                    }`}
+                                    onClick={() => setCoverOnly(true)}
+                                >
+                                    <ListChecks className="h-4 w-4" />
+                                    Setlist Only
+                                </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground -mt-1">
+                                {coverOnly
+                                    ? "Prints just the song list — one page, no chart PDFs."
+                                    : "Prints cover page with all chart PDFs."
+                                }
+                            </p>
+
                             {/* Transposition Details (just-me mode) */}
                             {printMode === "just-me" && activeTranspositions > 0 && (
                                 <TransposeTrackList
@@ -395,6 +433,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 linkedPdfCount={linkedPdfTracks.length}
                                 activeTranspositions={activeTranspositions}
                                 showTranspositions={printMode !== "standard"}
+                                coverOnly={coverOnly}
                             />
 
                             {error && (

@@ -176,7 +176,6 @@ vi.mock('@/lib/logger', () => ({
 // ── Dynamic import of the module under test ──
 
 let generatePrintPdf: typeof import('./print-pipeline').generatePrintPdf
-let PrintRequest: typeof import('./print-pipeline').PrintRequest
 type PrintRequestType = import('./print-pipeline').PrintRequest
 type PrintProgressType = import('./print-pipeline').PrintProgress
 
@@ -500,5 +499,110 @@ describe('Print Pipeline — Progress Callbacks (Integration)', () => {
         expect(processing[0].currentTrack).toBe(1)
         expect(processing[1].currentTrack).toBe(2)
         expect(processing[2].currentTrack).toBe(3)
+    })
+})
+
+// ══════════════════════════════════════════════════════════════════
+// Plan 15-01: Cover-only (setlist-only) print mode
+// ══════════════════════════════════════════════════════════════════
+
+describe('Print Pipeline — Cover-Only Mode', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockGetStorageFn.mockReturnValue({
+            bucket: vi.fn().mockReturnValue({
+                file: vi.fn().mockReturnValue({
+                    exists: vi.fn().mockResolvedValue([false]),
+                    save: vi.fn().mockResolvedValue(undefined),
+                }),
+            }),
+        })
+    })
+
+    it('returns PDF without fetching any track files when coverOnly is true', async () => {
+        const req: PrintRequestType = {
+            title: 'Shabbat Morning',
+            date: '2026-03-12',
+            coverOnly: true,
+            tracks: [
+                { title: 'Song 1', key: 'C', notes: '', fileId: 'f1' },
+                { title: 'Song 2', key: 'D', notes: '', fileId: 'f2' },
+                { title: 'Song 3', key: 'E', notes: '', fileId: 'f3' },
+            ],
+        }
+
+        const result = await generatePrintPdf(req)
+
+        // No track PDFs should be fetched
+        expect(mockFetchFileById).not.toHaveBeenCalled()
+        // Should still return valid PDF bytes
+        expect(result.pdf).toBeInstanceOf(Uint8Array)
+        expect(result.pdf.length).toBeGreaterThan(0)
+        // Stats should show zero appended tracks
+        expect(result.stats.appendedTracks).toBe(0)
+        expect(result.stats.transposedTracks).toBe(0)
+    })
+
+    it('fetches track files normally when coverOnly is false', async () => {
+        const req: PrintRequestType = {
+            title: 'Shabbat Morning',
+            date: '2026-03-12',
+            coverOnly: false,
+            tracks: [
+                { title: 'Song 1', key: 'C', notes: '', fileId: 'f1' },
+                { title: 'Song 2', key: 'D', notes: '', fileId: 'f2' },
+            ],
+        }
+
+        mockFetchFileById.mockResolvedValue({
+            buffer: Buffer.from('fake-pdf'),
+            contentType: 'application/pdf',
+            source: 'firebase-storage' as const,
+        })
+
+        const result = await generatePrintPdf(req)
+
+        expect(mockFetchFileById).toHaveBeenCalledTimes(2)
+        expect(result.stats.appendedTracks).toBe(2)
+    })
+
+    it('coverOnly still works with transposition metadata on tracks', async () => {
+        const req: PrintRequestType = {
+            title: 'Transposed Service',
+            date: '2026-03-12',
+            coverOnly: true,
+            musicianName: 'Test Musician - Bb Trumpet',
+            tracks: [
+                { title: 'Song 1', key: 'C', notes: '', fileId: 'f1', transposition: 2 },
+                { title: 'Song 2', key: 'D', notes: '', fileId: 'f2', transposition: -3 },
+            ],
+        }
+
+        const result = await generatePrintPdf(req)
+
+        // Should not fetch any files even with transpositions
+        expect(mockFetchFileById).not.toHaveBeenCalled()
+        // Cover page is built (returns valid PDF)
+        expect(result.pdf).toBeInstanceOf(Uint8Array)
+        expect(result.pdf.length).toBeGreaterThan(0)
+    })
+
+    it('coverOnly works with zero tracks that have fileId', async () => {
+        const req: PrintRequestType = {
+            title: 'Song List Only',
+            date: '2026-03-12',
+            coverOnly: true,
+            tracks: [
+                { title: 'OPENING', key: '', notes: '', type: 'header' },
+                { title: 'V\'ahavta', key: '', notes: '' },
+                { title: 'Shema', key: 'Am', notes: '' },
+            ],
+        }
+
+        const result = await generatePrintPdf(req)
+
+        expect(mockFetchFileById).not.toHaveBeenCalled()
+        expect(result.pdf).toBeInstanceOf(Uint8Array)
+        expect(result.stats.totalTracks).toBe(0)
     })
 })

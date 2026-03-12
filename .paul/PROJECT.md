@@ -70,6 +70,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] v2.5 Phase 12: AI & integration tests — gemini, key-detection, enrichment, print-pipeline tested
 - [x] v2.5 Phase 13: Tablet Performance UX — 44px touch targets, md: tablet breakpoint, PDF padding fix, swipe-while-zoomed 1.5x, 15s auto-hide, wider title truncation
 - [x] v2.5 Phase 14: Bug Fixes & Race Conditions — Firestore notification rule tightened, N+1 batch fetch, AbortController for offline, syncSessionCookie catch, BPM validation, non-null fix, 3 missing .catch() handlers
+- [x] v2.5 Phase 15: Setlist-Only Print Option — coverOnly toggle in PrintModal, single-page song list PDF without chart PDFs
 
 ### Validated (Recently Shipped)
 
@@ -202,7 +203,9 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Batch musician prefs via db.getAll() in scheduling cron | v2.5 P14 | Eliminates N+1 reads; single batch for up to 100 musicians |
 | AbortController per-file via Map ref in use-offline | v2.5 P14 | Prevents state updates after unmount during downloads |
 | Notification create restricted to admin/band_leader | v2.5 P14 | Server writes via admin SDK; client-side only for privileged roles |
+| coverOnly early-return in print pipeline | v2.5 P15 | Skips all PDF fetch/merge/transposition for cover-page-only prints |
+| coverOnly included in content hash | v2.5 P15 | Prevents full-packet cache from serving as cover-only and vice versa |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 14 (Bug Fixes & Race Conditions complete)*
+*Last updated: 2026-03-12 after Phase 15 (Setlist-Only Print Option complete)*

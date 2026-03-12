@@ -24,7 +24,7 @@ Phases: 22 total
 | 12 | AI & Integration Tests | 2 | Complete | 2026-03-12 |
 | 13 | Tablet Performance UX | 1 | Complete | 2026-03-12 |
 | 14 | Bug Fixes & Race Conditions | 1 | Complete | 2026-03-12 |
-| 15 | Setlist-Only Print Option | TBD | Not started | |
+| 15 | Setlist-Only Print Option | 1 | Complete | 2026-03-12 |
 | 16 | Design Token Cleanup & Accessibility | TBD | Not started | |
 | 17 | iPad Safe Areas & Spacing | TBD | Not started | |
 | 18 | Backend Hardening | TBD | Not started | |
@@ -342,4 +342,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-12 (Phase 14 complete)*
+*Last updated: 2026-03-12 (Phase 15 complete)*
