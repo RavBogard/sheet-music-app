@@ -156,9 +156,10 @@ describe('useUpcomingPrep', () => {
   it('computes urgency label "Tomorrow"', async () => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)
+    vi.setSystemTime(now)
     const tomorrow = new Date(now)
     tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(12, 0, 0, 0)
+    tomorrow.setHours(0, 0, 0, 0)
 
     const setlist = makeSetlist({
       eventDate: { seconds: Math.floor(tomorrow.getTime() / 1000), nanoseconds: 0 },
@@ -202,9 +203,10 @@ describe('useUpcomingPrep', () => {
   it('computes urgency label "In N days" for multi-day', async () => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)
+    vi.setSystemTime(now)
     const inFive = new Date(now)
     inFive.setDate(inFive.getDate() + 5)
-    inFive.setHours(12, 0, 0, 0)
+    inFive.setHours(0, 0, 0, 0)
 
     const setlist = makeSetlist({
       eventDate: { seconds: Math.floor(inFive.getTime() / 1000), nanoseconds: 0 },
