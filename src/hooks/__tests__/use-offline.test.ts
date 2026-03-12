@@ -65,7 +65,7 @@ describe('useOffline', () => {
       await result.current.downloadFile('file-1', 'Song A')
     })
 
-    expect(fetch).toHaveBeenCalledWith('/api/drive/file/file-1')
+    expect(fetch).toHaveBeenCalledWith('/api/drive/file/file-1', expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(result.current.offlineStatus['file-1']).toBe(true)
     expect(result.current.downloading['file-1']).toBe(false)
   })

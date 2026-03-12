@@ -169,15 +169,12 @@ import { SongChartsLibrary } from "../SongChartsLibrary"
 
 const chartFile1: DriveFile = {
     id: "chart-1", name: "Ma_Tovu.pdf", mimeType: "application/pdf",
-    modifiedTime: "2026-01-01", size: 1000,
 }
 const chartFile2: DriveFile = {
     id: "chart-2", name: "Shalom.musicxml", mimeType: "application/xml",
-    modifiedTime: "2026-01-02", size: 2000,
 }
 const audioFile1: DriveFile = {
     id: "audio-1", name: "intro.mp3", mimeType: "audio/mpeg",
-    modifiedTime: "2026-01-03", size: 5000,
 }
 
 describe("SongChartsLibrary", () => {
