@@ -3,7 +3,7 @@
 ## Current Milestone
 **v2.5 Bugsweep & Test Coverage**
 Status: In progress
-Phases: 15 total
+Phases: 22 total
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -22,6 +22,13 @@ Phases: 15 total
 | 10.1 | Mobile Action Bar Redesign | 1 | Complete | 2026-03-12 |
 | 11 | Component Tests | 2 | Complete | 2026-03-12 |
 | 12 | AI & Integration Tests | 2 | Complete | 2026-03-12 |
+| 13 | Tablet Performance UX | 1 | Planning | |
+| 14 | Bug Fixes & Race Conditions | TBD | Not started | |
+| 15 | Setlist-Only Print Option | TBD | Not started | |
+| 16 | Design Token Cleanup & Accessibility | TBD | Not started | |
+| 17 | iPad Safe Areas & Spacing | TBD | Not started | |
+| 18 | Backend Hardening | TBD | Not started | |
+| 19 | Final Audit & Clean Sweep | TBD | Not started | |
 
 ### Phase 1: Type Safety Fixes
 
@@ -100,6 +107,38 @@ Focus: Tests for critical UI components — PrintModal, library views (SongChart
 ### Phase 12: AI & Integration Tests
 
 Focus: Tests for gemini.ts (chat completions, error handling), key-detection.ts (key extraction accuracy), pdf-chord-extractor.ts (chord parsing from PDF), enrichment-engine.ts (metadata enrichment), print-pipeline edge cases (empty setlists, missing files, transposition combos). Mock external APIs (Gemini, Firebase Storage).
+
+### Phase 13: Tablet Performance UX
+
+Focus: Optimize the core tablet performance experience (portrait-only, no landscape support). (a) Increase all performance toolbar touch targets to minimum 44x44px — zoom buttons currently 28px (`h-7 w-7`), song nav buttons borderline at 56px. (b) Add `md:` responsive breakpoint for iPad 768px portrait — toolbar currently jumps from cramped mobile to desktop at `lg:` (1024px) with no tablet layout. (c) Recover wasted PDF viewing space — remove `pb-28` (112px) bottom padding when toolbar is hidden, make transposer popover responsive width instead of fixed `w-80`. (d) Fix swipe navigation disabled when zoom > 1.1x — allow swiping between charts even when slightly zoomed. (e) Extend toolbar auto-hide from 8s to 15s during performance. (f) Widen song title truncation from `max-w-[200px]` to `max-w-[300px]` on tablet.
+Skills required: /ui-ux-pro-max
+
+### Phase 14: Bug Fixes & Race Conditions
+
+Focus: Fix all bugs identified in codebase audit. (a) Fix `useMonitorConnection` ref-count race condition — two components mounting simultaneously can create duplicate connections. (b) Add `.catch()` to `syncSessionCookie` promise in `auth-context.tsx` — missing catch causes infinite loading on auth failure. (c) Fix state-update-after-unmount in `use-offline.ts` — add AbortController to `downloadFile`. (d) Add missing `.catch()` handlers in `SongChartsLibrary`, `LibraryFileRow`, `AddSongsModal`. (e) Fix Firestore security rule — `notifications` subcollection allows any signed-in user to create notifications for any other user. (f) Fix N+1 query in `cron/scheduling-reminder` — batch-fetch musician docs instead of per-loop reads. (g) Validate numeric inputs in `library/upload/route.ts` — prevent NaN BPM stored in Firestore. (h) Fix `PerformanceToolbar` effect missing `activeSessions` in dependency array. (i) Fix unsafe non-null assertion in `use-safe-firestore-sync.ts` line 119.
+
+### Phase 15: Setlist-Only Print Option
+
+Focus: Add option to print just the setlist cover page (song list with keys, BPM, lead) without any chart PDFs. Currently printing always generates cover page + all chart PDFs. Add a toggle or separate button in PrintModal to print "setlist only" — generates just the cover page. Useful for quickly printing a one-page song list for the music stand without waiting for all PDFs to render.
+Skills required: /ui-ux-pro-max
+
+### Phase 16: Design Token Cleanup & Accessibility
+
+Focus: Replace all hardcoded colors with design system tokens and improve accessibility. (a) Replace `bg-black text-white` in `FlowItemView.tsx` with `bg-background text-foreground`. (b) Replace `bg-black/40` in `MetronomeControl.tsx` with token. (c) Add `dark:` variants to `GlobalAlertBanner.tsx` color classes. (d) Replace `bg-red-500/10` in `error-state.tsx` with `bg-destructive/10`. (e) Add `aria-label` to all icon-only buttons in performance toolbar and other components. (f) Improve `sr-only` coverage (currently 9 instances across 448 files). (g) Fix image alt text in `DesktopHeader.tsx` from "Logo" to descriptive text.
+Skills required: /ui-ux-pro-max
+
+### Phase 17: iPad Safe Areas & Spacing
+
+Focus: Portrait-only iPad polish. (a) Add top/left/right safe area insets for iPad Pro with notch — currently only bottom is handled in `globals.css`. (b) Fix setlist drawer `max-h-[60vh]` — increase to `max-h-[70vh]` or `calc(100vh-120px)` for better use of iPad screen. (c) Fix inconsistent popover padding (`p-3` vs `p-0`). (d) Fix MetronomeControl BPM input touch target size. (e) Replace arbitrary shadow values in `MobileTabBar.tsx` with design tokens.
+Skills required: /ui-ux-pro-max
+
+### Phase 18: Backend Hardening
+
+Focus: Data integrity and API consistency. (a) Wrap admin operations in Firestore transactions — `delete-user` (Auth delete + Firestore delete + audit log), `set-role` (custom claims + Firestore + setlist locks). (b) Define and enforce consistent error response interface across all 56 API routes — standardize on `{ error: string, code?: string, details?: object }`. (c) Add rate limiting to unprotected mutation routes (AI routes, admin routes). (d) Move hardcoded super-admin UID from `firestore.rules` to a Firestore config document. (e) Add `CRON_SECRET` to env.mjs validation schema.
+
+### Phase 19: Final Audit & Clean Sweep
+
+Focus: Recursive codebase audit and bug/lint sweep until totally clean. Run full TypeScript strict check, ESLint, and test suite. Fix all errors, warnings, and failures — fix the code, never rig tests (updating tests for changed code is fine). Run Playwright E2E if available. Re-audit for any regressions introduced by Phases 13-18. Repeat sweep until zero warnings, zero test failures, zero lint errors. Verify production build succeeds. Verify Vercel deploy preview works.
 
 ## Previous Milestone
 **v2.0 Schedule & Workflow Fixes**
