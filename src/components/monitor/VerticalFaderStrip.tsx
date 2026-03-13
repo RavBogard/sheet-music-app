@@ -125,14 +125,6 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         <div
             className={`flex flex-col items-center w-14 min-w-[48px] transition-opacity snap-start ${!on ? "opacity-50" : ""}`}
         >
-            {/* Channel name */}
-            <div
-                className={`text-[10px] font-medium truncate w-full text-center mb-1 ${isMaster ? "text-brand" : "text-zinc-400"}`}
-                title={label}
-            >
-                {label}
-            </div>
-
             {/* Vertical fader track */}
             <div
                 ref={sliderRef}
@@ -196,7 +188,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             </div>
 
             {/* Percentage value */}
-            <div className="text-[10px] font-mono font-bold text-zinc-500 mt-1">
+            <div className="text-[10px] font-mono font-bold text-zinc-500 mt-1 mb-0.5">
                 {percentage}%
             </div>
 
@@ -206,7 +198,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 variant="ghost"
                 size="icon-sm"
                 onClick={onMuteToggle}
-                className={`mt-1 ${
+                className={`mt-0.5 ${
                     on
                         ? "bg-green-900/40 text-green-400 hover:bg-green-800/60"
                         : "bg-red-900/40 text-red-400 hover:bg-red-800/60"
@@ -216,6 +208,14 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             >
                 {on ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </Button>
+            
+            {/* Channel name (Moved to bottom) */}
+            <div
+                className={`text-[10px] font-medium truncate w-full text-center mt-2 ${isMaster ? "text-brand" : "text-zinc-400"}`}
+                title={label}
+            >
+                {label}
+            </div>
         </div>
     )
 }
