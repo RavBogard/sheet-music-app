@@ -155,7 +155,7 @@ export function QuickMonitorPanel() {
             </div>
 
             {/* Vertical faders in horizontal row */}
-            <ScrollFade snap scrollClassName="flex flex-row gap-1 p-3 min-h-[280px]">
+            <ScrollFade snap scrollClassName="flex flex-row gap-3 p-3 min-h-[280px]">
                 {/* Master bus fader (leftmost) */}
                 <VerticalFaderStrip
                     label="Master"

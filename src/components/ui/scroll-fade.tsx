@@ -43,7 +43,7 @@ export function ScrollFade({ children, className, scrollClassName, snap }: Scrol
         <div className={cn("relative", className)}>
             <div
                 ref={scrollRef}
-                className={cn("overflow-x-auto", snap && "snap-x snap-mandatory", scrollClassName)}
+                className={cn("overflow-x-auto", snap && "snap-x snap-proximity", scrollClassName)}
             >
                 {children}
             </div>
