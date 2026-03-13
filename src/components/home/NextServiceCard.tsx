@@ -54,7 +54,10 @@ export function NextServiceCard({
 
     if (isPastSetlist) {
         return (
-            <div className="rounded-2xl border border-brand/15 bg-card/80 backdrop-blur-sm p-5 shadow-lg">
+            <div 
+                onClick={onPerform}
+                className="rounded-2xl border border-brand/15 bg-card/80 backdrop-blur-sm p-5 shadow-lg cursor-pointer hover:border-brand/30 transition-colors duration-200 group"
+            >
                 {/* Date label */}
                 <div className="flex items-center gap-2 mb-3">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -67,7 +70,7 @@ export function NextServiceCard({
                 </div>
 
                 {/* Setlist name */}
-                <h2 className="text-xl font-bold leading-snug mb-3 font-display text-foreground">
+                <h2 className="text-xl font-bold leading-snug mb-3 font-display text-foreground group-hover:text-brand transition-colors">
                     {setlist.name}
                 </h2>
 
@@ -88,8 +91,7 @@ export function NextServiceCard({
                 {/* Action button — muted for past setlists */}
                 <Button
                     variant="ghost"
-                    onClick={onPerform}
-                    className="w-full py-3 rounded-xl font-semibold bg-brand/10 hover:bg-brand/15 text-foreground"
+                    className="w-full py-3 rounded-xl font-semibold bg-brand/10 group-hover:bg-brand/15 text-foreground transition-colors"
                 >
                     <PlayCircle className="h-4 w-4" />
                     Practice
@@ -100,7 +102,10 @@ export function NextServiceCard({
 
     // Upcoming setlist — bold brand gradient hero card
     return (
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-brand to-brand/80 p-5 shadow-lg shadow-brand/20 overflow-hidden relative">
+        <div 
+            onClick={onPerform}
+            className="rounded-2xl border border-white/10 bg-gradient-to-br from-brand to-brand/80 p-5 shadow-lg shadow-brand/20 overflow-hidden relative cursor-pointer hover:shadow-brand/40 hover:from-brand hover:to-brand/90 transition-all duration-200 group"
+        >
             {/* Date label — white badge on gradient */}
             <div className="flex items-center justify-between mb-3">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/15 text-white/90 backdrop-blur-sm">
@@ -134,8 +139,7 @@ export function NextServiceCard({
             {/* Primary CTA — white button on gradient */}
             <Button
                 variant="ghost"
-                onClick={onPerform}
-                className="w-full py-3 rounded-xl font-bold bg-white text-brand hover:bg-white/90 active:scale-[0.98]"
+                className="w-full py-3 rounded-xl font-bold bg-white text-brand group-hover:bg-white/90 transition-colors"
             >
                 <PlayCircle className="h-4 w-4" />
                 Perform

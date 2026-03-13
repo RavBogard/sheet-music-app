@@ -277,40 +277,38 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                     </div>
 
                     {/* ══════════════════════════════════════════
-                        MEMBER VIEW: Single focused card -- one card, one action.
-                        Replaces HeroCard + CommandRow + UpcomingTimeline + etc.
+                        HERO CARD: Single focused card -- one card, one action.
+                        Visible to all users (Guests, Pending, Members).
                        ══════════════════════════════════════════ */}
-                    {user && isMember && (
-                        <div className="flex flex-col gap-4">
-                            {!setlistsReady ? (
-                                /* Skeleton card while loading — brand-tinted */
-                                <div className="rounded-2xl border border-brand/10 bg-card/50 p-5 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full bg-brand/15 animate-pulse" />
-                                        <div className="h-3 w-20 bg-brand/10 rounded animate-pulse" />
-                                    </div>
-                                    <div className="h-5 w-52 bg-brand/15 rounded animate-pulse" />
-                                    <div className="h-3 w-32 bg-brand/10 rounded animate-pulse" />
-                                    <div className="h-9 w-full bg-brand/10 rounded-xl animate-pulse mt-2" />
+                    <div className="flex flex-col gap-4">
+                        {!setlistsReady ? (
+                            /* Skeleton card while loading — brand-tinted */
+                            <div className="rounded-2xl border border-brand/10 bg-card/50 p-5 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-brand/15 animate-pulse" />
+                                    <div className="h-3 w-20 bg-brand/10 rounded animate-pulse" />
                                 </div>
-                            ) : tonightSetlist ? (
-                                <NextServiceCard
-                                    setlist={tonightSetlist}
-                                    onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
-                                />
-                            ) : mostRecentPastSetlist ? (
-                                <NextServiceCard
-                                    setlist={mostRecentPastSetlist}
-                                    onPerform={() => router.push(`/perform/setlist/${mostRecentPastSetlist.id}`)}
-                                    isPastSetlist={true}
-                                />
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                    No services scheduled yet
-                                </p>
-                            )}
-                        </div>
-                    )}
+                                <div className="h-5 w-52 bg-brand/15 rounded animate-pulse" />
+                                <div className="h-3 w-32 bg-brand/10 rounded animate-pulse" />
+                                <div className="h-9 w-full bg-brand/10 rounded-xl animate-pulse mt-2" />
+                            </div>
+                        ) : tonightSetlist ? (
+                            <NextServiceCard
+                                setlist={tonightSetlist}
+                                onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
+                            />
+                        ) : mostRecentPastSetlist ? (
+                            <NextServiceCard
+                                setlist={mostRecentPastSetlist}
+                                onPerform={() => router.push(`/perform/setlist/${mostRecentPastSetlist.id}`)}
+                                isPastSetlist={true}
+                            />
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                                No services scheduled yet
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
 
