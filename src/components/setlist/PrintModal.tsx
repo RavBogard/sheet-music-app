@@ -356,22 +356,40 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                         </div>
                     ) : (
                         <>
-                            {/* Basic Fields */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="col-span-2">
-                                    <label className="text-sm text-muted-foreground mb-1 block">Title</label>
-                                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" />
-                                </div>
-                                <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">Date</label>
-                                    <Input value={date} onChange={e => setDate(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className="text-sm text-muted-foreground mb-1 block">Event (optional)</label>
-                                    <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="e.g., Shabbat Morning" />
+                            {/* 1. Packet Type Toggle - MOST PROMINENT */}
+                            <div className="space-y-2 pb-1">
+                                <label className="text-sm font-medium text-foreground">What to print:</label>
+                                <div className="flex rounded-lg border border-border overflow-hidden">
+                                    <button
+                                        type="button"
+                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                                            coverOnly
+                                                ? "bg-brand text-primary-foreground"
+                                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        }`}
+                                        onClick={() => setCoverOnly(true)}
+                                    >
+                                        <ListChecks className="h-4 w-4" />
+                                        Setlist Only
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                                            !coverOnly
+                                                ? "bg-brand text-primary-foreground"
+                                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        }`}
+                                        onClick={() => setCoverOnly(false)}
+                                    >
+                                        <FileStack className="h-4 w-4" />
+                                        Full Packet (PDFs)
+                                    </button>
                                 </div>
                             </div>
 
+                            <hr className="border-border my-2" />
+
+                            {/* 2. Print Mode / Audience */}
                             <PrintModeSelector
                                 printMode={printMode}
                                 setPrintMode={setPrintMode}
@@ -383,42 +401,26 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 toggleMusician={toggleMusician}
                             />
 
-                            {/* Packet Type Toggle */}
-                            <div className="flex rounded-lg border border-border overflow-hidden">
-                                <button
-                                    type="button"
-                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                                        !coverOnly
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                                    }`}
-                                    onClick={() => setCoverOnly(false)}
-                                >
-                                    <FileStack className="h-4 w-4" />
-                                    Full Packet
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                                        coverOnly
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                                    }`}
-                                    onClick={() => setCoverOnly(true)}
-                                >
-                                    <ListChecks className="h-4 w-4" />
-                                    Setlist Only
-                                </button>
+                            <hr className="border-border my-2" />
+
+                            {/* 3. Header Metadata */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Header Details:</label>
+                                <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
+                                    <div className="col-span-2">
+                                        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" className="bg-background h-9" />
+                                    </div>
+                                    <div>
+                                        <Input value={date} onChange={e => setDate(e.target.value)} placeholder="Date" className="bg-background h-9" />
+                                    </div>
+                                    <div>
+                                        <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event (optional)" className="bg-background h-9" />
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground -mt-1">
-                                {coverOnly
-                                    ? "Prints just the song list — one page, no chart PDFs."
-                                    : "Prints cover page with all chart PDFs."
-                                }
-                            </p>
 
                             {/* Transposition Details (just-me mode) */}
-                            {printMode === "just-me" && activeTranspositions > 0 && (
+                            {printMode === "just-me" && activeTranspositions > 0 && !coverOnly && (
                                 <TransposeTrackList
                                     tracks={tracks}
                                     trackTranspositions={trackTranspositions}
@@ -437,7 +439,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                             />
 
                             {error && (
-                                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
+                                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm mt-2">
                                     {error}
                                 </div>
                             )}
