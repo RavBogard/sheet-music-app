@@ -75,6 +75,12 @@ vi.mock("@/components/performance/SongNavigation", () => ({
 vi.mock("@/components/performance/SetlistDrawerLegacy", () => ({
     SetlistDrawer: () => <div>Drawer</div>,
 }))
+
+// Mock PrintModal which is rendered conditionally
+vi.mock("@/components/setlist/PrintModal", () => ({
+    PrintModal: () => <div data-testid="print-modal">Print Modal</div>,
+}))
+
 import { PDFOverlay } from "../PDFOverlay"
 
 const songA: SetlistTrack = {
