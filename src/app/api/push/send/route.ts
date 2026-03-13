@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
+import { withAuth } from "@/lib/api-auth"
 
 export const dynamic = 'force-dynamic'
 
@@ -23,11 +24,21 @@ const schema = z.object({
  * Reads FCM tokens from each user's `fcmTokens` array in Firestore,
  * then dispatches via Firebase Admin Messaging.
  */
-export const POST = createApiHandler(
-    async (ctx) => {
+export async function POST(req: NextRequest) {
+    const auth = await withAuth(req, 'band_leader')
+    if (auth instanceof NextResponse) return auth
+
+    try {
+        const body = await req.json()
+        const parsed = schema.safeParse(body)
+
+        if (!parsed.success) {
+             return NextResponse.json({ error: "Invalid request", details: parsed.error.format() }, { status: 400 })
+        }
+
         initAdmin()
 
-        const { targetUids, title, body, link } = ctx.body!
+        const { targetUids, title, body: textBody, link } = parsed.data
 
         const db = getFirestore()
 
@@ -37,7 +48,7 @@ export const POST = createApiHandler(
 
         for (let i = 0; i < targetUids.length; i += BATCH_SIZE) {
             const batch = targetUids.slice(i, i + BATCH_SIZE)
-            const refs = batch.map(uid => db.collection('users').doc(uid))
+            const refs = batch.map(uid => db.collection('users').doc(uid))      
             const docs = await db.getAll(...refs)
 
             for (const userDoc of docs) {
@@ -55,13 +66,13 @@ export const POST = createApiHandler(
         }
 
         // Send via Firebase Admin Messaging
-        const { getMessaging } = await import('firebase-admin/messaging')
+        const { getMessaging } = await import('firebase-admin/messaging')       
         const messaging = getMessaging()
 
         const message = {
             notification: {
                 title,
-                body,
+                body: textBody,
             },
             webpush: {
                 fcmOptions: {
@@ -102,7 +113,7 @@ export const POST = createApiHandler(
 
         // Clean up stale tokens
         if (staleTokens.length > 0) {
-            const { FieldValue } = await import('firebase-admin/firestore')
+            const { FieldValue } = await import('firebase-admin/firestore')     
             for (const uid of targetUids) {
                 try {
                     const userRef = db.collection('users').doc(uid)
@@ -113,7 +124,7 @@ export const POST = createApiHandler(
                     const staleForUser = tokens.filter(t => staleTokens.includes(t))
                     if (staleForUser.length > 0) {
                         await userRef.update({
-                            fcmTokens: FieldValue.arrayRemove(...staleForUser),
+                            fcmTokens: FieldValue.arrayRemove(...staleForUser), 
                         })
                     }
                 } catch {
@@ -127,6 +138,9 @@ export const POST = createApiHandler(
             failed: failureCount,
             staleTokensCleaned: staleTokens.length,
         })
-    },
-    { role: 'band_leader', schema }
-)
+
+    } catch (error) {
+        logger.error('[Push] API error:', error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+}
