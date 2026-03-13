@@ -1,11 +1,7 @@
-// NOTE: This route uses withAuth directly instead of createApiHandler because:
-// 1. Rate limiting runs before auth (reject spam before token verification)
-// 2. Returns streaming Response (not NextResponse) for SSE
-// 3. Custom body parsing with early return pattern
 import { NextResponse, NextRequest } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
@@ -116,30 +112,13 @@ You must return a JSON object with this structure:
 - **Available Templates**: ${Object.entries(TEMPLATE_LABELS).map(([k, v]) => `${v.label} (${k})`).join(', ')}
 `
 
-export async function POST(request: NextRequest) {
-  try {
+export const POST = createApiHandler(async (ctx) => {
     // Rate limit: 20 AI requests/min
-    const limited = await checkRateLimit(request, 'ai')
+    const limited = await checkRateLimit(ctx.req, 'ai')
     if (limited) return limited
 
-    // 1. Authenticate first (reject before parsing body)
-    const auth = await withAuth(request)
-    if (auth instanceof NextResponse) return auth // 401 — reject unauthenticated
-
-    const rawBody = await request.json().catch(() => null)
-    if (!rawBody) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
-    }
-
-    const validation = chatBodySchema.safeParse(rawBody)
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: validation.error.format() },
-        { status: 400 }
-      )
-    }
-
-    const { messages, currentSetlist, libraryFiles, setlistName, rabbi, matrixContext } = validation.data
+    // @ts-expect-error - Using parsed body from createApiHandler schema
+    const { messages, currentSetlist, libraryFiles, setlistName, rabbi, matrixContext } = ctx.body
 
     // ── Template Auto-Fill: detect "Create a X for Y" and use template engine ──
     const lastMessage = messages[messages.length - 1]?.content || ''
@@ -217,12 +196,12 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
 
     // 2. Check Role & Build User Context
-    const userRole = auth.role || 'member'
+    const userRole = ctx.auth!.role || 'member'
     let userContext = ""
     const missingContexts: string[] = []
 
     try {
-      if (auth.isAdmin || auth.isBandLeader) {
+      if (ctx.auth!.isAdmin || ctx.auth!.isBandLeader) {
         const usersSnap = await getFirestore().collection('users').limit(50).get()
         const users = usersSnap.docs.map(d => {
           const data = d.data()
@@ -261,7 +240,7 @@ export async function POST(request: NextRequest) {
           .limit(80)
           .get(),
         firestore.collection('setlists')
-          .where('ownerId', '==', auth.uid)
+          .where('ownerId', '==', ctx.auth!.uid)
           .orderBy('date', 'desc')
           .limit(20)
           .get(),
@@ -413,7 +392,7 @@ ${messages[messages.length - 1].content}
                   await firestore.collection('templates').doc(templateKey).set({
                     slots: cleanSlots,
                     updatedAt: new Date(),
-                    updatedBy: auth.uid,
+                    updatedBy: ctx.auth!.uid,
                   })
                   const templateLabel = TEMPLATE_LABELS[templateKey]?.label || templateKey
                   parsed.message = (parsed.message || '') + `\n\nTemplate "${templateLabel}" saved with ${cleanSlots.length} slots.`
@@ -448,11 +427,4 @@ ${messages[messages.length - 1].content}
       }
     })
 
-  } catch (error: unknown) {
-    logger.error("[Chat] Request failed:", error)
-    return NextResponse.json(
-      { error: "Chat request failed" },
-      { status: 500 }
-    )
-  }
-}
+}, { schema: chatBodySchema })

@@ -24,7 +24,8 @@ const publicExactRoutes = ['/login', '/']
 // Prefix-match public routes — these serve public/unauthenticated content
 // /perform/* — musicians view shared setlists (may not be signed in)
 // /qr/*     — QR code sign-in flow (used *before* having a session)
-const publicPrefixes = ['/perform', '/qr']
+// /live/*   — public live display view for screens and lobby
+const publicPrefixes = ['/perform', '/qr', '/live']
 
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl

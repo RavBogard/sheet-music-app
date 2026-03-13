@@ -36,14 +36,10 @@ const mockStoreState = {
     setAiEnabled: vi.fn(),
     capoFret: null,
     transposition: 0,
-    currentVisiblePage: 1,
     zoom: 1,
     setZoom: vi.fn(),
     currentSetlistId: null,
-    syncedBroadcasterId: null,
-    setSyncedBroadcasterId: vi.fn(),
     jumpToSong: vi.fn(),
-    setCurrentVisiblePage: vi.fn(),
 }
 vi.mock("@/lib/store", () => ({
     useMusicStore: Object.assign(

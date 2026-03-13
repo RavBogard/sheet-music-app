@@ -23,7 +23,7 @@ export default function LoginPage() {
     const { user, loading, signIn } = useAuth()
     const congregation = useCongregation()
     const router = useRouter()
-    const [signInState, setSignInState] = useState<"idle" | "popup" | "redirect">("idle")
+    const [signInState, setSignInState] = useState<"idle" | "loading">("idle")
 
     useEffect(() => {
         if (!loading && user) {
@@ -34,10 +34,18 @@ export default function LoginPage() {
     }, [user?.uid, loading, router])
 
     const handleGoogleSignIn = async () => {
-        setSignInState("popup") // optimistic — will update to "redirect" if needed
+        setSignInState("loading")
         try {
-            const method = await signIn()
-            setSignInState(method)
+            await signIn()
+            // If the user cancelled the popup, signIn resolves but user won't be set.
+            // We need to check if user is populated or loading is still true.
+            // Actually, onAuthStateChanged will handle the redirect via useEffect.
+            // If the popup was closed, user remains null, so we reset state if still idle.
+            // But we can just rely on the user state from context.
+            // Reset to idle so they can try again if it didn't trigger a redirect.
+            setTimeout(() => {
+                setSignInState((prev) => prev === "loading" ? "idle" : prev)
+            }, 1000)
         } catch {
             setSignInState("idle")
         }
@@ -66,11 +74,11 @@ export default function LoginPage() {
                         <img
                             src="/logo.jpg"
                             alt={congregation.shortName}
-                            className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
+                            className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"  
                         />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{congregation.shortName}</h1>
+                        <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{congregation.shortName}</h1>  
                         <p className="text-muted-foreground text-sm mt-1.5">
                             Sign in to access the music library
                         </p>
@@ -89,7 +97,7 @@ export default function LoginPage() {
                         ) : (
                             <GoogleIcon className="h-5 w-5 mr-3" />
                         )}
-                        {signInState === "redirect" ? "Redirecting to Google..." : signInState === "popup" ? "Signing in..." : "Sign in with Google"}
+                        {signInState === "loading" ? "Signing in..." : "Sign in with Google"}
                     </Button>
 
                     <p className="text-xs text-muted-foreground/60">

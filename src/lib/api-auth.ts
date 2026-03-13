@@ -37,14 +37,18 @@ function getSuperAdminUid(): string | null {
  * 
  * Returns AuthResult on success, throws NextResponse on failure.
  */
+export async function requireAuth(req: NextRequest | Request, requiredRole?: AuthRole, optional?: false): Promise<AuthResult>;
+export async function requireAuth(req: NextRequest | Request, requiredRole: AuthRole | undefined, optional: true): Promise<AuthResult | null>;
 export async function requireAuth(
     req: NextRequest | Request,
-    requiredRole?: AuthRole
-): Promise<AuthResult> {
+    requiredRole?: AuthRole,
+    optional: boolean = false
+): Promise<AuthResult | null> {
     const authHeader = req.headers.get("Authorization")
     const rawToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null
 
     if (!rawToken) {
+        if (optional) return null;
         throw NextResponse.json(
             { error: "Authentication required" },
             { status: 401 }
@@ -60,6 +64,7 @@ export async function requireAuth(
     const decoded = await verifyIdToken(rawToken)
 
     if (!decoded) {
+        if (optional) return null;
         throw NextResponse.json(
             { error: "Invalid or expired token" },
             { status: 403 }
@@ -118,12 +123,15 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
  *   const auth = await withAuth(req)
  *   if (auth instanceof NextResponse) return auth
  */
+export async function withAuth(req: NextRequest | Request, requiredRole?: AuthRole, optional?: false): Promise<AuthResult | NextResponse>;
+export async function withAuth(req: NextRequest | Request, requiredRole: AuthRole | undefined, optional: true): Promise<AuthResult | null | NextResponse>;
 export async function withAuth(
     req: NextRequest | Request,
-    requiredRole?: AuthRole
-): Promise<AuthResult | NextResponse> {
+    requiredRole?: AuthRole,
+    optional: boolean = false
+): Promise<AuthResult | null | NextResponse> {
     try {
-        return await requireAuth(req, requiredRole)
+        return await requireAuth(req, requiredRole, optional as any)
     } catch (error) {
         if (error instanceof NextResponse) return error
         logger.error("Auth middleware error:", error)

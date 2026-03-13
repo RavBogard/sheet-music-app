@@ -28,6 +28,7 @@ export interface ProtectedApiContext<P = any, B = any> {
 interface ApiOptions<TBody extends z.ZodType> {
     role?: AuthRole
     schema?: TBody
+    requireAuth?: boolean
 }
 
 /**
@@ -37,18 +38,20 @@ interface ApiOptions<TBody extends z.ZodType> {
  * 3. Error Catching & Logging
  */
 export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
-    handler: (ctx: ProtectedApiContext<TParams, z.infer<TBody>>) => Promise<NextResponse> | NextResponse,
+    handler: (ctx: ProtectedApiContext<TParams, z.infer<TBody>>) => Promise<NextResponse | Response> | NextResponse | Response,
     options?: ApiOptions<TBody>
 ) {
-    return async (req: NextRequest, context?: any): Promise<NextResponse> => {
+    return async (req: NextRequest, context?: any): Promise<NextResponse | Response> => {
         try {
             // 1. Authenticate Request
-            const authResponse = await withAuth(req, options?.role)
+            const optional = options?.requireAuth === false;
+            const authResponse = await withAuth(req, options?.role, optional as any)
             if (authResponse instanceof NextResponse) {
                 return authResponse // auth failed (401 or 403)
             }
 
             // 2. Validate Body (if schema provided and applicable request type)
+
             let parsedBody: z.infer<TBody> | undefined = undefined
             if (options?.schema && ["POST", "PUT", "PATCH"].includes(req.method)) {
                 try {
@@ -70,7 +73,7 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
             // 3. Execute Handler
             const ctx: ProtectedApiContext<TParams, z.infer<TBody>> = {
                 req,
-                auth: authResponse,
+                auth: authResponse as AuthResult,
                 params: resolvedParams,
                 body: parsedBody
             }

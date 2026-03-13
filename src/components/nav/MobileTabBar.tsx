@@ -19,11 +19,16 @@ import type { DriveFile } from "@/types/models"
 
 const SESSION_SETLIST_KEY = "lastOpenedSetlistId"
 
-export function MobileTabBar() {
+import { AppNavigationProps } from "./AppNavigation"
+
+export function MobileTabBar(props: AppNavigationProps) {
     const pathname = usePathname()
     const router = useRouter()
     const { user, isMember } = useAuth()
-    const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const { hasAccess: hasMonitorAccess } = useMonitorAccess({
+        serverIsAdmin: props.serverIsAdmin,
+        serverIsSoundEngineer: props.serverIsSoundEngineer
+    })
     const congregation = useCongregation()
     const [keyboardOpen, setKeyboardOpen] = useState(false)
     const [monitorOpen, setMonitorOpen] = useState(false)

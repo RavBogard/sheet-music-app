@@ -37,12 +37,20 @@ export interface DashboardServerProps {
     serverGreeting: Greeting | null
     /** Congregation short name from server (avoids waiting for Firestore) */
     serverShortName: string | null
+    serverIsMember?: boolean
+    serverIsBandLeader?: boolean
+    serverIsAdmin?: boolean
+    serverUid?: string | null
 }
 
-export default function DashboardClient({ serverGreeting, serverShortName }: DashboardServerProps) {
+export default function DashboardClient({ serverGreeting, serverShortName, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
-    const { user, profile, cachedUser, signIn, isMember, loading: authLoading } = useAuth()
+    const { user: authUser, profile, cachedUser, signIn, isMember: authIsMember, loading: authLoading } = useAuth()
     const congregation = useCongregation()
+    
+    const isMember = authIsMember || serverIsMember
+    const effectiveUid = authUser?.uid || serverUid
+    const user = authUser || (serverUid ? { uid: serverUid, displayName: null } as any : null)
 
     const [upcomingPersonal, setUpcomingPersonal] = useState<Setlist[]>([])
     const [upcomingPublic, setUpcomingPublic] = useState<Setlist[]>([])

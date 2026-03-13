@@ -1,60 +1,39 @@
-# Auth & Access Audit (CentralReform.live)
+# CentralReform.live: Bulletproof Auth & Architecture
 
 ## What This Is
-
-A specialized audit and hardening phase for the Central Reform Congregation worship music platform. The goal is to ensure that authentication flows, role-based access control (RBAC), and feature visibility are "bulletproof," preventing permission bleed and providing a seamless experience for both authenticated musicians and unauthenticated community members.
+A comprehensive refactoring project to fix authentication instability, streamline public access, eliminate UI leaks, and remove significant technical debt (legacy rendering engines) from the Next.js App Router codebase.
 
 ## Core Value
-
-Musicians see exactly what they need for their specific role (and nothing else), while unauthenticated users get instant, frictionless access to public setlists and charts.
+Musicians see exactly what they need instantly, admins have secure control without UI leaks, and the public gets frictionless access to setlists. The system is easy to maintain with a single unified performance engine.
 
 ## Requirements
 
 ### Validated
-
-- ✓ Setlist management (editor/performance) — v2.6
-- ✓ Sheet music library (Google Drive/Firebase Storage) — v2.6
-- ✓ Monitor mixing (X32 bridge) — v2.6
-- ✓ Transposition engine (Gemini AI + music-math) — v2.6
-- ✓ Basic Firebase Auth (Google OAuth) — v2.6
+- ✓ V2 Setlist Performance View is functional and preferred.
+- ✓ Next.js App Router architecture is in place (`src/proxy.ts`).
+- ✓ Firebase Client SDK is used for initial auth.
 
 ### Active
-
-- [ ] **AUTH-AUDIT-01**: Audit all authentication flows to eliminate "already signed in" or "stale session" bugs.
-- [ ] **RBAC-01**: Enforce strict "Edit" view visibility—only Admins and Band Leaders should see setlist editing features.
-- [ ] **RBAC-02**: Enforce "Monitor" feature visibility—only users with an assigned monitor bus should see monitor controls.
-- [ ] **PUBLIC-01**: Ensure unauthenticated users can access public setlists and charts instantly via public links.
-- [ ] **UI-UX-01**: Implement a "feature filtering" system that hides UI elements based on user roles and assignments.
-- [ ] **AUTH-ROBUST**: Harden the sign-in flow to handle edge cases (mobile popup blockers, account switching, etc.).
+- [ ] **ARCH-01**: Eliminate the legacy "footswitch" rendering engine (`PerformerView`, `FlowItemView`, `/perform/[id]`).
+- [ ] **ARCH-02**: Consolidate all performance views to `/perform/setlist/[id]`.
+- [ ] **AUTH-01**: Implement `next-firebase-auth-edge` for robust session-to-cookie synchronization.
+- [ ] **AUTH-02**: Standardize mobile login to popup-only (bypassing iOS ITP blocks).
+- [ ] **AUTH-03**: Implement "Hard Logout" (cache purge and full reload).
+- [ ] **SEC-01**: Strictly enforce the public boundary—editors are only for editors, public goes to performance view.
+- [ ] **SEC-02**: Implement Server-Side UI Gating (hide restricted UI at the server level, no client-side flicker).
+- [ ] **SEC-03**: Standardize all `/api/*` routes to use the secure `createApiHandler`.
 
 ### Out of Scope
-
-- [ ] Adding new non-auth features — focus is purely on audit and hardening.
-- [ ] Redesigning the monitor mixing logic — only focusing on its *visibility* and *access*.
-
-## Context
-
-- **Previous Work**: Significant efforts in v1.3, v1.5, v1.6, v1.9, and v2.5 to stabilize the codebase and auth, yet bugs persist around role boundaries.
-- **Roles**:
-    - **Admin**: Full access to all features.
-    - **Band Leader**: Admin-lite; can edit public setlists and upload charts.
-    - **Musician**: Access to monitor features (if assigned) and all public setlists/charts.
-    - **Member**: Access to public setlists/charts.
-    - **Sound Engineer (Toggle)**: Can assign monitors and change monitoring settings.
-- **Known Issues**: Non-editors seeing "Edit" options; musicians without monitors seeing monitor buttons; unauthenticated users struggling to access public charts.
-
-## Constraints
-
-- **Tech Stack**: Next.js 16 (App Router), Firebase (Auth, Firestore, Storage), Tailwind CSS 4.
-- **User Base**: Non-technical musicians and community members; UX must be frictionless.
-- **Security**: Must follow Firebase security best practices (Firestore rules, etc.).
+- Adding new features to the setlist editor.
+- Changing the underlying database schema.
+- Re-architecting the X32 monitor bridge (only securing its UI access).
 
 ## Key Decisions
-
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Audit first, then refactor | Need to reproduce and understand the "why" behind current leaks before fixing. | — Pending |
-| Role-based feature filtering | UI should reflect permissions, not just show disabled states. | — Pending |
+| Delete Footswitch Engine | It is unused, causes routing complexity, and forces the maintenance of two separate performance UI paradigms. | Pending |
+| Popup-Only Auth | `signInWithRedirect` is fundamentally broken on modern iOS Safari due to third-party cookie restrictions. | Pending |
+| Server-Side Gating | Relying on client-side hydration for RBAC causes UI flicker and leaks "unauthorized" code to the browser. | Pending |
 
 ---
-*Last updated: 2026-03-13 after initialization of Auth & Access Audit project*
+*Last updated: 2026-03-13 after initialization*

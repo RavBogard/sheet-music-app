@@ -15,10 +15,6 @@ import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { cn } from "@/lib/utils"
-import { LiveSession, subscribeToLiveSessions } from "@/lib/live-session-firebase"
-import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
-import { Link as LinkIcon, Unlink } from "lucide-react"
 
 interface PerformanceToolbarProps {
     onHome: () => void
@@ -27,14 +23,9 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
     const {
-        aiState, setAiEnabled, capoFret, transposition, currentVisiblePage, zoom, setZoom,
-        currentSetlistId, syncedBroadcasterId, setSyncedBroadcasterId, jumpToSong, setCurrentVisiblePage, playbackQueue, queueIndex
+        aiState, setAiEnabled, capoFret, transposition, zoom, setZoom
     } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
-    const { user, isAdmin, isBandLeader } = useAuth()
-    const router = useRouter()
-
-    const isBroadcaster = (isAdmin || isBandLeader) && !!user?.uid
 
     // Establish WebSocket connection immediately so the bridge is
     // ready *before* the user opens the Audio popover (zero latency).
@@ -82,43 +73,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         return "Transpose"
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
-    // ── Live Session Sync Logic ──
-    const [activeSessions, setActiveSessions] = useState<LiveSession[]>([])
-
-    useEffect(() => {
-        if (!currentSetlistId || isBroadcaster) return
-        const unsub = subscribeToLiveSessions(currentSetlistId, setActiveSessions)
-        return () => unsub()
-    }, [currentSetlistId, isBroadcaster])
-
-    const navigatingRef = useRef(false)
-    useEffect(() => {
-        if (!syncedBroadcasterId || isBroadcaster) return
-
-        const session = activeSessions.find(s => s.broadcasterId === syncedBroadcasterId)
-        if (!session) return // Keep state just in case they drop momentarily
-
-        if (session.queueIndex !== queueIndex && session.queueIndex >= 0 && session.queueIndex < playbackQueue.length && !navigatingRef.current) {
-            navigatingRef.current = true
-            const track = jumpToSong(session.queueIndex)
-            if (track) {
-                router.push(`/perform/${track.fileId}`)
-                // Reset guard after navigation settles
-                setTimeout(() => { navigatingRef.current = false }, 500)
-            } else {
-                navigatingRef.current = false
-            }
-        }
-
-        if (session.currentVisiblePage !== currentVisiblePage && session.currentVisiblePage > 0) {
-            setCurrentVisiblePage(session.currentVisiblePage)
-            const pageEl = document.querySelector(`[data-page-number="${session.currentVisiblePage}"]`)
-            if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-    }, [activeSessions, syncedBroadcasterId, queueIndex, currentVisiblePage, playbackQueue, jumpToSong, isBroadcaster, router, setCurrentVisiblePage])
-
-    const availableSession = activeSessions[0]
-
     // ── Shared sub-components ──
 
     const zoomControls = (compact = false) => (
@@ -157,31 +111,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         </div>
     )
 
-    const syncButton = (compact = false) => (
-        !isBroadcaster && availableSession ? (
-            <Button
-                variant="ghost"
-                onClick={() => setSyncedBroadcasterId(syncedBroadcasterId ? null : availableSession.broadcasterId)}
-                className={cn(
-                    "rounded-xl font-semibold fluid-interaction flex items-center transition-all",
-                    compact
-                        ? "h-11 px-3 text-xs gap-1.5 max-w-[110px]"
-                        : "h-11 px-4 text-xs font-bold uppercase tracking-wider gap-2 min-w-[120px]",
-                    syncedBroadcasterId
-                        ? "bg-green-600 border border-green-500/50 text-foreground shadow-lg shadow-green-900/20"
-                        : "glass-card text-foreground hover:bg-muted animate-pulse"
-                )}
-            >
-                {syncedBroadcasterId ? <LinkIcon className="h-3.5 w-3.5 shrink-0" /> : <Unlink className="h-3.5 w-3.5 shrink-0" />}
-                <span className="truncate">
-                    {syncedBroadcasterId
-                        ? (compact ? "Following" : `Following ${availableSession.broadcasterName.split(' ')[0]}`)
-                        : (compact ? "Sync" : "Sync to Leader")
-                    }
-                </span>
-            </Button>
-        ) : null
-    )
+
 
     const monitorPopover = (id: string, compact = false, side: "top" | "left" = "top") => (
         <Popover onOpenChange={(open) => trackPopover(id, open)}>
@@ -262,9 +192,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Metronome */}
                     <MetronomeControl />
 
-                    {/* Sync Button (if not broadcaster and session available) */}
-                    {syncButton(true)}
-
                     {/* Monitor Mix popover */}
                     {monitorPopover('tools', true)}
 
@@ -308,7 +235,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
 
                 {/* RIGHT: Sync + Monitor + Metronome + Transposer */}
                 <div className="flex items-center gap-2 z-10">
-                    {syncButton(true)}
                     {monitorPopover('tools-tablet', true)}
                     <MetronomeControl />
                     {transposerPopover(transposerOpenDesktop, setTransposerOpenDesktop, 'transposer-tablet', true)}
@@ -324,9 +250,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <X className="h-5 w-5" />
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
-
-                    {/* Sync Button (Desktop) */}
-                    {syncButton(false)}
 
                     {/* Scale Controls */}
                     {zoomControls(false)}

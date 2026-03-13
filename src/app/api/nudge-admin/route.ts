@@ -1,21 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
-import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { getAuth } from "firebase-admin/auth"
+import { NextResponse } from "next/server"
+import { getFirestore } from "@/lib/firebase-admin"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { logger } from "@/lib/logger"
 
-export async function POST(req: NextRequest) {
+export const POST = createApiHandler(async (ctx) => {
     try {
-        const authHeader = req.headers.get('Authorization')
-        if (!authHeader?.startsWith('Bearer ')) {
-            return new NextResponse('Unauthorized', { status: 401 })
-        }
-
-        initAdmin()
-        const token = authHeader.split('Bearer ')[1]
-        const decodedToken = await getAuth().verifyIdToken(token)
-
         const db = getFirestore()
-        const userRef = db.collection('users').doc(decodedToken.uid)
+        const userRef = db.collection('users').doc(ctx.auth!.uid)
 
         await userRef.update({
             lastNudgeAt: new Date().toISOString(),
@@ -27,4 +18,4 @@ export async function POST(req: NextRequest) {
         logger.error("Nudge admin error:", error)
         return new NextResponse("Internal Server Error", { status: 500 })
     }
-}
+})

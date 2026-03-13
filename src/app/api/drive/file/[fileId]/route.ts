@@ -1,9 +1,6 @@
-// NOTE: This route uses withAuth directly instead of createApiHandler because
-// it accepts BOTH Bearer token auth AND same-origin browser requests (no token).
-// createApiHandler would reject all browser requests with 401.
 import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 
@@ -68,34 +65,27 @@ function isTrustedBrowserRequest(req: NextRequest): boolean {
     return false
 }
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ fileId: string }> }
-) {
-    const limited = await checkRateLimit(request, 'api')
+export const GET = createApiHandler(async (ctx) => {
+    const limited = await checkRateLimit(ctx.req, 'api')
     if (limited) return limited
 
     // Auth: Accept Bearer token (API calls) OR same-origin browser requests
     // (chart embeds, prefetches, audio elements — can't attach Bearer headers).
     // Direct curl/script access without either is blocked.
-    const hasAuthHeader = request.headers.get('Authorization')?.startsWith('Bearer ')
-    if (hasAuthHeader) {
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
-    } else if (!isTrustedBrowserRequest(request)) {
-        const { fileId: fid } = await params
+    if (!ctx.auth && !isTrustedBrowserRequest(ctx.req)) {
+        const fid = ctx.params?.fileId
         logger.warn(`[FileProxy] Untrusted request blocked for ${fid}`, {
-            secFetchSite: request.headers.get('sec-fetch-site'),
-            secFetchDest: request.headers.get('sec-fetch-dest'),
-            referer: request.headers.get('referer'),
+            secFetchSite: ctx.req.headers.get('sec-fetch-site'),
+            secFetchDest: ctx.req.headers.get('sec-fetch-dest'),
+            referer: ctx.req.headers.get('referer'),
         })
         return NextResponse.json(
             { error: "Authentication required" },
-            { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request) } }
+            { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req) } }
         )
     }
 
-    const { fileId } = await params
+    const fileId = ctx.params?.fileId
 
     try {
         const result = await fetchFileById(fileId)
@@ -103,14 +93,14 @@ export async function GET(
         if (!result) {
             return NextResponse.json(
                 { error: 'File not found', fileId },
-                { status: 404, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request), 'Cache-Control': 'no-store' } }
+                { status: 404, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
             )
         }
 
         return new NextResponse(new Uint8Array(result.buffer), {
             status: 200,
             headers: {
-                'Access-Control-Allow-Origin': getAllowedOrigin(request),
+                'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req),
                 'Cache-Control': 'public, max-age=86400, s-maxage=604800',
                 'Content-Type': result.contentType,
                 'X-Served-From': result.source,
@@ -120,7 +110,7 @@ export async function GET(
         logger.error(`[FileProxy] Unexpected error for ${fileId}:`, error)
         return NextResponse.json(
             { error: 'File unavailable', fileId },
-            { status: 502, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(request), 'Cache-Control': 'no-store' } }
+            { status: 502, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
         )
     }
-}
+}, { requireAuth: false })

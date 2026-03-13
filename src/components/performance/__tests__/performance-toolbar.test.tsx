@@ -17,14 +17,10 @@ const mockStoreState = {
     setAiEnabled: vi.fn(),
     capoFret: null,
     transposition: 0,
-    currentVisiblePage: 1,
     zoom: 1,
     setZoom: mockSetZoom,
     currentSetlistId: null,
-    syncedBroadcasterId: null,
-    setSyncedBroadcasterId: vi.fn(),
     jumpToSong: vi.fn(),
-    setCurrentVisiblePage: vi.fn(),
 }
 vi.mock("@/lib/store", () => ({
     useMusicStore: Object.assign(
@@ -39,10 +35,6 @@ vi.mock("@/lib/store", () => ({
 // Mock hooks
 vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
 vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
-
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
-vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
 
 // Mock sub-components
 vi.mock("@/components/music/TransposerMenu", () => ({

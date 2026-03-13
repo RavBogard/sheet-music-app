@@ -31,16 +31,9 @@ export const POST = createApiHandler(async (ctx) => {
     initAdmin()
     const db = getFirestore()
 
-    // Verify the user is an admin
-    const userDoc = await db.collection("users").doc(ctx.auth.uid).get()
-    const userData = userDoc.data()
-    if (!userData?.role || !["admin", "band_leader"].includes(userData.role)) {
-        return NextResponse.json({ error: "Admin access required" }, { status: 403 })
-    }
-
     // Invalidate any existing unused codes from this user
     const existing = await db.collection("bridge-setup-codes")
-        .where("createdBy", "==", ctx.auth.uid)
+        .where("createdBy", "==", ctx.auth!.uid)
         .where("used", "==", false)
         .get()
     if (!existing.empty) {
@@ -55,14 +48,14 @@ export const POST = createApiHandler(async (ctx) => {
     const expiresAt = now + 10 * 60 * 1000 // 10 minutes
 
     await db.collection("bridge-setup-codes").doc(code).set({
-        createdBy: ctx.auth.uid,
+        createdBy: ctx.auth!.uid,
         createdAt: now,
         expiresAt,
         used: false,
     })
 
     return NextResponse.json({ code, expiresAt })
-})
+}, { role: 'band_leader' })
 
 // GET: Bridge redeems a setup code for credentials
 export async function GET(req: NextRequest) {

@@ -18,15 +18,27 @@ import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
  * Musicians don't need sound engineer access to control their own bus.
  * Sound engineers get automatic access + extra controls (matrix, bus assignment).
  */
-export function useMonitorAccess(): {
+export interface UseMonitorAccessProps {
+    serverIsAdmin?: boolean
+    serverIsSoundEngineer?: boolean
+}
+
+export function useMonitorAccess(props?: UseMonitorAccessProps): {
     hasAccess: boolean
     isAdmin: boolean
     isSoundEngineer: boolean
     hasBusAssigned: boolean
     loading: boolean
 } {
-    const { user, isAdmin, isSoundEngineer } = useAuth()
+    const { user, isAdmin: authIsAdmin, isSoundEngineer: authIsSoundEngineer } = useAuth()
+    
+    // Combine auth context with server props for immediate availability
+    const isAdmin = authIsAdmin || !!props?.serverIsAdmin
+    const isSoundEngineer = authIsSoundEngineer || !!props?.serverIsSoundEngineer
+    
     const [hasBusAssigned, setHasBusAssigned] = useState(false)
+    // If we already know they have access via server props, we don't strictly need to wait for config to say they have access,
+    // but we still wait for config to know *which* bus they have if they aren't admin/SE.
     const [loading, setLoading] = useState(true)
 
     const ref = useMemo(() => user ? doc(db, "config", "monitor") : null, [user])

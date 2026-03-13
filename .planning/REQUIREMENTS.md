@@ -1,62 +1,43 @@
-# Requirements: Auth & Access Audit
-
 ## v1 Requirements
 
-### Authentication (AUTH)
-- [ ] **AUTH-01**: Implement `proxy.ts` (Next.js 16) with `next-firebase-auth-edge` for robust server-side session management.
-- [ ] **AUTH-02**: Synchronize client-side `onIdTokenChanged` with server-side cookies via a `/api/login` (or `/api/sync`) endpoint to eliminate "stale session" bugs.
-- [ ] **AUTH-03**: Implement automatic token refreshing and cookie rotation to prevent session expiration during live services.
-- [ ] **AUTH-04**: Add `router.refresh()` calls on login/logout to clear the Next.js Client Router Cache.
-- [ ] **AUTH-05**: Handle Google OAuth popup blockers and redirects gracefully (especially on iOS Safari).
+### Architecture & Tech Debt
+- [ ] **ARCH-01**: Remove `src/components/views/PerformerView.tsx` and `FlowItemView.tsx`.
+- [ ] **ARCH-02**: Delete the `/perform/[id]` route.
+- [ ] **ARCH-03**: Remove global keyboard/footswitch event listeners tied to the legacy view.
 
-### RBAC & Visibility (RBAC)
-- [ ] **RBAC-01**: Implement Firebase Custom Claims for stateless, high-performance role verification (`admin`, `band_leader`, `musician`, `member`).
-- [ ] **RBAC-02**: Implement a server-side Data Access Layer (DAL) that uses React `cache()` to centralize role checks.
-- [ ] **RBAC-03**: **Strict Editor Access**: Only users with `admin` or `band_leader` roles can see or access "Edit" views and setlist modification features.
-- [ ] **RBAC-04**: **Monitor Access Logic**: Only users with the `sound_engineer` toggle OR a specifically assigned `monitorBusId` can see monitor controls.
-- [ ] **RBAC-05**: Hide all privileged UI elements (buttons, links, menus) at the Server Component level to prevent "layout flash" of unauthorized features.
-- [ ] **RBAC-06**: Protect all Server Actions and API Routes with the same RBAC logic (Defense-in-Depth).
+### Authentication & Sessions
+- [ ] **AUTH-01**: Integrate `next-firebase-auth-edge` to handle server-side cookie minting and token refresh automatically.
+- [ ] **AUTH-02**: Replace all instances of `signInWithRedirect` with `signInWithPopup`.
+- [ ] **AUTH-03**: Ensure the "Logout" action calls `/api/logout` (to clear cookie) and executes `window.location.reload()` to purge Next.js Router Cache.
 
-### Public Access (PUBLIC)
-- [ ] **PUBLIC-01**: Enable unauthenticated access to setlists and charts marked as "Public" by their creator.
-- [ ] **PUBLIC-02**: Implement token-based links for specific setlists that bypass the login requirement for "Member" level access.
-- [ ] **PUBLIC-03**: Ensure "Public" views are optimized for guest devices (phones/tablets) and hide all "Login/Sign In" prompts unless explicitly requested.
+### Routing & Public Boundary
+- [ ] **SEC-01**: Remove `?public=true` bypass logic from `/setlists/[id]/page.tsx` (the editor).
+- [ ] **SEC-02**: Update the "Share" functionality to link strictly to the `/perform/setlist/[id]` route.
+- [ ] **SEC-03**: Verify `src/proxy.ts` correctly permits unauthenticated access to the performance route but blocks the editor.
 
-### Monitoring & Assignments (MON)
-- [ ] **MON-01**: **Sound Engineer Role**: Implement a specific flag/role for Sound Engineers to manage monitor assignments.
-- [ ] **MON-02**: **Assignment Interface**: Create/Harden the UI for Sound Engineers to map `user_uid` to `monitor_bus_id`.
-- [ ] **MON-03**: **Personalized Faders**: Ensure a musician only sees the faders/channels they are assigned to (or have starred).
+### UI Permissions (Gating)
+- [ ] **UI-01**: Update `DashboardClient.tsx` (or parent layout) to receive server-verified roles.
+- [ ] **UI-02**: Update `SetlistDashboard.tsx` to conditionally render "Edit", "Duplicate", and "Delete" buttons server-side.
+- [ ] **UI-03**: Ensure Monitor controls are only rendered on the server if the user is a Sound Engineer or has an assigned bus.
 
-## v2 Requirements (Deferred)
-- [ ] **AUTH-OFFLINE**: Full offline PWA support for auth states (complex/low priority given venue wifi).
-- [ ] **RBAC-AUDIT-LOG**: Detailed logging of all permission-sensitive actions.
-- [ ] **LINK-REVOKE**: UI for revoking specific public links or tokens.
-
-## Out of Scope
-- [ ] Redesigning the core transposition logic or PDF viewer (focus is strictly on access/visibility).
-- [ ] Integrating with 3rd party scheduling platforms (Planning Center, etc.).
-
-## Traceability (Roadmap Mapping)
-
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| RBAC-01 | Phase 2 | Pending |
-| RBAC-02 | Phase 2 | Pending |
-| RBAC-03 | Phase 2 | Pending |
-| RBAC-04 | Phase 2 | Pending |
-| RBAC-05 | Phase 2 | Pending |
-| RBAC-06 | Phase 2 | Pending |
-| PUBLIC-01 | Phase 3 | Pending |
-| PUBLIC-02 | Phase 3 | Pending |
-| PUBLIC-03 | Phase 3 | Pending |
-| MON-01 | Phase 2 | Pending |
-| MON-02 | Phase 2 | Pending |
-| MON-03 | Phase 2 | Pending |
+### API Security
+- [ ] **API-01**: Audit all `export async function GET/POST` routes in `src/app/api`.
+- [ ] **API-02**: Refactor insecure endpoints (e.g., `/api/drive/file`, `/api/chat`) to use `createApiHandler`.
 
 ---
-*Last updated: 2026-03-13 after initialization*
+
+## Traceability
+- ARCH-01 -> Phase 1
+- ARCH-02 -> Phase 1
+- ARCH-03 -> Phase 1
+- AUTH-01 -> Phase 2
+- AUTH-02 -> Phase 2
+- AUTH-03 -> Phase 2
+- SEC-01 -> Phase 3
+- SEC-02 -> Phase 3
+- SEC-03 -> Phase 3
+- UI-01 -> Phase 4
+- UI-02 -> Phase 4
+- UI-03 -> Phase 4
+- API-01 -> Phase 5
+- API-02 -> Phase 5

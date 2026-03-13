@@ -23,16 +23,26 @@ import { useRouter } from "next/navigation"
 import { DriveFile } from "@/types/models"
 import { NotificationBell } from "@/components/nav/NotificationBell"
 
-export function DesktopHeader() {
+import { AppNavigationProps } from "./AppNavigation"
+
+export function DesktopHeader(props: AppNavigationProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, profile, isMember, isBandLeader, signIn, signOut } = useAuth()
+    const { user, profile, isMember: authIsMember, isBandLeader: authIsBandLeader, signIn, signOut } = useAuth()
+    
+    // Use server overrides to prevent UI flashing
+    const isMember = authIsMember || !!props.serverIsMember
+    const isBandLeader = authIsBandLeader || !!props.serverIsBandLeader
+
     const { allFiles } = useLibraryStore()
     // Start background sync if logged in
     useLibrary()
     const { setQueue } = useMusicStore()
     const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
-    const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const { hasAccess: hasMonitorAccess } = useMonitorAccess({
+        serverIsAdmin: props.serverIsAdmin,
+        serverIsSoundEngineer: props.serverIsSoundEngineer
+    })
     const congregation = useCongregation()
 
     // Search
@@ -40,7 +50,8 @@ export function DesktopHeader() {
     const [showResults, setShowResults] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
 
-    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
+    // A bit hacky to check profile?.role but we can use server roles as fallback
+    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin' || isBandLeader || !!props.serverIsAdmin
 
     const navLinks = [
         { label: "Setlists", href: "/setlists", show: true },

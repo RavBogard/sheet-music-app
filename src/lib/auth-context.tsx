@@ -5,8 +5,6 @@ import {
     User,
     onAuthStateChanged,
     signInWithPopup,
-    signInWithRedirect,
-    getRedirectResult,
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
@@ -50,7 +48,7 @@ interface AuthContextType {
     profile: UserProfile | null
     cachedUser: CachedUser | null
     loading: boolean
-    signIn: () => Promise<"popup" | "redirect">
+    signIn: () => Promise<void>
     signOut: () => Promise<void>
     isAdmin: boolean
     isBandLeader: boolean
@@ -65,7 +63,7 @@ const AuthContext = createContext<AuthContextType>({
     profile: null,
     cachedUser: null,
     loading: true,
-    signIn: async () => "popup" as const,
+    signIn: async () => {},
     signOut: async () => { },
     isAdmin: false,
     isBandLeader: false,
@@ -107,15 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let sessionReady = false
         let profileReady = false
 
-        // Handle redirect sign-in result (from signInWithRedirect on mobile).
-        // The result itself is handled by onAuthStateChanged — we just need to
-        // catch errors so they don't become unhandled rejections.
-        getRedirectResult(auth).catch((err) => {
-            if (err?.code !== 'auth/popup-closed-by-user') {
-                logger.warn("Redirect sign-in result:", err)
-            }
-        })
-
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
@@ -125,11 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(currentUser)
             if (currentUser) {
                 // CRITICAL: Re-enter loading state while session cookie syncs.
-                // Without this, signInWithRedirect causes a redirect loop:
-                // onAuthStateChanged fires with null first (loading→false), then
-                // fires again with user — but loading is already false, so the
-                // login page navigates to /setlists before the cookie exists,
-                // and middleware bounces back to /login.
+                // This prevents the race where middleware redirects before cookie exists.
                 setLoading(true)
 
                 // Sync session cookie BEFORE allowing loading to complete.
@@ -229,15 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }).catch(() => {})
     }, [user])
 
-    const signIn = async (): Promise<"popup" | "redirect"> => {
-        // Always try popup first. signInWithRedirect is broken on modern Chrome
-        // and Safari due to third-party cookie blocking — the auth domain
-        // (firebaseapp.com) differs from the app domain, so the redirect result
-        // is lost. Popup uses postMessage instead of cookies, avoiding this.
-        // Popup from a user click gesture works on mobile browsers too.
+    const signIn = async (): Promise<void> => {
         try {
             await signInWithPopup(auth, googleProvider)
-            return "popup"
         } catch (error: unknown) {
             const code = (error as { code?: string })?.code
             if (
@@ -245,9 +224,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 code === "auth/popup-closed-by-user" ||
                 code === "auth/cancelled-popup-request"
             ) {
-                logger.warn("Popup sign-in failed, falling back to redirect:", code)
-                await signInWithRedirect(auth, googleProvider)
-                return "redirect"
+                logger.warn("Popup sign-in cancelled or blocked:", code)
+                return // User cancelled, don't throw to avoid unhandled rejections
             }
             logger.error("Sign in error:", error)
             throw error
@@ -259,8 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('crc_cached_user')
             localStorage.removeItem('crc_session_refreshed_at')
             // Clear server session cookie
-            fetch("/api/auth/session", { method: "DELETE" }).catch(() => { })
+            await fetch("/api/auth/session", { method: "DELETE" }).catch(() => { })
             await firebaseSignOut(auth)
+            window.location.reload()
         } catch (error) {
             logger.error("Sign out error:", error)
         }

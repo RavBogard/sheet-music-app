@@ -19,15 +19,31 @@ export interface UseSetlistDashboardProps {
     onCreateNew?: () => void
     initialPersonalSetlists?: Setlist[]
     initialPublicSetlists?: Setlist[]
+    serverIsBandLeader?: boolean
+    serverIsMember?: boolean
+    serverIsAdmin?: boolean
+    serverUid?: string | null
 }
 
 export function useSetlistDashboard({
     onBack, onSelect, onCreateNew,
     initialPersonalSetlists = [],
-    initialPublicSetlists = []
+    initialPublicSetlists = [],
+    serverIsBandLeader = false,
+    serverIsMember = false,
+    serverIsAdmin = false,
+    serverUid = null
 }: UseSetlistDashboardProps) {
     const router = useRouter()
-    const { user, signIn, isMember, isBandLeader } = useAuth()
+    const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader } = useAuth()
+    
+    // Use server-provided values for initial render to prevent hydration flashes
+    const isMember = authIsMember || serverIsMember
+    const isBandLeader = authIsBandLeader || serverIsBandLeader
+    const effectiveUid = authUser?.uid || serverUid
+    // We construct a minimal user object if auth hasn't loaded but we have a server user
+    const user = authUser || (serverUid ? { uid: serverUid, displayName: null } : null)
+
     const { downloadSetlist, isDownloading } = useOffline()
 
     const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>(initialPersonalSetlists)

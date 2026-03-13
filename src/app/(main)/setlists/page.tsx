@@ -16,6 +16,10 @@ export default async function SetlistsPage() {
         <SetlistDashboard
             initialPersonalSetlists={personalSetlists as any}
             initialPublicSetlists={publicSetlists as any}
+            serverIsBandLeader={user?.isBandLeader || false}
+            serverIsMember={user?.isMember || false}
+            serverIsAdmin={user?.isAdmin || false}
+            serverUid={user?.uid || null}
         />
     )
 }

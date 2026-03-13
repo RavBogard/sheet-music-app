@@ -1,7 +1,7 @@
-# Project State: Auth & Access Audit
+# Project State: Bulletproof Auth & Architecture
 
 ## Project Reference
-**Core Value**: Musicians see only what they need; the public gets instant, frictionless access.
+**Core Value**: Musicians see exactly what they need instantly, admins have secure control without UI leaks, and the public gets frictionless access to setlists.
 **Current Focus**: Project Initialization & Roadmapping
 
 ## Current Position
@@ -10,25 +10,17 @@
 **Status**: Initialized
 **Progress**: [░░░░░░░░░░░░░░░░░░░░] 0%
 
-## Performance Metrics
-- **Auth Reliability**: TBD (Goal: 100% session persistence during services)
-- **Permission Leaks**: TBD (Goal: 0 occurrences of unauthorized UI visibility)
-- **Public Link Friction**: TBD (Goal: < 2 clicks to reach public song chart)
-
 ## Accumulated Context
 ### Decisions
-- **D-01**: Using `proxy.ts` (Next.js 16) for robust session management.
-- **D-02**: Using Firebase Custom Claims for O(1) server-side RBAC.
-- **D-03**: Hiding privileged UI elements at the Server Component (RSC) level.
+- Adopted 5-phase plan to address tech debt, sessions, routing, UI gating, and API security.
+- Eliminating the "footswitch" legacy rendering engine entirely.
 
 ### Todos
-- [ ] Approve Phase 1 roadmap and begin planning.
-- [ ] Reproduce "stale session" bug on mobile iOS.
-- [ ] Audit Firestore rules for "Edit" access protection.
+- [ ] Discuss and plan Phase 1 (Consolidate Performance Engines).
 
 ### Blockers
 - None currently.
 
 ## Session Continuity
-- **Last Action**: Roadmap created and requirements mapped to phases.
-- **Next Turn**: Wait for user approval of ROADMAP.md and then start Phase 1 planning.
+- **Last Action**: Project initialized with new 5-phase roadmap.
+- **Next Turn**: Proceed to Phase 1 discussion and planning.
