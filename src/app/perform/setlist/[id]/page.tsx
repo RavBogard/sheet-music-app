@@ -15,11 +15,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music, Users, Pencil } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
+import { useAuth } from "@/lib/auth-context"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
+import { PrintModal } from "@/components/setlist/PrintModal"
 
 export default function SetlistPerformPage() {
     const params = useParams()
@@ -41,6 +43,9 @@ export default function SetlistPerformPage() {
 
     // Hook point for Plan 02's PDF overlay
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
+    const [showPrintModal, setShowPrintModal] = useState(false)
+    const { isMusician, isBandLeader, isAdmin } = useAuth()
+    const canPrint = isMusician || isBandLeader || isAdmin
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
@@ -101,14 +106,22 @@ export default function SetlistPerformPage() {
                         {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
-                {isLeader && (
-                    <Button asChild size="sm" variant="ghost" className="h-8 gap-1.5 shrink-0 text-muted-foreground">
-                        <Link href={`/setlists/${setlistId}`}>
-                            <Pencil className="h-3.5 w-3.5" />
-                            <span className="text-xs">Edit</span>
-                        </Link>
-                    </Button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                    {canPrint && (
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground">
+                            <Printer className="h-3.5 w-3.5" />
+                            <span className="text-xs hidden sm:inline">Gig Packet</span>
+                        </Button>
+                    )}
+                    {isLeader && (
+                        <Button asChild size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground">
+                            <Link href={`/setlists/${setlistId}`}>
+                                <Pencil className="h-3.5 w-3.5" />
+                                <span className="text-xs hidden sm:inline">Edit</span>
+                            </Link>
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Who's playing */}
@@ -164,6 +177,16 @@ export default function SetlistPerformPage() {
                         </Button>
                     )}
                 </div>
+            )}
+
+            {showPrintModal && (
+                <PrintModal
+                    setlistName={name}
+                    tracks={tracks}
+                    setlistId={setlistId}
+                    assignedMusicians={musicians}
+                    onClose={() => setShowPrintModal(false)}
+                />
             )}
         </div>
     )
