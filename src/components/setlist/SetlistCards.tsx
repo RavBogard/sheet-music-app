@@ -47,7 +47,7 @@ export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo,
             variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
@@ -58,9 +58,9 @@ export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo,
                 <Calendar className="h-24 w-24 -mr-4 -mt-4 text-brand" />
             </div>
 
-            <div className="relative z-10">
-                <div className="flex justify-between items-start mb-2">
-                    <div className="inline-flex items-center gap-2 bg-brand/10 text-foreground px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+            <div className="relative z-10 w-full">
+                <div className="flex justify-between items-start mb-2 w-full gap-2">
+                    <div className="inline-flex items-center gap-2 bg-brand/10 text-foreground px-2 py-1 rounded text-xs font-bold uppercase tracking-wider shrink-0">
                         {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="flex gap-1 items-center">
@@ -184,22 +184,24 @@ export function SetlistCard({ setlist, onClick, onPerform, navigatingTo, onDupli
             variant="ghost"
             onClick={onClick}
             disabled={!!navigatingTo}
-            className={`h-auto bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
                     <Loader2 className="h-5 w-5 animate-spin text-brand" />
                 </div>
             )}
-            <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                    {setlist.isPublic ? (
-                        <Globe className="h-4 w-4 text-muted-foreground/60" />
-                    ) : (
-                        <Lock className="h-4 w-4 text-muted-foreground/60" />
-                    )}
-                    <div className="flex flex-col">
-                        <h3 className="text-xl font-semibold truncate text-foreground">{setlist.name}</h3>
+            <div className="flex items-start justify-between mb-2 w-full gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="shrink-0">
+                        {setlist.isPublic ? (
+                            <Globe className="h-4 w-4 text-muted-foreground/60" />
+                        ) : (
+                            <Lock className="h-4 w-4 text-muted-foreground/60" />
+                        )}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <h3 className="text-xl font-semibold truncate text-foreground" title={setlist.name}>{setlist.name}</h3>
                         {setlist.eventDate && (
                             <span className="text-xs text-muted-foreground">
                                 {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
