@@ -1,118 +1,60 @@
-# CRC Music v2.0
+# Auth & Access Audit (CentralReform.live)
 
 ## What This Is
 
-A worship music platform for Central Reform Congregation. 5-8 core musicians, cantorial soloists, a rabbi/band leader (Daniel), and a sound engineer use it to plan services, perform with confidence, and control their personal monitor mixes — all from tablets on music stands. Community members and guest musicians also access setlists and sheet music for jam sessions and special events.
-
-It replaces: Google Sheets for setlist planning, paper binders during performance, and the inability for musicians to control their own monitor mix.
+A specialized audit and hardening phase for the Central Reform Congregation worship music platform. The goal is to ensure that authentication flows, role-based access control (RBAC), and feature visibility are "bulletproof," preventing permission bleed and providing a seamless experience for both authenticated musicians and unauthenticated community members.
 
 ## Core Value
 
-A musician sets their tablet on a music stand, opens the app, and sees this week's service: song titles, their key, tempo, notes, and the full liturgical flow — readings, prayers, songs — all at a glance. They can drill into any PDF when needed, and adjust their monitor mix in 1-2 taps. A non-musician community member at a jam session can pull up centralreform.live on their phone and follow along with no account needed.
+Musicians see exactly what they need for their specific role (and nothing else), while unauthenticated users get instant, frictionless access to public setlists and charts.
 
-## The Three Pillars
+## Requirements
 
-### 1. Setlist Experience (Editor + Performance View)
+### Validated
 
-**The editor** replaces Google Sheets. Daniel's weekly workflow is "duplicate last week's setlist and swap a few songs." The liturgical structure is fixed (Kabbalat Shabbat has a known order), so the app should pre-fill the entire service skeleton from a template and let Daniel slot in songs, set keys, assign leads. It needs to be faster than a spreadsheet — type, tab, type, tab. AI auto-fills templates and accepts natural language commands ("add Mi Chamocha in Am after the responsive reading").
+- ✓ Setlist management (editor/performance) — v2.6
+- ✓ Sheet music library (Google Drive/Firebase Storage) — v2.6
+- ✓ Monitor mixing (X32 bridge) — v2.6
+- ✓ Transposition engine (Gemini AI + music-math) — v2.6
+- ✓ Basic Firebase Auth (Google OAuth) — v2.6
 
-16 service templates: 7 regular (Daniel/Karen Friday, Randy Friday, Shir Shabbat, Daniel/Karen Saturday, Randy Saturday, Bnei Mitzvah Saturday, Havdalah/Afternoon Bnei Mitzvah) and 9 holiday (Erev RH, Daytime RH, Alt Daytime RH, 2nd Day RH, Kol Nidre, Quick Kol Nidre, YK Morning, YK Yizkor, YK Neilah).
+### Active
 
-**The performance view** is what musicians see on a portrait tablet during a service. At a glance: song title, their transposed key, tempo. The full service flow (readings, prayers, transitions) is visible so nobody gets lost. Tapping a song opens the PDF viewer immersively — the setlist gets out of the way. Getting back to the setlist is fast and fluid.
+- [ ] **AUTH-AUDIT-01**: Audit all authentication flows to eliminate "already signed in" or "stale session" bugs.
+- [ ] **RBAC-01**: Enforce strict "Edit" view visibility—only Admins and Band Leaders should see setlist editing features.
+- [ ] **RBAC-02**: Enforce "Monitor" feature visibility—only users with an assigned monitor bus should see monitor controls.
+- [ ] **PUBLIC-01**: Ensure unauthenticated users can access public setlists and charts instantly via public links.
+- [ ] **UI-UX-01**: Implement a "feature filtering" system that hides UI elements based on user roles and assignments.
+- [ ] **AUTH-ROBUST**: Harden the sign-in flow to handle edge cases (mobile popup blockers, account switching, etc.).
 
-### 2. Monitor Mixing (The Killer Feature)
+### Out of Scope
 
-Musicians adjust their personal monitor mix from their tablets. 3-4 shared wedge monitor buses on an X32 console. Each musician sees 6-8 faders for the channels they care about.
+- [ ] Adding new non-auth features — focus is purely on audit and hardening.
+- [ ] Redesigning the monitor mixing logic — only focusing on its *visibility* and *access*.
 
-**Two modes:**
-- **Configure** (before service): See all channels, star the ones you care about. Sound engineer can pre-configure which channels each musician sees.
-- **Live** (during service): Only your starred channels. Clean faders, instant response. 1-2 taps to open from anywhere in the app.
+## Context
 
-**The bar:** A non-technical sound engineer plugs in the system and it works. Every musician opens their mix and it's just there. It never drops mid-service. Zero troubleshooting during a live service. If the X32 isn't reachable, the app says so clearly. This requires a serious research spike into the right bridge architecture — x32-proxy on a Raspberry Pi, a service on the production PC, direct browser OSC, or something else entirely. The answer must be stupid simple to install and bulletproof in production.
-
-### 3. PDF Viewer (Keep As-Is)
-
-The existing PDF viewer with AI chord detection, transposed chord overlays, and annotation is good. Don't rebuild it. Keep it immersive — when a musician taps into a PDF, it owns the screen. The setlist and monitor controls stay accessible (slide-out drawer, bottom bar button) but don't cover the PDF.
-
-## What Exists and What Changes
-
-### Keep As-Is
-- PDF viewer + AI chord detection pipeline (Gemini Flash OCR, three-layer detection)
-- Transposition engine (music-math, chord-utils — 100% test coverage)
-- Firebase Auth with Google OAuth
-- Firestore data model (sound architecture)
-- Vercel deployment
-
-### Rebuild / Redesign
-- Setlist editor (too slow/clunky, must be faster than a spreadsheet)
-- Setlist performance view (tablet-first, portrait orientation, setlist-at-a-glance)
-- Monitor mixing (never worked — total rethink from bridge architecture to UX)
-- Home screen (upcoming service focus, not a dashboard)
-- AI integration (currently poorly integrated — needs auto-fill templates + chat commands + behind-the-scenes intelligence)
-
-### Improve / Harden
-- Google Drive sync (works but fragile — needs retry logic, better error handling, robustness that eliminates admin duct tape)
-- Library management (browse, search, upload — keep but clean up)
-- Backend systems generally (simplify so admin tooling becomes unnecessary)
-- Code cleanup (157 components → focused set, 8 Zustand stores → consolidated, dead code removal)
-
-### Keep but Simplify
-- Scheduling (assign musicians to services, notify, who's playing — no availability calendar or AI suggestions for now)
-- Print/gig packet pipeline (everyone uses it sometimes, especially for guest musicians)
-- QR code authentication
-- SMS and push notifications
-- User/role management
-
-### Cut
-- Task management system
-- Analytics/usage dashboard
-- 8-week rotation matrix
-- Admin features that exist as duct tape for fragile backend systems
-
-## User Tiers
-
-| Tier | Auth | Access |
-|------|------|--------|
-| Core band | Google OAuth, approved | Full: setlist, monitoring, PDFs, transposition, scheduling |
-| Guest musicians | Google OAuth or QR | Performance view + PDFs + transposed chords + print packets |
-| Community jammers | No auth (public link) | Setlist + PDFs only (jam sessions, special events) |
-| Band leader (Daniel) | Admin | All of the above + setlist editor + scheduling + user management |
-| Sound engineer | Authorized | Monitor bus assignment + their own mix |
-
-## Physical Setup
-
-- **Tablets** (mostly iPads, mix of CRC-provided and personal) in **portrait orientation** on music stands
-- **X32 digital console** with 3-4 shared wedge monitor buses
-- Venue WiFi (reliable enough — offline is nice-to-have, not critical)
-- 5-8 musicians per service, 3-5 needing monitor control
-- Community jam sessions: up to 40 people on their own phones/tablets
+- **Previous Work**: Significant efforts in v1.3, v1.5, v1.6, v1.9, and v2.5 to stabilize the codebase and auth, yet bugs persist around role boundaries.
+- **Roles**:
+    - **Admin**: Full access to all features.
+    - **Band Leader**: Admin-lite; can edit public setlists and upload charts.
+    - **Musician**: Access to monitor features (if assigned) and all public setlists/charts.
+    - **Member**: Access to public setlists/charts.
+    - **Sound Engineer (Toggle)**: Can assign monitors and change monitoring settings.
+- **Known Issues**: Non-editors seeing "Edit" options; musicians without monitors seeing monitor buttons; unauthenticated users struggling to access public charts.
 
 ## Constraints
 
-- **Platform:** Vercel (serverless) — keep
-- **Database:** Firebase/Firestore — keep
-- **File storage:** Google Drive as canonical source — keep, harden
-- **Framework:** Next.js (App Router) + React — keep
-- **Timeline:** ASAP — ship polished, not half-baked
-- **Budget:** Minimal — free tiers
-- **Users:** ~10-15 core accounts, up to 40 for jam sessions
-- **Primary device:** Tablets in portrait on music stands; phones for jam session guests
-- **Success criteria:** Everything polished — setlist, monitoring, scheduling, notifications all solid before going live with the band
+- **Tech Stack**: Next.js 16 (App Router), Firebase (Auth, Firestore, Storage), Tailwind CSS 4.
+- **User Base**: Non-technical musicians and community members; UX must be frictionless.
+- **Security**: Must follow Firebase security best practices (Firestore rules, etc.).
 
 ## Key Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| Tablet-first, portrait orientation | Musicians use tablets on music stands during services |
-| Setlist-at-a-glance as primary view | Musicians need song/key/tempo info 95% of the time, PDFs only for new songs |
-| Monitor mixing as foundational priority | The killer feature that's never worked — requires deep research before implementation |
-| Keep PDF viewer as-is | It's good engineering, don't break what works |
-| Two-mode monitor UX (configure vs live) | Separate configuration complexity from performance simplicity |
-| Template-based setlist creation | Liturgical structure is fixed — pre-fill skeleton, swap songs |
-| Duplicate-and-tweak workflow | 70-80% of songs stay the same week to week |
-| Public access for jam sessions | No auth — centralreform.live link, setlist + PDFs only |
-| Backend simplification over admin tooling | Fix the systems, the duct tape admin tools become unnecessary |
-| Cut tasks, analytics, rotation matrix | No users yet — premature features |
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Audit first, then refactor | Need to reproduce and understand the "why" behind current leaks before fixing. | — Pending |
+| Role-based feature filtering | UI should reflect permissions, not just show disabled states. | — Pending |
 
 ---
-*Last updated: 2026-03-07*
+*Last updated: 2026-03-13 after initialization of Auth & Access Audit project*
