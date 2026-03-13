@@ -51,7 +51,7 @@ vi.mock("@/components/performance/MetronomeControl", () => ({
 vi.mock("@/components/performance/SongNavigation", () => ({
     SongNavigation: () => <div data-testid="song-nav">Nav</div>,
 }))
-vi.mock("@/components/performance/SetlistDrawerLegacy", () => ({
+vi.mock("@/components/performance/SetlistDrawer", () => ({
     SetlistDrawer: () => <div data-testid="setlist-drawer">Drawer</div>,
 }))
 vi.mock("@/components/monitor/QuickMonitorPanel", () => ({

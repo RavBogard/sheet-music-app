@@ -17,13 +17,11 @@ export function SongNavigation() {
     const currentTrack = playbackQueue[queueIndex]
 
     const handleNext = () => {
-        const next = nextSong()
-        if (next) router.replace(`/perform/${next.fileId}`)
+        nextSong() // Updates queueIndex in store; PDFOverlay listens to this
     }
 
     const handlePrev = () => {
-        const prev = prevSong()
-        if (prev) router.replace(`/perform/${prev.fileId}`)
+        prevSong() // Updates queueIndex in store; PDFOverlay listens to this
     }
 
     return (

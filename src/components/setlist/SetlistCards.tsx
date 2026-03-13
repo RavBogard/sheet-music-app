@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus } from "lucide-react"
+import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
@@ -15,10 +15,11 @@ import {
 
 /* ─── Upcoming Service Card ─── */
 
-interface UpcomingCardProps {
+export interface UpcomingCardProps {
     setlist: Setlist
     onClick: () => void
-    navigatingTo?: string | null
+    onPerform: (e: React.MouseEvent) => void
+    navigatingTo: string | null
     onDownload: (setlist: Setlist) => void
     isDownloading: boolean
     onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
@@ -29,7 +30,7 @@ interface UpcomingCardProps {
     canDuplicate: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
@@ -131,19 +132,30 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
                     )}
                 </div>
 
-                {/* Prominent "Duplicate for next week" button */}
-                {canDuplicate && (
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onCloneNextWeek(setlist, e)
-                        }}
-                        className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-brand/10 hover:bg-brand/20 text-foreground text-sm font-medium transition-colors cursor-pointer border border-brand/20"
+                <div className="mt-4 flex items-center gap-2 w-full">
+                    <Button
+                        variant="default"
+                        onClick={onPerform}
+                        className="flex-1 rounded-xl font-bold bg-brand hover:bg-brand/90 text-primary-foreground shadow-lg shadow-brand/20"
                     >
-                        <CalendarPlus className="h-4 w-4" />
-                        Duplicate for Next Week
-                    </div>
-                )}
+                        <PlayCircle className="h-4 w-4 mr-2" />
+                        Perform
+                    </Button>
+                    
+                    {/* Prominent "Duplicate for next week" button */}
+                    {canDuplicate && (
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onCloneNextWeek(setlist, e)
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2 h-10 rounded-xl bg-brand/10 hover:bg-brand/20 text-foreground text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer border border-brand/20"
+                        >
+                            <CalendarPlus className="h-3.5 w-3.5" />
+                            Clone
+                        </div>
+                    )}
+                </div>
             </div>
         </Button>
     )
@@ -151,11 +163,12 @@ export function UpcomingSetlistCard({ setlist, onClick, navigatingTo, onDownload
 
 /* ─── Past / Library Card ─── */
 
-interface PastCardProps {
+export interface PastCardProps {
     setlist: Setlist
     onClick: () => void
-    navigatingTo?: string | null
-    onDuplicate?: (setlist: Setlist, e: React.MouseEvent) => void
+    onPerform: (e: React.MouseEvent) => void
+    navigatingTo: string | null
+    onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
     onCloneNextWeek?: (setlist: Setlist, e: React.MouseEvent) => void
     onSaveAsTemplate?: (setlist: Setlist, e: React.MouseEvent) => void
     onDelete?: (setlist: Setlist, e: React.MouseEvent) => void
@@ -163,7 +176,7 @@ interface PastCardProps {
     canDuplicate: boolean
 }
 
-export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+export function SetlistCard({ setlist, onClick, onPerform, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
 
     return (
@@ -238,23 +251,34 @@ export function SetlistCard({ setlist, onClick, navigatingTo, onDuplicate, onClo
                     by {setlist.ownerName}
                 </div>
             )}
-            <div className="mt-2 text-muted-foreground text-sm">
+            <div className="mt-2 text-muted-foreground text-sm mb-4">
                 {setlist.trackCount || 0} songs{setlist.rabbi ? ` · Rabbi ${setlist.rabbi}` : ''}
             </div>
 
-            {/* Quick clone action */}
-            {canDuplicate && (
-                <div
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onCloneNextWeek?.(setlist, e)
-                    }}
-                    className="mt-2 flex items-center gap-1.5 text-xs text-brand/80 hover:text-brand transition-colors cursor-pointer"
+            <div className="mt-auto pt-2 flex items-center gap-2 w-full">
+                <Button
+                    variant="secondary"
+                    onClick={onPerform}
+                    className="flex-1 rounded-xl font-bold bg-muted hover:bg-muted/80 text-foreground"
                 >
-                    <CalendarPlus className="h-3.5 w-3.5" />
-                    <span>Duplicate for next week</span>
-                </div>
-            )}
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Perform
+                </Button>
+                
+                {/* Quick clone action */}
+                {canDuplicate && (
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onCloneNextWeek?.(setlist, e)
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-10 text-xs text-brand/80 hover:text-brand hover:bg-brand/5 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-brand/20"
+                    >
+                        <CalendarPlus className="h-3.5 w-3.5" />
+                        <span>Clone</span>
+                    </div>
+                )}
+            </div>
         </Button>
     )
 }
