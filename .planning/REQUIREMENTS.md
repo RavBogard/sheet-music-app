@@ -40,10 +40,23 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-* | Phase 1 | Pending |
-| RBAC-* | Phase 2 | Pending |
-| PUBLIC-* | Phase 3 | Pending |
-| MON-* | Phase 2/3 | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| RBAC-01 | Phase 2 | Pending |
+| RBAC-02 | Phase 2 | Pending |
+| RBAC-03 | Phase 2 | Pending |
+| RBAC-04 | Phase 2 | Pending |
+| RBAC-05 | Phase 2 | Pending |
+| RBAC-06 | Phase 2 | Pending |
+| PUBLIC-01 | Phase 3 | Pending |
+| PUBLIC-02 | Phase 3 | Pending |
+| PUBLIC-03 | Phase 3 | Pending |
+| MON-01 | Phase 2 | Pending |
+| MON-02 | Phase 2 | Pending |
+| MON-03 | Phase 2 | Pending |
 
 ---
 *Last updated: 2026-03-13 after initialization*
