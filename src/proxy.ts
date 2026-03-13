@@ -70,12 +70,21 @@ export function proxy(request: NextRequest) {
     }
 
     // Role Verification via Claims
-    if (isLeaderRoute && session) {
+    if (session && !isPublicRoute) {
         const role = decodedSession?.role
-        if (role !== 'admin' && role !== 'band_leader') {
-            // Unprivileged user trying to access leader/admin routes
-            const redirectUrl = new URL('/setlists', request.url)
+        
+        // Pending users are explicitly blocked from all secure routes except the home dashboard
+        if (role === 'pending' && pathname !== '/') {
+            const redirectUrl = new URL('/', request.url)
             return NextResponse.redirect(redirectUrl)
+        }
+
+        if (isLeaderRoute) {
+            if (role !== 'admin' && role !== 'band_leader') {
+                // Unprivileged user trying to access leader/admin routes
+                const redirectUrl = new URL('/setlists', request.url)
+                return NextResponse.redirect(redirectUrl)
+            }
         }
     }
 

@@ -341,8 +341,9 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                 </Button>
                             ) : (
                                 <div className="space-y-3">
-                                    <label className="text-sm font-medium text-foreground">What do you play?</label>
+                                    <label htmlFor="instrument-select" className="text-sm font-medium text-foreground">What do you play?</label>
                                     <select
+                                        id="instrument-select"
                                         value={selectedInstrument}
                                         onChange={e => setSelectedInstrument(e.target.value)}
                                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
@@ -412,8 +413,9 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                <label className="text-sm font-medium text-foreground">What do you play?</label>
+                                <label htmlFor="instrument-select-approved" className="text-sm font-medium text-foreground">What do you play?</label>
                                 <select
+                                    id="instrument-select-approved"
                                     value={selectedInstrument}
                                     onChange={e => setSelectedInstrument(e.target.value)}
                                     className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"

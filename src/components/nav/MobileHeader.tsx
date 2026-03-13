@@ -34,7 +34,7 @@ export function MobileHeader() {
                     <img
                         src="/logo.jpg"
                         alt="Logo"
-                        className="w-7 h-7 rounded-full border border-border transition-transform group-hover:scale-105"
+                        className="w-7 h-7 rounded-full border border-border transition-opacity group-hover:opacity-80"
                     />
                     <span className="font-display font-bold text-sm text-foreground">
                         {congregation.shortName}
