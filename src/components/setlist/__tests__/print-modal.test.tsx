@@ -182,16 +182,21 @@ describe("PrintModal", () => {
 
     // ── TransposeTrackList visibility ──
 
-    it("shows TransposeTrackList in just-me mode when transpositions active", () => {
+    it("shows TransposeTrackList in just-me mode when transpositions active", async () => {
         // Default profile has defaultTransposition: 2, so transpositions will be active
         render(<PrintModal {...defaultProps} />)
-        expect(screen.getByTestId("current-mode").textContent).toBe("just-me")
+        
+        await waitFor(() => {
+            expect(screen.getByTestId("current-mode").textContent).toBe("just-me")
+        })
         
         // TransposeTrackList renders when printMode is just-me AND activeTranspositions > 0 AND !coverOnly
         // We need to click "Full Packet (PDFs)" to set coverOnly to false since it defaults to true
         fireEvent.click(screen.getByText("Full Packet (PDFs)"))
         
-        expect(screen.getByTestId("transpose-track-list")).toBeDefined()
+        await waitFor(() => {
+            expect(screen.getByTestId("transpose-track-list")).toBeDefined()
+        })
     })
 
     it("hides TransposeTrackList in standard mode", () => {
