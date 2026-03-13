@@ -1,71 +1,28 @@
-# Project Roadmap: Bulletproof Auth & Architecture
+# Project Roadmap: Architecture Refinement & UX Polish
 
-The goal of this project is to fix authentication instability, streamline public access, eliminate UI leaks, and remove legacy rendering engines.
+This roadmap continues the work from the Bulletproof Auth refactor, focusing on edge-case UX, performance, and rigorous design standards.
 
-## Phases
+## Completed Phases
+- [x] Phase 1: Consolidate Performance Engines
+- [x] Phase 2: Session Hardening & Hard Logout
+- [x] Phase 3: The Public Routing Boundary
+- [x] Phase 4: Server-Side UI Gating
+- [x] Phase 5: API Endpoint Standardization
 
-- [ ] **Phase 1: Consolidate Performance Engines** - Delete the footswitch logic and the legacy rendering engine. Unify the app onto the V2 setlist view.
-- [ ] **Phase 2: Session Hardening & Hard Logout** - Fix the iOS Safari login loops and "stale session" bugs using `next-firebase-auth-edge`.
-- [ ] **Phase 3: The Public Routing Boundary** - Ensure all public sharing links go directly to the newly unified, read-only performance view, bypassing the Next.js middleware traps.
-- [ ] **Phase 4: Server-Side UI Gating** - Guarantee that buttons like "Edit" and "Monitor" are never sent to unauthorized users.
-- [ ] **Phase 5: API Endpoint Standardization** - Refactor all raw Next.js API endpoints to use the secure `createApiHandler` wrapper.
+## Upcoming Phases
 
-## Phase Details
-
-### Phase 1: Consolidate Performance Engines
-**Goal**: Eliminate the technical debt of the legacy "footswitch" rendering engine.
-**Depends on**: Nothing
-**Requirements**: ARCH-01, ARCH-02, ARCH-03
-**Success Criteria**:
-  1. The `src/components/views/PerformerView.tsx` and `FlowItemView.tsx` files are deleted.
-  2. The `src/app/perform/[id]` route is deleted.
-  3. The app successfully compiles and runs without these legacy components.
-**Plans**: TBD
-
-### Phase 2: Session Hardening & Hard Logout
-**Goal**: Establish a bulletproof authentication foundation that eliminates session desyncs and mobile login issues.
-**Depends on**: Nothing
-**Requirements**: AUTH-01, AUTH-02, AUTH-03
-**Success Criteria**:
-  1. `next-firebase-auth-edge` manages the `__session` cookie reliably.
-  2. Mobile login uses `signInWithPopup` exclusively.
-  3. Logging out clears the server cookie and performs a hard `window.location.reload()`.
-**Plans**: TBD
-
-### Phase 3: The Public Routing Boundary
-**Goal**: Guarantee frictionless access for unauthenticated users viewing public setlists.
-**Depends on**: Phase 1
-**Requirements**: SEC-01, SEC-02, SEC-03
-**Success Criteria**:
-  1. The `/setlists/[id]` editor route strictly rejects unauthenticated users.
-  2. "Share" buttons generate links to `/perform/setlist/[id]`.
-  3. `proxy.ts` correctly routes unauthenticated users to the performance view without a login prompt.
-**Plans**: TBD
-
-### Phase 4: Server-Side UI Gating
-**Goal**: Prevent UI flicker and permission leaks by gating UI on the server.
-**Depends on**: Phase 2
-**Requirements**: UI-01, UI-02, UI-03
-**Success Criteria**:
-  1. Unauthorized users do not receive HTML for "Edit", "Duplicate", or "Delete" buttons in the dashboard.
-  2. Monitor controls are strictly gated server-side based on the user's role and bus assignment.
-**Plans**: TBD
-
-### Phase 5: API Endpoint Standardization
-**Goal**: Secure all backend data requests.
-**Depends on**: Phase 2
-**Requirements**: API-01, API-02
-**Success Criteria**:
-  1. All critical `/api/*` endpoints use `createApiHandler`.
-  2. Endpoints properly validate the server-side `__session` cookie before execution.
-**Plans**: TBD
+- [ ] **Phase 6: Finish Server-Side Gating (Edge Cases)** - Apply `getServerUser` to the `/monitor` and `/manage` routes to prevent client-side flashes and unauthorized WebSocket connections.
+- [ ] **Phase 7: Dashboard UX Consolidation (Public Hero Cards)** - Break the `<NextServiceCard>` out of the `isMember` gate so all users, including guests, have instant access to upcoming services.
+- [ ] **Phase 8: PDF Worker & Caching Optimization** - Implement aggressive background pre-fetching for the next 2 songs in a setlist.
+- [ ] **Phase 9: Real-Time State Management (Zustand/RTDB)** - Move high-frequency live-session tracking off of Firestore writes.
+- [ ] **Phase 10: Recursive UI/UX Pro Max Audit** - A final, exhaustive sweep against the `ui-ux-pro-max` guidelines to guarantee perfect contrast, interaction states, and accessibility across all 7 user personas.
 
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Consolidate Performance Engines | 0/1 | Not started | - |
-| 2. Session Hardening & Hard Logout | 0/1 | Not started | - |
-| 3. The Public Routing Boundary | 0/1 | Not started | - |
-| 4. Server-Side UI Gating | 0/1 | Not started | - |
-| 5. API Endpoint Standardization | 0/1 | Not started | - |
+| 6. Finish Server-Side Gating | 0/1 | Not started | - |
+| 7. Dashboard UX Consolidation | 0/1 | Not started | - |
+| 8. PDF Worker & Caching | 0/1 | Not started | - |
+| 9. Real-Time State Management | 0/1 | Not started | - |
+| 10. Recursive UI/UX Audit | 0/1 | Not started | - |

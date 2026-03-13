@@ -1,39 +1,20 @@
-# CentralReform.live: Bulletproof Auth & Architecture
+# CentralReform.live: Architecture Refinement & UX Polish
 
 ## What This Is
-A comprehensive refactoring project to fix authentication instability, streamline public access, eliminate UI leaks, and remove significant technical debt (legacy rendering engines) from the Next.js App Router codebase.
+A continuation of the Bulletproof Auth project. Having secured the foundation (Phases 1-5), this project focuses on edge-case UX friction, performance optimization, and rigorous UI/UX standards compliance based on the `ui-ux-pro-max` guidelines.
 
 ## Core Value
-Musicians see exactly what they need instantly, admins have secure control without UI leaks, and the public gets frictionless access to setlists. The system is easy to maintain with a single unified performance engine.
+Frictionless, instant access for all users (especially unauthenticated and pending users), blazing fast PDF loading, and zero UI layout shifts or authorization flashes.
 
 ## Requirements
 
-### Validated
-- ✓ V2 Setlist Performance View is functional and preferred.
-- ✓ Next.js App Router architecture is in place (`src/proxy.ts`).
-- ✓ Firebase Client SDK is used for initial auth.
-
 ### Active
-- [ ] **ARCH-01**: Eliminate the legacy "footswitch" rendering engine (`PerformerView`, `FlowItemView`, `/perform/[id]`).
-- [ ] **ARCH-02**: Consolidate all performance views to `/perform/setlist/[id]`.
-- [ ] **AUTH-01**: Implement `next-firebase-auth-edge` for robust session-to-cookie synchronization.
-- [ ] **AUTH-02**: Standardize mobile login to popup-only (bypassing iOS ITP blocks).
-- [ ] **AUTH-03**: Implement "Hard Logout" (cache purge and full reload).
-- [ ] **SEC-01**: Strictly enforce the public boundary—editors are only for editors, public goes to performance view.
-- [ ] **SEC-02**: Implement Server-Side UI Gating (hide restricted UI at the server level, no client-side flicker).
-- [ ] **SEC-03**: Standardize all `/api/*` routes to use the secure `createApiHandler`.
-
-### Out of Scope
-- Adding new features to the setlist editor.
-- Changing the underlying database schema.
-- Re-architecting the X32 monitor bridge (only securing its UI access).
-
-## Key Decisions
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Delete Footswitch Engine | It is unused, causes routing complexity, and forces the maintenance of two separate performance UI paradigms. | Pending |
-| Popup-Only Auth | `signInWithRedirect` is fundamentally broken on modern iOS Safari due to third-party cookie restrictions. | Pending |
-| Server-Side Gating | Relying on client-side hydration for RBAC causes UI flicker and leaks "unauthorized" code to the browser. | Pending |
+- [ ] **UX-01 (Dashboard)**: Ensure unauthenticated and pending users see the `<NextServiceCard>` hero immediately on the dashboard.
+- [ ] **SEC-04 (Monitor Gating)**: Apply `getServerUser` to `/monitor/page.tsx` to prevent unauthorized WebSocket initialization.
+- [ ] **SEC-05 (Manage Gating)**: Apply `getServerUser` to `/manage/page.tsx` to prevent client-side tab flashing for Admin vs. Band Leader views.
+- [ ] **PERF-01 (PDF Cache)**: Implement background pre-fetching for the next 2 songs in a setlist to eliminate loading times during live performance.
+- [ ] **ARCH-04 (Real-time State)**: Transition ephemeral `LiveState` from Firestore to a faster, cheaper real-time layer (e.g., RTDB or Zustand enhancements).
+- [ ] **QA-01 (UI/UX Audit)**: Perform a recursive audit against the `ui-ux-pro-max` guidelines (contrast, cursor states, SVG icons, touch targets).
 
 ---
-*Last updated: 2026-03-13 after initialization*
+*Last updated: 2026-03-13 after completion of Auth Refactor (Phases 1-5)*
