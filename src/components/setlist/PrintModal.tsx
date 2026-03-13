@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { X, Printer, Download, Loader2, Mail, FileStack, ListChecks } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -336,8 +337,14 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const canGenerate = (coverOnly || linkedPdfTracks.length > 0) && !generating &&
         (printMode !== "select-musicians" || selectedUids.length > 0)
 
-    return (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+    // Ensure we only render the portal on the client
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
+
+    if (!mounted) return null
+
+    return createPortal(
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 sm:p-6" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
@@ -481,6 +488,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }
