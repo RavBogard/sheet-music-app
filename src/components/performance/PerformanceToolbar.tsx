@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Settings } from "lucide-react"
+import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Settings, Printer } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -21,14 +21,15 @@ import { cn } from "@/lib/utils"
 interface PerformanceToolbarProps {
     onHome: () => void
     onMenuOpenChange?: (open: boolean) => void
+    onPrint?: () => void
 }
 
-export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceToolbarProps) {
+export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: PerformanceToolbarProps) {
     const {
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom
     } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
-    const { isBandLeader } = useAuth()
+    const { isBandLeader, isAdmin, isMusician } = useAuth()
     const params = useParams()
     const router = useRouter()
     
@@ -81,6 +82,25 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
     // ── Shared sub-components ──
+
+    const printButton = (compact = false) => {
+        const canPrint = isBandLeader || isAdmin || isMusician
+        if (!canPrint || !onPrint) return null
+        return (
+            <Button
+                variant="ghost"
+                onClick={onPrint}
+                className={cn(
+                    "glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2",
+                    compact ? "h-12 px-4 shrink-0" : "h-11 px-3 shrink-0"
+                )}
+                title="Print Gig Packet"
+            >
+                <Printer className={compact ? "h-5 w-5" : "h-4 w-4"} />
+                {!compact && <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Print</span>}
+            </Button>
+        )
+    }
 
     const editButton = (compact = false) => {
         if (!isBandLeader || !setlistId) return null
@@ -234,6 +254,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <SongNavigation />
                     </div>
                     <div className="shrink-0 flex items-center gap-1">
+                        {printButton(true)}
                         {editButton(true)}
                         <SetlistDrawer />
                     </div>
@@ -249,6 +270,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
                     {zoomControls(false)}
+                    {printButton(true)}
                     {editButton(false)}
                     <SetlistDrawer />
                 </div>
@@ -281,6 +303,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Scale Controls */}
                     {zoomControls(false)}
 
+                    {printButton(false)}
                     {editButton(false)}
                     <SetlistDrawer />
                 </div>

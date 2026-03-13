@@ -6,6 +6,7 @@ import { SetlistTrack } from "@/types/models"
 import { PerformanceToolbar } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
+import { PrintModal } from "@/components/setlist/PrintModal"
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
 const PDFViewer = dynamic(
@@ -165,6 +166,12 @@ export function PDFOverlay({
 
     // Track menu open state to keep toolbar visible
     const [, setMenuOpen] = useState(false)
+    const [showPrintModal, setShowPrintModal] = useState(false)
+
+    // Find setlist metadata if available (from parent hook or store)
+    // The performance view is mounted under /perform/setlist/[id], so we can extract ID
+    const params = typeof window !== 'undefined' ? window.location.pathname.split('/') : []
+    const setlistId = params.includes('setlist') ? params[params.indexOf('setlist') + 1] : undefined
 
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -182,7 +189,19 @@ export function PDFOverlay({
             <PerformanceToolbar
                 onHome={onClose}
                 onMenuOpenChange={setMenuOpen}
+                onPrint={() => setShowPrintModal(true)}
             />
+
+            {showPrintModal && (
+                <div className="absolute inset-0 z-[60]">
+                    <PrintModal
+                        setlistName="Live Setlist" // Will pull default or use empty if not loaded
+                        tracks={tracks}
+                        setlistId={setlistId}
+                        onClose={() => setShowPrintModal(false)}
+                    />
+                </div>
+            )}
         </div>
     )
 }

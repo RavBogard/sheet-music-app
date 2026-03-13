@@ -338,7 +338,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center z-50 pt-8 sm:pt-4 px-4 pb-4">
-            <div className="bg-card rounded-xl w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="bg-card rounded-xl w-full max-w-lg h-[90vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                     <h2 className="text-xl font-bold">Print Gig Packet</h2>
