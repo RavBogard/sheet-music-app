@@ -126,6 +126,43 @@ export function PDFOverlay({
     // Build the PDF URL from the track's fileId
     const pdfUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
 
+    // Prefetch the next 2 PDFs in the background
+    const prefetchedRef = useRef(new Set<string>())
+    useEffect(() => {
+        const queue = useMusicStore.getState().playbackQueue
+        if (!queue || queue.length === 0) return
+
+        // Get the next 2 files
+        const nextFiles = [
+            queue[queueIndex + 1]?.fileId,
+            queue[queueIndex + 2]?.fileId
+        ].filter(Boolean) as string[]
+
+        if (nextFiles.length === 0) return
+
+        // Delay prefetching slightly so we don't steal bandwidth from the current PDF
+        const prefetchTimer = setTimeout(() => {
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => doPrefetch(nextFiles))
+            } else {
+                doPrefetch(nextFiles)
+            }
+        }, 1000)
+
+        const doPrefetch = (fileIds: string[]) => {
+            fileIds.forEach(id => {
+                if (prefetchedRef.current.has(id)) return
+                prefetchedRef.current.add(id)
+                fetch(`/api/drive/file/${id}`).catch(() => {
+                    // Ignore background fetch errors
+                    prefetchedRef.current.delete(id)
+                })
+            })
+        }
+
+        return () => clearTimeout(prefetchTimer)
+    }, [queueIndex])
+
     // Track menu open state to keep toolbar visible
     const [, setMenuOpen] = useState(false)
 
