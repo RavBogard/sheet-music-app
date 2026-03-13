@@ -337,10 +337,10 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         (printMode !== "select-musicians" || selectedUids.length > 0)
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center z-50 pt-8 sm:pt-4 px-4 pb-4">
-            <div className="bg-card rounded-xl w-full max-w-lg h-[90vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+                <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
                     <h2 className="text-xl font-bold">Print Gig Packet</h2>
                     <Button size="icon" variant="ghost" onClick={onClose}>
                         <X className="h-5 w-5" />
