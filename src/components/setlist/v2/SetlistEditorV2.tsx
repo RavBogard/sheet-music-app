@@ -557,7 +557,7 @@ export function SetlistEditorV2({
             <div className="flex-1 overflow-y-auto">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext items={tracks} strategy={verticalListSortingStrategy}>
-                        <div className="max-w-3xl mx-auto px-2 sm:px-4 py-4 space-y-1">
+                        <div className="max-w-3xl mx-auto px-1 sm:px-4 py-4 space-y-1">
                             {showEmpty && tracks.length === 0 && (
                                 <div className="text-center py-16 text-muted-foreground">
                                     <p className="text-lg font-medium mb-1">Empty setlist</p>
