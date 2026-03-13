@@ -234,6 +234,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signOut = async () => {
         try {
+            // Add a smooth loading overlay to mask the hard reload
+            if (typeof document !== 'undefined') {
+                document.body.insertAdjacentHTML(
+                    'beforeend', 
+                    '<div id="logout-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(var(--background),0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;"><div style="width:32px;height:32px;border:3px solid transparent;border-top-color:hsl(var(--primary));border-radius:50%;animation:spin 1s linear infinite;"></div><p style="color:hsl(var(--foreground));font-size:14px;font-weight:500;">Logging out securely...</p></div>'
+                )
+            }
             localStorage.removeItem('crc_cached_user')
             localStorage.removeItem('crc_session_refreshed_at')
             // Clear server session cookie
@@ -242,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.location.reload()
         } catch (error) {
             logger.error("Sign out error:", error)
+            document.getElementById('logout-overlay')?.remove()
         }
     }
 

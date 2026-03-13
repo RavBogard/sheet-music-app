@@ -78,7 +78,7 @@ describe('getServerUser', () => {
         expect(user).not.toBeNull()
         expect(user!.uid).toBe('user-123')
         expect(user!.email).toBe('test@example.com')
-        expect(user!.displayName).toBe('Test User')
+        expect(user!.displayName).toBe('Auth Name')
         expect(user!.role).toBe('musician')
     })
 

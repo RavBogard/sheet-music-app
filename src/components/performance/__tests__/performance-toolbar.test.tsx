@@ -35,6 +35,8 @@ vi.mock("@/lib/store", () => ({
 // Mock hooks
 vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
 vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ id: 'test-setlist' }) }))
 
 // Mock sub-components
 vi.mock("@/components/music/TransposerMenu", () => ({
