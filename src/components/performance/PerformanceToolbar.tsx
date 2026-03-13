@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Settings, Printer } from "lucide-react"
+import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Printer } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -98,24 +98,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
             >
                 <Printer className={compact ? "h-5 w-5" : "h-4 w-4"} />
                 {!compact && <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Print</span>}
-            </Button>
-        )
-    }
-
-    const editButton = (compact = false) => {
-        if (!isBandLeader || !setlistId) return null
-        return (
-            <Button
-                variant="ghost"
-                onClick={() => router.push(`/setlists/${setlistId}`)}
-                className={cn(
-                    "glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2",
-                    compact ? "h-12 px-4 shrink-0" : "h-11 px-3 shrink-0"
-                )}
-                title="Edit Setlist"
-            >
-                <Settings className={compact ? "h-5 w-5" : "h-4 w-4"} />
-                {!compact && <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>}
             </Button>
         )
     }
@@ -255,7 +237,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     </div>
                     <div className="shrink-0 flex items-center gap-1">
                         {printButton(true)}
-                        {editButton(true)}
+
                         <SetlistDrawer />
                     </div>
                 </div>
@@ -271,7 +253,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     </Button>
                     {zoomControls(false)}
                     {printButton(true)}
-                    {editButton(false)}
+
                     <SetlistDrawer />
                 </div>
 
@@ -304,7 +286,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     {zoomControls(false)}
 
                     {printButton(false)}
-                    {editButton(false)}
+
                     <SetlistDrawer />
                 </div>
 

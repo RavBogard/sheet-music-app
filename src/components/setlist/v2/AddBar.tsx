@@ -17,7 +17,7 @@ interface AddBarProps {
 
 export function AddBar({ onAddSongs, onAddItem }: AddBarProps) {
     return (
-        <div className="sticky bottom-16 sm:bottom-20 md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-brand/10 px-4 py-3 flex items-center justify-center">
+        <div className="sticky bottom-[72px] sm:bottom-[88px] md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-brand/10 px-4 py-3 flex items-center justify-center pb-safe md:pb-3">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="default" className="w-full sm:w-64 h-11 gap-2 rounded-xl shadow-md bg-brand hover:bg-brand/90 text-primary-foreground">
