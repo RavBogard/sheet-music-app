@@ -40,11 +40,9 @@ export class ErrorBoundary extends Component<Props, State> {
             typeof window !== "undefined" &&
             !sessionStorage.getItem("firestore-idb-recovery-attempted")
         ) {
-            logger.warn("[ErrorBoundary] Firestore assertion error detected, clearing IndexedDB and reloading")
+            logger.warn("[ErrorBoundary] Firestore assertion error detected, clearing IndexedDB")
             sessionStorage.setItem("firestore-idb-recovery-attempted", "1")
-            clearFirestoreIndexedDB().then(() => {
-                window.location.reload()
-            })
+            clearFirestoreIndexedDB().catch(e => logger.error("Failed to clear IDB", e))
         }
     }
 

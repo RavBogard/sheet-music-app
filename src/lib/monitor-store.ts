@@ -112,6 +112,15 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
     setSnapshot: (snapshot, userId) => {
         const state = get()
+        
+        // Stale-while-revalidate: Ignore empty/malformed snapshots if we already have valid data
+        if (snapshot.buses.length === 0 && state.buses.length > 0) {
+            logger.warn("[MonitorStore] Received empty snapshot, freezing last known good state")
+            // Still update health tracking so we know we got a ping
+            set({ lastSnapshotAt: Date.now(), snapshotCount: state.snapshotCount + 1 })
+            return
+        }
+
         const myBusIndex = snapshot.config.busAssignments
             ? findUserBus(snapshot.config.busAssignments, userId)
             : null
