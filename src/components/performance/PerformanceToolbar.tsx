@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List } from "lucide-react"
+import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Settings } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -26,6 +28,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom
     } = useMusicStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
+    const { isBandLeader } = useAuth()
+    const params = useParams()
+    const router = useRouter()
+    
+    const setlistId = params?.id as string | undefined
 
     // Establish WebSocket connection immediately so the bridge is
     // ready *before* the user opens the Audio popover (zero latency).
@@ -74,6 +81,24 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
     }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
 
     // ── Shared sub-components ──
+
+    const editButton = (compact = false) => {
+        if (!isBandLeader || !setlistId) return null
+        return (
+            <Button
+                variant="ghost"
+                onClick={() => router.push(`/setlists/${setlistId}`)}
+                className={cn(
+                    "glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2",
+                    compact ? "h-12 px-4 shrink-0" : "h-11 px-3 shrink-0"
+                )}
+                title="Edit Setlist"
+            >
+                <Settings className={compact ? "h-5 w-5" : "h-4 w-4"} />
+                {!compact && <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>}
+            </Button>
+        )
+    }
 
     const zoomControls = (compact = false) => (
         <div className={cn(
@@ -208,7 +233,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     <div className="flex-1 flex justify-center min-w-0">
                         <SongNavigation />
                     </div>
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex items-center gap-1">
+                        {editButton(true)}
                         <SetlistDrawer />
                     </div>
                 </div>
@@ -223,6 +249,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
                     </Button>
                     {zoomControls(false)}
+                    {editButton(false)}
                     <SetlistDrawer />
                 </div>
 
@@ -254,6 +281,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange }: PerformanceTool
                     {/* Scale Controls */}
                     {zoomControls(false)}
 
+                    {editButton(false)}
                     <SetlistDrawer />
                 </div>
 

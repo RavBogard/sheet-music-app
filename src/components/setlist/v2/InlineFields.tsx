@@ -28,6 +28,17 @@ export function SongInlineFields({ track, onUpdate, onReplace, onDelete }: SongI
             className="px-3 pb-3 pt-2 space-y-3 border-t border-border/30 mt-1"
             onClick={(e) => e.stopPropagation()}
         >
+            {/* Row 0: Title */}
+            <div className="space-y-1">
+                <label className="text-xs text-muted-foreground font-medium">Title</label>
+                <Input
+                    placeholder="Song title"
+                    value={track.title || ""}
+                    onChange={(e) => onUpdate(track.id, { title: e.target.value })}
+                    className="h-9 font-medium"
+                />
+            </div>
+
             {/* Row 1: Key + Tempo */}
             <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
