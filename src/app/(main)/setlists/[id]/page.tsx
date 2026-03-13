@@ -31,11 +31,18 @@ export default async function SetlistEditorPage({
 
         const data = doc.data() as any
 
-        // Personal setlist access check: 
-        // If it is NOT a public/shared setlist, only the owner and Admins can edit it.
-        // If it IS public, any authenticated Band Leader (who can reach this route via proxy.ts) can edit it.
-        if (!data.isPublic && data.ownerId && data.ownerId !== user.uid && !user.isAdmin) {
-            redirect("/setlists")
+        // Determine if the current user has EDIT access to this setlist
+        const isOwner = data.ownerId === user.uid
+        const canEdit = isOwner || user.isAdmin || (user.isBandLeader && data.isPublic)
+
+        if (!canEdit) {
+            if (data.isPublic) {
+                // If it's public but they can't edit it (e.g. a standard musician), send them to the performance view
+                redirect(`/perform/setlist/${id}`)
+            } else {
+                // If it's private and they aren't the owner/admin, bounce them out completely
+                redirect("/setlists")
+            }
         }
 
         existingSetlist = serializeSetlist(doc.id, data) as unknown as Setlist
