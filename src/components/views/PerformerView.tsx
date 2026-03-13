@@ -105,8 +105,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
 
             switch (e.key) {
-                case 'ArrowRight':
-                case 'PageDown': {
+                case 'ArrowRight': {
                     e.preventDefault()
                     if (syncedBroadcasterId) setSyncedBroadcasterId(null)
                     const el = viewRef.current
@@ -137,8 +136,7 @@ export function PerformerView({ fileType, fileUrl, onHome }: PerformerViewProps)
                     }
                     break
                 }
-                case 'ArrowLeft':
-                case 'PageUp': {
+                case 'ArrowLeft': {
                     e.preventDefault()
                     if (syncedBroadcasterId) setSyncedBroadcasterId(null)
                     const el = viewRef.current

@@ -51,19 +51,17 @@ export function FlowItemView({
         if (prev) router.push(`/perform/${prev.fileId}`)
     }, [prevSong, router])
 
-    // Keyboard / foot pedal navigation
+    // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return
             switch (e.key) {
                 case 'ArrowRight':
-                case 'PageDown':
                 case ' ':
                     e.preventDefault()
                     navigateNext()
                     break
                 case 'ArrowLeft':
-                case 'PageUp':
                     e.preventDefault()
                     navigatePrev()
                     break

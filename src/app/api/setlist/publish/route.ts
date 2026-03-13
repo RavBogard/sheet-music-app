@@ -49,10 +49,12 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note, subject } = ctx.body!
+        const parsed = schema.safeParse(ctx.body)
+        if (!parsed.success) {
+            return NextResponse.json({ error: 'Invalid request body', details: parsed.error.format() }, { status: 400 })
+        }
+        const { setlistId, musicians, emailRecipients, note, subject } = parsed.data
 
-        // Validate musicians array
-        const musicians: MusicianPayload[] = Array.isArray(rawMusicians) ? rawMusicians : []
         if (musicians.length === 0) {
             return NextResponse.json({ error: 'At least one musician must be assigned' }, { status: 400 })
         }
