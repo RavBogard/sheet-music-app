@@ -98,8 +98,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         return init
     })
 
-    // Cover-only toggle
-    const [coverOnly, setCoverOnly] = useState(false)
+    // Cover-only toggle (defaults to true per user request to just print the setlist)
+    const [coverOnly, setCoverOnly] = useState(true)
 
     // Email packets
     const [sendingEmails, setSendingEmails] = useState(false)
