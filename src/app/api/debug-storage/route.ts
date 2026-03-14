@@ -20,7 +20,7 @@ export async function GET(req: Request) {
                 contentType: f.metadata.contentType,
                 size: f.metadata.size,
                 created: f.metadata.timeCreated
-            })).sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).slice(0, 20)
+            })).sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime()).slice(0, 20)
         })
     } catch (e: any) {
         return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 })
