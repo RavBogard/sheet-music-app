@@ -23,5 +23,6 @@
 - None.
 
 ## Session Continuity
-- **Last Action**: Completed Phase 10 UI/UX audit and minor fixes.
-- **Next Turn**: Wait for user to verify final state.
+- **Last Action**: Phase 12 context gathered
+- **Next Turn**: `/gsd:plan-phase 12`
+- **Resume File**: `.planning/phases/12-auth-routing-deep-dive-fixes/12-CONTEXT.md`
