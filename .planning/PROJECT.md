@@ -6,6 +6,16 @@ A continuation of the Bulletproof Auth project. Having secured the foundation (P
 ## Core Value
 Frictionless, instant access for all users (especially unauthenticated and pending users), blazing fast PDF loading, and zero UI layout shifts or authorization flashes.
 
+## Current Milestone: v1.1 Gating
+
+**Goal:** Resolve role-based authorization bugs causing UI leaks and incorrect redirects, and streamline the schedule page.
+
+**Target features:**
+- Deep dive analysis into role-based routing and UI gating bugs
+- Fix musician UI showing unauthorized actions (duplicate setlists, clone for next week, etc.)
+- Fix band leaders incorrectly redirecting to Google login
+- Fix schedule page to simply list all upcoming public setlists associated with dates regardless of musician assignments
+
 ## Requirements
 
 ### Active
@@ -17,4 +27,4 @@ Frictionless, instant access for all users (especially unauthenticated and pendi
 - [ ] **QA-01 (UI/UX Audit)**: Perform a recursive audit against the `ui-ux-pro-max` guidelines (contrast, cursor states, SVG icons, touch targets).
 
 ---
-*Last updated: 2026-03-13 after completion of Auth Refactor (Phases 1-5)*
+*Last updated: 2026-03-13 — Milestone v1.1 Gating started*
