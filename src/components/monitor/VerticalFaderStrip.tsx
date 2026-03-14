@@ -211,7 +211,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             
             {/* Channel name (Moved to bottom) */}
             <div
-                className={`text-xs font-bold truncate w-full text-center mt-2 px-1 ${isMaster ? "text-brand" : "text-zinc-200"}`}
+                className={`text-xs sm:text-sm font-bold truncate max-w-[56px] text-center mt-2 px-1.5 py-0.5 rounded ${isMaster ? "text-brand bg-brand/10" : "text-white bg-zinc-800/80 shadow-sm"}`}
                 title={label}
             >
                 {label}
