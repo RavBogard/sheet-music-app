@@ -24,6 +24,18 @@
 - [ ] **API-01**: Audit all `export async function GET/POST` routes in `src/app/api`.
 - [ ] **API-02**: Refactor insecure endpoints (e.g., `/api/drive/file`, `/api/chat`) to use `createApiHandler`.
 
+### v1.1 Gating Requirements
+
+#### Auth & Routing Fixes
+- [ ] **AUTH-04**: Perform a deep dive analysis of role-based routing, UI gating, and authentication state flow.
+- [ ] **AUTH-05**: Musicians cannot see administrative actions like 'Clone Setlist' or 'Duplicate'.
+- [ ] **AUTH-06**: Ensure zero UI/Auth flashes when loading protected pages.
+- [ ] **AUTH-07**: Investigate and fix 403 Forbidden error when Admins upload files to `/api/library/upload`.
+
+#### Schedule & Data Fetching
+- [ ] **DATA-01**: Display a straightforward list of upcoming public setlists associated with dates on the schedule page (regardless of musician assignment).
+- [ ] **DATA-02**: Ensure unauthenticated users immediately see the hero card on the dashboard.
+
 ---
 
 ## Traceability
