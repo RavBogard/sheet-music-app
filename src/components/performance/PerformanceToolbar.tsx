@@ -219,9 +219,8 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                         </div>
                     </div>
 
-                    {/* Far Right: Monitor Popover + Setlist Drawer */}
+                    {/* Far Right: Setlist Drawer */}
                     <div className="shrink-0 flex items-center gap-1 z-10">
-                        {monitorPopover('tools', true)}
                         <SetlistDrawer />
                     </div>
                 </div>
