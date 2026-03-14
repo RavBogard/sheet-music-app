@@ -102,10 +102,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                 <ZoomOut className={compact ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
             <span className={cn(
-                "font-medium text-foreground text-center",
-                compact ? "text-xs w-10" : "text-xs w-10"
+                "font-medium text-foreground text-center flex items-center justify-center",
+                compact ? "text-xs" : "text-xs w-10"
             )}>
-                {Math.round(zoom * 100)}%
+                <span className="md:hidden text-muted-foreground/30 font-light px-0.5">/</span>
+                <span className="hidden md:inline w-10">{Math.round(zoom * 100)}%</span>
             </span>
             <Button
                 variant="ghost" size="icon"
@@ -127,11 +128,11 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
         <Popover onOpenChange={(open) => trackPopover(id, open)}>
             <PopoverTrigger asChild>
                 <Button variant="ghost" className={cn(
-                    "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center gap-1.5",
-                    compact ? "h-11 px-3 text-xs font-semibold" : "h-10 px-4 text-xs font-bold gap-2 group"
+                    "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center justify-center",
+                    compact ? "h-11 w-11 md:w-auto md:px-3 overflow-hidden text-xs font-semibold gap-1.5" : "h-10 px-4 text-xs font-bold gap-2 group"
                 )} aria-label="Monitor mix">
-                    <Speaker className="h-3.5 w-3.5" />
-                    <span>{compact ? "Monitor" : "MONITOR"}</span>
+                    <Speaker className={compact ? "h-4 w-4 md:h-3.5 md:w-3.5 shrink-0" : "h-3.5 w-3.5 shrink-0"} />
+                    <span className="hidden md:inline">{compact ? "Monitor" : "MONITOR"}</span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
