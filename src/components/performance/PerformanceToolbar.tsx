@@ -194,20 +194,12 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
             {/* ── TOUCH DEVICES (Mobile & Tablet): Two-row layout (< lg) ── */}
             <div className="lg:hidden w-full">
 
-                {/* Row 1 (top): Zoom | Transposer | Metronome (Left) —— Monitor (Right) */}
+                {/* Row 1 (top): Evenly Spaced - Zoom | BPM | Transpose | Monitor */}
                 <div className="w-full h-14 flex items-center justify-between px-3 border-b border-brand/10">
-
-                    {/* Left Group: Zoom, Transpose, BPM */}
-                    <div className="flex items-center gap-2">
-                        {zoomControls(true)}
-                        {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
-                        <MetronomeControl />
-                    </div>
-
-                    {/* Right Group: Monitor */}
-                    <div className="shrink-0 flex items-center">
-                        {monitorPopover('tools', true)}
-                    </div>
+                    {zoomControls(true)}
+                    <MetronomeControl />
+                    {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
+                    {monitorPopover('tools', true)}
                 </div>
 
                 {/* Row 2 (bottom): Home | Song Navigation (centered) | Monitor & Setlist */}
