@@ -29,6 +29,7 @@ export interface PrintTrack {
     transposition?: number
     preferFlats?: boolean
     capoFret?: number
+    omitPdf?: boolean
     // Service flow fields
     type?: string
     performer?: string
@@ -82,6 +83,7 @@ function computeContentHash(req: PrintRequest): string {
             transposition: t.transposition || 0,
             preferFlats: t.preferFlats || false,
             capoFret: t.capoFret || 0,
+            omitPdf: t.omitPdf || false,
         })),
     }
     return createHash('sha256').update(JSON.stringify(significant)).digest('hex').slice(0, 16)
@@ -336,6 +338,17 @@ async function buildCoverPage(
         const titleFont = isServiceFlow ? helveticaOblique : helvetica
         const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
 
+        // Draw alternating background row for zebra striping
+        if (songNum % 2 === 0 && trackType === 'song') {
+            coverPage.drawRectangle({
+                x: 45,
+                y: yOffset - 4,
+                width: width - 90,
+                height: 14,
+                color: rgb(0.96, 0.96, 0.97), // very slightly gray/cool
+            })
+        }
+
         coverPage.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: titleFont, color: titleColor })
         if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
@@ -571,7 +584,7 @@ export async function generatePrintPdf(
             continue
         }
 
-        if (!track.fileId) continue
+        if (!track.fileId || track.omitPdf) continue
         trackIndex++
 
         onProgress?.({

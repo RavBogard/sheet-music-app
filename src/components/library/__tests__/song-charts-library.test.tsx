@@ -305,10 +305,18 @@ describe("SongChartsLibrary", () => {
 
     // ── Upload ──
 
-    it("upload callback triggers library reload", () => {
+    it("upload callback triggers library reload via cache buster apiFetch", async () => {
         render(<SongChartsLibrary />)
         fireEvent.click(screen.getByTestId("upload-btn"))
-        expect(mockLoadLibrary).toHaveBeenCalled()
+        
+        // The real component calls apiFetch to bypass the CDN cache.
+        // We'll wait to ensure the microtask queue flushes the Promise chain.
+        await vi.waitUntil(() => mockApiFetch.mock.calls.some((call: any[]) => typeof call[0] === 'string' && call[0].includes('t=')))
+        
+        expect(mockApiFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/library/list?all=true&t='),
+            undefined 
+        )
     })
 
     // ── Hydrate ──

@@ -2,6 +2,7 @@
 
 import { Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 
@@ -11,61 +12,109 @@ export interface TrackTranspose {
     capoFret: number
 }
 
-interface TransposeTrackListProps {
+interface TrackPrintOptionsListProps {
     tracks: SetlistTrack[]
     trackTranspositions: Record<string, TrackTranspose>
     onUpdateTrack: (trackId: string, field: keyof TrackTranspose, value: number | boolean) => void
     onApplyGlobal: (semitones: number) => void
     activeTranspositions: number
+    selectedTrackIds: Set<string>
+    onToggleTrackSelection: (trackId: string, selected: boolean) => void
+    onSelectAll: () => void
+    onSelectNone: () => void
 }
 
-export function TransposeTrackList({
+export function TrackPrintOptionsList({
     tracks,
     trackTranspositions,
     onUpdateTrack,
     onApplyGlobal,
     activeTranspositions,
-}: TransposeTrackListProps) {
+    selectedTrackIds,
+    onToggleTrackSelection,
+    onSelectAll,
+    onSelectNone,
+}: TrackPrintOptionsListProps) {
+    const printableTracks = tracks.filter(t => t.type !== 'header' && !!t.fileId)
+
     return (
-        <div className="space-y-3">
+        <div className="space-y-3" data-testid="transpose-track-list">
             {/* Quick Actions */}
-            <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Quick:</span>
-                {[-2, -1, 1, 2, 3, 5, 7].map(s => (
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground mr-1">Include:</span>
                     <Button
-                        key={s}
                         variant="ghost"
                         size="xs"
-                        onClick={() => onApplyGlobal(s)}
+                        onClick={onSelectAll}
+                        className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent px-3"
+                    >
+                        All
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={onSelectNone}
+                        className="bg-muted text-muted-foreground hover:text-foreground border border-border hover:bg-destructive/10 px-3"
+                    >
+                        None
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs hidden sm:flex">
+                    <span className="text-muted-foreground mr-1">Transpose:</span>
+                    {[-2, -1, 1, 2, 3, 5, 7].map(s => (
+                        <Button
+                            key={s}
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => onApplyGlobal(s)}
+                            className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
+                        >
+                            {s > 0 ? `+${s}` : s}
+                        </Button>
+                    ))}
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => onApplyGlobal(0)}
                         className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
                     >
-                        {s > 0 ? `+${s}` : s}
+                        Reset
                     </Button>
-                ))}
-                <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => onApplyGlobal(0)}
-                    className="bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
-                >
-                    Reset
-                </Button>
+                </div>
             </div>
 
             {/* Per-Track List */}
-            <div className="bg-muted/50 rounded-lg divide-y divide-border">
-                {tracks.filter(t => t.type !== 'header').map(track => {
+            <div className="bg-muted/30 border border-border rounded-lg divide-y divide-border overflow-hidden">
+                {printableTracks.map(track => {
                     const tp = trackTranspositions[track.id]
                     if (!tp) return null
                     const transposedKey = (track.key && tp.transposition !== 0)
                         ? getTransposedKeyName(track.key, tp.transposition)
                         : null
+                    const isSelected = selectedTrackIds.has(track.id)
 
                     return (
-                        <div key={track.id} className="flex items-center gap-2 px-3 py-2">
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm truncate">{track.title}</div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div 
+                            key={track.id} 
+                            className={`flex items-center gap-3 px-3 py-2 transition-colors ${!isSelected ? 'opacity-50 grayscale bg-muted/50' : ''}`}
+                        >
+                            <Checkbox 
+                                checked={isSelected}
+                                onCheckedChange={(checked) => onToggleTrackSelection(track.id, checked as boolean)}
+                                id={`print-track-${track.id}`}
+                                className="h-5 w-5 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                            />
+                            
+                            <label 
+                                htmlFor={`print-track-${track.id}`}
+                                className="flex-1 min-w-0 cursor-pointer py-1"
+                            >
+                                <div className={`text-sm font-medium truncate ${!isSelected ? 'line-through decoration-muted-foreground/50' : ''}`}>
+                                    {track.title}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                                     {track.key && (
                                         <span className="font-mono">
                                             {track.key}
@@ -74,11 +123,8 @@ export function TransposeTrackList({
                                             )}
                                         </span>
                                     )}
-                                    {!track.fileId && (
-                                        <span className="text-yellow-600 dark:text-yellow-500/60">no PDF</span>
-                                    )}
                                 </div>
-                            </div>
+                            </label>
 
                             {/* Transpose stepper */}
                             <div className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">

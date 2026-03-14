@@ -1,6 +1,6 @@
 {
   "name": "sheet-music-app",
-  "version": "2.5.0",
+  "version": "2.7.1",
   "private": true,
   "scripts": {
     "dev": "node scripts/update-build-info.js && node scripts/copy-pdf-worker.js && next dev",
@@ -60,6 +60,7 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "5.4.296",
     "qrcode.react": "^4.2.0",
+    "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",

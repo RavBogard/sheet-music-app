@@ -22,6 +22,7 @@ import {
     Trash2,
     Clock,
     User,
+    Printer,
 } from "lucide-react"
 
 interface OverflowMenuProps {
@@ -33,6 +34,7 @@ interface OverflowMenuProps {
     onDelete?: () => void
     onEditDetails?: () => void
     onSetRabbi?: (rabbi: string) => void
+    onPrint?: () => void
 
     // State
     isPublic: boolean
@@ -52,6 +54,7 @@ export function OverflowMenu({
     onDelete,
     onEditDetails,
     onSetRabbi,
+    onPrint,
     isPublic,
     isBandLeader,
     canEdit,
@@ -138,6 +141,13 @@ export function OverflowMenu({
                 <DropdownMenuSeparator />
 
                 {/* Tools */}
+                {onPrint && (
+                    <DropdownMenuItem onClick={onPrint} className="sm:hidden">
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print Gig Packet
+                    </DropdownMenuItem>
+                )}
+                
                 <DropdownMenuItem onClick={onOpenAI}>
                     <Sparkles className="h-4 w-4 mr-2" />
                     AI Assistant

@@ -221,10 +221,9 @@ describe("PrintModal", () => {
 
     // ── Action buttons ──
 
-    it("renders download and print buttons", () => {
+    it("renders download buttons", () => {
         render(<PrintModal {...defaultProps} />)
         expect(screen.getByText("Download PDF")).toBeDefined()
-        expect(screen.getByText("Print")).toBeDefined()
     })
 
     it("shows email button when setlistId is present", () => {

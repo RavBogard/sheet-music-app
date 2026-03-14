@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
-import { TransposeTrackList, TrackTranspose } from "./TransposeTrackList"
+import { TrackPrintOptionsList, TrackTranspose } from "./TrackPrintOptionsList"
 import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
@@ -102,6 +102,30 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     // Cover-only toggle (defaults to true per user request to just print the setlist)
     const [coverOnly, setCoverOnly] = useState(true)
 
+    // Track Selection
+    const [trackIncludedIds, setTrackIncludedIds] = useState<Set<string>>(() => {
+        const set = new Set<string>()
+        tracks.filter(t => !!t.fileId).forEach(t => set.add(t.id))
+        return set
+    })
+
+    const toggleTrackSelection = useCallback((trackId: string, selected: boolean) => {
+        setTrackIncludedIds(prev => {
+            const next = new Set(prev)
+            if (selected) next.add(trackId)
+            else next.delete(trackId)
+            return next
+        })
+    }, [])
+
+    const selectAllTracks = useCallback(() => {
+        setTrackIncludedIds(new Set(tracks.filter(t => !!t.fileId).map(t => t.id)))
+    }, [tracks])
+
+    const selectNoTracks = useCallback(() => {
+        setTrackIncludedIds(new Set())
+    }, [])
+
     // Email packets
     const [sendingEmails, setSendingEmails] = useState(false)
 
@@ -139,6 +163,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         return Object.values(trackTranspositions).filter(t => t.transposition !== 0).length
     }, [printMode, trackTranspositions])
 
+    const printableSelectedCount = tracks.filter(t => !!t.fileId && trackIncludedIds.has(t.id)).length
+
     const myLabel = useMemo(() => {
         if (!myProfile?.instrument) return null
         const preset = INSTRUMENT_PRESETS[myProfile.instrument]
@@ -170,6 +196,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                         transposition: tp ? tp.transposition : transposition,
                         preferFlats: tp ? tp.preferFlats : preferFlats,
                         capoFret: tp ? tp.capoFret : capoFret,
+                        omitPdf: !trackIncludedIds.has(t.id),
                         type: t.type,
                         performer: t.performer,
                         estimatedMinutes: t.estimatedMinutes,
@@ -225,7 +252,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         }
     }
 
-    const handleGenerate = async (mode: 'download' | 'print') => {
+    const handleGenerate = async () => {
         setGenerating(true)
         setError(null)
         setProgressMsg("Generating gig packet...")
@@ -295,37 +322,16 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
             const url = URL.createObjectURL(blob)
 
-            if (mode === 'download') {
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
-                document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                URL.revokeObjectURL(url)
-                onClose()
-            } else {
-                const iframe = document.createElement('iframe')
-                iframe.style.position = 'fixed'
-                iframe.style.top = '-10000px'
-                iframe.style.left = '-10000px'
-                iframe.style.width = '1px'
-                iframe.style.height = '1px'
-                iframe.src = url
-                document.body.appendChild(iframe)
-                iframe.onload = () => {
-                    try {
-                        iframe.contentWindow?.print()
-                    } catch {
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                    }
-                    setTimeout(() => {
-                        document.body.removeChild(iframe)
-                        URL.revokeObjectURL(url)
-                    }, 1000)
-                }
-            }
+            const a = document.createElement('a')
+            a.href = url
+            // Convert something like "My Gig Packet!" into "My_Gig_Packet"
+            a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            
+            onClose()
         } catch (e: unknown) {
             logger.error('Print generation failed:', e)
             setError(e instanceof Error ? e.message : 'Failed to generate PDF')
@@ -334,7 +340,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         }
     }
 
-    const canGenerate = (coverOnly || linkedPdfTracks.length > 0) && !generating &&
+    const canGenerate = (coverOnly || printableSelectedCount > 0) && !generating &&
         (printMode !== "select-musicians" || selectedUids.length > 0)
 
     // Ensure we only render the portal on the client
@@ -426,20 +432,24 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 </div>
                             </div>
 
-                            {/* Transposition Details (just-me mode) */}
-                            {printMode === "just-me" && activeTranspositions > 0 && !coverOnly && (
-                                <TransposeTrackList
+                            {/* Print Options Checklist / Transposition */}
+                            {!coverOnly && (
+                                <TrackPrintOptionsList
                                     tracks={tracks}
                                     trackTranspositions={trackTranspositions}
                                     onUpdateTrack={updateTrackTranspose}
                                     onApplyGlobal={(s) => applyGlobalTranspose(s)}
-                                    activeTranspositions={activeTranspositions}
+                                    activeTranspositions={printMode === "just-me" || printMode === "select-musicians" ? activeTranspositions : 0}
+                                    selectedTrackIds={trackIncludedIds}
+                                    onToggleTrackSelection={toggleTrackSelection}
+                                    onSelectAll={selectAllTracks}
+                                    onSelectNone={selectNoTracks}
                                 />
                             )}
 
                             <PrintStats
                                 totalTracks={tracks.length}
-                                linkedPdfCount={linkedPdfTracks.length}
+                                linkedPdfCount={printableSelectedCount}
                                 activeTranspositions={activeTranspositions}
                                 showTranspositions={printMode !== "standard"}
                                 coverOnly={coverOnly}
@@ -459,20 +469,12 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 <div className="p-4 border-t border-border shrink-0 space-y-3">
                     <div className="flex gap-3">
                         <Button
-                            variant="outline" className="flex-1 gap-2"
-                            onClick={() => handleGenerate('download')}
+                            className="flex-1 gap-2"
+                            onClick={handleGenerate}
                             disabled={!canGenerate}
                         >
                             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
-                        </Button>
-                        <Button
-                            className="flex-1 gap-2"
-                            onClick={() => handleGenerate('print')}
-                            disabled={!canGenerate || (printMode === "select-musicians" && selectedUids.length > 1)}
-                        >
-                            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                            Print
                         </Button>
                     </div>
                     {setlistId && (
