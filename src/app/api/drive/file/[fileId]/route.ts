@@ -88,9 +88,11 @@ export const GET = createApiHandler(async (ctx) => {
     const fileId = ctx.params?.fileId
 
     try {
+        logger.info(`[FileProxy] Incoming request for fileId: "${fileId}" (length: ${fileId?.length})`)
         const result = await fetchFileById(fileId)
 
         if (!result) {
+            logger.warn(`[FileProxy] fetchFileById returned null for "${fileId}"`)
             return NextResponse.json(
                 { error: 'File not found', fileId },
                 { status: 404, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
