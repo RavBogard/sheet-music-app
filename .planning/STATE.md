@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 13 context gathered
-last_updated: "2026-03-14T02:26:36.683Z"
+stopped_at: Phase 14 context gathered
+last_updated: "2026-03-14T02:33:49.730Z"
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 2
+  total_plans: 1
   completed_plans: 0
 ---
 
@@ -37,6 +37,6 @@ progress:
 - None.
 
 ## Session Continuity
-Last session: 2026-03-14T02:26:36.681Z
-Stopped at: Phase 13 context gathered
-Resume file: .planning/phases/13-print-modal-ux/13-CONTEXT.md
+Last session: 2026-03-14T02:33:49.728Z
+Stopped at: Phase 14 context gathered
+Resume file: .planning/phases/14-perform-navigation-fixes/14-CONTEXT.md

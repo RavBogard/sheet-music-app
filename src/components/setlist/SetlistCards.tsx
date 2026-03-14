@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle } from "lucide-react"
+import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
@@ -17,8 +17,8 @@ import {
 
 export interface UpcomingCardProps {
     setlist: Setlist
-    onClick: () => void
     onPerform: (e: React.MouseEvent) => void
+    onEdit: (e: React.MouseEvent) => void
     navigatingTo: string | null
     onDownload: (setlist: Setlist) => void
     isDownloading: boolean
@@ -30,7 +30,7 @@ export interface UpcomingCardProps {
     canDuplicate: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
@@ -45,7 +45,7 @@ export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo,
     return (
         <Button
             variant="ghost"
-            onClick={onClick}
+            onClick={onPerform}
             disabled={!!navigatingTo}
             className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
@@ -134,12 +134,12 @@ export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo,
 
                 <div className="mt-4 flex items-center gap-2 w-full">
                     <Button
-                        variant="default"
-                        onClick={onPerform}
-                        className="flex-1 rounded-xl font-bold bg-brand hover:bg-brand/90 text-primary-foreground shadow-lg shadow-brand/20"
+                        variant="secondary"
+                        onClick={onEdit}
+                        className="flex-1 rounded-xl font-bold bg-muted hover:bg-muted/80 text-foreground"
                     >
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Perform
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Setlist
                     </Button>
                     
                     {/* Prominent "Duplicate for next week" button */}
@@ -165,8 +165,8 @@ export function UpcomingSetlistCard({ setlist, onClick, onPerform, navigatingTo,
 
 export interface PastCardProps {
     setlist: Setlist
-    onClick: () => void
     onPerform: (e: React.MouseEvent) => void
+    onEdit: (e: React.MouseEvent) => void
     navigatingTo: string | null
     onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
     onCloneNextWeek?: (setlist: Setlist, e: React.MouseEvent) => void
@@ -176,13 +176,13 @@ export interface PastCardProps {
     canDuplicate: boolean
 }
 
-export function SetlistCard({ setlist, onClick, onPerform, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
 
     return (
         <Button
             variant="ghost"
-            onClick={onClick}
+            onClick={onPerform}
             disabled={!!navigatingTo}
             className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
@@ -260,11 +260,11 @@ export function SetlistCard({ setlist, onClick, onPerform, navigatingTo, onDupli
             <div className="mt-auto pt-2 flex items-center gap-2 w-full">
                 <Button
                     variant="secondary"
-                    onClick={onPerform}
+                    onClick={onEdit}
                     className="flex-1 rounded-xl font-bold bg-muted hover:bg-muted/80 text-foreground"
                 >
-                    <PlayCircle className="h-4 w-4 mr-2" />
-                    Perform
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
                 </Button>
                 
                 {/* Quick clone action */}

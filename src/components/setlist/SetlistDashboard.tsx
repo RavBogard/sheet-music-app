@@ -181,8 +181,8 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                             <UpcomingSetlistCard
                                                 key={setlist.id}
                                                 setlist={setlist}
-                                                onClick={() => handleSelect(setlist)}
-                                                onPerform={(e) => { e.stopPropagation(); router.push(`/perform/setlist/${setlist.id}`) }}
+                                                onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
+                                                onPerform={() => router.push(`/perform/setlist/${setlist.id}`)}
                                                 navigatingTo={navigatingTo}
                                                 onDownload={handleDownload}
                                                 isDownloading={isDownloading}
@@ -215,8 +215,8 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                             <SetlistCard
                                                 key={setlist.id}
                                                 setlist={setlist}
-                                                onClick={() => handleSelect(setlist)}
-                                                onPerform={(e) => { e.stopPropagation(); router.push(`/perform/setlist/${setlist.id}`) }}
+                                                onEdit={(e) => { e.stopPropagation(); handleSelect(setlist) }}
+                                                onPerform={() => router.push(`/perform/setlist/${setlist.id}`)}
                                                 navigatingTo={navigatingTo}
                                                 onDuplicate={handleDuplicateClick}
                                                 onCloneNextWeek={handleCloneNextWeekClick}

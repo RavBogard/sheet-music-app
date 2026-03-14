@@ -1,12 +1,10 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 export function SongNavigation() {
-    const router = useRouter()
     const {
         playbackQueue,
         queueIndex,

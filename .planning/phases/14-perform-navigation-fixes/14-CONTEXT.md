@@ -7,7 +7,7 @@
 ## Phase Boundary
 
 This phase addresses two critical navigation bugs reported by a Band Leader:
-1. **"Perform" Button on Setlist Dashboard:** The Band Leader cannot click "Perform" from the Setlists page. The `handleSelect` function in `useSetlistDashboard` defaults to routing to the editor (`/setlists/[id]`), but the "Perform" button needs to route directly to the performance mode (`/perform/setlist/[id]`).
+1. **Setlist Dashboard Routing:** The "Perform" logic from the Setlists page defaults to routing to the editor (`/setlists/[id]`). We need clicking the card to route directly to the performance mode (`/perform/setlist/[id]`) with a distinct action for editing.
 2. **"Forward" Button in Performance Mode:** The `SongNavigation` component in the `PerformanceToolbar` is attempting to route to the deleted legacy engine (`/perform/[fileId]`). This breaks the "Next" and "Previous" arrows when a user has a PDF open in the V2 Setlist view.
 
 </domain>
@@ -15,29 +15,36 @@ This phase addresses two critical navigation bugs reported by a Band Leader:
 <decisions>
 ## Implementation Decisions
 
-### 1. Dashboard "Perform" Button Fix
-- **Decision:** The `UpcomingSetlistCard` and `SetlistCard` currently call `onClick={() => handleSelect(setlist)}`, which goes to the editor. We need to distinguish between clicking the *card* (goes to editor) vs clicking the *Perform* button.
-- **Decision:** Check if `UpcomingSetlistCard` has an explicit `onPerform` prop. If so, wire it up in `SetlistDashboard.tsx` to `router.push('/perform/setlist/[id]')`.
+### 1. Dashboard "Perform" vs "Edit" Behavior
+- **Decision:** Clicking the *entire Setlist Card* will route the user directly to the Gig View (`/perform/setlist/[id]`). 
+- **Decision:** An explicit "Edit" button will be added to the card for authorized users (Band Leaders/Admins) to route them to the Editor (`/setlists/[id]`).
 
-### 2. SongNavigation Fix (V2 Engine Integration)
-- **Decision:** The `SongNavigation.tsx` component is hardcoded with `router.replace('/perform/${next.fileId}')`. This relies on the deleted Phase 1 legacy engine.
-- **Decision:** In the V2 architecture (`PDFOverlay.tsx`), the active song is controlled by local state (`activeSongIndex`) inside `SetlistPerformPage`, not by URL routing.
-- **Decision:** We must remove `router.replace` from `SongNavigation.tsx`. Instead, `SongNavigation` needs to trigger the `onNavigate` callback that is already passed down from `PDFOverlay`. 
+### 2. SongNavigation Arrow Behavior
+- **Decision:** The Next/Previous arrows will simply **disable/gray out** when reaching the beginning or end of the setlist, rather than wrapping around.
 
 </decisions>
 
 <code_context>
 ## Existing Code Insights
 
+### Dashboard Cards (`src/components/setlist/SetlistCard.tsx` & `UpcomingSetlistCard.tsx`)
+- We need to modify the `onClick` handler of the root card div to `router.push('/perform/setlist/[id]')`.
+- We need to add an `onEdit` callback or an internal `Link` to `/setlists/[id]` to satisfy the new Edit requirement.
+
 ### `SongNavigation.tsx`
-- Relies heavily on `useMusicStore` (`queueIndex`, `nextSong`, `prevSong`).
-- Uses `router.replace('/perform/${next.fileId}')` which is a 404 dead end.
-
-### `PDFOverlay.tsx`
-- Receives `onNavigate: (index: number) => void`.
-- This callback currently does nothing inside `PDFOverlay` because `PerformanceToolbar` doesn't accept an `onNavigate` prop.
-
+- We must remove `router.replace('/perform/${next.fileId}')`.
+- The `handleNext` and `handlePrev` functions should mutate the `queueIndex` via the store, which will natively update `PDFOverlay.tsx` via its reactive effect.
 </code_context>
+
+<specifics>
+## Specific Ideas
+- Best practice standard Tailwind UI/UX applies, as per user request in Phase 13.
+</specifics>
+
+<deferred>
+## Deferred Ideas
+None.
+</deferred>
 
 ---
 
