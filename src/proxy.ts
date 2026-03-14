@@ -51,22 +51,46 @@ export function proxy(request: NextRequest) {
         return NextResponse.next()
     }
 
+    // Helper to create a redirect with cache-busting headers
+    const createNoCacheRedirect = (url: URL) => {
+        const response = NextResponse.redirect(url)
+        response.headers.set('Cache-Control', 'no-store, must-revalidate, max-age=0')
+        return response
+    }
+
+    // Redirect Loop Detection
+    // Track how many auth-related redirects happen in a short time
+    const detectRedirectLoop = (targetPath: string) => {
+        const bounceCountValue = request.cookies.get('auth_bounce_count')?.value || '0'
+        const bounceCount = parseInt(bounceCountValue, 10)
+
+        if (bounceCount > 3) {
+            // Loop detected! Send to fallback page and clear the bounce cookie
+            const fallbackUrl = new URL('/auth-error', request.url)
+            const response = createNoCacheRedirect(fallbackUrl)
+            response.cookies.delete('auth_bounce_count')
+            return response
+        }
+
+        // Increment bounce count and set a short expiry (10 seconds)
+        const response = createNoCacheRedirect(new URL(targetPath, request.url))
+        response.cookies.set('auth_bounce_count', (bounceCount + 1).toString(), { maxAge: 10 })
+        return response
+    }
+
     if (!session && !isPublicRoute) {
-        // User is not logged in but trying to access a secure page
-        const redirectUrl = new URL('/login', request.url)
-        return NextResponse.redirect(redirectUrl)
+        // User is not logged in but trying to access a secure page -> send to login
+        return detectRedirectLoop('/login')
     }
 
     if (session && pathname === '/login') {
         // User is logged in but going to the login page -> send to dashboard
-        const redirectUrl = new URL('/setlists', request.url)
-        return NextResponse.redirect(redirectUrl)
+        return detectRedirectLoop('/setlists')
     }
 
     // Redirect /admin to /manage
     if (session && pathname === '/admin') {
-        const redirectUrl = new URL('/manage', request.url)
-        return NextResponse.redirect(redirectUrl)
+        return createNoCacheRedirect(new URL('/manage', request.url))
     }
 
     // Role Verification via Claims
@@ -75,20 +99,23 @@ export function proxy(request: NextRequest) {
         
         // Pending users are explicitly blocked from all secure routes except the home dashboard
         if (role === 'pending' && pathname !== '/') {
-            const redirectUrl = new URL('/', request.url)
-            return NextResponse.redirect(redirectUrl)
+            return detectRedirectLoop('/')
         }
 
         if (isLeaderRoute) {
             if (role !== 'admin' && role !== 'band_leader') {
                 // Unprivileged user trying to access leader/admin routes
-                const redirectUrl = new URL('/setlists', request.url)
-                return NextResponse.redirect(redirectUrl)
+                return detectRedirectLoop('/setlists')
             }
         }
     }
 
-    return NextResponse.next()
+    // Clear the bounce cookie on successful load of any non-redirected page
+    const response = NextResponse.next()
+    if (request.cookies.has('auth_bounce_count')) {
+        response.cookies.delete('auth_bounce_count')
+    }
+    return response
 }
 
 // See "Matching Paths" below to learn more
