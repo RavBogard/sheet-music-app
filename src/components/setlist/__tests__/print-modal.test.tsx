@@ -285,6 +285,15 @@ describe("PrintModal", () => {
             fireEvent.click(screen.getByText("Email Packet Links to Band"))
         })
 
+        // Wait for confirmation UI
+        await waitFor(() => {
+            expect(screen.getByText(/Send \d+ Email/i)).toBeDefined()
+        })
+
+        await act(async () => {
+            fireEvent.click(screen.getByText(/Send \d+ Email/i))
+        })
+
         await waitFor(() => {
             expect(mockApiFetch).toHaveBeenCalledWith("/api/setlist/email-packets", expect.objectContaining({
                 method: "POST",
@@ -303,6 +312,15 @@ describe("PrintModal", () => {
 
         await act(async () => {
             fireEvent.click(screen.getByText("Email Packet Links to Band"))
+        })
+
+        // Wait for confirmation UI
+        await waitFor(() => {
+            expect(screen.getByText(/Send \d+ Email/i)).toBeDefined()
+        })
+
+        await act(async () => {
+            fireEvent.click(screen.getByText(/Send \d+ Email/i))
         })
 
         await waitFor(() => {

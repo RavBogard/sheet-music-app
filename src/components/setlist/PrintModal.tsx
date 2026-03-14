@@ -128,6 +128,10 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     // Email packets
     const [sendingEmails, setSendingEmails] = useState(false)
+    const [showEmailConfirm, setShowEmailConfirm] = useState(false)
+    const [emailRecipientUids, setEmailRecipientUids] = useState<Set<string>>(() => {
+        return new Set(assignedMusicians?.map(m => m.uid!).filter(Boolean) || [])
+    })
 
     const updateTrackTranspose = (trackId: string, field: keyof TrackTranspose, value: number | boolean) => {
         setTrackTranspositions(prev => ({
@@ -221,17 +225,20 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         return response.blob()
     }
 
-    const handleEmailPackets = async () => {
+    const executeEmailPackets = async () => {
         if (!setlistId) {
             toast.error('Cannot email packets: setlist not saved yet')
+            return
+        }
+        if (emailRecipientUids.size === 0) {
+            toast.error('Please select at least one recipient')
             return
         }
         setSendingEmails(true)
         try {
             const emailBody: Record<string, unknown> = { setlistId }
-            if (printMode === "select-musicians" && selectedUids.length > 0) {
-                emailBody.recipientUids = selectedUids
-            }
+            emailBody.recipientUids = Array.from(emailRecipientUids)
+            
             const response = await apiFetch('/api/setlist/email-packets', {
                 method: 'POST',
                 body: JSON.stringify(emailBody),
@@ -245,6 +252,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             if (result.failed > 0) {
                 toast.warning(`${result.failed} email${result.failed !== 1 ? 's' : ''} failed to send`)
             }
+            setShowEmailConfirm(false)
         } catch (e) {
             toast.error(e instanceof Error ? e.message : 'Failed to send packet emails')
         } finally {
@@ -362,7 +370,51 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 p-4 space-y-3 min-h-0">
-                    {generating ? (
+                    {showEmailConfirm ? (
+                        <div className="space-y-4 pb-4">
+                            <div className="space-y-2">
+                                <h3 className="font-semibold text-lg text-foreground">Select Email Recipients</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Send personalized gig packet download links directly to these band members.
+                                </p>
+                            </div>
+                            <div className="block border border-border rounded-lg bg-card overflow-hidden">
+                                {musicians.map(m => {
+                                    const isSelected = emailRecipientUids.has(m.uid)
+                                    const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null
+                                    return (
+                                        <label key={m.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer border-b border-border last:border-0 transition-colors">
+                                            <input 
+                                                type="checkbox" 
+                                                className="h-4 w-4 rounded border-primary text-primary focus:ring-primary" 
+                                                checked={isSelected}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked
+                                                    setEmailRecipientUids(prev => {
+                                                        const next = new Set(prev)
+                                                        if (checked) next.add(m.uid)
+                                                        else next.delete(m.uid)
+                                                        return next
+                                                    })
+                                                }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{m.displayName}</p>
+                                                {m.profile.instrument && (
+                                                    <p className="text-xs text-muted-foreground truncate">{preset?.label || m.profile.instrument}</p>
+                                                )}
+                                            </div>
+                                        </label>
+                                    )
+                                })}
+                                {musicians.length === 0 && (
+                                    <div className="p-4 text-center text-sm text-muted-foreground">
+                                        No active musicians found.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : generating ? (
                         <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <Loader2 className="h-10 w-10 text-primary animate-spin" />
                             <p className="text-sm text-muted-foreground">{progressMsg || 'Generating...'}</p>
@@ -467,26 +519,44 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                 {/* Actions */}
                 <div className="p-4 border-t border-border shrink-0 space-y-3">
-                    <div className="flex gap-3">
-                        <Button
-                            className="flex-1 gap-2"
-                            onClick={handleGenerate}
-                            disabled={!canGenerate}
-                        >
-                            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                            {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
-                        </Button>
-                    </div>
-                    {setlistId && (
-                        <Button
-                            variant="outline"
-                            className="w-full gap-2 text-muted-foreground"
-                            onClick={handleEmailPackets}
-                            disabled={sendingEmails}
-                        >
-                            {sendingEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                            Email Packet Links to Band
-                        </Button>
+                    {showEmailConfirm ? (
+                        <div className="flex gap-3 w-full">
+                            <Button variant="outline" className="flex-1" onClick={() => setShowEmailConfirm(false)} disabled={sendingEmails}>
+                                Cancel
+                            </Button>
+                            <Button 
+                                className="flex-[2] gap-2 transition-all" 
+                                onClick={executeEmailPackets} 
+                                disabled={sendingEmails || emailRecipientUids.size === 0}
+                            >
+                                {sendingEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                Send {emailRecipientUids.size} Email{emailRecipientUids.size !== 1 ? 's' : ''}
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex gap-3">
+                                <Button
+                                    className="flex-1 gap-2"
+                                    onClick={handleGenerate}
+                                    disabled={!canGenerate}
+                                >
+                                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                    {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
+                                </Button>
+                            </div>
+                            {setlistId && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full gap-2 text-muted-foreground"
+                                    onClick={() => setShowEmailConfirm(true)}
+                                    disabled={sendingEmails}
+                                >
+                                    <Mail className="h-4 w-4" />
+                                    Email Packet Links to Band
+                                </Button>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

@@ -74,6 +74,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
+        cacheVersion: 2, // Increment when PDF rendering logic changes to bypass stale cache
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
