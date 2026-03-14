@@ -19,7 +19,7 @@ function decodeJwtPayload(token: string) {
 }
 
 // Exact-match public routes
-const publicExactRoutes = ['/login', '/']
+const publicExactRoutes = ['/login', '/', '/auth-error']
 
 // Prefix-match public routes — these serve public/unauthenticated content
 // /perform/* — musicians view shared setlists (may not be signed in)
