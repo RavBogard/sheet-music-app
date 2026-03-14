@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Derived roles — uses shared hierarchy from @/lib/roles
     const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(profile?.role)
     const isSoundEngineer = !!profile?.soundEngineer
-    const canUpload = isAdmin || isBandLeader || !!profile?.canUpload
+    const canUpload = isAdmin || isBandLeader || isMusician || !!profile?.canUpload
 
     useEffect(() => {
         // Build-time safety: If auth is mock (empty object), return
