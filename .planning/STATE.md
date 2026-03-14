@@ -5,8 +5,8 @@
 **Current Focus**: Milestone v1.1 Gating
 
 ## Current Position
-**Phase**: Not started (defining requirements)
-**Plan**: —
+**Phase**: Phase 12: Auth & Routing Deep Dive & Fixes
+**Plan**: Implement AUTH-04 and AUTH-07
 **Status**: Defining requirements
 **Last activity**: 2026-03-13 — Milestone v1.1 Gating started
 

@@ -53,3 +53,9 @@
 - UI-03 -> Phase 4
 - API-01 -> Phase 5
 - API-02 -> Phase 5
+- AUTH-04 -> Phase 12
+- AUTH-05 -> Phase 13
+- AUTH-06 -> Phase 13
+- AUTH-07 -> Phase 12
+- DATA-01 -> Phase 14
+- DATA-02 -> Phase 14
