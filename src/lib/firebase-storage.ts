@@ -33,10 +33,16 @@ function getBucket() {
  * Mirrors a flat structure keyed by Drive file ID for easy lookup.
  */
 function getStoragePath(fileId: string, mimeType?: string): string {
-    const ext = mimeType?.includes('pdf') ? '.pdf'
+    let ext = mimeType?.includes('pdf') ? '.pdf'
         : mimeType?.includes('xml') ? '.xml'
             : mimeType?.includes('audio') ? '.mp3'
                 : ''
+    
+    // Prevent double extensions if the ID somehow already includes it
+    if (ext && fileId.toLowerCase().endsWith(ext)) {
+        ext = ''
+    }
+    
     return `library/${fileId}${ext}`
 }
 

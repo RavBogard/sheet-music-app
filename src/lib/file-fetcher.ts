@@ -23,7 +23,10 @@ export interface FetchedFile {
  * @returns FetchedFile or null if not in Storage
  */
 export async function fetchFileById(fileId: string, mimeType?: string): Promise<FetchedFile | null> {
-    const storageResult = await downloadFromStorage(fileId, mimeType)
+    // If the frontend passed a raw storageUrl with an extension, strip it so the candidate logic works correctly 
+    const cleanId = fileId.replace(/\.(pdf|xml|musicxml|mp3)$/i, '')
+    
+    const storageResult = await downloadFromStorage(cleanId, mimeType)
     if (storageResult.success) {
         return {
             buffer: storageResult.data.buffer,
