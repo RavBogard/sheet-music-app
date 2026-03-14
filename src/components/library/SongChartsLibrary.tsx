@@ -136,7 +136,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const getCleanName = (name: string) =>
         name.replace(/\.(pdf|musicxml|xml|mxl)$/i, '').replace(/_/g, ' ')
 
-    const { isAdmin, isBandLeader, profile, canUpload } = useAuth()
+    const { isAdmin, isBandLeader, profile, canUpload, user } = useAuth()
     const congregation = useCongregation()
     const { digitizing, handleDigitize, handleArchive, handleRename } = useLibraryActions({ loadLibrary, getCleanName })
 
@@ -152,6 +152,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const combinedItems = tab === "audio" ? audioFiles : files
 
     useEffect(() => {
+        if (!user) return // Wait for Firebase client auth token to initialize
+        
         const fileIds = combinedItems
             .filter(f => !isAudioFile(f))
             .map(f => f.id)
@@ -164,7 +166,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             .then(data => setUsageMap(data))
             .catch(() => { }) // Silent -- usage badges are non-critical
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [combinedItems.map(i => i.id).join(',')])
+    }, [combinedItems.map(i => i.id).join(','), user])
 
     const itemCount = tab === "audio" ? audioFiles.length : files.length
     const hasAudio = audioFiles.length > 0
@@ -182,9 +184,18 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </div>
                 <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
                 {canUpload && (
-                    <UploadDialog onUploadComplete={() => {
-                        void Promise.resolve(loadLibrary()).catch(() => {})
+                    <UploadDialog onUploadComplete={async () => {
                         toast.success("Library updated with your upload")
+                        try {
+                            // Bust both browser and CDN caches to instantly show the new file
+                            const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
+                            if (res.ok) {
+                                const data = await res.json()
+                                hydrate(data.files)
+                            }
+                        } catch (err) {
+                            console.error("Failed to refresh library after upload", err)
+                        }
                     }} />
                 )}
                 <Button
