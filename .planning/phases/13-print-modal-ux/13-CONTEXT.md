@@ -6,41 +6,45 @@
 <domain>
 ## Phase Boundary
 
-This phase addresses two specific issues with the "Gig Packet" (Print) functionality:
-1. **Modal Layout Issue:** The `PrintModal` content is pushing the primary action buttons ("Print" / "Download") off-screen, requiring users to scroll down. The layout needs to be constrained so the header and footer (actions) are always sticky and visible, while only the middle content scrolls.
-2. **Access from Performance Mode:** The "Gig Packet" button is currently only in the Editor. It needs to be added to the `PerformanceToolbar` (next to the "Edit" button) and made accessible to all authenticated users (`isMusician` and above).
-
+Resolve the 1) overflow/scrolling UI bug in the `PrintModal` separating the content body from the sticky action buttons, and 2) extend the Print capability so that it is accessible from the `PerformanceToolbar` natively without needing to open the editor view, gating the button to musicians and above.
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### 1. Print Modal Layout Fix
-- **Decision:** The `PrintModal` uses Tailwind's `flex-1` and `overflow-y-auto` for the middle section, but the parent container might not be constraining its height properly, causing the whole modal to grow beyond the viewport on some screens.
-- **Decision:** Ensure the modal container (`div.bg-card`) has `max-h-[90vh] flex flex-col`, the header has `shrink-0`, the content area has `flex-1 overflow-y-auto min-h-0`, and the footer has `shrink-0 p-4 bg-background sticky bottom-0 border-t`.
-- **Decision:** Check if `TransposeTrackList` or `PrintModeSelector` is forcing the modal to expand unnecessarily.
-
-### 2. Performance Toolbar Access
-- **Decision:** Add a "Print" (Printer icon) button to the `PerformanceToolbar`.
-- **Decision:** It should sit next to the "Edit" button.
-- **Decision:** It should be visible to `isMusician`, `isBandLeader`, and `isAdmin` (basically, any logged-in user who isn't just a community member or guest).
-- **Decision:** Clicking it will mount the `PrintModal` directly over the performance view. We will need to pass the current setlist data to the toolbar, or have the toolbar trigger a state that opens the modal.
-
+### Claude's Discretion
+- **User Preference:** The user explicitly stated "i trust you on all of it" regarding the UI/UX decisions.
+- **Modal Constrainment:** Claude will implement a robust `max-h` flexbox containment strategy to keep the header and footer sticky within the viewport bounds.
+- **Button Stacking:** Claude will decide how to make the print buttons responsive on mobile devices (e.g., stacking them in the footer vs shrinking them).
+- **Toolbar Placement:** Claude will integrate the Gig Packet button cleanly into the `PerformanceToolbar` near the Edit view button, respecting the existing tablet and desktop layout groupings.
 </decisions>
 
 <code_context>
 ## Existing Code Insights
 
-### `src/components/setlist/PrintModal.tsx`
-- The outermost wrapper is `fixed inset-0 ...`.
-- The inner modal is `bg-card rounded-xl w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col`.
-- The actions div is `p-4 border-t border-border shrink-0 space-y-3`.
-- The bug likely stems from the fact that `max-h-[90vh]` works, but if the content is long, the user still has to scroll *inside* the modal to see the buttons. Actually, the prompt says "it opens up a view where the actual print menu is 'below' everything, and you have to scroll down significantly to access it." Wait, if the footer is `shrink-0` in a `flex flex-col` container with a fixed height, the footer *should* stick to the bottom. I need to review the exact HTML structure of the modal.
+### Reusable Assets
+- `src/components/setlist/PrintModal.tsx`: The primary modal component that needs the scrolling behavior decoupled from the `<body>`/window height.
+- `src/components/performance/PerformanceToolbar.tsx`: Where we need to inject the `printButton()` trigger.
 
-### `src/components/performance/PerformanceToolbar.tsx`
-- Already has `isBandLeader` from `useAuth()`. We will add `isMusician` or simply check `user` since `proxy.ts` allows public access. We only want musicians+ to see the print button.
+### Established Patterns
+- **Role Verification:** `useAuth()` surfaces `isAdmin`, `isBandLeader` and `isMusician`. The Performance route itself is public, so the button explicitly needs a gate (e.g., `if (!isMusician) return null`).
+- **Responsive Toolbar:** The toolbar uses standard `md:hidden`, `md:flex lg:hidden`, and `lg:flex` breakpoints, meaning our new button will need to handle the `compact=true` and `compact=false` states for label visibility.
 
 </code_context>
+
+<specifics>
+## Specific Ideas
+
+No specific requirements — open to standard, clean approaches as approved by Claude.
+
+</specifics>
+
+<deferred>
+## Deferred Ideas
+
+None — discussion stayed within phase scope.
+
+</deferred>
 
 ---
 

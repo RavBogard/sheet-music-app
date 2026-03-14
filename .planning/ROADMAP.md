@@ -17,24 +17,32 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 ## Upcoming Phases
 
 - [ ] **Phase 9: Real-Time State Management (Zustand/RTDB)** - (Cancelled - Not needed)
-- [ ] **Phase 12: Auth & Routing Deep Dive & Fixes**
-  - **Requirements:** AUTH-04, AUTH-07
-  - **Success Criteria:**
-    - Routing logic and authentication state flow are fully documented and stable.
-    - Admins can successfully upload files to the library without encountering 403 Forbidden errors.
-    - Authentication state transitions occur without unexpected connection drops.
+- [ ] Phase 12: Auth & Routing Deep Dive & Fixes
 - [ ] **Phase 13: UI Gating & Flash Prevention**
-  - **Requirements:** AUTH-05, AUTH-06
-  - **Success Criteria:**
-    - Musicians do not see administrative action buttons such as 'Clone Setlist' or 'Duplicate'.
-    - Protected pages render instantly with appropriate role-based UI, exhibiting zero layout shifts or auth flashes.
-    - Unauthorized users are properly gated via server-side rendering.
 - [ ] **Phase 14: Schedule & Dashboard Optimization**
-  - **Requirements:** DATA-01, DATA-02
-  - **Success Criteria:**
-    - Unauthenticated and pending users immediately see the hero card on the dashboard.
-    - The schedule page displays a straightforward, chronological list of upcoming public setlists.
-    - Schedule queries are optimized and decoupled from heavy assignment data.
+
+### Phase Details
+
+#### Phase 12: Auth & Routing Deep Dive & Fixes
+- **Requirements:** AUTH-04, AUTH-07
+- **Success Criteria:**
+  - Routing logic and authentication state flow are fully documented and stable.
+  - Admins can successfully upload files to the library without encountering 403 Forbidden errors.
+  - Authentication state transitions occur without unexpected connection drops.
+
+#### Phase 13: UI Gating & Flash Prevention
+- **Requirements:** AUTH-05, AUTH-06
+- **Success Criteria:**
+  - Musicians do not see administrative action buttons such as 'Clone Setlist' or 'Duplicate'.
+  - Protected pages render instantly with appropriate role-based UI, exhibiting zero layout shifts or auth flashes.
+  - Unauthorized users are properly gated via server-side rendering.
+
+#### Phase 14: Schedule & Dashboard Optimization
+- **Requirements:** DATA-01, DATA-02
+- **Success Criteria:**
+  - Unauthenticated and pending users immediately see the hero card on the dashboard.
+  - The schedule page displays a straightforward, chronological list of upcoming public setlists.
+  - Schedule queries are optimized and decoupled from heavy assignment data.
 
 ## Progress Table
 

@@ -344,8 +344,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     if (!mounted) return null
 
     return createPortal(
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 sm:p-6" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-2xl border border-border overflow-hidden">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 sm:p-6 pb-safe" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
                     <h2 className="text-xl font-bold">Print Gig Packet</h2>
@@ -355,7 +355,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="overflow-y-auto flex-1 p-4 space-y-3">
+                <div className="overflow-y-auto flex-1 p-4 space-y-3 min-h-0">
                     {generating ? (
                         <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <Loader2 className="h-10 w-10 text-primary animate-spin" />
