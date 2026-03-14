@@ -1,6 +1,6 @@
-# Feature Research: Musician Platforms (Auth & Access)
+# Feature Research
 
-**Domain:** Music Collaboration & Worship Management
+**Domain:** Authorization Gating, Routing, and Schedule Display
 **Researched:** 2026-03-13
 **Confidence:** HIGH
 
@@ -12,11 +12,9 @@ Features users assume exist. Missing these = product feels incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Tiered RBAC** | Different needs for Band Leaders vs. Musicians vs. Tech Crew. | MEDIUM | Standard: Admin, Editor, Scheduler, Viewer. |
-| **Setlist Management** | Core utility of the platform. | MEDIUM | Must support reordering, song keys, and rehearsal notes. |
-| **Song Library** | Centralized repository for all charts and media. | MEDIUM | Integration with cloud storage (Drive/Firebase) is standard. |
-| **Mobile-First Viewer** | Musicians use tablets/phones on stage. | HIGH | Needs to be responsive, fast, and support "Performance Mode." |
-| **Auth Integration** | Secure but simple login (Google/SSO). | LOW | Frictionless onboarding is critical for volunteers. |
+| Role-based UI Gating | Users should only see actions they can perform. Musicians shouldn't see admin actions (e.g., clone setlist). | MEDIUM | Requires reliable user context (e.g., `getServerUser` and React context) and conditional UI rendering. Needs server-side validation to prevent unauthorized actions. |
+| Correct Login Redirect Handling | Authenticated users (like band leaders) shouldn't be erroneously kicked back to Google login. Unauth users should be prompted contextually. | MEDIUM | Relies on solid middleware or layout wrappers. Edge cases in state hydration or expired tokens often cause these bugs. |
+| Simplified Schedule Display | A straightforward list of upcoming services/setlists regardless of complex individual assignments. | LOW | Re-scoping the query to simply list upcoming public setlists by date, decoupling from strict musician assignments for basic viewing. |
 
 ### Differentiators (Competitive Advantage)
 
@@ -24,10 +22,8 @@ Features that set the product apart. Not required, but valuable.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Frictionless Public Links** | Instant access for community/guests without login. | MEDIUM | Unique to this project; competitors (Planning Center/MultiTracks) gate this heavily. |
-| **X32 Monitor Bridge** | Direct control of monitor mixes from the chart view. | HIGH | Massive value for musicians; usually requires separate apps (M-Air/X32-Mix). |
-| **AI Transposition** | Instant, accurate chord shifting via LLM/Math. | MEDIUM | Standard tools often struggle with complex formatting; Gemini-powered is a win. |
-| **Feature Filtering UI** | UI that hides (not just disables) irrelevant tools. | LOW | Keeps the interface clean for non-technical users. |
+| Zero UI/Auth Flashes | Aligns with "Core Value". Users instantly see correct layout without a split-second of unauthorized UI flashing. | HIGH | Requires Server-Side Rendering (SSR) checks (e.g., applying `getServerUser` to `/manage/page.tsx`, `/monitor/page.tsx`) before delivering the client bundle. |
+| Frictionless Unauth Access | Unauthenticated and pending users immediately see the `<NextServiceCard>` hero on the dashboard without hitting login walls. | LOW | Needs specific routing fallback logic on the dashboard to present public-facing components instead of global redirects. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
@@ -35,80 +31,79 @@ Features that seem good but create problems.
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Public PDF Hosting** | Easy sharing of sheet music. | **Legal/Copyright Risk** | Link to official sources or use restricted "Musician" view for copyrighted files. |
-| **In-App DAW Editing** | Full audio editing in-browser. | Extreme complexity; performance issues. | Stems playback with basic volume/mute only. |
-| **Open "Edit" for All** | "We're all a team, everyone should edit." | Versioning chaos; accidental deletions. | Role-based "Request Edit" or "Local Version" (MultiTracks style). |
+| Fine-grained Permission Models | Allows custom permissions per user instead of roles. | Extreme complexity, hard to audit, overkill for the application's scale. | Stick to simple, well-defined role Enums (Admin, Band Leader, Musician, Pending). |
+| Client-side Only Gating | Fast to implement, just hide buttons in React state. | Prone to UI flashes before state hydrates; highly insecure if API routes remain unprotected. | Server-side gating via `getServerUser` combined with protected API endpoints. |
+| Musician-centric Complex Schedules | Filtering the schedule based heavily on individual assignments. | Causes confusion if assignments are incomplete or change frequently; leads to blank states. | A simple, chronological list of all upcoming public services. |
 
 ## Feature Dependencies
 
-```
-[Public Link Access] ──requires──> [Song Metadata/Public Flag]
-                                   └──requires──> [Public Domain Filter]
+```text
+[Zero UI/Auth Flashes]
+    └──requires──> [Role-based UI Gating (SSR)]
+                       └──requires──> [Robust Auth Context (`getServerUser`)]
 
-[Monitor Mixing] ──requires──> [User-to-Bus Mapping]
-                               └──requires──> [X32 Network Bridge]
+[Correct Login Redirect Handling] ──requires──> [Robust Auth Context (`getServerUser`)]
 
-[AI Transposition] ──requires──> [Structured Text Format (ChordPro)]
+[Simplified Schedule Display] ──enhances──> [Frictionless Unauth Access]
+
+[Client-side Only Gating] ──conflicts──> [Zero UI/Auth Flashes]
 ```
 
 ### Dependency Notes
 
-- **Public Link Access requires Public Flag:** To avoid copyright issues, songs must be explicitly marked as "Public" or "Public Domain" before being visible via unauthenticated links.
-- **Monitor Mixing requires Bus Mapping:** A user shouldn't see monitor controls unless their account is mapped to a specific hardware bus (1-16).
-- **AI Transposition requires ChordPro:** The engine works best on text-based chord charts rather than static PDFs.
+- **[Zero UI/Auth Flashes] requires [Role-based UI Gating (SSR)]:** You cannot prevent flashes if the client has to render first and then check permissions. It must be gated at the server layout level.
+- **[Correct Login Redirect Handling] requires [Robust Auth Context]:** The router needs absolute certainty about the user's logged-in state to avoid bouncing valid users (like band leaders) to the login screen.
+- **[Simplified Schedule Display] enhances [Frictionless Unauth Access]:** By making the schedule data fetch simpler and public-by-default, it's easier to serve this data immediately to unauthenticated users.
+- **[Client-side Only Gating] conflicts with [Zero UI/Auth Flashes]:** Relying on client state for gating guarantees a layout shift or flash of unauthorized content during hydration.
 
-## MVP Definition (Auth & Access Focus)
+## MVP Definition
 
-### Launch With (v1 / Audit Phase)
+### Launch With (v1.1 Gating Fixes)
 
-Minimum viable product — what's needed to validate the "Bulletproof Auth" concept.
+Minimum viable product — what's needed to resolve the current bugs.
 
-- [x] **Strict RBAC Enforcement** — Admins see Edit; Musicians see Performance; Members see Public.
-- [x] **Public Setlist Link** — Token-based URL that bypasses login for "Public" marked songs.
-- [x] **Google OAuth Hardening** — Handle session expiration and account switching gracefully.
-- [x] **Monitor Visibility Filter** — Hide X32 controls if no bus is assigned.
+- [x] **Correct Login Redirects** — Essential to stop band leaders from being kicked out of their sessions.
+- [x] **Server-Side UI Gating** — Essential to prevent unauthorized actions (duplicate/clone) from appearing to musicians.
+- [x] **Simplified Schedule** — Essential to provide a clear view of upcoming services without assignment-based filtering bugs.
+- [x] **Frictionless Dashboard** — Essential to ensure unauth/pending users see the `<NextServiceCard>` immediately.
 
 ### Add After Validation (v1.x)
 
 Features to add once core is working.
 
-- [ ] **"Sound Engineer" Role** — A specific role that can manage monitor assignments for everyone.
-- [ ] **Audit Logs** — Track who changed keys or reordered setlists.
+- [ ] **Background Pre-fetching** — (PERF-01) Implement PDF cache for next 2 songs.
+- [ ] **Real-time State Transition** — (ARCH-04) Move ephemeral `LiveState` from Firestore.
 
 ### Future Consideration (v2+)
 
 Features to defer until product-market fit is established.
 
-- [ ] **Offline Mode PWA** — Access charts without internet (requires complex caching).
-- [ ] **Automated CCLI Reporting** — Sync with CCLI API for legal compliance.
+- [ ] **Complex Schedule Analytics** — Defer until the basic schedule view is stable.
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Role-based UI Filtering | HIGH | LOW | P1 |
-| Public Link Access | HIGH | MEDIUM | P1 |
-| Monitor Bus Security | MEDIUM | LOW | P1 |
-| Admin-only Edit View | HIGH | LOW | P1 |
-| Session Hardening | MEDIUM | MEDIUM | P2 |
-| Audit Logging | LOW | MEDIUM | P3 |
+| Correct Login Redirect Handling | HIGH | MEDIUM | P1 |
+| Server-Side UI Gating | HIGH | MEDIUM | P1 |
+| Simplified Schedule Display | MEDIUM | LOW | P1 |
+| Frictionless Unauth Access | HIGH | LOW | P1 |
+| Background PDF Pre-fetching | HIGH | HIGH | P2 |
+| Real-time State Transition | MEDIUM | HIGH | P2 |
+
+**Priority key:**
+- P1: Must have for current milestone (v1.1)
+- P2: Should have, subsequent milestone
+- P3: Nice to have, future consideration
 
 ## Competitor Feature Analysis
 
-| Feature | Planning Center | MultiTracks | CentralReform.live |
-|---------|-----------------|-------------|--------------|
-| **Public Access** | Order of Service only | None (Paid Seats only) | **Full Chart access (Public songs)** |
-| **Monitor Control** | No (External link only) | No | **Integrated X32 Bridge** |
-| **Transposition** | Native (Manual edit) | Dynamic (Proprietary) | **Gemini AI + Math** |
-| **Role Limits** | Tiered (Viewer-Admin) | Org/Team Roles | **Simplified Assignment-based** |
+| Feature | Competitor A (Planning Center) | Competitor B (PraiseCharts) | Our Approach |
+|---------|--------------------------------|-----------------------------|--------------|
+| Schedule Gating | Highly complex, role-based, multi-org. | Mostly paywalled by licensing. | Dead-simple public view of setlists, deep-gating only for administrative mutation actions. |
+| UI Rendering | Traditional SPA, some loading spinners. | Mix of server/client. | SSR-first approach with `getServerUser` to guarantee zero layout shifts for role-based features. |
 
 ## Sources
 
-- Planning Center Services Documentation (User Permissions)
-- MultiTracks ChartBuilder Feature Guide
-- US Copyright Law Section 110 (Religious Service Exemption)
-- CCLI Music Reproduction License Guidelines
-
----
-*Feature research for: Sheet Music App (Auth & Access Audit)*
-*Researched: 2026-03-13*
+- `.planning/PROJECT.md` Core Values and v1.1 Gating requirements
+- Known issues regarding Musician UI leaks and Band Leader redirects

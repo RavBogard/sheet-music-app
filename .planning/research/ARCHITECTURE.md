@@ -1,34 +1,35 @@
-# Architecture Research: Multi-Layered RBAC in Next.js 16
+# Architecture Research
 
-**Domain:** Authentication & Access Control (Next.js App Router + Firebase)
-**Researched:** 2026-03-14
+**Domain:** Authentication, Routing, and Data Fetching
+**Researched:** 2026-03-13
 **Confidence:** HIGH
 
 ## Standard Architecture
 
 ### System Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    User Browser (Client)                     │
+│                       Edge / Proxy Layer                     │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
-│  │Firebase │  │ Auth    │  │ Zustand │  │ UI      │        │
-│  │ SDK     │  │ Context │  │ Stores  │  │ Filter  │        │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
-│       │            │            │            │              │
-├───────┼────────────┼────────────┼────────────┼──────────────┤
-│       │            ▼            ▼            ▼              │
-│       │       ┌───────────────────────────────────────┐     │
-│       │       │       Next.js App Router (Server)     │     │
-│       │       └───────────────────────────────────────┘     │
-│       │            │            │            │              │
-├───────┼────────────┼────────────┼────────────┼──────────────┤
-│       ▼            ▼            ▼            ▼              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
-│  │ Firebase │  │ Session  │  │ Firestore│  │ Custom   │     │
-│  │ Auth     │  │ Cookies  │  │ DB       │  │ Claims   │     │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                    src/proxy.ts                     │    │
+│  │    (Basic path prefix and role claim validation)    │    │
+│  └─────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│                    Server Component Layer                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐ │
+│  │ ManagePage     │  │ MonitorPage    │  │ DashboardPage  │ │
+│  │ (Role checks)  │  │ (Config checks)│  │ (Greeting SSR) │ │
+│  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘ │
+│          │                   │                   │          │
+├──────────┴───────────────────┴───────────────────┴──────────┤
+│                    Client Component Layer                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐ │
+│  │ ManageClient   │  │ MonitorClient  │  │ DashboardClient│ │
+│  └────────────────┘  └────────────────┘  └────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,128 +37,129 @@
 
 | Component | Responsibility | Typical Implementation |
 |-----------|----------------|------------------------|
-| **Middleware** | Route-level guarding | Next.js Edge Runtime checking Session Cookies |
-| **Server Components** | Data-level auth & UI filtering | Async components calling `getServerUser()` |
-| **Auth Context** | Client-side session state | React Context hydrated with server-side seed |
-| **Custom Claims** | Secure role storage | Firebase Auth Token claims (role, soundEngineer) |
-| **DAL (Data Access)**| Centralized auth logic | Shared `lib/dal.ts` with React `cache()` |
+| `src/proxy.ts` | Early interception of unauthorized users and role-based path blocking. | `NextRequest` middleware checking `__session` JWT claims. |
+| Server Pages (`page.tsx`) | Deep role verification, fetching DB configs to gate access, SSR data loading. | `getServerUser()` to retrieve user context, `redirect()` or conditional rendering. |
+| Client Pages (`*Client.tsx`) | Rendering interactive UI, optimistic updates, and real-time listeners. | Context hooks like `useAuth()`, Firestore real-time subscriptions. |
 
 ## Recommended Project Structure
 
-```
+```text
 src/
 ├── app/
-│   ├── (auth)/             # Auth-protected route groups
-│   ├── api/auth/session/   # Session cookie minting/revocation
-│   └── layout.tsx          # Root layout (seeds Auth Context)
-├── lib/
-│   ├── dal.ts              # Data Access Layer (Server-side auth)
-│   ├── server-auth.ts      # Session cookie verification
-│   ├── roles.ts            # Role hierarchy and derivation
-│   └── auth-context.tsx    # Hydrated Client Auth Context
-├── middleware.ts           # Global route guard
-└── firestore.rules         # Database-level security (last line of defense)
+│   ├── (main)/
+│   │   ├── manage/page.tsx      # Server-side auth gating for Admin/Leader
+│   │   ├── monitor/page.tsx     # Server-side auth & config gating for Monitor
+│   │   └── schedule/page.tsx    # Simplified server/client schedule view
+│   └── login/page.tsx           # Handled securely via proxy.ts redirects
+├── components/
+│   ├── dashboard/               # Unauthenticated/pending user components (e.g. NextServiceCard)
+│   └── setlist/                 # Client UI gating (e.g. hiding clone/duplicate from musicians)
+└── lib/
+    ├── server-auth.ts           # Shared SSR user validation logic
+    └── setlist-firebase.ts      # Fetching logic for schedule page
 ```
 
 ### Structure Rationale
 
-- **lib/dal.ts:** Centralizes authorization logic. Prevents "permission bleed" by ensuring every data fetch or server action re-verifies roles using cached server-side state.
-- **middleware.ts:** Handles redirects for unauthenticated users at the Edge, preventing the "flash of unauthorized content" before the page even begins to render.
-- **(auth) Route Group:** Simplifies layout-based protection where large sections of the app share the same access requirements.
+- **Server-side gating in `page.tsx`:** Moving role checks to the server eliminates client-side UI flashing (SEC-04, SEC-05), resolving UX friction before any JS loads.
+- **`proxy.ts` for routing edge cases:** Provides an instantaneous fallback to prevent users from reaching secure paths without any session, saving server processing time.
 
 ## Architectural Patterns
 
-### Pattern 1: Server-Seeded Hydration (Flash Prevention)
+### Pattern 1: Server-Side UI Gating
 
-**What:** Passing the authenticated user state from the Root Layout (Server) to the Auth Provider (Client) as a prop.
-**When to use:** Always in Next.js App Router to eliminate the "loading..." flicker during Firebase SDK initialization.
-**Trade-offs:** Requires serializing the user object (removing non-POJOs like Timestamps).
-
-**Example:**
-```typescript
-// src/app/layout.tsx
-export default async function RootLayout({ children }) {
-  const user = await getServerUser(); // Verifies session cookie
-  return (
-    <AuthProvider initialUser={user}>
-      {children}
-    </AuthProvider>
-  );
-}
-```
-
-### Pattern 2: Claims-Trusted Verification
-
-**What:** Trusting the `role` stored in the Custom Claims of the session cookie instead of looking up the User Profile in Firestore on every request.
-**When to use:** For high-performance SSR and Middleware checks.
-**Trade-offs:** Requires a mechanism to force-refresh tokens when roles change.
+**What:** Validating user roles inside Next.js App Router Server Components before rendering the client shell.
+**When to use:** For high-security routes (Admin, Monitor) where rendering unauthorized client components is a security risk or causes layout shifts.
+**Trade-offs:** Adds slight initial latency (TTFB) to fetch user context but guarantees no layout flash.
 
 **Example:**
 ```typescript
-// src/lib/server-auth.ts
-export async function getServerUser() {
-  const session = await cookies().get("__session")?.value;
-  const decoded = await admin.auth().verifySessionCookie(session);
-  // Trust the claim directly — no Firestore lookup needed!
-  return { uid: decoded.uid, role: decoded.role }; 
+export default async function MonitorPage() {
+    const user = await getServerUser()
+    if (!user) redirect("/login")
+    
+    // Complex logic that isn't possible in proxy.ts
+    const hasAccess = await checkMonitorConfig(user.uid)
+    if (!hasAccess) return <UnauthorizedMessage />
+    
+    return <MonitorClient />
 }
 ```
 
-### Pattern 3: Component-Level Filtering (RSC)
+### Pattern 2: Edge Middleware Path Blocking
 
-**What:** Only rendering and sending the components a user is allowed to see.
-**When to use:** To hide privileged UI (like "Edit" buttons) from unauthorized users without client-side logic.
+**What:** Using `src/proxy.ts` to decode JWTs from cookies and perform basic path gating (e.g., pending users cannot access `/manage`).
+**When to use:** Broad, application-wide routing rules based on decoded claims.
+**Trade-offs:** Must be lightweight. Cannot fetch from external databases (like Firestore) at the edge reliably.
+
+### Pattern 3: Optimistic Client-Side Action Hiding
+
+**What:** Hiding unauthorized actions (e.g., Duplicate, Clone) from unprivileged users directly in the UI.
+**When to use:** For granular permissions within shared pages (e.g., `SetlistDashboard`).
+**Trade-offs:** The backend still needs to secure the actual endpoints.
 
 ## Data Flow
 
-### Request Flow (Authenticated)
+### Request Flow (Auth Gating)
 
-```
-[Browser Request]
+```text
+[User Navigation]
     ↓
-[Middleware] (Verifies Cookie)
+[proxy.ts (Edge)] → Blocks non-logged in users -> /login
+    ↓ (If allowed)
+[Server Page] → Calls `getServerUser()`. Validates `isBandLeader` or `isAdmin`.
     ↓
-[Root Layout] (getServerUser() → Seed Prop)
-    ↓
-[Page Component] (verifyRole() → Fetch Data)
-    ↓
-[Hydrated UI] (Instant visibility, no flicker)
+[Client Page] → Renders specific UI. Hides "Duplicate" if user is musician.
 ```
 
 ### Key Data Flows
 
-1. **Session Minting:** Client `signInWithPopup` → `/api/auth/session` (POST) → Server `createSessionCookie` → `httpOnly` Cookie set.
-2. **Role Sync:** Admin updates Firestore `role` → Trigger Cloud Function → `setCustomUserClaims` → Client `getIdToken(true)` on next visit.
+1. **Dashboard Unauthenticated Flow:** `proxy.ts` allows `/` -> `DashboardPage` fetches server greeting -> `DashboardClient` subscribes to public setlists instantly (no auth required) -> renders `NextServiceCard`.
+2. **Simplified Schedule Fetching:** `SchedulePage` subscribes *only* to upcoming public setlists instead of complex cross-referencing with musician assignments.
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0-1k users | Standard Firebase Admin SDK + Middleware is sufficient. |
-| 1k-100k users | Move role checks to Custom Claims to avoid Firestore read limits. |
-| 100k+ users | Consider splitting session cookie (if claims > 4KB) and using Redis for session revocation lists. |
+| 0-1k users | Current model is optimal. Firestore real-time listeners are efficient. |
+| 1k-100k users | Shift more data fetching to SSR rather than client-side subscriptions for the Schedule page to reduce Firestore read costs. |
+
+### Scaling Priorities
+
+1. **First bottleneck:** Firestore reads for `SchedulePage` if users constantly refresh.
+2. **Second bottleneck:** Heavy client-side JS bundles for auth validation logic. Moving to server components eliminates this.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Client-Only Auth Guarding
+### Anti-Pattern 1: Client-Side Redirect Flashes
 
-**What people do:** Using `useEffect` and `router.push` in a Client Component to protect a route.
-**Why it's wrong:** Causes "Layout Flash" where users see protected UI for 500ms before being redirected.
-**Do this instead:** Use `middleware.ts` or `redirect()` inside a Server Component.
+**What people do:** Load the page, check `useAuth()`, then use `router.push('/login')` inside a `useEffect`.
+**Why it's wrong:** The user briefly sees the secure UI before being redirected.
+**Do this instead:** Use `proxy.ts` or `redirect()` inside the Next.js Server Component (e.g., `getServerUser()`).
 
-### Anti-Pattern 2: Redundant Firestore Lookups
+### Anti-Pattern 2: Over-fetching Schedule Data
 
-**What people do:** Fetching the `users/{id}` document on every server request to check a role.
-**Why it's wrong:** Increases latency (50-200ms) and Firestore costs.
-**Do this instead:** Store the role in Custom Claims and trust the signed JWT.
+**What people do:** Fetching all setlists and all musician assignments just to display dates on the `SchedulePage`.
+**Why it's wrong:** High latency and unnecessary Firestore reads when the goal is simply listing upcoming public setlists.
+**Do this instead:** Subscribe strictly to public setlists (`subscribeToUpcomingSetlists`) and drop assignment cross-referencing.
 
-## Sources
+## Integration Points
 
-- [Next.js Authentication Docs](https://nextjs.org/docs/app/building-your-application/authentication)
-- [Firebase Session Cookie Guide](https://firebase.google.com/docs/auth/admin/manage-cookies)
-- [Iron Session / JWT Patterns 2025](https://github.com/vvo/iron-session)
-- [Clerk/WorkOS Best Practices for RSC RBAC](https://workos.com/blog/nextjs-authentication-patterns)
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `proxy.ts` ↔ JWT Session | Cookie decoding | Must remain lightweight. Rely on JWT claims (`role`). |
+| Server Page ↔ `server-auth.ts` | Direct function call | Uses Firebase Admin SDK. Cache user requests to prevent redundant lookups. |
+| Client UI ↔ User Roles | React Context (`useAuth`) | Ensure `isBandLeader` flag correctly gates UI buttons (Clone/Duplicate). |
+
+## Build Order
+
+1. **Schedule Simplification:** Update `src/app/(main)/schedule/page.tsx` to remove assignment logic and directly list upcoming public setlists.
+2. **Musician UI Gating:** Update `src/components/setlist/SetlistDashboard.tsx` and `SetlistEditorV2` to strictly hide "Duplicate" and "Clone for Next Week" actions unless `user.isBandLeader || user.isAdmin`.
+3. **Verify Dashboard Hero:** Ensure `DashboardClient.tsx` accurately renders `NextServiceCard` for unauthenticated/pending users immediately on load.
+4. **Audit Redirects:** Ensure `proxy.ts` strictly maps to the requirements (pending users blocked everywhere except `/`, admin redirects correctly handled).
 
 ---
-*Architecture research for: sheet-music-app (Auth & Access Audit)*
-*Researched: 2026-03-14*
+*Architecture research for: Project Research — Architecture for role-based authorization fixes, redirect fixes, and schedule page updates.*
+*Researched: 2026-03-13*

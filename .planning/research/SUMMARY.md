@@ -1,124 +1,120 @@
 # Project Research Summary
 
-**Project:** Auth & Access Audit (CentralReform.live)
-**Domain:** Next.js 16 + Firebase Auth v11 (RBAC Audit)
-**Researched:** 2026-03-14
+**Project:** Sheet Music App
+**Domain:** Next.js Authorization, Realtime State, and Data Fetching
+**Researched:** 2026-03-13
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The "Auth & Access Audit" for CentralReform.live focuses on hardening the authentication and role-based access control (RBAC) systems of a worship music platform. Built on Next.js 16 and Firebase v11, the project aims to eliminate persistent session bugs and permission leaks that allow unauthorized users to see sensitive UI elements like "Edit" buttons or monitor controls. The core value lies in providing a tailored experience where musicians see only relevant tools, while the public can access marked songs frictionless via token-based links.
+The Sheet Music App is a Next.js application requiring robust role-based authorization, seamless redirect handling, and efficient data fetching for both authenticated and public routes. The goal is to provide a frictionless experience where users never see flashes of unauthorized content or get trapped in redirect loops.
 
-The recommended approach leverages Next.js 16's `proxy.ts` for server-side session management and Firebase Custom Claims for O(1) RBAC verification. This architecture eliminates "layout flashes" and ensures that security is enforced at both the UI and data layers (React Server Components and Server Actions). Key risks include "stale cookie" desyncs and role propagation lag, which will be mitigated through synchronized token refresh patterns and forced client-side hydration.
+The recommended approach relies heavily on Next.js App Router features—specifically, Edge Middleware (`src/proxy.ts`) for early path blocking, and React Server Components (RSC) with `getServerUser` for server-side UI gating. By verifying roles on the server before the client shell renders, we can guarantee zero layout shifts and secure the UI.
+
+The key risks (pitfalls) revolve around legacy patterns: relying on client-side state for authorization (causing UI leaks), conflicting routing logic (causing infinite redirects), and reusing heavy administrative queries for public views (causing performance bottlenecks). Shifting authorization to the server and decoupling the public schedule query are the primary mitigations.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is centered around Next.js 16 and Firebase v11 to provide a modern, server-centric authentication flow. The use of `proxy.ts` (replacing legacy middleware) allows for full Node.js SDK access at the edge for robust session handling.
+The stack is centered around Next.js and Firebase, emphasizing server-side validation.
 
 **Core technologies:**
-- **Next.js 16.x**: Framework — Standard for RSC; uses `proxy.ts` for robust auth handling.
-- **Firebase Auth v11.x**: Identity Provider — Supports Custom Claims for O(1) server-side RBAC.
-- **Firebase Admin SDK v13.x**: Server Auth — Essential for verifying session cookies and managing claims.
-- **next-firebase-auth-edge 2.x**: Auth Handshake — Syncs Firebase client state with HTTP-only cookies.
-- **React 19.x**: UI Library — Introduces `use cache` for role-based scoping and data leak prevention.
+- Next.js App Router & Middleware: Route gating and redirect loop prevention — Core framework feature. Stops unauthorized requests before rendering.
+- Firebase Admin SDK: Server-side token verification — Essential for validating secure HTTP-only cookies in `getServerUser` and Middleware.
+- React Server Components (RSC): Role-based UI gating — Native to Next.js. Allows rendering role-specific UI on the server, ensuring zero UI layout shifts or authorization flashes.
 
 ### Expected Features
 
-The feature set balances standard platform requirements with unique differentiators for the worship music domain.
-
 **Must have (table stakes):**
-- **Tiered RBAC** — Distinct views for Admins, Band Leaders, Musicians, and Tech Crew.
-- **Setlist Management** — Core utility supporting reordering and song keys.
-- **Mobile-First Viewer** — High-performance "Performance Mode" for stage use.
-- **Google OAuth Hardening** — Frictionless but secure onboarding for volunteers.
+- Role-based UI Gating — Users should only see actions they can perform (e.g., Musicians shouldn't see "Clone Setlist").
+- Correct Login Redirect Handling — Authenticated users shouldn't be erroneously kicked back to Google login.
+- Simplified Schedule Display — A straightforward, chronological list of upcoming services/setlists.
+- Frictionless Unauth Access — Unauthenticated users immediately see the `<NextServiceCard>` hero on the dashboard.
 
 **Should have (competitive):**
-- **Frictionless Public Links** — Instant access for guests without login (unique differentiator).
-- **X32 Monitor Bridge** — Integrated monitor mix controls based on user-to-bus mapping.
-- **AI Transposition** — Gemini-powered chord shifting for complex formatting.
+- Zero UI/Auth Flashes — Users instantly see correct layout without a split-second of unauthorized UI flashing.
 
 **Defer (v2+):**
-- **Offline Mode PWA** — Complex caching for no-internet scenarios.
-- **Automated CCLI Reporting** — Legal compliance automation.
+- Background Pre-fetching — Implement PDF cache for next 2 songs.
+- Real-time State Transition — Move ephemeral `LiveState` from Firestore to Realtime Database.
+- Complex Schedule Analytics.
 
 ### Architecture Approach
 
-A multi-layered RBAC system that enforces security at the Edge, on the Server (RSC), and in the Data Access Layer (DAL).
+The architecture separates routing concerns into distinct layers to optimize performance and security.
 
 **Major components:**
-1. **Proxy/Middleware** — Route-level guarding and session cookie synchronization at the Edge.
-2. **Data Access Layer (DAL)** — Centralized auth logic using React `cache()` to prevent permission bleed.
-3. **Custom Claims** — Stateless, secure role storage within the Firebase JWT for high performance.
-4. **Server Components (RSC)** — Component-level filtering to hide privileged UI before it reaches the client.
+1. `src/proxy.ts` (Edge Middleware) — Early interception of unauthorized users and role-based path blocking.
+2. Server Pages (`page.tsx`) — Deep role verification via `getServerUser()`, fetching DB configs to gate access, SSR data loading.
+3. Client Pages (`*Client.tsx`) — Rendering interactive UI, optimistic updates, and real-time listeners.
 
 ### Critical Pitfalls
 
-1. **The "Stale Cookie" Desync** — Client-side tokens refresh but server cookies remain stale. Avoid by syncing `onIdTokenChanged` via `POST`.
-2. **Custom Claim Propagation Lag** — 1-hour delay in role updates. Avoid by forcing `getIdToken(true)` on the client.
-3. **Next.js Router Cache Leak** — Old UI segments visible after account switching. Avoid using `router.refresh()` on logout.
-4. **Static Rendering Authorization Leak** — Protected pages accidentally cached as static. Avoid by calling `cookies()` to force Dynamic Rendering.
+1. **Client-Side Only Authorization (UI Leaks & Flashing)** — Avoid by applying `getServerUser` natively in Next.js Server Components to physically prevent the delivery of unauthorized HTML.
+2. **Infinite Redirect Loops (Auth Bouncing)** — Avoid by centralizing route protection in Next.js Middleware and rendering public fallbacks instead of forcing redirects for pending states.
+3. **Accidental Over-Fetching on Public Views** — Avoid by creating a dedicated, shallow query for the schedule page that strictly lists upcoming public setlists.
 
 ## Implications for Roadmap
 
-### Phase 1: Foundation & Session Hardening
-**Rationale:** Establishes the secure "proxy" pattern and fixes the most reported "stale session" bugs that plague the current implementation.
-**Delivers:** Robust login/logout flows, cookie-syncing middleware, and the initial Data Access Layer (DAL).
-**Addresses:** AUTH-AUDIT-01, AUTH-ROBUST.
-**Avoids:** Pitfall 1 (Stale Cookie) and Pitfall 3 (Router Cache Leak).
+Based on research, suggested phase structure:
 
-### Phase 2: Strict RBAC & UI Filtering
-**Rationale:** Implements the core "Edit" and "Monitor" visibility logic using the hardened session foundation.
-**Delivers:** Custom Claims integration, role-based component filtering (RSC), and Server Action protection (Logic Lock).
-**Addresses:** RBAC-01, RBAC-02, UI-UX-01.
-**Avoids:** Pitfall 2 (Claim Lag), Pitfall 4 (Static Leak), and Pitfall 5 (Action Bypass).
+### Phase 1: Milestone v1.1 Gating (Auth & Routing Fixes)
+**Rationale:** Fixes critical bugs affecting current user experience, security, and performance.
+**Delivers:** Server-Side UI Gating, Correct Login Redirect Handling, Simplified Schedule Display, Frictionless Dashboard.
+**Addresses:** Role-based UI Gating, Correct Login Redirect Handling, Simplified Schedule Display.
+**Avoids:** Client-Side Only Authorization, Infinite Redirect Loops, Accidental Over-Fetching.
 
-### Phase 3: Public Access & Frictionless Links
-**Rationale:** Extends the auth system to handle token-based, unauthenticated access safely for community members.
-**Delivers:** Public song flags, secure token-based link generation, and a dedicated guest viewer mode.
-**Addresses:** PUBLIC-01.
+### Phase 2: Performance Enhancements
+**Rationale:** Improves the live performance experience (a core value proposition) once the routing foundation is stable.
+**Delivers:** Background pre-fetching for PDFs.
+**Uses:** Zustand (Client state & optimistic updates).
+**Implements:** Client UI optimization.
+
+### Phase 3: Realtime Infrastructure Optimization
+**Rationale:** Reduces costs and latency for live setlist tracking as the user base grows.
+**Delivers:** Migration of `LiveState` away from Firestore.
+**Uses:** Firebase Realtime Database (RTDB).
+**Implements:** Real-time Data Sync Architecture.
 
 ### Phase Ordering Rationale
-- **Dependency:** Session hardening must come first because all subsequent RBAC checks rely on a reliable, synchronized session cookie.
-- **Grouping:** RBAC and UI filtering are grouped because they both utilize the same Custom Claims and RSC patterns.
-- **Risk Mitigation:** By addressing session desyncs early, we eliminate the most frequent source of user complaints before moving to more complex role logic.
+
+- Phase 1 tackles immediate stability and security. Without proper SSR gating and routing, the application is fundamentally broken for certain roles.
+- Phase 2 builds on a stable application to deliver performance enhancements that matter during live usage.
+- Phase 3 defers backend infrastructure optimization until after core UX issues are resolved.
+- This grouping ensures that the critical pitfalls (broken auth, slow public routes) are addressed immediately.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (X32 Integration):** Hardware bus mapping requires validation of network security when exposed via RBAC.
-- **Phase 3 (Public Links):** Token expiration and revocation strategies for guest links need specific implementation patterns.
+- **Phase 3:** Firebase RTDB vs Redis specifics for the exact `LiveState` data structure and migration path.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Auth Hardening):** Next.js 16 `proxy.ts` and `next-firebase-auth-edge` have established patterns.
+- **Phase 1:** Well-documented Next.js App Router and Middleware patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Next.js 16 and Firebase v11 patterns are well-documented and standard for 2026. |
-| Features | HIGH | Domain requirements are stable and clearly defined from previous iterations. |
-| Architecture | HIGH | Standard RSC and DAL patterns provide a clear path forward. |
-| Pitfalls | HIGH | Identified pitfalls match known App Router and Firebase behaviors. |
+| Stack | HIGH | Verified with Next.js and Firebase documentation |
+| Features | HIGH | Clear mapping to MVP/v1.1 requirements |
+| Architecture | HIGH | Standard Next.js server component model |
+| Pitfalls | HIGH | Known and observed issues in the current domain |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **X32 Network Bridge:** Need to ensure the hardware bridge doesn't bypass app-level RBAC (requires "Double-Lock" validation).
-- **Session Lifetimes:** Fine-tuning the balance between security (short sessions) and volunteer UX (frictionless access).
+- **Schedule Query Shape:** The exact data structure for the simplified schedule query needs definition during implementation of Phase 1.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `next-firebase-auth-edge` — Middleware patterns verified.
-- Firebase Admin SDK Documentation — Session cookie management and Custom Claims.
-- Next.js 16 "What's New" — `proxy.ts` and `use cache` documentation.
-
-### Secondary (MEDIUM confidence)
-- US Copyright Law Section 110 — Guidelines for religious service exemptions regarding public links.
+- Next.js Documentation — Server Components & Middleware patterns.
+- Firebase Documentation — RTDB vs Firestore pricing and latency.
+- Local `package.json` — Verified existing stack versions (Next.js 16.1, React 19, Firebase 12/13).
+- `.planning/PROJECT.md` — Core Values and v1.1 Gating requirements.
 
 ---
-*Research completed: 2026-03-14*
+*Research completed: 2026-03-13*
 *Ready for roadmap: yes*

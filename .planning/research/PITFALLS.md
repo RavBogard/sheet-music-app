@@ -1,190 +1,158 @@
-# Pitfalls Research: Auth & Access Audit (RBAC)
+# Pitfalls Research
 
-**Domain:** Authentication, RBAC, Firebase, Next.js App Router
+**Domain:** Next.js Role-based Authorization, Redirects, and Data Fetching
 **Researched:** 2026-03-13
-**Confidence:** HIGH (verified with Next.js 15/16 patterns and Firebase SDK documentation)
+**Confidence:** HIGH
 
 ## Critical Pitfalls
 
-### Pitfall 1: The "Stale Cookie" Desync (Session Bleed)
+### Pitfall 1: Client-Side Only Authorization (UI Leaks & Flashing)
 
 **What goes wrong:**
-The Firebase Client SDK automatically refreshes the ID token every hour. However, the HTTP-only cookie used by Next.js Server Components/Middleware remains stale. The user appears "logged in" on the client but the server rejects requests with a 401/403 or falls back to "unauthenticated" state.
+Unauthorized users (e.g., musicians or pending users) briefly see restricted UI elements (like "Duplicate Setlist" or "Clone for next week") before the client-side React code hydrates and hides them, or worse, they can trigger the underlying action if the API isn't secured.
 
 **Why it happens:**
-Next.js Server Components cannot see the client-side Firebase Auth state directly. They rely on cookies. Developers often forget to sync the refreshed token from `onIdTokenChanged` back to the server via a `POST` or Server Action.
+Developers rely exclusively on client-side state (e.g., `if (user.role === 'admin')`) to hide UI components without applying equivalent checks at the server level (Next.js Server Components) or the API/mutation level.
 
 **How to avoid:**
-Implement an `AuthProvider` that listens to `onIdTokenChanged`. When the token changes, immediately trigger a fetch/Server Action to update the session cookie.
-```javascript
-useEffect(() => {
-  return onIdTokenChanged(auth, async (user) => {
-    const token = user ? await user.getIdToken() : null;
-    await fetch('/api/auth/sync', { method: 'POST', body: JSON.stringify({ token }) });
-  });
-}, []);
-```
+Apply `getServerUser` natively in Next.js Server Components (like `/manage/page.tsx` and `/monitor/page.tsx`) to physically prevent the rendering and delivery of unauthorized HTML to the client. Always pair UI gating with strict backend API validation.
 
 **Warning signs:**
-Users reporting they are suddenly "logged out" while actively using the app, or "Permission Denied" errors that resolve only after a manual page refresh.
+- Client-side tab flashing during initial page load.
+- Users report seeing buttons they cannot click.
+- Network tab shows unauthorized UI components in the initial HTML payload.
 
 **Phase to address:**
-AUTH-AUDIT-01 (Session Hardening)
+Milestone v1.1 Gating
 
 ---
 
-### Pitfall 2: Custom Claim Propagation Lag (Role Bleed)
+### Pitfall 2: Infinite Redirect Loops (Auth Bouncing)
 
 **What goes wrong:**
-When an Admin upgrades a "Musician" to "Band Leader" in Firebase, the change is NOT immediate for the user. They retain their old "Musician" permissions for up to 1 hour because their active JWT ID token still contains the old claims.
+Valid users (like band leaders) are incorrectly and repeatedly redirected to the Google login screen when trying to access protected routes, creating a broken, looping experience.
 
 **Why it happens:**
-Firebase ID tokens are stateless JWTs. Claims are only refreshed when a new token is minted.
+Conflicting routing logic between Next.js Middleware, client-side route guards (e.g., `useEffect` redirects), and server-side checks. Often caused by treating "loading auth state" as "unauthenticated", prompting a premature redirect before the user's role is fully resolved.
 
 **How to avoid:**
-1. Force a token refresh on the client after a role change using `user.getIdToken(true)`.
-2. For high-security actions (e.g. deleting a setlist), don't just check the JWT; perform a real-time Firestore lookup of the user's role.
+Centralize route protection in Next.js Middleware. Ensure that "unauthenticated" and "pending/loading" are treated as distinct states. For unauthenticated/pending users on the dashboard, render the `<NextServiceCard>` hero immediately rather than forcing a redirect.
 
 **Warning signs:**
-"I promoted them but they still can't see the Edit button," or worse, "I demoted them but they can still edit for another hour."
+- Browser console warnings about `ERR_TOO_MANY_REDIRECTS`.
+- Blank screens with flickering URLs.
+- High bounce rates on the authentication callback route.
 
 **Phase to address:**
-RBAC-01 (Strict Edit Visibility)
+Milestone v1.1 Gating
 
 ---
 
-### Pitfall 3: Next.js App Router Cache Leak (The "Ghost Admin" UI)
+### Pitfall 3: Accidental Over-Fetching on Public Views
 
 **What goes wrong:**
-A "Musician" user logs out, and an "Admin" logs in on the same browser. Due to the App Router's client-side "Router Cache," the Musician might see segments of the Admin's UI (or vice versa) because Next.js cached the layout segments in the browser.
+The public schedule page becomes incredibly slow or hits database read limits because it attempts to fetch and resolve granular data (like musician assignments and individual user profiles) for every upcoming setlist.
 
 **Why it happens:**
-The App Router caches prefetched and visited segments to make navigation instant. It doesn't automatically clear this cache on logout unless directed.
+Developers reuse existing, complex database queries (built for the Admin/Manage view) for the public schedule view to save time, inadvertently pulling unnecessary relational data.
 
 **How to avoid:**
-1. Call `router.refresh()` after every login/logout.
-2. Ensure the logout logic clears all local state and triggers a hard redirect or `window.location.reload()` for maximum safety.
+Create a dedicated, shallow query for the schedule page that strictly lists upcoming public setlists and their associated dates. Explicitly exclude musician assignments and inner details from this fetch.
 
 **Warning signs:**
-UI elements from a previous session appearing briefly after switching accounts.
+- Noticeable UI lag or long TTFB (Time to First Byte) on the `/schedule` route.
+- Firestore/Database read spikes correlating with schedule page visits.
 
 **Phase to address:**
-AUTH-ROBUST (Sign-in Hardening)
-
----
-
-### Pitfall 4: Static Rendering Authorization Leak
-
-**What goes wrong:**
-A page that should be protected (e.g. `/setlist/[id]/edit`) is accidentally statically optimized (SSG) by Next.js because it doesn't use dynamic functions like `cookies()`. The "Admin" UI structure is baked into the static HTML and served to everyone.
-
-**Why it happens:**
-Next.js tries to be "static by default." If a page doesn't explicitly opt-into dynamic rendering, the build-time version is served.
-
-**How to avoid:**
-Always call `cookies()` or `headers()` inside Server Components that perform RBAC checks. This forces the page into **Dynamic Rendering** mode, ensuring the auth check runs on every request.
-
-**Warning signs:**
-The "Edit" button appearing for a split second for everyone before "disappearing" (if hidden via client-side JS), or the button being visible in the "View Source" of the page.
-
-**Phase to address:**
-RBAC-01 / UI-UX-01 (Feature Filtering)
-
----
-
-### Pitfall 5: Bypassing RBAC via Server Actions/API Routes
-
-**What goes wrong:**
-The developer hides the "Delete Setlist" button for Musicians, but forgets to protect the `deleteSetlistAction` Server Action. A savvy user can trigger the action directly via the browser console or a tool like Postman.
-
-**Why it happens:**
-Focusing on "UI visibility" instead of "Data integrity."
-
-**How to avoid:**
-Implement a "Double-Lock" strategy:
-1. **UI Lock:** Hide the button in the component.
-2. **Logic Lock:** The very first line of the Server Action/API Route MUST verify the user's role using `getAuth()` and `verifyIdToken()`.
-
-**Warning signs:**
-Audit logs showing unauthorized roles performing sensitive actions.
-
-**Phase to address:**
-RBAC-01 / RBAC-02 (Visibility & Enforcement)
+Milestone v1.1 Gating
 
 ---
 
 ## Technical Debt Patterns
 
+Shortcuts that seem reasonable but create long-term problems.
+
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| **Hardcoded Admin UIDs** | Fast to implement, bypasses RBAC complexity. | Security risk, hard to maintain as team grows. | **Never.** (Currently identified as a concern in `CONCERNS.md`). |
-| **Client-only Role Checks** | Easier to code (no Server Component logic). | Extremely easy to bypass; leaks UI structure. | Only for non-sensitive UI-only toggles. |
-| **Middleware-only Auth** | Centralized, "set and forget." | Doesn't protect sub-components or nested actions. | As a first line of defense, but not the only one. |
-| **Legacy Role Mappings** | Maintains backward compatibility. | Logic "bloat," confusion about which role is current. | During transition periods only (max 1-2 milestones). |
+| Reusing Admin queries for public views | Saves writing a new database query | Cripples performance; exposes internal data to the client | Never for production public routes |
+| Client-side route blocking | Faster to implement than Middleware | Causes layout shifts, UI flashes, and security vulnerabilities | MVP only; never for sensitive data |
+| Hardcoding role checks (`role === 'admin'`) | Quick implementation for single roles | Unmaintainable when adding new roles (e.g., 'band_leader', 'musician') | Never; use capability-based checks |
 
 ## Integration Gotchas
 
+Common mistakes when connecting to external services.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| **Firebase Auth** | Relying on `onAuthStateChanged` for server-side auth. | Use Session Cookies + Firebase Admin SDK in Middleware/Server Components. |
-| **Firestore** | Forgetting to sync Firestore Security Rules with app roles. | Ensure Firestore rules mirror the RBAC logic (e.g. `request.auth.token.role == 'admin'`). |
-| **Google Drive** | Direct client-side access to files. | Proxy via a Server Action to check app-level RBAC before serving the file link. |
+| Firebase Auth | Relying on the client SDK to determine route access | Use Firebase Admin SDK / session cookies in Middleware/Server Components |
+| WebSockets | Initializing the connection before verifying user roles | Verify role via `getServerUser` in `/monitor/page.tsx` before mounting the socket client |
+| Google OAuth | Not handling the "pending" state during token exchange | Show deterministic loading UI or public fallback (e.g., `<NextServiceCard>`) |
 
 ## Performance Traps
 
+Patterns that work at small scale but fail as usage grows.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| **Real-time Role Lookups** | High Firestore read costs, slow page loads. | Use Custom Claims in the JWT for fast, stateless role checks. | > 1,000 users/month |
-| **Unpaginated User Audits** | "Admin" page hangs or crashes on load. | Implement pagination for user management and audit logs. | > 100 users |
-| **Heavy Auth Contexts** | Entire app re-renders on every auth state change. | Split Auth state into small, focused contexts or use `useOptimistic` for UI. | Any scale |
+| Fetching full setlists for schedule | Slow schedule page load times | Create a projection/shallow query for schedule data | > 50 setlists |
+| Synchronous PDF loading | UI freezes when clicking a song | Implement background pre-fetching for the next 2 songs | > 5 songs per setlist |
+| Real-time state in Firestore | High costs, latency in updates | Transition ephemeral `LiveState` to RTDB or Zustand | > 10 concurrent users |
 
 ## Security Mistakes
 
+Domain-specific security issues beyond general web security.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| **Exposing Role Logic in Client** | Users can see what roles exist and target vulnerabilities. | Keep detailed role logic on the server; only send boolean flags (e.g. `canEdit`) to client. |
-| **Weak Session Expiry** | Sessions lasting weeks on public/shared devices. | Use shorter session cookie expiry (e.g. 24h) and force re-auth for sensitive actions. |
-| **Token Theft via LocalStorage** | Cross-Site Scripting (XSS) can steal the ID token. | Use `httpOnly` cookies for the primary session, never store raw tokens in `localStorage`. |
+| Client-gated WebSocket initialization | Unauthorized users connecting to live performance streams | Server-side role validation before socket handshake |
+| Sending full musician profiles to unauthenticated schedule | PII exposure | Strict database query scoping for public schedule routes |
+| Action buttons hidden by CSS only | Malicious users triggering unauthorized mutations via API | Secure the API endpoint and use Server Components |
 
 ## UX Pitfalls
 
+Common user experience mistakes in this domain.
+
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| **Layout Shift on Auth** | Content jumps when the "Admin" sidebar appears. | Use "Skeleton Screens" or server-side rendering to determine layout before it hits the browser. |
-| **Silent Failures** | User clicks "Edit" but nothing happens (403). | Always provide "Access Denied" feedback or hide the button entirely. |
-| **Sign-in Loop** | Redirected to login while already signed in. | Fix the "Stale Cookie" desync (Pitfall #1). |
+| Flashing unauthorized UI | Confusion and feeling of a "broken" site | Server-side rendering with `getServerUser` |
+| Bouncing unauthenticated users | Frustration, high drop-off | Show immediate public value (e.g., `<NextServiceCard>`) |
+| Waiting for PDFs during performance | Awkward pauses during live sets | Background pre-fetching |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **RBAC:** Often missing **server-side enforcement** — verify that the Server Action rejects unauthorized roles.
-- [ ] **Logout:** Often missing **cache clearing** — verify that `router.refresh()` or a hard reload happens.
-- [ ] **Role Change:** Often missing **token refresh** — verify `user.getIdToken(true)` is called after a role update.
-- [ ] **Public Access:** Often missing **unauthenticated path handling** — verify public setlists work in Incognito mode.
+Things that appear complete but are missing critical pieces.
+
+- [ ] **Role-based UI:** Often missing API security — verify the endpoint rejects unauthorized requests.
+- [ ] **Auth Redirects:** Often missing edge cases — verify behavior for "pending" users and expired sessions.
+- [ ] **Schedule Page:** Often missing optimized queries — verify the network tab to ensure no musician data is being fetched.
+- [ ] **Dashboard Hero:** Often missing instant render — verify unauthenticated users see the `<NextServiceCard>` without any layout shift.
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| **Permission Bleed** | MEDIUM | Revoke all tokens for the affected user and force a re-login. |
-| **Stale Session Bug** | LOW | Clear browser cookies and re-authenticate. |
-| **Admin UI Leak** | HIGH | Rotate secrets (if leaked), fix static rendering, and deploy a "Clear Site Data" header. |
+| UI Leak (Security) | HIGH | Immediately patch the API to reject unauthorized requests, then fix the UI rendering. |
+| Redirect Loop | HIGH | Revert to a stable routing configuration; isolate auth checks to a single source of truth. |
+| Over-fetching | MEDIUM | Deploy an emergency shallow query and update the frontend to use it. |
 
 ## Pitfall-to-Phase Mapping
 
+How roadmap phases should address these pitfalls.
+
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Stale Cookie Desync | AUTH-AUDIT-01 | Test "Session Expiry" edge cases in dev tools. |
-| Claim Propagation Lag | RBAC-01 | Promote user in Firebase and verify immediate access in app. |
-| Router Cache Leak | AUTH-ROBUST | Log out/in as different users and check for UI artifacts. |
-| Static Rendering Leak | UI-UX-01 | View source of protected pages to ensure no sensitive HTML is present. |
+| Client-Side Only Authorization | Milestone v1.1 Gating | Audit initial HTML payload for unauthorized elements; test API endpoints. |
+| Infinite Redirect Loops | Milestone v1.1 Gating | Simulate login flows for all roles; monitor browser console for redirects. |
+| Accidental Over-Fetching | Milestone v1.1 Gating | Profile database queries on the `/schedule` route. |
 
 ## Sources
 
-- [Next.js Authentication Docs](https://nextjs.org/docs/app/building-your-application/authentication)
-- [Firebase Admin SDK Custom Claims](https://firebase.google.com/docs/auth/admin/custom-claims)
-- [Personal Experience: "The Ghost Admin" bug in App Router v13-15]
-- [sheet-music-app/CONCERNS.md (Hardcoded UIDs, Legacy Roles)]
+- CentralReform.live PROJECT.md Context
+- Next.js App Router Documentation (Server Components & Middleware)
+- Known issues from Milestone v1.1 Gating requirements
 
 ---
-*Pitfalls research for: sheet-music-app (Auth & Access Audit)*
+*Pitfalls research for: Next.js Role-based Authorization, Redirects, and Data Fetching*
 *Researched: 2026-03-13*

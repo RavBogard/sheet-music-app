@@ -1,7 +1,7 @@
-# Stack Research: Auth & Access Control
+# Stack Research
 
-**Domain:** Next.js 16 + Firebase Auth v11 (RBAC Audit)
-**Researched:** 2026-03-14
+**Domain:** Next.js Authorization, Realtime State, and Data Fetching
+**Researched:** 2026-03-13
 **Confidence:** HIGH
 
 ## Recommended Stack
@@ -10,121 +10,77 @@
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| **Next.js** | 16.x | Framework | Standard for RSC (React Server Components). The 2026 standard replaces `middleware.ts` with `proxy.ts` (Node.js runtime by default) for robust auth handling. |
-| **Firebase Auth** | v11.x | Identity Provider | Gold standard for managed auth. Supports Custom Claims for O(1) RBAC verification on the server. |
-| **Firebase Admin SDK** | v13.x | Server Auth | Essential for verifying session cookies and managing custom claims (roles) in a secure Node.js environment. |
-| **React** | 19.x | UI Library | Introduces `use cache` and `cacheTag` for role-based caching, and `experimental_taintObjectReference` to prevent data leaks. |
+| Next.js App Router & Middleware | 16.1.4 | Route gating and redirect loop prevention | Core framework feature. Middleware allows inspecting cookies before rendering, preventing flashes of unauthorized content and redirect loops. |
+| Firebase Admin SDK | 13.6.0 | Server-side token verification | Already in stack. Essential for validating secure HTTP-only cookies in `getServerUser` and Middleware. |
+| React Server Components (RSC) | 19.2.3 | Role-based UI gating | Native to Next.js. Allows rendering role-specific UI (e.g., Band Leader controls) on the server, ensuring zero UI layout shifts or authorization flashes. |
 
 ### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| **next-firebase-auth-edge** | 2.x | Auth Handshake | The 2026 community standard for syncing Firebase client state with server-side HTTP-only cookies and automatic token rotation. |
-| **jose** | latest | JWT Verification | Used by edge/proxy layers to verify Firebase JWTs without the overhead of the full Admin SDK where performance is critical. |
-| **zod** | 3.x | Schema Validation | Use for validating custom claims and session data shapes in the Data Access Layer (DAL). |
+| `server-only` | ^0.0.1 | Prevent server-code leakage | Use in any file that performs server-side auth (like `getServerUser`) to guarantee it cannot be accidentally imported into a Client Component. |
+| Firebase Realtime Database (RTDB) | 12.9.0 | Low-latency ephemeral state | For transitioning `LiveState` away from Firestore. RTDB is optimized for high-frequency, ephemeral state sync (like live setlist tracking) and is significantly cheaper/faster than Firestore for this use case. |
+| Zustand | 5.0.10 | Client state & optimistic updates | Already in stack. Use to manage local UI state while waiting for RTDB/Firestore updates to prevent UI stutter during role-based actions. |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| **Firebase CLI** | Security Rules | Use for local testing of Firestore/Storage rules to ensure they match server-side RBAC logic. |
-| **Sentry/LogRocket** | Session Monitoring | Essential for debugging "stale session" edge cases and "already signed in" UI bugs. |
+| Next.js Bundle Analyzer | Analyze client bundle | Ensure server-side auth logic isn't bloating the client bundle. |
+| Firebase Emulator Suite | Local testing of RTDB and Auth | Crucial for safely testing redirect loops and permission rules offline without affecting the production database. |
 
 ## Installation
 
 ```bash
 # Core
-npm install firebase firebase-admin next-firebase-auth-edge jose
+# Next.js and Firebase are already installed.
 
-# Supporting
-npm install zod
-
-# Dev dependencies
-npm install -D firebase-tools
+# Supporting (Adding server-only to strictly enforce server boundaries)
+npm install server-only
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| **Firebase Custom Claims** | **Firestore User Docs** | Use when you have >1000 bytes of permission data or need to revoke permissions instantly (Claims require a token refresh). |
-| **`proxy.ts` (Next.js 16)** | **`middleware.ts` (Legacy)** | Only if staying on Next.js 15 or older; however, `proxy.ts` is required for full Node.js SDK access at the edge. |
-| **HTTP-only Cookies** | **LocalStorage** | Never. LocalStorage is incompatible with Server Components and leads to "Auth Flashes." |
+| Firebase RTDB | Upstash Redis | Use Redis (already in stack) if you need ultra-low latency key-value storage without built-in client-side offline persistence. RTDB is preferred for out-of-the-box WebSocket sync. |
+| Next.js Middleware | HOCs (Higher Order Components) | Use HOCs only if migrating legacy React apps. For Next.js App Router, Middleware is superior for preventing redirect loops and UI flashes. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| **Client-side only Auth** | Causes "Layout Flashes" and is bypassable. | Server-side Session Cookies. |
-| **Raw JWTs in state** | Vulnerable to XSS. | Secure, HTTP-only Cookies. |
-| **`useEffect` for Auth guards** | Delayed protection; page content renders before check. | `proxy.ts` or Server Component guards. |
+| Client-side Auth Gating (`useEffect`) | Causes "flashes of unauthorized content", layout shifts, and race conditions leading to redirect loops. | Next.js Middleware for routing, RSCs for UI gating. |
+| Heavy ACL Libraries (e.g., `casl`) | Overkill for simple Admin/Band Leader/Musician/Pending roles, adds unnecessary bundle weight. | Simple role properties on the user object validated via `zod`. |
+| Firestore for `LiveState` | High cost and higher latency for high-frequency, ephemeral updates (like a live performance monitor). | Firebase Realtime Database (RTDB) or Redis. |
 
-## "Bulletproof" Patterns for 2026
+## Stack Patterns by Variant
 
-### 1. The Proxy Refresh Pattern (Fixes Stale Sessions)
-To prevent "stale session" bugs where a user is logged in on the client but the server-side cookie is expired, use `proxy.ts` to automatically refresh tokens.
+**If handling page-level access (e.g., `/manage` vs `/monitor`):**
+- Use Next.js Middleware
+- Because it stops unauthorized requests before the server even begins rendering, preventing redirect loops.
 
-**Implementation:**
-- Store both `ID Token` and `Refresh Token` in cookies.
-- In `proxy.ts`, if the ID Token is expired, use the Refresh Token to fetch a new one server-to-server.
-- Update the response cookies in the same request. This ensures the user never sees an "Unauthorized" error while their session is technically valid.
+**If conditionally rendering UI elements (e.g., "Clone Setlist" button):**
+- Use React Server Components + `getServerUser`
+- Because it ensures the unauthorized HTML is never sent to the client, preventing UI flashes and reducing payload size.
 
-### 2. The Data Access Layer (DAL) (Fixes Permission Bleed)
-Centralize all auth checks in a single `verifySession` function using React's `cache` to prevent multiple token verifications per request.
-
-```typescript
-// lib/auth/dal.ts
-import { cache } from 'react';
-import { cookies } from 'next/headers';
-import { getTokens } from 'next-firebase-auth-edge';
-
-export const verifySession = cache(async () => {
-  const tokens = await getTokens(await cookies(), { /* config */ });
-  if (!tokens) return null;
-  return { uid: tokens.decodedToken.uid, role: tokens.decodedToken.role };
-});
-```
-
-### 3. Role-Based Cache Scoping (Fixes Cache Leaks)
-Next.js 16's `use cache` directive must be scoped to the user's role to prevent an "Admin" view from being served to a "Musician" from the global cache.
-
-```typescript
-async function DashboardData({ role }: { role: string }) {
-  'use cache';
-  cacheTag(`dashboard-${role}`);
-  // ... fetch data
-}
-```
-
-### 4. Client-to-Server Sync (Fixes "Already Signed In" Bugs)
-Use a global listener to keep the server cookie in sync with the client-side Firebase Auth state.
-
-```typescript
-// components/AuthProvider.tsx
-onIdTokenChanged(auth, async (user) => {
-  if (user) {
-    const idToken = await user.getIdToken();
-    await fetch('/api/login', { method: 'POST', body: JSON.stringify({ idToken }) });
-  } else {
-    await fetch('/api/logout', { method: 'POST' });
-  }
-});
-```
+**If syncing high-frequency live performance state:**
+- Use Firebase Realtime Database (RTDB)
+- Because it uses WebSockets for lower latency and is priced by bandwidth rather than document reads/writes, making it ideal for the `Monitor` feature.
 
 ## Version Compatibility
 
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| `firebase@11.x` | `firebase-admin@13.x` | Standard v11/v13 pairing for 2026. |
-| `next@16.x` | `react@19.x` | Required for `proxy.ts` and `use cache`. |
-| `next-firebase-auth-edge@2.x` | `next@16.x` | Ensure using the latest v2 for Next.js 16 support. |
+| Package A | Compatible With | Notes |
+|-----------|-----------------|-------|
+| `firebase@12.9.0` | `firebase-admin@13.6.0` | Ensure both client and admin SDKs are kept aligned to prevent token validation discrepancies. |
+| `next@16.1.4` | `react@19.2.3` | App Router features heavily rely on React 19 concurrent features. |
 
 ## Sources
 
-- `next-firebase-auth-edge` — Middleware patterns verified (HIGH)
-- `firebase-admin` docs — Session cookie management (HIGH)
-- Next.js 16 "What's New" — `proxy.ts` and `use cache` patterns (MEDIUM/HIGH)
+- Next.js Documentation — Verified Middleware and RSC patterns for auth gating.
+- Firebase Documentation — Verified RTDB vs Firestore pricing and latency characteristics for ephemeral state.
+- Local `package.json` — Verified existing stack versions (Next.js 16.1, React 19, Firebase 12/13).
 
 ---
-*Stack research for: sheet-music-app (Auth & Access Audit)*
-*Researched: 2026-03-14*
+*Stack research for: Next.js Authorization, Realtime State, and Data Fetching*
+*Researched: 2026-03-13*
