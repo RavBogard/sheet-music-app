@@ -83,24 +83,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
 
     // ── Shared sub-components ──
 
-    const printButton = (compact = false) => {
-        const canPrint = isBandLeader || isAdmin || isMusician
-        if (!canPrint || !onPrint) return null
-        return (
-            <Button
-                variant="ghost"
-                onClick={onPrint}
-                className={cn(
-                    "glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2",
-                    compact ? "h-12 px-4 shrink-0" : "h-11 px-3 shrink-0"
-                )}
-                title="Print Gig Packet"
-            >
-                <Printer className={compact ? "h-5 w-5" : "h-4 w-4"} />
-                {!compact && <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Print</span>}
-            </Button>
-        )
-    }
+    // ── Shared sub-components ──
 
     const zoomControls = (compact = false) => (
         <div className={cn(
@@ -207,68 +190,44 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
     return (
         <div className="material-thick border-t-0 shrink-0 pb-safe shadow-2xl">
 
-            {/* ── MOBILE: Two-row layout (< md) ── */}
-            <div className="md:hidden w-full">
+            {/* ── TOUCH DEVICES (Mobile & Tablet): Two-row layout (< lg) ── */}
+            <div className="lg:hidden w-full">
 
-                {/* Row 1 (top): Zoom | Annotate | Metronome | Audio | Transposer */}
+                {/* Row 1 (top): Spread evenly - Transposer | Metronome | Zoom */}
                 <div className="w-full h-14 flex items-center justify-between px-3 border-b border-brand/10">
 
-                    {/* Zoom controls (compact) */}
-                    {zoomControls(true)}
+                    {/* Left: Transposer */}
+                    {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
 
-                    {/* Metronome */}
+                    {/* Center: Metronome */}
                     <MetronomeControl />
 
-                    {/* Monitor Mix popover */}
-                    {monitorPopover('tools', true)}
-
-                    {/* Transposer */}
-                    {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true)}
+                    {/* Right: Zoom controls */}
+                    {zoomControls(true)}
                 </div>
 
-                {/* Row 2 (bottom): Home + Song Navigation (centered) + Setlist */}
-                <div className="w-full h-14 flex items-center px-2">
-                    <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl shrink-0 flex items-center gap-2">
-                        <X className="h-5 w-5" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
-                    </Button>
-                    <div className="flex-1 flex justify-center min-w-0">
-                        <SongNavigation />
+                {/* Row 2 (bottom): Home | Song Navigation (centered) | Monitor & Setlist */}
+                <div className="relative w-full h-14 flex items-center justify-between px-2">
+                    {/* Far Left: Exit X */}
+                    <div className="shrink-0">
+                        <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
+                            <X className="h-5 w-5" />
+                            <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Exit</span>
+                        </Button>
                     </div>
-                    <div className="shrink-0 flex items-center gap-1">
-                        {printButton(true)}
 
+                    {/* Center: Song Navigation (absolute so it perfectly centers) */}
+                    <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
+                        <div className="pointer-events-auto">
+                            <SongNavigation />
+                        </div>
+                    </div>
+
+                    {/* Far Right: Monitor Popover + Setlist Drawer */}
+                    <div className="shrink-0 flex items-center gap-1 z-10">
+                        {monitorPopover('tools', true)}
                         <SetlistDrawer />
                     </div>
-                </div>
-            </div>
-
-            {/* ── TABLET: Single row (md to lg) ── */}
-            <div className="hidden md:flex lg:hidden w-full h-16 items-center justify-between px-4 relative">
-                {/* LEFT: Exit + Zoom + Setlist */}
-                <div className="flex items-center gap-2 z-10">
-                    <Button variant="ghost" onClick={onHome} className="h-11 px-3 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl shrink-0 flex items-center gap-2" title="Exit Gig Mode">
-                        <X className="h-5 w-5" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
-                    </Button>
-                    {zoomControls(false)}
-                    {printButton(true)}
-
-                    <SetlistDrawer />
-                </div>
-
-                {/* CENTER: Song Navigation */}
-                <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
-                    <div className="pointer-events-auto">
-                        <SongNavigation />
-                    </div>
-                </div>
-
-                {/* RIGHT: Sync + Monitor + Metronome + Transposer */}
-                <div className="flex items-center gap-2 z-10">
-                    {monitorPopover('tools-tablet', true)}
-                    <MetronomeControl />
-                    {transposerPopover(transposerOpenDesktop, setTransposerOpenDesktop, 'transposer-tablet', true)}
                 </div>
             </div>
 
@@ -284,8 +243,6 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
 
                     {/* Scale Controls */}
                     {zoomControls(false)}
-
-                    {printButton(false)}
 
                     <SetlistDrawer />
                 </div>

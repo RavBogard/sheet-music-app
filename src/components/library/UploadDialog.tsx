@@ -23,6 +23,9 @@ interface UploadDialogProps {
     onUploadComplete?: (fileId: string, title: string) => void
 }
 
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { DialogDescription } from '@radix-ui/react-dialog'
+
 export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const { user } = useAuth()
     const [open, setOpen] = useState(false)
@@ -139,6 +142,9 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                         <Music className="h-5 w-5 text-brand" />
                         Upload to Library
                     </DialogTitle>
+                    <VisuallyHidden>
+                        <DialogDescription>Upload a new PDF or MusicXML file to the song library.</DialogDescription>
+                    </VisuallyHidden>
                 </DialogHeader>
 
                 {success ? (
