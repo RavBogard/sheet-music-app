@@ -12,6 +12,8 @@ import { Loader2, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
 import { ScrollFade } from "@/components/ui/scroll-fade"
 import { isBridgeOnline, getBridgeStatusMessage } from "@/components/monitor/ConnectionIndicator"
 
+const noop = () => {} // Stable reference to prevent memo breaking
+
 /**
  * Compact monitor mixer panel for the performance toolbar.
  * Shows master fader + starred/default channel sends as vertical faders.
@@ -163,7 +165,7 @@ export function QuickMonitorPanel() {
                     on={true}
                     isMaster
                     onChange={handleBusMaster}
-                    onMuteToggle={() => {}}
+                    onMuteToggle={noop}
                 />
 
                 {/* Divider between master and channels */}
