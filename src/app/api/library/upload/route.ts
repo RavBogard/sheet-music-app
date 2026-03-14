@@ -99,13 +99,13 @@ export const POST = createApiHandler(
         // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs
         const nameLower = title.toLowerCase()
         const exactMatch = await db.collection('library_index')
-            .where('status', '==', 'active')
             .where('nameLower', '==', nameLower)
-            .limit(1)
+            .limit(5)
             .get()
 
-        if (!exactMatch.empty) {
-            const existingName = exactMatch.docs[0].data().name
+        const activeExactMatch = exactMatch.docs.find(d => d.data().status === 'active')
+        if (activeExactMatch) {
+            const existingName = activeExactMatch.data().name
             return NextResponse.json({ error: `A chart with the same name ("${existingName}") already exists.` }, { status: 409 })
         }
 
@@ -114,15 +114,16 @@ export const POST = createApiHandler(
         if (prefix.length >= 3) {
             const prefixEnd = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
             const similarSnap = await db.collection('library_index')
-                .where('status', '==', 'active')
                 .where('nameLower', '>=', prefix)
                 .where('nameLower', '<', prefixEnd)
-                .select('name')
+                .select('name', 'status')
                 .limit(20)
                 .get()
 
             const normalizedNewTitle = nameLower.replace(/[^a-z0-9]/g, '')
             for (const doc of similarSnap.docs) {
+                if (doc.data().status !== 'active') continue;
+                
                 const existingName = doc.data().name as string
                 const normalizedExisting = existingName.toLowerCase().replace(/[^a-z0-9]/g, '')
                 const distance = levenshteinDistance(normalizedNewTitle, normalizedExisting)
