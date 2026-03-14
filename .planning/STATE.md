@@ -23,6 +23,6 @@
 - None.
 
 ## Session Continuity
-- **Last Action**: Phase 12 context gathered
-- **Next Turn**: `/gsd:plan-phase 12`
-- **Resume File**: `.planning/phases/12-auth-routing-deep-dive-fixes/12-CONTEXT.md`
+- **Last Action**: Phase 12 planned
+- **Next Turn**: `/gsd:execute-phase 12`
+- **Resume File**: `.planning/phases/12-auth-routing-deep-dive-fixes/12-PLAN-01-AUTH-ROUTING-FIXES.md`
