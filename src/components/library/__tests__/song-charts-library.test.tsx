@@ -314,8 +314,7 @@ describe("SongChartsLibrary", () => {
         await vi.waitUntil(() => mockApiFetch.mock.calls.some((call: any[]) => typeof call[0] === 'string' && call[0].includes('t=')))
         
         expect(mockApiFetch).toHaveBeenCalledWith(
-            expect.stringContaining('/api/library/list?all=true&t='),
-            undefined 
+            expect.stringContaining('/api/library/list?all=true&t=')
         )
     })
 

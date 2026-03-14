@@ -191,6 +191,7 @@ vi.mock('pdf-lib', () => {
         getSize: vi.fn().mockReturnValue({ width: 612, height: 792 }),
         drawText: vi.fn(),
         drawLine: vi.fn(),
+        drawRectangle: vi.fn(),
         getPageIndices: vi.fn().mockReturnValue([0]),
     }
 
