@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TemplatesSection } from "@/components/admin/TemplatesSection"
+import { UnauthorizedState } from "@/components/ui/unauthorized-state"
 
 export default function TemplatesPage() {
     const { isBandLeader, loading: authLoading } = useAuth()
@@ -19,8 +20,12 @@ export default function TemplatesPage() {
     }
 
     if (!isBandLeader) {
-        router.replace("/setlists")
-        return null
+        return (
+            <UnauthorizedState 
+                title="Leaders Only" 
+                description="Only Band Leaders can manage global liturgical templates." 
+            />
+        )
     }
 
     return (

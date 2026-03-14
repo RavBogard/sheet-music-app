@@ -1,5 +1,11 @@
-import { redirect } from "next/navigation"
+import { UnauthorizedState } from "@/components/ui/unauthorized-state"
 
 export default function MonitorAdminRedirect() {
-    redirect("/manage")
+    return (
+        <UnauthorizedState 
+            title="Monitor Config Restricted" 
+            description="Only Sound Engineers can configure monitor buses." 
+            actionHref="/setlists" 
+        />
+    )
 }
