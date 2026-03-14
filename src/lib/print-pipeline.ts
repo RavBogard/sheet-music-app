@@ -294,6 +294,7 @@ async function buildCoverPage(
 
     // Rows — only show tracks with charts (plus section headers for structure)
     const printableTracks = req.tracks.filter(t => t.type === 'header' || !!t.fileId)
+    let rowNum = 0
     let songNum = 0
     printableTracks.forEach((track) => {
         if (yOffset < 60) return
@@ -301,9 +302,32 @@ async function buildCoverPage(
         const trackType = track.type || 'song'
         const isServiceFlow = trackType !== 'song'
 
-        const maxTitleLen = hasTranspositions ? 26 : 30
-        const songTitle = track.title.length > maxTitleLen
-            ? track.title.substring(0, maxTitleLen - 3) + "..." : track.title
+        // Determine font and max width constraints based on layout and track type
+        const titleFont = isServiceFlow ? helveticaOblique : helvetica
+        const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
+        let finalTitleSize = 10
+        let songTitle = track.title
+        
+        if (trackType === 'header') {
+            const headerMax = 300
+            let headerTitle = songTitle.toUpperCase()
+            while (finalTitleSize > 7 && helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) finalTitleSize -= 0.5
+            if (helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) {
+                let truncateLen = headerTitle.length
+                while (truncateLen > 5 && helveticaBold.widthOfTextAtSize(headerTitle.substring(0, truncateLen) + "...", finalTitleSize) > headerMax) truncateLen--
+                headerTitle = headerTitle.substring(0, truncateLen) + "..."
+            }
+            songTitle = headerTitle
+        } else {
+            const maxAvailableWidth = hasTranspositions ? 190 : 220
+            while (finalTitleSize > 6.5 && titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) finalTitleSize -= 0.5
+            if (titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) {
+                let truncateLen = songTitle.length
+                while (truncateLen > 5 && titleFont.widthOfTextAtSize(songTitle.substring(0, truncateLen) + "...", finalTitleSize) > maxAvailableWidth) truncateLen--
+                songTitle = songTitle.substring(0, truncateLen) + "..."
+            }
+        }
+
         const key = isServiceFlow ? "" : (track.key || "-")
         const maxLeadLen = hasTranspositions ? 12 : 15
         const lead = isServiceFlow ? (track.performer || "") : (track.leadMusician || "")
@@ -324,33 +348,31 @@ async function buildCoverPage(
         const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && track.key)
             ? getTransposedKeyName(track.key, track.transposition) : null
 
+        rowNum++
+
+        // Draw alternating background row for zebra striping for ALL rows (including headers)
+        if (rowNum % 2 === 0) {
+            coverPage.drawRectangle({
+                x: 45,
+                y: trackType === 'header' ? yOffset - 8 : yOffset - 4,
+                width: width - 90,
+                height: trackType === 'header' ? 18 : 14,
+                color: rgb(0.96, 0.96, 0.97), // very slightly gray/cool
+            })
+        }
+
         // Headers render as bold centered labels (no number)
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
-            coverPage.drawText(songTitle.toUpperCase(), { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
             yOffset -= 18
             return
         }
 
         songNum++
 
-        // Use italic font for non-song service flow items
-        const titleFont = isServiceFlow ? helveticaOblique : helvetica
-        const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
-
-        // Draw alternating background row for zebra striping
-        if (songNum % 2 === 0 && trackType === 'song') {
-            coverPage.drawRectangle({
-                x: 45,
-                y: yOffset - 4,
-                width: width - 90,
-                height: 14,
-                color: rgb(0.96, 0.96, 0.97), // very slightly gray/cool
-            })
-        }
-
         coverPage.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 10, font: titleFont, color: titleColor })
+        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
         if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
         if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
@@ -540,7 +562,7 @@ export async function generatePrintPdf(
     const hasTranspositions = req.tracks.some(t => t.transposition && t.transposition !== 0)
 
     // Read congregation branding
-    let printFooter = "Generated by CRC Music Books"
+    let printFooter = "Generated by CRC Music Books • a project of Rabbi Daniel Bogard"
     try {
         const configSnap = await getFirestore().collection("config").doc("congregation").get()
         if (configSnap.exists) {

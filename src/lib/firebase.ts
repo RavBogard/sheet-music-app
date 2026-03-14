@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentMultipleTabManager, setLogLevel } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -40,6 +40,10 @@ try {
         // Historical note: Long polling was previously enabled to suppress
         // AbortError console noise in Firebase SDK <12.5. That bug is fixed
         // in v12.9+, so we use the default streaming transport now.
+
+        // Suppress harmless "Detected an update time that is in the future" clock-skew warnings
+        setLogLevel("error");
+
         try {
             db = initializeFirestore(app, {
                 localCache: persistentLocalCache({
