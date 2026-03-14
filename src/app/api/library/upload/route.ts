@@ -43,7 +43,9 @@ export const POST = createApiHandler(
         const db = getFirestore()
 
         const userDoc = await db.collection('users').doc(ctx.auth.uid).get()
-        if (!userDoc.exists || !userDoc.data()?.canUpload) {
+        const isPrivilegedRole = ctx.auth.isAdmin || ctx.auth.isBandLeader || ctx.auth.isMusician
+        
+        if (!isPrivilegedRole && (!userDoc.exists || !userDoc.data()?.canUpload)) {
             return NextResponse.json(
                 { error: "Upload permission required. Ask an admin to enable uploads for your account." },
                 { status: 403 }
