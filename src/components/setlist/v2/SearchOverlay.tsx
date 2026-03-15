@@ -148,11 +148,22 @@ export function SearchOverlay({
                                     <Music className="h-4 w-4" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <span className="font-medium text-foreground truncate block">
-                                        {cleanName || file.name}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-foreground truncate block">
+                                            {cleanName || file.name}
+                                        </span>
+                                        {file.collection === 'supplemental' ? (
+                                            <span className="text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20 shrink-0 mt-0.5">
+                                                Shireinu
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-500/20 shrink-0 mt-0.5">
+                                                CRC
+                                            </span>
+                                        )}
+                                    </div>
                                     {file.metadata?.key && (
-                                        <span className="text-xs text-muted-foreground">
+                                        <span className="text-xs text-muted-foreground mt-0.5 block">
                                             Key: {file.metadata.key}
                                         </span>
                                     )}

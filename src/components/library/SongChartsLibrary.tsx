@@ -177,7 +177,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [combinedItems.map(i => i.id).join(','), user])
 
-    const itemCount = tab === "audio" ? audioFiles.length : files.length
     const hasAudio = audioFiles.length > 0
 
     return (
@@ -191,7 +190,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <img src="/logo.jpg" alt={congregation.shortName} className="h-8 w-8 rounded-full border border-brand/20 object-cover" />
                     <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
-                <div className="text-sm text-muted-foreground">{itemCount} {tab === "audio" ? "tracks" : "charts"}</div>
                 {canUpload && (
                     <UploadDialog onUploadComplete={async () => {
                         toast.success("Library updated with your upload")

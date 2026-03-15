@@ -166,7 +166,13 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
                                 {!isFolder && !isAudio && item.collection === 'supplemental' && (
                                     <span className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
-                                        Supplemental
+                                        Shireinu
+                                    </span>
+                                )}
+
+                                {!isFolder && !isAudio && item.collection !== 'supplemental' && (
+                                    <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
+                                        CRC
                                     </span>
                                 )}
 
