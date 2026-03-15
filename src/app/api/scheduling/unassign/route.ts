@@ -112,7 +112,10 @@ export const POST = createApiHandler(
             if (setlistDoc.exists) {
                 const musicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string }>
                 const filtered = musicians.filter(m => m.uid !== assignment.musicianUid)
-                await setlistRef.update({ musicians: filtered })
+                await setlistRef.update({
+                    musicians: filtered,
+                    assignedUids: filtered.map(m => m.uid).filter(Boolean),
+                })
             }
         } catch (e) {
             logger.warn('[Scheduling] Failed to remove musician from setlist:', e)

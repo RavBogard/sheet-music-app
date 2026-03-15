@@ -202,8 +202,10 @@ export const POST = createApiHandler(
                     }))
 
                 if (newMusicians.length > 0) {
+                    const mergedMusicians = [...existingMusicians, ...newMusicians]
                     await setlistRef.update({
-                        musicians: [...existingMusicians, ...newMusicians],
+                        musicians: mergedMusicians,
+                        assignedUids: mergedMusicians.map(m => m.uid).filter(Boolean),
                     })
                 }
             }

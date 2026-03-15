@@ -97,9 +97,11 @@ export function proxy(request: NextRequest) {
     if (session && !isPublicRoute) {
         const role = decodedSession?.role
         
-        // Pending users are explicitly blocked from all secure routes except the home dashboard
-        if (role === 'pending' && pathname !== '/') {
-            return detectRedirectLoop('/')
+        // Pending users AND users with no explicitly granted role yet are blocked from secure routes
+        if (!role || role === 'pending') {
+            if (pathname !== '/') {
+                return detectRedirectLoop('/')
+            }
         }
 
         if (isLeaderRoute) {

@@ -79,8 +79,12 @@ service cloud.firestore {
 
     // SETLISTS Collection (The new root collection)
     match /setlists/{setlistId} {
-      // 1. READ: Allow if Public OR User is Owner OR Admin OR Band Leader
-      allow read: if (resource.data.isPublic == true) || isOwner(resource) || isAdmin() || isBandLeader();
+      // 1. READ: Allow if Public OR User is Owner OR Admin OR Band Leader OR Scheduled Musician
+      allow read: if (resource.data.isPublic == true)
+                  || isOwner(resource)
+                  || isAdmin()
+                  || isBandLeader()
+                  || (resource.data.assignedUids != null && request.auth.uid in resource.data.assignedUids);
 
       // 2. CREATE: 
       //    - Members can create private setlists.
