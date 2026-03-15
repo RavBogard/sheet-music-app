@@ -128,7 +128,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     const isVisible = needsOverlay || isEditingChords || showPopover
 
                     return (
-                        <div key={i} className="absolute" style={{ left: `${chord.x}%`, top: `${chord.y}%` }}>
+                        <div key={i} className="absolute animate-in fade-in duration-200" style={{ left: `${chord.x}%`, top: `${chord.y}%` }}>
                             <div
                                 ref={el => setChordRef(i, el)}
                                 className="cursor-pointer"

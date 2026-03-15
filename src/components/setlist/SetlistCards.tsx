@@ -133,7 +133,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     )}
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 w-full">
+                <div className="mt-4 flex flex-col sm:flex-row items-center gap-2 w-full">
                     <Button
                         variant="secondary"
                         onClick={onEdit}
@@ -259,7 +259,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                 {setlist.trackCount || 0} songs{setlist.rabbi ? ` · Rabbi ${setlist.rabbi}` : ''}
             </div>
 
-            <div className="mt-auto pt-2 flex items-center gap-2 w-full">
+            <div className="mt-auto pt-2 flex flex-col sm:flex-row items-center gap-2 w-full">
                 <Button
                     variant="secondary"
                     onClick={onEdit}

@@ -105,7 +105,7 @@ export function proxy(request: NextRequest) {
         if (isLeaderRoute) {
             if (role !== 'admin' && role !== 'band_leader') {
                 // Unprivileged user trying to access leader/admin routes
-                return detectRedirectLoop('/setlists')
+                return NextResponse.rewrite(new URL('/unauthorized', request.url))
             }
         }
     }
