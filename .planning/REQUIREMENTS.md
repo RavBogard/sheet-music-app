@@ -36,6 +36,20 @@
 - [ ] **DATA-01**: Display a straightforward list of upcoming public setlists associated with dates on the schedule page (regardless of musician assignment).
 - [ ] **DATA-02**: Ensure unauthenticated users immediately see the hero card on the dashboard.
 
+### v1.2 Library Expansion Requirements
+
+#### PDF Processing Pipeline
+- [ ] **DATA-03**: Create a local Node script to batch process a directory of PDFs, removing the first page (title page) from each file.
+- [ ] **DATA-04**: Extract `Title` and `Author` from the source PDF filenames using Regex, converting titles from ALL CAPS to Title Case.
+- [ ] **DATA-05**: Upload processed PDFs to Firebase Storage via the script.
+- [ ] **DATA-06**: Create corresponding Firestore `songs` documents for each uploaded PDF, populated with the extracted metadata and a `collection` identifier.
+
+#### UI Segregation & Segregation
+- [ ] **UI-04**: Add visual indicators (badges, color tints) to search results in `SongChartsLibrary.tsx` to differentiate between Core and Supplemental collections.
+- [ ] **UI-05**: Add a "Collection" filter to the library search toolbar.
+- [ ] **UI-06**: Update the `UploadDialog.tsx` to require selecting a destination collection when manually uploading new charts.
+- [ ] **ARCH-04**: Update the `Song` type definition and Firestore schema to include the `collection` field.
+
 ---
 
 ## Traceability
@@ -59,3 +73,11 @@
 - AUTH-07 -> Phase 12
 - DATA-01 -> Phase 14
 - DATA-02 -> Phase 14
+- DATA-03 -> TBD
+- DATA-04 -> TBD
+- DATA-05 -> TBD
+- DATA-06 -> TBD
+- UI-04 -> TBD
+- UI-05 -> TBD
+- UI-06 -> TBD
+- ARCH-04 -> TBD

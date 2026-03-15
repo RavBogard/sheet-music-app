@@ -6,15 +6,16 @@ A continuation of the Bulletproof Auth project. Having secured the foundation (P
 ## Core Value
 Frictionless, instant access for all users (especially unauthenticated and pending users), blazing fast PDF loading, and zero UI layout shifts or authorization flashes.
 
-## Current Milestone: v1.1 Gating
+## Current Milestone: v1.2 Library Expansion
 
-**Goal:** Resolve role-based authorization bugs causing UI leaks and incorrect redirects, and streamline the schedule page.
+**Goal:** Expand the repertoire by ingesting hundreds of supplemental PDF song files, parsing their metadata from file names, and adding visual distinctions for different collections in the UI.
 
 **Target features:**
-- Deep dive analysis into role-based routing and UI gating bugs
-- Fix musician UI showing unauthorized actions (duplicate setlists, clone for next week, etc.)
-- Fix band leaders incorrectly redirecting to Google login
-- Fix schedule page to simply list all upcoming public setlists associated with dates regardless of musician assignments
+- Process local directory of PDFs to strip identical title pages (first page)
+- Extract "Title" and "Author" from semi-structured PDF file names via script/Regex
+- Upload cleaned PDFs and their metadata to Firebase Storage and Firestore
+- Distinguish the new PDFs with a "collection" schema (e.g., Core vs. Supplemental)
+- Add frontend UI support for displaying the collections distinctively in the Library and Search
 
 ## Requirements
 

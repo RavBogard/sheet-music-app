@@ -20,6 +20,8 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 - [ ] Phase 12: Auth & Routing Deep Dive & Fixes
 - [ ] **Phase 13: UI Gating & Flash Prevention**
 - [ ] **Phase 14: Schedule & Dashboard Optimization**
+- [ ] **Phase 16: PDF Processing & Metadata Pipeline**
+- [ ] **Phase 17: Library Collection UI Segregation**
 
 ### Phase Details
 
@@ -44,6 +46,21 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
   - The schedule page displays a straightforward, chronological list of upcoming public setlists.
   - Schedule queries are optimized and decoupled from heavy assignment data.
 
+#### Phase 16: PDF Processing & Metadata Pipeline
+- **Requirements:** DATA-03, DATA-04, DATA-05, DATA-06
+- **Success Criteria:**
+  - Local script successfully strips the first page from a batch of raw PDFs.
+  - Script correctly extracts Title and Author from the filenames using Regex, formatting them to title case.
+  - Cleaned PDFs are uploaded to Firebase Storage and corresponding populated records are created in Firestore with a `collection` identifier.
+
+#### Phase 17: Library Collection UI Segregation
+- **Requirements:** UI-04, UI-05, UI-06, ARCH-04
+- **Success Criteria:**
+  - Firestore `Song` schema formally typing supports a `collection` field.
+  - The Library UI visually distinguishes core from supplemental charts via distinct color badges.
+  - Users can filter search results by collection.
+  - Manual upload dialogue requires the user to select a destination collection.
+
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
@@ -57,3 +74,5 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 12. Auth & Routing Fixes | 0/1 | Pending | — |
 | 13. UI Gating & Flash Prevention | 0/1 | Pending | — |
 | 14. Schedule & Dashboard Opt. | 0/1 | Pending | — |
+| 16. PDF Processing Pipeline | 0/1 | Pending | — |
+| 17. Library Collection UI | 0/1 | Pending | — |
