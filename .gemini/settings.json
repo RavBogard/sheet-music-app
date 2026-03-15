@@ -1,4 +1,12 @@
 {
+  "general": {
+    "retryFetchErrors": true,
+    "maxAttempts": 5
+  },
+  "model": {
+    "maxSessionTurns": 50,
+    "compressionThreshold": 0.5
+  },
   "experimental": {
     "enableAgents": true
   },
@@ -13,7 +21,7 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "AfterTool": [
       {
         "hooks": [
           {

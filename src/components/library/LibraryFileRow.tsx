@@ -164,6 +164,12 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     </span>
                                 )}
 
+                                {!isFolder && !isAudio && item.collection === 'supplemental' && (
+                                    <span className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                        Supplemental
+                                    </span>
+                                )}
+
                                 {isCached && !isFolder && (
                                     <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title="This file is downloaded and available offline">
                                         <CheckCircle2 className="w-3 h-3" />

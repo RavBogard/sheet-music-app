@@ -24,6 +24,7 @@ export const GET = createApiHandler(
         const cursor = url.searchParams.get("cursor")
         const all = url.searchParams.get("all") === "true"
         const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
+        const collectionFilter = url.searchParams.get("collection") // 'supplemental' or 'core'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
         initAdmin()
@@ -64,9 +65,15 @@ export const GET = createApiHandler(
 
         const files = snapshot.docs
             .filter(doc => {
-                const status = doc.data().status
-                if (statusFilter === 'archived') return status === 'archived'
-                return status !== 'archived'
+                const data = doc.data()
+                const status = data.status
+                if (statusFilter === 'archived' && status !== 'archived') return false
+                if (statusFilter !== 'archived' && status === 'archived') return false
+                
+                const col = data.collection || 'core'
+                if (collectionFilter && collectionFilter !== 'all' && col !== collectionFilter) return false
+                
+                return true
             })
             .map(doc => {
                 const data = doc.data()
@@ -83,6 +90,7 @@ export const GET = createApiHandler(
                     modifiedTime: data.modifiedTime || null,
                     webViewLink: data.webViewLink,
                     metadata: data.metadata || null,
+                    collection: data.collection || 'core',
                     status: (data.status as string) || 'active',
                     ...(statusFilter === 'archived' ? {
                         archivedAt: data.archivedAt || null,

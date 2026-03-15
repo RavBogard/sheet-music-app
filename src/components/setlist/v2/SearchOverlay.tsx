@@ -5,7 +5,9 @@ import { X, Search, Music } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useLibraryStore } from "@/lib/library-store"
+import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Fuse from "fuse.js"
 
 /** Only show chart files (PDF, MusicXML, ChordPro) — exclude audio files */
@@ -31,8 +33,12 @@ export function SearchOverlay({
     currentTrackFileIds,
 }: SearchOverlayProps) {
     const [query, setQuery] = useState("")
+    const [collection, setCollection] = useState<"core" | "supplemental">("core")
     const inputRef = useRef<HTMLInputElement>(null)
     const { allFiles } = useLibraryStore()
+    
+    // Fetch the correct library catalog into the hydration store based on the active tab
+    useLibrary(false, collection)
 
     // Build Fuse index for search
     const fuse = useMemo(() => {
@@ -74,22 +80,32 @@ export function SearchOverlay({
     return (
         <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-                <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
-                    <X className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        ref={inputRef}
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder={replacingTrackId ? "Search for replacement song..." : "Search songs to add..."}
-                        className="pl-9 h-10"
-                        autoComplete="off"
-                        autoCorrect="off"
-                    />
+            <div className="flex flex-col gap-3 px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+                        <X className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            ref={inputRef}
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={replacingTrackId ? "Search for replacement song..." : "Search songs to add..."}
+                            className="pl-9 h-10"
+                            autoComplete="off"
+                            autoCorrect="off"
+                        />
+                    </div>
                 </div>
+                
+                {/* Collection Toggle */}
+                <Tabs value={collection} onValueChange={(val) => setCollection(val as "core" | "supplemental")} className="w-full max-w-sm mx-auto">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="core">CRC Charts</TabsTrigger>
+                        <TabsTrigger value="supplemental">Shireinu</TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
             {/* Results */}

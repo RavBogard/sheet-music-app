@@ -17,6 +17,7 @@ export interface DriveFile {
     displayName?: string
     mimeType: string
     parents?: string[]
+    collection?: 'core' | 'supplemental'
     webContentLink?: string
     thumbnailLink?: string
     metadata?: {

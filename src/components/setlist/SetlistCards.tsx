@@ -43,11 +43,12 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
         }).catch(() => setOfflineStatus('none'))
     }, [setlist.tracks])
     return (
-        <Button
-            variant="ghost"
+        <div
+            role="button"
+            tabIndex={0}
             onClick={onPerform}
-            disabled={!!navigatingTo}
-            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
+            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''} ${!!navigatingTo ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
@@ -157,7 +158,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     )}
                 </div>
             </div>
-        </Button>
+        </div>
     )
 }
 
@@ -180,11 +181,12 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
     const isLoading = navigatingTo === setlist.id
 
     return (
-        <Button
-            variant="ghost"
+        <div
+            role="button"
+            tabIndex={0}
             onClick={onPerform}
-            disabled={!!navigatingTo}
-            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
+            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''} ${!!navigatingTo ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
@@ -281,7 +283,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                     </div>
                 )}
             </div>
-        </Button>
+        </div>
     )
 }
 

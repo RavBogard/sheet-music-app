@@ -8,12 +8,14 @@ export async function GET(req: Request) {
     try {
         initAdmin()
         const db = require('firebase-admin/firestore').getFirestore()
-        const doc = await db.collection('library_index').doc('upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915').get()
+        const b = require('firebase-admin/storage').getStorage().bucket()
+        const [allFiles] = await b.getFiles()
         
         return NextResponse.json({
             success: true,
-            exists: doc.exists,
-            data: doc.data()
+            recentFiles: allFiles.map((f: any) => ({ name: f.name, timeCreated: f.metadata.timeCreated }))
+                .sort((a: any, b: any) => new Date(b.timeCreated || 0).getTime() - new Date(a.timeCreated || 0).getTime())
+                .slice(0, 20)
         })
     } catch (e: any) {
         return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 })

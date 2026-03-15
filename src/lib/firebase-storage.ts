@@ -12,8 +12,6 @@
 import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
 
-const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
-
 // ─── Discriminated Result Types ───
 
 export type StorageError = { success: false; reason: 'not_found' | 'network' | 'invalid_input'; message: string }
@@ -25,7 +23,8 @@ export type StorageResult<T> = StorageSuccess<T> | StorageError
  */
 function getBucket() {
     initAdmin()
-    return getStorage().bucket(BUCKET_NAME)
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+    return getStorage().bucket(bucketName)
 }
 
 /**
@@ -54,8 +53,17 @@ function getCandidatePaths(fileId: string, mimeType?: string): string[] {
     const altFileId = fileId.replace(/_/g, '-')
     const fileIdsToTry = fileId === altFileId ? [fileId] : [fileId, altFileId]
 
-    const paths: string[] = []
+    // Some systems prefix manual uploads with 'upload-' while others don't.
+    // Try both variants to be absolutely sure we find the file.
+    const expandedIds = new Set<string>()
     for (const id of fileIdsToTry) {
+        expandedIds.add(id)
+        if (!id.startsWith('upload-')) expandedIds.add(`upload-${id}`)
+        if (id.startsWith('upload-')) expandedIds.add(id.replace('upload-', ''))
+    }
+
+    const paths: string[] = []
+    for (const id of Array.from(expandedIds)) {
         if (mimeType) {
             paths.push(getStoragePath(id, mimeType))
         } else {
@@ -111,8 +119,8 @@ export async function uploadToStorage(
         }
     })
 
-
-    return `gs://${BUCKET_NAME}/${path}`
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+    return `gs://${bucketName}/${path}`
 }
 
 /**
@@ -127,7 +135,10 @@ export async function getStorageUrl(fileId: string, mimeType?: string): Promise<
         for (const path of paths) {
             const file = bucket.file(path)
             const [exists] = await file.exists()
-            if (exists) return { success: true, data: `gs://${BUCKET_NAME}/${path}` }
+            if (exists) {
+                const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+                return { success: true, data: `gs://${bucketName}/${path}` }
+            }
         }
 
         return { success: false, reason: 'not_found', message: `File ${fileId} not found in storage` }

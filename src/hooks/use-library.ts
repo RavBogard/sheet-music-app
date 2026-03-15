@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth-context"
  * 
  * If force=true, bypasses the browser cache.
  */
-async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastModified: string }> {
+async function fetchLibrary(force = false, collection = 'all'): Promise<{ files: DriveFile[], lastModified: string }> {
     const user = auth?.currentUser
     const headers: HeadersInit = {}
     if (user) {
@@ -18,7 +18,7 @@ async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastMo
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const endpoint = '/api/library/list?all=true'
+    const endpoint = `/api/library/list?all=true&collection=${collection}${force ? `&t=${Date.now()}` : '&v=2'}`
     const options: RequestInit = { headers }
     if (force) {
         options.cache = 'no-store'
@@ -36,12 +36,14 @@ async function fetchLibrary(force = false): Promise<{ files: DriveFile[], lastMo
  * React Query natively handles the caching, invalidation, and background
  * refetching, completely replacing the bespoke IDB caching layer.
  */
-export function useLibrary(force = false) {
+export function useLibrary(force = false, collection = 'all') {
     const { user } = useAuth()
 
     const queryInfo = useQuery({
-        queryKey: ['library', force, !!user],
-        queryFn: () => fetchLibrary(force),
+        // Increment the cache key version (v2) to force an immediate bust of the
+        // old empty 'all' cache for all clients.
+        queryKey: ['library', 'v2', collection, force, !!user],
+        queryFn: () => fetchLibrary(force, collection),
         staleTime: 1000 * 60 * 60 * 24, // Consider data fresh for 24 hours (sync handles updates)
         enabled: !!user, // Wait for auth to initialize reactively
     })

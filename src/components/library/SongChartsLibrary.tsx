@@ -28,7 +28,7 @@ import { LibraryFileRow } from "./LibraryFileRow"
 import { SelectionActionBar } from "./SelectionActionBar"
 import { useLibraryActions } from "./useLibraryActions"
 
-type LibraryTab = "charts" | "audio"
+type LibraryTab = "core" | "supplemental" | "audio"
 
 function isAudioFile(f: DriveFile) {
     return f.mimeType.startsWith('audio/') ||
@@ -86,12 +86,15 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     }, [initialLibrary, hydrate])
 
     // Automatically load the library on mount if needed
-    const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary()
+    const [tab, setTab] = useState<LibraryTab>("core")
+    
+    // We fetch ALL files now instead of just the active collection,
+    // so that the tab counts in the UI are always accurate.
+    const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary(false, "all")
     const loading = filtering || queryLoading
     const error = queryError ? queryError.message : null
 
     const [searchQuery, setSearchQuery] = useState("")
-    const [tab, setTab] = useState<LibraryTab>("charts")
     const [playingFile, setPlayingFile] = useState<DriveFile | null>(null)
     const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
@@ -144,11 +147,17 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
 
     // Apply library filters (key, topic, recency) to chart files
-    const files = useMemo(
-        () => applyLibraryFilters(rawFiles, libraryFilters, usageMap),
+    const allFilteredCore = useMemo(
+        () => applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental'), libraryFilters, usageMap),
+        [rawFiles, libraryFilters, usageMap]
+    )
+    
+    const allFilteredSupplemental = useMemo(
+        () => applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, usageMap),
         [rawFiles, libraryFilters, usageMap]
     )
 
+    const files = tab === "supplemental" ? allFilteredSupplemental : allFilteredCore
     const combinedItems = tab === "audio" ? audioFiles : files
 
     useEffect(() => {
@@ -225,7 +234,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </div>
 
                 {/* Library filters (key, topic, recency) */}
-                {tab === "charts" && (
+                {tab !== "audio" && (
                     <LibraryFilters
                         allFiles={rawFiles}
                         filters={libraryFilters}
@@ -234,16 +243,22 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     />
                 )}
 
-                {/* Tabs -- only show if audio files exist */}
-                {hasAudio && (
-                    <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="max-w-xl mx-auto">
-                        <TabsList variant="line" className="bg-transparent gap-2 h-auto p-0">
-                            <TabsTrigger
-                                value="charts"
-                                className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
-                            >
-                                Charts ({files.length})
-                            </TabsTrigger>
+                {/* Tabs -- always show charts and supplemental */}
+                <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="max-w-xl mx-auto">
+                    <TabsList variant="line" className="bg-transparent gap-2 h-auto p-0">
+                        <TabsTrigger
+                            value="core"
+                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                        >
+                            CRC Charts ({allFilteredCore.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="supplemental"
+                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                        >
+                            Shireinu ({allFilteredSupplemental.length})
+                        </TabsTrigger>
+                        {hasAudio && (
                             <TabsTrigger
                                 value="audio"
                                 className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
@@ -251,9 +266,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 <Music className="w-3.5 h-3.5" />
                                 Audio ({audioFiles.length})
                             </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                )}
+                        )}
+                    </TabsList>
+                </Tabs>
             </div>
 
             {/* Content Search Results (searches within chord data) */}
