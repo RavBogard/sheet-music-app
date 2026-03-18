@@ -15,7 +15,7 @@ vi.mock("@dnd-kit/sortable", () => ({
 }))
 
 vi.mock("@dnd-kit/utilities", () => ({
-    CSS: { Transform: { toString: () => null } },
+    CSS: { Transform: { toString: () => null }, Translate: { toString: () => null } },
 }))
 
 // Mock KeyPicker to a simple input

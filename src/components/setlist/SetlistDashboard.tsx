@@ -72,7 +72,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="gap-2 border-brand/30 text-brand hover:bg-brand/10">
-                                    <Sparkles className="h-4 w-4" /> From Template
+                                    <Sparkles className="h-4 w-4" /> Templates
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
