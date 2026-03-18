@@ -77,7 +77,7 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 16. PDF Processing Pipeline | 0/1 | Pending | — |
 | 17. Library Collection UI | 0/1 | Pending | — |
 | 18. MuseScore Import | 2/2 | Complete    | 2026-03-18 |
-| 19. Native MusicXML Transposition | 2/2 | Complete   | 2026-03-18 |
+| 19. Native MusicXML Transposition | 2/2 | Complete    | 2026-03-18 |
 
 ### Phase 18: MuseScore file import and MusicXML conversion
 
