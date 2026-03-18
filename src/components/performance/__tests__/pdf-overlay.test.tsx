@@ -153,4 +153,65 @@ describe("PDFOverlay", () => {
         // Mobile + desktop layouts each render an Exit button
         expect(screen.getAllByText("Exit").length).toBeGreaterThanOrEqual(1)
     })
+
+    describe("queue building file type detection", () => {
+        it('assigns type "pdf" for a regular file', () => {
+            render(<PDFOverlay {...defaultProps} track={songA} tracks={[songA]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("pdf")
+        })
+
+        it('assigns type "musicxml" for a track with db- prefix fileId', () => {
+            const dbTrack: SetlistTrack = {
+                id: "mxml-1",
+                title: "DB MusicXML",
+                type: "song",
+                fileId: "db-abc123",
+            }
+            render(<PDFOverlay {...defaultProps} track={dbTrack} tracks={[dbTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .musicxml extension', () => {
+            const mxmlTrack: SetlistTrack = {
+                id: "mxml-2",
+                title: "MusicXML File",
+                type: "song",
+                fileId: "song.musicxml",
+            }
+            render(<PDFOverlay {...defaultProps} track={mxmlTrack} tracks={[mxmlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .xml extension', () => {
+            const xmlTrack: SetlistTrack = {
+                id: "mxml-3",
+                title: "XML File",
+                type: "song",
+                fileId: "song.xml",
+            }
+            render(<PDFOverlay {...defaultProps} track={xmlTrack} tracks={[xmlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .mxl extension', () => {
+            const mxlTrack: SetlistTrack = {
+                id: "mxml-4",
+                title: "MXL File",
+                type: "song",
+                fileId: "song.mxl",
+            }
+            render(<PDFOverlay {...defaultProps} track={mxlTrack} tracks={[mxlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+    })
 })
