@@ -77,7 +77,7 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 16. PDF Processing Pipeline | 0/1 | Pending | — |
 | 17. Library Collection UI | 0/1 | Pending | — |
 | 18. MuseScore Import | 2/2 | Complete    | 2026-03-18 |
-| 19. Native MusicXML Transposition | 1/2 | In Progress | — |
+| 19. Native MusicXML Transposition | 2/2 | Complete   | 2026-03-18 |
 
 ### Phase 18: MuseScore file import and MusicXML conversion
 
@@ -95,7 +95,7 @@ Plans:
 **Goal:** Enable real note/chord/key-signature transposition for MusicXML files rendered via OSMD, replacing the chord-overlay-only approach used for PDFs. Fix TransposeCalculator initialization, wire file-type branching into the performance view, and suppress the SmartTransposer overlay for MusicXML files.
 **Requirements**: T19-01, T19-02, T19-03, T19-04, T19-05, T19-06, T19-07
 **Depends on:** Phase 18
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 19-01-PLAN.md — Fix SmartScoreViewer TransposeCalculator + PDFOverlay queue type detection
