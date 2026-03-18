@@ -100,3 +100,13 @@ Plans:
 Plans:
 - [ ] 19-01-PLAN.md — Fix SmartScoreViewer TransposeCalculator + PDFOverlay queue type detection
 - [ ] 19-02-PLAN.md — Wire file-type branching in PDFOverlay + visual verification
+
+### Phase 20: Add song to existing setlist from library view
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 19
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 20 to break down)
