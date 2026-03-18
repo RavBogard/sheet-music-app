@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-18T22:33:58.468Z"
+last_updated: "2026-03-18T22:42:45.094Z"
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: Architecture Refinement & UX Polish
@@ -31,6 +31,8 @@ progress:
 - [18-01] Used SaxonJS with pre-compiled SEF for XSLT transformation (faster than raw XSL at runtime)
 - [18-01] TPC-based pitch mapping for accurate enharmonic note resolution
 - [18-01] Quarter note = 1 division for MusicXML simplicity
+- [Phase 18-02]: Extension-based MuseScore detection since browsers send generic MIME for .mscz
+- [Phase 18-02]: Dual storage pattern: originals at library/originals/, converted at library/
 
 ### Todos
 - None.

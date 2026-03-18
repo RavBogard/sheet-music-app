@@ -55,10 +55,10 @@
 #### MuseScore File Conversion
 - [x] **MS-01**: Extract .mscx XML content from .mscz ZIP archives using jszip.
 - [x] **MS-02**: Convert MSCX XML to valid MusicXML (score-partwise) via XSLT transform, preserving core notation (notes, rests, chords, key/time signatures, parts).
-- [ ] **MS-03**: Extend the upload API route (`/api/library/upload`) to accept .mscz and .mscx files, converting them to MusicXML server-side.
-- [ ] **MS-04**: Store both the original MuseScore file and the converted MusicXML in Firebase Storage.
+- [x] **MS-03**: Extend the upload API route (`/api/library/upload`) to accept .mscz and .mscx files, converting them to MusicXML server-side.
+- [x] **MS-04**: Store both the original MuseScore file and the converted MusicXML in Firebase Storage.
 - [x] **MS-05**: Preserve the original file buffer alongside the conversion output for archival and potential re-conversion.
-- [ ] **MS-06**: Update UploadDialog.tsx to accept .mscz and .mscx file types in the file picker.
+- [x] **MS-06**: Update UploadDialog.tsx to accept .mscz and .mscx file types in the file picker.
 
 ### v1.2 Native Transposition Requirements
 
