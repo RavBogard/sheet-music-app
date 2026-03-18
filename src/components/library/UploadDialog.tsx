@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { toast } from "sonner"
 
-const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl"
+const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx"
 const MAX_SIZE_MB = 25
 
 const KEY_OPTIONS = [
@@ -55,9 +55,9 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             return
         }
 
-        const validExt = /\.(pdf|xml|musicxml|mxl)$/i.test(selectedFile.name)
+        const validExt = /\.(pdf|xml|musicxml|mxl|mscz|mscx)$/i.test(selectedFile.name)
         if (!validExt) {
-            toast.error("Only PDF and MusicXML files are supported.")
+            toast.error("Only PDF, MusicXML, and MuseScore files are supported.")
             return
         }
 
@@ -143,7 +143,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                         Upload to Library
                     </DialogTitle>
                     <VisuallyHidden>
-                        <DialogDescription>Upload a new PDF or MusicXML file to the song library.</DialogDescription>
+                        <DialogDescription>Upload a new PDF, MusicXML, or MuseScore file to the song library.</DialogDescription>
                     </VisuallyHidden>
                 </DialogHeader>
 
@@ -168,7 +168,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                 <p className="text-sm text-zinc-400 mb-1">
                                     Drop a file here or <span className="text-brand">browse</span>
                                 </p>
-                                <p className="text-xs text-zinc-600">PDF or MusicXML, up to {MAX_SIZE_MB}MB</p>
+                                <p className="text-xs text-zinc-600">PDF, MusicXML, or MuseScore, up to {MAX_SIZE_MB}MB</p>
                                 <input
                                     ref={fileInputRef}
                                     type="file"

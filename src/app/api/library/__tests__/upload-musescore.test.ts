@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mock state ──
 
 const mockSet = vi.fn()
-const mockGet = vi.fn()
 const mockUserDocGet = vi.fn()
 
 const makeChainable = () => {
@@ -67,24 +66,54 @@ function mockAuth() {
         uid: 'test-user',
         email: 'user@test.com',
         role: 'admin',
-        isAdmin: true,
-        isBandLeader: true,
-        isMusician: true,
     } as never)
 }
 
-function createUploadRequest(fileName: string, fileContent = 'file-content', mimeType = 'application/octet-stream') {
-    const blob = new Blob([fileContent], { type: mimeType })
-    const file = new File([blob], fileName, { type: mimeType })
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('title', fileName.replace(/\.[^/.]+$/, ''))
+/**
+ * Create a mock File-like object that works in Node test environment.
+ * Node's File constructor sometimes doesn't provide arrayBuffer().
+ */
+function createMockFile(name: string, content = 'file-content', type = 'application/octet-stream') {
+    const buffer = Buffer.from(content)
+    return {
+        name,
+        type,
+        size: buffer.length,
+        arrayBuffer: () => Promise.resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)),
+    }
+}
 
-    return new NextRequest('http://localhost/api/library/upload', {
+/**
+ * Create a NextRequest with a properly mocked formData() method.
+ */
+function createUploadRequest(fileName: string, fileContent = 'file-content', mimeType = 'application/octet-stream') {
+    const mockFile = createMockFile(fileName, fileContent, mimeType)
+
+    const formEntries = new Map<string, unknown>()
+    formEntries.set('file', mockFile)
+    formEntries.set('title', fileName.replace(/\.[^/.]+$/, ''))
+
+    const mockFormData = {
+        get: (key: string) => formEntries.get(key) ?? null,
+        getAll: (key: string) => {
+            const v = formEntries.get(key)
+            return v ? [v] : []
+        },
+        has: (key: string) => formEntries.has(key),
+    }
+
+    const req = new NextRequest('http://localhost/api/library/upload', {
         method: 'POST',
-        body: formData,
-        headers: { Authorization: 'Bearer test-token' },
+        headers: {
+            Authorization: 'Bearer test-token',
+            'Content-Type': 'multipart/form-data',
+        },
     })
+
+    // Override formData() to return our mock
+    vi.spyOn(req, 'formData').mockResolvedValue(mockFormData as unknown as FormData)
+
+    return req
 }
 
 beforeEach(() => {
@@ -127,12 +156,13 @@ describe('Upload route - MuseScore files', () => {
         // Should have two uploadToStorage calls: one for original, one for converted
         expect(mockUploadToStorage).toHaveBeenCalledTimes(2)
 
-        // Find the original upload call (contains 'originals' path or octet-stream mime)
+        // Find the original upload call (contains 'originals' in the path)
         const originalCall = mockUploadToStorage.mock.calls.find(
-            (call: unknown[]) => String(call[0]).includes('original') || call[2] === 'application/octet-stream'
+            (call: unknown[]) => String(call[0]).includes('original')
         )
         expect(originalCall).toBeTruthy()
         expect(originalCall![2]).toBe('application/octet-stream')
+        expect(String(originalCall![0])).toMatch(/\.mscz$/)
     })
 
     it('stores original .mscx file at library/originals/{fileId}.mscx', async () => {
@@ -142,9 +172,10 @@ describe('Upload route - MuseScore files', () => {
         expect(mockUploadToStorage).toHaveBeenCalledTimes(2)
 
         const originalCall = mockUploadToStorage.mock.calls.find(
-            (call: unknown[]) => String(call[0]).includes('original') || call[2] === 'application/octet-stream'
+            (call: unknown[]) => String(call[0]).includes('original')
         )
         expect(originalCall).toBeTruthy()
+        expect(String(originalCall![0])).toMatch(/\.mscx$/)
     })
 
     it('stores converted MusicXML with application/xml mimeType', async () => {

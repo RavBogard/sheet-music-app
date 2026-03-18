@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { levenshteinDistance } from "@/lib/string-utils"
+import { processMuseScoreFile } from "@/lib/musescore-converter"
 
 // Max file size: 25MB
 const MAX_FILE_SIZE = 25 * 1024 * 1024
@@ -17,6 +18,8 @@ const ALLOWED_TYPES: Record<string, string> = {
     'text/xml': '.xml',
     'application/vnd.recordare.musicxml+xml': '.musicxml',
     'application/vnd.recordare.musicxml': '.musicxml',
+    'application/x-musescore': '.mscz',
+    'application/x-musescore+xml': '.mscx',
 }
 
 /**
@@ -61,9 +64,9 @@ export const POST = createApiHandler(
 
         // Validate file type
         const mimeType = file.type || 'application/octet-stream'
-        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl)$/i)) {
+        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx)$/i)) {
             return NextResponse.json(
-                { error: "Only PDF and MusicXML files are supported" },
+                { error: "Only PDF, MusicXML, and MuseScore files are supported" },
                 { status: 400 }
             )
         }
@@ -77,10 +80,37 @@ export const POST = createApiHandler(
         }
 
         // Read file buffer
-        const buffer = Buffer.from(await file.arrayBuffer())
+        let buffer = Buffer.from(await file.arrayBuffer())
 
         // Generate a unique ID (prefixed to distinguish from Drive files)
         const fileId = `upload-${crypto.randomUUID()}`
+
+        // Detect MuseScore files by extension
+        const msExt = file.name.match(/\.(mscz|mscx)$/i)?.[1]?.toLowerCase() as 'mscz' | 'mscx' | undefined
+        let originalStorageUrl: string | undefined
+        let sourceFormat: string | undefined
+
+        if (msExt) {
+            logger.info(`[Upload] Converting ${file.name} from ${msExt} to MusicXML`)
+            try {
+                const { musicXml, originalContent } = await processMuseScoreFile(buffer, msExt)
+
+                // Store the original MuseScore file for archival
+                const originalPath = `library/originals/${fileId}.${msExt}`
+                await uploadToStorage(`originals/${fileId}.${msExt}`, originalContent, 'application/octet-stream')
+                originalStorageUrl = originalPath
+                sourceFormat = msExt
+
+                // Replace buffer with converted MusicXML
+                buffer = Buffer.from(musicXml, 'utf-8')
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Unknown error'
+                return NextResponse.json(
+                    { error: `Failed to convert MuseScore file: ${message}` },
+                    { status: 422 }
+                )
+            }
+        }
 
         // Extract metadata from form
         const rawTitle = formData.get('title') as string | null
@@ -92,10 +122,11 @@ export const POST = createApiHandler(
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
 
         // Determine content type for storage
-        const isMusicXml = mimeType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)
-        const contentType = mimeType.includes('pdf') ? 'application/pdf'
-            : isMusicXml ? 'application/xml'
-                : mimeType
+        // MuseScore files are already converted to MusicXML at this point
+        const contentType = msExt ? 'application/xml'
+            : mimeType.includes('pdf') ? 'application/pdf'
+                : (mimeType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)) ? 'application/xml'
+                    : mimeType
 
         // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs
         const nameLower = title.toLowerCase()
@@ -157,6 +188,9 @@ export const POST = createApiHandler(
             ...(tags.length > 0 && { tags }),
             // Storage reference
             storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : '.xml'}`,
+            // MuseScore-specific fields
+            ...(originalStorageUrl && { originalStorageUrl }),
+            ...(sourceFormat && { sourceFormat }),
             // Status
             status: 'active',
         }
