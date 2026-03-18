@@ -6,6 +6,7 @@ import { SetlistTrack } from "@/types/models"
 import { PerformanceToolbar } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
+import { toQueueItem } from "@/lib/queue-utils"
 import { PrintModal } from "@/components/setlist/PrintModal"
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -65,13 +66,9 @@ export function PDFOverlay({
             .map((t, i) => ({ track: t, setlistIndex: i }))
             .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
 
-        const queueItems: QueueItem[] = songTracks.map(({ track: t }) => ({
-            name: t.title || "Untitled",
-            fileId: t.fileId!,
-            type: "pdf" as const,
-            key: t.key || undefined,
-            transposition: 0,
-        }))
+        const queueItems: QueueItem[] = songTracks.map(({ track: t, setlistIndex: i }) =>
+            toQueueItem(t, i)
+        )
 
         // Find queue position matching current setlist index
         const queueStart = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
