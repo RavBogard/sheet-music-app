@@ -60,6 +60,17 @@
 - [ ] **MS-05**: Preserve the original file buffer alongside the conversion output for archival and potential re-conversion.
 - [ ] **MS-06**: Update UploadDialog.tsx to accept .mscz and .mscx file types in the file picker.
 
+### v1.2 Native Transposition Requirements
+
+#### MusicXML Transposition
+- [ ] **T19-01**: SmartScoreViewer must initialize OSMD's `TransposeCalculator` so that `Sheet.Transpose` actually affects rendered output (notes, chords, key signatures).
+- [ ] **T19-02**: PDFOverlay must detect MusicXML file types from queue items (db- prefix, .musicxml, .xml, .mxl extensions) instead of hardcoding `type: "pdf"`.
+- [ ] **T19-03**: PDFOverlay must render SmartScoreViewer for MusicXML files and PDFViewer for PDF files based on queue item type.
+- [ ] **T19-04**: SmartTransposer AI chord overlay must NOT render for MusicXML files (chords are in the score data, not AI-detected overlays).
+- [ ] **T19-05**: Queue items built in PDFOverlay must use `toQueueItem()` from queue-utils.ts for correct file-type detection.
+- [ ] **T19-06**: Transposition of MusicXML files must change actual notation (notes + chords + key signatures) natively via OSMD, not just chord label overlays.
+- [ ] **T19-07**: Print output of transposed MusicXML scores must reflect the transposed notation.
+
 ---
 
 ## Traceability
@@ -97,3 +108,10 @@
 - MS-04 -> Phase 18
 - MS-05 -> Phase 18
 - MS-06 -> Phase 18
+- T19-01 -> Phase 19
+- T19-02 -> Phase 19
+- T19-03 -> Phase 19
+- T19-04 -> Phase 19
+- T19-05 -> Phase 19
+- T19-06 -> Phase 19
+- T19-07 -> Phase 19
