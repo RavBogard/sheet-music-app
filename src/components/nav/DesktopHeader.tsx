@@ -94,7 +94,7 @@ export function DesktopHeader(props: AppNavigationProps) {
     }, [])
 
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-hidden">
+        <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-x-clip">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group">
