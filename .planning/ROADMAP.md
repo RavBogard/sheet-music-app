@@ -76,15 +76,18 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 14. Schedule & Dashboard Opt. | 0/1 | Pending | — |
 | 16. PDF Processing Pipeline | 0/1 | Pending | — |
 | 17. Library Collection UI | 0/1 | Pending | — |
+| 18. MuseScore Import | 0/2 | Planned | — |
+
 ### Phase 18: MuseScore file import and MusicXML conversion
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Enable uploading MuseScore files (.mscz/.mscx) through the existing upload flow, converting them server-side to MusicXML for rendering in the OSMD viewer. Accept partial conversion fidelity (core notation, chords, key/time signatures).
+**Requirements**: MS-01, MS-02, MS-03, MS-04, MS-05, MS-06
 **Depends on:** Phase 17
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 18 to break down)
+- [ ] 18-01-PLAN.md — Core converter module (MSCZ extraction + MSCX-to-MusicXML via XSLT/SaxonJS)
+- [ ] 18-02-PLAN.md — Upload pipeline integration (wire converter into upload route + update client UI)
 
 ### Phase 19: Native transposition for MusicXML and structured score files
 

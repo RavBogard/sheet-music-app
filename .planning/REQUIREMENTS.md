@@ -50,6 +50,16 @@
 - [ ] **UI-06**: Update the `UploadDialog.tsx` to require selecting a destination collection when manually uploading new charts.
 - [ ] **ARCH-04**: Update the `Song` type definition and Firestore schema to include the `collection` field.
 
+### v1.2 MuseScore Import Requirements
+
+#### MuseScore File Conversion
+- [ ] **MS-01**: Extract .mscx XML content from .mscz ZIP archives using jszip.
+- [ ] **MS-02**: Convert MSCX XML to valid MusicXML (score-partwise) via XSLT transform, preserving core notation (notes, rests, chords, key/time signatures, parts).
+- [ ] **MS-03**: Extend the upload API route (`/api/library/upload`) to accept .mscz and .mscx files, converting them to MusicXML server-side.
+- [ ] **MS-04**: Store both the original MuseScore file and the converted MusicXML in Firebase Storage.
+- [ ] **MS-05**: Preserve the original file buffer alongside the conversion output for archival and potential re-conversion.
+- [ ] **MS-06**: Update UploadDialog.tsx to accept .mscz and .mscx file types in the file picker.
+
 ---
 
 ## Traceability
@@ -81,3 +91,9 @@
 - UI-05 -> TBD
 - UI-06 -> TBD
 - ARCH-04 -> TBD
+- MS-01 -> Phase 18
+- MS-02 -> Phase 18
+- MS-03 -> Phase 18
+- MS-04 -> Phase 18
+- MS-05 -> Phase 18
+- MS-06 -> Phase 18
