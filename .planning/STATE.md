@@ -33,5 +33,9 @@ progress:
 ### Todos
 - None.
 
+### Roadmap Evolution
+- Phase 18 added: MuseScore file import and MusicXML conversion
+- Phase 19 added: Native transposition for MusicXML and structured score files
+
 ### Blockers
 - None.

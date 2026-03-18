@@ -76,3 +76,22 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 14. Schedule & Dashboard Opt. | 0/1 | Pending | — |
 | 16. PDF Processing Pipeline | 0/1 | Pending | — |
 | 17. Library Collection UI | 0/1 | Pending | — |
+### Phase 18: MuseScore file import and MusicXML conversion
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 18 to break down)
+
+### Phase 19: Native transposition for MusicXML and structured score files
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 18
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 19 to break down)
