@@ -15,6 +15,12 @@ const PDFViewer = dynamic(
     { ssr: false }
 )
 
+// Dynamically import SmartScoreViewer for MusicXML rendering (matching PDFViewer pattern)
+const SmartScoreViewer = dynamic(
+    () => import("@/components/music/SmartScoreViewer").then((mod) => mod.SmartScoreViewer),
+    { ssr: false }
+)
+
 export interface PDFOverlayProps {
     track: SetlistTrack
     tracks: SetlistTrack[]
@@ -121,8 +127,13 @@ export function PDFOverlay({
         }
     }, [])
 
-    // Build the PDF URL from the track's fileId
-    const pdfUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
+    // Determine file type from current queue item
+    const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
+    const isMusicXml = currentItem?.type === 'musicxml'
+
+    // Build the file URL from the track's fileId (used for both PDF and MusicXML)
+    const fileUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
+    const pdfUrl = fileUrl
 
     // Prefetch the next 2 PDFs in the background
     const prefetchedRef = useRef(new Set<string>())
@@ -172,10 +183,12 @@ export function PDFOverlay({
 
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
-            {/* PDF content area */}
+            {/* Content area -- branches on file type */}
             <div className="flex-1 overflow-auto pb-0 relative">
-                {pdfUrl && (
-                    <PDFViewer url={pdfUrl} trackName={track.title} />
+                {isMusicXml ? (
+                    fileUrl && <SmartScoreViewer url={fileUrl} />
+                ) : (
+                    pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
                 )}
                 {showTempoFlash && track.bpm && track.bpm > 0 && (
                     <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
