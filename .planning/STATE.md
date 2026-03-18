@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-18T22:48:14.647Z"
+last_updated: "2026-03-18T22:52:17Z"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State: Architecture Refinement & UX Polish
@@ -18,13 +18,15 @@ progress:
 **Current Focus**: Milestone v1.2 Library Expansion
 
 ## Current Position
-**Phase**: 18 - MuseScore File Import and MusicXML Conversion
-**Plan**: 2 of 2 complete
-**Status**: Phase complete
-**Last activity**: 2026-03-18 — Completed 18-02 (Upload pipeline integration, human-verified)
+**Phase**: 19 - Native Transposition for MusicXML and Structured Score Files
+**Plan**: 1 of 2 complete
+**Status**: In progress
+**Last activity**: 2026-03-18 — Completed 19-01 (Foundation bug fixes: TransposeCalculator + file type detection)
 
 ## Accumulated Context
 ### Decisions
+- [19-01] TransposeCalculator imported directly from opensheetmusicdisplay (confirmed exported from main package)
+- [19-01] Reused existing toQueueItem from queue-utils for PDFOverlay file type detection
 - Completed exhaustive UI/UX audit against `ui-ux-pro-max`.
 - Fixed remaining minor UI/UX bugs (accessibility labels, anti-pattern hover states, edge-case routing for pending users).
 - Project is stable and complete.
