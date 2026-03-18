@@ -92,8 +92,9 @@ export const POST = createApiHandler(
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
 
         // Determine content type for storage
+        const isMusicXml = mimeType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)
         const contentType = mimeType.includes('pdf') ? 'application/pdf'
-            : mimeType.includes('xml') ? 'application/xml'
+            : isMusicXml ? 'application/xml'
                 : mimeType
 
         // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs

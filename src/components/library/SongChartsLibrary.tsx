@@ -37,7 +37,7 @@ function isAudioFile(f: DriveFile) {
 
 function isChartFile(f: DriveFile) {
     return (f.mimeType.includes('pdf') || f.mimeType.includes('xml') ||
-        f.name.endsWith('.pdf') || f.name.endsWith('.musicxml')) &&
+        /\.(pdf|musicxml|xml|mxl|chordpro)$/i.test(f.name)) &&
         !f.mimeType.startsWith('audio/')
 }
 
