@@ -78,7 +78,7 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 17. Library Collection UI | 0/1 | Pending | — |
 | 18. MuseScore Import | 2/2 | Complete    | 2026-03-18 |
 | 19. Native MusicXML Transposition | 2/2 | Complete    | 2026-03-18 |
-| 20. Add to Setlist from Library | 1/2 | In Progress | — |
+| 20. Add to Setlist from Library | 2/2 | Complete   | 2026-03-19 |
 
 ### Phase 18: MuseScore file import and MusicXML conversion
 
@@ -107,7 +107,7 @@ Plans:
 **Goal:** Add a Spotify-like "Add to Playlist" interaction to the library view, enabling users to add songs (single or batch) to existing setlists via context menu, batch selection bar, and search results. Uses a bottom sheet picker with search, toast with undo, and role-based visibility.
 **Requirements**: P20-01, P20-02, P20-03, P20-04, P20-05, P20-06, P20-07, P20-08
 **Depends on:** Phase 19
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 20-01-PLAN.md — Core hook (use-add-to-setlist) + bottom sheet picker component (AddToSetlistSheet)

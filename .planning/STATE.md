@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-19T00:33:00.000Z"
+last_updated: "2026-03-19T00:45:07.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State: Architecture Refinement & UX Polish
@@ -19,12 +19,13 @@ progress:
 
 ## Current Position
 **Phase**: 20 - Add Song to Existing Setlist from Library View
-**Plan**: 1 of 2 complete
-**Status**: In progress
-**Last activity**: 2026-03-19 — Completed 20-01 (Core hook + bottom sheet component)
+**Plan**: 2 of 2 complete
+**Status**: Awaiting human verification (Task 3 checkpoint)
+**Last activity**: 2026-03-19 — Completed 20-02 (Entry point wiring, pending human verify)
 
 ## Accumulated Context
 ### Decisions
+- [20-02] Added useAddToSetlist mock to SetlistEditorV2 tests to prevent hook subscription failures in test environment
 - [20-01] Case-insensitive substring match for setlist search (simpler than fuse.js for small lists)
 - [20-01] Undo re-reads current tracks via subscribeToSetlist, filters by added IDs (concurrent-edit safe)
 - [20-01] Separate personalLoaded/publicLoaded flags for dual-subscription loading state
