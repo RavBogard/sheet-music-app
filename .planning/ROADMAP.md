@@ -78,7 +78,7 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 17. Library Collection UI | 0/1 | Pending | — |
 | 18. MuseScore Import | 2/2 | Complete    | 2026-03-18 |
 | 19. Native MusicXML Transposition | 2/2 | Complete    | 2026-03-18 |
-| 20. Add to Setlist from Library | 0/2 | Planned | — |
+| 20. Add to Setlist from Library | 1/2 | In Progress | — |
 
 ### Phase 18: MuseScore file import and MusicXML conversion
 
@@ -110,5 +110,5 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Core hook (use-add-to-setlist) + bottom sheet picker component (AddToSetlistSheet)
+- [x] 20-01-PLAN.md — Core hook (use-add-to-setlist) + bottom sheet picker component (AddToSetlistSheet)
 - [ ] 20-02-PLAN.md — Wire into LibraryFileRow, SelectionActionBar, SongChartsLibrary, ContentSearchResults

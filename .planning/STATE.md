@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-18T23:02:19.743Z"
+last_updated: "2026-03-19T00:33:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 4
+  total_plans: 7
+  completed_plans: 5
 ---
 
 # Project State: Architecture Refinement & UX Polish
@@ -18,13 +18,16 @@ progress:
 **Current Focus**: Milestone v1.2 Library Expansion
 
 ## Current Position
-**Phase**: 19 - Native Transposition for MusicXML and Structured Score Files
-**Plan**: 2 of 2 complete
-**Status**: Phase complete
-**Last activity**: 2026-03-18 — Completed 19-02 (File-type branching in PDFOverlay + visual verification)
+**Phase**: 20 - Add Song to Existing Setlist from Library View
+**Plan**: 1 of 2 complete
+**Status**: In progress
+**Last activity**: 2026-03-19 — Completed 20-01 (Core hook + bottom sheet component)
 
 ## Accumulated Context
 ### Decisions
+- [20-01] Case-insensitive substring match for setlist search (simpler than fuse.js for small lists)
+- [20-01] Undo re-reads current tracks via subscribeToSetlist, filters by added IDs (concurrent-edit safe)
+- [20-01] Separate personalLoaded/publicLoaded flags for dual-subscription loading state
 - [19-01] TransposeCalculator imported directly from opensheetmusicdisplay (confirmed exported from main package)
 - [19-01] Reused existing toQueueItem from queue-utils for PDFOverlay file type detection
 - Completed exhaustive UI/UX audit against `ui-ux-pro-max`.

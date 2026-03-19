@@ -76,11 +76,11 @@
 #### Add Song to Setlist from Library
 - [ ] **P20-01**: "Add to Setlist..." context menu item appears as FIRST item on LibraryFileRow for band leaders and admins on non-folder, non-audio files.
 - [ ] **P20-02**: Context menu item and batch action button hidden for musicians (non-admin, non-band-leader roles).
-- [ ] **P20-03**: Bottom sheet picker opens with editable setlists (personal + public), sorted by most recent, with search/filter.
-- [ ] **P20-04**: Selecting a setlist adds the song(s) as tracks (matching addSongsFromLibrary ID format), auto-closes the sheet.
-- [ ] **P20-05**: Toast with undo action shown after successful add, matching existing delete-track toast pattern.
-- [ ] **P20-06**: Undo removes only the specific added track IDs (not snapshot restore) to handle concurrent edits safely.
-- [ ] **P20-07**: Duplicate song in setlist: warn but allow, toast says '"Song Name" is already in this setlist. Added again.'
+- [x] **P20-03**: Bottom sheet picker opens with editable setlists (personal + public), sorted by most recent, with search/filter.
+- [x] **P20-04**: Selecting a setlist adds the song(s) as tracks (matching addSongsFromLibrary ID format), auto-closes the sheet.
+- [x] **P20-05**: Toast with undo action shown after successful add, matching existing delete-track toast pattern.
+- [x] **P20-06**: Undo removes only the specific added track IDs (not snapshot restore) to handle concurrent edits safely.
+- [x] **P20-07**: Duplicate song in setlist: warn but allow, toast says '"Song Name" is already in this setlist. Added again.'
 - [ ] **P20-08**: Batch add from SelectionActionBar sends all selected songs to the sheet picker, single aggregate toast.
 
 ---
