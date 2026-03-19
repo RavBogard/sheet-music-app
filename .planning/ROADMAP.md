@@ -78,6 +78,7 @@ This roadmap continues the work from the Bulletproof Auth refactor, focusing on 
 | 17. Library Collection UI | 0/1 | Pending | — |
 | 18. MuseScore Import | 2/2 | Complete    | 2026-03-18 |
 | 19. Native MusicXML Transposition | 2/2 | Complete    | 2026-03-18 |
+| 20. Add to Setlist from Library | 0/2 | Planned | — |
 
 ### Phase 18: MuseScore file import and MusicXML conversion
 
@@ -103,10 +104,11 @@ Plans:
 
 ### Phase 20: Add song to existing setlist from library view
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Add a Spotify-like "Add to Playlist" interaction to the library view, enabling users to add songs (single or batch) to existing setlists via context menu, batch selection bar, and search results. Uses a bottom sheet picker with search, toast with undo, and role-based visibility.
+**Requirements**: P20-01, P20-02, P20-03, P20-04, P20-05, P20-06, P20-07, P20-08
 **Depends on:** Phase 19
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 20 to break down)
+- [ ] 20-01-PLAN.md — Core hook (use-add-to-setlist) + bottom sheet picker component (AddToSetlistSheet)
+- [ ] 20-02-PLAN.md — Wire into LibraryFileRow, SelectionActionBar, SongChartsLibrary, ContentSearchResults
