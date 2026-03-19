@@ -38,6 +38,8 @@ import { BatchActionBar } from "./BatchActionBar"
 import { AddBar } from "./AddBar"
 import { MusicianPicker } from "./MusicianPicker"
 import { SearchOverlay } from "./SearchOverlay"
+import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
+import { AddToSetlistSheet } from "@/components/library/AddToSetlistSheet"
 
 // Shared components (kept from v1)
 import { PrintModal } from "../PrintModal"
@@ -92,6 +94,7 @@ export function SetlistEditorV2({
     const { user } = useAuth()
     const router = useRouter()
     const { setQueue } = useMusicStore()
+    const addToSetlistHook = useAddToSetlist()
 
     const handleBack = useCallback(() => {
         if (onBack) return onBack()
@@ -661,6 +664,20 @@ export function SetlistEditorV2({
                 onSelect={handleSearchSelect}
                 replacingTrackId={replacingTrackId}
                 currentTrackFileIds={currentTrackFileIds}
+                canAddToSetlist={addToSetlistHook.canAddToSetlist}
+                onAddToSetlist={(file) => addToSetlistHook.openForSongs([file])}
+            />
+
+            {/* Add to Setlist Sheet (for SearchOverlay "Add to Setlist..." action) */}
+            <AddToSetlistSheet
+                isOpen={addToSetlistHook.isOpen}
+                onOpenChange={addToSetlistHook.setIsOpen}
+                setlists={addToSetlistHook.editableSetlists}
+                loading={addToSetlistHook.loading}
+                searchQuery={addToSetlistHook.searchQuery}
+                onSearchChange={addToSetlistHook.setSearchQuery}
+                onSelectSetlist={addToSetlistHook.addToSetlist}
+                pendingCount={addToSetlistHook.pendingSongs.length}
             />
         </div>
         </ErrorBoundary>

@@ -279,6 +279,11 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     searching={contentSearch.searching}
                     query={contentSearch.query}
                     onSelectFile={handleSelectFile}
+                    canAddToSetlist={addToSetlist.canAddToSetlist}
+                    onAddToSetlist={(fileId, fileName) => {
+                        const file = allFiles.find(f => f.id === fileId)
+                        if (file) addToSetlist.openForSongs([file])
+                    }}
                 />
             )}
 

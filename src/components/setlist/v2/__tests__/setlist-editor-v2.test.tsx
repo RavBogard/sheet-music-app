@@ -115,6 +115,27 @@ vi.mock("@dnd-kit/sortable", () => ({
     verticalListSortingStrategy: {},
 }))
 
+// Mock useAddToSetlist hook
+vi.mock("@/hooks/use-add-to-setlist", () => ({
+    useAddToSetlist: () => ({
+        isOpen: false,
+        setIsOpen: vi.fn(),
+        pendingSongs: [],
+        editableSetlists: [],
+        loading: false,
+        searchQuery: "",
+        setSearchQuery: vi.fn(),
+        openForSongs: vi.fn(),
+        addToSetlist: vi.fn(),
+        canAddToSetlist: true,
+    }),
+}))
+
+// Mock AddToSetlistSheet component
+vi.mock("@/components/library/AddToSetlistSheet", () => ({
+    AddToSetlistSheet: () => null,
+}))
+
 // Mock Firebase services
 vi.mock("@/lib/setlist-firebase", () => ({
     createSetlistService: () => ({

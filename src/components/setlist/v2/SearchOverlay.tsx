@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { X, Search, Music } from "lucide-react"
+import { X, Search, Music, ListPlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useLibraryStore } from "@/lib/library-store"
@@ -23,6 +23,10 @@ interface SearchOverlayProps {
     replacingTrackId?: string | null
     /** File IDs already in the setlist (to mark as "already added") */
     currentTrackFileIds?: Set<string>
+    /** Whether the current user can add songs to setlists */
+    canAddToSetlist?: boolean
+    /** Callback to add a file to a setlist via the bottom sheet picker */
+    onAddToSetlist?: (file: DriveFile) => void
 }
 
 export function SearchOverlay({
@@ -31,6 +35,8 @@ export function SearchOverlay({
     onSelect,
     replacingTrackId,
     currentTrackFileIds,
+    canAddToSetlist,
+    onAddToSetlist,
 }: SearchOverlayProps) {
     const [query, setQuery] = useState("")
     const [collection, setCollection] = useState<"core" | "supplemental">("core")
@@ -170,6 +176,20 @@ export function SearchOverlay({
                                 </div>
                                 {isAlreadyAdded && (
                                     <span className="text-xs text-muted-foreground shrink-0">Added</span>
+                                )}
+                                {canAddToSetlist && onAddToSetlist && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="shrink-0 text-xs opacity-70 hover:opacity-100"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            onAddToSetlist(file)
+                                        }}
+                                    >
+                                        <ListPlus className="h-3.5 w-3.5 mr-1" />
+                                        Add to Setlist...
+                                    </Button>
                                 )}
                             </button>
                         )
