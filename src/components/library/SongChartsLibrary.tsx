@@ -27,6 +27,8 @@ import { UploadDialog } from "./UploadDialog"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { SelectionActionBar } from "./SelectionActionBar"
 import { useLibraryActions } from "./useLibraryActions"
+import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
+import { AddToSetlistSheet } from "./AddToSetlistSheet"
 
 type LibraryTab = "core" | "supplemental" | "audio"
 
@@ -142,6 +144,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const { isAdmin, isBandLeader, profile, canUpload, user } = useAuth()
     const congregation = useCongregation()
     const { digitizing, handleDigitize, handleArchive, handleRename } = useLibraryActions({ loadLibrary, getCleanName })
+    const addToSetlist = useAddToSetlist()
 
     // Song usage data
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
@@ -334,6 +337,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                         setSelectedIds(new Set([id]))
                                     }}
                                     usageInfo={usageMap[item.id] ?? undefined}
+                                    canAddToSetlist={addToSetlist.canAddToSetlist}
+                                    onAddToSetlist={(item) => addToSetlist.openForSongs([item])}
                                 />
                             )
                         })}
@@ -352,6 +357,19 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 onSelectAll={() => setSelectedIds(new Set(combinedItems.map(i => i.id)))}
                 onClear={() => setSelectedIds(new Set())}
                 onDismiss={() => { setSelectedIds(new Set()); setSelectMode(false) }}
+                onAddToSetlist={addToSetlist.canAddToSetlist ? (items) => addToSetlist.openForSongs(items) : undefined}
+            />
+
+            {/* Add to Setlist Sheet */}
+            <AddToSetlistSheet
+                isOpen={addToSetlist.isOpen}
+                onOpenChange={addToSetlist.setIsOpen}
+                setlists={addToSetlist.editableSetlists}
+                loading={addToSetlist.loading}
+                searchQuery={addToSetlist.searchQuery}
+                onSearchChange={addToSetlist.setSearchQuery}
+                onSelectSetlist={addToSetlist.addToSetlist}
+                pendingCount={addToSetlist.pendingSongs.length}
             />
 
             {/* Sticky Audio Player */}

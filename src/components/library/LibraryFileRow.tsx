@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil } from "lucide-react"
+import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
@@ -22,6 +22,8 @@ interface LibraryFileRowProps {
     onToggleSelect?: (id: string) => void
     onLongPress?: (id: string) => void
     usageInfo?: { lastUsedDate: string; totalUses: number } | null
+    canAddToSetlist?: boolean
+    onAddToSetlist?: (item: DriveFile) => void
 }
 
 function isAudioMime(item: DriveFile) {
@@ -36,7 +38,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist }: LibraryFileRowProps) {
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -212,6 +214,13 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                 </Button>
             </ContextMenuTrigger>
             <ContextMenuContent>
+                {canAddToSetlist && !isFolder && !isAudio && onAddToSetlist && (
+                    <ContextMenuItem onClick={() => onAddToSetlist(item)}>
+                        <span className="flex items-center gap-2">
+                            <ListPlus className="h-4 w-4" /> Add to Setlist...
+                        </span>
+                    </ContextMenuItem>
+                )}
                 <ContextMenuItem onClick={onClick}>
                     {isFolder ? "Open Folder" : isAudio ? "Play" : "Select / View"}
                 </ContextMenuItem>

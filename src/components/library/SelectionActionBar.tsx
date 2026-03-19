@@ -12,6 +12,7 @@ interface SelectionActionBarProps {
     onSelectAll: () => void
     onClear: () => void
     onDismiss: () => void
+    onAddToSetlist?: (items: DriveFile[]) => void
 }
 
 export function SelectionActionBar({
@@ -22,6 +23,7 @@ export function SelectionActionBar({
     onSelectAll,
     onClear,
     onDismiss,
+    onAddToSetlist,
 }: SelectionActionBarProps) {
     if (!selectMode || selectedIds.size === 0) return null
 
@@ -59,18 +61,19 @@ export function SelectionActionBar({
                     >
                         Copy Names
                     </Button>
-                    <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-brand hover:bg-brand/90 text-white"
-                        onClick={() => {
-                            const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
-                            toast.info(`${selectedItems.length} songs selected. Use the setlist editor to add songs directly.`)
-                            onDismiss()
-                        }}
-                    >
-                        Add {selectedIds.size} to Setlist
-                    </Button>
+                    {onAddToSetlist && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-brand hover:bg-brand/90 text-white"
+                            onClick={() => {
+                                const selectedItems = combinedItems.filter(i => selectedIds.has(i.id))
+                                onAddToSetlist(selectedItems)
+                            }}
+                        >
+                            Add {selectedIds.size} to Setlist
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>
