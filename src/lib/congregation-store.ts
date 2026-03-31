@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { db } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
+import { logger } from "@/lib/logger"
 import type { RabbiProfile } from "@/types/models"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 
@@ -74,7 +75,7 @@ export const useCongregationStore = create<CongregationStore>()(
                         }
                     },
                     (err) => {
-                        console.error("Failed to sync congregation config", err)
+                        logger.error("[Congregation] Failed to sync config:", err)
                     }
                 )
 

@@ -88,6 +88,8 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
                 callback(null)
             }
         }
+    }, (err) => {
+        logger.error("[Users] Profile listener error:", err)
     })
 }
 

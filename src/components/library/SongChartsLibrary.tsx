@@ -13,6 +13,7 @@ import { useMusicStore, FileType } from "@/lib/store"
 import { NoResultsIllustration, EmptyAudioIllustration } from "@/components/ui/illustrations"
 import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
+import { logger } from "@/lib/logger"
 import { useLibrary } from "@/hooks/use-library"
 import { useContentSearch } from "@/hooks/use-content-search"
 import { ContentSearchResults } from "@/components/library/ContentSearchResults"
@@ -204,7 +205,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 hydrate(data.files)
                             }
                         } catch (err) {
-                            console.error("Failed to refresh library after upload", err)
+                            logger.error("Failed to refresh library after upload", err)
                         }
                     }} />
                 )}

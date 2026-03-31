@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { CheckSquare, Square, Clock } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 interface TaskItem {
     id: string
@@ -48,7 +49,10 @@ export function TaskCards() {
                 }
             })
             setTasks(items)
-        }, () => setTasks([]))
+        }, (err) => {
+            logger.error("[TaskCards] Listener error:", err)
+            setTasks([])
+        })
 
         return () => unsub()
     }, [user])

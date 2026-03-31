@@ -9,6 +9,7 @@ import { LiveState, subscribeToPresence, PresenceEntry } from "@/lib/setlist-liv
 import { SetlistTrack } from "@/types/models"
 import { Radio, ChevronRight, Users, BookOpen, Heart, ArrowLeftRight, Music } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { logger } from "@/lib/logger"
 
 /**
  * Public LIVE view — follows the leader's position in real-time.
@@ -38,7 +39,10 @@ export default function LivePage() {
             const data = snap.data()
             setSetlist({ id: snap.id, ...data } as Setlist)
             setLiveState((data.liveState as LiveState) || null)
-        }, () => setError(true))
+        }, (err) => {
+            logger.error("[Live] Setlist listener error:", err)
+            setError(true)
+        })
         return () => unsub()
     }, [setlistId])
 

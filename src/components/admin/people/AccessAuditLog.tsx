@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { cn } from "@/lib/utils"
+import { logger } from "@/lib/logger"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 interface AuditLog {
@@ -35,7 +36,7 @@ export function AccessAuditLog() {
         if (isLogsLoading) return
 
         if (logsError) {
-            console.error("Audit log error:", logsError)
+            logger.error("Audit log error:", logsError)
             setLoading(false)
             return
         }

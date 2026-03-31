@@ -8,6 +8,7 @@ import { collection, query, where, doc, getDocs } from "firebase/firestore"
 import { MonitorConfig, BridgeStatus } from "@/types/monitor"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { logger } from "@/lib/logger"
 import { FeaturedSetlistCard } from "@/components/admin/live/FeaturedSetlistCard"
 import { formatEventDate, toDate } from "@/lib/firestore-helpers"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -61,12 +62,12 @@ export function LiveServiceSection() {
                         const count = pSnap.size
                         counts[list.id] = count
                     } catch (e) {
-                        console.error("Failed to fetch presence for setlist", list.id)
+                        logger.error("Failed to fetch presence for setlist", list.id)
                     }
                 }
                 setPresenceCounts(counts)
             } catch (e) {
-                console.error("Failed to fetch presence data", e)
+                logger.error("Failed to fetch presence data", e)
             } finally {
                 setLoading(false)
             }

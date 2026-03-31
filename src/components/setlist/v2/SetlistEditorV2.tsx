@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { SetlistTrack, TrackType, SetlistMusician, DriveFile } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
+import { logger } from "@/lib/logger"
 import { useAuth } from "@/lib/auth-context"
 import { useChatStore } from "@/lib/chat-store"
 import { SERVICE_FLOW_TYPES } from "@/lib/validations"
@@ -211,7 +212,7 @@ export function SetlistEditorV2({
             return
         }
         if (tracks.length > 0) {
-            syncSetlist(tracks, { silent: true }).catch(console.error)
+            syncSetlist(tracks, { silent: true }).catch(e => logger.error("[SetlistEditor] Sync failed:", e))
         }
     }, [tracks, syncSetlist])
 

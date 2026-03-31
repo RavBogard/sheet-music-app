@@ -110,6 +110,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 } else {
                     callback(null);
                 }
+            }, (err) => {
+                logger.error("[Setlist] Listener error for %s:", id, err)
             });
         },
 

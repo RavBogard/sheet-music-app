@@ -70,6 +70,8 @@ function ensureConnected(userId: string): void {
         if (!snap.exists()) return
         const config = snap.data() as MonitorConfig
         useMonitorStore.getState().setConfig(config)
+    }, (err) => {
+        logger.error("[MonitorConn] Config listener error:", err)
     })
 
     // Create and start the Firestore monitor client

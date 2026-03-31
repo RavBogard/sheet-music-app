@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore"
 import { db } from "./firebase"
 import type { TemplateSlot } from "./liturgical-templates"
+import { logger } from "@/lib/logger"
 
 const COLLECTION = "templates"
 
@@ -104,9 +105,10 @@ export function useCustomTemplates(): {
                 setOverrides(result)
                 setLoading(false)
             },
-            () => {
+            (err) => {
                 // Permission denied or other error — fall back to empty overrides
                 // (hardcoded defaults will be used)
+                logger.warn("[Templates] Listener error (using defaults):", err)
                 setLoading(false)
             },
         )

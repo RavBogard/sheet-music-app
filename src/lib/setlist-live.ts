@@ -50,6 +50,8 @@ export function subscribeToPresence(
                 return now - e.lastSeen.toMillis() < STALE_PRESENCE_MS
             })
         callback(entries)
+    }, (err) => {
+        logger.error("[Presence] Listener error:", err)
     })
 }
 
@@ -164,17 +166,22 @@ export async function swapLiveTrack({
     const setlistRef = doc(db, "setlists", setlistId)
 
     // Atomic setlist update: tracks + liveState.lastSwap
-    await updateDoc(setlistRef, {
-        tracks: updatedTracks,
-        trackCount: updatedTracks.length,
-        "liveState.lastSwap.trackIndex": trackIndex,
-        "liveState.lastSwap.previousTitle": previousTrack.title,
-        "liveState.lastSwap.newTitle": newTrack.title,
-        "liveState.lastSwap.swappedBy": uid,
-        "liveState.lastSwap.swappedByName": displayName,
-        "liveState.lastSwap.swappedAt": serverTimestamp(),
-        "liveState.lastSwap.swapId": swapId,
-    })
+    try {
+        await updateDoc(setlistRef, {
+            tracks: updatedTracks,
+            trackCount: updatedTracks.length,
+            "liveState.lastSwap.trackIndex": trackIndex,
+            "liveState.lastSwap.previousTitle": previousTrack.title,
+            "liveState.lastSwap.newTitle": newTrack.title,
+            "liveState.lastSwap.swappedBy": uid,
+            "liveState.lastSwap.swappedByName": displayName,
+            "liveState.lastSwap.swappedAt": serverTimestamp(),
+            "liveState.lastSwap.swapId": swapId,
+        })
+    } catch (error) {
+        logger.error("[SwapLiveTrack] Failed to update setlist:", error)
+        throw error
+    }
 
     // Append audit trail (non-blocking — don't fail the swap if this errors)
     const historyRef = collection(db, "setlists", setlistId, "swapHistory")

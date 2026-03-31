@@ -1,6 +1,7 @@
 import { db, auth } from "./firebase"
 import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
+import { logger } from "@/lib/logger"
 
 /**
  * Save the current user's musician profile to Firestore.
@@ -33,6 +34,8 @@ export function subscribeToMusicianProfile(
         } else {
             callback(null)
         }
+    }, (err) => {
+        logger.error("[MusicianProfile] Listener error:", err)
     })
 }
 
@@ -93,5 +96,7 @@ export function subscribeToAllMusicianProfiles(
                 !!m.profile && !!m.profile.instrument
             )
         callback(musicians)
+    }, (err) => {
+        logger.error("[MusicianProfile] All profiles listener error:", err)
     })
 }

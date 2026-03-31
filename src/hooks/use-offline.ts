@@ -121,7 +121,9 @@ export function useOffline() {
         try {
             const res = await fetch(`/api/drive/file/${fileId}`, { cache: "only-if-cached" })
             if (res.ok) return await res.blob()
-        } catch { }
+        } catch {
+            // cache-only fetch throws when file isn't cached — expected, not an error
+        }
         return null
     }, [])
 

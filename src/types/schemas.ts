@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { DocumentData, QueryDocumentSnapshot, SnapshotOptions } from "firebase/firestore"
+import { logger } from "@/lib/logger"
 // Reusable date schema (Firebase Timestamps can be complex, so we accept 'any' and parse later, or define strictly)
 // In Firebase, Timestamps have { seconds, nanoseconds }
 const firestoreTimestampSchema = z.custom<any>((val: any) => {
@@ -174,7 +175,7 @@ export const createZodConverter = <T extends z.ZodTypeAny>(schema: T) => ({
             const parsed = schema.parse({ id: snapshot.id, uid: snapshot.id, ...data })
             return parsed
         } catch (error) {
-            console.error(`[Zod] Validation failed for document ${snapshot.id}:`, error)
+            logger.error(`[Zod] Validation failed for document ${snapshot.id}:`, error)
             // Return null to signify a corrupted document.
             return null
         }

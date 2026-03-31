@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 export default function MainError({
     error,
@@ -11,7 +12,7 @@ export default function MainError({
     reset: () => void
 }) {
     useEffect(() => {
-        console.error("[MainError] Caught:", error)
+        logger.error("[MainError] Caught:", error)
     }, [error])
 
     return (
