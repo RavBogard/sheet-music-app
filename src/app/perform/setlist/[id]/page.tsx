@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
@@ -26,7 +27,7 @@ import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
 import { SwapBottomSheet } from "@/components/performance/SwapBottomSheet"
 import { SwapToast } from "@/components/performance/SwapToast"
-import { PrintModal } from "@/components/setlist/PrintModal"
+const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 import type { SetlistTrack } from "@/types/models"
 import type { SongGroupEntry } from "@/types/song-groups"
 

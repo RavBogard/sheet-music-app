@@ -42,8 +42,10 @@ import { SearchOverlay } from "./SearchOverlay"
 import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "@/components/library/AddToSetlistSheet"
 
+import dynamic from "next/dynamic"
+
 // Shared components (kept from v1)
-import { PrintModal } from "../PrintModal"
+const PrintModal = dynamic(() => import("../PrintModal").then(m => m.PrintModal), { ssr: false })
 import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
 import { NamePrompt } from "../modals/NamePrompt"

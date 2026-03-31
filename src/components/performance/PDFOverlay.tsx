@@ -7,7 +7,7 @@ import { PerformanceToolbar } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
-import { PrintModal } from "@/components/setlist/PrintModal"
+const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
 const PDFViewer = dynamic(
