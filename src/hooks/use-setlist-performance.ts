@@ -25,6 +25,8 @@ interface UseSetlistPerformanceReturn {
     isPublicView: boolean
     setCurrentPosition: (index: number) => void
     musicians: SetlistMusician[]
+    liveState: LiveState | undefined
+    setlistId: string
 }
 
 export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceReturn {
@@ -93,5 +95,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         isPublicView,
         setCurrentPosition,
         musicians,
+        liveState,
+        setlistId,
     }
 }

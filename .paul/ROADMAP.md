@@ -3,12 +3,12 @@
 ## Current Milestone
 **v3.0 Live Setlist Sync**
 Status: In Progress
-Phases: 1 of 3 complete
+Phases: 2 of 3 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Song Groups & Swap Infrastructure | 2/2 | ✅ Complete | 2026-03-30 |
-| 2 | Swap UI & Confirmation Flow | TBD | Not started | - |
+| 2 | Swap UI & Confirmation Flow | 2/2 | ✅ Complete | 2026-03-30 |
 | 3 | Real-Time Receiver Experience | TBD | Not started | - |
 
 ### Phase 1: Song Groups & Swap Infrastructure

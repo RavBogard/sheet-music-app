@@ -52,11 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [ ] v3.0 Phase 2: Swap UI — swap button on SetlistRow, bottom sheet picker, confirmation flow
+- [x] v3.0 Phase 2: Swap UI — SwapButton, SwapBottomSheet, SwapToast, 3-tap swap flow
 - [ ] v3.0 Phase 3: Real-time receiver — auto-update performance view, swap toast notifications, edge cases
 
 ### Validated (Recently Shipped)
 
+- [x] v3.0 Phase 2: Swap UI — SwapButton, SwapBottomSheet, SwapToast, 3-tap director swap flow
 - [x] v3.0 Phase 1: Song groups & swap infrastructure — types, permissions, security rules, API routes, admin UI
 - [x] v2.6: Deprecation cleanup, tech debt & setlist UX — 3 phases complete
 - [x] v2.6 Phase 1: Setlist row layout — key next to title, inline amber notes, dual-tint alternating rows

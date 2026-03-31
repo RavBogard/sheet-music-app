@@ -13,6 +13,10 @@ export interface SetlistViewProps {
     onSongTap: (index: number) => void
     onLeaderSetPosition: (index: number) => void
     serviceNotes?: string | null
+    canSwap?: boolean
+    isLiveMode?: boolean
+    hasAlternatives?: (track: SetlistTrack) => boolean
+    onSwapTap?: (index: number) => void
 }
 
 export function SetlistView({
@@ -24,6 +28,10 @@ export function SetlistView({
     onSongTap,
     onLeaderSetPosition,
     serviceNotes,
+    canSwap,
+    isLiveMode,
+    hasAlternatives,
+    onSwapTap,
 }: SetlistViewProps) {
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
     const _transpositionKey = useMemo(
@@ -53,6 +61,10 @@ export function SetlistView({
                         isLeader={isLeader}
                         onSongTap={() => onSongTap(index)}
                         onLeaderSetPosition={() => onLeaderSetPosition(index)}
+                        canSwap={canSwap}
+                        isLiveMode={isLiveMode}
+                        hasAlternatives={hasAlternatives?.(track)}
+                        onSwapTap={onSwapTap ? () => onSwapTap(index) : undefined}
                     />
                 ))}
 

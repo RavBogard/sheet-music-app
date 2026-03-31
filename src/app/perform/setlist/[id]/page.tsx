@@ -12,16 +12,23 @@
  * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
  */
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { useAuth } from "@/lib/auth-context"
+import { useLiveSwapAccess } from "@/hooks/use-live-swap-access"
+import { useSongGroups } from "@/hooks/use-song-groups"
+import { swapLiveTrack } from "@/lib/setlist-live"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
+import { SwapBottomSheet } from "@/components/performance/SwapBottomSheet"
+import { SwapToast } from "@/components/performance/SwapToast"
 import { PrintModal } from "@/components/setlist/PrintModal"
+import type { SetlistTrack } from "@/types/models"
+import type { SongGroupEntry } from "@/types/song-groups"
 
 export default function SetlistPerformPage() {
     const params = useParams()
@@ -39,13 +46,51 @@ export default function SetlistPerformPage() {
         isPublicView,
         setCurrentPosition,
         musicians,
+        liveState,
+        setlistId: resolvedSetlistId,
     } = useSetlistPerformance(setlistId)
 
-    // Hook point for Plan 02's PDF overlay
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
     const { isMusician, isBandLeader, isAdmin } = useAuth()
+    const { user } = useAuth()
     const canPrint = isMusician || isBandLeader || isAdmin
+
+    // Live swap
+    const { canSwap } = useLiveSwapAccess()
+    const { getAlternatives, getAlternativesByFileId, hasAlternatives } = useSongGroups()
+    const isLiveMode = !!liveState?.enabled
+    const [swapTarget, setSwapTarget] = useState<{ index: number; track: SetlistTrack } | null>(null)
+
+    const swapAlternatives = swapTarget
+        ? (swapTarget.track.liturgicalSlot
+            ? getAlternatives(swapTarget.track.liturgicalSlot, swapTarget.track.fileId)
+            : getAlternativesByFileId(swapTarget.track.fileId || ""))
+        : []
+
+    const handleHasAlternatives = useCallback((track: SetlistTrack): boolean => {
+        if (track.liturgicalSlot) return hasAlternatives(track.liturgicalSlot, track.fileId)
+        return getAlternativesByFileId(track.fileId || "").length > 0
+    }, [hasAlternatives, getAlternativesByFileId])
+
+    const handleConfirmSwap = useCallback(async (alt: SongGroupEntry) => {
+        if (!swapTarget || !user) return
+        await swapLiveTrack({
+            setlistId: resolvedSetlistId,
+            trackIndex: swapTarget.index,
+            currentTracks: tracks,
+            newTrack: {
+                id: `track-${Date.now()}-${alt.fileId}`,
+                title: alt.title,
+                fileId: alt.fileId,
+                key: alt.key,
+                liturgicalSlot: swapTarget.track.liturgicalSlot,
+            },
+            previousTrack: swapTarget.track,
+            uid: user.uid,
+            displayName: user.displayName || "Director",
+        })
+    }, [swapTarget, user, resolvedSetlistId, tracks])
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
@@ -124,6 +169,9 @@ export default function SetlistPerformPage() {
                 </div>
             </div>
 
+            {/* Swap toast — notifies musicians when a swap occurs */}
+            <SwapToast liveState={liveState} />
+
             {/* Who's playing */}
             {musicians.length > 0 && (
                 <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 overflow-x-auto scrollbar-hide">
@@ -152,6 +200,10 @@ export default function SetlistPerformPage() {
                 onSongTap={(index) => setActiveSongIndex(index)}
                 onLeaderSetPosition={setCurrentPosition}
                 serviceNotes={serviceNotes}
+                canSwap={canSwap}
+                isLiveMode={isLiveMode}
+                hasAlternatives={handleHasAlternatives}
+                onSwapTap={(index) => setSwapTarget({ index, track: tracks[index] })}
             />
 
             {/* PDF overlay: renders on top of setlist when a song is tapped */}
@@ -177,6 +229,17 @@ export default function SetlistPerformPage() {
                         </Button>
                     )}
                 </div>
+            )}
+
+            {/* Swap bottom sheet */}
+            {swapTarget && (
+                <SwapBottomSheet
+                    open={!!swapTarget}
+                    onClose={() => setSwapTarget(null)}
+                    currentTrack={swapTarget.track}
+                    alternatives={swapAlternatives}
+                    onConfirmSwap={handleConfirmSwap}
+                />
             )}
 
             {showPrintModal && (
