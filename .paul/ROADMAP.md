@@ -9,7 +9,7 @@ Phases: 2 of 3 complete
 |-------|------|-------|--------|-----------|
 | 1 | Song Groups & Swap Infrastructure | 2/2 | ✅ Complete | 2026-03-30 |
 | 2 | Swap UI & Confirmation Flow | 2/2 | ✅ Complete | 2026-03-30 |
-| 3 | Real-Time Receiver Experience | TBD | Not started | - |
+| 3 | Real-Time Receiver Experience | 0/1 | In progress | - |
 
 ### Phase 1: Song Groups & Swap Infrastructure
 

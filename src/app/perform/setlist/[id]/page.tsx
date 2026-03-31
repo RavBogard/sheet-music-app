@@ -12,7 +12,7 @@
  * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
  */
 
-import { useState, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
@@ -91,6 +91,20 @@ export default function SetlistPerformPage() {
             displayName: user.displayName || "Director",
         })
     }, [swapTarget, user, resolvedSetlistId, tracks])
+
+    // Offline connectivity indicator
+    const [isOffline, setIsOffline] = useState(false)
+    useEffect(() => {
+        const goOffline = () => setIsOffline(true)
+        const goOnline = () => setIsOffline(false)
+        setIsOffline(!navigator.onLine)
+        window.addEventListener("offline", goOffline)
+        window.addEventListener("online", goOnline)
+        return () => {
+            window.removeEventListener("offline", goOffline)
+            window.removeEventListener("online", goOnline)
+        }
+    }, [])
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
@@ -171,6 +185,13 @@ export default function SetlistPerformPage() {
 
             {/* Swap toast — notifies musicians when a swap occurs */}
             <SwapToast liveState={liveState} />
+
+            {/* Offline indicator */}
+            {isOffline && (
+                <div className="px-3 py-1.5 bg-amber-500/20 text-amber-400 text-xs text-center border-b border-amber-500/20">
+                    Offline — setlist may be outdated
+                </div>
+            )}
 
             {/* Who's playing */}
             {musicians.length > 0 && (

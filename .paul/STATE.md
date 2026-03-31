@@ -10,14 +10,13 @@ See: .paul/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Milestone: v3.0 Live Setlist Sync
-Phase: 2 of 3 (Swap UI & Confirmation Flow)
-Plan: 02-02 created, awaiting approval
+Phase: 3 of 3 (Real-Time Receiver Experience)
+Plan: 03-01 created, awaiting approval
 Status: PLAN created, ready for APPLY
-Last activity: 2026-03-30 — Created 02-02-PLAN.md
+Last activity: 2026-03-30 — Created 03-01-PLAN.md
 
 Progress:
-- v3.0 Live Setlist Sync: [█████░░░░░] 50%
-- Phase 2: [█████░░░░░] 50%
+- v3.0 Live Setlist Sync: [██████░░░░] 67%
 
 ## Loop Position
 
@@ -30,10 +29,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ## Accumulated Context
 
 ### Decisions
-- 3-tap swap flow: icon → sheet → tap alternative (no separate confirm button)
-- getAlternativesByFileId fallback for tracks without liturgicalSlot
-- Bottom sheet with backdrop blur, 56px touch targets, slide-in animation
-- SwapButton uses stopPropagation to prevent row click-through
+- 3-tap swap flow: icon → sheet → tap alternative (no separate confirm)
+- SwapToast: 4s auto-dismiss, amber, dedup via swapId, skip for initiator
+- Bottom sheet: fixed positioning, backdrop blur, slide-in animation, 56px targets
+- SwapButton: stopPropagation, 44px target, focus ring, aria-label
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -43,15 +42,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper
 
 ### Git State
-Last commit: fa881d6
+Last commit: 006c01b
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-03-30
-Stopped at: Plan 02-01 loop closed
-Next action: /paul:plan for Plan 02-02 (SwapToast + PDF reload + edge cases)
-Resume file: .paul/phases/02-swap-ui-confirmation-flow/02-01-SUMMARY.md
+Stopped at: Phase 2 complete, ready to plan Phase 3
+Next action: /paul:plan for Phase 3
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*
