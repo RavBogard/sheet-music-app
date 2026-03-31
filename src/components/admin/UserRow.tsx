@@ -321,9 +321,67 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
                     {user.canLiveSwap && <Badge variant="default" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">🔄 Swap</Badge>}
+                    {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">Pending</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1">
+                    {/* Sound Engineer toggle (mobile) */}
+                    {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleSoundEngineerToggle}
+                            disabled={soundEngLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                user.soundEngineer
+                                    ? "bg-success/20 border-success/40 text-success"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
+                            )}
+                            title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
+                        >
+                            {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
+                        </Button>
+                    )}
+
+                    {/* Live Swap toggle (mobile) */}
+                    {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleLiveSwapToggle}
+                            disabled={liveSwapLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                user.canLiveSwap
+                                    ? "bg-amber-500/20 border-amber-500/40 text-amber-500"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
+                            )}
+                            title={user.canLiveSwap ? 'Remove live swap' : 'Enable live swap'}
+                        >
+                            {liveSwapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowLeftRight className="h-4 w-4" />}
+                        </Button>
+                    )}
+
+                    {/* Delete (mobile, admin only) */}
+                    {isCurrentAdmin && !isSelf && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDelete}
+                            disabled={deleteLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                confirmDelete
+                                    ? "bg-destructive/20 border-destructive/40 text-destructive"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
+                            )}
+                            title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
+                        >
+                            {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                    )}
+
                     {!isSelf && (
                         <Select
                             disabled={loading}

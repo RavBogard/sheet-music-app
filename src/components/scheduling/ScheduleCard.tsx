@@ -111,7 +111,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="default"
-                                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="gap-1.5 h-11 bg-emerald-600 hover:bg-emerald-700 text-white"
                                 onClick={() => handleRespond('accept')}
                                 disabled={responding !== null}
                             >
@@ -125,7 +125,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="gap-1.5 text-red-600 hover:bg-red-500/10 hover:text-red-600 border-red-500/30"
+                                className="gap-1.5 h-11 text-red-600 hover:bg-red-500/10 hover:text-red-600 border-red-500/30"
                                 onClick={() => handleRespond('decline')}
                                 disabled={responding !== null}
                             >
@@ -140,7 +140,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                     )}
 
                     <Link href={`/setlists/${assignment.setlistId}`} className="ml-auto">
-                        <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground">
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-11 text-muted-foreground">
                             View Setlist <ChevronRight className="h-3.5 w-3.5" />
                         </Button>
                     </Link>

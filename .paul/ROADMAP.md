@@ -1,10 +1,29 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v3.1 Post-v3.0 Bugsweep & Hardening**
+**v3.2 Mobile Admin & Responsive Fixes**
 Status: In Progress
-Phases: 5 of 5 complete
+Phases: 2 of 2 complete
 Status: Complete
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Mobile Admin Controls | 1/1 | Complete | 2026-03-31 |
+| 2 | Touch Targets & Responsive Polish | 1/1 | Complete | 2026-03-31 |
+
+### Phase 1: Mobile Admin Controls
+
+Focus: UserRow mobile toggles (sound engineer, canLiveSwap) — currently `hidden sm:flex` and inaccessible on phones. Add mobile user attributes/badges so admins can see permissions at a glance on small screens.
+
+### Phase 2: Touch Targets & Responsive Polish
+
+Focus: ScheduleCard accept/decline buttons (32px → 44px), any remaining responsive gaps discovered during Phase 1.
+Skills required: /ui-ux-pro-max
+
+## Previous Milestone
+**v3.1 Post-v3.0 Bugsweep & Hardening**
+Status: Complete
+Completed: 2026-03-31
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
