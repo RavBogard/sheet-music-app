@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { makeReq } from '@/__tests__/api-test-helpers'
-import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockWhere } from '@/__tests__/mock-firebase-admin'
+import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockUpdate, mockWhere } from '@/__tests__/mock-firebase-admin'
 
 vi.mock('@/lib/firebase-admin', () => firebaseAdminMock)
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn(() => null) }))
@@ -52,19 +52,18 @@ describe('POST /api/scheduling/assign', () => {
 
         expect(res.status).toBe(200)
 
-        // Verify the setlist update call was made with assignedUids
-        const docCalls = mockFirestore.collection().doc.mock.calls
-        const hasSetlistCall = docCalls.some((args: string[]) => args[0] === 'setlist-123' || args[0]?.includes('setlists/setlist-123'))
-        expect(hasSetlistCall).toBeDefined()
-
-        // Because we mock the doc() function to return an inline object { get, update, collection }
-        // the top-level update mock capture works best
-        const updateCall = mockFirestore.collection().doc().update.mock.calls[0]
-        expect(updateCall).toBeDefined()
-        const updateData = updateCall[0]
+        // The setlist musicians sync calls mockUpdate with the merged musicians + assignedUids
+        const setlistUpdateCall = mockUpdate.mock.calls.find(
+            (args: unknown[]) => {
+                const data = args[0] as Record<string, unknown> | undefined
+                return data && 'assignedUids' in data && 'musicians' in data
+            }
+        )
+        expect(setlistUpdateCall).toBeDefined()
+        const updateData = setlistUpdateCall![0] as Record<string, unknown>
 
         expect(updateData.assignedUids).toEqual(['musician-1', 'musician-2'])
         expect(updateData.musicians).toHaveLength(2)
-        expect(updateData.musicians[1].uid).toBe('musician-2')
+        expect((updateData.musicians as Array<{ uid: string }>)[1].uid).toBe('musician-2')
     })
 })

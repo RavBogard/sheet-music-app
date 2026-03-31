@@ -1,3 +1,5 @@
+import type { LiveState } from "@/lib/setlist-live"
+
 /** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
 export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
@@ -83,6 +85,8 @@ export interface Setlist {
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string
     previousOwnerId?: string
+    liveState?: LiveState
+    assignedUids?: string[]
 }
 
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'

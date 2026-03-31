@@ -8,7 +8,7 @@ import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { updateLiveTrack } from "@/lib/setlist-live"
-import { SetlistTrack, SetlistMusician } from "@/types/models"
+import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
 import { LiveState } from "@/lib/setlist-live"
 
@@ -39,7 +39,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         () => (setlistId ? doc(db, "setlists", setlistId) : null),
         [setlistId]
     )
-    const { data: setlistData, loading, error } = useSafeFirestoreSync<any>(setlistRef)
+    const { data: setlistData, loading, error } = useSafeFirestoreSync<Setlist>(setlistRef)
 
     // Extract fields from setlist data
     const tracks: SetlistTrack[] = setlistData?.tracks || []
@@ -48,7 +48,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     const musicians: SetlistMusician[] = setlistData?.musicians || []
 
     // Live state: position tracking
-    const liveState = setlistData?.liveState as LiveState | undefined
+    const liveState = setlistData?.liveState
     const currentTrackIndex = liveState?.enabled ? liveState.currentTrackIndex : -1
 
     // Musician profile for default transposition

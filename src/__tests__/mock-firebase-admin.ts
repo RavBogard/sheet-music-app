@@ -27,14 +27,18 @@ export const mockWhere = vi.fn(() => ({
     get: vi.fn(() => mockUsersSnap),
 }))
 
+export const mockUpdate = vi.fn()
+export const mockSet = vi.fn()
+
 export const mockFirestore = {
     collection: vi.fn(() => ({
         doc: vi.fn(() => ({
             id: 'mock-doc-id',
             get: vi.fn(() => mockDoc),
-            update: vi.fn(),
+            update: mockUpdate,
             collection: vi.fn(() => ({
                 doc: vi.fn(() => ({ set: vi.fn() })),
+                add: vi.fn(),
             })),
         })),
         where: mockWhere,
@@ -42,8 +46,8 @@ export const mockFirestore = {
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
         const transaction = {
             get: vi.fn(async () => ({ empty: true, docs: [] })),
-            set: vi.fn(),
-            update: vi.fn(),
+            set: mockSet,
+            update: mockUpdate,
         }
         return fn(transaction)
     }),

@@ -79,7 +79,10 @@ export const useCongregationStore = create<CongregationStore>()(
                 )
 
                 set({ isInitialized: true })
-                return unsub
+                return () => {
+                    unsub()
+                    set({ isInitialized: false })
+                }
             }
         }),
         {

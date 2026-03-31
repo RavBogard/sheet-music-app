@@ -212,6 +212,7 @@ describe('POST /api/scheduling/unassign', () => {
 
         expect(mockSetlistUpdate).toHaveBeenCalledWith({
             musicians: [{ uid: 'musician-2' }],
+            assignedUids: ['musician-2'],
         })
     })
 

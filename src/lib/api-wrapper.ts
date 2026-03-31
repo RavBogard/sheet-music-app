@@ -45,7 +45,9 @@ export function createApiHandler<TParams = any, TBody extends z.ZodType = any>(
         try {
             // 1. Authenticate Request
             const optional = options?.requireAuth === false;
-            const authResponse = await withAuth(req, options?.role, optional as any)
+            const authResponse = optional
+                ? await withAuth(req, options?.role, true)
+                : await withAuth(req, options?.role)
             if (authResponse instanceof NextResponse) {
                 return authResponse // auth failed (401 or 403)
             }

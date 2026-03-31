@@ -35,7 +35,9 @@ export const POST = createApiHandler(
         const indexSnap = await db.collection("library_index").limit(500).get()
 
         // 3. For each slot, find matching files
-        const groups: Record<string, any> = {}
+        interface SongMatch { fileId: string; title: string; key?: string; addedAt: string; addedBy: string }
+        interface SongGroup { id: string; label: string; liturgicalSlot: string; songs: SongMatch[]; sortOrder: number }
+        const groups: Record<string, SongGroup> = {}
         let sortOrder = 0
 
         for (const [label, slotInfo] of slotsMap) {
@@ -43,7 +45,7 @@ export const POST = createApiHandler(
                 .replace(/[^a-z0-9]+/g, '_')
                 .replace(/^_|_$/g, '')
 
-            const matchingFiles: any[] = []
+            const matchingFiles: SongMatch[] = []
 
             for (const fileDoc of indexSnap.docs) {
                 const file = fileDoc.data()
@@ -78,7 +80,7 @@ export const POST = createApiHandler(
 
         // 4. Merge with existing config/songGroups (don't overwrite manual edits)
         const existing = await db.doc("config/songGroups").get()
-        const existingGroups = existing.exists ? existing.data()?.groups || {} : {}
+        const existingGroups = (existing.exists ? existing.data()?.groups || {} : {}) as Record<string, SongGroup>
 
         const merged = { ...groups }
         // Preserve any manually-created groups not in templates
@@ -96,7 +98,7 @@ export const POST = createApiHandler(
 
         // 5. Update liturgicalSlot on matched library_index docs
         let taggedCount = 0
-        for (const group of Object.values(groups) as any[]) {
+        for (const group of Object.values(groups)) {
             for (const song of group.songs) {
                 try {
                     await db.collection("library_index").doc(song.fileId).update({

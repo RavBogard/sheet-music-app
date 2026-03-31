@@ -12,10 +12,12 @@ interface AlertStore {
     alert: GlobalAlert | null
     loading: boolean
     init: () => void
+    destroy: () => void
     setAlert: (alert: GlobalAlert) => Promise<void>
 }
 
 let initialized = false
+let unsubscribe: (() => void) | null = null
 
 export const useAlertStore = create<AlertStore>((set) => ({
     alert: null,
@@ -25,7 +27,7 @@ export const useAlertStore = create<AlertStore>((set) => ({
         initialized = true
         if (!db) return
         const ref = doc(db, "system", "globalAlert")
-        onSnapshot(ref, (snap) => {
+        unsubscribe = onSnapshot(ref, (snap) => {
             if (snap.exists()) {
                 set({ alert: snap.data() as GlobalAlert, loading: false })
             } else {
@@ -34,6 +36,13 @@ export const useAlertStore = create<AlertStore>((set) => ({
         }, () => {
             set({ loading: false }) // Silently fail if no access
         })
+    },
+    destroy: () => {
+        if (unsubscribe) {
+            unsubscribe()
+            unsubscribe = null
+        }
+        initialized = false
     },
     setAlert: async (alert: GlobalAlert) => {
         if (!db) return

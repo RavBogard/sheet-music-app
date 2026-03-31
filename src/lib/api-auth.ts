@@ -131,7 +131,9 @@ export async function withAuth(
     optional: boolean = false
 ): Promise<AuthResult | null | NextResponse> {
     try {
-        return await requireAuth(req, requiredRole, optional as any)
+        return optional
+            ? await requireAuth(req, requiredRole, true)
+            : await requireAuth(req, requiredRole)
     } catch (error) {
         if (error instanceof NextResponse) return error
         logger.error("Auth middleware error:", error)
