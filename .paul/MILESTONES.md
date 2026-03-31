@@ -19,6 +19,47 @@ Completed milestone log for this project.
 | v2.0 Schedule & Workflow Fixes | 2026-03-11 | 1 day | 3 phases, 3 plans |
 | v2.5 Bugsweep & Test Coverage | 2026-03-12 | 2 days | 19 phases, 30 plans |
 | v2.6 Deprecation Cleanup, Tech Debt & Setlist UX | 2026-03-12 | 1 day | 3 phases, 3 plans |
+| v3.0 Live Setlist Sync | 2026-03-30 | 1 session | 3 phases, 5 plans |
+
+---
+
+## ✅ v3.0 Live Setlist Sync
+
+**Completed:** 2026-03-30
+**Duration:** 1 session across 5 plans
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 3 |
+| Plans | 5 |
+| Files created | 10 |
+| Files modified | 12 |
+
+### Key Accomplishments
+
+- Song group tagging system with liturgicalSlot + config/songGroups Firestore document
+- canLiveSwap permission model mirroring soundEngineer (profile + custom claims + auth context)
+- Firestore security rules with field-level restrictions (affectedKeys().hasOnly) and rate limiting
+- swapLiveTrack() atomic swap function (tracks + liveState in single updateDoc)
+- SwapButton on eligible SetlistRows (amber, 44px touch target, live mode only)
+- SwapBottomSheet with 3-tap swap flow (56px alternatives, "Swap Now")
+- SwapToast receiver notification (4s auto-dismiss, dedup via swapId)
+- Offline connectivity indicator in performance view
+- Admin UI: canLiveSwap toggle in UserRow + Song Groups tab with template seeding
+- 4-round recursive research (12 agents) informing architecture decisions
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| Hybrid song grouping (tag + config doc) | P1 | No sync issues, client-side filtering |
+| canLiveSwap mirrors soundEngineer pattern | P1 | Consistent permission model |
+| affectedKeys().hasOnly() for field-level rules | P1 | Swap users restricted to tracks/liveState only |
+| 3-tap flow without separate confirm button | P2 | Fastest possible with safety |
+| SwapToast dedup via swapId ref | P2 | Prevents re-showing on re-renders |
+| navigator.onLine for offline detection | P3 | Simpler than Firestore fromCache |
 
 ---
 

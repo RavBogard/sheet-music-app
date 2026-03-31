@@ -53,7 +53,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 ### Active (In Progress)
 
 - [x] v3.0 Phase 2: Swap UI — SwapButton, SwapBottomSheet, SwapToast, 3-tap swap flow
-- [ ] v3.0 Phase 3: Real-time receiver — auto-update performance view, swap toast notifications, edge cases
+- [x] v3.0 Phase 3: Real-time receiver — offline indicator, verified chart reload, deployed to Vercel
 
 ### Validated (Recently Shipped)
 
