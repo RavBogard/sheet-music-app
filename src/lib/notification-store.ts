@@ -73,8 +73,12 @@ export function subscribeToNotifications(
  * Mark a single notification as read.
  */
 export async function markAsRead(uid: string, notificationId: string): Promise<void> {
-    const ref = doc(db, 'users', uid, 'notifications', notificationId)
-    await updateDoc(ref, { read: true })
+    try {
+        const ref = doc(db, 'users', uid, 'notifications', notificationId)
+        await updateDoc(ref, { read: true })
+    } catch (err) {
+        logger.warn('[Notifications] markAsRead failed:', err)
+    }
 }
 
 /**
@@ -96,21 +100,25 @@ export async function markAllAsRead(uid: string): Promise<void> {
         // No Firebase app (test environment) — skip the check, Firestore rules still enforce
     }
 
-    const q = query(
-        collection(db, 'users', uid, 'notifications'),
-        where('read', '==', false)
-    )
-    const snap = await getDocs(q)
-    if (snap.empty) return
+    try {
+        const q = query(
+            collection(db, 'users', uid, 'notifications'),
+            where('read', '==', false)
+        )
+        const snap = await getDocs(q)
+        if (snap.empty) return
 
-    // M3 fix: Chunk batches to stay under Firestore's 500 operations limit
-    const BATCH_LIMIT = 450
-    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
-        const batch = writeBatch(db)
-        snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => {
-            batch.update(d.ref, { read: true })
-        })
-        await batch.commit()
+        // M3 fix: Chunk batches to stay under Firestore's 500 operations limit
+        const BATCH_LIMIT = 450
+        for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+            const batch = writeBatch(db)
+            snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => {
+                batch.update(d.ref, { read: true })
+            })
+            await batch.commit()
+        }
+    } catch (err) {
+        logger.warn('[Notifications] markAllAsRead failed:', err)
     }
 }
 
@@ -122,12 +130,16 @@ export async function createNotification(
     uid: string,
     notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
 ): Promise<void> {
-    const ref = collection(db, 'users', uid, 'notifications')
-    await addDoc(ref, {
-        ...notification,
-        read: false,
-        createdAt: serverTimestamp(),
-    })
+    try {
+        const ref = collection(db, 'users', uid, 'notifications')
+        await addDoc(ref, {
+            ...notification,
+            read: false,
+            createdAt: serverTimestamp(),
+        })
+    } catch (err) {
+        logger.warn('[Notifications] createNotification failed:', err)
+    }
 }
 
 /**

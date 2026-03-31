@@ -40,6 +40,18 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
     const [dirty, setDirty] = useState(false)
     const [pickingSlotIndex, setPickingSlotIndex] = useState<number | null>(null)
 
+    // Warn about unsaved changes on navigation/close
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (dirty) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [dirty])
+
     // Reset when template changes
     useEffect(() => {
         setSlots(customSlots ?? defaultSlots)

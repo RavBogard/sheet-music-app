@@ -18,6 +18,16 @@ import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
 import { Headphones, ArrowLeftRight, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -51,24 +61,30 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const [liveSwapLoading, setLiveSwapLoading] = useState(false)
     const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
+    const [pendingRole, setPendingRole] = useState<string | null>(null)
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'
     const isCurrentBandLeaderOrAbove = currentLevel >= ROLE_HIERARCHY.band_leader
     const isSelf = user.uid === currentUserUid
 
-    const handleRoleChange = async (newRole: string) => {
+    const requestRoleChange = (newRole: string) => {
         if (isSelf) {
             toast.error("You cannot change your own role here.")
             return
         }
-
-        // Can only assign up to your own level
         const targetLevel = ROLE_HIERARCHY[newRole] ?? 0
         if (targetLevel > currentLevel) {
             toast.error(`You can only assign roles up to ${ROLE_LABELS[currentUserRole]}.`)
             return
         }
+        setPendingRole(newRole)
+    }
+
+    const confirmRoleChange = async () => {
+        if (!pendingRole) return
+        const newRole = pendingRole
+        setPendingRole(null)
 
         setLoading(true)
         try {
@@ -168,6 +184,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
     return (
+        <>
         <div className={cn("flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50", isSelected && "bg-brand/5 hover:bg-brand/10")}>
             {/* Checkbox Column */}
             <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
@@ -274,7 +291,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                         <Select
                             disabled={loading}
                             value={effectiveRole}
-                            onValueChange={handleRoleChange}
+                            onValueChange={requestRoleChange}
                         >
                             <SelectTrigger className="w-[120px] bg-background border-border h-11 text-xs font-medium">
                                 <SelectValue placeholder="Role" />
@@ -311,7 +328,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                         <Select
                             disabled={loading}
                             value={effectiveRole}
-                            onValueChange={handleRoleChange}
+                            onValueChange={requestRoleChange}
                         >
                             <SelectTrigger className="w-[100px] bg-background border-border h-11 text-[10px]">
                                 <SelectValue placeholder="Role" />
@@ -328,5 +345,22 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 </div>
             </div>
         </div>
+
+        {/* Role change confirmation dialog */}
+        <AlertDialog open={!!pendingRole} onOpenChange={(open) => { if (!open) setPendingRole(null) }}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Change Role?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Change {user.displayName}&apos;s role from {ROLE_LABELS[effectiveRole]} to {ROLE_LABELS[pendingRole || ''] || pendingRole}?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmRoleChange}>Change Role</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     )
 }

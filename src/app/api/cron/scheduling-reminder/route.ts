@@ -12,6 +12,9 @@ function safeCompare(a: string, b: string): boolean {
     return timingSafeEqual(Buffer.from(a), Buffer.from(b))
 }
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 /**
  * GET /api/cron/scheduling-reminder
  *
