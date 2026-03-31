@@ -27,6 +27,7 @@ export interface DriveFile {
         topics?: string[]
         enrichedAt?: string
         omrCorrections?: OMRCorrection[]
+        liturgicalSlot?: string // e.g. "L'cha Dodi", "Shema", "Mi Chamocha"
     }
 }
 
@@ -53,6 +54,7 @@ export interface SetlistTrack {
     performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
     pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
+    liturgicalSlot?: string // Links to SongGroup for live swap eligibility
 }
 
 /** A musician assigned to play a specific service/setlist */
@@ -93,6 +95,7 @@ export interface UserProfile {
     viewedWelcomeModal?: boolean
     role: UserRole
     soundEngineer?: boolean
+    canLiveSwap?: boolean // Permission to swap songs during live mode
     canUpload?: boolean
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate

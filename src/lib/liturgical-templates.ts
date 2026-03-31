@@ -277,7 +277,8 @@ const SHAVUOT_TEMPLATE: TemplateSlot[] = [
 
 // ── Template Registry ──
 
-const TEMPLATES: Record<string, TemplateSlot[]> = {
+/** All templates keyed by service type — exported for song group seeding */
+export const TEMPLATES: Record<string, TemplateSlot[]> = {
     // Regular templates (7)
     friday_night: FRIDAY_NIGHT_TEMPLATE,
     shir_shabbat: SHIR_SHABBAT_TEMPLATE,

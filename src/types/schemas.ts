@@ -44,6 +44,7 @@ export const userProfileSchema = z.object({
     viewedWelcomeModal: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
     role: userRoleSchema,
     soundEngineer: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
+    canLiveSwap: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
     createdAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     lastLoginAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     claimsUpdatedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
@@ -81,6 +82,7 @@ export const setlistTrackSchema = z.preprocess(
         description: z.string().nullish().catch(undefined).transform(v => v || undefined),
         performer: z.string().nullish().catch(undefined).transform(v => v || undefined),
         estimatedMinutes: z.number().nullish().catch(undefined).transform(v => v ?? undefined),
+        liturgicalSlot: z.string().nullish().catch(undefined).transform(v => v || undefined),
     }).passthrough()
 )
 

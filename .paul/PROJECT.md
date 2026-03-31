@@ -52,10 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- To be defined in next milestone
+- [ ] v3.0 Phase 2: Swap UI — swap button on SetlistRow, bottom sheet picker, confirmation flow
+- [ ] v3.0 Phase 3: Real-time receiver — auto-update performance view, swap toast notifications, edge cases
 
 ### Validated (Recently Shipped)
 
+- [x] v3.0 Phase 1: Song groups & swap infrastructure — types, permissions, security rules, API routes, admin UI
 - [x] v2.6: Deprecation cleanup, tech debt & setlist UX — 3 phases complete
 - [x] v2.6 Phase 1: Setlist row layout — key next to title, inline amber notes, dual-tint alternating rows
 - [x] v2.6 Phase 2: Next.js & Sentry deprecation cleanup — proxy rename, instrumentation-client, global-error
@@ -193,7 +195,12 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | CRON_SECRET/SUPER_ADMIN_UID optional in env.mjs | v2.5 P18 | Runtime guards still enforce; dev envs don't break on missing vars |
 | bg-white/[opacity] for dark-mode alternating rows | v2.6 P1 | --muted OKLCH has baked-in alpha; bg-white is predictable |
 | Dual-tint rows (0.03/0.07) instead of tint/black | v2.6 P1 | Both rows readable on dark backgrounds |
+| canLiveSwap mirrors soundEngineer pattern (profile + custom claim) | v3.0 P1 | Consistent permission model across features |
+| Hybrid song grouping: liturgicalSlot tag + config/songGroups doc | v3.0 P1 | Tags = source of truth, config = display metadata |
+| affectedKeys().hasOnly() for field-level setlist update rules | v3.0 P1 | Swap users restricted to tracks/liveState/trackCount only |
+| swapLiveTrack: single updateDoc + fire-and-forget audit | v3.0 P1 | Atomic swap, non-blocking audit trail |
+| isNotTooFrequent() rule: 2s minimum between swaps | v3.0 P1 | Prevents accidental double-taps at Firestore level |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-12 after Phase 1 (Setlist Row Layout)*
+*Last updated: 2026-03-30 after v3.0 Phase 1 (Song Groups & Swap Infrastructure)*

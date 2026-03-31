@@ -18,6 +18,35 @@ Completed milestone log for this project.
 | v1.9 Auth Stability & Deferred Cleanup | 2026-03-11 | 1 day | 5 phases, 4 plans |
 | v2.0 Schedule & Workflow Fixes | 2026-03-11 | 1 day | 3 phases, 3 plans |
 | v2.5 Bugsweep & Test Coverage | 2026-03-12 | 2 days | 19 phases, 30 plans |
+| v2.6 Deprecation Cleanup, Tech Debt & Setlist UX | 2026-03-12 | 1 day | 3 phases, 3 plans |
+
+---
+
+## ✅ v2.6 Deprecation Cleanup, Tech Debt & Setlist UX
+
+**Completed:** 2026-03-12
+**Duration:** ~1 day across 3 plans
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 3 |
+| Plans | 3 |
+
+### Key Accomplishments
+
+- Setlist row layout — key badge next to title, inline amber notes, dual-tint alternating rows
+- Next.js & Sentry deprecation cleanup — proxy.ts rename, instrumentation-client migration, global-error with Sentry
+- Technical debt — leader→band_leader Firestore migration script, build-info git describe cleanup
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| bg-white/[opacity] for dark-mode alternating rows | P1 | Predictable alpha on dark backgrounds |
+| Dual-tint rows (0.03/0.07) | P1 | Both rows readable |
+| Next.js 16 proxy requires export function proxy() | P2 | Not just a file rename |
 
 ---
 

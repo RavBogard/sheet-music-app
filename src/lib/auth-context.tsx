@@ -55,6 +55,7 @@ interface AuthContextType {
     isMusician: boolean
     isMember: boolean
     isSoundEngineer: boolean
+    canLiveSwap: boolean
     canUpload: boolean
 }
 
@@ -70,6 +71,7 @@ const AuthContext = createContext<AuthContextType>({
     isMusician: false,
     isMember: false,
     isSoundEngineer: false,
+    canLiveSwap: false,
     canUpload: false,
 })
 
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Derived roles — uses shared hierarchy from @/lib/roles
     const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(profile?.role)
     const isSoundEngineer = !!profile?.soundEngineer
+    const canLiveSwap = isAdmin || isBandLeader || !!profile?.canLiveSwap
     const canUpload = isAdmin || isBandLeader || isMusician || !!profile?.canUpload
 
     useEffect(() => {
@@ -153,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 email: p.email,
                                 role: p.role,
                                 soundEngineer: p.soundEngineer || false,
+                            canLiveSwap: p.canLiveSwap || false,
                             }))
                         } catch { /* quota exceeded or private browsing */ }
                     }
@@ -270,8 +274,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isMusician,
         isMember,
         isSoundEngineer,
+        canLiveSwap,
         canUpload,
-    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
+    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canLiveSwap, canUpload])
 
     return (
         <AuthContext.Provider value={value}>

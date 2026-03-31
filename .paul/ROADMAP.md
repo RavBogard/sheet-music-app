@@ -1,30 +1,35 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v2.6 Deprecation Cleanup, Tech Debt & Setlist UX**
+**v3.0 Live Setlist Sync**
 Status: In Progress
-Phases: 3 total
+Phases: 1 of 3 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Setlist Row Layout & Readability | 1/1 | ✅ Complete | 2026-03-12 |
-| 2 | Next.js & Sentry Deprecation Cleanup | 1/1 | ✅ Complete | 2026-03-12 |
-| 3 | Technical Debt Cleanup | 1/1 | ✅ Complete | 2026-03-12 |
+| 1 | Song Groups & Swap Infrastructure | 2/2 | ✅ Complete | 2026-03-30 |
+| 2 | Swap UI & Confirmation Flow | TBD | Not started | - |
+| 3 | Real-Time Receiver Experience | TBD | Not started | - |
 
-### Phase 1: Setlist Row Layout & Readability
+### Phase 1: Song Groups & Swap Infrastructure
 
-Focus: Fix setlist perform view layout — move key badge directly next to song title (not far right), show notes inline next to key in a distinct color (e.g. amber/warm muted), and add subtle alternating row backgrounds for visual lane separation. Apply consistently across SetlistRow (main perform view) and SetlistDrawer (compact PDF overlay drawer).
+Focus: Song group tagging system — Firestore data model for groups, group management UI (admin), live swap role/permission model (similar to monitor access).
+
+### Phase 2: Swap UI & Confirmation Flow
+
+Focus: Swap button in performance view, grouped song picker (alternatives from same group surface first), confirmation dialog ("Replace [Song A] with [Song B]?"), Firestore broadcast write.
 Skills required: /ui-ux-pro-max
 
-### Phase 2: Next.js & Sentry Deprecation Cleanup
+### Phase 3: Real-Time Receiver Experience
 
-Focus: Address all build deprecation warnings. (a) Rename `middleware.ts` → `proxy.ts` per Next.js 16 convention. (b) Move `sentry.client.config.ts` → `instrumentation-client.ts` for Turbopack compatibility. (c) Add `global-error.js` with Sentry instrumentation for React render errors. (d) Add `onRequestError` hook via `Sentry.captureRequestError` in instrumentation file for server component errors.
-
-### Phase 3: Technical Debt Cleanup
-
-Focus: Clean up accumulated tech debt. (a) Migrate Firestore `leader` field to `band_leader` (LOW-004 from v1.3 — update all reads/writes, add migration script for existing docs). (b) Remove nested `sheet-music-app/` directory artifact from git. (c) Clean up `build-info.json` git describe warnings in Vercel build log.
+Focus: Firestore real-time listener on setlist changes, auto-update performance view for all musicians, chart transition when viewing swapped song, edge cases (offline/reconnect, mid-scroll).
 
 ## Previous Milestone
+**v2.6 Deprecation Cleanup, Tech Debt & Setlist UX**
+Status: Complete
+Completed: 2026-03-12
+
+## Previous Milestone (prior)
 **v2.5 Bugsweep & Test Coverage**
 Status: Complete
 Completed: 2026-03-12
