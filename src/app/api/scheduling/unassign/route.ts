@@ -17,21 +17,31 @@ export const POST = createApiHandler(
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
 
-        // Fetch the assignment
+        // Use transaction to prevent race with concurrent respond/unassign
         const assignmentRef = db.collection('scheduling_assignments').doc(assignmentId)
-        const assignmentDoc = await assignmentRef.get()
+        let assignment: FirebaseFirestore.DocumentData
 
-        if (!assignmentDoc.exists) {
-            return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+        try {
+            assignment = await db.runTransaction(async (transaction) => {
+                const assignmentDoc = await transaction.get(assignmentRef)
+
+                if (!assignmentDoc.exists) {
+                    throw new Error('NOT_FOUND')
+                }
+
+                const data = assignmentDoc.data()!
+                transaction.update(assignmentRef, {
+                    status: 'cancelled',
+                    respondedAt: FieldValue.serverTimestamp(),
+                })
+                return data
+            })
+        } catch (e) {
+            if (e instanceof Error && e.message === 'NOT_FOUND') {
+                return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+            }
+            throw e
         }
-
-        const assignment = assignmentDoc.data()!
-
-        // Cancel the assignment
-        await assignmentRef.update({
-            status: 'cancelled',
-            respondedAt: FieldValue.serverTimestamp(),
-        })
 
         // Check musician's notification preferences
         const musicianUid = assignment.musicianUid

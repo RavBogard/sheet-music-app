@@ -28,10 +28,12 @@ const makeChainable = (docs: MockDocEntry[]) => {
     return chain
 }
 
+const mockSet = vi.fn()
+
 const mockFirestoreLocal = {
     collection: vi.fn((name: string) => {
         if (name === 'scheduling_assignments') {
-            return {
+            const assignmentCollection = {
                 where: vi.fn(() => ({
                     where: vi.fn(() => ({
                         limit: vi.fn(() => ({
@@ -44,9 +46,17 @@ const mockFirestoreLocal = {
                 })),
                 add: mockAdd,
                 doc: vi.fn(() => ({
+                    id: addResult.id,
                     update: mockUpdate,
                 })),
             }
+            // Make the chainable query available from the collection for transaction.get()
+            assignmentCollection.where = vi.fn(() => ({
+                where: vi.fn(() => ({
+                    limit: vi.fn(() => assignmentCollection),
+                })),
+            })) as ReturnType<typeof vi.fn>
+            return assignmentCollection
         }
         if (name === 'setlists') {
             return {
@@ -75,6 +85,17 @@ const mockFirestoreLocal = {
             }
         }
         return makeChainable([])
+    }),
+    runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
+        const transaction = {
+            get: vi.fn(async () => ({
+                empty: existingAssignmentDocs.length === 0,
+                docs: existingAssignmentDocs,
+            })),
+            set: mockSet,
+            update: mockUpdate,
+        }
+        return fn(transaction)
     }),
 }
 
@@ -182,10 +203,11 @@ describe('POST /api/scheduling/assign', () => {
 
         expect(json.success).toBe(true)
         expect(json.assigned).toBe(1)
-        expect(mockAdd).toHaveBeenCalled()
-        const addCall = (mockAdd.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown>
-        expect(addCall.status).toBe('pending')
-        expect(addCall.autoConfirmed).toBe(false)
+        expect(mockSet).toHaveBeenCalled()
+        // transaction.set(ref, data) — data is second arg
+        const setCall = (mockSet.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>
+        expect(setCall.status).toBe('pending')
+        expect(setCall.autoConfirmed).toBe(false)
     })
 
     it('assigns core musician with confirmed status and autoConfirmed true', async () => {
@@ -201,9 +223,10 @@ describe('POST /api/scheduling/assign', () => {
 
         expect(json.success).toBe(true)
         expect(json.assigned).toBe(1)
-        const addCall = (mockAdd.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown>
-        expect(addCall.status).toBe('confirmed')
-        expect(addCall.autoConfirmed).toBe(true)
+        // transaction.set(ref, data) — data is second arg
+        const setCall = (mockSet.mock.calls as unknown[][])[0]?.[1] as Record<string, unknown>
+        expect(setCall.status).toBe('confirmed')
+        expect(setCall.autoConfirmed).toBe(true)
     })
 
     it('skips duplicate assignment when musician already assigned', async () => {

@@ -1,31 +1,44 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v3.0 Live Setlist Sync**
+**v3.1 Post-v3.0 Bugsweep & Hardening**
 Status: In Progress
-Phases: 3 of 3 complete
-Status: ✅ Complete
+Phases: 1 of 5 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Song Groups & Swap Infrastructure | 2/2 | ✅ Complete | 2026-03-30 |
-| 2 | Swap UI & Confirmation Flow | 2/2 | ✅ Complete | 2026-03-30 |
-| 3 | Real-Time Receiver Experience | 1/1 | ✅ Complete | 2026-03-30 |
+| 1 | Critical Security & Data Integrity | 2/2 | Complete | 2026-03-31 |
+| 2 | Memory Leaks, Type Safety & Failing Tests | TBD | Not started | - |
+| 3 | Error Handling & v3.0 Hardening | TBD | Not started | - |
+| 4 | UX Safety & Confirmation Dialogs | TBD | Not started | - |
+| 5 | Test Coverage & Performance | TBD | Not started | - |
 
-### Phase 1: Song Groups & Swap Infrastructure
+### Phase 1: Critical Security & Data Integrity
 
-Focus: Song group tagging system — Firestore data model for groups, group management UI (admin), live swap role/permission model (similar to monitor access).
+Focus: P0 security vulnerabilities — unauthenticated session DELETE endpoint, timing attacks on cron auth (3 routes), scheduling race conditions (assign/unassign/respond), npm audit fix + Next.js upgrade, Firestore rules hardening (config/admins lockdown, missing collection rules, system collection).
 
-### Phase 2: Swap UI & Confirmation Flow
+### Phase 2: Memory Leaks, Type Safety & Failing Tests
 
-Focus: Swap button in performance view, grouped song picker (alternatives from same group surface first), confirmation dialog ("Replace [Song A] with [Song B]?"), Firestore broadcast write.
-Skills required: /ui-ux-pro-max
+Focus: Runtime stability — Firestore listener memory leaks (alert-store, congregation-store), add liveState to Setlist type, fix `useSafeFirestoreSync<any>` generics, eliminate production `as any` casts, fix 3 failing tests, fix ESLint errors in use-song-groups.ts.
 
-### Phase 3: Real-Time Receiver Experience
+### Phase 3: Error Handling & v3.0 Hardening
 
-Focus: Firestore real-time listener on setlist changes, auto-update performance view for all musicians, chart transition when viewing swapped song, edge cases (offline/reconnect, mid-scroll).
+Focus: Silent failure elimination — incomplete newTrack in swap, stale tracks array race, missing null checks, swap error handling, onSnapshot error callbacks, empty catch blocks, console.error → logger migration.
+
+### Phase 4: UX Safety & Confirmation Dialogs
+
+Focus: Destructive action protection — SwipeToDelete confirmation, role change confirmation, template editor unsaved changes warning, scheduling-reminder maxDuration, notification error handling, auth-context async guard, pending detections cleanup.
+
+### Phase 5: Test Coverage & Performance
+
+Focus: Quality hardening — v3.0 test coverage (swap hooks, components, API routes), lazy-load PrintModal/jsPDF, code-split ChatPanel, ChatPanel error boundary.
 
 ## Previous Milestone
+**v3.0 Live Setlist Sync**
+Status: Complete
+Completed: 2026-03-30
+
+## Previous Milestone (prior)
 **v2.6 Deprecation Cleanup, Tech Debt & Setlist UX**
 Status: Complete
 Completed: 2026-03-12

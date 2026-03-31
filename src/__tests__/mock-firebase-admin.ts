@@ -30,6 +30,7 @@ export const mockWhere = vi.fn(() => ({
 export const mockFirestore = {
     collection: vi.fn(() => ({
         doc: vi.fn(() => ({
+            id: 'mock-doc-id',
             get: vi.fn(() => mockDoc),
             update: vi.fn(),
             collection: vi.fn(() => ({
@@ -38,6 +39,14 @@ export const mockFirestore = {
         })),
         where: mockWhere,
     })),
+    runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
+        const transaction = {
+            get: vi.fn(async () => ({ empty: true, docs: [] })),
+            set: vi.fn(),
+            update: vi.fn(),
+        }
+        return fn(transaction)
+    }),
 }
 
 export const firebaseAdminMock = {

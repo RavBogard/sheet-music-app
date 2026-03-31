@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server"
+import { timingSafeEqual } from "crypto"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
 import { env } from "@/env.mjs"
+
+function safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false
+    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
 
 /**
  * GET /api/cron/scheduling-reminder
@@ -13,10 +19,10 @@ import { env } from "@/env.mjs"
  * Protected by CRON_SECRET bearer token.
  */
 export async function GET(req: Request) {
-    // Verify cron secret
+    // Verify cron secret (constant-time comparison to prevent timing attacks)
     const authHeader = req.headers.get('authorization')
     const cronSecret = env.CRON_SECRET
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -1,28 +1,34 @@
 import { NextRequest, NextResponse } from "next/server"
+import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { enrichFile } from "@/lib/enrichment-engine"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 
+function safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false
+    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
+
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 /**
  * GET /api/cron/enrich
- * 
+ *
  * Automated nightly enrichment via Vercel Cron (2:00 AM UTC).
  * Scans library_index for unenriched files and processes them in batches.
- * 
+ *
  * Authenticated via CRON_SECRET header (set in Vercel env vars).
  */
 export async function GET(req: NextRequest) {
     try {
-        // Verify cron secret to prevent unauthorized triggers
+        // Verify cron secret (constant-time comparison to prevent timing attacks)
         const authHeader = req.headers.get('authorization')
         const cronSecret = env.CRON_SECRET
 
-        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

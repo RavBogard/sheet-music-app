@@ -39,6 +39,13 @@ const mockFirestoreLocal = {
         }
         return { doc: vi.fn(() => ({ get: vi.fn(async () => ({ exists: false })) })) }
     }),
+    runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
+        const transaction = {
+            get: vi.fn(async () => assignmentDoc),
+            update: mockAssignmentUpdate,
+        }
+        return fn(transaction)
+    }),
 }
 
 vi.mock('@/lib/firebase-admin', () => ({
@@ -126,6 +133,7 @@ describe('POST /api/scheduling/respond', () => {
         expect(json.success).toBe(true)
         expect(json.status).toBe('confirmed')
         expect(mockAssignmentUpdate).toHaveBeenCalledWith(
+            expect.anything(), // assignmentRef (passed as first arg in transaction.update)
             expect.objectContaining({ status: 'confirmed', respondedAt: 'mock-timestamp' })
         )
     })
@@ -143,6 +151,7 @@ describe('POST /api/scheduling/respond', () => {
         expect(res.status).toBe(200)
         expect(json.status).toBe('declined')
         expect(mockAssignmentUpdate).toHaveBeenCalledWith(
+            expect.anything(), // assignmentRef
             expect.objectContaining({
                 status: 'declined',
                 declineReason: 'Out of town',

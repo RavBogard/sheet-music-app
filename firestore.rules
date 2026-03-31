@@ -175,9 +175,11 @@ service cloud.firestore {
 
     // ADMIN BOOTSTRAP CONFIG (super-admin UIDs for isAdmin() fallback)
     // Seeded via Firebase Admin SDK or console. isAdmin() reads this doc.
+    // Write locked to Admin SDK only — this doc is read by isAdmin() itself,
+    // so client-side writes would create a circular trust issue.
     match /config/admins {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // MONITOR CONFIGURATION
@@ -307,6 +309,12 @@ service cloud.firestore {
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.createdAt is number;
       allow update, delete: if false; // Bridge deletes via Admin SDK
+    }
+
+    // Deny-all fallback — any collection not explicitly matched above is locked.
+    // Prevents new collections from being accidentally accessible.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

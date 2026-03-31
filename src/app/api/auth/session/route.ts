@@ -65,15 +65,38 @@ export async function POST(req: NextRequest) {
  * DELETE /api/auth/session
  *
  * Clears the session cookie. Called on sign-out.
+ * Requires a valid session cookie to prevent unauthenticated cookie clearing.
  */
-export async function DELETE() {
-    const response = NextResponse.json({ status: "ok" })
-    response.cookies.set(COOKIE_NAME, "", {
-        maxAge: 0,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        sameSite: "lax",
-    })
-    return response
+export async function DELETE(req: NextRequest) {
+    try {
+        const sessionCookie = req.cookies.get(COOKIE_NAME)?.value
+        if (!sessionCookie) {
+            return NextResponse.json({ error: "No session" }, { status: 401 })
+        }
+
+        initAdmin()
+        const auth = getAuth()
+        await auth.verifySessionCookie(sessionCookie)
+
+        const response = NextResponse.json({ status: "ok" })
+        response.cookies.set(COOKIE_NAME, "", {
+            maxAge: 0,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            sameSite: "lax",
+        })
+        return response
+    } catch {
+        // Invalid/expired session — clear cookie anyway since it's useless
+        const response = NextResponse.json({ status: "ok" })
+        response.cookies.set(COOKIE_NAME, "", {
+            maxAge: 0,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            sameSite: "lax",
+        })
+        return response
+    }
 }

@@ -46,6 +46,13 @@ const mockFirestoreLocal = {
         }
         return { doc: vi.fn(() => ({ get: vi.fn(async () => ({ exists: false })) })) }
     }),
+    runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
+        const transaction = {
+            get: vi.fn(async () => assignmentDoc),
+            update: mockAssignmentUpdate,
+        }
+        return fn(transaction)
+    }),
 }
 
 vi.mock('@/lib/firebase-admin', () => ({
@@ -151,10 +158,13 @@ describe('POST /api/scheduling/unassign', () => {
 
         expect(res.status).toBe(200)
         expect(json.success).toBe(true)
-        expect(mockAssignmentUpdate).toHaveBeenCalledWith({
-            status: 'cancelled',
-            respondedAt: 'mock-timestamp',
-        })
+        expect(mockAssignmentUpdate).toHaveBeenCalledWith(
+            expect.anything(), // assignmentRef (passed as first arg in transaction.update)
+            {
+                status: 'cancelled',
+                respondedAt: 'mock-timestamp',
+            }
+        )
     })
 
     it('sends cancellation email by default', async () => {

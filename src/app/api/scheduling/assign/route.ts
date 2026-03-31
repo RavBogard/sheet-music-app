@@ -49,18 +49,6 @@ export const POST = createApiHandler(
 
         for (const musician of musicians) {
             try {
-                // Check if assignment already exists
-                const existing = await db.collection('scheduling_assignments')
-                    .where('setlistId', '==', setlistId)
-                    .where('musicianUid', '==', musician.uid)
-                    .limit(1)
-                    .get()
-
-                if (!existing.empty) {
-                    // Already assigned — skip (don't count as newly created)
-                    continue
-                }
-
                 const isCore = musician.schedulingTier === 'core'
 
                 // Detect new songs BEFORE writing the assignment (so the new assignment
@@ -75,25 +63,43 @@ export const POST = createApiHandler(
                     }
                 }
 
-                const assignmentData = {
-                    setlistId,
-                    setlistName,
-                    eventDate: eventDate || null,
-                    serviceType: serviceType || null,
-                    musicianUid: musician.uid,
-                    musicianName: musician.name,
-                    musicianEmail: musician.email,
-                    musicianPhone: musician.phone || null,
-                    instrument: musician.instrument || null,
-                    status: isCore ? 'confirmed' : 'pending',
-                    autoConfirmed: isCore,
-                    assignedBy: ctx.auth.uid,
-                    assignedByName: ctx.auth.email || 'Unknown',
-                    assignedAt: FieldValue.serverTimestamp(),
-                    notifiedVia: [] as string[],
-                }
+                // Use transaction to prevent duplicate assignments from concurrent requests
+                const ref = await db.runTransaction(async (transaction) => {
+                    const existing = await transaction.get(
+                        db.collection('scheduling_assignments')
+                            .where('setlistId', '==', setlistId)
+                            .where('musicianUid', '==', musician.uid)
+                            .limit(1)
+                    )
 
-                const ref = await db.collection('scheduling_assignments').add(assignmentData)
+                    if (!existing.empty) {
+                        return null // Already assigned
+                    }
+
+                    const assignmentData = {
+                        setlistId,
+                        setlistName,
+                        eventDate: eventDate || null,
+                        serviceType: serviceType || null,
+                        musicianUid: musician.uid,
+                        musicianName: musician.name,
+                        musicianEmail: musician.email,
+                        musicianPhone: musician.phone || null,
+                        instrument: musician.instrument || null,
+                        status: isCore ? 'confirmed' : 'pending',
+                        autoConfirmed: isCore,
+                        assignedBy: ctx.auth.uid,
+                        assignedByName: ctx.auth.email || 'Unknown',
+                        assignedAt: FieldValue.serverTimestamp(),
+                        notifiedVia: [] as string[],
+                    }
+
+                    const newRef = db.collection('scheduling_assignments').doc()
+                    transaction.set(newRef, assignmentData)
+                    return newRef
+                })
+
+                if (!ref) continue // Already assigned — skip
                 created.push(musician.uid)
 
                 // Check musician's notification preferences
