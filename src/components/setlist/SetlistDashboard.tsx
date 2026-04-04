@@ -31,7 +31,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
 
     // Destructure all the state and handlers from our custom hook
     const {
-        router, user, signIn, isMember, isBandLeader, onBack, onCreateNew,
+        router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab, view, setView,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
@@ -191,7 +191,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid}
+                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid || isAdmin || isBandLeader}
                                             />
                                         ))}
                                         {placeholders.map((p, idx) => (
@@ -223,7 +223,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid}
+                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid || isAdmin || isBandLeader}
                                             />
                                         ))}
                                     </div>

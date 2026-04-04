@@ -50,6 +50,7 @@ export default function SetlistPerformPage() {
         musicians,
         liveState,
         setlistId: resolvedSetlistId,
+        rabbi,
     } = useSetlistPerformance(setlistId)
 
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
@@ -308,6 +309,7 @@ export default function SetlistPerformPage() {
                     tracks={tracks}
                     setlistId={setlistId}
                     assignedMusicians={musicians}
+                    rabbi={rabbi}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

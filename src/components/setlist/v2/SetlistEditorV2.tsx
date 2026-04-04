@@ -639,6 +639,7 @@ export function SetlistEditorV2({
                     setlistId={setlistId || undefined}
                     assignedMusicians={musicians}
                     eventDate={eventDate?.toISOString() ?? null}
+                    rabbi={rabbi}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

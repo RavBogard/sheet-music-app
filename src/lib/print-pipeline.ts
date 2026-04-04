@@ -42,6 +42,7 @@ export interface PrintRequest {
     date: string
     musicianName?: string
     eventName?: string
+    rabbi?: string
     tracks: PrintTrack[]
     coverOnly?: boolean
 }
@@ -252,6 +253,14 @@ async function buildCoverPage(
         yOffset -= 22
     }
 
+    if (req.rabbi) {
+        coverPage.drawText(`Led by: ${req.rabbi}`, {
+            x: 50, y: yOffset, size: 13,
+            font: helvetica, color: rgb(0.4, 0.4, 0.4),
+        })
+        yOffset -= 22
+    }
+
     if (req.musicianName) {
         coverPage.drawText(`Prepared for: ${req.musicianName}`, {
             x: 50, y: yOffset, size: 13,
@@ -293,8 +302,8 @@ async function buildCoverPage(
     })
     yOffset -= 16
 
-    // Rows — only show tracks with charts (plus section headers for structure)
-    const printableTracks = req.tracks.filter(t => t.type === 'header' || !!t.fileId)
+    // Rows — show all items in the order of service (songs, readings, prayers, headers)
+    const printableTracks = req.tracks
     let rowNum = 0
     let songNum = 0
     printableTracks.forEach((track) => {

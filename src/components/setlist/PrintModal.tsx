@@ -41,9 +41,10 @@ interface PrintModalProps {
     setlistId?: string
     assignedMusicians?: Array<{ uid?: string; name: string; displayName?: string }>
     eventDate?: string | null
+    rabbi?: string
 }
 
-export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi }: PrintModalProps) {
     const { user, profile } = useAuth()
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(() => {
@@ -190,6 +191,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 title, date,
                 musicianName: name || undefined,
                 eventName: eventName || undefined,
+                rabbi: rabbi || undefined,
                 coverOnly,
                 tracks: tracks.map(t => {
                     const useTransposition = printMode === "just-me"

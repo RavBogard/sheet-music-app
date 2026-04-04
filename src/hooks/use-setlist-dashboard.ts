@@ -35,11 +35,12 @@ export function useSetlistDashboard({
     serverUid = null
 }: UseSetlistDashboardProps) {
     const router = useRouter()
-    const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader } = useAuth()
-    
+    const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader, isAdmin: authIsAdmin } = useAuth()
+
     // Use server-provided values for initial render to prevent hydration flashes
     const isMember = authIsMember || serverIsMember
     const isBandLeader = authIsBandLeader || serverIsBandLeader
+    const isAdmin = authIsAdmin || serverIsAdmin
     const effectiveUid = authUser?.uid || serverUid
     // We construct a minimal user object if auth hasn't loaded but we have a server user
     const user = authUser || (serverUid ? { uid: serverUid, displayName: null } : null)
@@ -122,7 +123,7 @@ export function useSetlistDashboard({
 
     const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (setlist.isPublic && setlist.ownerId !== user?.uid) {
+        if (setlist.isPublic && setlist.ownerId !== user?.uid && !isAdmin && !isBandLeader) {
             toast.error("You can only delete setlists you created")
             return
         }
@@ -377,7 +378,7 @@ export function useSetlistDashboard({
     const hasUpcoming = upcoming.length > 0 || placeholders.length > 0
 
     return {
-        router, user, signIn, isMember, isBandLeader, onBack, onCreateNew,
+        router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab, view, setView,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,

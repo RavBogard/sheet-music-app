@@ -122,8 +122,8 @@ service cloud.firestore {
                         && isNotTooFrequent()
                     );
 
-      // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
-      allow delete: if isOwner(resource) || isAdmin();
+      // 4. DELETE: Owner, Admin, or Band Leader (public setlists only)
+      allow delete: if isOwner(resource) || isAdmin() || (isBandLeader() && resource.data.isPublic == true);
 
       // D1: Presence subcollection — users write their own presence doc
       match /presence/{odinguid} {

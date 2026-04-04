@@ -27,6 +27,7 @@ interface UseSetlistPerformanceReturn {
     musicians: SetlistMusician[]
     liveState: LiveState | undefined
     setlistId: string
+    rabbi: string | undefined
 }
 
 export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceReturn {
@@ -46,6 +47,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     const name: string = setlistData?.name || "Untitled"
     const serviceNotes: string | null = setlistData?.serviceNotes || null
     const musicians: SetlistMusician[] = setlistData?.musicians || []
+    const rabbi: string | undefined = setlistData?.rabbi
 
     // Live state: position tracking
     const liveState = setlistData?.liveState
@@ -97,5 +99,6 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         musicians,
         liveState,
         setlistId,
+        rabbi,
     }
 }
