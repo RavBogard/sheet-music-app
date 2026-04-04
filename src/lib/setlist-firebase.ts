@@ -193,7 +193,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         async copyToPersonal(publicSetlistId: string, setlistData: Setlist) {
             try {
                 // Just create a new doc in the SAME collection, but owned by ME and PRIVATE
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                const copyData = stripUndefinedDeep({
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
                     tracks: setlistData.tracks,
@@ -202,7 +202,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     copiedFrom: publicSetlistId
-                });
+                }) as Record<string, unknown>
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
                 return docRef.id;
             } catch (e) {
                 logger.error("Error copying setlist: ", e);
@@ -222,7 +223,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const context = await getFullServiceContext(targetDate)
                 const name = generateSetlistName(context)
 
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                const cloneData = stripUndefinedDeep({
                     name,
                     date: Timestamp.fromDate(targetDate),
                     eventDate: Timestamp.fromDate(targetDate),
@@ -235,7 +236,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
                     ...(source.rabbi ? { rabbi: source.rabbi } : {}),
                     clonedFrom: source.id,
-                })
+                }) as Record<string, unknown>
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
 
                 logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
                 return docRef.id
