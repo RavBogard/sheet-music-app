@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useCallback } from "react"
 import { doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -26,41 +26,30 @@ export function useSongGroups() {
     const { data, loading, error } = useSafeFirestoreSync<SongGroupsConfig>(ref)
 
     /** Get alternatives for a given liturgical slot, excluding the current song */
-    const getAlternatives = useMemo(() => {
-        if (!data?.groups) return (_slot: string, _currentFileId?: string) => [] as SongGroupEntry[]
-
-        return (liturgicalSlot: string, currentFileId?: string): SongGroupEntry[] => {
-            // Find the group that matches this slot
-            const group = Object.values(data.groups).find(
-                (g) => g.liturgicalSlot === liturgicalSlot
-            )
-            if (!group) return []
-            // Return all songs except the current one
-            return group.songs.filter((s) => s.fileId !== currentFileId)
-        }
+    const getAlternatives = useCallback((liturgicalSlot: string, currentFileId?: string): SongGroupEntry[] => {
+        if (!data?.groups) return []
+        const group = Object.values(data.groups).find(
+            (g) => g.liturgicalSlot === liturgicalSlot
+        )
+        if (!group) return []
+        return group.songs.filter((s) => s.fileId !== currentFileId)
     }, [data])
 
     /** Fallback: find alternatives by fileId when liturgicalSlot is missing on the track */
-    const getAlternativesByFileId = useMemo(() => {
-        if (!data?.groups) return (_fileId: string) => [] as SongGroupEntry[]
-
-        return (fileId: string): SongGroupEntry[] => {
-            for (const group of Object.values(data.groups)) {
-                if (group.songs.some(s => s.fileId === fileId)) {
-                    return group.songs.filter(s => s.fileId !== fileId)
-                }
+    const getAlternativesByFileId = useCallback((fileId: string): SongGroupEntry[] => {
+        if (!data?.groups) return []
+        for (const group of Object.values(data.groups)) {
+            if (group.songs.some(s => s.fileId === fileId)) {
+                return group.songs.filter(s => s.fileId !== fileId)
             }
-            return []
         }
+        return []
     }, [data])
 
     /** Check if a slot has swap alternatives available */
-    const hasAlternatives = useMemo(() => {
-        if (!data?.groups) return (_slot: string, _currentFileId?: string) => false
-
-        return (liturgicalSlot: string, currentFileId?: string): boolean => {
-            return getAlternatives(liturgicalSlot, currentFileId).length > 0
-        }
+    const hasAlternatives = useCallback((liturgicalSlot: string, currentFileId?: string): boolean => {
+        if (!data?.groups) return false
+        return getAlternatives(liturgicalSlot, currentFileId).length > 0
     }, [data, getAlternatives])
 
     /** Get all groups sorted by sortOrder (for admin UI) */

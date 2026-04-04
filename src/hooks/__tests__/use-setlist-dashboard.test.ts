@@ -6,11 +6,12 @@ import { renderHook, act } from '@testing-library/react'
 const mockPush = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }))
 
-const mockUseAuth = vi.fn((): { user: { uid: string; displayName: string } | null; signIn: ReturnType<typeof vi.fn>; isMember: boolean; isBandLeader: boolean } => ({
+const mockUseAuth = vi.fn((): { user: { uid: string; displayName: string } | null; signIn: ReturnType<typeof vi.fn>; isMember: boolean; isBandLeader: boolean; isAdmin: boolean } => ({
   user: { uid: 'user-1', displayName: 'Rabbi Daniel' },
   signIn: vi.fn(),
   isMember: true,
   isBandLeader: true,
+  isAdmin: false,
 }))
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => mockUseAuth() }))
 
@@ -123,6 +124,7 @@ describe('useSetlistDashboard', () => {
       signIn: vi.fn(),
       isMember: true,
       isBandLeader: true,
+      isAdmin: false,
     })
   })
 
@@ -146,6 +148,7 @@ describe('useSetlistDashboard', () => {
       signIn: vi.fn(),
       isMember: false,
       isBandLeader: false,
+      isAdmin: false,
     })
     const { result } = renderHook(() => useSetlistDashboard({}))
     expect(result.current.activeTab).toBe('public')
@@ -230,7 +233,14 @@ describe('useSetlistDashboard', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('handleDeleteClick blocks non-owner deletes on public setlists', () => {
+  it('handleDeleteClick blocks non-owner non-privileged deletes on public setlists', () => {
+    mockUseAuth.mockReturnValueOnce({
+      user: { uid: 'user-1', displayName: 'Musician' },
+      signIn: vi.fn(),
+      isMember: true,
+      isBandLeader: false,
+      isAdmin: false,
+    })
     const { result } = renderHook(() => useSetlistDashboard({}))
     const setlist = makeSetlist({ ownerId: 'other-user', isPublic: true })
 
