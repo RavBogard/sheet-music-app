@@ -52,11 +52,14 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- [x] v3.0 Phase 2: Swap UI — SwapButton, SwapBottomSheet, SwapToast, 3-tap swap flow
-- [x] v3.0 Phase 3: Real-time receiver — offline indicator, verified chart reload, deployed to Vercel
+- To be defined in next milestone
 
 ### Validated (Recently Shipped)
 
+- [x] v3.4 Phase 1: LeaderConsole mounted on performance page — collapsible panel, live mode accessible
+- [x] v3.4 Phase 2: Setlist permissions broadened + print outline includes all items + rabbi "Led by:" on cover page
+- [x] v3.4 Phase 3: Print outline fix (absorbed into Phase 2)
+- [x] v3.4 Bugfix: CSP allow hebcal.com + strip undefined from clone data
 - [x] v3.0 Phase 2: Swap UI — SwapButton, SwapBottomSheet, SwapToast, 3-tap director swap flow
 - [x] v3.0 Phase 1: Song groups & swap infrastructure — types, permissions, security rules, API routes, admin UI
 - [x] v2.6: Deprecation cleanup, tech debt & setlist UX — 3 phases complete

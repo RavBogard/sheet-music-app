@@ -20,6 +20,36 @@ Completed milestone log for this project.
 | v2.5 Bugsweep & Test Coverage | 2026-03-12 | 2 days | 19 phases, 30 plans |
 | v2.6 Deprecation Cleanup, Tech Debt & Setlist UX | 2026-03-12 | 1 day | 3 phases, 3 plans |
 | v3.0 Live Setlist Sync | 2026-03-30 | 1 session | 3 phases, 5 plans |
+| v3.1 Post-v3.0 Bugsweep & Hardening | 2026-03-31 | 1 session | 5 phases, 7 plans |
+| v3.2 Mobile Admin & Responsive Fixes | 2026-03-31 | 1 session | 2 phases, 2 plans |
+| v3.3 Live Mode Activation | 2026-04-04 | absorbed | absorbed into v3.4 |
+| v3.4 Fixes & Live Mode Activation | 2026-04-04 | 1 session | 3 phases, 2 plans |
+
+---
+
+## ✅ v3.4 Fixes & Live Mode Activation
+
+**Completed:** 2026-04-04
+**Duration:** 1 session across 2 plans + 1 bugfix
+
+### Key Accomplishments
+
+- LeaderConsole mounted on performance page as collapsible panel (absorbs v3.3)
+- Admin/band_leader can delete any public setlist (UI + Firestore rules)
+- Print cover page includes all items (readings, prayers, transitions) — not just songs
+- "Led by: {rabbi}" shown on print cover page when rabbi field is set
+- CSP updated to allow hebcal.com for liturgical calendar
+- Fixed Firestore undefined rejection in cloneForNextWeek
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| Collapsible panel for LeaderConsole | P1 | Doesn't dominate screen for non-leaders |
+| Band leaders can delete public setlists only | P2 | Consistent with update permissions |
+| Cover page shows ALL items, not just songs | P2 | Full order of service visible on outline |
+| Rabbi field as "Led by:" (not creator) | P2 | Service attribution to actual leader |
+| Spread operator to omit undefined rabbi | Bugfix | Firestore rejects undefined values |
 
 ---
 

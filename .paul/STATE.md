@@ -2,41 +2,35 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-03-30)
+See: .paul/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v3.4 Fixes & Live Mode Activation
+**Current focus:** Milestone complete — ready for next milestone discussion
 
 ## Current Position
 
-Milestone: v3.4 Fixes & Live Mode Activation
-Phase: 1 of 3 (Mount LeaderConsole) — Planning
-Plan: 01-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-04-04 — Milestone v3.4 created (absorbs v3.3)
+Milestone: v3.4 Fixes & Live Mode Activation — Complete
+Phase: 3 of 3 — All complete
+Status: Milestone complete
+Last activity: 2026-04-04 — v3.4 milestone completed
 
 Progress:
-- Milestone: [░░░░░░░░░░] 0%
-- Phase 1: [░░░░░░░░░░] 0%
+- Milestone: [██████████] 100% ✓
 
 ## Loop Position
 
-Current loop state:
-```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
-```
+No active loop — milestone complete.
 
 ## Accumulated Context
 
 ### Decisions
 - v3.3 absorbed into v3.4 as Phase 1 (LeaderConsole mounting)
-- LeaderConsole component exists but was never mounted (orphaned since v3.0)
-- All swap infrastructure (SwapButton, SwapBottomSheet, SwapToast, /live/[id], API routes, Firestore rules) is complete
-- Live mode gated on isLeader — only leaders/admins see the console
-- Swap buttons gated on canLiveSwap + isLiveMode + hasAlternatives
-- Close/duplicate on public setlists is a permissions bug, not a new feature
-- Non-song items excluded from PDF charts (correct) but should appear on printed outline/cover page
+- Collapsible panel pattern for LeaderConsole (not always-visible)
+- Band leaders can delete public setlists only (not private)
+- Print cover page shows ALL items, not just songs with charts
+- Rabbi field rendered as "Led by:" above "Prepared for:" on print cover
+- CSP updated to allow hebcal.com for liturgical calendar fetch
+- Spread operator to omit undefined rabbi field (Firestore rejects undefined)
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
@@ -49,15 +43,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
 - Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper
 
 ### Git State
-Last commit: d37476c
+Last commit: 30f809c
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: Milestone v3.4 created, Phase 1 plan ready
-Next action: Review and approve plan, then run /paul:apply .paul/phases/01-mount-leader-console/01-01-PLAN.md
-Resume file: .paul/phases/01-mount-leader-console/01-01-PLAN.md
+Stopped at: v3.4 milestone complete
+Next action: /paul:discuss-milestone for next milestone
+Resume file: .paul/ROADMAP.md
 
 ---
 *STATE.md — Updated after every significant action*

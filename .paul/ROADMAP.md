@@ -1,15 +1,20 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+
+To be defined in next milestone discussion.
+
+## Previous Milestone
 **v3.4 Fixes & Live Mode Activation**
-Status: In Progress
+Status: Complete
+Completed: 2026-04-04
 Phases: 3
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Mount LeaderConsole | 1/1 | Planning | — |
-| 2 | Setlist Permissions Fix | TBD | Not started | — |
-| 3 | Print Outline Fix | TBD | Not started | — |
+| 1 | Mount LeaderConsole | 1/1 | Complete | 2026-04-04 |
+| 2 | Setlist Permissions Fix | 1/1 | Complete | 2026-04-04 |
+| 3 | Print Outline Fix | 0/0 | Complete | 2026-04-04 |
 
 ### Phase 1: Mount LeaderConsole
 
@@ -23,6 +28,7 @@ Focus: Close and duplicate actions currently only work on setlists created by th
 ### Phase 3: Print Outline Fix
 
 Focus: Non-song items (readings, prayers, liturgical elements) are currently excluded from the printed outline/cover page. Include them as line items in the printed order of service — no chart pages needed, just listed on the outline.
+Note: Fully addressed in Phase 2 — no separate plan needed.
 
 ## Previous Milestone
 **v3.3 Live Mode Activation** (absorbed into v3.4)
