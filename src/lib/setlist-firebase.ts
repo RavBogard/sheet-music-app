@@ -233,7 +233,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
                     assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
-                    rabbi: source.rabbi || '',
+                    ...(source.rabbi ? { rabbi: source.rabbi } : {}),
                     clonedFrom: source.id,
                 })
 
