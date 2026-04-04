@@ -1,24 +1,43 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v3.2 Mobile Admin & Responsive Fixes**
+**v3.4 Fixes & Live Mode Activation**
 Status: In Progress
-Phases: 2 of 2 complete
+Phases: 3
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Mount LeaderConsole | 1/1 | Planning | — |
+| 2 | Setlist Permissions Fix | TBD | Not started | — |
+| 3 | Print Outline Fix | TBD | Not started | — |
+
+### Phase 1: Mount LeaderConsole
+
+Focus: Wire up the orphaned LeaderConsole component into the performance page so leaders can start Live Mode, step through the service, and enable Live Swap. All v3.0 infrastructure (swap buttons, bottom sheet, toast, /live/[id] receiver, Firestore rules, API routes) is already built — just needs the entry point. Absorbed from v3.3.
+Skills required: /ui-ux-pro-max
+
+### Phase 2: Setlist Permissions Fix
+
+Focus: Close and duplicate actions currently only work on setlists created by the current user. Fix so they work on any public setlist regardless of owner.
+
+### Phase 3: Print Outline Fix
+
+Focus: Non-song items (readings, prayers, liturgical elements) are currently excluded from the printed outline/cover page. Include them as line items in the printed order of service — no chart pages needed, just listed on the outline.
+
+## Previous Milestone
+**v3.3 Live Mode Activation** (absorbed into v3.4)
+Status: Absorbed
+Note: Scope merged into v3.4 Phase 1
+
+## Previous Milestone
+**v3.2 Mobile Admin & Responsive Fixes**
 Status: Complete
+Completed: 2026-03-31
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Mobile Admin Controls | 1/1 | Complete | 2026-03-31 |
 | 2 | Touch Targets & Responsive Polish | 1/1 | Complete | 2026-03-31 |
-
-### Phase 1: Mobile Admin Controls
-
-Focus: UserRow mobile toggles (sound engineer, canLiveSwap) — currently `hidden sm:flex` and inaccessible on phones. Add mobile user attributes/badges so admins can see permissions at a glance on small screens.
-
-### Phase 2: Touch Targets & Responsive Polish
-
-Focus: ScheduleCard accept/decline buttons (32px → 44px), any remaining responsive gaps discovered during Phase 1.
-Skills required: /ui-ux-pro-max
 
 ## Previous Milestone
 **v3.1 Post-v3.0 Bugsweep & Hardening**

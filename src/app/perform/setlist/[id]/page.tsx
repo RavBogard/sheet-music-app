@@ -16,13 +16,14 @@ import { useState, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, Radio, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { useAuth } from "@/lib/auth-context"
 import { useLiveSwapAccess } from "@/hooks/use-live-swap-access"
 import { useSongGroups } from "@/hooks/use-song-groups"
-import { swapLiveTrack } from "@/lib/setlist-live"
+import { swapLiveTrack, subscribeToPresence, type PresenceEntry } from "@/lib/setlist-live"
+import { LeaderConsole } from "@/components/setlist/LeaderConsole"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
 import { SwapBottomSheet } from "@/components/performance/SwapBottomSheet"
@@ -92,6 +93,14 @@ export default function SetlistPerformPage() {
             displayName: user.displayName || "Director",
         })
     }, [swapTarget, user, resolvedSetlistId, tracks])
+
+    // Leader console
+    const [consoleOpen, setConsoleOpen] = useState(false)
+    const [presence, setPresence] = useState<PresenceEntry[]>([])
+    useEffect(() => {
+        if (!isLeader || !resolvedSetlistId) return
+        return subscribeToPresence(resolvedSetlistId, setPresence)
+    }, [isLeader, resolvedSetlistId])
 
     // Offline connectivity indicator
     const [isOffline, setIsOffline] = useState(false)
@@ -191,6 +200,35 @@ export default function SetlistPerformPage() {
             {isOffline && (
                 <div className="px-3 py-1.5 bg-amber-500/20 text-amber-400 text-xs text-center border-b border-amber-500/20">
                     Offline — setlist may be outdated
+                </div>
+            )}
+
+            {/* Leader Console — collapsible panel for service leaders */}
+            {isLeader && user && (
+                <div className="border-b border-border/50">
+                    <button
+                        onClick={() => setConsoleOpen(!consoleOpen)}
+                        className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors cursor-pointer"
+                    >
+                        <span className="flex items-center gap-2">
+                            <Radio className={liveState?.enabled ? "w-3.5 h-3.5 text-red-500 animate-pulse" : "w-3.5 h-3.5 text-muted-foreground"} />
+                            {liveState?.enabled ? "Live — ON AIR" : "Live Console"}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${consoleOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {consoleOpen && (
+                        <div className="px-4 pb-3">
+                            <LeaderConsole
+                                setlistId={resolvedSetlistId}
+                                setlistName={name}
+                                tracks={tracks}
+                                liveState={liveState ?? null}
+                                presence={presence}
+                                userId={user.uid}
+                                userName={user.displayName || "Leader"}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
