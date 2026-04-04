@@ -6,7 +6,6 @@ import { Loader2, ArrowLeft, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
-import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 
 export default function SoundSettingsPage() {
     const { isBandLeader, loading } = useAuth()
@@ -37,22 +36,14 @@ export default function SoundSettingsPage() {
                             Sound System Settings
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
-                            Monitor bridge configuration and live service overview
+                            Monitor bridge configuration
                         </p>
                     </div>
                 </div>
 
-                <div className="space-y-12">
-                    <SectionErrorBoundary label="Live Production">
-                        <LiveServiceSection />
-                    </SectionErrorBoundary>
-
-                    <hr className="border-border" />
-
-                    <SectionErrorBoundary label="Sound System">
-                        <SoundSystemSection />
-                    </SectionErrorBoundary>
-                </div>
+                <SectionErrorBoundary label="Sound System">
+                    <SoundSystemSection />
+                </SectionErrorBoundary>
             </div>
         </div>
     )

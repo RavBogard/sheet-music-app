@@ -5,52 +5,53 @@
 See: .paul/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** Milestone complete — ready for next milestone discussion
+**Current focus:** v4.0 Live Swap Redesign
 
 ## Current Position
 
-Milestone: v3.4 Fixes & Live Mode Activation — Complete
-Phase: 3 of 3 — All complete
-Status: Milestone complete
-Last activity: 2026-04-04 — v3.4 milestone completed
+Milestone: v4.0 Live Swap Redesign
+Phase: 1 of 3 (Teardown Old Live System) — Planning
+Plan: 01-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-04-04 — Created .paul/phases/01-teardown-old-live/01-01-PLAN.md
 
 Progress:
-- Milestone: [██████████] 100% ✓
+- Milestone: [░░░░░░░░░░] 0%
+- Phase 1: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
-No active loop — milestone complete.
+Current loop state:
+```
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ○        ○     [Plan created, awaiting approval]
+```
 
 ## Accumulated Context
 
 ### Decisions
-- v3.3 absorbed into v3.4 as Phase 1 (LeaderConsole mounting)
-- Collapsible panel pattern for LeaderConsole (not always-visible)
-- Band leaders can delete public setlists only (not private)
-- Print cover page shows ALL items, not just songs with charts
-- Rabbi field rendered as "Led by:" above "Prepared for:" on print cover
-- CSP updated to allow hebcal.com for liturgical calendar fetch
-- Spread operator to omit undefined rabbi field (Firestore rejects undefined)
+- Old live system (v3.0-v3.4) being completely replaced — over-engineered for the use case
+- No separate "live mode" — normal performance view IS the live experience
+- Swap = inline editing from performance view, not a separate flow
+- Fuzzy name matching for swap suggestions (most swaps are between similarly-named songs like Barechu variants)
+- All setlists public — no private/public distinction
+- Fuse.js already available for fuzzy search
+- Firestore real-time sync handles "everyone sees changes" — no new infrastructure
 
 ### Deferred Issues
 - CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
-- LOW-005 (logger levels) — Accepted as-is
 - BUG-022 (rate limits on all API routes) — Large effort, deferred
 - BUG-020 (108 non-null assertions) — Large effort, deferred
-- BUG-030 (track array content validation in rules) — Large effort, deferred
-
-### Known Issues
-- Remind route: "no setlistId" 48-hour filter code is unreachable via API wrapper
 
 ### Git State
-Last commit: 30f809c
+Last commit: 6db33cd
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: v3.4 milestone complete
-Next action: /paul:discuss-milestone for next milestone
+Stopped at: Milestone v4.0 created, ready to plan Phase 1
+Next action: /paul:plan for Phase 1 (Teardown Old Live System)
 Resume file: .paul/ROADMAP.md
 
 ---

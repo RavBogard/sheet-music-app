@@ -3,7 +3,6 @@
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { cn } from "@/lib/utils"
-import { SwapButton } from "./SwapButton"
 
 export interface SetlistRowProps {
     track: SetlistTrack
@@ -14,10 +13,6 @@ export interface SetlistRowProps {
     onSongTap: () => void
     isLeader: boolean
     onLeaderSetPosition: () => void
-    canSwap?: boolean
-    isLiveMode?: boolean
-    hasAlternatives?: boolean
-    onSwapTap?: () => void
 }
 
 export function SetlistRow({
@@ -29,10 +24,6 @@ export function SetlistRow({
     onSongTap,
     isLeader,
     onLeaderSetPosition,
-    canSwap,
-    isLiveMode,
-    hasAlternatives,
-    onSwapTap,
 }: SetlistRowProps) {
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
@@ -123,16 +114,11 @@ export function SetlistRow({
         !isSong && "opacity-60"
     )
 
-    const swapButton = canSwap && isLiveMode && isSong && onSwapTap ? (
-        <SwapButton track={track} hasAlternatives={!!hasAlternatives} onSwapTap={onSwapTap} />
-    ) : null
-
     // Non-interactive rows
     if (!isInteractive) {
         return (
             <div className={cn(rowClasses, "cursor-default")}>
                 {songContent}
-                {swapButton}
             </div>
         )
     }
@@ -157,7 +143,6 @@ export function SetlistRow({
             )}
         >
             {songContent}
-            {swapButton}
         </div>
     )
 }

@@ -1,16 +1,14 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
-import { updateLiveTrack } from "@/lib/setlist-live"
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
-import { LiveState } from "@/lib/setlist-live"
 
 interface UseSetlistPerformanceReturn {
     tracks: SetlistTrack[]
@@ -25,7 +23,6 @@ interface UseSetlistPerformanceReturn {
     isPublicView: boolean
     setCurrentPosition: (index: number) => void
     musicians: SetlistMusician[]
-    liveState: LiveState | undefined
     setlistId: string
     rabbi: string | undefined
 }
@@ -49,9 +46,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     const musicians: SetlistMusician[] = setlistData?.musicians || []
     const rabbi: string | undefined = setlistData?.rabbi
 
-    // Live state: position tracking
-    const liveState = setlistData?.liveState
-    const currentTrackIndex = liveState?.enabled ? liveState.currentTrackIndex : -1
+    const currentTrackIndex = -1
 
     // Musician profile for default transposition
     const [musicianProfile, setMusicianProfile] = useState<MusicianProfile | null>(null)
@@ -70,19 +65,11 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     const { isLocked: isWakeLockActive, requestWakeLock } = useWakeLock()
 
     useEffect(() => {
-        // Request wake lock when the performance page mounts
-        // This is triggered by the user gesture of navigating to the page
         requestWakeLock()
     }, [requestWakeLock])
 
-    // Leader position control
-    const setCurrentPosition = useCallback(
-        (index: number) => {
-            if (!isLeader || !user) return
-            updateLiveTrack(setlistId, index, user.uid, user.displayName || "Leader")
-        },
-        [isLeader, user, setlistId]
-    )
+    // No-op position control (live stepping removed)
+    const setCurrentPosition = () => {}
 
     return {
         tracks,
@@ -97,7 +84,6 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
         isPublicView,
         setCurrentPosition,
         musicians,
-        liveState,
         setlistId,
         rabbi,
     }

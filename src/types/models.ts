@@ -1,5 +1,3 @@
-import type { LiveState } from "@/lib/setlist-live"
-
 /** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
 export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
@@ -56,7 +54,6 @@ export interface SetlistTrack {
     performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
     pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
-    liturgicalSlot?: string // Links to SongGroup for live swap eligibility
 }
 
 /** A musician assigned to play a specific service/setlist */
@@ -85,7 +82,6 @@ export interface Setlist {
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string
     previousOwnerId?: string
-    liveState?: LiveState
     assignedUids?: string[]
 }
 
@@ -99,7 +95,6 @@ export interface UserProfile {
     viewedWelcomeModal?: boolean
     role: UserRole
     soundEngineer?: boolean
-    canLiveSwap?: boolean // Permission to swap songs during live mode
     canUpload?: boolean
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate

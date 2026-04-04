@@ -2,16 +2,14 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, ShieldAlert, Users, Database, Radio, History, ArrowLeftRight } from "lucide-react"
+import { Loader2, ArrowLeft, ShieldAlert, Users, Database, Radio, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { PeopleSection } from "@/components/admin/PeopleSection"
 import { LibraryDataSection } from "@/components/admin/LibraryDataSection"
 import { AccessAuditLog } from "@/components/admin/people/AccessAuditLog"
-import { LiveServiceSection } from "@/components/admin/LiveServiceSection"
 import { SoundSystemSection } from "@/components/admin/SoundSystemSection"
-import { SongGroupSection } from "@/components/admin/SongGroupSection"
 import { DuplicateScanner } from "@/components/library/DuplicateScanner"
 import { PDFHealthScanner } from "@/components/library/PDFHealthScanner"
 import { useLibrary } from "@/hooks/use-library"
@@ -57,13 +55,9 @@ export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean
                             <Database className="w-4 h-4" />
                             Library
                         </TabsTrigger>
-<TabsTrigger value="sound" className="min-h-11 gap-1.5">
+                        <TabsTrigger value="sound" className="min-h-11 gap-1.5">
                             <Radio className="w-4 h-4" />
                             Sound
-                        </TabsTrigger>
-                        <TabsTrigger value="groups" className="min-h-11 gap-1.5">
-                            <ArrowLeftRight className="w-4 h-4" />
-                            Groups
                         </TabsTrigger>
                         {serverIsAdmin && (
                             <TabsTrigger value="audit" className="min-h-11 gap-1.5">
@@ -102,16 +96,9 @@ export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean
                         </div>
                     </TabsContent>
 
-<TabsContent value="sound" className="mt-6 space-y-8">
+                    <TabsContent value="sound" className="mt-6 space-y-8">
                         <SectionErrorBoundary label="Sound System">
-                            <LiveServiceSection />
                             <SoundSystemSection />
-                        </SectionErrorBoundary>
-                    </TabsContent>
-
-                    <TabsContent value="groups" className="mt-6">
-                        <SectionErrorBoundary label="Song Groups">
-                            <SongGroupSection />
                         </SectionErrorBoundary>
                     </TabsContent>
 

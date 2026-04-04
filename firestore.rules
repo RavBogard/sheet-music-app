@@ -41,19 +41,6 @@ service cloud.firestore {
       return request.auth.token.soundEngineer == true;
     }
 
-    // Live Swap: Can swap songs during live mode, checked via custom claim
-    function canLiveSwap() {
-      return request.auth.token.canLiveSwap == true;
-    }
-
-    // Rate limit: Prevent rapid swap writes (minimum 2 seconds between swaps)
-    function isNotTooFrequent() {
-      return !('liveState' in resource.data)
-          || !('lastSwap' in resource.data.liveState)
-          || resource.data.liveState.lastSwap == null
-          || request.time > resource.data.liveState.lastSwap.swappedAt + duration.value(2, 's');
-    }
-
     // USERS Collection
     match /users/{userId} {
       // Secure Rule: Own data, Leaders (for musician picker), or Admin
@@ -109,28 +96,13 @@ service cloud.firestore {
       // 3. UPDATE:
       //    - Owner can always update.
       //    - Leaders/Admins can update ANY Public setlist.
-      //    - canLiveSwap users can update ONLY tracks + liveState + trackCount (during live mode).
       allow update: if isOwner(resource)
                     || (resource.data.isPublic == true && isBandLeader())
-                    || isAdmin()
-                    || (
-                        canLiveSwap()
-                        && resource.data.liveState != null
-                        && resource.data.liveState.enabled == true
-                        && request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['liveState', 'tracks', 'trackCount'])
-                        && isNotTooFrequent()
-                    );
+                    || isAdmin();
 
       // 4. DELETE: Owner, Admin, or Band Leader (public setlists only)
       allow delete: if isOwner(resource) || isAdmin() || (isBandLeader() && resource.data.isPublic == true);
 
-      // D1: Presence subcollection — users write their own presence doc
-      match /presence/{odinguid} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && request.auth.uid == odinguid;
-        allow delete: if isSignedIn() && request.auth.uid == odinguid;
-      }
     }
     
     // TASKS Collection
@@ -200,14 +172,6 @@ service cloud.firestore {
       allow write: if isBandLeader();
     }
 
-    // SONG GROUPS CONFIGURATION — liturgical slot groupings for live swap
-    // Read: Any signed-in user (swap picker needs to load alternatives)
-    // Write: Band leaders and admins (they manage the group catalog)
-    match /config/songGroups {
-      allow read: if isSignedIn();
-      allow write: if isBandLeader();
-    }
-
     // LIBRARY INDEX — server-only (admin SDK)
     // Sync engine, enrichment cron, and upload API all write via admin SDK.
     // No client should read/write directly.
@@ -224,15 +188,6 @@ service cloud.firestore {
     match /setlists/{setlistId}/history/{entryId} {
       allow read: if isAdmin();
       allow create: if isSignedIn();  // Append-only: users can log changes but never edit/delete
-      allow update, delete: if false; // Immutable once written
-    }
-
-    // SWAP HISTORY — append-only audit trail for live song swaps
-    match /setlists/{setlistId}/swapHistory/{swapId} {
-      allow read: if isBandLeader();
-      allow create: if isSignedIn()
-                    && (isBandLeader() || canLiveSwap())
-                    && request.resource.data.swappedBy == request.auth.uid;
       allow update, delete: if false; // Immutable once written
     }
 

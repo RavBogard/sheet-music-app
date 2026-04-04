@@ -1,8 +1,28 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v4.0 Live Swap Redesign**
+Status: In Progress
+Phases: 3
 
-To be defined in next milestone discussion.
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Teardown Old Live System | 1/1 | Planning | — |
+| 2 | Remove Private Setlists | TBD | Not started | — |
+| 3 | Inline Swap + Toast | TBD | Not started | — |
+
+### Phase 1: Teardown Old Live System
+
+Focus: Remove LeaderConsole, SwapButton, SwapBottomSheet, SwapToast, /live/[id] receiver page, liveState, presence tracking, canLiveSwap permission, song groups/liturgicalSlot system, admin Song Groups tab, canLiveSwap toggle in UserRow. Clean removal — no replacement yet.
+
+### Phase 2: Remove Private Setlists
+
+Focus: Eliminate the isPublic flag distinction. All setlists are public. Remove personal tab, ownership-gated restrictions. Any band leader or admin can edit any setlist. Simplify Firestore rules, UI, and data model.
+
+### Phase 3: Inline Swap + Toast
+
+Focus: Leader taps a song in the performance view → search picker appears pre-populated with fuzzy name matches from the library (e.g., Barechu variants). Leader picks replacement → Firestore tracks array updates → everyone's view updates in real-time. Toast notification shows all musicians what was swapped.
+Skills required: /ui-ux-pro-max
 
 ## Previous Milestone
 **v3.4 Fixes & Live Mode Activation**

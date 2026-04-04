@@ -16,7 +16,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
-import { Headphones, ArrowLeftRight, Trash2, Loader2 } from "lucide-react"
+import { Headphones, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     AlertDialog,
@@ -58,7 +58,6 @@ interface UserRowProps {
 export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onSelect }: UserRowProps) {
     const [loading, setLoading] = useState(false)
     const [soundEngLoading, setSoundEngLoading] = useState(false)
-    const [liveSwapLoading, setLiveSwapLoading] = useState(false)
     const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [pendingRole, setPendingRole] = useState<string | null>(null)
@@ -118,28 +117,6 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             toast.error("Failed to update sound engineer flag")
         } finally {
             setSoundEngLoading(false)
-        }
-    }
-
-    const handleLiveSwapToggle = async () => {
-        setLiveSwapLoading(true)
-        try {
-            const { auth: firebaseAuth } = await import("@/lib/firebase")
-            const currentUser = firebaseAuth.currentUser
-            if (!currentUser) return
-            const token = await currentUser.getIdToken()
-            const res = await fetch("/api/admin/set-live-swap", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ targetUserId: user.uid, canLiveSwap: !user.canLiveSwap }),
-            })
-            if (!res.ok) throw new Error("Failed")
-            toast.success(`${user.displayName}: live swap ${user.canLiveSwap ? 'removed' : 'enabled'}`)
-        } catch (e) {
-            logger.error(e)
-            toast.error("Failed to update live swap flag")
-        } finally {
-            setLiveSwapLoading(false)
         }
     }
 
@@ -219,7 +196,6 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[10px] h-5 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
-                    {user.canLiveSwap && <Badge variant="default" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">🔄 Swap</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
 
                     <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={user.createdAt ? toDate(user.createdAt)?.toLocaleString() : ""}>
@@ -245,25 +221,6 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
                         >
                             {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
-                        </Button>
-                    )}
-
-                    {/* Live Swap toggle */}
-                    {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleLiveSwapToggle}
-                            disabled={liveSwapLoading}
-                            className={cn(
-                                "rounded-lg border",
-                                user.canLiveSwap
-                                    ? "bg-amber-500/20 border-amber-500/40 text-amber-500"
-                                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
-                            )}
-                            title={user.canLiveSwap ? 'Remove live swap' : 'Enable live swap'}
-                        >
-                            {liveSwapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowLeftRight className="h-4 w-4" />}
                         </Button>
                     )}
 
@@ -320,7 +277,6 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
-                    {user.canLiveSwap && <Badge variant="default" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">🔄 Swap</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">Pending</Badge>}
                 </div>
 
@@ -341,25 +297,6 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
                         >
                             {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
-                        </Button>
-                    )}
-
-                    {/* Live Swap toggle (mobile) */}
-                    {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleLiveSwapToggle}
-                            disabled={liveSwapLoading}
-                            className={cn(
-                                "rounded-lg border",
-                                user.canLiveSwap
-                                    ? "bg-amber-500/20 border-amber-500/40 text-amber-500"
-                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
-                            )}
-                            title={user.canLiveSwap ? 'Remove live swap' : 'Enable live swap'}
-                        >
-                            {liveSwapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowLeftRight className="h-4 w-4" />}
                         </Button>
                     )}
 

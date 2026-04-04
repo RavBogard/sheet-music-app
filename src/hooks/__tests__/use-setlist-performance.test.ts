@@ -42,10 +42,6 @@ vi.mock('@/lib/musician-profile', () => ({
   subscribeToMusicianProfile: vi.fn(() => vi.fn()), // returns unsub
 }))
 
-vi.mock('@/lib/setlist-live', () => ({
-  updateLiveTrack: vi.fn(),
-}))
-
 import { useSetlistPerformance } from '@/hooks/use-setlist-performance'
 
 describe('useSetlistPerformance', () => {
@@ -127,27 +123,11 @@ describe('useSetlistPerformance', () => {
     expect(result.current.isPublicView).toBe(true)
   })
 
-  it('reads currentTrackIndex from liveState', () => {
+  it('currentTrackIndex is always -1 (live stepping removed)', () => {
     mockUseSafeFirestoreSync.mockReturnValue({
       data: {
         id: 'setlist-1',
         tracks: [],
-        liveState: { enabled: true, currentTrackIndex: 3 },
-      },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(result.current.currentTrackIndex).toBe(3)
-  })
-
-  it('returns -1 when liveState is not enabled', () => {
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: {
-        id: 'setlist-1',
-        tracks: [],
-        liveState: { enabled: false, currentTrackIndex: 3 },
       },
       loading: false,
       error: null,
