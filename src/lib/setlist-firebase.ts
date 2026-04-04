@@ -250,7 +250,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Save a setlist as a reusable template (strips date, musicians, rabbi)
         async saveAsTemplate(source: Setlist, templateName?: string): Promise<string> {
             try {
-                const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                const templateData = stripUndefinedDeep({
                     name: templateName || `${source.name} (Template)`,
                     date: serverTimestamp(),
                     tracks: source.tracks,
@@ -260,7 +260,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     templateType: 'other',
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
-                })
+                }) as Record<string, unknown>
+                const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
 
                 logSetlistChange(docRef.id, 'saved_as_template', userId || '', userName || 'Anonymous')
                 return docRef.id
