@@ -191,7 +191,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid || isAdmin || isBandLeader}
+                                                canDelete={setlist.ownerId === user?.uid || isAdmin || isBandLeader}
                                             />
                                         ))}
                                         {placeholders.map((p, idx) => (
@@ -223,7 +223,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={!setlist.isPublic || setlist.ownerId === user?.uid || isAdmin || isBandLeader}
+                                                canDelete={setlist.ownerId === user?.uid || isAdmin || isBandLeader}
                                             />
                                         ))}
                                     </div>

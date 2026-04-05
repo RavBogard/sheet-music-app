@@ -46,7 +46,7 @@ vi.mock("@/lib/auth-context", () => ({
 const mockSubscribeToPublicSetlists = vi.fn()
 vi.mock("@/lib/setlist-firebase", () => ({
     createSetlistService: () => ({
-        subscribeToPublicSetlists: mockSubscribeToPublicSetlists,
+        subscribeToAllSetlists: mockSubscribeToPublicSetlists,
     }),
 }))
 

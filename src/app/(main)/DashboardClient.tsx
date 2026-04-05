@@ -52,12 +52,10 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     const effectiveUid = authUser?.uid || serverUid
     const user = authUser || (serverUid ? { uid: serverUid, displayName: null } as any : null)
 
-    const [upcomingPersonal, setUpcomingPersonal] = useState<Setlist[]>([])
-    const [upcomingPublic, setUpcomingPublic] = useState<Setlist[]>([])
+    const [upcomingSetlists, setUpcomingSetlistsState] = useState<Setlist[]>([])
     const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
-    const [recentPublicSetlists, setRecentPublicSetlists] = useState<Setlist[]>([])
-    const [personalLoaded, setPersonalLoaded] = useState(false)
-    const [publicLoaded, setPublicLoaded] = useState(false)
+    const [recentSetlists, setRecentSetlists] = useState<Setlist[]>([])
+    const [setlistsLoaded, setSetlistsLoaded] = useState(false)
 
     // Quick-setup inline form state — reset when role changes to avoid stuck UI
     const [showQuickSetup, setShowQuickSetup] = useState(false)
@@ -83,13 +81,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
 
     // Safety timeout: 2s. Prevents hanging on slow networks.
     useEffect(() => {
-        if (personalLoaded && publicLoaded) return
+        if (setlistsLoaded) return
         const timer = setTimeout(() => {
-            setPersonalLoaded(true)
-            setPublicLoaded(true)
+            setSetlistsLoaded(true)
         }, 2000)
         return () => clearTimeout(timer)
-    }, [personalLoaded, publicLoaded])
+    }, [setlistsLoaded])
 
     // Greeting — use server-rendered value initially, recompute client-side for real-time updates.
     const initialGreeting = serverGreeting || getContextualGreeting(null, undefined, serverShortName || DEFAULT_SHORT_NAME)
@@ -124,65 +121,28 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         }
     }, [])
 
-    // ── PUBLIC setlists: start IMMEDIATELY -- no auth gate ──
+    // ── ALL setlists: single subscription (v4.0: no private/public split) ──
     useEffect(() => {
         if (!setlistService) return
-        setPublicLoaded(false)
+        setSetlistsLoaded(false)
 
-        const unsub = setlistService.subscribeToPublicSetlists((setlists) => {
+        const unsub = setlistService.subscribeToAllSetlists((setlists) => {
             const upcoming = filterUpcoming(setlists)
-            setUpcomingPublic(upcoming.slice(0, 5))
+            setUpcomingSetlistsState(upcoming.slice(0, 5))
             const recent = setlists
                 .filter(s => s.eventDate)
                 .sort((a, b) => (toDate(b.eventDate)?.getTime() || 0) - (toDate(a.eventDate)?.getTime() || 0))
                 .slice(0, 5)
-            setRecentPublicSetlists(recent)
-
-            if (!user?.uid) {
-                setAllSetlists(setlists)
-            }
-            setPublicLoaded(true)
-        })
-
-        return () => unsub()
-    }, [setlistService, user?.uid, filterUpcoming])
-
-    // ── PERSONAL setlists: fire after auth resolves ──
-    useEffect(() => {
-        if (authLoading) return
-
-        if (!user?.uid) {
-            setPersonalLoaded(true)
-            return
-        }
-
-        if (!setlistService) return
-        setPersonalLoaded(false)
-
-        const unsub = setlistService.subscribeToPersonalSetlists((setlists) => {
-            setUpcomingPersonal(filterUpcoming(setlists).slice(0, 5))
+            setRecentSetlists(recent)
             setAllSetlists(setlists)
-            setPersonalLoaded(true)
+            setSetlistsLoaded(true)
         })
 
         return () => unsub()
-    }, [setlistService, user?.uid, authLoading, filterUpcoming])
+    }, [setlistService, filterUpcoming])
 
-
-    // Merge upcoming from personal + public, deduplicate by ID, sort by date
-    const upcomingSetlists = useMemo(() => {
-        const map = new Map<string, Setlist>()
-        // Personal first (higher priority)
-        for (const s of upcomingPersonal) map.set(s.id, s)
-        // Public fills in anything not already present
-        for (const s of upcomingPublic) if (!map.has(s.id)) map.set(s.id, s)
-        return Array.from(map.values())
-            .sort((a, b) => (toDate(a.eventDate)?.getTime() || 0) - (toDate(b.eventDate)?.getTime() || 0))
-            .slice(0, 5)
-    }, [upcomingPersonal, upcomingPublic])
-
-    // Content is ready once public setlists have loaded.
-    const setlistsReady = publicLoaded
+    // Content is ready once setlists have loaded.
+    const setlistsReady = setlistsLoaded
     const tonightSetlist = upcomingSetlists[0]
 
     // Empty state: find the most recent past setlist for practice reference
@@ -467,12 +427,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 )}
 
                 {/* ── Recent Public Setlists (non-member / no upcoming) ── */}
-                {setlistsReady && !tonightSetlist && recentPublicSetlists.length > 0 && (
+                {setlistsReady && !tonightSetlist && recentSetlists.length > 0 && (
                     <div className={cn("flex flex-col gap-2", stagger(3))}>
                         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Recent Setlists
                         </h2>
-                        {recentPublicSetlists.slice(0, 4).map(s => (
+                        {recentSetlists.slice(0, 4).map(s => (
                             <CompactSetlistRow
                                 key={s.id}
                                 setlist={s}

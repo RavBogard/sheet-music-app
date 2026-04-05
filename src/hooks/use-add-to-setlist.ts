@@ -35,11 +35,9 @@ export function useAddToSetlist() {
   // Core state
   const [isOpen, setIsOpen] = useState(false)
   const [pendingSongs, setPendingSongs] = useState<DriveFile[]>([])
-  const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>([])
-  const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
+  const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [personalLoaded, setPersonalLoaded] = useState(false)
-  const [publicLoaded, setPublicLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   // Track added IDs for undo
   const lastAddedTrackIdsRef = useRef<string[]>([])
@@ -52,34 +50,23 @@ export function useAddToSetlist() {
     [user?.uid, user?.displayName]
   )
 
-  // Subscribe to setlists
+  // Subscribe to all setlists (v4.0: single unified list)
   useEffect(() => {
-    const unsub1 = setlistService.subscribeToPersonalSetlists((setlists) => {
-      setPersonalSetlists(setlists)
-      setPersonalLoaded(true)
+    const unsub = setlistService.subscribeToAllSetlists((setlists) => {
+      setAllSetlists(setlists)
+      setLoaded(true)
     })
-    const unsub2 = setlistService.subscribeToPublicSetlists((setlists) => {
-      setPublicSetlists(setlists)
-      setPublicLoaded(true)
-    })
-    return () => { unsub1(); unsub2() }
+    return () => unsub()
   }, [setlistService])
 
-  const loading = !personalLoaded || !publicLoaded
+  const loading = !loaded
 
-  // Merge, dedup, sort, filter
+  // Sort and filter
   const editableSetlists = useMemo(() => {
-    const map = new Map<string, Setlist>()
-    // Personal first, then public overwrites duplicates
-    for (const s of personalSetlists) map.set(s.id, s)
-    for (const s of publicSetlists) {
-      if (!map.has(s.id)) map.set(s.id, s)
-    }
-
-    let merged = Array.from(map.values())
+    let list = [...allSetlists]
 
     // Sort by updatedAt desc (fallback to date)
-    merged.sort((a, b) => {
+    list.sort((a, b) => {
       const ta = toTimestamp(a.updatedAt) || toTimestamp(a.date)
       const tb = toTimestamp(b.updatedAt) || toTimestamp(b.date)
       return tb - ta
@@ -88,11 +75,11 @@ export function useAddToSetlist() {
     // Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase()
-      merged = merged.filter(s => s.name.toLowerCase().includes(q))
+      list = list.filter(s => s.name.toLowerCase().includes(q))
     }
 
-    return merged
-  }, [personalSetlists, publicSetlists, searchQuery])
+    return list
+  }, [allSetlists, searchQuery])
 
   // Open the sheet for given songs
   const openForSongs = useCallback((songs: DriveFile[]) => {

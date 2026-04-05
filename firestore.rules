@@ -78,30 +78,22 @@ service cloud.firestore {
     }
 
     // SETLISTS Collection (The new root collection)
+    // v4.0: All setlists are public — no private/public distinction for access control.
     match /setlists/{setlistId} {
-      // 1. READ: Allow if Public OR User is Owner OR Admin OR Band Leader OR Scheduled Musician
-      allow read: if (resource.data.isPublic == true)
-                  || isOwner(resource)
-                  || isAdmin()
-                  || isBandLeader()
-                  || (resource.data.assignedUids != null && request.auth.uid in resource.data.assignedUids);
+      // 1. READ: All members can read all setlists
+      allow read: if isMember();
 
-      // 2. CREATE: 
-      //    - Members can create private setlists.
-      //    - Only Leaders/Admins can create PUBLIC setlists.
-      allow create: if isSignedIn() 
-                    && request.resource.data.ownerId == request.auth.uid
-                    && (request.resource.data.isPublic != true || isBandLeader());
+      // 2. CREATE: Any signed-in user, must set ownerId to self
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid;
 
-      // 3. UPDATE:
-      //    - Owner can always update.
-      //    - Leaders/Admins can update ANY Public setlist.
+      // 3. UPDATE: Owner, Band Leader, or Admin
       allow update: if isOwner(resource)
-                    || (resource.data.isPublic == true && isBandLeader())
+                    || isBandLeader()
                     || isAdmin();
 
-      // 4. DELETE: Owner, Admin, or Band Leader (public setlists only)
-      allow delete: if isOwner(resource) || isAdmin() || (isBandLeader() && resource.data.isPublic == true);
+      // 4. DELETE: Owner, Band Leader, or Admin
+      allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
 
     }
     

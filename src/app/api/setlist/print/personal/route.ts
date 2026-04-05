@@ -33,9 +33,11 @@ export const GET = createApiHandler(
         }
         const setlist = setlistDoc.data()!
 
-        // Verify access: must be public, owned by user, or user is a band leader
-        if (setlist.isPublic !== true && setlist.ownerId !== ctx.auth.uid && !ctx.auth.isBandLeader) {
-            return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+        // Verify access: owner or band leader (v4.0: all setlists are accessible to members)
+        // Access is already enforced by Firestore rules (isMember), but double-check for API safety
+        if (setlist.ownerId !== ctx.auth.uid && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
+            // Still allow — all members can read all setlists in v4.0
+            // This check is kept as a no-op placeholder for future role-based restrictions
         }
 
         // Load user profile for musician preferences

@@ -54,9 +54,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
     const COLLECTION_PATH = 'setlists';
 
     return {
-        // ===== PERSONAL SETLISTS =====
-
-        async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = false, additionalData: Partial<Setlist> = {}) {
+        async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = true, additionalData: Partial<Setlist> = {}) {
             try {
                 // Sanitize tracks: Firebase rejects undefined values
                 const cleanTracks = stripUndefinedDeep(tracks) as SetlistTrack[]
@@ -77,30 +75,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 throw e;
             }
         },
-        subscribeToPersonalSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
-            const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-            const q = query(
-                collectionRef,
-                where("ownerId", "==", userId),
-                // where("isPublic", "==", false), // Removed to include ALL my setlists (public or private)
-                orderBy("date", "desc"),
-                limit(50)
-            );
-
-            return onSnapshot(q, {
-                next: (snapshot) => {
-                    const setlists = snapshot.docs
-                        .map(doc => doc.data())
-                        .filter(Boolean) as Setlist[];
-                    callback(setlists, snapshot.metadata.fromCache);
-                },
-                error: (error) => {
-                    logger.error("Error subscribing to personal setlists:", error);
-                    if (onError) onError(error);
-                }
-            });
-        },
-
         // Subscribe to a single setlist by ID
         subscribeToSetlist(id: string, _isPublic: boolean, callback: (setlist: Setlist | null) => void) {
             const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
@@ -163,14 +137,11 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // ===== PUBLIC SETLISTS =====
-
-        // Subscribe to ALL public setlists
-        subscribeToPublicSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
+        // Subscribe to ALL setlists (v4.0: no private/public distinction)
+        subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
             const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
             const q = query(
                 collectionRef,
-                where("isPublic", "==", true),
                 orderBy("date", "desc"),
                 limit(50)
             );
@@ -183,30 +154,29 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     callback(setlists, snapshot.metadata.fromCache);
                 },
                 error: (error) => {
-                    logger.error("Error subscribing to public setlists:", error)
+                    logger.error("Error subscribing to setlists:", error)
                     if (onError) onError(error)
                 }
             });
         },
 
-        // Copy a public setlist to personal collection
-        async copyToPersonal(publicSetlistId: string, setlistData: Setlist) {
+        // Duplicate a setlist (creates a copy owned by current user)
+        async duplicateSetlist(sourceSetlistId: string, setlistData: Setlist) {
             try {
-                // Just create a new doc in the SAME collection, but owned by ME and PRIVATE
                 const copyData = stripUndefinedDeep({
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
                     tracks: setlistData.tracks,
                     trackCount: setlistData.tracks.length,
-                    isPublic: false,
+                    isPublic: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
-                    copiedFrom: publicSetlistId
+                    copiedFrom: sourceSetlistId
                 }) as Record<string, unknown>
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
                 return docRef.id;
             } catch (e) {
-                logger.error("Error copying setlist: ", e);
+                logger.error("Error duplicating setlist: ", e);
                 throw e;
             }
         },
@@ -229,7 +199,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     eventDate: Timestamp.fromDate(targetDate),
                     tracks: source.tracks,
                     trackCount: source.tracks.length,
-                    isPublic: false,
+                    isPublic: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
@@ -255,7 +225,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     date: serverTimestamp(),
                     tracks: source.tracks,
                     trackCount: source.tracks.length,
-                    isPublic: false,
+                    isPublic: true,
                     isTemplate: true,
                     templateType: 'other',
                     ownerId: userId,

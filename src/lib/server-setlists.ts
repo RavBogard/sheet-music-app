@@ -4,10 +4,11 @@ import { logger } from "@/lib/logger"
 import { serializeSetlist } from "@/lib/server-auth"
 
 /**
- * Fetch public setlists server-side for instant SSR.
- * Returns the next 5 upcoming public setlists.
+ * Fetch upcoming setlists server-side for instant SSR.
+ * Returns the next 5 upcoming setlists.
+ * v4.0: No private/public distinction — all setlists are accessible.
  */
-export async function getUpcomingPublicSetlists() {
+export async function getUpcomingSetlists() {
     try {
         initAdmin()
         const db = getFirestore()
@@ -17,7 +18,6 @@ export async function getUpcomingPublicSetlists() {
 
         const snap = await db
             .collection("setlists")
-            .where("isPublic", "==", true)
             .where("eventDate", ">=", now)
             .orderBy("eventDate", "asc")
             .limit(5)
@@ -31,16 +31,15 @@ export async function getUpcomingPublicSetlists() {
 }
 
 /**
- * Fetch recent public setlists (for users with no upcoming events).
+ * Fetch recent setlists (for users with no upcoming events).
  */
-export async function getRecentPublicSetlists() {
+export async function getRecentSetlists() {
     try {
         initAdmin()
         const db = getFirestore()
 
         const snap = await db
             .collection("setlists")
-            .where("isPublic", "==", true)
             .orderBy("date", "desc")
             .limit(5)
             .get()
@@ -53,45 +52,29 @@ export async function getRecentPublicSetlists() {
 }
 
 /**
- * Fetch a user's personal setlists server-side.
+ * Fetch all setlists server-side for the dashboard.
+ * v4.0: No private/public distinction.
  */
-export async function getPersonalSetlists(userId: string) {
+export async function getAllSetlists() {
     try {
         initAdmin()
         const db = getFirestore()
 
         const snap = await db
             .collection("setlists")
-            .where("ownerId", "==", userId)
             .orderBy("date", "desc")
             .limit(50)
             .get()
 
         return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
     } catch (error) {
-        logger.warn("Server personal setlist fetch failed:", error)
+        logger.warn("Server all setlist fetch failed:", error)
         return []
     }
 }
 
-/**
- * Fetch all recent public setlists server-side for the dashboard.
- */
-export async function getAllPublicSetlists() {
-    try {
-        initAdmin()
-        const db = getFirestore()
-
-        const snap = await db
-            .collection("setlists")
-            .where("isPublic", "==", true)
-            .orderBy("date", "desc")
-            .limit(50)
-            .get()
-
-        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
-    } catch (error) {
-        logger.warn("Server all public setlist fetch failed:", error)
-        return []
-    }
-}
+// Backward-compat aliases (deprecated — use new names)
+export const getUpcomingPublicSetlists = getUpcomingSetlists
+export const getRecentPublicSetlists = getRecentSetlists
+export const getPersonalSetlists = (_userId: string) => getAllSetlists()
+export const getAllPublicSetlists = getAllSetlists

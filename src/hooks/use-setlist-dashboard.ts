@@ -17,8 +17,11 @@ export interface UseSetlistDashboardProps {
     onBack?: () => void
     onSelect?: (setlist: Setlist) => void
     onCreateNew?: () => void
+    /** @deprecated Use initialSetlists instead */
     initialPersonalSetlists?: Setlist[]
+    /** @deprecated Use initialSetlists instead */
     initialPublicSetlists?: Setlist[]
+    initialSetlists?: Setlist[]
     serverIsBandLeader?: boolean
     serverIsMember?: boolean
     serverIsAdmin?: boolean
@@ -29,6 +32,7 @@ export function useSetlistDashboard({
     onBack, onSelect, onCreateNew,
     initialPersonalSetlists = [],
     initialPublicSetlists = [],
+    initialSetlists,
     serverIsBandLeader = false,
     serverIsMember = false,
     serverIsAdmin = false,
@@ -47,9 +51,10 @@ export function useSetlistDashboard({
 
     const { downloadSetlist, isDownloading } = useOffline()
 
-    const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>(initialPersonalSetlists)
-    const [publicSetlists, setPublicSetlists] = useState<Setlist[]>(initialPublicSetlists)
-    const [loading, setLoading] = useState(initialPersonalSetlists.length === 0 && initialPublicSetlists.length === 0)
+    // v4.0: single unified setlist list (no personal/public split)
+    const mergedInitial = initialSetlists || [...initialPublicSetlists, ...initialPersonalSetlists]
+    const [setlists, setSetlists] = useState<Setlist[]>(mergedInitial)
+    const [loading, setLoading] = useState(mergedInitial.length === 0)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar' | 'matrix'>('list')
@@ -71,39 +76,24 @@ export function useSetlistDashboard({
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user?.uid, user?.displayName])
 
-    // Subscribe to personal setlists
+    // Subscribe to all setlists (v4.0: single unified list)
     useEffect(() => {
-        if (!user?.uid || !setlistService) {
+        if (!setlistService) {
             setLoading(false)
             return
         }
         setLoading(true)
         setError(null)
-        const unsubscribe = setlistService.subscribeToPersonalSetlists(
-            (data) => { setPersonalSetlists(data); setLoading(false) },
+        const unsubscribe = setlistService.subscribeToAllSetlists(
+            (data) => { setSetlists(data); setLoading(false) },
             (err) => {
-                logger.error("Personal setlist subscription error:", err)
-                setError("Failed to load your personal setlists. Please check your connection.")
+                logger.error("Setlist subscription error:", err)
+                setError("Failed to load setlists. Please check your connection.")
                 setLoading(false)
             }
         )
         return () => unsubscribe()
-    }, [setlistService, user?.uid])
-
-    // Subscribe to public setlists
-    useEffect(() => {
-        if (!setlistService) return
-        const unsubscribe = setlistService.subscribeToPublicSetlists(
-            (data) => setPublicSetlists(data),
-            (err) => logger.error("Public setlist subscription error:", err)
-        )
-        return () => unsubscribe()
     }, [setlistService])
-
-    // Force 'public' tab if guest
-    useEffect(() => {
-        if (!user?.uid) setActiveTab('public')
-    }, [user?.uid])
 
     // Load library in background
     useLibrary()
@@ -123,7 +113,7 @@ export function useSetlistDashboard({
 
     const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (setlist.isPublic && setlist.ownerId !== user?.uid && !isAdmin && !isBandLeader) {
+        if (setlist.ownerId !== user?.uid && !isAdmin && !isBandLeader) {
             toast.error("You can only delete setlists you created")
             return
         }
@@ -152,9 +142,8 @@ export function useSetlistDashboard({
     const confirmDuplicate = async () => {
         if (!setlistService || !user || !setlistToDuplicate) return
         try {
-            await setlistService.copyToPersonal(setlistToDuplicate.id, setlistToDuplicate)
+            await setlistService.duplicateSetlist(setlistToDuplicate.id, setlistToDuplicate)
             toast.success("Setlist duplicated successfully!")
-            setActiveTab('personal')
         } catch {
             toast.error("Failed to duplicate setlist.")
         }
@@ -300,7 +289,7 @@ export function useSetlistDashboard({
             handleSelect({
                 id, name, tracks, trackCount: tracks.length,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: false,
+                eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: true,
             })
         } catch (err: unknown) {
             toast.dismiss(templateToastId)
@@ -316,16 +305,16 @@ export function useSetlistDashboard({
         }
     }
 
-    // Derived data
-    const allSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
+    // Derived data (v4.0: single list, no tab switching)
+    const allSetlists = setlists
 
     const availableRabbis = useMemo(() => {
         const rabbis = new Set<string>()
-            ;[...personalSetlists, ...publicSetlists].forEach(s => {
-                if (s.rabbi) rabbis.add(s.rabbi)
-            })
+        setlists.forEach(s => {
+            if (s.rabbi) rabbis.add(s.rabbi)
+        })
         return Array.from(rabbis).sort()
-    }, [personalSetlists, publicSetlists])
+    }, [setlists])
 
     const displayedSetlists = useMemo(() => {
         let filtered = allSetlists
@@ -364,11 +353,11 @@ export function useSetlistDashboard({
         .filter(s => { const d = getDate(s); return !d || d < today })
 
     const placeholders: { date: Date }[] = []
-    if (user && activeTab === 'public') {
+    if (user) {
         for (let i = 0; i < 7; i++) {
             const d = new Date(today)
             d.setDate(today.getDate() + i)
-            const exists = publicSetlists.some(s => { const sd = getDate(s); return sd && sd.toDateString() === d.toDateString() })
+            const exists = setlists.some(s => { const sd = getDate(s); return sd && sd.toDateString() === d.toDateString() })
             if (!exists && d.getDay() === 6) {
                 placeholders.push({ date: d })
             }

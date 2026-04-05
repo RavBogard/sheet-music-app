@@ -17,7 +17,7 @@ export function PublicSetlistListing() {
 
     useEffect(() => {
         const service = createSetlistService(null, null)
-        const unsub = service.subscribeToPublicSetlists((data) => {
+        const unsub = service.subscribeToAllSetlists((data) => {
             setSetlists(data)
             setLoading(false)
         })

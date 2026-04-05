@@ -55,6 +55,9 @@ vi.mock('@/lib/server-auth', () => ({
 // ── Import after mocks ──
 
 import {
+    getUpcomingSetlists,
+    getRecentSetlists,
+    getAllSetlists,
     getUpcomingPublicSetlists,
     getRecentPublicSetlists,
     getPersonalSetlists,
@@ -69,57 +72,62 @@ function makeDoc(id: string, data: Record<string, unknown>) {
 
 // ── Tests ──
 
-describe('getUpcomingPublicSetlists', () => {
+describe('getUpcomingSetlists', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockShouldThrow = false
         mockSnapshotDocs = [
-            makeDoc('s1', { name: 'Shabbat', isPublic: true, eventDate: '2026-04-01' }),
-            makeDoc('s2', { name: 'Friday Night', isPublic: true, eventDate: '2026-04-02' }),
+            makeDoc('s1', { name: 'Shabbat', eventDate: '2026-04-01' }),
+            makeDoc('s2', { name: 'Friday Night', eventDate: '2026-04-02' }),
         ]
     })
 
-    it('returns serialized setlists for public upcoming setlists', async () => {
-        const result = await getUpcomingPublicSetlists()
+    it('returns serialized setlists for upcoming setlists', async () => {
+        const result = await getUpcomingSetlists()
 
         expect(result).toHaveLength(2)
-        expect(result[0]).toEqual({ id: 's1', name: 'Shabbat', isPublic: true, eventDate: '2026-04-01' })
-        expect(result[1]).toEqual({ id: 's2', name: 'Friday Night', isPublic: true, eventDate: '2026-04-02' })
+        expect(result[0]).toEqual({ id: 's1', name: 'Shabbat', eventDate: '2026-04-01' })
+        expect(result[1]).toEqual({ id: 's2', name: 'Friday Night', eventDate: '2026-04-02' })
     })
 
-    it('queries with correct filters (isPublic, eventDate >= now)', async () => {
-        await getUpcomingPublicSetlists()
+    it('queries with correct filters (eventDate >= now, no isPublic filter)', async () => {
+        await getUpcomingSetlists()
 
-        expect(mockWhere).toHaveBeenCalledWith('isPublic', '==', true)
         expect(mockWhere).toHaveBeenCalledWith('eventDate', '>=', expect.any(Date))
+        expect(mockWhere).not.toHaveBeenCalledWith('isPublic', '==', true)
         expect(mockOrderBy).toHaveBeenCalledWith('eventDate', 'asc')
         expect(mockLimit).toHaveBeenCalledWith(5)
     })
 
     it('returns empty array when no matching setlists', async () => {
         mockSnapshotDocs = []
-        const result = await getUpcomingPublicSetlists()
+        const result = await getUpcomingSetlists()
         expect(result).toEqual([])
     })
 
     it('returns empty array on Firestore error', async () => {
         mockShouldThrow = true
-        const result = await getUpcomingPublicSetlists()
+        const result = await getUpcomingSetlists()
         expect(result).toEqual([])
+    })
+
+    it('backward-compat alias getUpcomingPublicSetlists works', async () => {
+        const result = await getUpcomingPublicSetlists()
+        expect(result).toHaveLength(2)
     })
 })
 
-describe('getRecentPublicSetlists', () => {
+describe('getRecentSetlists', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockShouldThrow = false
         mockSnapshotDocs = [
-            makeDoc('s1', { name: 'Recent Service', isPublic: true }),
+            makeDoc('s1', { name: 'Recent Service' }),
         ]
     })
 
     it('returns serialized setlists ordered by date desc', async () => {
-        const result = await getRecentPublicSetlists()
+        const result = await getRecentSetlists()
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe('s1')
@@ -129,12 +137,17 @@ describe('getRecentPublicSetlists', () => {
 
     it('returns empty array on error', async () => {
         mockShouldThrow = true
-        const result = await getRecentPublicSetlists()
+        const result = await getRecentSetlists()
         expect(result).toEqual([])
+    })
+
+    it('backward-compat alias getRecentPublicSetlists works', async () => {
+        const result = await getRecentPublicSetlists()
+        expect(result).toHaveLength(1)
     })
 })
 
-describe('getPersonalSetlists', () => {
+describe('getPersonalSetlists (backward-compat alias)', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockShouldThrow = false
@@ -143,11 +156,11 @@ describe('getPersonalSetlists', () => {
         ]
     })
 
-    it('filters by ownerId matching userId parameter', async () => {
+    it('returns all setlists (no longer filters by ownerId)', async () => {
         const result = await getPersonalSetlists('user-abc')
 
         expect(result).toHaveLength(1)
-        expect(mockWhere).toHaveBeenCalledWith('ownerId', '==', 'user-abc')
+        // v4.0: getPersonalSetlists is now an alias for getAllSetlists
         expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
         expect(mockLimit).toHaveBeenCalledWith(50)
     })
@@ -159,28 +172,33 @@ describe('getPersonalSetlists', () => {
     })
 })
 
-describe('getAllPublicSetlists', () => {
+describe('getAllSetlists', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockShouldThrow = false
         mockSnapshotDocs = [
-            makeDoc('s1', { name: 'Public 1', isPublic: true }),
-            makeDoc('s2', { name: 'Public 2', isPublic: true }),
+            makeDoc('s1', { name: 'Setlist 1' }),
+            makeDoc('s2', { name: 'Setlist 2' }),
         ]
     })
 
-    it('returns up to 50 public setlists', async () => {
-        const result = await getAllPublicSetlists()
+    it('returns up to 50 setlists without isPublic filter', async () => {
+        const result = await getAllSetlists()
 
         expect(result).toHaveLength(2)
-        expect(mockWhere).toHaveBeenCalledWith('isPublic', '==', true)
+        expect(mockWhere).not.toHaveBeenCalledWith('isPublic', '==', true)
         expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
         expect(mockLimit).toHaveBeenCalledWith(50)
     })
 
     it('returns empty array on error', async () => {
         mockShouldThrow = true
-        const result = await getAllPublicSetlists()
+        const result = await getAllSetlists()
         expect(result).toEqual([])
+    })
+
+    it('backward-compat alias getAllPublicSetlists works', async () => {
+        const result = await getAllPublicSetlists()
+        expect(result).toHaveLength(2)
     })
 })

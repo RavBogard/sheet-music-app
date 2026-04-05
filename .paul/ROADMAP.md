@@ -7,7 +7,7 @@ Phases: 3
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Teardown Old Live System | 1/1 | Planning | — |
+| 1 | Teardown Old Live System | 1/1 | Complete | 2026-04-04 |
 | 2 | Remove Private Setlists | TBD | Not started | — |
 | 3 | Inline Swap + Toast | TBD | Not started | — |
 

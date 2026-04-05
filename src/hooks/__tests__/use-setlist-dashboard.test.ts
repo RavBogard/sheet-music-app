@@ -15,20 +15,18 @@ const mockUseAuth = vi.fn((): { user: { uid: string; displayName: string } | nul
 }))
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => mockUseAuth() }))
 
-const mockSubscribePersonal = vi.fn((_onData?: unknown, _onError?: unknown) => vi.fn())
-const mockSubscribePublic = vi.fn((_onData?: unknown, _onError?: unknown) => vi.fn())
+const mockSubscribeAll = vi.fn((_onData?: unknown, _onError?: unknown) => vi.fn())
 const mockDeleteSetlist = vi.fn().mockResolvedValue(undefined)
-const mockCopyToPersonal = vi.fn().mockResolvedValue(undefined)
+const mockDuplicateSetlist = vi.fn().mockResolvedValue(undefined)
 const mockCloneForNextWeek = vi.fn().mockResolvedValue('cloned-id')
 const mockSaveAsTemplate = vi.fn().mockResolvedValue(undefined)
 const mockCreateSetlist = vi.fn().mockResolvedValue('new-id')
 
 vi.mock('@/lib/setlist-firebase', () => ({
   createSetlistService: vi.fn(() => ({
-    subscribeToPersonalSetlists: (...args: unknown[]) => mockSubscribePersonal(...args),
-    subscribeToPublicSetlists: (...args: unknown[]) => mockSubscribePublic(...args),
+    subscribeToAllSetlists: (...args: unknown[]) => mockSubscribeAll(...args),
     deleteSetlist: (...args: unknown[]) => mockDeleteSetlist(...args),
-    copyToPersonal: (...args: unknown[]) => mockCopyToPersonal(...args),
+    duplicateSetlist: (...args: unknown[]) => mockDuplicateSetlist(...args),
     cloneForNextWeek: (...args: unknown[]) => mockCloneForNextWeek(...args),
     saveAsTemplate: (...args: unknown[]) => mockSaveAsTemplate(...args),
     createSetlist: (...args: unknown[]) => mockCreateSetlist(...args),
@@ -136,10 +134,9 @@ describe('useSetlistDashboard', () => {
     expect(result.current.searchQuery).toBe('')
   })
 
-  it('subscribes to personal and public setlists on mount', () => {
+  it('subscribes to all setlists on mount', () => {
     renderHook(() => useSetlistDashboard({}))
-    expect(mockSubscribePersonal).toHaveBeenCalled()
-    expect(mockSubscribePublic).toHaveBeenCalled()
+    expect(mockSubscribeAll).toHaveBeenCalled()
   })
 
   it('forces public tab when no user', () => {
@@ -273,7 +270,7 @@ describe('useSetlistDashboard', () => {
     expect(result.current.deleteConfirmOpen).toBe(false)
   })
 
-  it('confirmDuplicate calls copyToPersonal and switches to personal tab', async () => {
+  it('confirmDuplicate calls duplicateSetlist', async () => {
     const { result } = renderHook(() => useSetlistDashboard({}))
     const setlist = makeSetlist()
 
@@ -281,9 +278,8 @@ describe('useSetlistDashboard', () => {
 
     await act(async () => { await result.current.confirmDuplicate() })
 
-    expect(mockCopyToPersonal).toHaveBeenCalledWith('setlist-1', setlist)
+    expect(mockDuplicateSetlist).toHaveBeenCalledWith('setlist-1', setlist)
     expect(toast.success).toHaveBeenCalledWith('Setlist duplicated successfully!')
-    expect(result.current.activeTab).toBe('personal')
   })
 
   it('handleCloneNextWeekClick calls cloneForNextWeek', async () => {

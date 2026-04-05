@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 
 interface SetlistToolbarProps {
-    activeTab: 'personal' | 'public'
-    onTabChange: (tab: 'personal' | 'public') => void
+    /** @deprecated No longer used — kept for backward compat */
+    activeTab?: 'personal' | 'public'
+    /** @deprecated No longer used — kept for backward compat */
+    onTabChange?: (tab: 'personal' | 'public') => void
     view: 'list' | 'calendar' | 'matrix'
     onViewChange: (view: 'list' | 'calendar' | 'matrix') => void
-    showPersonalTab: boolean
+    /** @deprecated No longer used */
+    showPersonalTab?: boolean
     searchQuery: string
     onSearchChange: (query: string) => void
     rabbiFilter: string
@@ -19,7 +22,7 @@ interface SetlistToolbarProps {
 }
 
 export function SetlistToolbar({
-    activeTab, onTabChange, view, onViewChange, showPersonalTab,
+    view, onViewChange,
     searchQuery, onSearchChange,
     rabbiFilter, onRabbiFilterChange, availableRabbis,
 }: SetlistToolbarProps) {
@@ -28,26 +31,9 @@ export function SetlistToolbar({
     return (
         <div className="px-3 pt-4 md:px-6 md:pt-6 shrink-0 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex bg-card p-1 rounded-xl w-fit">
-                    <Button
-                        variant={activeTab === 'public' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => onTabChange('public')}
-                        className={`transition-all ${activeTab === 'public' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                    >
-                        Public Library
-                    </Button>
-                    {showPersonalTab && (
-                        <Button
-                            variant={activeTab === 'personal' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => onTabChange('personal')}
-                            className={`transition-all ${activeTab === 'personal' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                        >
-                            My Personal
-                        </Button>
-                    )}
-                </div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    All Setlists
+                </h2>
 
                 <div className="flex items-center gap-2">
                     <Button

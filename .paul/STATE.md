@@ -10,48 +10,40 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.0 Live Swap Redesign
-Phase: 1 of 3 (Teardown Old Live System) — Planning
-Plan: 01-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-04-04 — Created .paul/phases/01-teardown-old-live/01-01-PLAN.md
+Phase: 2 of 3 (Remove Private Setlists) — Not started
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-04 — Phase 1 complete (Teardown Old Live System)
 
 Progress:
-- Milestone: [░░░░░░░░░░] 0%
-- Phase 1: [░░░░░░░░░░] 0%
+- Milestone: [███░░░░░░░] 33%
+- Phase 1: [██████████] 100% ✓
+- Phase 2: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ○        ○        ○     [Ready for Phase 2 PLAN]
 ```
 
 ## Accumulated Context
 
 ### Decisions
-- Old live system (v3.0-v3.4) being completely replaced — over-engineered for the use case
-- No separate "live mode" — normal performance view IS the live experience
-- Swap = inline editing from performance view, not a separate flow
-- Fuzzy name matching for swap suggestions (most swaps are between similarly-named songs like Barechu variants)
-- All setlists public — no private/public distinction
-- Fuse.js already available for fuzzy search
-- Firestore real-time sync handles "everyone sees changes" — no new infrastructure
-
-### Deferred Issues
-- CRIT-003 (bridge credentials) — Accepted risk, revisit if multi-tenant
-- BUG-022 (rate limits on all API routes) — Large effort, deferred
-- BUG-020 (108 non-null assertions) — Large effort, deferred
+- Old live system fully removed (18 files, ~2,000 lines)
+- Keep liturgicalSlot on library file metadata (data, not swap system)
+- currentTrackIndex always -1, setCurrentPosition is no-op
 
 ### Git State
-Last commit: 6db33cd
+Last commit: f5fc48b
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: Milestone v4.0 created, ready to plan Phase 1
-Next action: /paul:plan for Phase 1 (Teardown Old Live System)
+Stopped at: Phase 1 complete, Phase 2 ready to plan
+Next action: /paul:plan for Phase 2 (Remove Private Setlists)
 Resume file: .paul/ROADMAP.md
 
 ---

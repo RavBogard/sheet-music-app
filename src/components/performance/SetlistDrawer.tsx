@@ -117,7 +117,7 @@ export function SetlistDrawer() {
         if (open && showPublicPicker) {
             setLoading(true)
             const service = createSetlistService(user?.uid || null, user?.displayName || null)
-            const unsubscribe = service.subscribeToPublicSetlists(
+            const unsubscribe = service.subscribeToAllSetlists(
                 (data) => {
                     setPublicSetlists(data)
                     setLoading(false)

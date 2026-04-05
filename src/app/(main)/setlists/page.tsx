@@ -1,21 +1,16 @@
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
-import { getServerUser, getPersonalSetlists, getAllPublicSetlists } from "@/lib/server-auth"
+import { getServerUser } from "@/lib/server-auth"
+import { getAllSetlists } from "@/lib/server-setlists"
 
 export default async function SetlistsPage() {
-    // 1. Fetch user to know if we need personal setlists
-    const user = await getServerUser()
-
-    // 2. Fetch data server-side
-    // We can fetch concurrently for speed
-    const [publicSetlists, personalSetlists] = await Promise.all([
-        getAllPublicSetlists(),
-        user ? getPersonalSetlists(user.uid) : Promise.resolve([])
+    const [user, allSetlists] = await Promise.all([
+        getServerUser(),
+        getAllSetlists(),
     ])
 
     return (
         <SetlistDashboard
-            initialPersonalSetlists={personalSetlists as any}
-            initialPublicSetlists={publicSetlists as any}
+            initialSetlists={allSetlists as any}
             serverIsBandLeader={user?.isBandLeader || false}
             serverIsMember={user?.isMember || false}
             serverIsAdmin={user?.isAdmin || false}

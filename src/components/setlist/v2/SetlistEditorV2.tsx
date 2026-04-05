@@ -261,8 +261,8 @@ export function SetlistEditorV2({
     const handleDuplicateSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
         try {
-            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi } as Parameters<typeof editorService.copyToPersonal>[1]
-            const newId = await editorService.copyToPersonal(setlistId, currentSetlist)
+            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi } as Parameters<typeof editorService.duplicateSetlist>[1]
+            const newId = await editorService.duplicateSetlist(setlistId, currentSetlist)
             toast.success("Setlist duplicated!")
             router.push(`/setlists/${newId}`)
         } catch {

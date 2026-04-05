@@ -9,14 +9,12 @@ vi.mock('sonner', () => ({
 }))
 
 const mockUpdateSetlist = vi.fn().mockResolvedValue(undefined)
-const mockSubscribeToPersonalSetlists = vi.fn()
-const mockSubscribeToPublicSetlists = vi.fn()
+const mockSubscribeToAllSetlists = vi.fn()
 const mockSubscribeToSetlist = vi.fn()
 
 vi.mock('@/lib/setlist-firebase', () => ({
   createSetlistService: () => ({
-    subscribeToPersonalSetlists: mockSubscribeToPersonalSetlists,
-    subscribeToPublicSetlists: mockSubscribeToPublicSetlists,
+    subscribeToAllSetlists: mockSubscribeToAllSetlists,
     subscribeToSetlist: mockSubscribeToSetlist,
     updateSetlist: mockUpdateSetlist,
   }),
@@ -58,24 +56,17 @@ const makeSetlist = (overrides: Partial<Setlist> = {}): Setlist => ({
 })
 
 describe('useAddToSetlist', () => {
-  let personalCallback: ((setlists: Setlist[], fromCache: boolean) => void) | null = null
-  let publicCallback: ((setlists: Setlist[], fromCache: boolean) => void) | null = null
+  let allCallback: ((setlists: Setlist[], fromCache: boolean) => void) | null = null
 
   beforeEach(() => {
     vi.clearAllMocks()
-    personalCallback = null
-    publicCallback = null
+    allCallback = null
     mockAuth.isAdmin = false
     mockAuth.isBandLeader = true
     mockAuth.isMusician = false
 
-    mockSubscribeToPersonalSetlists.mockImplementation((cb: (setlists: Setlist[], fromCache: boolean) => void) => {
-      personalCallback = cb
-      return vi.fn() // unsubscribe
-    })
-
-    mockSubscribeToPublicSetlists.mockImplementation((cb: (setlists: Setlist[], fromCache: boolean) => void) => {
-      publicCallback = cb
+    mockSubscribeToAllSetlists.mockImplementation((cb: (setlists: Setlist[], fromCache: boolean) => void) => {
+      allCallback = cb
       return vi.fn() // unsubscribe
     })
   })
@@ -136,19 +127,16 @@ describe('useAddToSetlist', () => {
   // --- Setlist Merge/Sort/Filter ---
 
   describe('editableSetlists', () => {
-    it('merges personal and public setlists, deduplicated by ID', () => {
+    it('shows all setlists sorted by updatedAt desc', () => {
       const { result } = renderHook(() => useAddToSetlist())
 
-      const personal = makeSetlist({ id: 'sl-1', name: 'Personal', updatedAt: new Date('2026-03-10') })
-      const publicSl = makeSetlist({ id: 'sl-2', name: 'Public', isPublic: true, updatedAt: new Date('2026-03-15') })
-      const duplicate = makeSetlist({ id: 'sl-1', name: 'Personal (pub)', isPublic: true, updatedAt: new Date('2026-03-12') })
+      const sl1 = makeSetlist({ id: 'sl-1', name: 'Older', updatedAt: new Date('2026-03-10') })
+      const sl2 = makeSetlist({ id: 'sl-2', name: 'Newer', isPublic: true, updatedAt: new Date('2026-03-15') })
 
       act(() => {
-        personalCallback?.([personal], false)
-        publicCallback?.([publicSl, duplicate], false)
+        allCallback?.([sl1, sl2], false)
       })
 
-      // Should have 2 (deduplicated), sorted by updatedAt desc
       expect(result.current.editableSetlists).toHaveLength(2)
       expect(result.current.editableSetlists[0].id).toBe('sl-2') // most recent
       expect(result.current.editableSetlists[1].id).toBe('sl-1')
@@ -161,8 +149,7 @@ describe('useAddToSetlist', () => {
       const newer = makeSetlist({ id: 'sl-2', updatedAt: new Date('2026-03-15') })
 
       act(() => {
-        personalCallback?.([older, newer], false)
-        publicCallback?.([], false)
+        allCallback?.([older, newer], false)
       })
 
       expect(result.current.editableSetlists[0].id).toBe('sl-2')
@@ -176,8 +163,7 @@ describe('useAddToSetlist', () => {
       const s2 = makeSetlist({ id: 'sl-2', name: 'Friday Night', updatedAt: new Date('2026-03-14') })
 
       act(() => {
-        personalCallback?.([s1, s2], false)
-        publicCallback?.([], false)
+        allCallback?.([s1, s2], false)
       })
 
       act(() => {
@@ -192,13 +178,12 @@ describe('useAddToSetlist', () => {
   // --- Loading State ---
 
   describe('loading', () => {
-    it('starts as loading until subscriptions fire', () => {
+    it('starts as loading until subscription fires', () => {
       const { result } = renderHook(() => useAddToSetlist())
       expect(result.current.loading).toBe(true)
 
       act(() => {
-        personalCallback?.([], false)
-        publicCallback?.([], false)
+        allCallback?.([], false)
       })
 
       expect(result.current.loading).toBe(false)

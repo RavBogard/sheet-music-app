@@ -140,7 +140,7 @@ vi.mock("@/components/library/AddToSetlistSheet", () => ({
 vi.mock("@/lib/setlist-firebase", () => ({
     createSetlistService: () => ({
         deleteSetlist: vi.fn(),
-        copyToPersonal: vi.fn(),
+        duplicateSetlist: vi.fn(),
     }),
 }))
 vi.mock("@/lib/template-firebase", () => ({
