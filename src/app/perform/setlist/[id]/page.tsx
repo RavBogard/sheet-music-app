@@ -11,7 +11,7 @@
  * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
  */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -21,6 +21,11 @@ import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { useAuth } from "@/lib/auth-context"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
+import { SwapPicker } from "@/components/performance/SwapPicker"
+import { SwapChangeToast } from "@/components/performance/SwapChangeToast"
+import { createSetlistService } from "@/lib/setlist-firebase"
+import { useLibrary } from "@/hooks/use-library"
+import type { SetlistTrack, DriveFile } from "@/types/models"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 export default function SetlistPerformPage() {
@@ -45,8 +50,29 @@ export default function SetlistPerformPage() {
 
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
-    const { isMusician, isBandLeader, isAdmin } = useAuth()
+    const [swapTarget, setSwapTarget] = useState<{ index: number; track: SetlistTrack } | null>(null)
+    const lastOwnSwapRef = useRef<number | null>(null)
+    const { user, isMusician, isBandLeader, isAdmin } = useAuth()
     const canPrint = isMusician || isBandLeader || isAdmin
+
+    // Ensure library data is loaded for SwapPicker search
+    useLibrary()
+
+    const setlistService = useMemo(
+        () => createSetlistService(user?.uid || null, user?.displayName || null),
+        [user]
+    )
+
+    const handleSwapSelect = useCallback(async (file: DriveFile) => {
+        if (!swapTarget || !setlistService) return
+        lastOwnSwapRef.current = swapTarget.index
+        await setlistService.swapTrack(resolvedSetlistId, swapTarget.index, tracks, {
+            fileId: file.id,
+            title: file.name.replace(/\.[^.]+$/, ''),
+            key: file.metadata?.key,
+        })
+        setSwapTarget(null)
+    }, [swapTarget, setlistService, resolvedSetlistId, tracks])
 
     // Offline connectivity indicator
     const [isOffline, setIsOffline] = useState(false)
@@ -174,6 +200,7 @@ export default function SetlistPerformPage() {
                 onSongTap={(index) => setActiveSongIndex(index)}
                 onLeaderSetPosition={setCurrentPosition}
                 serviceNotes={serviceNotes}
+                onSwapTap={isLeader ? (index) => setSwapTarget({ index, track: tracks[index] }) : undefined}
             />
 
             {/* PDF overlay: renders on top of setlist when a song is tapped */}
@@ -209,6 +236,17 @@ export default function SetlistPerformPage() {
                     assignedMusicians={musicians}
                     rabbi={rabbi}
                     onClose={() => setShowPrintModal(false)}
+                />
+            )}
+
+            <SwapChangeToast tracks={tracks} lastOwnSwapRef={lastOwnSwapRef} />
+
+            {swapTarget && (
+                <SwapPicker
+                    open={!!swapTarget}
+                    onClose={() => setSwapTarget(null)}
+                    currentTrack={swapTarget.track}
+                    onSelectReplacement={handleSwapSelect}
                 />
             )}
         </div>

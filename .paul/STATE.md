@@ -10,40 +10,43 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.0 Live Swap Redesign
-Phase: 2 of 3 (Remove Private Setlists) — Not started
+Phase: 3 of 3 (Inline Swap + Toast) — Not started
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-04-04 — Phase 1 complete (Teardown Old Live System)
+Last activity: 2026-04-04 — Phase 2 complete (Remove Private Setlists)
 
 Progress:
-- Milestone: [███░░░░░░░] 33%
+- Milestone: [██████░░░░] 66%
 - Phase 1: [██████████] 100% ✓
-- Phase 2: [░░░░░░░░░░] 0%
+- Phase 2: [██████████] 100% ✓
+- Phase 3: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready for Phase 2 PLAN]
+  ○        ○        ○     [Ready for Phase 3 PLAN]
 ```
 
 ## Accumulated Context
 
 ### Decisions
 - Old live system fully removed (18 files, ~2,000 lines)
-- Keep liturgicalSlot on library file metadata (data, not swap system)
-- currentTrackIndex always -1, setCurrentPosition is no-op
+- All setlists public — no personal/public distinction
+- Keep isPublic field for backwards compat, just don't check it
+- Keep ownerId for "created by" display
+- duplicateSetlist replaces copyToPersonal
 
 ### Git State
-Last commit: f5fc48b
+Last commit: b0124f1
 Branch: master
 
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: Phase 1 complete, Phase 2 ready to plan
-Next action: /paul:plan for Phase 2 (Remove Private Setlists)
+Stopped at: Phase 2 complete, Phase 3 ready to plan
+Next action: /paul:plan for Phase 3 (Inline Swap + Toast)
 Resume file: .paul/ROADMAP.md
 
 ---

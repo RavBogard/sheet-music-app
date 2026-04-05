@@ -13,6 +13,7 @@ export interface SetlistViewProps {
     onSongTap: (index: number) => void
     onLeaderSetPosition: (index: number) => void
     serviceNotes?: string | null
+    onSwapTap?: (index: number) => void
 }
 
 export function SetlistView({
@@ -24,6 +25,7 @@ export function SetlistView({
     onSongTap,
     onLeaderSetPosition,
     serviceNotes,
+    onSwapTap,
 }: SetlistViewProps) {
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
     const _transpositionKey = useMemo(
@@ -53,6 +55,7 @@ export function SetlistView({
                         isLeader={isLeader}
                         onSongTap={() => onSongTap(index)}
                         onLeaderSetPosition={() => onLeaderSetPosition(index)}
+                        onSwapTap={onSwapTap ? () => onSwapTap(index) : undefined}
                     />
                 ))}
 

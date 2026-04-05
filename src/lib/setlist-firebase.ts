@@ -261,6 +261,23 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
+        // Swap a single track in a setlist (inline song replacement)
+        async swapTrack(setlistId: string, trackIndex: number, currentTracks: SetlistTrack[], replacement: { fileId: string; title: string; key?: string }) {
+            const newTracks = [...currentTracks]
+            newTracks[trackIndex] = {
+                ...newTracks[trackIndex],
+                fileId: replacement.fileId,
+                title: replacement.title,
+                key: replacement.key || newTracks[trackIndex].key,
+            }
+            const docRef = doc(db, 'setlists', setlistId)
+            await updateDoc(docRef, {
+                tracks: stripUndefinedDeep(newTracks),
+                trackCount: newTracks.length,
+            })
+            logSetlistChange(setlistId, 'tracks_updated', userId || '', userName || 'Anonymous', { trackCount: newTracks.length }, newTracks as SetlistTrack[])
+        },
+
         // Make a public setlist private (UPDATE field)
         async makePrivate(setlistId: string) {
             try {
