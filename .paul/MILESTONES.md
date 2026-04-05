@@ -24,6 +24,7 @@ Completed milestone log for this project.
 | v3.2 Mobile Admin & Responsive Fixes | 2026-03-31 | 1 session | 2 phases, 2 plans |
 | v3.3 Live Mode Activation | 2026-04-04 | absorbed | absorbed into v3.4 |
 | v3.4 Fixes & Live Mode Activation | 2026-04-04 | 1 session | 3 phases, 2 plans |
+| v4.0 Live Swap Redesign | 2026-04-04 | 1 session | 3 phases, 3 plans |
 
 ---
 

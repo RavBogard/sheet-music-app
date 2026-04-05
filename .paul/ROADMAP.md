@@ -1,15 +1,20 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+
+To be defined in next milestone discussion.
+
+## Previous Milestone
 **v4.0 Live Swap Redesign**
-Status: In Progress
+Status: Complete
+Completed: 2026-04-04
 Phases: 3
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Teardown Old Live System | 1/1 | Complete | 2026-04-04 |
 | 2 | Remove Private Setlists | 1/1 | Complete | 2026-04-04 |
-| 3 | Inline Swap + Toast | 1/1 | Planning | — |
+| 3 | Inline Swap + Toast | 1/1 | Complete | 2026-04-04 |
 
 ### Phase 1: Teardown Old Live System
 
