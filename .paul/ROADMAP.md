@@ -1,18 +1,81 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v4.1 Kill Private Setlists (for real this time)**
+**v4.2 UX Polish & Band Onboarding**
 Status: 🚧 In Progress
-Phases: 0 of 1 complete
+Phases: 1 of 8 complete
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Kill Private Setlists | 1 | Planning | - |
+| 1 | Recursive Research: Bugs, Gaps, Failures | 1/1 | Complete | 2026-04-13 |
+| 1.1 | Concurrent-edit Safety | TBD | Not started | - |
+| 1.2 | Offline Truthiness | TBD | Not started | - |
+| 1.3 | Security Hardening | TBD | Not started | - |
+| 2 | Weekly Workflow Polish | TBD | Not started | - |
+| 3 | Stage UX for the Band | TBD | Not started | - |
+| 4 | Editor Ergonomics + Noise Cleanup | TBD | Not started | - |
+| 5 | Navigation + Schedule Hygiene | TBD | Not started | - |
+
+### Phase 1: Recursive Research: Bugs, Gaps, Failures ✓
+
+Focus: Multi-wave parallel audit across the whole app. Wave 1 dispatched 6 agents (bugs, missing UI, errors, pain points, inconsistencies, security); Wave 2 dispatched 3 drill-downs on the biggest uncertainties. 53+ findings; 2 P0s confirmed → became phases 1.1 and 1.2; 1 small security phase (1.3) added; ~20 P1s folded into Phases 2–5 scopes; P2s deferred.
+Deliverable: `.paul/phases/01-recursive-research/FINDINGS.md`
+
+### Phase 1.1: Concurrent-edit Safety (P0 — blocks band onboarding)
+
+Focus: Every write to `setlists/{id}.tracks` is a full-array replace with no transaction, no `arrayUnion`/`arrayRemove`, no version check. The editor hook `use-setlist-logic` doesn't subscribe to the setlist doc. Two concurrent editors silently destroy each other's work. Fix: Firestore `runTransaction` + `rev`/`updatedAt` precondition on every `tracks` write, plus `subscribeToSetlist` inside the editor hook with a "setlist changed — merge?" banner. Covers `setlist-firebase.ts` (`updateSetlist`, `swapTrack`), `use-setlist-logic.ts` (`performSave`, `restoreTracks`), `use-add-to-setlist.ts`, chat `handleApplyEdits`, `api/setlists/import/execute`, `api/setlist/publish` updates.
+Estimated effort: 10–14 hours.
+Plans: TBD (defined during /paul:plan)
+
+### Phase 1.2: Offline Truthiness (P0 — blocks first band service)
+
+Focus: v2.5 ripped out the service worker but left a UI layer that still reports files as "offline ready" based on signals that no longer mean anything. `use-offline.ts:99–116` counts failed fetches as successes. The "offline ready" pills, HeroCard ratio, `offline-manager.getOfflineStats`, and `PerformanceOfflineIndicator` banners all lie. Musicians will arrive at low-Wi-Fi sanctuaries with no charts and a green checkmark. Fix: kill the Cache-API pretense; add an IndexedDB blob store; `downloadFile`/`downloadSetlist` explicitly `res.blob()` and write to IDB; `SmartScoreViewer` prefers the IDB blob; every offline-state UI reads IDB ground truth. Keep a "Pre-load setlist" action so the weekly workflow survives.
+Estimated effort: ~7 hours.
+Plans: TBD (defined during /paul:plan)
+
+### Phase 1.3: Security Hardening
+
+Focus: Three small, independent items. (1) Commit `storage.rules` mirroring the Firestore `isMember()` gate for `library/**`, add to `firebase.json`, CI dry-run check — currently rules exist in the Firebase console only, invisible to version control. (2) Raise `/api/bridge/setup-code` entropy from ~30 bits to 50+ bits and tighten rate-limit tier specifically for that endpoint. (3) Add `checkRateLimit` to `/api/nudge-admin` and `/api/scheduling/calendar-feed/[token]`.
+Estimated effort: ~4 hours.
+Plans: TBD (defined during /paul:plan)
+
+### Phase 2: Weekly Workflow Polish
+
+Focus: The 90% clone-and-tweak flow. Immediate save after clone, "Saved Ns ago" indicator, `beforeunload`/`pagehide` save-flush fix (dropped promise), setlist list ordering (upcoming asc → past desc), role-aware dashboard hero CTA, drop template step from "+ New" wizard (Templates dropdown keeps auto-populate; auto-advance on template tap + Enter key binding in wizard), data-driven rabbi list in OverflowMenu, split NamePrompt/EditDetails, surface service notes always, referrer-based editor back button, OverflowMenu reorder + "Save as Template", unify "Gig Packet" / "Print" / "Share" copy, global Cmd/Ctrl+Z for undo/redo.
+Skills required: /ui-ux-pro-max
+Plans: TBD (defined during /paul:plan)
+
+### Phase 3: Stage UX for the Band
+
+Focus: Harden the live-performance view before the band is onboarded. Per-chart transposition override on `SetlistTrack`; bump amber cue-note contrast to full opacity; musician-side "Setlist updated" toast when swaps land (requires fixing the `notifySetlistUpdated` Firestore-rules-blocked `users` query — server-side or rule relaxation); bigger liturgical header hit area; mobile offline indicator (reads IDB ground truth from Phase 1.2); ErrorBoundary around `PDFOverlay` / `PDFViewer`; unify the two `/perform` route wrappers (`[fileId]` double-wraps with `fixed inset-0 z-50`); SwapPicker keyboard bindings (Enter / Esc / arrow keys) + don't pre-fill search with song-to-replace + apply the `setTimeout(100)` iOS autofocus hack; PDFOverlay Esc-to-close binding.
+Skills required: /ui-ux-pro-max
+Plans: TBD (defined during /paul:plan)
+
+### Phase 4: Editor Ergonomics + Noise Cleanup
+
+Focus: Merge dual onboarding cards into role-aware component (kills stacking bug); consolidate triple modal chain (SearchOverlay + AddSongsModal + AddToSetlistSheet); bump SwapPicker height on tablet portrait; collapse `toast.loading → dismiss → success` triples; replace routine success toasts with inline badges; empty-state CTAs; visible delete + move-up/down buttons for track rows; memoize `useSafeFirestoreSync` refs to kill listener churn; fix `useUpcomingPrep` stuck-loading on empty result; modernize TransferSetlistDialog + SetlistHistoryPanel (replace `window.confirm` and hand-rolled overlay with AlertDialog primitives); unify hardcoded `INSTRUMENTS` (`DashboardClient.tsx:30`) with `lib/musician-profile.ts` registry; consolidate duplicated `REQUIRED` band-instruments list; consolidate three `formatEventDate` copies into one helper; introduce shared `canEditSetlist()` helper (four predicate shapes today); introduce z-index design tokens (migrate dialogs we're already touching); add error toasts to ~10 silent-catch paths (expanded from the original 3); add fetch timeout/abort to `apiFetch` and PDF fetches.
+Skills required: /ui-ux-pro-max
+Plans: TBD (defined during /paul:plan)
+
+### Phase 5: Navigation + Schedule Hygiene
+
+Focus: Add Schedule tab to the mobile bottom bar. Strip blockout/availability UI from the Schedule page; keep Schedule as a read-only calendar of upcoming services + setlists. Delete the dead `musician_availability` composite index and orphaned code in `UnifiedCalendar.tsx`. Delete orphan routes `/settings/users` and `/settings/sound`. Remove `SetlistDrawer` if dead (confirm vs `SetlistView`). Trace and remove `monitor-live/commands/pending` if dead. Preserve RSVP flow, `scheduling_assignments` collection, MusicianPicker on setlists, and publish-and-notify emails.
+Skills required: /ui-ux-pro-max
+Plans: TBD (defined during /paul:plan)
+
+## Previous Milestone
+**v4.1 Kill Private Setlists (for real this time)**
+Status: Complete
+Completed: 2026-04-13
+Phases: 1
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Kill Private Setlists | 1/1 | Complete | 2026-04-13 |
 
 ### Phase 1: Kill Private Setlists
 
-Focus: Finish what v4.0 Phase 2 started. Remove `isPublic` from the type, schema, service signature, and every caller (wizard, chat, import, transfer, admin). One-shot Firestore migration to strip `isPublic` from existing docs. Remove lingering UI affordances. Add a guard test so the field can't be silently reintroduced.
-Plans: TBD (defined during /paul:plan)
+Focus: Finished what v4.0 Phase 2 started. Removed `isPublic` from the type, schema, service signature, and every caller. One-shot Firestore migration stripped the field from 25 of 26 existing setlist docs (idempotent). Removed lingering UI affordances. Added a regression-guard test.
 
 ## Previous Milestone
 **v4.0 Live Swap Redesign**
@@ -351,4 +414,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-13 (v4.1 milestone created)*
+*Last updated: 2026-04-13 (v4.1 complete; v4.2 created)*
