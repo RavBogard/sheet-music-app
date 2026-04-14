@@ -138,7 +138,7 @@ Resume file: `.paul/phases/v43-05-bugs-ux/05-01-SUMMARY.md`
 ## v4.3 Phase Progress
 - ✓ Phase 1 (audit)
 - 2/3 Phase 2 security triage: S01 ✓, S03 ✓, S02 deferred (decision plan needed)
-- 1/3 Phase 4 data integrity: D03 ✓, D01 pending, D02 pending
+- 2/3 Phase 4 data integrity: D03 ✓, D02 ✓, D01 pending
 - 1/4 Phase 5 bugs+UX: B01 ✓, B02 pending, U01 pending, U02 pending
 - Phases 3, 6–8 not started
 
