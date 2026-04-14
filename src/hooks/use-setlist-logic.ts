@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Timestamp } from "firebase/firestore"
 import { createSetlistService, StaleWriteError } from "@/lib/setlist-firebase"
+import { auth as firebaseAuth } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOffline } from "@/hooks/use-offline"
 import { useChatStore, ChatEditAction } from "@/lib/chat-store"
@@ -12,6 +13,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { notifySetlistUpdated } from "@/lib/notification-store"
 import { apiFetch } from "@/lib/api-client"
 import { saveLastUsedKey, loadLibraryMeta } from "@/lib/chord-cache"
+import { sendKeepaliveFlush } from "@/lib/setlist-flush"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -25,6 +27,17 @@ interface UseSetlistLogicProps {
     initialMusicians?: SetlistMusician[]
 
     onSave?: (id: string) => void
+}
+
+// Hoisted so both the in-page save path and the unload keepalive-fetch path
+// agree on the serialization format.
+function serializeEventDate(d?: Date | null): string | undefined {
+    if (!d) return undefined
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    // Store as Noon US Central (UTC-06:00) — day boundary reads the same everywhere.
+    return `${year}-${month}-${day}T12:00:00.000-06:00`
 }
 
 export function useSetlistLogic(props: UseSetlistLogicProps) {
@@ -255,29 +268,11 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
         setSaving(true)
         try {
-            const serializeDate = (d?: Date | null) => {
-                if (!d) return undefined
-                // User requested Central time default
-                // Format the local date as a YYYY-MM-DD string
-                const year = d.getFullYear()
-                const month = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-
-                // Store it as Noon in US Central Time (UTC-6 or UTC-5 depending on DST)
-                // The easiest way is to construct a string that gets parsed in Central Time
-                // However, since we want a stable ISO string to store in Firebase, we can
-                // use Noon UTC as before which works universally for dates, OR we can
-                // format the string in the browser's timezone but shifted to represent 12:00 PM Central time.
-                // Best approach: Store it as 12:00 PM UTC-06:00 (which is 18:00 UTC) 
-                // That way when people read it in Central time, it falls squarely on the same day.
-                return `${year}-${month}-${day}T12:00:00.000-06:00`
-            }
-
             const dataToSave = {
                 name: n,
                 tracks: t,
                 trackCount: t.length,
-                eventDate: serializeDate(ed),
+                eventDate: serializeEventDate(ed),
                 rabbi: rab,
                 serviceNotes: sn?.trim() || undefined,
                 musicians: mus.length > 0 ? mus : undefined,
@@ -287,7 +282,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 await setlistService.updateSetlist(id, dataToSave, lastSeenUpdatedAtRef.current)
             } else {
                 const newId = await setlistService.createSetlist(n, t, {
-                    eventDate: serializeDate(ed),
+                    eventDate: serializeEventDate(ed),
                     rabbi: rab,
                     serviceNotes: sn?.trim() || undefined,
                     musicians: mus.length > 0 ? mus : undefined,
@@ -369,10 +364,35 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
     }, [name, tracks, eventDate, rabbi, serviceNotes, musicians, canEdit])
 
-    // Flush pending saves when user navigates away or switches apps
-
+    // Keep a fresh Firebase ID token so the unload-flush fetch can attach a
+    // Bearer header synchronously (user.getIdToken() is async and the page
+    // unloads before the promise resolves). Refresh on mount + after every
+    // successful save.
+    const idTokenRef = useRef<string | null>(null)
     useEffect(() => {
-        const flushSave = () => {
+        let cancelled = false
+        const refresh = async () => {
+            const user = firebaseAuth.currentUser
+            if (!user) { idTokenRef.current = null; return }
+            try {
+                const t = await user.getIdToken()
+                if (!cancelled) idTokenRef.current = t
+            } catch { /* keep previous token */ }
+        }
+        refresh()
+        return () => { cancelled = true }
+    }, [uid, lastSaved])
+
+    // Flush pending saves when user navigates away or switches apps.
+    //
+    // Two paths:
+    //   - visibilitychange:hidden → page is still alive, use the Firebase SDK
+    //     write (performSave). This is the iPad-home / app-switcher path.
+    //   - pagehide / beforeunload → page IS unloading. The SDK write promise
+    //     will be killed before flushing. Use `fetch(..., {keepalive: true})`
+    //     against /api/setlist/flush, which the browser guarantees to deliver.
+    useEffect(() => {
+        const flushViaSDK = () => {
             if (hasPendingSave.current && saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current)
                 saveTimeoutRef.current = null
@@ -381,24 +401,50 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
         }
 
-        // Flush on tab/app switch (iPad home button, app switcher)
-        const handleVisibility = () => {
-            if (document.visibilityState === 'hidden') flushSave()
+        const flushViaKeepalive = () => {
+            if (!hasPendingSave.current) return
+            const { setlistId: id, name: n, tracks: t, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
+            if (!id || !n || !canEdit) return
+            const token = idTokenRef.current
+            if (!token) return
+
+            const remoteUpdatedAt = lastSeenUpdatedAtRef.current
+            sendKeepaliveFlush({
+                setlistId: id,
+                expectedUpdatedAtMs: remoteUpdatedAt ? remoteUpdatedAt.toMillis() : null,
+                data: {
+                    name: n,
+                    tracks: t,
+                    trackCount: t.length,
+                    eventDate: serializeEventDate(ed),
+                    rabbi: rab || undefined,
+                    serviceNotes: sn?.trim() || undefined,
+                    musicians: mus.length > 0 ? mus : undefined,
+                },
+            }, token)
+
+            // Clear local pending flag so the in-page effect doesn't re-fire.
+            hasPendingSave.current = false
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current)
+                saveTimeoutRef.current = null
+            }
         }
 
-        // Flush on page unload (navigation, refresh)
-        const handleBeforeUnload = () => flushSave()
+        const handleVisibility = () => {
+            if (document.visibilityState === 'hidden') flushViaSDK()
+        }
 
         document.addEventListener('visibilitychange', handleVisibility)
-        window.addEventListener('beforeunload', handleBeforeUnload)
-        window.addEventListener('pagehide', handleBeforeUnload)
+        window.addEventListener('beforeunload', flushViaKeepalive)
+        window.addEventListener('pagehide', flushViaKeepalive)
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility)
-            window.removeEventListener('beforeunload', handleBeforeUnload)
-            window.removeEventListener('pagehide', handleBeforeUnload)
+            window.removeEventListener('beforeunload', flushViaKeepalive)
+            window.removeEventListener('pagehide', flushViaKeepalive)
         }
-    }, [])
+    }, [canEdit])
 
     // --- Background key detection ---
     const pendingKeyDetections = useRef<Set<string>>(new Set())

@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 2 of 8 (Weekly Workflow Polish) — Ready to plan
-Plan: Not started
-Status: Phase 1.3 complete; ready to plan Phase 2
-Last activity: 2026-04-13 — Phase 1.3 unified; transition to Phase 2 complete
+Phase: 2 of 8 (Weekly Workflow Polish) — Planning
+Plan: 02-01 created (Save reliability), awaiting approval
+Status: PLAN created, ready for APPLY (blocked on /ui-ux-pro-max before Task 2)
+Last activity: 2026-04-13 — Plan 02-01 drafted at .paul/phases/02-weekly-workflow-polish/02-01-PLAN.md
 
 Progress:
 - v4.2: [█████░░░░░] 50% (4 of 8 phases complete)
@@ -23,7 +23,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase 1.3 loop closed; Phase 2 ready to plan]
+  ✓        ○        ○     [Plan 02-01 created, awaiting approval]
 ```
 
 ## How to resume
@@ -111,12 +111,19 @@ Vercel auto-deploys `master` to production.
 - User works from multiple computers — pull before starting
 - Must be "bulletproof and easy and intuitive" before onboarding band
 
+## Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| 2026-04-13: Auth path for /api/setlist/flush — keepalive fetch (Bearer) over sendBeacon (no headers) | Phase 2 P01 | sendBeacon dropped; keepalive fetch sole transport for unload-flush |
+| 2026-04-13: /api/setlist/flush rate-limit tier — shared `api` (60/min) | Phase 2 P01 | No new tier; flush shares user's general-api budget |
+
 ## Session Continuity
 
-Last session: 2026-04-13 (Phase 1.3 complete, transitioned to Phase 2)
-Stopped at: Phase 1.3 unified; PROJECT.md + ROADMAP.md evolved; ready to plan Phase 2
-Next action: `/paul:plan` for Phase 2 (Weekly Workflow Polish) — REQUIRES `/ui-ux-pro-max`
-Resume file: `.paul/ROADMAP.md`
+Last session: 2026-04-13 (Phase 2 planning — Plan 01 drafted)
+Stopped at: Plan 02-01 (Save reliability) created, awaiting approval
+Next action: Review plan, then `/paul:apply .paul/phases/02-weekly-workflow-polish/02-01-PLAN.md` (load `/ui-ux-pro-max` before Task 2)
+Resume file: `.paul/phases/02-weekly-workflow-polish/02-01-PLAN.md`
 
 ---
 *STATE.md — Updated after every significant action*

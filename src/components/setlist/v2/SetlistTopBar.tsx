@@ -74,17 +74,9 @@ export function SetlistTopBar({
                 )}
             </div>
 
-            {/* Save status dot — optimistic: green unless actively saving */}
+            {/* Save status — dot (glanceable) + text (contextual) */}
             <div className="shrink-0 flex items-center gap-1">
-                {lastSaved && !saving && (
-                    <div className="h-2 w-2 rounded-full bg-success mr-1" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
-                )}
-                {saving && (
-                    <div className="h-2 w-2 rounded-full bg-success animate-pulse mr-1" title="Saving..." />
-                )}
-                {!lastSaved && !saving && (
-                    <div className="h-2 w-2 rounded-full bg-muted-foreground/30 mr-1" title="Not yet saved" />
-                )}
+                <SaveStatus saving={saving} lastSaved={lastSaved} />
 
                 {/* Undo / Redo */}
                 {canEdit && onUndo && (
@@ -144,4 +136,47 @@ export function SetlistTopBar({
             {overflowTrigger}
         </div>
     )
+}
+
+function SaveStatus({ saving, lastSaved }: { saving: boolean; lastSaved: Date | null }) {
+    // Re-render every 10s so "Saved Ns ago" climbs while idle
+    const [, tick] = useState(0)
+    useEffect(() => {
+        if (!lastSaved || saving) return
+        const id = setInterval(() => tick(n => n + 1), 10_000)
+        return () => clearInterval(id)
+    }, [lastSaved, saving])
+
+    let dotClass: string
+    let text: string
+    let textClass = "text-xs text-muted-foreground"
+
+    if (saving) {
+        dotClass = "bg-success animate-pulse"
+        text = "Saving…"
+    } else if (lastSaved) {
+        dotClass = "bg-success"
+        text = formatSince(lastSaved)
+    } else {
+        dotClass = "bg-muted-foreground/30"
+        text = "Not saved"
+        textClass = "text-xs text-muted-foreground/70"
+    }
+
+    return (
+        <div className="flex items-center gap-1.5 mr-1" aria-live="polite">
+            <div className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
+            <span className={`${textClass} hidden sm:inline`}>{text}</span>
+        </div>
+    )
+}
+
+function formatSince(d: Date): string {
+    const secs = Math.round((Date.now() - d.getTime()) / 1000)
+    if (secs < 5) return "Saved just now"
+    if (secs < 60) return `Saved ${secs}s ago`
+    const mins = Math.round(secs / 60)
+    if (mins < 60) return `Saved ${mins}m ago`
+    const hrs = Math.round(mins / 60)
+    return `Saved ${hrs}h ago`
 }
