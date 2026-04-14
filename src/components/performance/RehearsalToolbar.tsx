@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { formatPlaybackTime } from "@/lib/format-utils"
+import { reportSaveError } from "@/lib/save-error"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -175,7 +176,7 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
                 if (!uid) return
                 import("firebase/firestore").then(({ doc, setDoc }) => {
                     const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
-                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(() => { })
+                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(err => reportSaveError(err, "metronome speed"))
                 })
             })
         }

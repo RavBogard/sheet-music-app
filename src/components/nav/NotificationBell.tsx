@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { reportSaveError } from "@/lib/save-error"
 import {
     Notification,
     subscribeToNotifications,
@@ -59,7 +60,7 @@ export function NotificationBell() {
 
     const handleClick = async (notif: Notification) => {
         if (!notif.read) {
-            await markAsRead(user.uid, notif.id).catch(() => { })
+            await markAsRead(user.uid, notif.id).catch(err => reportSaveError(err, "notification"))
         }
         if (notif.link) {
             router.push(notif.link)
@@ -68,7 +69,7 @@ export function NotificationBell() {
     }
 
     const handleMarkAllRead = async () => {
-        await markAllAsRead(user.uid).catch(() => { })
+        await markAllAsRead(user.uid).catch(err => reportSaveError(err, "notifications"))
     }
 
     return (
