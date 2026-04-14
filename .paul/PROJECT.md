@@ -52,7 +52,15 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-- To be defined in next milestone
+**v4.2 UX Polish & Band Onboarding — 4 of 8 phases complete**
+- [x] v4.2 Phase 1: Recursive research — 53+ findings, bugs/gaps mapped (2026-04-13)
+- [x] v4.2 Phase 1.1: Concurrent-edit safety — runTransaction + rev precondition + merge banner (2026-04-13)
+- [x] v4.2 Phase 1.2: Offline truthiness — IndexedDB blob store, honest offline state (2026-04-13)
+- [x] v4.2 Phase 1.3: Security hardening — storage.rules in VC, 10-char bridge code, rate limits on nudge-admin + calendar-feed (2026-04-13)
+- [ ] v4.2 Phase 2: Weekly workflow polish (/ui-ux-pro-max)
+- [ ] v4.2 Phase 3: Stage UX for the band (/ui-ux-pro-max)
+- [ ] v4.2 Phase 4: Editor ergonomics + noise cleanup (/ui-ux-pro-max)
+- [ ] v4.2 Phase 5: Navigation + schedule hygiene (/ui-ux-pro-max)
 
 ### Validated (Recently Shipped)
 
@@ -204,7 +212,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | affectedKeys().hasOnly() for field-level setlist update rules | v3.0 P1 | Swap users restricted to tracks/liveState/trackCount only |
 | swapLiveTrack: single updateDoc + fire-and-forget audit | v3.0 P1 | Atomic swap, non-blocking audit trail |
 | isNotTooFrequent() rule: 2s minimum between swaps | v3.0 P1 | Prevents accidental double-taps at Firestore level |
+| storage.rules: isMember() via custom claim only (no Firestore cross-read) | v4.2 P1.3 | Storage rules cannot read Firestore; legacy config/admins bootstrap cannot be mirrored — accept cost |
+| Dedicated `bridgeSetup` rate-limit tier (5/min) for credential exchange | v4.2 P1.3 | Credential endpoints deserve stricter bound than app-wide 60/min |
+| 10-char unambiguous setup codes (~50 bits) over alphabet expansion | v4.2 P1.3 | Humans copy the code; ambiguity-free alphabet preserved, entropy comes from length |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-03-30 after v3.0 Phase 1 (Song Groups & Swap Infrastructure)*
+*Last updated: 2026-04-13 after v4.2 Phase 1.3 (Security Hardening)*

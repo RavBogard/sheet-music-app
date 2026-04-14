@@ -3,14 +3,14 @@
 ## Current Milestone
 **v4.2 UX Polish & Band Onboarding**
 Status: 🚧 In Progress
-Phases: 1 of 8 complete
+Phases: 4 of 8 complete (50%)
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Recursive Research: Bugs, Gaps, Failures | 1/1 | Complete | 2026-04-13 |
-| 1.1 | Concurrent-edit Safety | 1/1 | Complete | 2026-04-13 |
-| 1.2 | Offline Truthiness | 1/1 | Complete | 2026-04-13 |
-| 1.3 | Security Hardening | TBD | Not started | - |
+| 1 | Recursive Research: Bugs, Gaps, Failures | 1/1 | ✅ Complete | 2026-04-13 |
+| 1.1 | Concurrent-edit Safety | 1/1 | ✅ Complete | 2026-04-13 |
+| 1.2 | Offline Truthiness | 1/1 | ✅ Complete | 2026-04-13 |
+| 1.3 | Security Hardening | 1/1 | ✅ Complete | 2026-04-13 |
 | 2 | Weekly Workflow Polish | TBD | Not started | - |
 | 3 | Stage UX for the Band | TBD | Not started | - |
 | 4 | Editor Ergonomics + Noise Cleanup | TBD | Not started | - |

@@ -10,20 +10,20 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 1.3 of 8 (Security Hardening) — Planning
-Plan: 01_3-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-04-13 — Plan 01_3-01 drafted at .paul/phases/01_3-security-hardening/01_3-01-PLAN.md
+Phase: 2 of 8 (Weekly Workflow Polish) — Ready to plan
+Plan: Not started
+Status: Phase 1.3 complete; ready to plan Phase 2
+Last activity: 2026-04-13 — Phase 1.3 unified; transition to Phase 2 complete
 
 Progress:
-- v4.2: [███░░░░░░░] ~37% (3 of 8 phases complete)
+- v4.2: [█████░░░░░] 50% (4 of 8 phases complete)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 01_3-01 created, awaiting approval]
+  ○        ○        ○     [Phase 1.3 loop closed; Phase 2 ready to plan]
 ```
 
 ## How to resume
@@ -35,7 +35,8 @@ Run `/paul:plan` for Phase 1.3. The plan template lives at the phase dir `.paul/
 1. ✓ Recursive research (complete, 2026-04-13)
 2. ✓ Phase 1.1 — Concurrent-edit safety (complete, 2026-04-13)
 3. ✓ Phase 1.2 — Offline truthiness (complete, 2026-04-13)
-4. **▶ Phase 1.3 — Security hardening (~4h, plan next)**
+4. ✓ Phase 1.3 — Security hardening (complete, 2026-04-13)
+   **▶ Next: Phase 2 — Weekly workflow polish (/ui-ux-pro-max required)**
 5. Phase 2 — Weekly workflow polish (expanded scope, /ui-ux-pro-max)
 6. Phase 3 — Stage UX for the band (expanded, /ui-ux-pro-max)
 7. Phase 4 — Editor ergonomics + noise cleanup (expanded, /ui-ux-pro-max)
@@ -112,10 +113,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (Phase 1.3 planning)
-Stopped at: Plan 01_3-01 created, awaiting approval
-Next action: Review plan, then `/paul:apply .paul/phases/01_3-security-hardening/01_3-01-PLAN.md`
-Resume file: `.paul/phases/01_3-security-hardening/01_3-01-PLAN.md`
+Last session: 2026-04-13 (Phase 1.3 complete, transitioned to Phase 2)
+Stopped at: Phase 1.3 unified; PROJECT.md + ROADMAP.md evolved; ready to plan Phase 2
+Next action: `/paul:plan` for Phase 2 (Weekly Workflow Polish) — REQUIRES `/ui-ux-pro-max`
+Resume file: `.paul/ROADMAP.md`
 
 ---
 *STATE.md — Updated after every significant action*
