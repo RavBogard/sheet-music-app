@@ -8,7 +8,7 @@ Phases: 1 of 8 complete
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Recursive Research: Bugs, Gaps, Failures | 1/1 | Complete | 2026-04-13 |
-| 1.1 | Concurrent-edit Safety | 1 | Planning | - |
+| 1.1 | Concurrent-edit Safety | 1/1 | Complete | 2026-04-13 |
 | 1.2 | Offline Truthiness | TBD | Not started | - |
 | 1.3 | Security Hardening | TBD | Not started | - |
 | 2 | Weekly Workflow Polish | TBD | Not started | - |
