@@ -21,6 +21,8 @@ import {
     Clock,
     User,
     Printer,
+    BookmarkPlus,
+    Pencil,
 } from "lucide-react"
 import { useCongregation } from "@/lib/congregation-store"
 
@@ -31,6 +33,7 @@ interface OverflowMenuProps {
     onOpenAI: () => void
     onDelete?: () => void
     onEditDetails?: () => void
+    onSaveAsTemplate?: () => void
     onSetRabbi?: (rabbi: string) => void
     onPrint?: () => void
 
@@ -49,6 +52,7 @@ export function OverflowMenu({
     onOpenAI,
     onDelete,
     onEditDetails,
+    onSaveAsTemplate,
     onSetRabbi,
     onPrint,
     isBandLeader,
@@ -88,6 +92,7 @@ export function OverflowMenu({
                     </>
                 )}
 
+                {/* Leader actions — Publish / Edit Details / Save as Template */}
                 {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
@@ -97,8 +102,15 @@ export function OverflowMenu({
 
                 {canEdit && onEditDetails && (
                     <DropdownMenuItem onClick={onEditDetails}>
-                        <MoreVertical className="h-4 w-4 mr-2" />
+                        <Pencil className="h-4 w-4 mr-2" />
                         Edit Details
+                    </DropdownMenuItem>
+                )}
+
+                {canEdit && onSaveAsTemplate && (
+                    <DropdownMenuItem onClick={onSaveAsTemplate}>
+                        <BookmarkPlus className="h-4 w-4 mr-2" />
+                        Save as Template
                     </DropdownMenuItem>
                 )}
 
@@ -113,10 +125,10 @@ export function OverflowMenu({
                 {onPrint && (
                     <DropdownMenuItem onClick={onPrint} className="sm:hidden">
                         <Printer className="h-4 w-4 mr-2" />
-                        Print Gig Packet
+                        Gig Packet
                     </DropdownMenuItem>
                 )}
-                
+
                 <DropdownMenuItem onClick={onOpenAI}>
                     <Sparkles className="h-4 w-4 mr-2" />
                     AI Assistant

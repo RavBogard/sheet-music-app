@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 2 of 8 (Weekly Workflow Polish) — Plan 03 complete (3 of ~4 plans)
-Plan: 02-03 shipped (commit 1c6bb59); Plan 02-04 next (OverflowMenu + copy + undo/redo + service-notes)
-Status: Plan 02-03 UNIFIED; ready to plan Plan 02-04
-Last activity: 2026-04-13 — Plan 02-03 (List ordering + hero + back button) shipped + unified
+Phase: 2 of 8 (Weekly Workflow Polish) — Plan 04 planning (final plan of phase)
+Plan: 02-04 created (OverflowMenu + Save-as-Template + copy + service-notes + global undo), awaiting approval
+Status: PLAN created, ready for APPLY (blocked on /ui-ux-pro-max before Tasks 1 & 2)
+Last activity: 2026-04-13 — Plan 02-04 drafted at .paul/phases/02-weekly-workflow-polish/02-04-PLAN.md
 
 Progress:
 - v4.2: [█████░░░░░] 50% (4 of 8 phases complete)
@@ -23,7 +23,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Plan 02-03 loop closed; Plan 02-04 ready to plan]
+  ✓        ○        ○     [Plan 02-04 created, awaiting approval]
 ```
 
 ## How to resume
@@ -120,10 +120,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (Plan 02-03 shipped + unified)
-Stopped at: Plan 02-03 loop closed; ready to plan Plan 02-04 (final Phase 2 plan — OverflowMenu + copy + undo/redo + service-notes)
-Next action: `/paul:plan` for Phase 2 Plan 04 — REQUIRES `/ui-ux-pro-max`
-Resume file: `.paul/phases/02-weekly-workflow-polish/02-03-SUMMARY.md`
+Last session: 2026-04-13 (Plan 02-04 planning — draft complete)
+Stopped at: Plan 02-04 created, awaiting approval. Final plan of Phase 2 — UNIFY will trigger phase transition.
+Next action: Review plan, then `/paul:apply .paul/phases/02-weekly-workflow-polish/02-04-PLAN.md` (load `/ui-ux-pro-max` before Tasks 1 & 2)
+Resume file: `.paul/phases/02-weekly-workflow-polish/02-04-PLAN.md`
 
 ---
 *STATE.md — Updated after every significant action*

@@ -210,6 +210,34 @@ export function SetlistEditorV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    // Global Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z + Ctrl+Y redo.
+    // Skips when focus is inside an input/textarea/contenteditable so native
+    // field undo still works for typing-in-name, service-notes editing, etc.
+    useEffect(() => {
+        if (!canEdit) return
+        const handler = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null
+            if (target && (
+                target.isContentEditable ||
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT'
+            )) return
+            if (!(e.metaKey || e.ctrlKey)) return
+            const key = e.key.toLowerCase()
+            const isUndo = key === 'z' && !e.shiftKey
+            const isRedoZ = key === 'z' && e.shiftKey
+            const isRedoY = key === 'y' && !e.shiftKey
+            if (isUndo) {
+                if (canUndo) { e.preventDefault(); undo() }
+            } else if (isRedoZ || isRedoY) {
+                if (canRedo) { e.preventDefault(); redo() }
+            }
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [canEdit, canUndo, canRedo, undo, redo])
+
     // Background offline syncing — silent to avoid toast spam on every track change
     // Skip initial mount to avoid racing with auto-save
     const hasMountedForSync = useRef(false)
@@ -250,6 +278,24 @@ export function SetlistEditorV2({
         () => user ? createSetlistService(user.uid, user.displayName) : null,
         [user]
     )
+
+    const handleSaveAsTemplate = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        const toastId = toast.loading("Saving template…")
+        try {
+            await editorService.saveAsTemplate({
+                id: setlistId,
+                name,
+                tracks,
+                trackCount: tracks.length,
+                ownerId: initialOwnerId ?? user?.uid,
+                ownerName: user?.displayName ?? "",
+            } as unknown as Parameters<typeof editorService.saveAsTemplate>[0])
+            toast.success(`Template "${name}" saved`, { id: toastId })
+        } catch {
+            toast.error("Failed to save template", { id: toastId })
+        }
+    }, [editorService, setlistId, name, tracks, initialOwnerId, user?.uid, user?.displayName])
 
     const handleDeleteSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
@@ -501,6 +547,7 @@ export function SetlistEditorV2({
                         onOpenAI={() => useChatStore.getState().toggle()}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
+                        onSaveAsTemplate={canEdit && setlistId ? handleSaveAsTemplate : undefined}
                         isBandLeader={isBandLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
@@ -542,34 +589,23 @@ export function SetlistEditorV2({
                 />
             )}
 
-            {/* Service notes */}
+            {/* Service notes — always visible to editors; read-only viewers see it only when populated */}
             {(canEdit || serviceNotes) && (
                 <div className="border-b border-brand/10 px-4 py-2">
-                    {!serviceNotes && canEdit ? (
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => setServiceNotes(" ")}
-                            className="text-muted-foreground hover:text-foreground hover:bg-transparent"
-                        >
-                            + Add service notes
-                        </Button>
-                    ) : (
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>
-                            {canEdit ? (
-                                <textarea
-                                    value={serviceNotes?.trim() || ""}
-                                    onChange={(e) => setServiceNotes(e.target.value)}
-                                    placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
-                                    className="w-full text-sm bg-muted/30 rounded-lg border border-brand/10 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand/30"
-                                    rows={2}
-                                />
-                            ) : (
-                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{serviceNotes}</p>
-                            )}
-                        </div>
-                    )}
+                    <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>
+                        {canEdit ? (
+                            <textarea
+                                value={serviceNotes ?? ""}
+                                onChange={(e) => setServiceNotes(e.target.value)}
+                                placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
+                                className="w-full text-sm bg-muted/30 rounded-lg border border-brand/10 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand/30"
+                                rows={2}
+                            />
+                        ) : (
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{serviceNotes}</p>
+                        )}
+                    </div>
                 </div>
             )}
 

@@ -364,7 +364,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
-                    <h2 className="text-xl font-bold">Print Gig Packet</h2>
+                    <h2 className="text-xl font-bold">Gig Packet</h2>
                     <Button size="icon" variant="ghost" onClick={onClose}>
                         <X className="h-5 w-5" />
                     </Button>

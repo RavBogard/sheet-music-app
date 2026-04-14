@@ -140,7 +140,7 @@ describe("PrintModal", () => {
 
     it("renders modal with title and header", () => {
         render(<PrintModal {...defaultProps} />)
-        expect(screen.getByText("Print Gig Packet")).toBeDefined()
+        expect(screen.getByText("Gig Packet")).toBeDefined()
     })
 
     it("renders title input with setlist name", () => {
