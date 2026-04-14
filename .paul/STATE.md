@@ -10,12 +10,13 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.3 Deep Audit Remediation
-Phase: 2 of 8 (P0 Security Triage) — In progress
-Phase: 5 of 8 (P0 Bugs + UX) — In progress
-Plan: 05-03 complete (U01 touch targets ≥44px)
-Status: UNIFY complete — loop closed; ready for next plan
-Open P0 items: S02 (bridge creds, decision), D01 (cascade delete, larger), U02 (mobile keyboard)
-Last activity: 2026-04-14 — U01 SUMMARY written; 7/10 v4.3 P0s closed
+Phase: 2 of 8 (P0 Security Triage) — In progress (S02 pending)
+Phase: 4 of 8 (P0 Data Integrity) — In progress (D01 pending)
+Phase: 5 of 8 (P0 Bugs + UX) — ✅ Complete (4/4 items shipped)
+Plan: 05-04 complete (U02 AddBar hide-on-keyboard)
+Status: Phase 5 complete; ready for next plan (Phase 3/4 remaining P0s)
+Open P0 items: S02 (bridge creds, decision), D01 (cascade delete)
+Last activity: 2026-04-14 — U02 shipped + human-verified; Phase 5 complete (8/10 P0 closed overall)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -33,7 +34,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [05-03 closed (U01 shipped)]
+  ✓        ✓        ✓     [05-04 closed (U02 shipped); Phase 5 ✅ complete]
 ```
 
 ## How to resume
@@ -131,10 +132,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (05-03 closed — U01 shipped)
-Stopped at: Loop closed; U01 on prod + regression test green
-Next action: `/paul:plan` for next P0 — U02 (AddBar keyboard), D01 (cascade delete), or S02 (bridge creds decision)
-Resume file: `.paul/phases/v43-05-bugs-ux/05-03-SUMMARY.md`
+Last session: 2026-04-14 (05-04 closed — U02 shipped; Phase 5 complete)
+Stopped at: Loop closed; Phase 5 done; 8/10 v4.3 P0s closed overall
+Next action: `/paul:plan` for remaining P0s — S02 (bridge creds decision, Phase 3) or D01 (cascade delete, Phase 4)
+Resume file: `.paul/phases/v43-05-bugs-ux/05-04-SUMMARY.md`
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
