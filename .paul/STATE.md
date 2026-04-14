@@ -9,15 +9,15 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 5 of 8 (Navigation + Schedule Hygiene) — Planning
-Plan: 05-01 complete (loop closed)
-Status: Ready for 05-02 PLAN
-Last activity: 2026-04-14 — Unified 05-01 (SUMMARY written)
+Milestone: v4.2 UX Polish & Band Onboarding — COMPLETE (pending audit)
+Phase: 5 of 8 complete (Navigation + Schedule Hygiene) — all phases shipped
+Plan: 05-02 complete (loop closed)
+Status: Milestone v4.2 ready for audit / close
+Last activity: 2026-04-14 — Unified 05-02; Phase 5 complete; milestone v4.2 100%
 
 Progress:
-- v4.2: [███████▌░░] 75% (6 of 8 phases complete)
-- Phase 3: [██████████] 100% ✓
+- v4.2: [██████████] 100% (8 of 8 phases complete)
+- Phase 5: [██████████] 100% ✓
 
 ## Planned Phase 3 split (4 plans)
 
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [05-01 loop closed; more Phase 5 plans remain]
+  ✓        ✓        ✓     [05-02 closed; Phase 5 complete; milestone v4.2 100%]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (Plan 05-01 complete)
-Stopped at: 05-01 SUMMARY written; tree clean; pushed to origin/master
-Next action: `/paul:plan` for 05-02 (orphan route + dead-code cleanup — /settings/users, /settings/sound, SetlistDrawer, monitor-live/commands/pending)
-Resume file: `.paul/phases/05-nav-schedule-hygiene/05-01-SUMMARY.md`
+Last session: 2026-04-14 (Phase 5 complete — milestone v4.2 100%)
+Stopped at: Phase 5 closed (2 plans + audit note); all commits on origin/master; Vercel auto-deploying
+Next action: `/paul:audit-milestone` v4.2 → then `/paul:complete-milestone` → then band-onboarding prep or v4.3 planning
+Resume file: `.paul/phases/05-nav-schedule-hygiene/05-02-SUMMARY.md`
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched

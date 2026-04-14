@@ -52,15 +52,15 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v4.2 UX Polish & Band Onboarding — 6 of 8 phases complete**
+**v4.2 UX Polish & Band Onboarding — 8 of 8 phases complete (pending milestone audit)**
 - [x] v4.2 Phase 1: Recursive research — 53+ findings, bugs/gaps mapped (2026-04-13)
 - [x] v4.2 Phase 1.1: Concurrent-edit safety — runTransaction + rev precondition + merge banner (2026-04-13)
 - [x] v4.2 Phase 1.2: Offline truthiness — IndexedDB blob store, honest offline state (2026-04-13)
 - [x] v4.2 Phase 1.3: Security hardening — storage.rules in VC, 10-char bridge code, rate limits on nudge-admin + calendar-feed (2026-04-13)
 - [x] v4.2 Phase 2: Weekly workflow polish — save-reliability flush route + "Saved Ns ago" ticker; single-step wizard + congregation-driven rabbi list; past-list DESC + role-aware hero CTA + referrer-back; service-notes always visible + Save-as-Template + "Gig Packet" copy unification + global Cmd/Ctrl+Z (2026-04-13)
 - [x] v4.2 Phase 3: Stage UX for the band — SwapPicker keyboard/iOS polish (03-01); PDFOverlay ErrorBoundary + Esc + unified wrapper (03-02); server-side setlist-updated broadcast + musician swap toast (03-03); per-track transposition display + amber cue-note contrast + ≥44px leader header + IDB-backed offline indicator (03-04) (2026-04-14)
-- [ ] v4.2 Phase 4: Editor ergonomics + noise cleanup (/ui-ux-pro-max)
-- [ ] v4.2 Phase 5: Navigation + schedule hygiene (/ui-ux-pro-max)
+- [x] v4.2 Phase 4: Editor ergonomics + noise cleanup — canEditSetlist helper, apiFetch timeout + PDFViewer abort, role-aware OnboardingCard, toast hygiene, inline Move-Up/Down, modal consolidation audit (2026-04-14)
+- [x] v4.2 Phase 5: Navigation + schedule hygiene — mobile Schedule tab, UnifiedCalendar JSDoc correction, dead musician_availability indexes removed, orphan /settings/users + /settings/sound routes deleted, SetlistDrawer + monitor-live/commands/pending audited-live (2026-04-14)
 
 ### Validated (Recently Shipped)
 
