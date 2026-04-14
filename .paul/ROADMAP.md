@@ -3,8 +3,8 @@
 ## Current Milestone
 **v4.3 Deep Audit Remediation**
 Status: 🚧 In Progress
-Phases: 1 of 8 complete (recursive audit)
-Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 findings) before the band onboards.
+Phases: 5 of 9 complete (P0s all shipped; P1 work + claim-sync remain)
+Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 findings) + the role-claim-sync latent bug surfaced during 04-03 rollout before the band onboards.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -16,6 +16,7 @@ Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 find
 | 6 | P1 Security + Bugs (S04-S06, B03-B06) | TBD | Not started | - |
 | 7 | P1 Data + UX (D04-D07, U03-U08) | TBD | Not started | - |
 | 8 | Performance + Dead-Code Sweep (P01-P05, C01-C04) | TBD | Not started | - |
+| 9 | Role-Claim Sync (latent auth bug surfaced during 04-03) | TBD | Planning | - |
 
 Carry-over items available:
 - Human smoke tests deferred from v4.2 (setlist creation paths, two-tab conflict, fresh-browser offline)
