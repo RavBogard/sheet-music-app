@@ -3,6 +3,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
+import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -31,53 +32,27 @@ function getAllowedOrigin(request: NextRequest): string {
     return ALLOWED_ORIGINS[0]
 }
 
-/**
- * Check if request is from a trusted browser context (same-origin navigation/embed).
- * Modern browsers send Sec-Fetch-Site on all requests. This can't be forged
- * by curl/scripts since browsers control the header.
- *
- * Fallback: also accept requests with a valid Referer from our domain.
- */
-function isTrustedBrowserRequest(req: NextRequest): boolean {
-    // 1. Best signal: Sec-Fetch-Site (set by all modern browsers, can't be forged)
-    const secFetchSite = req.headers.get('sec-fetch-site')
-    if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true
-
-    // 2. Sec-Fetch-Dest indicates a browser request context (embed, document, image, etc.)
-    const secFetchDest = req.headers.get('sec-fetch-dest')
-    if (secFetchDest && secFetchDest !== 'empty') return true
-
-    // 3. Referer from our domain
-    const referer = req.headers.get('referer')
-    if (referer) {
-        try {
-            const url = new URL(referer)
-            return ALLOWED_HOSTNAMES.includes(url.hostname) ||
-                url.hostname === 'localhost' ||
-                url.hostname.endsWith('.vercel.app')
-        } catch { /* invalid referer */ }
-    }
-
-    // 4. Accept header with browser-typical content types
-    const accept = req.headers.get('accept') || ''
-    if (accept.includes('text/html') || accept.includes('application/pdf') || accept.includes('image/')) return true
-
-    return false
-}
+// hasBrowserFetchMetadata lives in @/lib/drive-file-auth
 
 export const GET = createApiHandler(async (ctx) => {
     const limited = await checkRateLimit(ctx.req, 'api')
     if (limited) return limited
 
-    // Auth: Accept Bearer token (API calls) OR same-origin browser requests
-    // (chart embeds, prefetches, audio elements — can't attach Bearer headers).
-    // Direct curl/script access without either is blocked.
-    if (!ctx.auth && !isTrustedBrowserRequest(ctx.req)) {
+    // Auth: Accept Bearer token (API calls) OR requests that carry
+    // browser-set Sec-Fetch-* metadata (chart embeds, prefetches, audio
+    // elements — can't attach Bearer headers). Defense-in-depth only —
+    // see hasBrowserFetchMetadata JSDoc. Direct curl/script access
+    // without either is blocked.
+    if (!ctx.auth && !hasBrowserFetchMetadata(ctx.req)) {
         const fid = ctx.params?.fileId
+        const fwd = ctx.req.headers.get('x-forwarded-for') || ''
+        const ip = fwd.split(',')[0]?.trim() || ctx.req.headers.get('x-real-ip') || 'unknown'
         logger.warn(`[FileProxy] Untrusted request blocked for ${fid}`, {
             secFetchSite: ctx.req.headers.get('sec-fetch-site'),
             secFetchDest: ctx.req.headers.get('sec-fetch-dest'),
             referer: ctx.req.headers.get('referer'),
+            userAgent: ctx.req.headers.get('user-agent'),
+            ip,
         })
         return NextResponse.json(
             { error: "Authentication required" },
