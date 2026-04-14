@@ -229,16 +229,14 @@ export function useSetlistDashboard({
                         isTemplate: false,
                     })
 
-                    toast.dismiss(toastId)
                     const matched = tracks.filter(t => t.fileId).length
                     const total = tracks.filter(t => t.type === 'song').length
-                    toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+                    toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: toastId })
 
                     router.push(`/setlists/${id}`)
                     return
                 } catch (err: unknown) {
-                    toast.dismiss(toastId)
-                    toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"))
+                    toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: toastId })
                     return
                 }
             }
@@ -280,11 +278,9 @@ export function useSetlistDashboard({
                 isTemplate: false,
             })
 
-            toast.dismiss(templateToastId)
-
             const matched = tracks.filter(t => t.fileId).length
             const total = tracks.filter(t => t.type === 'song').length
-            toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+            toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: templateToastId })
 
             handleSelect({
                 id, name, tracks, trackCount: tracks.length,
@@ -292,8 +288,7 @@ export function useSetlistDashboard({
                 eventDate: targetDate.toISOString(), ownerId: user.uid,
             })
         } catch (err: unknown) {
-            toast.dismiss(templateToastId)
-            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"))
+            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: templateToastId })
         }
     }
 

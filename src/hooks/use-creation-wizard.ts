@@ -104,6 +104,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         if (!name.trim()) return
         setCreating(true)
 
+        let loadingId: string | number | undefined
         try {
             const service = createSetlistService(user.uid, user.displayName)
 
@@ -111,13 +112,12 @@ export function useCreationWizard(): UseCreationWizardReturn {
             if (selectedTemplate && finalTracks.length === 0) {
                 const template = getTemplate(selectedTemplate, customTemplates)
                 if (template && eventDate) {
-                    toast.loading('Building setlist from template...')
+                    loadingId = toast.loading('Building setlist from template...')
                     const baseContext = await getFullServiceContext(eventDate)
                     baseContext.type = selectedTemplate as ServiceType
                     const context = rabbi ? { ...baseContext, rabbi } : baseContext
                     const { allFiles } = useLibraryStore.getState()
                     finalTracks = buildSetlistFromTemplate(template, allFiles, context)
-                    toast.dismiss()
                 }
             }
 
@@ -152,18 +152,18 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 }
             }
 
+            const successOpts = loadingId ? { id: loadingId } : undefined
             if (selectedTemplate) {
                 const matched = finalTracks.filter(t => t.fileId).length
                 const total = finalTracks.filter(t => t.type === 'song').length
-                toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+                toast.success(`Created "${name}" — ${matched}/${total} songs matched`, successOpts)
             } else {
-                toast.success(`"${name}" created!`)
+                toast.success(`"${name}" created!`, successOpts)
             }
 
             router.push(`/setlists/${setlistId}`)
         } catch {
-            toast.dismiss()
-            toast.error('Failed to create setlist')
+            toast.error('Failed to create setlist', loadingId ? { id: loadingId } : undefined)
         } finally {
             setCreating(false)
         }

@@ -182,7 +182,9 @@ describe('useCreationWizard (single-step)', () => {
 
     await act(async () => { await result.current.create() })
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to create setlist')
+    // 04-05: error path now passes loadingId via second arg when present;
+    // when no template was selected (this test) loadingId is undefined.
+    expect(toast.error).toHaveBeenCalledWith('Failed to create setlist', undefined)
     expect(result.current.creating).toBe(false)
   })
 
