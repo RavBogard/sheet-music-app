@@ -73,6 +73,26 @@ export const INSTRUMENT_PRESETS: Record<string, { label: string; transposition: 
 }
 
 /**
+ * Slug keys surfaced in onboarding / quick-setup flows.
+ * Subset of INSTRUMENT_PRESETS — Settings shows the full registry.
+ * Stored value at `musicianProfile.instrument` must be a slug key; the
+ * dropdown shows the preset's `label`.
+ */
+export const ONBOARDING_INSTRUMENT_KEYS = [
+    'acoustic_guitar',
+    'electric_bass',
+    'hand_drums',
+    'piano',
+    'voice',
+    'electric_guitar',
+    'bb_trumpet',
+    'eb_alto_sax',
+    'bb_clarinet',
+    'violin',
+    'other',
+] as const
+
+/**
  * Subscribe to all users who have musician profiles set up.
  * Used by the "Print for..." feature in the gig packet generator.
  */

@@ -3,7 +3,7 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
-import { rankMusicians, type MusicianCandidate } from "@/lib/musician-suggestions"
+import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
 
 const RECENT_WINDOW = 10
 
@@ -99,9 +99,8 @@ export const GET = createApiHandler(
                 rabbiProfile,
             })
 
-            // Identify coverage gaps
-            const REQUIRED = ['acoustic_guitar', 'electric_bass', 'hand_drums', 'piano', 'voice']
-            const coverageGap = REQUIRED.filter(k => !selectedInstruments.includes(k))
+            // Identify coverage gaps (REQUIRED_INSTRUMENTS is the single source of truth)
+            const coverageGap = [...REQUIRED_INSTRUMENTS].filter(k => !selectedInstruments.includes(k))
 
             return NextResponse.json({
                 success: true,

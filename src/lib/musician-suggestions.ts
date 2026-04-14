@@ -36,7 +36,12 @@ export interface SuggestedMusician {
     reasons: string[]
 }
 
-const REQUIRED_INSTRUMENTS = new Set([
+/**
+ * Slug keys that the scheduling suggestion + gap-fill logic treats as the
+ * "required" band core. Exported so server-side scheduling routes can share
+ * the same source instead of duplicating the list.
+ */
+export const REQUIRED_INSTRUMENTS = new Set([
     'acoustic_guitar', 'electric_bass', 'hand_drums', 'piano', 'voice'
 ])
 
