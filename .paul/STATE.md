@@ -129,10 +129,17 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (04-03 loop closed)
-Stopped at: UNIFY complete for 04-03; SUMMARY written; committed 2aef757; pushed origin/master
-Next action: `/paul:plan` for 04-04. Remaining Phase 4 backlog: (a) toast hygiene (dedupe loading→success triples + inline badges + error toasts for silent-catch paths) — /ui-ux-pro-max; (b) INSTRUMENTS registry unification — autonomous; (c) triple-modal chain consolidation (SearchOverlay + AddSongsModal + AddToSetlistSheet) — /ui-ux-pro-max, larger investigation; (d) track-row delete/move buttons + tablet SwapPicker height — /ui-ux-pro-max; (e) z-index tokens — autonomous.
-Resume file: `.paul/phases/04-editor-cleanup/04-03-SUMMARY.md`
+Last session: 2026-04-14 (Phase 4 complete — 6 plans + 1 audit note)
+Stopped at: All Phase 4 loops closed; HANDOFF written; clean tree pushed to origin/master
+Next action: `/paul:plan` for Phase 5 (Navigation + Schedule Hygiene — /ui-ux-pro-max required). Scope per ROADMAP.md: mobile bottom-bar Schedule tab, strip blockout/availability UI, delete dead musician_availability index + UnifiedCalendar code, delete orphan routes (/settings/users, /settings/sound), remove SetlistDrawer if dead, trace monitor-live/commands/pending if dead. Preserve RSVP, scheduling_assignments, MusicianPicker, publish-and-notify emails.
+Resume file: `.paul/HANDOFF-2026-04-14.md`
+Resume context:
+- Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
+- Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
+- All commits on origin/master, auto-deployed to Vercel prod
+- Phase 5 is the only remaining v4.2 milestone phase; band onboarding gate
+- Must load /ui-ux-pro-max before any Phase 5 APPLY (per SPECIAL-FLOWS.md)
+- Pull before starting (user works from multiple computers)
 
 ---
 *STATE.md — Updated after every significant action*
