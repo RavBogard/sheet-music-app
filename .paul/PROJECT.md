@@ -52,7 +52,11 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v4.2 UX Polish & Band Onboarding — 8 of 8 phases complete (pending milestone audit)**
+**v4.3 — TBD (awaiting scope)**: band-onboarding bring-up + deferred smoke tests + carry-over items (CRIT-003, LOW-004).
+
+### Validated (Shipped this cycle)
+
+**v4.2 UX Polish & Band Onboarding — 8 of 8 phases complete, 2026-04-14**
 - [x] v4.2 Phase 1: Recursive research — 53+ findings, bugs/gaps mapped (2026-04-13)
 - [x] v4.2 Phase 1.1: Concurrent-edit safety — runTransaction + rev precondition + merge banner (2026-04-13)
 - [x] v4.2 Phase 1.2: Offline truthiness — IndexedDB blob store, honest offline state (2026-04-13)

@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Milestone: v4.2 UX Polish & Band Onboarding — COMPLETE (pending audit)
-Phase: 5 of 8 complete (Navigation + Schedule Hygiene) — all phases shipped
-Plan: 05-02 complete (loop closed)
-Status: Milestone v4.2 ready for audit / close
-Last activity: 2026-04-14 — Unified 05-02; Phase 5 complete; milestone v4.2 100%
+Milestone: v4.3 — TBD (awaiting scope)
+Prior milestone: v4.2 UX Polish & Band Onboarding — ✅ Complete 2026-04-14 (audited)
+Plan: none — milestone scope pending
+Status: Ready for `/paul:discuss-milestone` v4.3
+Last activity: 2026-04-14 — Closed milestone v4.2 (audit passed; ROADMAP + PROJECT archived)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (Phase 5 complete — milestone v4.2 100%)
-Stopped at: Phase 5 closed (2 plans + audit note); all commits on origin/master; Vercel auto-deploying
-Next action: `/paul:audit-milestone` v4.2 → then `/paul:complete-milestone` → then band-onboarding prep or v4.3 planning
-Resume file: `.paul/phases/05-nav-schedule-hygiene/05-02-SUMMARY.md`
+Last session: 2026-04-14 (milestone v4.2 closed)
+Stopped at: v4.2 audited + archived; ROADMAP/PROJECT rolled forward; clean tree pushed to origin/master
+Next action: `/paul:discuss-milestone` to scope v4.3 (band onboarding bring-up), or pause for actual band dry-run feedback
+Resume file: `.paul/ROADMAP.md`
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
