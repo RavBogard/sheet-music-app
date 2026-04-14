@@ -7,6 +7,8 @@ import { z } from "zod"
 
 export const maxDuration = 120
 
+// No Firestore write — .passthrough() is acceptable here; tracks are
+// forwarded to the PDF print pipeline and not persisted.
 const schema = z.object({
     title: z.string().min(1),
     tracks: z.array(z.any()).min(1),
