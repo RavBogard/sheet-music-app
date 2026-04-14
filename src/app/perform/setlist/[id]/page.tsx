@@ -131,9 +131,10 @@ export default function SetlistPerformPage() {
             <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
                 <Link
                     href={backHref}
-                    className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
+                    aria-label={isPublicView ? "Back to home" : "Back to setlists"}
+                    className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
                 >
-                    <ArrowLeft className="h-4.5 w-4.5 text-muted-foreground" />
+                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-base font-bold truncate">{name}</h1>
@@ -144,15 +145,15 @@ export default function SetlistPerformPage() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground">
-                            <Printer className="h-3.5 w-3.5" />
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Open gig packet" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                            <Printer className="h-4 w-4" />
                             <span className="text-xs hidden sm:inline">Gig Packet</span>
                         </Button>
                     )}
                     {isLeader && (
-                        <Button asChild size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground">
-                            <Link href={`/setlists/${setlistId}`}>
-                                <Pencil className="h-3.5 w-3.5" />
+                        <Button asChild size="sm" variant="ghost" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                            <Link href={`/setlists/${setlistId}`} aria-label="Edit setlist">
+                                <Pencil className="h-4 w-4" />
                                 <span className="text-xs hidden sm:inline">Edit</span>
                             </Link>
                         </Button>

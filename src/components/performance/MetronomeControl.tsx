@@ -37,7 +37,7 @@ export function MetronomeControl() {
                 variant="ghost"
                 onClick={togglePlay}
                 className={cn(
-                    "h-9 px-3 sm:px-4 rounded-lg cursor-pointer border",
+                    "h-11 min-w-11 px-3 sm:px-4 rounded-lg cursor-pointer border",
                     "bg-card lg:bg-background/50",
                     isPlaying
                         ? "border-red-500/50"
