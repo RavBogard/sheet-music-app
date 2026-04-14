@@ -12,6 +12,7 @@ import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
+import { apiFetch } from "@/lib/api-client"
 
 /** Sync session cookie to server. Retries once on failure. Returns true on success. */
 async function syncSessionCookie(user: User): Promise<boolean> {
@@ -139,6 +140,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         currentUser.getIdToken(true).catch(err => logger.warn("Claims refresh failed:", err))
                     }
                     lastClaimsUpdate.current = claimsTs
+
+                    // v4.3 P9: repair Firestore↔claim drift (e.g., legacy users
+                    // whose role lives in users/{uid}.role but whose token has
+                    // no role claim). Fire-and-forget — the server bumps
+                    // claimsUpdatedAt on success, which the handler above then
+                    // detects and force-refreshes the token.
+                    if (p?.role && p.role !== "pending") {
+                        currentUser
+                            .getIdTokenResult()
+                            .then((res) => {
+                                const claimRole = res.claims.role as string | undefined
+                                if (claimRole !== p.role) {
+                                    apiFetch("/api/auth/sync-claims", { method: "POST" })
+                                        .then((r) => {
+                                            if (!r.ok)
+                                                logger.warn("[sync-claims] failed", r.status)
+                                        })
+                                        .catch((err) =>
+                                            logger.warn("[sync-claims] threw", err),
+                                        )
+                                }
+                            })
+                            .catch((err) =>
+                                logger.warn("[sync-claims] getIdTokenResult failed", err),
+                            )
+                    }
 
                     setProfile(p)
                     profileReady = true
