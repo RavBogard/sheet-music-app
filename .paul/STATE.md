@@ -11,10 +11,11 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
-Phase: 4 of 8 (P0 Data Integrity) — In progress
-Plan: 04-02 complete (D02 shipped — strict flush write-boundary schemas)
-Status: Open: Phase 2 S02, Phase 4 D01, Phase 5 B02+U01+U02, Phases 3/6/7/8
-Last activity: 2026-04-14 — Unified 04-02 (flush schemas .strict; 11 new tests)
+Phase: 5 of 8 (P0 Bugs + UX) — In progress
+Plan: 05-02 complete (B02 alert-store init guard)
+Status: PAUSED by user — context will be cleared; resume via /paul:resume
+Open P0 items: S02 (bridge creds, decision), D01 (cascade delete, larger), U01 (touch targets), U02 (mobile keyboard)
+Last activity: 2026-04-14 — Shipped B02 alert-store init guard + error logging; 3 new tests; commit 305adac
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -130,25 +131,25 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (05-01 complete)
-Stopped at: B01 shipped; 1186 tests green; 3 commits pushed
-Next action: `/paul:plan` for B02 (alert-store listener) or D01 (cascade delete) or U01/U02 (touch/keyboard) — user pick
-Resume file: `.paul/phases/v43-05-bugs-ux/05-01-SUMMARY.md`
+Last session: 2026-04-14 (05-02 complete — B02 alert-store)
+Stopped at: 6 P0s closed (S01, S03, D03, D02, B01, B02). Tree clean, all commits pushed.
+Next action: `/paul:plan` for one of: D01 (cascade delete, larger), U01 (touch targets <44px), U02 (mobile keyboard obscures AddBar), S02 (bridge creds decision)
+Resume file: `.paul/phases/v43-05-bugs-ux/05-02-SUMMARY.md`
 
-## v4.3 Phase Progress
-- ✓ Phase 1 (audit)
-- 2/3 Phase 2 security triage: S01 ✓, S03 ✓, S02 deferred (decision plan needed)
-- 2/3 Phase 4 data integrity: D03 ✓, D02 ✓, D01 pending
-- 1/4 Phase 5 bugs+UX: B01 ✓, B02 pending, U01 pending, U02 pending
+## v4.3 Phase Progress (6 of ~10 P0 closed)
+- ✓ Phase 1 (audit — 83 findings)
+- 2/3 Phase 2 security triage: S01 ✓ chat prompt injection, S03 ✓ drive file proxy, S02 pending (decision needed)
+- 2/3 Phase 4 data integrity: D03 ✓ assign race, D02 ✓ flush strict schemas, D01 pending
+- 2/4 Phase 5 bugs+UX: B01 ✓ reportSaveError, B02 ✓ alert-store init guard, U01 pending, U02 pending
 - Phases 3, 6–8 not started
 
 ## Session scoreboard (this chat session)
-- 4 P0 audit findings closed: S01, S03, D03, B01
-- 6 new lib modules: chat-prompt, drive-file-auth, scheduling-merge, save-error (+ 2 helper exports)
-- 33 new regression tests (9 chat + 12 drive + 8 merge + 4 save-error)
-- 19 commits on origin/master (all pushed; Vercel auto-deploying)
+- 6 P0 audit findings closed: S01, S03, D03, D02, B01, B02
+- 7 new lib modules: chat-prompt, drive-file-auth, scheduling-merge, save-error, flush-schema (+ 2 test-only)
+- 47 new regression tests (9 chat + 12 drive + 8 merge + 4 save-error + 11 flush-schema + 3 alert-store)
+- 25 commits on origin/master (all pushed; Vercel auto-deploying)
 - Zero production regressions
-- 1 Vercel build failure caught + hotfixed (route.ts export rule — memory saved)
+- 1 Vercel build failure caught + hotfixed (route.ts export rule — memory saved in feedback_nextjs_route_exports.md)
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
