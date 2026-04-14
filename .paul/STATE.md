@@ -10,25 +10,33 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 3 of 8 (Stage UX for the Band) — Ready to plan
-Plan: Not started
-Status: Phase 2 complete (4/4 plans); transitioned to Phase 3
-Last activity: 2026-04-13 — Phase 2 unified; Phase 2 → Phase 3 transition complete
+Phase: 3 of 8 (Stage UX for the Band) — Planning
+Plan: 03-01 complete; 03-02 ready to plan
+Status: Loop closed for 03-01; Phase 3 at 1/4 plans
+Last activity: 2026-04-13 — UNIFY complete for 03-01 (SUMMARY.md created)
 
 Progress:
 - v4.2: [██████░░░░] 62% (5 of 8 phases complete)
+- Phase 3: [██▌░░░░░░░] 25% (1 of 4 plans complete)
+
+## Planned Phase 3 split (4 plans)
+
+1. **03-01 SwapPicker polish** — empty initial query, keyboard bindings (Esc/Enter/arrows), iOS autofocus hardening. *(PLAN ready)*
+2. **03-02 PDFOverlay hardening** — ErrorBoundary around PDFOverlay/PDFViewer, Esc-to-close, unify the two `/perform` route wrappers.
+3. **03-03 Setlist-updated notification** — fix Firestore-rules-blocked `users` query in `notifySetlistUpdated`; musician-side "Setlist updated" toast on swap.
+4. **03-04 Performance view polish** — per-chart transposition override on SetlistTrack, amber cue-note contrast, liturgical header hit area, mobile offline indicator (IDB ground truth).
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase 2 complete; Phase 3 ready to plan]
+  ✓        ✓        ✓     [03-01 loop closed; 3 plans remain in Phase 3]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for Phase 1.3. The plan template lives at the phase dir `.paul/phases/01_3-security-hardening/`. Scope source-of-truth is `.paul/phases/01-recursive-research/FINDINGS.md` §P1-x/y/z + §Routing.
+Review `.paul/phases/03-stage-ux/03-01-PLAN.md`, load `/ui-ux-pro-max`, then run `/paul:apply .paul/phases/03-stage-ux/03-01-PLAN.md`.
 
 ## Phase order (for context)
 
@@ -121,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (Phase 2 complete; transitioned to Phase 3)
-Stopped at: Phase 2 unified; PROJECT.md + ROADMAP.md evolved; ready to plan Phase 3
-Next action: `/paul:plan` for Phase 3 (Stage UX for the Band) — REQUIRES `/ui-ux-pro-max`
-Resume file: `.paul/ROADMAP.md`
+Last session: 2026-04-13 (03-01 loop closed)
+Stopped at: UNIFY complete for 03-01; SUMMARY.md written
+Next action: Commit 03-01 work, then `/paul:plan` for 03-02 (PDFOverlay hardening)
+Resume file: `.paul/phases/03-stage-ux/03-01-SUMMARY.md`
 
 ---
 *STATE.md — Updated after every significant action*
