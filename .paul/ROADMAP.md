@@ -12,7 +12,7 @@ Phases: 5 of 8 complete (62.5%)
 | 1.2 | Offline Truthiness | 1/1 | ✅ Complete | 2026-04-13 |
 | 1.3 | Security Hardening | 1/1 | ✅ Complete | 2026-04-13 |
 | 2 | Weekly Workflow Polish | 4/4 | ✅ Complete | 2026-04-13 |
-| 3 | Stage UX for the Band | 1/4 | In progress | - |
+| 3 | Stage UX for the Band | 2/4 | In progress | - |
 | 4 | Editor Ergonomics + Noise Cleanup | TBD | Not started | - |
 | 5 | Navigation + Schedule Hygiene | TBD | Not started | - |
 

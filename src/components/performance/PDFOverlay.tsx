@@ -7,6 +7,7 @@ import { PerformanceToolbar } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
 import { toQueueItem } from "@/lib/queue-utils"
+import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -206,6 +207,21 @@ export function PDFOverlay({
     const [, setMenuOpen] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState(false)
 
+    // Escape closes the open child modal first, then the overlay itself.
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key !== "Escape" || e.defaultPrevented) return
+            if (showPrintModal) {
+                setShowPrintModal(false)
+            } else {
+                onClose()
+            }
+            e.stopPropagation()
+        }
+        document.addEventListener("keydown", handler)
+        return () => document.removeEventListener("keydown", handler)
+    }, [showPrintModal, onClose])
+
     // Find setlist metadata if available (from parent hook or store)
     // The performance view is mounted under /perform/setlist/[id], so we can extract ID
     const params = typeof window !== 'undefined' ? window.location.pathname.split('/') : []
@@ -215,11 +231,13 @@ export function PDFOverlay({
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* Content area -- branches on file type */}
             <div className="flex-1 overflow-auto pb-0 relative">
-                {isMusicXml ? (
-                    fileUrl && <SmartScoreViewer url={fileUrl} />
-                ) : (
-                    pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
-                )}
+                <SectionErrorBoundary key={track.fileId} label="Chart">
+                    {isMusicXml ? (
+                        fileUrl && <SmartScoreViewer url={fileUrl} />
+                    ) : (
+                        pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
+                    )}
+                </SectionErrorBoundary>
                 {showTempoFlash && track.bpm && track.bpm > 0 && (
                     <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
                 )}

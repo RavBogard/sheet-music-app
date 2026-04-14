@@ -11,13 +11,13 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.2 UX Polish & Band Onboarding
 Phase: 3 of 8 (Stage UX for the Band) — Planning
-Plan: 03-01 complete; 03-02 ready to plan
-Status: Loop closed for 03-01; Phase 3 at 1/4 plans
-Last activity: 2026-04-13 — UNIFY complete for 03-01 (SUMMARY.md created)
+Plan: 03-02 complete; 03-03 next
+Status: Loop closed for 03-02; Phase 3 at 2/4 plans
+Last activity: 2026-04-14 — UNIFY complete for 03-02 (PDFOverlay hardening)
 
 Progress:
 - v4.2: [██████░░░░] 62% (5 of 8 phases complete)
-- Phase 3: [██▌░░░░░░░] 25% (1 of 4 plans complete)
+- Phase 3: [█████░░░░░] 50% (2 of 4 plans complete)
 
 ## Planned Phase 3 split (4 plans)
 
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [03-01 loop closed; 3 plans remain in Phase 3]
+  ✓        ✓        ✓     [03-02 loop closed; 2 plans remain in Phase 3]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (03-01 loop closed)
-Stopped at: UNIFY complete for 03-01; SUMMARY.md written
-Next action: Commit 03-01 work, then `/paul:plan` for 03-02 (PDFOverlay hardening)
-Resume file: `.paul/phases/03-stage-ux/03-01-SUMMARY.md`
+Last session: 2026-04-14 (03-02 loop closed)
+Stopped at: UNIFY complete for 03-02; SUMMARY.md written
+Next action: Commit + push 03-02, then `/paul:plan` for 03-03 (Setlist-updated notification)
+Resume file: `.paul/phases/03-stage-ux/03-02-SUMMARY.md`
 
 ---
 *STATE.md — Updated after every significant action*

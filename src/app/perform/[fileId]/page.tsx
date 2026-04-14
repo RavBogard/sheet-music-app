@@ -49,18 +49,13 @@ export default function StandalonePerformPage() {
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-background">
-            <PDFOverlay
-                track={track}
-                tracks={[track]}
-                currentIndex={0}
-                onClose={() => {
-                    // Navigate back to library or dashboard
-                    router.back()
-                }}
-                onNavigate={() => {}}
-                isPublicView={false} // Enables annotations/transposition features
-            />
-        </div>
+        <PDFOverlay
+            track={track}
+            tracks={[track]}
+            currentIndex={0}
+            onClose={() => router.back()}
+            onNavigate={() => {}}
+            isPublicView={false}
+        />
     )
 }
