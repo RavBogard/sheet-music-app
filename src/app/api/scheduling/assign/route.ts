@@ -8,6 +8,7 @@ import { sendSchedulingAssignmentSMS } from "@/lib/sms"
 import { detectNewSongs, type TrackRef } from "@/lib/new-song-detector"
 import { BASE_URL } from "@/lib/constants"
 import { sendPushToUsers } from "@/lib/push-send"
+import { mergeNewMusicians, type SetlistMusician } from "@/lib/scheduling-merge"
 
 const assignSchema = z.object({
     setlistId: z.string().min(1),
@@ -189,32 +190,21 @@ export const POST = createApiHandler(
             }
         }
 
-        // Also update the setlist's musicians array to keep it in sync
+        // D03 fix: read + write under a transaction so concurrent assigns can't
+        // both merge against the same stale baseline and drop each other's writes.
         try {
             const setlistRef = db.collection('setlists').doc(setlistId)
-            // Re-fetch to get the latest musicians array (may have changed during assignment loop)
-            const setlistDoc = await setlistRef.get()
-            if (setlistDoc.exists) {
-                const existingMusicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string; name: string; email: string; instrument?: string }>
-                const existingUids = new Set(existingMusicians.map(m => m.uid).filter(Boolean))
-
-                const newMusicians = musicians
-                    .filter(m => !existingUids.has(m.uid))
-                    .map(m => ({
-                        uid: m.uid,
-                        name: m.name,
-                        email: m.email,
-                        instrument: m.instrument || null,
-                    }))
-
-                if (newMusicians.length > 0) {
-                    const mergedMusicians = [...existingMusicians, ...newMusicians]
-                    await setlistRef.update({
-                        musicians: mergedMusicians,
-                        assignedUids: mergedMusicians.map(m => m.uid).filter(Boolean),
-                    })
-                }
-            }
+            await db.runTransaction(async (tx) => {
+                const setlistDoc = await tx.get(setlistRef)
+                if (!setlistDoc.exists) return
+                const existingMusicians = (setlistDoc.data()?.musicians || []) as SetlistMusician[]
+                const { merged, changed } = mergeNewMusicians(existingMusicians, musicians)
+                if (!changed) return
+                tx.update(setlistRef, {
+                    musicians: merged,
+                    assignedUids: merged.map(m => m.uid).filter(Boolean),
+                })
+            })
         } catch (e) {
             logger.warn('[Scheduling] Failed to sync setlist musicians array:', e)
         }

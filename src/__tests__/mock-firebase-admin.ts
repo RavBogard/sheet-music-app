@@ -45,7 +45,11 @@ export const mockFirestore = {
     })),
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
         const transaction = {
-            get: vi.fn(async () => ({ empty: true, docs: [] })),
+            // tx.get(ref) returns the shared mockDoc so transactional reads
+            // mirror what a docRef.get() would return in the same test setup.
+            // Callers that need the "collection query" shape can override
+            // per-test with `mockFirestore.runTransaction.mockImplementationOnce(...)`.
+            get: vi.fn(async () => mockDoc),
             set: mockSet,
             update: mockUpdate,
         }
