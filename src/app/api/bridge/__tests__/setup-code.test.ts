@@ -2,7 +2,7 @@
  * S02 — /api/bridge/setup-code GET
  * Audit-log + admin-email path + failure behavior.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest"
 import { NextRequest } from "next/server"
 
 // ── Mocks ──
@@ -14,11 +14,11 @@ const collectionMock = vi.fn((name: string) => {
     }
     return { doc: docMock }
 })
-const runTransactionMock = vi.fn<any>()
+const runTransactionMock: ReturnType<typeof vi.fn> = vi.fn()
 
 const fakeDb = {
     collection: collectionMock,
-    runTransaction: (fn: (tx: any) => Promise<any>) => runTransactionMock(fn),
+    runTransaction: (fn: (tx: unknown) => Promise<unknown>) => runTransactionMock(fn),
 }
 
 vi.mock("@/lib/firebase-admin", () => ({
@@ -30,9 +30,9 @@ vi.mock("@/lib/rate-limit", () => ({
     checkRateLimit: vi.fn(async () => null), // never rate-limited
 }))
 
-const alertSpy = vi.fn(async () => ({ ok: true, messageId: "msg-1" }))
+const alertSpy: ReturnType<typeof vi.fn> = vi.fn(async () => ({ ok: true, reason: undefined, messageId: "msg-1" }))
 vi.mock("@/lib/email", () => ({
-    sendBridgeRedemptionAlert: (...args: unknown[]) => alertSpy(...args),
+    sendBridgeRedemptionAlert: (arg: unknown) => alertSpy(arg),
 }))
 
 vi.mock("@/lib/logger", () => ({

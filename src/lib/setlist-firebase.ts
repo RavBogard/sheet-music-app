@@ -67,6 +67,7 @@ export type { SetlistTrack }
 
 import { Setlist } from "@/types/api"
 import { logger } from "@/lib/logger"
+import { apiFetch } from "@/lib/api-client"
 import { toDate } from "@/lib/firestore-helpers"
 import { getFullServiceContext } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
@@ -155,23 +156,18 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         async deleteSetlist(id: string) {
             try {
-                // Delete the setlist document — this is the critical operation.
-                await deleteDoc(doc(db, COLLECTION_PATH, id))
-
-                // Best-effort cleanup of associated tasks.
-                // Tasks use `allow write: if false` in Firestore rules (server-only),
-                // so client-side deletion will fail. Orphaned tasks are harmless
-                // (they reference a non-existent setlist and won't render).
-                try {
-                    const tasksQuery = query(collection(db, 'tasks'), where('setlistId', '==', id))
-                    const taskSnap = await getDocs(tasksQuery)
-                    if (taskSnap.size > 0) {
-                        const batch = writeBatch(db)
-                        taskSnap.docs.forEach(taskDoc => batch.delete(taskDoc.ref))
-                        await batch.commit()
-                    }
-                } catch {
-                    // Expected in most cases — rules block client-side task writes
+                // D01: cascade delete runs server-side via Admin SDK — removes
+                // the setlist doc + scheduling_assignments + tasks + setlist-
+                // rooted notifications + sub-collections (history, emailEvents).
+                // Client rules correctly deny most of these; the API route is
+                // the single source of truth for the cascade.
+                const res = await apiFetch('/api/setlist/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ setlistId: id }),
+                })
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}))
+                    throw new Error(data?.error || `Delete failed (${res.status})`)
                 }
 
                 logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
