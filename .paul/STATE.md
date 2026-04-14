@@ -10,14 +10,14 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 3 of 8 (Stage UX for the Band) — Planning
-Plan: 03-03 executed, ready for UNIFY
-Status: APPLY complete, checkpoint approved
-Last activity: 2026-04-14 — APPLY complete for 03-03 (notify-updated route + swap toast upgrade)
+Phase: 4 of 8 (Editor Ergonomics + Noise Cleanup) — Ready to plan
+Plan: Phase 3 closed; Phase 4 not yet planned
+Status: Phase transition complete; ready for /paul:plan on Phase 4
+Last activity: 2026-04-14 — Phase 3 COMPLETE (4/4 plans); ROADMAP + PROJECT.md updated
 
 Progress:
-- v4.2: [██████░░░░] 62% (5 of 8 phases complete)
-- Phase 3: [█████░░░░░] 50% (2 of 4 plans complete)
+- v4.2: [███████▌░░] 75% (6 of 8 phases complete)
+- Phase 3: [██████████] 100% ✓
 
 ## Planned Phase 3 split (4 plans)
 
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [03-03 APPLY complete; ready for UNIFY]
+  ✓        ✓        ✓     [Phase 3 complete — transition done; ready for Phase 4 PLAN]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (03-03 APPLY complete)
-Stopped at: APPLY complete, checkpoint approved, awaiting UNIFY
-Next action: Run `/paul:unify .paul/phases/03-stage-ux/03-03-PLAN.md` to close the loop (writes SUMMARY, commits + pushes)
-Resume file: `.paul/phases/03-stage-ux/03-03-PLAN.md`
+Last session: 2026-04-14 (Phase 3 complete — transition done)
+Stopped at: Phase 3 closed. SUMMARY written. ROADMAP/PROJECT updated. Committed + pushed to origin/master.
+Next action: `/paul:plan` for Phase 4 (Editor Ergonomics + Noise Cleanup — /ui-ux-pro-max required). Per the roadmap: dual onboarding cards → role-aware component; triple-modal chain consolidation; SwapPicker tablet height; toast dedupe; inline badges over routine toasts; row delete/move buttons; useSafeFirestoreSync memo; useUpcomingPrep stuck-loading fix; AlertDialog for TransferSetlistDialog + SetlistHistoryPanel; INSTRUMENTS unification; formatEventDate consolidation; canEditSetlist helper; z-index tokens; apiFetch timeout/abort; error toasts to ~10 silent-catch paths.
+Resume file: `.paul/phases/03-stage-ux/03-04-SUMMARY.md`
 
 ---
 *STATE.md — Updated after every significant action*

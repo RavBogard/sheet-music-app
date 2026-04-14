@@ -31,15 +31,20 @@ export function SetlistRow({
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
 
-    // Compute display key: show original key always, transposed key when applicable
+    // Compute display key. Precedence mirrors use-musician-transposition:
+    // per-track override (track.transposition) wins over the musician's profile
+    // default. Public view always shows the original key.
     const displayKey = (() => {
         if (!isSong || !track.key) return null
-        if (!isPublicView && defaultTransposition !== 0) {
-            const fullName = getTransposedKeyName(track.key, defaultTransposition)
-            const parenIdx = fullName.indexOf(" (")
-            return parenIdx > -1 ? fullName.substring(0, parenIdx) : fullName
-        }
-        return track.key
+        if (isPublicView) return track.key
+        const override = track.transposition
+        const effective = override !== undefined && override !== 0
+            ? override
+            : defaultTransposition
+        if (effective === 0) return track.key
+        const fullName = getTransposedKeyName(track.key, effective)
+        const parenIdx = fullName.indexOf(" (")
+        return parenIdx > -1 ? fullName.substring(0, parenIdx) : fullName
     })()
 
     const hasFile = isSong && !!track.fileId
@@ -56,19 +61,33 @@ export function SetlistRow({
         }
     }
 
-    // Header items render as inline dividers
+    // Header items render as inline dividers. For leaders, wrap in a real
+    // <button> so the whole row is a ≥44px tap target with native keyboard
+    // activation. Musicians see a plain, non-interactive label.
     if (isHeader) {
-        return (
-            <div
-                className="flex items-center gap-3 px-4 py-1.5 my-1"
-                role={isLeader ? "button" : undefined}
-                onClick={isLeader ? handleClick : undefined}
-            >
+        const headerInner = (
+            <>
                 <div className="h-px flex-1 bg-brand/10" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                     {track.title}
                 </span>
                 <div className="h-px flex-1 bg-brand/10" />
+            </>
+        )
+        if (isLeader) {
+            return (
+                <button
+                    type="button"
+                    onClick={handleClick}
+                    className="flex items-center gap-3 px-4 min-h-11 w-full text-left my-1 cursor-pointer"
+                >
+                    {headerInner}
+                </button>
+            )
+        }
+        return (
+            <div className="flex items-center gap-3 px-4 py-1.5 my-1">
+                {headerInner}
             </div>
         )
     }
@@ -89,7 +108,7 @@ export function SetlistRow({
                     </span>
                 )}
                 {track.notes && (
-                    <span className="text-xs text-amber-400/70 truncate max-w-[200px] md:max-w-[300px] shrink">
+                    <span className="text-xs text-amber-300 truncate max-w-[200px] md:max-w-[300px] shrink">
                         {track.notes}
                     </span>
                 )}

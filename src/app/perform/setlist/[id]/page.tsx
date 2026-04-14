@@ -23,6 +23,7 @@ import { SetlistView } from "@/components/performance/SetlistView"
 import { PDFOverlay } from "@/components/performance/PDFOverlay"
 import { SwapPicker } from "@/components/performance/SwapPicker"
 import { SwapChangeToast } from "@/components/performance/SwapChangeToast"
+import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import { useLibrary } from "@/hooks/use-library"
 import type { SetlistTrack, DriveFile } from "@/types/models"
@@ -74,19 +75,13 @@ export default function SetlistPerformPage() {
         setSwapTarget(null)
     }, [swapTarget, setlistService, resolvedSetlistId])
 
-    // Offline connectivity indicator
-    const [isOffline, setIsOffline] = useState(false)
-    useEffect(() => {
-        const goOffline = () => setIsOffline(true)
-        const goOnline = () => setIsOffline(false)
-        setIsOffline(!navigator.onLine)
-        window.addEventListener("offline", goOffline)
-        window.addEventListener("online", goOnline)
-        return () => {
-            window.removeEventListener("offline", goOffline)
-            window.removeEventListener("online", goOnline)
-        }
-    }, [])
+    // Song fileIds for the offline indicator's IDB ground-truth count.
+    const songFileIds = useMemo(
+        () => tracks
+            .filter(t => (!t.type || t.type === "song") && t.fileId)
+            .map(t => t.fileId as string),
+        [tracks]
+    )
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
@@ -165,12 +160,9 @@ export default function SetlistPerformPage() {
                 </div>
             </div>
 
-            {/* Offline indicator */}
-            {isOffline && (
-                <div className="px-3 py-1.5 bg-amber-500/20 text-amber-400 text-xs text-center border-b border-amber-500/20">
-                    Offline — setlist may be outdated
-                </div>
-            )}
+            {/* Offline indicator — IDB ground truth for N/M charts ready */}
+            <PerformanceOfflineIndicator setlistFileIds={songFileIds} />
+
 
             {/* Who's playing */}
             {musicians.length > 0 && (

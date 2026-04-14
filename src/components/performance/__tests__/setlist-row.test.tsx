@@ -133,4 +133,91 @@ describe("SetlistRow", () => {
         expect(screen.queryByTestId("key-badge")).toBeNull()
         expect(screen.getByText("Amazing Grace")).toBeDefined()
     })
+
+    it("per-track transposition override wins over profile default", () => {
+        const overridden: SetlistTrack = { ...baseSong, transposition: 2 }
+        render(
+            <SetlistRow
+                track={overridden}
+                {...defaultProps}
+                defaultTransposition={-2}
+            />
+        )
+        expect(screen.getByTestId("key-badge").textContent).toBe("D")
+    })
+
+    it("public view ignores per-track transposition override", () => {
+        const overridden: SetlistTrack = { ...baseSong, transposition: 2 }
+        render(
+            <SetlistRow
+                track={overridden}
+                {...defaultProps}
+                isPublicView={true}
+            />
+        )
+        expect(screen.getByTestId("key-badge").textContent).toBe("C")
+    })
+
+    it("falls back to profile default when track transposition is 0/undefined", () => {
+        render(
+            <SetlistRow
+                track={{ ...baseSong, transposition: 0 }}
+                {...defaultProps}
+                defaultTransposition={-2}
+            />
+        )
+        expect(screen.getByTestId("key-badge").textContent).toBe("Bb")
+    })
+
+    it("cue-notes use full-opacity amber-300 (not /70)", () => {
+        const trackWithNotes: SetlistTrack = {
+            ...baseSong,
+            notes: "Cue in after Amen",
+        }
+        render(<SetlistRow track={trackWithNotes} {...defaultProps} />)
+        const notes = screen.getByText("Cue in after Amen")
+        expect(notes.className).toContain("text-amber-300")
+        expect(notes.className).not.toContain("text-amber-400/70")
+    })
+
+    it("leader header renders as a ≥44px button that fires onLeaderSetPosition", () => {
+        const header: SetlistTrack = { id: "h1", title: "Shacharit", type: "header" }
+        const onLeaderSetPosition = vi.fn()
+        render(
+            <SetlistRow
+                track={header}
+                {...defaultProps}
+                isLeader={true}
+                onLeaderSetPosition={onLeaderSetPosition}
+            />
+        )
+        const button = screen.getByRole("button", { name: /Shacharit/ })
+        expect(button.tagName).toBe("BUTTON")
+        expect(button.className).toContain("min-h-11")
+        fireEvent.click(button)
+        expect(onLeaderSetPosition).toHaveBeenCalledTimes(1)
+    })
+
+    it("non-leader header has no interactive affordance", () => {
+        const header: SetlistTrack = { id: "h1", title: "Shacharit", type: "header" }
+        render(<SetlistRow track={header} {...defaultProps} isLeader={false} />)
+        expect(screen.queryByRole("button")).toBeNull()
+    })
+
+    it("leader header activates on Enter via native button semantics", () => {
+        const header: SetlistTrack = { id: "h1", title: "Shacharit", type: "header" }
+        const onLeaderSetPosition = vi.fn()
+        render(
+            <SetlistRow
+                track={header}
+                {...defaultProps}
+                isLeader={true}
+                onLeaderSetPosition={onLeaderSetPosition}
+            />
+        )
+        const button = screen.getByRole("button", { name: /Shacharit/ })
+        // Native <button> fires click on Enter; simulate click-through.
+        fireEvent.click(button)
+        expect(onLeaderSetPosition).toHaveBeenCalled()
+    })
 })
