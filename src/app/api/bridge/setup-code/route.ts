@@ -3,6 +3,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { sendBridgeRedemptionAlert } from "@/lib/email"
 import { randomBytes } from "crypto"
 
 /**
@@ -80,6 +81,7 @@ export async function GET(req: NextRequest) {
         // Prevents race condition where two requests both pass the check
         const codeRef = db.collection("bridge-setup-codes").doc(code)
 
+        let createdBy: string | undefined
         const redeemed = await db.runTransaction(async (tx) => {
             const snap = await tx.get(codeRef)
             if (!snap.exists) return { error: "Invalid code", status: 404 }
@@ -87,6 +89,8 @@ export async function GET(req: NextRequest) {
             const data = snap.data()!
             if (data.used) return { error: "Code already used", status: 410 }
             if (Date.now() > data.expiresAt) return { error: "Code expired", status: 410 }
+
+            createdBy = data.createdBy
 
             // Mark as used atomically
             tx.update(codeRef, { used: true, usedAt: Date.now() })
@@ -96,6 +100,34 @@ export async function GET(req: NextRequest) {
         if ("error" in redeemed) {
             return NextResponse.json({ error: redeemed.error }, { status: redeemed.status })
         }
+
+        // S02 — audit-log + admin email on successful redemption.
+        // Best-effort: failures here must never fail the redemption itself.
+        const redeemedAt = new Date()
+        const redeemerIp =
+            req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            req.headers.get("x-real-ip") ??
+            "unknown"
+        const redeemerUserAgent = req.headers.get("user-agent") ?? "unknown"
+
+        await db
+            .collection("bridge-redemptions")
+            .add({
+                code,
+                createdBy: createdBy ?? null,
+                redeemedAt,
+                redeemerIp,
+                redeemerUserAgent,
+                success: true,
+            })
+            .catch((err) => logger.error("bridge audit write failed:", err))
+
+        // Fire-and-forget: don't block the response on email delivery.
+        sendBridgeRedemptionAlert({ code, redeemedAt, redeemerIp, redeemerUserAgent })
+            .then((r) => {
+                if (!r.ok) logger.warn("bridge alert email:", r.reason)
+            })
+            .catch((err) => logger.error("bridge alert email threw:", err))
 
         // Build a minimal service account key from environment variables
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID

@@ -241,6 +241,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Bridge redemption audit log — server-only (Admin SDK)
+    match /bridge-redemptions/{id} {
+      allow read, write: if false;
+    }
+
     // MONITOR LIVE STATE — Firestore transport for mixer control
     // Bridge writes state via Admin SDK (bypasses rules).
     // Clients read state and write commands.
