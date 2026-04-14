@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.2 UX Polish & Band Onboarding
 Phase: 4 of 8 (Editor Ergonomics + Noise Cleanup) — Planning
-Plan: 04-05 complete; 04-06 next
-Status: Loop closed for 04-05; Phase 4 at 5/N plans
-Last activity: 2026-04-14 — UNIFY complete for 04-05 (toast hygiene)
+Plan: 04-06 complete; 04-07 audit-only (no code change — see 04-07-AUDIT-NOTE.md)
+Status: Phase 4 at 6 plans + 1 audit note; ready for milestone-end audit/handoff
+Last activity: 2026-04-14 — Investigated triple-modal "chain"; decided NOT to consolidate; documented rationale in 04-07-AUDIT-NOTE.md
 
 Progress:
 - v4.2: [███████▌░░] 75% (6 of 8 phases complete)
