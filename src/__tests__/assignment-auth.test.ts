@@ -51,15 +51,16 @@ describe('POST /api/scheduling/assign', () => {
 
         expect(res.status).toBe(200)
 
-        // The setlist musicians sync calls mockUpdate with the merged musicians + assignedUids
+        // D03: sync runs inside runTransaction → tx.update(ref, data).
+        // The payload is at args[1] (args[0] is the doc ref).
         const setlistUpdateCall = mockUpdate.mock.calls.find(
             (args: unknown[]) => {
-                const data = args[0] as Record<string, unknown> | undefined
+                const data = args[1] as Record<string, unknown> | undefined
                 return data && 'assignedUids' in data && 'musicians' in data
             }
         )
         expect(setlistUpdateCall).toBeDefined()
-        const updateData = setlistUpdateCall![0] as Record<string, unknown>
+        const updateData = setlistUpdateCall![1] as Record<string, unknown>
 
         expect(updateData.assignedUids).toEqual(['musician-1', 'musician-2'])
         expect(updateData.musicians).toHaveLength(2)

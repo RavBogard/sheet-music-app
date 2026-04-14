@@ -87,10 +87,16 @@ const mockFirestoreLocal = {
         return makeChainable([])
     }),
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
+        // tx.get is called in two shapes by the route:
+        //  (1) tx.get(query) for dedup → reads .empty / .docs
+        //  (2) tx.get(docRef) for setlist sync (D03) → reads .exists / .data()
+        // Returning a merged shape satisfies both readers in the same test run.
         const transaction = {
             get: vi.fn(async () => ({
                 empty: existingAssignmentDocs.length === 0,
                 docs: existingAssignmentDocs,
+                exists: setlistExists,
+                data: () => ({ ...setlistData, musicians: setlistMusicians }),
             })),
             set: mockSet,
             update: mockUpdate,
@@ -309,7 +315,9 @@ describe('POST /api/scheduling/assign', () => {
         const req = makeReq('/api/scheduling/assign', { method: 'POST', token: 'valid', body: validBody })
         await POST(req)
 
+        // D03: sync happens inside runTransaction, so tx.update(ref, data) — 2 args.
         expect(mockUpdate).toHaveBeenCalledWith(
+            expect.anything(),
             expect.objectContaining({
                 musicians: expect.arrayContaining([
                     expect.objectContaining({ uid: 'musician-1', name: 'Test Player' }),
