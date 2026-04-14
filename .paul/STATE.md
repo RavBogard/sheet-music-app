@@ -10,20 +10,20 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 2 of 8 (Weekly Workflow Polish) — Plan 04 planning (final plan of phase)
-Plan: 02-04 created (OverflowMenu + Save-as-Template + copy + service-notes + global undo), awaiting approval
-Status: PLAN created, ready for APPLY (blocked on /ui-ux-pro-max before Tasks 1 & 2)
-Last activity: 2026-04-13 — Plan 02-04 drafted at .paul/phases/02-weekly-workflow-polish/02-04-PLAN.md
+Phase: 3 of 8 (Stage UX for the Band) — Ready to plan
+Plan: Not started
+Status: Phase 2 complete (4/4 plans); transitioned to Phase 3
+Last activity: 2026-04-13 — Phase 2 unified; Phase 2 → Phase 3 transition complete
 
 Progress:
-- v4.2: [█████░░░░░] 50% (4 of 8 phases complete)
+- v4.2: [██████░░░░] 62% (5 of 8 phases complete)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan 02-04 created, awaiting approval]
+  ○        ○        ○     [Phase 2 complete; Phase 3 ready to plan]
 ```
 
 ## How to resume
@@ -36,7 +36,8 @@ Run `/paul:plan` for Phase 1.3. The plan template lives at the phase dir `.paul/
 2. ✓ Phase 1.1 — Concurrent-edit safety (complete, 2026-04-13)
 3. ✓ Phase 1.2 — Offline truthiness (complete, 2026-04-13)
 4. ✓ Phase 1.3 — Security hardening (complete, 2026-04-13)
-   **▶ Next: Phase 2 — Weekly workflow polish (/ui-ux-pro-max required)**
+5. ✓ Phase 2 — Weekly workflow polish (complete, 2026-04-13 — 4 plans: save-reliability, wizard polish, dashboard polish, editor polish)
+   **▶ Next: Phase 3 — Stage UX for the band (/ui-ux-pro-max required)**
 5. Phase 2 — Weekly workflow polish (expanded scope, /ui-ux-pro-max)
 6. Phase 3 — Stage UX for the band (expanded, /ui-ux-pro-max)
 7. Phase 4 — Editor ergonomics + noise cleanup (expanded, /ui-ux-pro-max)
@@ -120,10 +121,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (Plan 02-04 planning — draft complete)
-Stopped at: Plan 02-04 created, awaiting approval. Final plan of Phase 2 — UNIFY will trigger phase transition.
-Next action: Review plan, then `/paul:apply .paul/phases/02-weekly-workflow-polish/02-04-PLAN.md` (load `/ui-ux-pro-max` before Tasks 1 & 2)
-Resume file: `.paul/phases/02-weekly-workflow-polish/02-04-PLAN.md`
+Last session: 2026-04-13 (Phase 2 complete; transitioned to Phase 3)
+Stopped at: Phase 2 unified; PROJECT.md + ROADMAP.md evolved; ready to plan Phase 3
+Next action: `/paul:plan` for Phase 3 (Stage UX for the Band) — REQUIRES `/ui-ux-pro-max`
+Resume file: `.paul/ROADMAP.md`
 
 ---
 *STATE.md — Updated after every significant action*

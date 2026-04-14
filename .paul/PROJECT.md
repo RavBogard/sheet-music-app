@@ -52,12 +52,12 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v4.2 UX Polish & Band Onboarding — 4 of 8 phases complete**
+**v4.2 UX Polish & Band Onboarding — 5 of 8 phases complete**
 - [x] v4.2 Phase 1: Recursive research — 53+ findings, bugs/gaps mapped (2026-04-13)
 - [x] v4.2 Phase 1.1: Concurrent-edit safety — runTransaction + rev precondition + merge banner (2026-04-13)
 - [x] v4.2 Phase 1.2: Offline truthiness — IndexedDB blob store, honest offline state (2026-04-13)
 - [x] v4.2 Phase 1.3: Security hardening — storage.rules in VC, 10-char bridge code, rate limits on nudge-admin + calendar-feed (2026-04-13)
-- [ ] v4.2 Phase 2: Weekly workflow polish (/ui-ux-pro-max)
+- [x] v4.2 Phase 2: Weekly workflow polish — save-reliability flush route + "Saved Ns ago" ticker; single-step wizard + congregation-driven rabbi list; past-list DESC + role-aware hero CTA + referrer-back; service-notes always visible + Save-as-Template + "Gig Packet" copy unification + global Cmd/Ctrl+Z (2026-04-13)
 - [ ] v4.2 Phase 3: Stage UX for the band (/ui-ux-pro-max)
 - [ ] v4.2 Phase 4: Editor ergonomics + noise cleanup (/ui-ux-pro-max)
 - [ ] v4.2 Phase 5: Navigation + schedule hygiene (/ui-ux-pro-max)
@@ -215,7 +215,19 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | storage.rules: isMember() via custom claim only (no Firestore cross-read) | v4.2 P1.3 | Storage rules cannot read Firestore; legacy config/admins bootstrap cannot be mirrored — accept cost |
 | Dedicated `bridgeSetup` rate-limit tier (5/min) for credential exchange | v4.2 P1.3 | Credential endpoints deserve stricter bound than app-wide 60/min |
 | 10-char unambiguous setup codes (~50 bits) over alphabet expansion | v4.2 P1.3 | Humans copy the code; ambiguity-free alphabet preserved, entropy comes from length |
+| Unload flush: fetch keepalive + Bearer, not sendBeacon | v4.2 P2-01 | App auth is Bearer-header only; sendBeacon can't set headers → would 401 |
+| New /api/setlist/flush route mirrors Phase 1.1 StaleWriteError precondition server-side | v4.2 P2-01 | Unload save path goes through Admin SDK; same version-check semantics as in-page save |
+| Text + dot SaveStatus (dot scans at stage distance, text gives context) | v4.2 P2-01 | Glanceable + informative; no regression on existing visual cue |
+| Single-step creation wizard with inline Template dropdown | v4.2 P2-02 | Shaves one click from 90% weekly flow; Template remains accessible as a Select |
+| Storage rules isMember() uses custom claim only (no Firestore cross-read) | v4.2 P1.3 | Storage rules cannot call Firestore; config/admins bootstrap not mirrored — accept cost |
+| Two distinct modals for create vs edit (NamePrompt / EditDetails) | v4.2 P2-02 | One overloaded modal was showing wrong title and missing rabbi/notes fields on edit path |
+| Hardcoded rabbi list replaced with useCongregation() | v4.2 P2-02 | Admins can edit rabbiProfiles in Firestore without a code push; wizard + overflow submenu stay in sync |
+| NextServiceCard is the live hero; HeroCard is dead code | v4.2 P2-03 | Role-aware CTA change applied to NextServiceCard (the rendered component); HeroCard left untouched for a future cleanup plan |
+| router.back() gated on same-origin + href-not-self | v4.2 P2-03 | Referrer-based back respects in-app history but doesn't exit the app via search-engine referrers |
+| Service Notes always visible (no "+ Add" gate) | v4.2 P2-04 | Progressive disclosure on a primary authoring field is an anti-pattern; placeholder carries the purpose |
+| Field-aware global keyboard shortcuts | v4.2 P2-04 | Skip on INPUT/TEXTAREA/SELECT/contenteditable so native field undo works |
+| Canonical "Gig Packet" copy (drop "Print") | v4.2 P2-04 | "Print" undersells a multi-page PDF; "Gig Packet" is the in-house term |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-13 after v4.2 Phase 1.3 (Security Hardening)*
+*Last updated: 2026-04-13 after v4.2 Phase 2 (Weekly Workflow Polish — 4 plans)*

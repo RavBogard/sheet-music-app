@@ -3,7 +3,7 @@
 ## Current Milestone
 **v4.2 UX Polish & Band Onboarding**
 Status: 🚧 In Progress
-Phases: 4 of 8 complete (50%)
+Phases: 5 of 8 complete (62.5%)
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
@@ -11,7 +11,7 @@ Phases: 4 of 8 complete (50%)
 | 1.1 | Concurrent-edit Safety | 1/1 | ✅ Complete | 2026-04-13 |
 | 1.2 | Offline Truthiness | 1/1 | ✅ Complete | 2026-04-13 |
 | 1.3 | Security Hardening | 1/1 | ✅ Complete | 2026-04-13 |
-| 2 | Weekly Workflow Polish | TBD | Not started | - |
+| 2 | Weekly Workflow Polish | 4/4 | ✅ Complete | 2026-04-13 |
 | 3 | Stage UX for the Band | TBD | Not started | - |
 | 4 | Editor Ergonomics + Noise Cleanup | TBD | Not started | - |
 | 5 | Navigation + Schedule Hygiene | TBD | Not started | - |
