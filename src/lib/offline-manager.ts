@@ -1,15 +1,16 @@
 /**
- * Unified Offline Manager
+ * Unified Offline Manager.
  *
- * Consolidates two parallel offline systems:
- * 1. Service Worker Cache API (for PDF files via BackgroundPrefetcher)
- * 2. IndexedDB (for library index via library-cache.ts)
+ * Single source of truth backed by IndexedDB:
+ *  - blob storage for PDF/audio files (offline-idb.ts)
+ *  - library index cache (library-cache.ts)
  *
- * Provides a single source of truth for what's cached, storage usage,
- * and cache management operations.
+ * v4.2 Phase 1.2: the old Cache API / service worker path is gone. Stats
+ * and listings read from IDB only.
  */
 
 import { getCachedLibrary, clearLibraryCache } from "./library-cache"
+import { clearAll as clearOfflineBlobs, listFileIds, totalBytes } from "./offline-idb"
 import { logger } from "./logger"
 
 export interface OfflineStats {
@@ -19,7 +20,7 @@ export interface OfflineStats {
     quotaBytes: number
     /** Usage as a percentage (0-100) */
     usagePercent: number
-    /** Number of cached PDF files (from Cache API) */
+    /** Number of cached PDF/audio files (from IDB blob store) */
     cachedFileCount: number
     /** Whether the library index is cached in IndexedDB */
     libraryIndexCached: boolean
@@ -27,9 +28,6 @@ export interface OfflineStats {
     libraryIndexCachedAt: Date | null
 }
 
-/**
- * Get comprehensive offline storage statistics.
- */
 export async function getOfflineStats(): Promise<OfflineStats> {
     const stats: OfflineStats = {
         usageBytes: 0,
@@ -54,23 +52,20 @@ export async function getOfflineStats(): Promise<OfflineStats> {
         // Storage API not available
     }
 
-    // Count cached files from Cache API
+    // Count cached files from IDB blob store (ground truth)
     try {
-        if (typeof caches !== 'undefined') {
-            const cacheNames = await caches.keys()
-            for (const name of cacheNames) {
-                const cache = await caches.open(name)
-                const keys = await cache.keys()
-                stats.cachedFileCount += keys.filter(
-                    req => req.url.includes('/api/drive/file/')
-                ).length
-            }
+        const ids = await listFileIds()
+        stats.cachedFileCount = ids.length
+        // If the browser-level estimate is unavailable, fall back to summing
+        // known blob sizes so the UI still has a real number.
+        if (stats.usageBytes === 0) {
+            stats.usageBytes = await totalBytes()
         }
     } catch {
-        // Cache API not available
+        // IDB not available
     }
 
-    // Check IndexedDB library cache
+    // Check IndexedDB library-index cache
     try {
         const lib = await getCachedLibrary()
         if (lib) {
@@ -84,67 +79,30 @@ export async function getOfflineStats(): Promise<OfflineStats> {
     return stats
 }
 
-/**
- * Clear all offline caches (both Cache API and IndexedDB).
- */
+/** Clear all offline data (blob store + library index). */
 export async function clearAllOfflineData(): Promise<void> {
-    // Clear Cache API entries for drive files
     try {
-        if (typeof caches !== 'undefined') {
-            const cacheNames = await caches.keys()
-            for (const name of cacheNames) {
-                const cache = await caches.open(name)
-                const keys = await cache.keys()
-                for (const req of keys) {
-                    if (req.url.includes('/api/drive/file/')) {
-                        await cache.delete(req)
-                    }
-                }
-            }
-        }
+        await clearOfflineBlobs()
     } catch (err) {
-        logger.warn('[Offline] Failed to clear Cache API:', err)
+        logger.warn('[Offline] Failed to clear blob store:', err)
     }
-
-    // Clear IndexedDB library cache
     try {
         await clearLibraryCache()
     } catch (err) {
-        logger.warn('[Offline] Failed to clear IndexedDB:', err)
+        logger.warn('[Offline] Failed to clear library index:', err)
     }
 }
 
-/**
- * Get cached file IDs from the Cache API.
- * Useful for showing which specific files are available offline.
- */
+/** Get cached file IDs from the IDB blob store. */
 export async function getCachedFileIds(): Promise<string[]> {
-    const fileIds: string[] = []
-
     try {
-        if (typeof caches === 'undefined') return fileIds
-
-        const cacheNames = await caches.keys()
-        for (const name of cacheNames) {
-            const cache = await caches.open(name)
-            const keys = await cache.keys()
-            for (const req of keys) {
-                const match = req.url.match(/\/api\/drive\/file\/([^/?]+)/)
-                if (match) {
-                    fileIds.push(match[1])
-                }
-            }
-        }
+        return await listFileIds()
     } catch {
-        // Cache API not available
+        return []
     }
-
-    return fileIds
 }
 
-/**
- * Format bytes into a human-readable string.
- */
+/** Format bytes into a human-readable string. */
 export function formatBytes(bytes: number): string {
     if (bytes === 0) return '0 B'
     const units = ['B', 'KB', 'MB', 'GB']

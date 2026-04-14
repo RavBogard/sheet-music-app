@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 1.2 of 8 (Offline Truthiness) — next up
-Plan: Not started
-Status: Phase 1.1 complete; ready to plan Phase 1.2
-Last activity: 2026-04-13 — Phase 1.1 (Concurrent-edit Safety) shipped. Transaction + rev precondition on every tracks write; editor subscribes to remote; banner on stale. Migration stamped 10 legacy docs; idempotent confirmed. 1089/1089 tests pass. Two-tab smoke test pending human verification.
+Phase: 1.2 of 8 (Offline Truthiness) — Planning
+Plan: 01_2-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-04-13 — Created .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
 
 Progress:
 - v4.2: [█░░░░░░░░░] ~12% (1 of 8 phases complete)
@@ -56,9 +56,9 @@ Branch: master
 ## Session Continuity
 
 Last session: 2026-04-13
-Stopped at: Phase 1.1 complete (SUMMARY at .paul/phases/01_1-concurrent-edit-safety/01_1-01-SUMMARY.md)
-Next action: /paul:plan for Phase 1.2 (Offline Truthiness)
-Resume file: .paul/phases/01-recursive-research/FINDINGS.md + WAVE-2-offline-truthiness.md
+Stopped at: Plan 01_2-01 created for Phase 1.2 (Offline Truthiness)
+Next action: Approve plan, then /paul:apply .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
+Resume file: .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
 
 ---
 *STATE.md — Updated after every significant action*

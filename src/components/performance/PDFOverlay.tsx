@@ -131,8 +131,32 @@ export function PDFOverlay({
     const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
     const isMusicXml = currentItem?.type === 'musicxml'
 
-    // Build the file URL from the track's fileId (used for both PDF and MusicXML)
-    const fileUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
+    // Build the file URL from the track's fileId (used for both PDF and MusicXML).
+    // Prefer the IDB blob when we have one so offline-preloaded charts render
+    // without a network fetch.
+    const networkUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
+    const [fileUrl, setFileUrl] = useState<string>(networkUrl)
+    useEffect(() => {
+        let cancelled = false
+        let objectUrl: string | null = null
+        async function resolve() {
+            if (!track.fileId) { setFileUrl(""); return }
+            const { getFile } = await import("@/lib/offline-idb")
+            const blob = await getFile(track.fileId)
+            if (cancelled) return
+            if (blob) {
+                objectUrl = URL.createObjectURL(blob)
+                setFileUrl(objectUrl)
+            } else {
+                setFileUrl(networkUrl)
+            }
+        }
+        resolve()
+        return () => {
+            cancelled = true
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
+        }
+    }, [track.fileId, networkUrl])
     const pdfUrl = fileUrl
 
     // Prefetch the next 2 PDFs in the background
@@ -158,15 +182,21 @@ export function PDFOverlay({
             }
         }, 1000)
 
-        const doPrefetch = (fileIds: string[]) => {
-            fileIds.forEach(id => {
-                if (prefetchedRef.current.has(id)) return
+        const doPrefetch = async (fileIds: string[]) => {
+            const { hasFile, putFile } = await import("@/lib/offline-idb")
+            for (const id of fileIds) {
+                if (prefetchedRef.current.has(id)) continue
                 prefetchedRef.current.add(id)
-                fetch(`/api/drive/file/${id}`).catch(() => {
-                    // Ignore background fetch errors
+                try {
+                    if (await hasFile(id)) continue
+                    const res = await fetch(`/api/drive/file/${id}`)
+                    if (!res.ok) { prefetchedRef.current.delete(id); continue }
+                    const blob = await res.blob()
+                    if (blob && blob.size > 0) await putFile(id, blob)
+                } catch {
                     prefetchedRef.current.delete(id)
-                })
-            })
+                }
+            }
         }
 
         return () => clearTimeout(prefetchTimer)
