@@ -40,7 +40,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const resolvedUrlRef = useRef<string | null>(null)
     const retryCountRef = useRef(0)
 
-    const fetchPdf = useCallback(async (fetchUrl: string, isRetry = false) => {
+    const fetchPdf = useCallback(async (fetchUrl: string, signal?: AbortSignal, isRetry = false) => {
         if (resolvedUrlRef.current === fetchUrl && !isRetry) return
 
         setLoading(true)
@@ -50,7 +50,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         // Rely on standard ServiceWorker caching instead of IndexedDB.
         // Fetch the PDF ourselves so we can diagnose failures
         try {
-            const res = await fetch(fetchUrl)
+            const res = await fetch(fetchUrl, { signal })
 
             if (!res.ok) {
                 // Try to read error body for diagnostics
@@ -83,28 +83,46 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             setError(null)
             retryCountRef.current = 0
         } catch (e) {
+            // Abort is an expected outcome on unmount / URL change — swallow quietly.
+            if (e instanceof Error && e.name === 'AbortError') return
             const msg = e instanceof Error ? e.message : String(e)
             logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
             setError(msg)
             setSource(null)
         } finally {
-            setLoading(false)
+            // Guard against setting loading=false after an abort already triggered
+            // a re-fetch with a new signal.
+            if (!signal?.aborted) setLoading(false)
         }
     }, [])
 
-    // Resolve source when URL changes
+    // Tracks a bust-counter to force-rerun the fetch effect for retries.
+    const [retryBust, setRetryBust] = useState(0)
+
+    // Resolve source when URL changes. A 60s timeout covers hung venue networks.
     useEffect(() => {
-        fetchPdf(url)
-    }, [url, fetchPdf])
+        const controller = new AbortController()
+        const timer = setTimeout(() => {
+            controller.abort(new DOMException('PDF fetch timeout', 'AbortError'))
+        }, 60_000)
+
+        const effectiveUrl = retryBust > 0
+            ? (url.includes('?') ? `${url}&_r=${retryBust}` : `${url}?_r=${retryBust}`)
+            : url
+        fetchPdf(effectiveUrl, controller.signal, retryBust > 0)
+
+        return () => {
+            clearTimeout(timer)
+            controller.abort()
+        }
+    }, [url, retryBust, fetchPdf])
 
     const handleRetry = () => {
         retryCountRef.current++
         resolvedUrlRef.current = null
-        // Add cache-bust param to bypass any stale CDN-cached errors
-        const bustUrl = url.includes('?')
-            ? `${url}&_r=${retryCountRef.current}`
-            : `${url}?_r=${retryCountRef.current}`
-        fetchPdf(bustUrl, true)
+        // Bumping the bust counter retriggers the effect, which creates a fresh
+        // AbortController + timer. Cache-bust param is appended in the effect.
+        setRetryBust(retryCountRef.current)
     }
 
     // Auto-Resize
