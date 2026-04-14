@@ -18,17 +18,11 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
+import { flushMusicianSchema, flushTrackSchema } from "@/lib/flush-schema"
 
-// Reject anything that would let the client rewrite server-controlled fields.
-const musicianSchema = z.object({
-    uid: z.string().optional(),
-    name: z.string(),
-    email: z.string().optional(),
-    instrument: z.string().optional(),
-}).passthrough()
-
-const trackSchema = z.object({}).passthrough() // Trust the existing SetlistTrack shape
-
+// Write boundary — strict schemas reject unknown fields so clients can't
+// silently inject into Firestore via tracks[*] or musicians[*]. See
+// src/lib/flush-schema.ts for the full allowlists.
 const schema = z.object({
     setlistId: z.string().min(1),
     // Client sends the `updatedAt` millis it last observed. Null skips the
@@ -36,12 +30,12 @@ const schema = z.object({
     expectedUpdatedAtMs: z.number().int().nullable(),
     data: z.object({
         name: z.string().min(1),
-        tracks: z.array(trackSchema),
+        tracks: z.array(flushTrackSchema),
         trackCount: z.number().int().nonnegative(),
         eventDate: z.string().optional(),
         rabbi: z.string().optional(),
         serviceNotes: z.string().optional(),
-        musicians: z.array(musicianSchema).optional(),
+        musicians: z.array(flushMusicianSchema).optional(),
     }),
 })
 
