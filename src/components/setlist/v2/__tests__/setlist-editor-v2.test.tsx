@@ -223,6 +223,10 @@ vi.mock("../../SetlistDialogs", () => ({
 vi.mock("../../SetlistHistoryPanel", () => ({
     SetlistHistoryPanel: () => null,
 }))
+vi.mock("../../modals/EditDetails", () => ({
+    EditDetails: () => null,
+}))
+
 vi.mock("../../modals/NamePrompt", () => ({
     NamePrompt: () => null,
 }))

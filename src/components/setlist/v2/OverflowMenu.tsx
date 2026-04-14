@@ -22,6 +22,7 @@ import {
     User,
     Printer,
 } from "lucide-react"
+import { useCongregation } from "@/lib/congregation-store"
 
 interface OverflowMenuProps {
     // Actions
@@ -104,26 +105,7 @@ export function OverflowMenu({
                 <DropdownMenuSeparator />
 
                 {/* Settings */}
-                {canEdit && onSetRabbi && (
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                            <User className="h-4 w-4 mr-2" />
-                            {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                            {["Daniel", "Karen", "Randy"].map((r) => (
-                                <DropdownMenuItem key={r} onClick={() => onSetRabbi(r)}>
-                                    {rabbi === r && <Check className="h-3 w-3 mr-2" />}
-                                    <span className={rabbi === r ? "font-medium" : ""}>Rabbi {r}</span>
-                                </DropdownMenuItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => onSetRabbi("")}>
-                                Clear
-                            </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                )}
+                <RabbiSubmenu canEdit={canEdit} rabbi={rabbi} onSetRabbi={onSetRabbi} />
 
                 <DropdownMenuSeparator />
 
@@ -152,5 +134,41 @@ export function OverflowMenu({
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+    )
+}
+
+function RabbiSubmenu({
+    canEdit,
+    rabbi,
+    onSetRabbi,
+}: {
+    canEdit: boolean
+    rabbi?: string
+    onSetRabbi?: (rabbi: string) => void
+}) {
+    const congregation = useCongregation()
+    const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
+
+    if (!canEdit || !onSetRabbi) return null
+
+    return (
+        <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+                <User className="h-4 w-4 mr-2" />
+                {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+                {rabbiProfiles.map((rp) => (
+                    <DropdownMenuItem key={rp.name} onClick={() => onSetRabbi(rp.name)}>
+                        {rabbi === rp.name && <Check className="h-3 w-3 mr-2" />}
+                        <span className={rabbi === rp.name ? "font-medium" : ""}>Rabbi {rp.name}</span>
+                    </DropdownMenuItem>
+                ))}
+                {rabbiProfiles.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => onSetRabbi("")}>
+                    Clear
+                </DropdownMenuItem>
+            </DropdownMenuSubContent>
+        </DropdownMenuSub>
     )
 }

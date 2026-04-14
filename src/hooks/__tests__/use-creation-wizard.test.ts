@@ -21,12 +21,8 @@ vi.mock('@/lib/scheduling-firebase', () => ({
 }))
 
 const mockGetFullServiceContext = vi.fn().mockResolvedValue({ type: 'shabbat_morning', parasha: 'Bereshit' })
-const mockGetNextFriday = vi.fn(() => new Date('2026-03-13'))
-const mockGetNextSaturday = vi.fn(() => new Date('2026-03-14'))
 vi.mock('@/lib/liturgical-calendar', () => ({
   getFullServiceContext: vi.fn((_opts?: unknown) => mockGetFullServiceContext(_opts)),
-  getNextFriday: () => mockGetNextFriday(),
-  getNextSaturday: () => mockGetNextSaturday(),
   ServiceType: {},
 }))
 
@@ -66,81 +62,49 @@ vi.mock('sonner', () => ({
 import { useCreationWizard } from '@/hooks/use-creation-wizard'
 import { toast } from 'sonner'
 
-describe('useCreationWizard', () => {
+describe('useCreationWizard (single-step)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateSetlist.mockResolvedValue('new-setlist-id')
   })
 
-  it('starts with initial state', () => {
+  it('starts empty and cannot create until a name is entered', () => {
     const { result } = renderHook(() => useCreationWizard())
-    expect(result.current.step).toBe('template')
-    expect(result.current.stepIndex).toBe(0)
-    expect(result.current.totalSteps).toBe(2)
     expect(result.current.name).toBe('')
     expect(result.current.selectedTemplate).toBeNull()
     expect(result.current.tracks).toEqual([])
     expect(result.current.musicians).toEqual([])
     expect(result.current.creating).toBe(false)
+    expect(result.current.canCreate).toBe(false)
   })
 
-  it('navigates forward with goNext', () => {
+  it('canCreate flips true once name is non-empty', () => {
     const { result } = renderHook(() => useCreationWizard())
-    act(() => { result.current.goNext() })
-    expect(result.current.step).toBe('details')
-    expect(result.current.stepIndex).toBe(1)
-  })
-
-  it('navigates backward with goBack', () => {
-    const { result } = renderHook(() => useCreationWizard())
-    act(() => { result.current.goNext() })
-    expect(result.current.step).toBe('details')
-
-    act(() => { result.current.goBack() })
-    expect(result.current.step).toBe('template')
-  })
-
-  it('does not go back from first step', () => {
-    const { result } = renderHook(() => useCreationWizard())
-    expect(result.current.canGoBack).toBe(false)
-    act(() => { result.current.goBack() })
-    expect(result.current.step).toBe('template')
-  })
-
-  it('goToStep jumps directly', () => {
-    const { result } = renderHook(() => useCreationWizard())
-    act(() => { result.current.goToStep('details') })
-    expect(result.current.step).toBe('details')
-  })
-
-  it('canGoNext: template step always true', () => {
-    const { result } = renderHook(() => useCreationWizard())
-    expect(result.current.canGoNext).toBe(true)
-  })
-
-  it('canGoNext: details step requires non-empty name', () => {
-    const { result } = renderHook(() => useCreationWizard())
-    act(() => { result.current.goToStep('details') })
-    expect(result.current.canGoNext).toBe(false)
-
+    act(() => { result.current.setName('  ') })
+    expect(result.current.canCreate).toBe(false)
     act(() => { result.current.setName('My Setlist') })
-    expect(result.current.canGoNext).toBe(true)
+    expect(result.current.canCreate).toBe(true)
   })
 
-  it('template selection auto-fills eventDate for Saturday', async () => {
+  it('template selection auto-fills name from liturgical context', async () => {
     const { result } = renderHook(() => useCreationWizard())
     await act(async () => { await result.current.setSelectedTemplate('shabbat_morning') })
 
-    expect(result.current.eventDate).toEqual(new Date('2026-03-14'))
-    expect(mockGetNextSaturday).toHaveBeenCalled()
+    expect(mockGetFullServiceContext).toHaveBeenCalled()
+    expect(mockGenerateSetlistName).toHaveBeenCalled()
+    expect(result.current.name).toBe('Shabbat Morning — Bereshit')
+    expect(result.current.eventDate).toBeInstanceOf(Date)
   })
 
-  it('template selection auto-fills eventDate for Friday', async () => {
+  it('template deselect leaves name as last-set value (no reset)', async () => {
     const { result } = renderHook(() => useCreationWizard())
-    await act(async () => { await result.current.setSelectedTemplate('friday_night') })
+    await act(async () => { await result.current.setSelectedTemplate('shabbat_morning') })
+    expect(result.current.name).toBe('Shabbat Morning — Bereshit')
 
-    expect(result.current.eventDate).toEqual(new Date('2026-03-13'))
-    expect(mockGetNextFriday).toHaveBeenCalled()
+    act(() => { result.current.setSelectedTemplate(null) })
+    // Name is the user's current field value; dropdown going back to blank shouldn't wipe it.
+    expect(result.current.name).toBe('Shabbat Morning — Bereshit')
+    expect(result.current.selectedTemplate).toBeNull()
   })
 
   it('addSongsFromFiles creates tracks from DriveFile array', () => {
@@ -173,6 +137,13 @@ describe('useCreationWizard', () => {
       expect.objectContaining({ templateType: 'shabbat_morning' })
     )
     expect(mockPush).toHaveBeenCalledWith('/setlists/new-setlist-id')
+  })
+
+  it('create() is a no-op when name is empty', async () => {
+    const { result } = renderHook(() => useCreationWizard())
+    await act(async () => { await result.current.create() })
+    expect(mockCreateSetlist).not.toHaveBeenCalled()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
   it('create() assigns musicians when musicians selected', async () => {
@@ -219,18 +190,19 @@ describe('useCreationWizard', () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => {
       result.current.setName('Test')
-      result.current.goToStep('details')
+      result.current.setRabbi('Daniel')
     })
 
     act(() => { result.current.reset() })
 
-    expect(result.current.step).toBe('template')
     expect(result.current.name).toBe('')
+    expect(result.current.rabbi).toBe('')
     expect(result.current.tracks).toEqual([])
     expect(result.current.creating).toBe(false)
+    expect(result.current.canCreate).toBe(false)
   })
 
-  it('sets creating=true during create and resets after', async () => {
+  it('sets creating=false after create completes', async () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => { result.current.setName('Test') })
 
@@ -238,7 +210,6 @@ describe('useCreationWizard', () => {
 
     await act(async () => { await result.current.create() })
 
-    // creating resets to false after completion
     expect(result.current.creating).toBe(false)
     expect(mockCreateSetlist).toHaveBeenCalledTimes(1)
   })

@@ -1,20 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-    ChevronLeft, ChevronRight, Check, Loader2,
-    Calendar as CalendarIcon, Sparkles, FileText,
-} from "lucide-react"
+import { useEffect } from "react"
+import { Check, Loader2, Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
-import { useCreationWizard, type WizardStep } from "@/hooks/use-creation-wizard"
+import { useCreationWizard } from "@/hooks/use-creation-wizard"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 
 interface CreationWizardProps {
@@ -22,276 +19,157 @@ interface CreationWizardProps {
     onOpenChange: (open: boolean) => void
 }
 
-const STEPS: { id: WizardStep; label: string; icon: React.ReactNode }[] = [
-    { id: 'template', label: 'Template', icon: <Sparkles className="h-4 w-4" /> },
-    { id: 'details', label: 'Details', icon: <CalendarIcon className="h-4 w-4" /> },
-]
+// Sentinel for the "no template" option — empty-string values are forbidden by shadcn Select.
+const BLANK = "__blank__"
 
 export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
     const wizard = useCreationWizard()
 
-    // Reset wizard state each time the dialog opens
+    // Reset state each time the dialog opens
     useEffect(() => {
         if (open) wizard.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
-    const isLastStep = wizard.stepIndex === wizard.totalSteps - 1
+    const congregation = useCongregation()
+    const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
 
-    const handleNext = () => {
-        if (isLastStep) {
-            wizard.create()
-        } else {
-            wizard.goNext()
-        }
+    const regularTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'regular')
+    const holidayTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'holiday')
+
+    const handleSubmit = () => {
+        if (wizard.canCreate && !wizard.creating) wizard.create()
     }
 
     return (
         <Dialog open={open} onOpenChange={(v) => !wizard.creating && onOpenChange(v)}>
-            <DialogContent className="bg-card border-border text-foreground sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
-                {/* Step indicator */}
-                <div className="flex items-center gap-1 px-6 pt-6 pb-4 border-b border-border/50">
-                    {STEPS.map((s, i) => {
-                        const isCurrent = s.id === wizard.step
-                        const isDone = i < wizard.stepIndex
-                        return (
-                            <button
-                                key={s.id}
-                                onClick={() => i <= wizard.stepIndex && wizard.goToStep(s.id)}
-                                disabled={i > wizard.stepIndex}
-                                className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                                    isCurrent && "bg-brand/10 text-brand",
-                                    isDone && "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer",
-                                    !isCurrent && !isDone && "text-muted-foreground/50 cursor-not-allowed",
-                                )}
-                            >
-                                {isDone ? <Check className="h-3.5 w-3.5" /> : s.icon}
-                                <span className="hidden sm:inline">{s.label}</span>
-                            </button>
-                        )
-                    })}
+            <DialogContent className="bg-card border-border text-foreground sm:max-w-md p-0">
+                <div className="px-6 pt-6 pb-2">
+                    <h2 className="text-xl font-bold mb-1">New Setlist</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Name it and create. Optionally pick a template to pre-fill the liturgical skeleton.
+                    </p>
                 </div>
 
-                {/* Step content */}
-                <div className="flex-1 overflow-y-auto px-6 py-5">
-                    {wizard.step === 'template' && (
-                        <TemplateStep wizard={wizard} />
-                    )}
-                    {wizard.step === 'details' && (
-                        <DetailsStep wizard={wizard} />
-                    )}
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/20">
-                    <Button
-                        variant="ghost"
-                        onClick={wizard.goBack}
-                        disabled={!wizard.canGoBack || wizard.creating}
-                        className="gap-1.5"
-                    >
-                        <ChevronLeft className="h-4 w-4" /> Back
-                    </Button>
-
-                    <div className="flex items-center gap-2">
-                        <Button
-                            onClick={handleNext}
-                            disabled={!wizard.canGoNext || wizard.creating}
-                            className={cn(
-                                "gap-1.5",
-                                isLastStep && "bg-brand hover:bg-brand/90",
-                            )}
+                <div className="px-6 py-4 space-y-4">
+                    {/* Template shortcut */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Template (optional)</label>
+                        <Select
+                            value={wizard.selectedTemplate ?? BLANK}
+                            onValueChange={(v) => wizard.setSelectedTemplate(v === BLANK ? null : v)}
                         >
-                            {wizard.creating ? (
-                                <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>
-                            ) : isLastStep ? (
-                                <><Check className="h-4 w-4" /> Create Setlist</>
-                            ) : (
-                                <>Next <ChevronRight className="h-4 w-4" /></>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-// ── Step 1: Template Picker ──
-
-function TemplateStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
-    const regularTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'regular')
-    const holidayTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'holiday')
-
-    return (
-        <div className="space-y-6 max-w-lg mx-auto">
-            <div>
-                <h2 className="text-xl font-bold mb-1">Choose a template</h2>
-                <p className="text-sm text-muted-foreground">
-                    Pick a service type to get a pre-filled liturgical skeleton, or start blank.
-                </p>
-            </div>
-
-            {/* Regular templates */}
-            <div className="space-y-2">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Regular Services</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {regularTemplates.map(key => {
-                        const meta = TEMPLATE_LABELS[key]
-                        const isSelected = wizard.selectedTemplate === key
-                        return (
-                            <button
-                                key={key}
-                                onClick={() => wizard.setSelectedTemplate(isSelected ? null : key)}
-                                className={cn(
-                                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
-                                    isSelected
-                                        ? "border-brand bg-brand/10 ring-1 ring-brand/30"
-                                        : "border-border/50 bg-card/70 hover:bg-card hover:border-border"
-                                )}
-                            >
-                                <div className={cn(
-                                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                    isSelected ? "bg-brand/20 text-brand" : "bg-muted text-muted-foreground"
-                                )}>
-                                    <Sparkles className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{meta?.label || key}</div>
-                                    <div className="text-xs text-muted-foreground">{meta?.slotCount || 0} slots</div>
-                                </div>
-                                {isSelected && <Check className="h-4 w-4 text-brand shrink-0" />}
-                            </button>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* Holiday templates */}
-            <div className="space-y-2">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Holiday Services</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {holidayTemplates.map(key => {
-                        const meta = TEMPLATE_LABELS[key]
-                        const isSelected = wizard.selectedTemplate === key
-                        return (
-                            <button
-                                key={key}
-                                onClick={() => wizard.setSelectedTemplate(isSelected ? null : key)}
-                                className={cn(
-                                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
-                                    isSelected
-                                        ? "border-brand bg-brand/10 ring-1 ring-brand/30"
-                                        : "border-border/50 bg-card/70 hover:bg-card hover:border-border"
-                                )}
-                            >
-                                <div className={cn(
-                                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                    isSelected ? "bg-brand/20 text-brand" : "bg-muted text-muted-foreground"
-                                )}>
-                                    <FileText className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{meta?.label || key}</div>
-                                    <div className="text-xs text-muted-foreground">{meta?.slotCount || 0} slots</div>
-                                </div>
-                                {isSelected && <Check className="h-4 w-4 text-brand shrink-0" />}
-                            </button>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* Blank option */}
-            <button
-                onClick={() => wizard.setSelectedTemplate(null)}
-                className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
-                    wizard.selectedTemplate === null
-                        ? "border-muted-foreground/30 bg-muted/20"
-                        : "border-border/30 bg-transparent hover:bg-muted/10"
-                )}
-            >
-                <div className="text-sm text-muted-foreground">
-                    Or skip template and start with a blank setlist
-                </div>
-            </button>
-        </div>
-    )
-}
-
-// ── Step 2: Details (Name, Date, Rabbi, Public/Private) ──
-
-function DetailsStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
-    const congregation = useCongregation()
-    const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
-
-    return (
-        <div className="space-y-6 max-w-md mx-auto">
-            <div>
-                <h2 className="text-xl font-bold mb-1">Name your setlist</h2>
-                <p className="text-sm text-muted-foreground">
-                    {wizard.selectedTemplate
-                        ? "Auto-generated from template. Edit if needed."
-                        : "What service is this for?"}
-                </p>
-            </div>
-
-            <Input
-                value={wizard.name}
-                onChange={(e) => wizard.setName(e.target.value)}
-                placeholder="e.g., Shabbat Morning, Friday Night..."
-                className="text-lg h-12 bg-background/50 border-border"
-                autoFocus
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-                {/* Date */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-xs font-medium text-muted-foreground">Date</label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={cn(
-                                    "w-full justify-start text-left font-normal bg-background/50",
-                                    !wizard.eventDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {wizard.eventDate ? format(wizard.eventDate, "PPP") : "Pick a date"}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={wizard.eventDate ?? undefined}
-                                onSelect={(d) => wizard.setEventDate(d ?? null)}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-
-                {/* Rabbi */}
-                {rabbiProfiles.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-muted-foreground">Rabbi</label>
-                        <Select value={wizard.rabbi} onValueChange={wizard.setRabbi}>
                             <SelectTrigger className="bg-background/50">
-                                <SelectValue placeholder="Select rabbi" />
+                                <SelectValue placeholder="Start from blank" />
                             </SelectTrigger>
                             <SelectContent>
-                                {rabbiProfiles.map((rp) => (
-                                    <SelectItem key={rp.name} value={rp.name}>{rp.name}</SelectItem>
-                                ))}
+                                <SelectItem value={BLANK}>Blank setlist</SelectItem>
+                                {regularTemplates.length > 0 && (
+                                    <SelectGroup>
+                                        <SelectLabel>Regular services</SelectLabel>
+                                        {regularTemplates.map(key => (
+                                            <SelectItem key={key} value={key}>
+                                                {TEMPLATE_LABELS[key]?.label || key}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                )}
+                                {holidayTemplates.length > 0 && (
+                                    <SelectGroup>
+                                        <SelectLabel>Holiday services</SelectLabel>
+                                        {holidayTemplates.map(key => (
+                                            <SelectItem key={key} value={key}>
+                                                {TEMPLATE_LABELS[key]?.label || key}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
-                )}
-            </div>
 
-        </div>
+                    {/* Name (required, autofocus) */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Name</label>
+                        <Input
+                            value={wizard.name}
+                            onChange={(e) => wizard.setName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && wizard.canCreate && !wizard.creating) {
+                                    e.preventDefault()
+                                    wizard.create()
+                                }
+                            }}
+                            placeholder="e.g., Shabbat Morning, Friday Night..."
+                            className="text-base h-11 bg-background/50 border-border"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Date */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">Date (optional)</label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal bg-background/50",
+                                            !wizard.eventDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {wizard.eventDate ? format(wizard.eventDate, "PPP") : "Pick a date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={wizard.eventDate ?? undefined}
+                                        onSelect={(d) => wizard.setEventDate(d ?? null)}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Rabbi (only when congregation has a list) */}
+                        {rabbiProfiles.length > 0 && (
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Rabbi (optional)</label>
+                                <Select value={wizard.rabbi} onValueChange={wizard.setRabbi}>
+                                    <SelectTrigger className="bg-background/50">
+                                        <SelectValue placeholder="Select rabbi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {rabbiProfiles.map((rp) => (
+                                            <SelectItem key={rp.name} value={rp.name}>{rp.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+                    <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={wizard.creating}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!wizard.canCreate || wizard.creating}
+                        className="gap-1.5 bg-brand hover:bg-brand/90"
+                    >
+                        {wizard.creating ? (
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+                        ) : (
+                            <><Check className="h-4 w-4" /> Create Setlist</>
+                        )}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }

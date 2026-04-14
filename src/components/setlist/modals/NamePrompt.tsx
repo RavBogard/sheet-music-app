@@ -19,8 +19,6 @@ interface NamePromptProps {
     onClose: () => void
     initialName: string
     initialDate?: Date | null
-    /** @deprecated No longer used */
-    isBandLeader?: boolean
     onConfirm: (name: string, date: Date | null) => void
 }
 

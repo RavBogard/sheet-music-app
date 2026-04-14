@@ -50,6 +50,7 @@ import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
 import { SetlistChangedBanner } from "./SetlistChangedBanner"
 import { NamePrompt } from "../modals/NamePrompt"
+import { EditDetails } from "../modals/EditDetails"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
 import { createSetlistService } from "@/lib/setlist-firebase"
@@ -435,20 +436,32 @@ export function SetlistEditorV2({
     return (
         <ErrorBoundary FallbackComponent={(props) => <FallbackError {...props} title="Editor Error" />}>
         <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100dvh-5rem)]">
-            {/* Name prompt for new setlists */}
+            {/* Name prompt — create-new flow only */}
             <NamePrompt
-                isOpen={showNamePrompt || showEditDetails}
-                onClose={() => {
-                    setShowNamePrompt(false)
-                    setShowEditDetails(false)
-                }}
+                isOpen={showNamePrompt}
+                onClose={() => setShowNamePrompt(false)}
                 initialName={name}
                 initialDate={eventDate ? new Date(eventDate) : null}
-                isBandLeader={isBandLeader}
                 onConfirm={(newName, newDate) => {
                     setName(newName)
                     setEventDate(newDate)
                     setShowNamePrompt(false)
+                }}
+            />
+
+            {/* Edit details — edit-existing flow (name + date + rabbi + notes) */}
+            <EditDetails
+                isOpen={showEditDetails}
+                onClose={() => setShowEditDetails(false)}
+                initialName={name}
+                initialDate={eventDate ? new Date(eventDate) : null}
+                initialRabbi={rabbi}
+                initialServiceNotes={serviceNotes}
+                onConfirm={({ name: n, date, rabbi: r, serviceNotes: sn }) => {
+                    setName(n)
+                    setEventDate(date)
+                    setRabbi(r)
+                    setServiceNotes(sn)
                     setShowEditDetails(false)
                 }}
             />
