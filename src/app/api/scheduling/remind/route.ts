@@ -6,6 +6,7 @@ import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
+import { formatEventDate } from "@/lib/firestore-helpers"
 
 const remindSchema = z.object({
     setlistId: z.string().min(1),
@@ -135,18 +136,8 @@ function hasSeconds(v: unknown): v is { seconds: number } {
 }
 
 function formatEventDateForEmail(eventDate: unknown): string {
-    if (!eventDate) return 'TBD'
-    try {
-        let date: Date
-        if (typeof eventDate === 'string') {
-            date = new Date(eventDate)
-        } else if (hasSeconds(eventDate)) {
-            date = new Date(eventDate.seconds * 1000)
-        } else {
-            return 'TBD'
-        }
-        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    } catch {
-        return 'TBD'
-    }
+    // Thin wrapper around the canonical helper with an email-friendly 'TBD'
+    // fallback. Format ("Friday, February 14") is identical to the canonical —
+    // previously duplicated inline here.
+    return formatEventDate(eventDate as Parameters<typeof formatEventDate>[0]) ?? 'TBD'
 }

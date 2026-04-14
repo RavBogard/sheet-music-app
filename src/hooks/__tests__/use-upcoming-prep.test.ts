@@ -15,9 +15,9 @@ vi.mock('@/lib/auth-context', () => ({ useAuth: () => mockUseAuth() }))
 
 vi.mock('@/lib/firebase', () => ({ db: {} }))
 
-const mockSyncData = { current: null as unknown }
+const mockSyncData = { current: null as unknown, loading: false }
 vi.mock('@/hooks/use-safe-firestore-sync', () => ({
-  useSafeFirestoreSync: vi.fn(() => ({ data: mockSyncData.current })),
+  useSafeFirestoreSync: vi.fn(() => ({ data: mockSyncData.current, loading: mockSyncData.loading, error: null })),
 }))
 
 const mockGetDoc = vi.fn()
@@ -76,6 +76,7 @@ describe('useUpcomingPrep', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     mockSyncData.current = null
+    mockSyncData.loading = false
     mockUseAuth.mockReturnValue({ user: { uid: 'user-1' }, isMember: true })
     mockGetDocFromCache.mockRejectedValue(new Error('no cache'))
     mockGetDoc.mockResolvedValue({ data: () => ({}), exists: () => true })
@@ -262,6 +263,31 @@ describe('useUpcomingPrep', () => {
 
     // Header tracks are excluded (no fileId or type=header)
     expect(result.current.items[0].prep.total).toBe(1)
+  })
+
+  it('isLoading is false when subscription returned an empty snapshot', () => {
+    mockSyncData.current = []
+    mockSyncData.loading = false
+    const { result } = renderHook(() => useUpcomingPrep())
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.items).toEqual([])
+    expect(result.current.hasData).toBe(false)
+  })
+
+  it('isLoading is true while the subscription has not yet fired', () => {
+    mockSyncData.current = null
+    mockSyncData.loading = true
+    const { result } = renderHook(() => useUpcomingPrep())
+    expect(result.current.isLoading).toBe(true)
+  })
+
+  it('isLoading is false after data arrives', async () => {
+    mockSyncData.current = [makeSetlist()]
+    mockSyncData.loading = false
+    const { result } = renderHook(() => useUpcomingPrep())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.hasData).toBe(true)
   })
 
   it('writes lastVisitedAt on mount', async () => {

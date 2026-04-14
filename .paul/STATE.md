@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 4 of 8 (Editor Ergonomics + Noise Cleanup) — Ready to plan
-Plan: Phase 3 closed; Phase 4 not yet planned
-Status: Phase transition complete; ready for /paul:plan on Phase 4
-Last activity: 2026-04-14 — Phase 3 COMPLETE (4/4 plans); ROADMAP + PROJECT.md updated
+Phase: 4 of 8 (Editor Ergonomics + Noise Cleanup) — Planning
+Plan: 04-01 executed, ready for UNIFY
+Status: APPLY complete (autonomous — no checkpoint)
+Last activity: 2026-04-14 — APPLY complete for 04-01 (canEditSetlist helper + formatEventDate dedupe + useUpcomingPrep stuck-loading fix)
 
 Progress:
 - v4.2: [███████▌░░] 75% (6 of 8 phases complete)
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 3 complete — transition done; ready for Phase 4 PLAN]
+  ✓        ✓        ○     [04-01 APPLY complete; ready for UNIFY]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (Phase 3 complete — transition done)
-Stopped at: Phase 3 closed. SUMMARY written. ROADMAP/PROJECT updated. Committed + pushed to origin/master.
-Next action: `/paul:plan` for Phase 4 (Editor Ergonomics + Noise Cleanup — /ui-ux-pro-max required). Per the roadmap: dual onboarding cards → role-aware component; triple-modal chain consolidation; SwapPicker tablet height; toast dedupe; inline badges over routine toasts; row delete/move buttons; useSafeFirestoreSync memo; useUpcomingPrep stuck-loading fix; AlertDialog for TransferSetlistDialog + SetlistHistoryPanel; INSTRUMENTS unification; formatEventDate consolidation; canEditSetlist helper; z-index tokens; apiFetch timeout/abort; error toasts to ~10 silent-catch paths.
-Resume file: `.paul/phases/03-stage-ux/03-04-SUMMARY.md`
+Last session: 2026-04-14 (04-01 PLAN created)
+Stopped at: Plan 04-01 written, awaiting approval
+Next action: Review and approve plan, then `/paul:apply .paul/phases/04-editor-cleanup/04-01-PLAN.md`. Autonomous plan (no checkpoints, no /ui-ux-pro-max needed — pure internal refactor).
+Resume file: `.paul/phases/04-editor-cleanup/04-01-PLAN.md`
 
 ---
 *STATE.md — Updated after every significant action*

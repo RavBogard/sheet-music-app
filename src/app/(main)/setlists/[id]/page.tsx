@@ -3,6 +3,7 @@ import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { Setlist } from "@/lib/setlist-firebase"
 import { notFound, redirect } from "next/navigation"
 import { SetlistEditorV2 } from "@/components/setlist/v2/SetlistEditorV2"
+import { canEditSetlist } from "@/lib/setlist-permissions"
 
 // Note for Next.js 15: params/searchParams must be strings/Promises depending on exact Next.js versions.
 // We are on Next.js 16.1.4, so we MUST await `params` and `searchParams`.
@@ -31,10 +32,12 @@ export default async function SetlistEditorPage({
 
         const data = doc.data() as any
 
-        // Determine if the current user has EDIT access to this setlist
         // v4.0: Leaders/admins can edit any setlist; owners can edit their own
-        const isOwner = data.ownerId === user.uid
-        const canEdit = isOwner || user.isAdmin || user.isBandLeader
+        const canEdit = canEditSetlist(data, {
+            uid: user.uid,
+            isBandLeader: user.isBandLeader,
+            isAdmin: user.isAdmin,
+        })
 
         if (!canEdit) {
             // Non-editors get sent to the performance view

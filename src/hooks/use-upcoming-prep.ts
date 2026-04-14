@@ -81,7 +81,7 @@ export function useUpcomingPrep() {
         )
     }, [user, isMember])
 
-    const { data } = useSafeFirestoreSync<Setlist[]>(q)
+    const { data, loading: subLoading } = useSafeFirestoreSync<Setlist[]>(q)
 
     useEffect(() => {
         if (data) {
@@ -198,7 +198,10 @@ export function useUpcomingPrep() {
 
     return {
         items: enriched,
-        isLoading: user !== null && isMember && setlists.length === 0,
+        // Honest loading signal: reflects the subscription's own loading state,
+        // not "setlists is empty" — an empty snapshot (no upcoming services)
+        // previously left this stuck at true forever.
+        isLoading: !!user && isMember && q !== null && subLoading,
         hasData: enriched.length > 0,
     }
 }

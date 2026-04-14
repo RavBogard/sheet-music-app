@@ -16,6 +16,7 @@ import { SetlistToolbar } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
+import { canEditSetlist } from "@/lib/setlist-permissions"
 import { SetlistMatrixView } from "./v2/SetlistMatrixView"
 import { CreationWizard } from "./wizard/CreationWizard"
 
@@ -191,7 +192,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={setlist.ownerId === user?.uid || isAdmin || isBandLeader}
+                                                canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
                                             />
                                         ))}
                                         {placeholders.map((p, idx) => (
@@ -223,7 +224,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
-                                                canDelete={setlist.ownerId === user?.uid || isAdmin || isBandLeader}
+                                                canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
                                             />
                                         ))}
                                     </div>

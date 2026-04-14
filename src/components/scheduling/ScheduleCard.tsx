@@ -28,7 +28,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
     const isConfirmed = assignment.status === 'confirmed'
     const isDeclined = assignment.status === 'declined'
 
-    const eventDateStr = formatEventDate(assignment.eventDate)
+    const eventDateStr = formatAssignmentDate(assignment.eventDate)
 
     async function handleRespond(action: 'accept' | 'decline') {
         setResponding(action)
@@ -178,7 +178,13 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
     }
 }
 
-function formatEventDate(eventDate: unknown): string {
+/**
+ * Compact assignment-card date format ("Fri, Feb 14", year shown only when
+ * different from current). Intentionally distinct from the canonical
+ * `formatEventDate` in `@/lib/firestore-helpers` (which uses long forms) —
+ * the card layout needs a tighter string under the service title.
+ */
+function formatAssignmentDate(eventDate: unknown): string {
     if (!eventDate) return 'Date TBD'
 
     try {
