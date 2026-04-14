@@ -13,10 +13,10 @@ Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress (S02 pending)
 Phase: 4 of 8 (P0 Data Integrity) — In progress (D01 pending)
 Phase: 5 of 8 (P0 Bugs + UX) — ✅ Complete (4/4 items shipped)
-Plan: 03-01 APPLY complete (S02 decision = Option A)
-Status: APPLY complete, ready for UNIFY
-Open P0 items: S02 implementation pending (plan 03-02), D01 (cascade delete)
-Last activity: 2026-04-14 — S02 decision made: Option A (audit-log + admin email); DECISION.md finalized
+Plan: 03-01 complete (S02 decision = Option A)
+Status: UNIFY complete — loop closed; ready for next plan
+Open P0 items: S02 implementation (plan 03-02, ~2hr), D01 (cascade delete)
+Last activity: 2026-04-14 — 03-01 SUMMARY written; Option A locked in; 03-02 scope ready
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -34,7 +34,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [03-01 APPLY complete (S02 → Option A), awaiting unify]
+  ✓        ✓        ✓     [03-01 closed (S02 → Option A; implementation queued as 03-02)]
 ```
 
 ## How to resume
@@ -133,10 +133,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (05-04 closed — U02 shipped; Phase 5 complete)
-Stopped at: Loop closed; Phase 5 done; 8/10 v4.3 P0s closed overall
-Next action: `/paul:plan` for remaining P0s — S02 (bridge creds decision, Phase 3) or D01 (cascade delete, Phase 4)
-Resume file: `.paul/phases/v43-05-bugs-ux/05-04-SUMMARY.md`
+Last session: 2026-04-14 (03-01 closed — S02 decision = Option A)
+Stopped at: Loop closed; 03-02 implementation scope ready (~2hr)
+Next action: `/paul:plan` 03-02 (S02 audit-log + admin email implementation) or pick D01 (cascade delete)
+Resume file: `.paul/phases/v43-03-bridge-credentials/03-01-SUMMARY.md`
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
