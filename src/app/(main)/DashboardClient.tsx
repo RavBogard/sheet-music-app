@@ -45,7 +45,7 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
-    const { user: authUser, profile, cachedUser, signIn, isMember: authIsMember, loading: authLoading } = useAuth()
+    const { user: authUser, profile, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
     
     const isMember = authIsMember || serverIsMember
@@ -256,12 +256,16 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                             <NextServiceCard
                                 setlist={tonightSetlist}
                                 onPerform={() => router.push(`/perform/setlist/${tonightSetlist.id}`)}
+                                onEdit={() => router.push(`/setlists/${tonightSetlist.id}`)}
+                                isBandLeader={isBandLeader}
                             />
                         ) : mostRecentPastSetlist ? (
                             <NextServiceCard
                                 setlist={mostRecentPastSetlist}
                                 onPerform={() => router.push(`/perform/setlist/${mostRecentPastSetlist.id}`)}
+                                onEdit={() => router.push(`/setlists/${mostRecentPastSetlist.id}`)}
                                 isPastSetlist={true}
+                                isBandLeader={isBandLeader}
                             />
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">

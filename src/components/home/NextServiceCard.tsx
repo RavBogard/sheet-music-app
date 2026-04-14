@@ -2,9 +2,8 @@
 
 import { Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
-import { PlayCircle, Clock } from "lucide-react"
+import { PlayCircle, Clock, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 /**
  * NextServiceCard -- single focused card for the home screen.
@@ -18,11 +17,15 @@ import { cn } from "@/lib/utils"
 export function NextServiceCard({
     setlist,
     onPerform,
+    onEdit,
     isPastSetlist = false,
+    isBandLeader = false,
 }: {
     setlist: Setlist
     onPerform: () => void
+    onEdit?: () => void
     isPastSetlist?: boolean
+    isBandLeader?: boolean
 }) {
     const eventDate = toDate(setlist.eventDate)
 
@@ -88,14 +91,27 @@ export function NextServiceCard({
                     </div>
                 )}
 
-                {/* Action button — muted for past setlists */}
-                <Button
-                    variant="ghost"
-                    className="w-full py-3 rounded-xl font-semibold bg-brand/10 group-hover:bg-brand/15 text-foreground transition-colors"
-                >
-                    <PlayCircle className="h-4 w-4" />
-                    Practice
-                </Button>
+                {/* Action buttons — muted for past setlists */}
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        className="flex-1 py-3 rounded-xl font-semibold bg-brand/10 group-hover:bg-brand/15 text-foreground transition-colors"
+                    >
+                        <PlayCircle className="h-4 w-4" />
+                        Practice
+                    </Button>
+                    {isBandLeader && onEdit && (
+                        <Button
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); onEdit() }}
+                            aria-label="Edit setlist"
+                            className="h-11 px-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-brand/10"
+                        >
+                            <Pencil className="h-4 w-4" />
+                            <span className="text-xs font-medium">Edit</span>
+                        </Button>
+                    )}
+                </div>
             </div>
         )
     }
@@ -136,14 +152,28 @@ export function NextServiceCard({
                 </div>
             )}
 
-            {/* Primary CTA — white button on gradient */}
-            <Button
-                variant="ghost"
-                className="w-full py-3 rounded-xl font-bold bg-white text-brand group-hover:bg-white/90 transition-colors"
-            >
-                <PlayCircle className="h-4 w-4" />
-                Perform
-            </Button>
+            {/* Primary CTA — white button on gradient. Band leaders get an
+                adjacent Edit shortcut; musicians/members see Perform-only. */}
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="ghost"
+                    className="flex-1 py-3 rounded-xl font-bold bg-white text-brand group-hover:bg-white/90 transition-colors"
+                >
+                    <PlayCircle className="h-4 w-4" />
+                    Perform
+                </Button>
+                {isBandLeader && onEdit && (
+                    <Button
+                        variant="ghost"
+                        onClick={(e) => { e.stopPropagation(); onEdit() }}
+                        aria-label="Edit setlist"
+                        className="h-11 px-3 rounded-xl bg-white/15 text-white hover:bg-white/25"
+                    >
+                        <Pencil className="h-4 w-4" />
+                        <span className="text-xs font-medium">Edit</span>
+                    </Button>
+                )}
+            </div>
         </div>
     )
 }

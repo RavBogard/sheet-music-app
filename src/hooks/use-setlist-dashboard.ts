@@ -349,8 +349,19 @@ export function useSetlistDashboard({
         .filter(s => { const d = getDate(s); return d && d >= today })
         .sort((a, b) => getDate(a)!.getTime() - getDate(b)!.getTime())
 
-    const pastOrNoDate = displayedSetlists
-        .filter(s => { const d = getDate(s); return !d || d < today })
+    // Past list: dated-past sorted DESC (most recent first — usually the
+    // clone source for "next week"); null-dated trail in stable/original order.
+    const pastOrNoDate = (() => {
+        const dated: Setlist[] = []
+        const undated: Setlist[] = []
+        for (const s of displayedSetlists) {
+            const d = getDate(s)
+            if (!d) undated.push(s)
+            else if (d < today) dated.push(s)
+        }
+        dated.sort((a, b) => getDate(b)!.getTime() - getDate(a)!.getTime())
+        return [...dated, ...undated]
+    })()
 
     const placeholders: { date: Date }[] = []
     if (user) {

@@ -327,4 +327,37 @@ describe('useSetlistDashboard', () => {
     )
     expect(mockPush).toHaveBeenCalledWith('/setlists/new-id')
   })
+
+  describe('past ordering', () => {
+    it('pastOrNoDate sorts dated-past DESC with null-dated trailing', () => {
+      const past1 = makeSetlist({ id: 'past-old', name: 'Old', eventDate: '2026-01-05T12:00:00Z' })
+      const past2 = makeSetlist({ id: 'past-mid', name: 'Mid', eventDate: '2026-02-15T12:00:00Z' })
+      const past3 = makeSetlist({ id: 'past-recent', name: 'Recent', eventDate: '2026-04-01T12:00:00Z' })
+      const noDate1 = makeSetlist({ id: 'nodate-1', name: 'No date A', eventDate: undefined })
+      const noDate2 = makeSetlist({ id: 'nodate-2', name: 'No date B', eventDate: undefined })
+
+      const { result } = renderHook(() => useSetlistDashboard({
+        initialSetlists: [past1, noDate1, past3, noDate2, past2],
+      }))
+
+      const ids = result.current.pastOrNoDate.map(s => s.id)
+      expect(ids.slice(0, 3)).toEqual(['past-recent', 'past-mid', 'past-old'])
+      // Null-dated trail in their original relative order
+      expect(ids.slice(3)).toEqual(['nodate-1', 'nodate-2'])
+    })
+
+    it('upcoming still sorts ascending (regression guard)', () => {
+      // Far future so they stay on the "upcoming" side regardless of today's clock
+      const soon = makeSetlist({ id: 'soon', name: 'Soon', eventDate: '2099-01-01T12:00:00Z' })
+      const later = makeSetlist({ id: 'later', name: 'Later', eventDate: '2099-06-01T12:00:00Z' })
+      const latest = makeSetlist({ id: 'latest', name: 'Latest', eventDate: '2099-12-01T12:00:00Z' })
+
+      const { result } = renderHook(() => useSetlistDashboard({
+        initialSetlists: [latest, soon, later],
+      }))
+
+      const ids = result.current.upcoming.map(s => s.id)
+      expect(ids).toEqual(['soon', 'later', 'latest'])
+    })
+  })
 })

@@ -101,6 +101,19 @@ export function SetlistEditorV2({
 
     const handleBack = useCallback(() => {
         if (onBack) return onBack()
+        // Honor same-origin referrer via browser history — takes the user back
+        // to wherever they came from (schedule, library, perform view…) instead
+        // of always teleporting to /setlists or /perform.
+        try {
+            const ref = typeof document !== 'undefined' ? document.referrer : ''
+            if (ref) {
+                const refOrigin = new URL(ref).origin
+                if (refOrigin === window.location.origin && ref !== window.location.href) {
+                    router.back()
+                    return
+                }
+            }
+        } catch { /* malformed referrer — fall through */ }
         router.push(initialSetlistId ? `/perform/setlist/${initialSetlistId}` : "/setlists")
     }, [onBack, router, initialSetlistId])
 
