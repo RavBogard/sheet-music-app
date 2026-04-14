@@ -245,23 +245,30 @@ export async function notifySetlistPublished(
 
 /**
  * Notify all members about a setlist track update.
+ *
+ * Delegates to POST /api/setlists/notify-updated — broadcast writes happen
+ * server-side via Admin SDK. The previous client-side implementation read
+ * the `users` collection, which Firestore rules block for non-privileged
+ * roles. Fire-and-forget: caller ignores the promise.
+ *
+ * The `editorUid` argument is kept for signature compatibility with existing
+ * callers (the server derives the caller from the Bearer token).
  */
 export async function notifySetlistUpdated(
     setlistName: string,
     setlistId: string,
     trackCount: number,
-    editorUid?: string
+    _editorUid?: string
 ): Promise<void> {
     try {
-        const uids = await getActiveMemberUids(editorUid)
-        if (uids.length === 0) return
-        await broadcastNotification(uids, {
-            type: 'setlist_updated',
-            title: 'Setlist updated',
-            body: `"${setlistName}" was updated (${trackCount} tracks)`,
-            link: `/setlist/${setlistId}`,
-            entityId: setlistId,
+        const { apiFetch } = await import('@/lib/api-client')
+        const res = await apiFetch('/api/setlists/notify-updated', {
+            method: 'POST',
+            body: JSON.stringify({ setlistId, setlistName, trackCount }),
         })
+        if (!res.ok) {
+            logger.warn('[Notifications] notify-updated responded non-2xx:', res.status)
+        }
     } catch (e) {
         logger.warn('[Notifications] Failed to broadcast setlist_updated:', e)
     }
