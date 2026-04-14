@@ -11,17 +11,24 @@
  * Run:
  *   GOOGLE_APPLICATION_CREDENTIALS=./service-account.json pnpm tsx scripts/migrate-remove-isPublic.ts
  */
-import { initializeApp, applicationDefault, cert, getApps } from 'firebase-admin/app'
+import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+import { config as loadEnv } from 'dotenv'
+import { resolve } from 'path'
+
+loadEnv({ path: resolve(process.cwd(), '.env.local') })
 
 function init() {
     if (getApps().length > 0) return
-    const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    if (saJson) {
-        initializeApp({ credential: cert(JSON.parse(saJson)) })
-    } else {
-        initializeApp({ credential: applicationDefault() })
+    const serviceAccount = {
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }
+    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error('Missing Firebase admin credentials in .env.local')
+    }
+    initializeApp({ credential: cert(serviceAccount) })
 }
 
 async function main() {
