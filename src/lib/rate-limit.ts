@@ -77,6 +77,7 @@ const limiterConfigs = {
     upload: { max: 10, window: 60 },
     sync: { max: 3, window: 60 },
     ai: { max: 20, window: 60 },
+    bridgeSetup: { max: 5, window: 60 },
 } as const
 
 const limiters = {
@@ -88,6 +89,8 @@ const limiters = {
     sync: createLimiter(3, 60),
     /** AI/expensive: 20/min */
     ai: createLimiter(20, 60),
+    /** Bridge setup-code redemption: 5/min — credential-exchange endpoint */
+    bridgeSetup: createLimiter(5, 60),
 }
 
 // In-memory fallbacks used when Redis is unavailable (fail-closed)

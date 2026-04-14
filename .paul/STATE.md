@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 1.3 of 8 (Security Hardening) — next up
-Plan: Not started
-Status: Phases 1, 1.1, 1.2 complete. Ready to plan Phase 1.3.
-Last activity: 2026-04-13 — Phase 1.2 (Offline Truthiness) shipped.
+Phase: 1.3 of 8 (Security Hardening) — Planning
+Plan: 01_3-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-04-13 — Plan 01_3-01 drafted at .paul/phases/01_3-security-hardening/01_3-01-PLAN.md
 
 Progress:
 - v4.2: [███░░░░░░░] ~37% (3 of 8 phases complete)
@@ -23,7 +23,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready to plan Phase 1.3]
+  ✓        ○        ○     [Plan 01_3-01 created, awaiting approval]
 ```
 
 ## How to resume
@@ -112,10 +112,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-13 (context cleared after Phase 1.2)
-Stopped at: Phase 1.2 complete; ready to plan Phase 1.3 (Security Hardening)
-Next action: `/paul:plan` for Phase 1.3
-Resume file: `.paul/phases/01-recursive-research/FINDINGS.md` (scope source) + this STATE.md
+Last session: 2026-04-13 (Phase 1.3 planning)
+Stopped at: Plan 01_3-01 created, awaiting approval
+Next action: Review plan, then `/paul:apply .paul/phases/01_3-security-hardening/01_3-01-PLAN.md`
+Resume file: `.paul/phases/01_3-security-hardening/01_3-01-PLAN.md`
 
 ---
 *STATE.md — Updated after every significant action*

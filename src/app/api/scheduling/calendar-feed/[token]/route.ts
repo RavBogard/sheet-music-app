@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { BASE_URL } from "@/lib/constants"
 
@@ -11,10 +12,13 @@ import { BASE_URL } from "@/lib/constants"
  * No authentication required — the token acts as the credential.
  */
 export async function GET(
-    req: Request,
+    req: NextRequest,
     context: { params: Promise<{ token: string }> }
 ) {
     try {
+        const limited = await checkRateLimit(req, 'api')
+        if (limited) return limited
+
         const { token } = await context.params
 
         if (!token || token.length < 10) {

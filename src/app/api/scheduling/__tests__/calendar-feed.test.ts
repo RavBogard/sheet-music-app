@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // ── Configurable mock state ──
 
@@ -40,7 +41,7 @@ vi.mock('@/lib/constants', () => ({
 // ── Import after mocks ──
 
 describe('GET /api/scheduling/calendar-feed/[token]', () => {
-    let GET: (req: Request, context: { params: Promise<{ token: string }> }) => Promise<Response>
+    let GET: (req: NextRequest, context: { params: Promise<{ token: string }> }) => Promise<Response>
 
     beforeAll(async () => {
         const mod = await import('@/app/api/scheduling/calendar-feed/[token]/route')
@@ -71,7 +72,7 @@ describe('GET /api/scheduling/calendar-feed/[token]', () => {
 
     it('returns text/calendar for valid token', async () => {
         const token = 'a'.repeat(48)
-        const req = new Request(`http://localhost/api/scheduling/calendar-feed/${token}`)
+        const req = new NextRequest(`http://localhost/api/scheduling/calendar-feed/${token}`)
         const res = await GET(req, { params: Promise.resolve({ token }) })
 
         expect(res.status).toBe(200)
@@ -80,7 +81,7 @@ describe('GET /api/scheduling/calendar-feed/[token]', () => {
 
     it('includes VCALENDAR and VEVENT in iCal output', async () => {
         const token = 'a'.repeat(48)
-        const req = new Request(`http://localhost/api/scheduling/calendar-feed/${token}`)
+        const req = new NextRequest(`http://localhost/api/scheduling/calendar-feed/${token}`)
         const res = await GET(req, { params: Promise.resolve({ token }) })
         const text = await res.text()
 
@@ -92,7 +93,7 @@ describe('GET /api/scheduling/calendar-feed/[token]', () => {
 
     it('returns 400 for short tokens', async () => {
         const token = 'short'
-        const req = new Request(`http://localhost/api/scheduling/calendar-feed/${token}`)
+        const req = new NextRequest(`http://localhost/api/scheduling/calendar-feed/${token}`)
         const res = await GET(req, { params: Promise.resolve({ token }) })
 
         expect(res.status).toBe(400)
@@ -102,7 +103,7 @@ describe('GET /api/scheduling/calendar-feed/[token]', () => {
         userDocs = [] // no user found
 
         const token = 'b'.repeat(48)
-        const req = new Request(`http://localhost/api/scheduling/calendar-feed/${token}`)
+        const req = new NextRequest(`http://localhost/api/scheduling/calendar-feed/${token}`)
         const res = await GET(req, { params: Promise.resolve({ token }) })
 
         expect(res.status).toBe(404)
@@ -110,7 +111,7 @@ describe('GET /api/scheduling/calendar-feed/[token]', () => {
 
     it('includes Content-Disposition header with filename', async () => {
         const token = 'a'.repeat(48)
-        const req = new Request(`http://localhost/api/scheduling/calendar-feed/${token}`)
+        const req = new NextRequest(`http://localhost/api/scheduling/calendar-feed/${token}`)
         const res = await GET(req, { params: Promise.resolve({ token }) })
 
         expect(res.headers.get('Content-Disposition')).toContain('.ics')

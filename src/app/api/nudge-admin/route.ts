@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
 export const POST = createApiHandler(async (ctx) => {
     try {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const db = getFirestore()
         const userRef = db.collection('users').doc(ctx.auth!.uid)
 

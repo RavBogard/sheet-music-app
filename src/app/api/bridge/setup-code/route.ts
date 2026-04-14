@@ -16,11 +16,13 @@ import { randomBytes } from "crypto"
  * GET  /api/bridge/setup-code?code=ABC123  — Bridge: redeem code for credentials
  */
 
+const CODE_LENGTH = 10
+
 function generateCode(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // No 0/O/1/I confusion
-    const bytes = randomBytes(6)
+    const bytes = randomBytes(CODE_LENGTH)
     let code = ""
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < CODE_LENGTH; i++) {
         code += chars[bytes[i] % chars.length]
     }
     return code
@@ -61,13 +63,13 @@ export const POST = createApiHandler(async (ctx) => {
 export async function GET(req: NextRequest) {
     try {
         // Rate limit redemption attempts to prevent brute-force
-        const limited = await checkRateLimit(req, 'api')
+        const limited = await checkRateLimit(req, 'bridgeSetup')
         if (limited) return limited
 
         const url = new URL(req.url)
         const code = url.searchParams.get("code")?.toUpperCase().trim()
 
-        if (!code || code.length !== 6) {
+        if (!code || code.length !== CODE_LENGTH) {
             return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 

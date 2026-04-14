@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Storage rules mirror firestore.rules isMember() semantics.
+// Storage cannot call Firestore, so the config/admins fallback does not apply here —
+// membership is resolved purely through the custom claim `role`.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isMember() {
+      return request.auth != null
+          && request.auth.token.role in ['member', 'musician', 'band_leader', 'admin'];
+    }
+
+    // Library files — members read, writes only via admin SDK server-side
+    match /library/{allPaths=**} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    // Deny-all fallback — any path not explicitly matched above is locked.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
