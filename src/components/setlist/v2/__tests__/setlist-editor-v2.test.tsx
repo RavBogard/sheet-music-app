@@ -66,7 +66,6 @@ const mockSetlistLogic = {
     addSongsFromLibrary: vi.fn(),
     addServiceItem: vi.fn(),
     detectKeyForFile: vi.fn(),
-    togglePublic: vi.fn(),
     undo: vi.fn(),
     redo: vi.fn(),
     canUndo: false,
