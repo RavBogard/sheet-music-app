@@ -437,6 +437,16 @@ export function SetlistEditorV2({
         const tapHandler = selectMode ? () => { } : handleToggleExpand
         const playHandler = selectMode ? undefined : handlePlayTrack
 
+        // Pre-compute neighbour ids so the inline panel's Move-Up/Move-Down
+        // buttons can call moveTrack — same hook the drag handler uses.
+        const idx = tracks.indexOf(track)
+        const prevId = idx > 0 ? tracks[idx - 1].id : undefined
+        const nextId = idx >= 0 && idx < tracks.length - 1 ? tracks[idx + 1].id : undefined
+        const onMoveUp = prevId ? () => moveTrack(track.id, prevId) : undefined
+        const onMoveDown = nextId ? () => moveTrack(track.id, nextId) : undefined
+        const canMoveUp = !!prevId
+        const canMoveDown = !!nextId
+
         const row = (() => {
             if (track.type === "header") {
                 return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
@@ -451,6 +461,10 @@ export function SetlistEditorV2({
                         onTap={tapHandler}
                         onUpdate={updateTrack}
                         onDelete={deleteTrack}
+                        onMoveUp={onMoveUp}
+                        onMoveDown={onMoveDown}
+                        canMoveUp={canMoveUp}
+                        canMoveDown={canMoveDown}
                     />
                 )
             }
@@ -465,6 +479,10 @@ export function SetlistEditorV2({
                     onUpdate={updateTrack}
                     onReplace={handleReplace}
                     onDelete={deleteTrack}
+                    onMoveUp={onMoveUp}
+                    onMoveDown={onMoveDown}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
                 />
             )
         })()

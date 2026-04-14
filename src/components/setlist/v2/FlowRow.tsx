@@ -14,6 +14,10 @@ interface FlowRowProps {
     onTap?: (track: SetlistTrack) => void
     onUpdate?: (id: string, data: Partial<SetlistTrack>) => void
     onDelete?: (id: string) => void
+    onMoveUp?: () => void
+    onMoveDown?: () => void
+    canMoveUp?: boolean
+    canMoveDown?: boolean
 }
 
 const FLOW_CONFIG: Record<string, {
@@ -50,6 +54,10 @@ export const FlowRow = memo(function FlowRow({
     onTap,
     onUpdate,
     onDelete,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
 }: FlowRowProps) {
     const trackType = (track.type || "note") as TrackType
     const config = FLOW_CONFIG[trackType] || FLOW_CONFIG.note
@@ -139,6 +147,10 @@ export const FlowRow = memo(function FlowRow({
                     track={track}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
+                    onMoveUp={onMoveUp}
+                    onMoveDown={onMoveDown}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
                 />
             )}
         </div>

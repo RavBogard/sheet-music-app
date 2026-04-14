@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { KeyPicker } from "@/components/ui/key-picker"
-import { Trash2, Replace, Unlink } from "lucide-react"
+import { Trash2, Replace, Unlink, ChevronUp, ChevronDown } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 
 interface SongInlineFieldsProps {
@@ -13,9 +13,13 @@ interface SongInlineFieldsProps {
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
     onReplace: (track: SetlistTrack) => void
     onDelete: (id: string) => void
+    onMoveUp?: () => void
+    onMoveDown?: () => void
+    canMoveUp?: boolean
+    canMoveDown?: boolean
 }
 
-export function SongInlineFields({ track, onUpdate, onReplace, onDelete }: SongInlineFieldsProps) {
+export function SongInlineFields({ track, onUpdate, onReplace, onDelete, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: SongInlineFieldsProps) {
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -105,6 +109,30 @@ export function SongInlineFields({ track, onUpdate, onReplace, onDelete }: SongI
                         Unlink Chart
                     </Button>
                 )}
+                {onMoveUp && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        aria-label="Move up"
+                        disabled={!canMoveUp}
+                        onClick={onMoveUp}
+                    >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
+                )}
+                {onMoveDown && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        aria-label="Move down"
+                        disabled={!canMoveDown}
+                        onClick={onMoveDown}
+                    >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                )}
                 <Button
                     variant="outline"
                     size="sm"
@@ -123,9 +151,13 @@ interface FlowInlineFieldsProps {
     track: SetlistTrack
     onUpdate: (id: string, data: Partial<SetlistTrack>) => void
     onDelete: (id: string) => void
+    onMoveUp?: () => void
+    onMoveDown?: () => void
+    canMoveUp?: boolean
+    canMoveDown?: boolean
 }
 
-export function FlowInlineFields({ track, onUpdate, onDelete }: FlowInlineFieldsProps) {
+export function FlowInlineFields({ track, onUpdate, onDelete, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: FlowInlineFieldsProps) {
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -184,8 +216,32 @@ export function FlowInlineFields({ track, onUpdate, onDelete }: FlowInlineFields
                 </div>
             </div>
 
-            {/* Delete button */}
-            <div className="pt-1">
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-1">
+                {onMoveUp && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        aria-label="Move up"
+                        disabled={!canMoveUp}
+                        onClick={onMoveUp}
+                    >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
+                )}
+                {onMoveDown && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        aria-label="Move down"
+                        disabled={!canMoveDown}
+                        onClick={onMoveDown}
+                    >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                )}
                 <Button
                     variant="outline"
                     size="sm"

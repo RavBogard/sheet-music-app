@@ -19,6 +19,10 @@ interface SongRowProps {
     onUpdate?: (id: string, data: Partial<SetlistTrack>) => void
     onReplace?: (track: SetlistTrack) => void
     onDelete?: (id: string) => void
+    onMoveUp?: () => void
+    onMoveDown?: () => void
+    canMoveUp?: boolean
+    canMoveDown?: boolean
 }
 
 export const SongRow = memo(function SongRow({
@@ -30,6 +34,10 @@ export const SongRow = memo(function SongRow({
     onUpdate,
     onReplace,
     onDelete,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
 }: SongRowProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: track.id,
@@ -149,6 +157,10 @@ export const SongRow = memo(function SongRow({
                     onUpdate={onUpdate}
                     onReplace={onReplace}
                     onDelete={onDelete}
+                    onMoveUp={onMoveUp}
+                    onMoveDown={onMoveDown}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
                 />
             )}
         </div>

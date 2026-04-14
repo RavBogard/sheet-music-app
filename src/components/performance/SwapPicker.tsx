@@ -89,7 +89,7 @@ export function SwapPicker({ open, onClose, currentTrack, onSelectReplacement }:
                 onClick={onClose}
             />
 
-            <div className="relative w-full max-w-lg bg-card rounded-t-2xl max-h-[70vh] flex flex-col animate-in slide-in-from-bottom duration-200">
+            <div className="relative w-full max-w-lg bg-card rounded-t-2xl max-h-[70vh] md:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
                     <h2 className="text-sm font-semibold text-foreground truncate">
                         Replace: {currentTrack.title}
