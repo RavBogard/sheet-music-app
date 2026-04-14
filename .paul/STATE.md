@@ -11,10 +11,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
-Phase: 4 of 8 (P0 Data Integrity) — In progress
-Plan: 04-01 complete (D03 shipped). D01 + D02 remaining in Phase 4.
-Status: Ready for 04-02 (D01 cascade) or 04-03 (D02 .strict schemas). S02 in Phase 2 still deferred.
-Last activity: 2026-04-14 — Unified 04-01 (scheduling/assign runTransaction; 8 new tests)
+Phase: 5 of 8 (P0 Bugs + UX) — In progress
+Plan: 05-01 complete (B01 shipped — user-visible writes surface errors). B02 + U01 + U02 remain.
+Status: Ready for next plan. Open: Phase 2 S02, Phase 4 D01+D02, Phase 5 B02+U01+U02, Phases 3/6/7/8
+Last activity: 2026-04-14 — Unified 05-01 (reportSaveError helper; scope trimmed at execution from 9→5 sites)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [04-01 closed; D03 shipped. Phase 4 has D01 + D02 pending]
+  ✓        ✓        ✓     [05-01 closed; B01 shipped]
 ```
 
 ## How to resume
@@ -130,16 +130,25 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (04-01 complete)
-Stopped at: D03 shipped; 1182/1182 tests; pushed to origin/master
-Next action: `/paul:plan` 04-02 (D01 setlist delete cascade) OR 04-03 (D02 .passthrough → .strict)
-Resume file: `.paul/phases/v43-04-data-integrity/04-01-SUMMARY.md`
+Last session: 2026-04-14 (05-01 complete)
+Stopped at: B01 shipped; 1186 tests green; 3 commits pushed
+Next action: `/paul:plan` for B02 (alert-store listener) or D01 (cascade delete) or U01/U02 (touch/keyboard) — user pick
+Resume file: `.paul/phases/v43-05-bugs-ux/05-01-SUMMARY.md`
 
 ## v4.3 Phase Progress
 - ✓ Phase 1 (audit)
 - 2/3 Phase 2 security triage: S01 ✓, S03 ✓, S02 deferred (decision plan needed)
 - 1/3 Phase 4 data integrity: D03 ✓, D01 pending, D02 pending
-- Phases 3, 5–8 not started
+- 1/4 Phase 5 bugs+UX: B01 ✓, B02 pending, U01 pending, U02 pending
+- Phases 3, 6–8 not started
+
+## Session scoreboard (this chat session)
+- 4 P0 audit findings closed: S01, S03, D03, B01
+- 6 new lib modules: chat-prompt, drive-file-auth, scheduling-merge, save-error (+ 2 helper exports)
+- 33 new regression tests (9 chat + 12 drive + 8 merge + 4 save-error)
+- 19 commits on origin/master (all pushed; Vercel auto-deploying)
+- Zero production regressions
+- 1 Vercel build failure caught + hotfixed (route.ts export rule — memory saved)
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
