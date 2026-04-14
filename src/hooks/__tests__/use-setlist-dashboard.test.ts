@@ -104,7 +104,6 @@ function makeSetlist(overrides: Partial<Setlist> = {}): Setlist {
     date: { seconds: Date.now() / 1000, nanoseconds: 0 },
     tracks: [{ id: 't1', title: 'Song A', fileId: 'file-a' }],
     trackCount: 1,
-    isPublic: true,
     ownerId: 'user-1',
     ...overrides,
   }
@@ -239,7 +238,7 @@ describe('useSetlistDashboard', () => {
       isAdmin: false,
     })
     const { result } = renderHook(() => useSetlistDashboard({}))
-    const setlist = makeSetlist({ ownerId: 'other-user', isPublic: true })
+    const setlist = makeSetlist({ ownerId: 'other-user' })
 
     act(() => { result.current.handleDeleteClick(setlist, mockEvent()) })
 
@@ -265,7 +264,7 @@ describe('useSetlistDashboard', () => {
 
     await act(async () => { await result.current.confirmDelete() })
 
-    expect(mockDeleteSetlist).toHaveBeenCalledWith('setlist-1', true)
+    expect(mockDeleteSetlist).toHaveBeenCalledWith('setlist-1')
     expect(toast.success).toHaveBeenCalledWith('Setlist deleted')
     expect(result.current.deleteConfirmOpen).toBe(false)
   })
@@ -324,7 +323,6 @@ describe('useSetlistDashboard', () => {
     expect(mockCreateSetlist).toHaveBeenCalledWith(
       expect.stringContaining('New Setlist'),
       [],
-      true,
       expect.objectContaining({ eventDate: date.toISOString() })
     )
     expect(mockPush).toHaveBeenCalledWith('/setlists/new-id')

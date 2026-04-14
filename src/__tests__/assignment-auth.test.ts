@@ -25,7 +25,6 @@ describe('POST /api/scheduling/assign', () => {
         mockDoc.exists = true
         mockDoc.data = () => ({
             ownerId: 'leader-123',
-            isPublic: false,
             name: 'Test Setlist',
             tracks: [],
             musicians: [

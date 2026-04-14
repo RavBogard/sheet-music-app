@@ -24,7 +24,6 @@ const makeSetlist = (overrides: Partial<Setlist> = {}): Setlist => ({
     { id: 't2', title: 'Song B', type: 'song' },
   ],
   trackCount: 2,
-  isPublic: false,
   ownerId: 'user-1',
   ...overrides,
 })

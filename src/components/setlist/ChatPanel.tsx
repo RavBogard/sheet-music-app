@@ -281,8 +281,7 @@ export function ChatPanel() {
 
                             const newId = await setlistService.createSetlist(
                                 String(p.name),
-                                normalizedTracks,
-                                !!p.isPublic
+                                normalizedTracks
                             )
                             lastCreatedSetlistId = newId
                             toast.success(`Created setlist: ${p.name}`)
@@ -300,7 +299,7 @@ export function ChatPanel() {
                             if (!resolvedId) {
                                 toast.error("No setlist to publish — create one first")
                             } else {
-                                await setlistService.updateSetlist(resolvedId, false, {
+                                await setlistService.updateSetlist(resolvedId, {
                                     eventDate: String(p.date)
                                 })
                                 toast.success(`Scheduled for ${p.date}`)

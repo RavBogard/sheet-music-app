@@ -48,8 +48,6 @@ const mockSetlistLogic = {
     name: "Shabbat Service",
     setName: vi.fn(),
     tracks: [] as SetlistTrack[],
-    isPublic: false,
-    setIsPublic: vi.fn(),
     eventDate: null,
     setEventDate: vi.fn(),
     rabbi: "",

@@ -102,7 +102,6 @@ export function subscribeToUpcomingSetlists(
 
     const q = query(
         collection(db, 'setlists'),
-        where('isPublic', '==', true),
         where('eventDate', '>=', Timestamp.fromDate(now)),
         orderBy('eventDate', 'asc'),
     )

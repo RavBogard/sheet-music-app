@@ -85,7 +85,7 @@ describe('createSetlistService', () => {
                 { id: '2', title: 'Song 2', fileName: 'Song 2', type: 'song' as const },
             ]
 
-            const id = await service.createSetlist('Friday Night', tracks, false)
+            const id = await service.createSetlist('Friday Night', tracks)
 
             expect(id).toBe('new-setlist-id')
             expect(mockAddDoc).toHaveBeenCalledTimes(1)
@@ -94,20 +94,18 @@ describe('createSetlistService', () => {
             expect(data.name).toBe('Friday Night')
             expect(data.tracks).toHaveLength(2)
             expect(data.trackCount).toBe(2)
-            expect(data.isPublic).toBe(false)
             expect(data.ownerId).toBe('user123')
             expect(data.ownerName).toBe('Test User')
         })
 
-        it('creates a public setlist', async () => {
-            await service.createSetlist('Shabbat Morning', [], true)
-
+        it('never writes isPublic to Firestore (regression guard)', async () => {
+            await service.createSetlist('Any Setlist', [])
             const data = mockAddDoc.mock.calls[0][1]
-            expect(data.isPublic).toBe(true)
+            expect(Object.keys(data)).not.toContain('isPublic')
         })
 
         it('includes additional data when provided', async () => {
-            await service.createSetlist('Festival', [], false, {
+            await service.createSetlist('Festival', [], {
                 templateType: 'rosh_hashanah',
             })
 
@@ -118,7 +116,7 @@ describe('createSetlistService', () => {
 
     describe('deleteSetlist', () => {
         it('deletes the setlist document directly and attempts task cleanup', async () => {
-            await service.deleteSetlist('setlist-abc', false)
+            await service.deleteSetlist('setlist-abc')
 
             // Setlist doc is deleted directly (not via batch)
             expect(mockDeleteDoc).toHaveBeenCalledTimes(1)
@@ -136,7 +134,7 @@ describe('createSetlistService', () => {
                 { id: 'c', title: 'Song C', fileName: 'Song C', type: 'song' as const },
             ]
 
-            await service.updateSetlist('setlist-xyz', false, {
+            await service.updateSetlist('setlist-xyz', {
                 tracks,
                 trackCount: 3,
                 name: 'Test Setlist',
@@ -165,7 +163,6 @@ describe('createSetlistService', () => {
                 { id: 't2', title: 'Mi Chamocha', type: 'song' as const },
             ],
             trackCount: 2,
-            isPublic: false,
             ownerId: 'user123',
             musicians: [{ name: 'Alice', email: 'alice@test.com' }],
             rabbi: 'Daniel',

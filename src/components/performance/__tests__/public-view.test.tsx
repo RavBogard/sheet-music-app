@@ -81,7 +81,6 @@ describe("Public View", () => {
                         eventDate: "2026-03-14T10:00:00Z",
                         tracks: [{ id: "t1", title: "Song 1" }, { id: "t2", title: "Song 2" }],
                         trackCount: 2,
-                        isPublic: true,
                     },
                     {
                         id: "setlist-2",
@@ -89,7 +88,6 @@ describe("Public View", () => {
                         eventDate: "2026-03-13T18:00:00Z",
                         tracks: [{ id: "t3", title: "Song 3" }],
                         trackCount: 1,
-                        isPublic: true,
                     },
                 ], false)
                 return vi.fn() // unsubscribe
@@ -112,7 +110,6 @@ describe("Public View", () => {
                         eventDate: "2026-03-14T10:00:00Z",
                         tracks: [],
                         trackCount: 0,
-                        isPublic: true,
                     },
                 ], false)
                 return vi.fn()

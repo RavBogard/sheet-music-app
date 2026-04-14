@@ -186,12 +186,12 @@ describe('serializeSetlist', () => {
         const result = serializeSetlist('s1', {
             name: 'Test',
             trackCount: 5,
-            isPublic: true,
+            isTemplate: true,
         })
 
         expect(result.name).toBe('Test')
         expect(result.trackCount).toBe(5)
-        expect(result.isPublic).toBe(true)
+        expect(result.isTemplate).toBe(true)
     })
 
     it('handles nested objects and arrays recursively', () => {

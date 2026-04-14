@@ -42,7 +42,6 @@ export function TemplatesSection() {
         try {
             const q = query(
                 collection(db, "setlists"),
-                where("isPublic", "==", true),
                 orderBy("date", "desc"),
                 limit(10),
             )

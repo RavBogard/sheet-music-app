@@ -100,7 +100,6 @@ export const setlistSchema = z.object({
     updatedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     tracks: z.array(setlistTrackSchema).catch([]).default([]),
     trackCount: z.number().catch(0).default(0),
-    isPublic: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
     ownerId: z.string().nullish().catch(undefined).transform(v => v || undefined),
     ownerName: z.string().nullish().catch(undefined).transform(v => v || undefined),
     rabbi: z.string().nullish().catch(undefined).transform(v => v || undefined),

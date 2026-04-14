@@ -1,8 +1,18 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v4.1 Kill Private Setlists (for real this time)**
+Status: 🚧 In Progress
+Phases: 0 of 1 complete
 
-To be defined in next milestone discussion.
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Kill Private Setlists | 1 | Planning | - |
+
+### Phase 1: Kill Private Setlists
+
+Focus: Finish what v4.0 Phase 2 started. Remove `isPublic` from the type, schema, service signature, and every caller (wizard, chat, import, transfer, admin). One-shot Firestore migration to strip `isPublic` from existing docs. Remove lingering UI affordances. Add a guard test so the field can't be silently reintroduced.
+Plans: TBD (defined during /paul:plan)
 
 ## Previous Milestone
 **v4.0 Live Swap Redesign**
@@ -341,4 +351,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-03-12 (Phase 1 complete)*
+*Last updated: 2026-04-13 (v4.1 milestone created)*

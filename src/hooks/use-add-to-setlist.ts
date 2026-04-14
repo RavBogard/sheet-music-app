@@ -122,7 +122,7 @@ export function useAddToSetlist() {
     setIsOpen(false)
 
     // Perform Firestore write
-    await setlistService.updateSetlist(setlistId, setlist.isPublic ?? false, {
+    await setlistService.updateSetlist(setlistId, {
       tracks: updatedTracks,
       trackCount: updatedTracks.length,
     })
@@ -142,7 +142,6 @@ export function useAddToSetlist() {
 
     // Capture values for undo closure
     const undoSetlistId = setlistId
-    const undoIsPublic = setlist.isPublic ?? false
     const undoTrackIds = [...addedTrackIds]
 
     toast(message, {
@@ -153,7 +152,7 @@ export function useAddToSetlist() {
           const currentTracks = await new Promise<SetlistTrack[]>((resolve) => {
             let unsub: (() => void) | null = null
             let resolved = false
-            unsub = setlistService.subscribeToSetlist(undoSetlistId, undoIsPublic, (current) => {
+            unsub = setlistService.subscribeToSetlist(undoSetlistId, (current) => {
               if (resolved) return
               resolved = true
               // Defer unsub to avoid "used before initialization" when callback fires synchronously
@@ -164,7 +163,7 @@ export function useAddToSetlist() {
           })
 
           const filteredTracks = currentTracks.filter(t => !undoTrackIds.includes(t.id))
-          await setlistService.updateSetlist(undoSetlistId, undoIsPublic, {
+          await setlistService.updateSetlist(undoSetlistId, {
             tracks: filteredTracks,
             trackCount: filteredTracks.length,
           })

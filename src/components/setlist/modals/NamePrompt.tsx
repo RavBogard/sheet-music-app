@@ -18,12 +18,10 @@ interface NamePromptProps {
     isOpen: boolean
     onClose: () => void
     initialName: string
-    /** @deprecated No longer used — all setlists are public (v4.0) */
-    initialIsPublic?: boolean
     initialDate?: Date | null
     /** @deprecated No longer used */
     isBandLeader?: boolean
-    onConfirm: (name: string, isPublic: boolean, date: Date | null) => void
+    onConfirm: (name: string, date: Date | null) => void
 }
 
 export function NamePrompt({
@@ -38,8 +36,7 @@ export function NamePrompt({
 
     const handleConfirm = () => {
         if (name.trim()) {
-            // v4.0: always public
-            onConfirm(name, true, date || null)
+            onConfirm(name, date || null)
         }
     }
 

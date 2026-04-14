@@ -15,8 +15,6 @@ import {
     MoreVertical,
     Play,
     Bell,
-    Globe,
-    Lock,
     Check,
     Sparkles,
     Trash2,
@@ -29,7 +27,6 @@ interface OverflowMenuProps {
     // Actions
     onPerform?: () => void
     onPublish?: () => void
-    onTogglePublic: () => void
     onOpenAI: () => void
     onDelete?: () => void
     onEditDetails?: () => void
@@ -37,7 +34,6 @@ interface OverflowMenuProps {
     onPrint?: () => void
 
     // State
-    isPublic: boolean
     isBandLeader: boolean
     canEdit: boolean
     setlistId?: string
@@ -49,13 +45,11 @@ interface OverflowMenuProps {
 export function OverflowMenu({
     onPerform,
     onPublish,
-    onTogglePublic,
     onOpenAI,
     onDelete,
     onEditDetails,
     onSetRabbi,
     onPrint,
-    isPublic,
     isBandLeader,
     canEdit,
     setlistId,
@@ -96,7 +90,7 @@ export function OverflowMenu({
                 {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
-                        {isPublic ? "Update & Notify" : "Publish & Notify"}
+                        Publish & Notify
                     </DropdownMenuItem>
                 )}
 
@@ -129,13 +123,6 @@ export function OverflowMenu({
                             </DropdownMenuItem>
                         </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                )}
-
-                {canEdit && setlistId && (
-                    <DropdownMenuItem onClick={onTogglePublic} disabled={!isPublic && !isBandLeader}>
-                        {isPublic ? <Lock className="h-4 w-4 mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
-                        {isPublic ? "Make Private" : "Make Public"}
-                    </DropdownMenuItem>
                 )}
 
                 <DropdownMenuSeparator />

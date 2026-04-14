@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
     ChevronLeft, ChevronRight, Check, Loader2,
-    Calendar as CalendarIcon, Lock, Globe, Sparkles, FileText,
+    Calendar as CalendarIcon, Sparkles, FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
 import { useCreationWizard, type WizardStep } from "@/hooks/use-creation-wizard"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
@@ -29,7 +28,6 @@ const STEPS: { id: WizardStep; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
-    const { isBandLeader } = useAuth()
     const wizard = useCreationWizard()
 
     // Reset wizard state each time the dialog opens
@@ -81,7 +79,7 @@ export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
                         <TemplateStep wizard={wizard} />
                     )}
                     {wizard.step === 'details' && (
-                        <DetailsStep wizard={wizard} isBandLeader={isBandLeader} />
+                        <DetailsStep wizard={wizard} />
                     )}
                 </div>
 
@@ -225,7 +223,7 @@ function TemplateStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard>
 
 // ── Step 2: Details (Name, Date, Rabbi, Public/Private) ──
 
-function DetailsStep({ wizard, isBandLeader }: { wizard: ReturnType<typeof useCreationWizard>; isBandLeader: boolean }) {
+function DetailsStep({ wizard }: { wizard: ReturnType<typeof useCreationWizard> }) {
     const congregation = useCongregation()
     const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
 
@@ -294,33 +292,6 @@ function DetailsStep({ wizard, isBandLeader }: { wizard: ReturnType<typeof useCr
                 )}
             </div>
 
-            {/* Public/Private */}
-            <div className="flex items-center gap-4 p-4 bg-muted rounded-lg border border-border/50">
-                <button
-                    onClick={() => wizard.setIsPublic(false)}
-                    className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors",
-                        !wizard.isPublic ? "bg-blue-600 text-foreground shadow-lg shadow-blue-900/20" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    )}
-                >
-                    <Lock className="h-4 w-4" /> Personal
-                </button>
-                {isBandLeader ? (
-                    <button
-                        onClick={() => wizard.setIsPublic(true)}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors",
-                            wizard.isPublic ? "bg-green-600 text-foreground shadow-lg shadow-green-900/20" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        )}
-                    >
-                        <Globe className="h-4 w-4" /> Public
-                    </button>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground/60 cursor-not-allowed opacity-50" title="Only Leaders can create Public Setlists">
-                        <Globe className="h-4 w-4" /> Public
-                    </div>
-                )}
-            </div>
         </div>
     )
 }

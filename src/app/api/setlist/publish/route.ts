@@ -2,7 +2,7 @@
  * POST /api/setlist/publish
  *
  * Publishes a setlist and triggers notifications:
- * 1. Set isPublic: true, publishedAt timestamp
+ * 1. Stamp publishedAt + snapshot
  * 2. Record song usage (fire-and-forget)
  * 3. In-app notifications to assigned musicians with accounts
  * 4. Email notifications to all assigned musicians
@@ -83,15 +83,14 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
         }
 
-        // Step 1: Publish (set isPublic + publishedAt + snapshot for change detection)
+        // Step 1: Publish (stamp publishedAt + snapshot for change detection)
         const songTracks = tracks.filter((t: { type?: string }) => !t.type || t.type === 'song')
         const publishedSnapshot = songTracks.map((t: { title: string; key?: string; fileId?: string }) => ({
             title: t.title, key: t.key || '', fileId: t.fileId || ''
         }))
-        const wasPublic = setlist.isPublic === true
-        if (!wasPublic) {
+        const wasPublished = !!setlist.publishedAt
+        if (!wasPublished) {
             await setlistRef.update({
-                isPublic: true,
                 publishedAt: FieldValue.serverTimestamp(),
                 publishedSnapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
@@ -240,7 +239,7 @@ export const POST = createApiHandler(
         // Only for initial publish, not re-publish (to control SMS costs)
         const smsResults = { sent: 0, failed: 0 }
         const smsPromises: Promise<void>[] = []
-        if (!wasPublic) {
+        if (!wasPublished) {
             for (const musician of registeredMusicians) {
                 try {
                     const userData = userDataMap.get(musician.uid!)
@@ -272,7 +271,7 @@ export const POST = createApiHandler(
             userName: ctx.auth.email || 'unknown',
             timestamp: FieldValue.serverTimestamp(),
             details: {
-                wasAlreadyPublic: wasPublic,
+                wasAlreadyPublished: wasPublished,
                 musicianCount: musicians.length,
                 musicianNames: musicians.map(m => m.name),
             },
@@ -307,7 +306,7 @@ export const POST = createApiHandler(
             batch.commit().catch(err => logger.warn('[Publish] Email events write failed:', err))
         }
 
-        // Bust Next.js aggressive cache so it stops serving initialIsPublic: false on hard reloads
+        // Bust Next.js cache so listings reflect the new publishedAt snapshot
         try {
             revalidatePath('/setlists')
             revalidatePath(`/setlists/${setlistId}`)
@@ -318,7 +317,7 @@ export const POST = createApiHandler(
 
         return NextResponse.json({
             success: true,
-            wasAlreadyPublic: wasPublic,
+            wasAlreadyPublished: wasPublished,
             notified: registeredMusicians.length, // in-app only (excludes publisher)
             musicianCount: musicians.length,
             emailed,

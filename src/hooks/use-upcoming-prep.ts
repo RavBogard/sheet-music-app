@@ -74,7 +74,6 @@ export function useUpcomingPrep() {
 
         return query(
             collection(db, 'setlists'),
-            where('isPublic', '==', true),
             where('eventDate', '>=', Timestamp.fromDate(now)),
             where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
             orderBy('eventDate', 'asc'),

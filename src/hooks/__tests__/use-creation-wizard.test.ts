@@ -170,17 +170,15 @@ describe('useCreationWizard', () => {
     expect(mockCreateSetlist).toHaveBeenCalledWith(
       'Test Setlist',
       expect.any(Array),
-      false,
       expect.objectContaining({ templateType: 'shabbat_morning' })
     )
     expect(mockPush).toHaveBeenCalledWith('/setlists/new-setlist-id')
   })
 
-  it('create() assigns musicians when public + musicians selected', async () => {
+  it('create() assigns musicians when musicians selected', async () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => {
       result.current.setName('Service')
-      result.current.setIsPublic(true)
       result.current.setMusicians([
         { uid: 'u1', name: 'Alice', email: 'alice@test.com', instrument: 'guitar' },
       ])
@@ -221,7 +219,6 @@ describe('useCreationWizard', () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => {
       result.current.setName('Test')
-      result.current.setIsPublic(true)
       result.current.goToStep('details')
     })
 
@@ -229,7 +226,6 @@ describe('useCreationWizard', () => {
 
     expect(result.current.step).toBe('template')
     expect(result.current.name).toBe('')
-    expect(result.current.isPublic).toBe(false)
     expect(result.current.tracks).toEqual([])
     expect(result.current.creating).toBe(false)
   })

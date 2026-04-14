@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         const setlist = setlistDoc.data()!
 
         // Security: only published setlists can be downloaded without auth
-        if (setlist.isPublic !== true) {
+        if (!setlist.publishedAt) {
             return NextResponse.json({ error: 'Setlist is not published' }, { status: 403 })
         }
 

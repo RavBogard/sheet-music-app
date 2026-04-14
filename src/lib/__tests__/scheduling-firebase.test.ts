@@ -195,12 +195,11 @@ describe('subscribeToAllUpcomingAssignments', () => {
 })
 
 describe('subscribeToUpcomingSetlists', () => {
-    it('queries setlists collection with isPublic and eventDate filters', () => {
+    it('queries setlists collection with eventDate filter', () => {
         const cb = vi.fn()
         subscribeToUpcomingSetlists(cb)
 
         expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'setlists')
-        expect(mockWhere).toHaveBeenCalledWith('isPublic', '==', true)
         expect(mockWhere).toHaveBeenCalledWith('eventDate', '>=', expect.anything())
         expect(mockOrderBy).toHaveBeenCalledWith('eventDate', 'asc')
     })

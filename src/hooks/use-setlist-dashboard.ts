@@ -124,7 +124,7 @@ export function useSetlistDashboard({
     const confirmDelete = async () => {
         if (!setlistService || !setlistToDelete) return
         try {
-            await setlistService.deleteSetlist(setlistToDelete.id, setlistToDelete.isPublic || false)
+            await setlistService.deleteSetlist(setlistToDelete.id)
             toast.success("Setlist deleted")
         } catch {
             toast.error("Failed to delete setlist")
@@ -223,7 +223,7 @@ export function useSetlistDashboard({
                     const tracks = buildSetlistFromTemplate(template, allFiles, context)
                     const name = generateSetlistName(context)
 
-                    const id = await setlistService.createSetlist(name, tracks, true, {
+                    const id = await setlistService.createSetlist(name, tracks, {
                         eventDate: date.toISOString(),
                         templateType: templateType as Setlist['templateType'],
                         isTemplate: false,
@@ -248,7 +248,7 @@ export function useSetlistDashboard({
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
         const name = 'New Setlist — ' + formattedDate
         try {
-            const id = await setlistService.createSetlist(name, [], true, {
+            const id = await setlistService.createSetlist(name, [], {
                 eventDate: date.toISOString(),
             })
             router.push(`/setlists/${id}`)
@@ -274,7 +274,7 @@ export function useSetlistDashboard({
             const tracks = buildSetlistFromTemplate(template, allFiles, context)
             const name = generateSetlistName(context)
 
-            const id = await setlistService.createSetlist(name, tracks, true, {
+            const id = await setlistService.createSetlist(name, tracks, {
                 eventDate: targetDate.toISOString(),
                 templateType: templateType as Setlist['templateType'],
                 isTemplate: false,
@@ -289,7 +289,7 @@ export function useSetlistDashboard({
             handleSelect({
                 id, name, tracks, trackCount: tracks.length,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: true,
+                eventDate: targetDate.toISOString(), ownerId: user.uid,
             })
         } catch (err: unknown) {
             toast.dismiss(templateToastId)

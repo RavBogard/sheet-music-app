@@ -114,7 +114,6 @@ export function MobileTabBar(props: AppNavigationProps) {
             const now = new Date()
             const q = query(
                 collection(db, "setlists"),
-                where("isPublic", "==", true),
                 where("eventDate", ">=", Timestamp.fromDate(now)),
                 orderBy("eventDate", "asc"),
                 limit(1),

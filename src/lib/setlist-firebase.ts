@@ -54,7 +54,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
     const COLLECTION_PATH = 'setlists';
 
     return {
-        async createSetlist(name: string, tracks: SetlistTrack[], isPublic: boolean = true, additionalData: Partial<Setlist> = {}) {
+        async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
             try {
                 // Sanitize tracks: Firebase rejects undefined values
                 const cleanTracks = stripUndefinedDeep(tracks) as SetlistTrack[]
@@ -63,12 +63,11 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     date: serverTimestamp(),
                     tracks: cleanTracks,
                     trackCount: tracks.length,
-                    isPublic,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     ...stripUndefined(additionalData as Record<string, unknown>)
                 });
-                logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length, isPublic })
+                logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length })
                 return docRef.id;
             } catch (e) {
                 logger.error("Error creating setlist: ", e);
@@ -76,7 +75,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
         // Subscribe to a single setlist by ID
-        subscribeToSetlist(id: string, _isPublic: boolean, callback: (setlist: Setlist | null) => void) {
+        subscribeToSetlist(id: string, callback: (setlist: Setlist | null) => void) {
             const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
             return onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
@@ -90,7 +89,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // Update a setlist (sanitize undefined → null for Firestore)
-        async updateSetlist(id: string, _isPublic: boolean, data: Partial<Setlist>) {
+        async updateSetlist(id: string, data: Partial<Setlist>) {
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = stripUndefined(data as Record<string, unknown>);
             cleanData.updatedAt = serverTimestamp();
@@ -109,7 +108,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             // Client-side broadcast would fail because Firestore rules restrict user doc reads
         },
 
-        async deleteSetlist(id: string, _isPublic: boolean) {
+        async deleteSetlist(id: string) {
             try {
                 // Delete the setlist document — this is the critical operation.
                 await deleteDoc(doc(db, COLLECTION_PATH, id))
@@ -168,7 +167,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     date: serverTimestamp(),
                     tracks: setlistData.tracks,
                     trackCount: setlistData.tracks.length,
-                    isPublic: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     copiedFrom: sourceSetlistId
@@ -199,7 +197,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     eventDate: Timestamp.fromDate(targetDate),
                     tracks: source.tracks,
                     trackCount: source.tracks.length,
-                    isPublic: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
@@ -225,7 +222,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     date: serverTimestamp(),
                     tracks: source.tracks,
                     trackCount: source.tracks.length,
-                    isPublic: true,
                     isTemplate: true,
                     templateType: 'other',
                     ownerId: userId,
@@ -238,26 +234,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
             } catch (e) {
                 logger.error("Error saving as template:", e)
                 throw e
-            }
-        },
-
-        // Make a personal setlist public (UPDATE field)
-        async makePublic(setlistId: string) {
-            try {
-                const docRef = doc(db, COLLECTION_PATH, setlistId);
-                await updateDoc(docRef, {
-                    isPublic: true,
-                    updatedAt: serverTimestamp(),
-                    ownerName: userName || "Anonymous" // Update name in case it changed
-                });
-                logSetlistChange(setlistId, 'made_public', userId || '', userName || 'Anonymous')
-
-                // Note: Publish notifications are handled server-side via /api/setlist/publish
-
-                return setlistId;
-            } catch (e) {
-                logger.error("Error making setlist public: ", e);
-                throw e;
             }
         },
 
@@ -276,21 +252,6 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 trackCount: newTracks.length,
             })
             logSetlistChange(setlistId, 'tracks_updated', userId || '', userName || 'Anonymous', { trackCount: newTracks.length }, newTracks as SetlistTrack[])
-        },
-
-        // Make a public setlist private (UPDATE field)
-        async makePrivate(setlistId: string) {
-            try {
-                const docRef = doc(db, COLLECTION_PATH, setlistId);
-                await updateDoc(docRef, {
-                    isPublic: false
-                });
-                logSetlistChange(setlistId, 'made_private', userId || '', userName || 'Anonymous')
-                return setlistId;
-            } catch (e) {
-                logger.error("Error making setlist private: ", e);
-                throw e;
-            }
         }
     };
 }

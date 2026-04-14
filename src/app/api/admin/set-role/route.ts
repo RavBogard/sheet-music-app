@@ -46,25 +46,6 @@ export const POST = createApiHandler(
                 timestamp: FieldValue.serverTimestamp()
             })
 
-            // Demotion guard: lock public setlists
-            if (newRole === 'member' || newRole === 'pending') {
-                const publicSetlists = await txn.get(
-                    db.collection("setlists")
-                        .where("createdBy.uid", "==", targetUserId)
-                        .where("isPublic", "==", true)
-                )
-
-                for (const doc of publicSetlists.docs) {
-                    txn.update(doc.ref, {
-                        isPublic: false,
-                        updatedAt: FieldValue.serverTimestamp()
-                    })
-                }
-
-                if (!publicSetlists.empty) {
-                    logger.info(`[Demotion Guard] Locked ${publicSetlists.size} public setlists for demoted user ${targetUserId}`)
-                }
-            }
         })
 
         // Update Auth custom claims (external service, after Firestore transaction succeeds)

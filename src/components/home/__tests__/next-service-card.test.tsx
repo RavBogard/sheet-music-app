@@ -14,7 +14,6 @@ describe("NextServiceCard", () => {
             { id: "t2", title: "Song 2", type: "song" as const },
         ],
         trackCount: 2,
-        isPublic: true,
         musicians: [
             { name: "Sarah", email: "sarah@test.com", instrument: "Guitar" },
             { name: "David", email: "david@test.com", instrument: "Drums" },

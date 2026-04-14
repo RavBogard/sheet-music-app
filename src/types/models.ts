@@ -72,7 +72,6 @@ export interface Setlist {
     updatedAt?: FirestoreDate
     tracks: SetlistTrack[]
     trackCount: number
-    isPublic?: boolean
     ownerId?: string
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service

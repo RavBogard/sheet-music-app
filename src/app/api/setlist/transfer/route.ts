@@ -37,7 +37,6 @@ export const POST = createApiHandler(
         await setlistRef.update({
             ownerId: targetUser.uid,
             ownerName: targetUser.displayName || targetUser.email || "Unknown User",
-            isPublic: false,
             transferredAt: new Date().toISOString(),
             previousOwnerId: auth.uid
         })

@@ -33,8 +33,6 @@ export interface UseCreationWizardReturn {
     // Step 2: Details
     name: string
     setName: (v: string) => void
-    isPublic: boolean
-    setIsPublic: (v: boolean) => void
     eventDate: Date | null
     setEventDate: (v: Date | null) => void
     rabbi: string
@@ -68,7 +66,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
     // Step 2: Details
     const [name, setName] = useState("")
-    const [isPublic, setIsPublic] = useState(false)
     const [eventDate, setEventDate] = useState<Date | null>(null)
     const [rabbi, setRabbi] = useState("")
 
@@ -143,7 +140,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setCreating(false)
         setSelectedTemplate(null)
         setName("")
-        setIsPublic(false)
         setEventDate(null)
         setRabbi("")
         setTracks([])
@@ -173,15 +169,15 @@ export function useCreationWizard(): UseCreationWizardReturn {
             }
 
             // Create the setlist
-            const setlistId = await service.createSetlist(name, finalTracks, isPublic, {
+            const setlistId = await service.createSetlist(name, finalTracks, {
                 eventDate: eventDate?.toISOString() ?? undefined,
                 rabbi: rabbi || undefined,
                 musicians,
                 templateType: selectedTemplate as Setlist['templateType'],
             })
 
-            // Schedule musicians (if any selected and setlist is public)
-            if (musicians.length > 0 && isPublic) {
+            // Schedule musicians (if any selected)
+            if (musicians.length > 0) {
                 const musiciansToAssign = musicians
                     .filter(m => m.uid)
                     .map(m => ({
@@ -221,7 +217,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
+    }, [user, creating, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
 
     return {
         step,
@@ -237,8 +233,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
         templateKeys,
         name,
         setName,
-        isPublic,
-        setIsPublic,
         eventDate,
         setEventDate,
         rabbi,

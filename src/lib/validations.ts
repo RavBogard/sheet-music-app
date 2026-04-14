@@ -19,7 +19,6 @@ export const transferSetlistSchema = z.object({
 export const createSetlistSchema = z.object({
     name: z.string().min(1, "Name is required"),
     tracks: z.array(z.any()), // Refine this later with Track schema
-    isPublic: z.boolean().optional()
 })
 
 export const updateRoleSchema = z.object({

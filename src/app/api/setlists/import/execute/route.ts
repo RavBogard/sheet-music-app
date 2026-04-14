@@ -132,7 +132,6 @@ export const POST = createApiHandler(
             updatedAt: nowStr,
             tracks: resolvedTracks,
             trackCount: resolvedTracks.length,
-            isPublic: false, // Default to private until reviewed
             ownerId: ctx.auth.uid,
             ownerName: ctx.auth.email || "Unknown",
         }

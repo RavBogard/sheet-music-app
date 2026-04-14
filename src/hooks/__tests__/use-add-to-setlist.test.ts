@@ -50,7 +50,6 @@ const makeSetlist = (overrides: Partial<Setlist> = {}): Setlist => ({
   updatedAt: new Date('2026-03-15'),
   tracks: [],
   trackCount: 0,
-  isPublic: false,
   ownerId: 'user-1',
   ...overrides,
 })
@@ -131,7 +130,7 @@ describe('useAddToSetlist', () => {
       const { result } = renderHook(() => useAddToSetlist())
 
       const sl1 = makeSetlist({ id: 'sl-1', name: 'Older', updatedAt: new Date('2026-03-10') })
-      const sl2 = makeSetlist({ id: 'sl-2', name: 'Newer', isPublic: true, updatedAt: new Date('2026-03-15') })
+      const sl2 = makeSetlist({ id: 'sl-2', name: 'Newer', updatedAt: new Date('2026-03-15') })
 
       act(() => {
         allCallback?.([sl1, sl2], false)
@@ -196,7 +195,7 @@ describe('useAddToSetlist', () => {
     it('builds tracks with correct ID format and appends to setlist', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'drive-abc', name: 'My_Song.pdf', metadata: { key: 'Am' } })
-      const setlist = makeSetlist({ id: 'sl-1', tracks: [], isPublic: false })
+      const setlist = makeSetlist({ id: 'sl-1', tracks: [] })
 
       act(() => {
         result.current.openForSongs([file])
@@ -207,9 +206,8 @@ describe('useAddToSetlist', () => {
       })
 
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const [id, isPublic, data] = mockUpdateSetlist.mock.calls[0]
+      const [id, data] = mockUpdateSetlist.mock.calls[0]
       expect(id).toBe('sl-1')
-      expect(isPublic).toBe(false)
       expect(data.tracks).toHaveLength(1)
       expect(data.tracks[0].id).toMatch(/^track-\d+-drive-abc-0$/)
       expect(data.tracks[0].title).toBe('My Song')
@@ -272,7 +270,7 @@ describe('useAddToSetlist', () => {
 
       // Should still add (not blocked)
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const data = mockUpdateSetlist.mock.calls[0][2]
+      const data = mockUpdateSetlist.mock.calls[0][1]
       expect(data.tracks).toHaveLength(2) // original + new
 
       // Toast should mention duplicate
@@ -312,11 +310,10 @@ describe('useAddToSetlist', () => {
         id: 'sl-1',
         tracks: [{ id: 'track-existing', title: 'Existing', fileId: 'file-old', type: 'song' }],
         trackCount: 1,
-        isPublic: true,
       })
 
       // Mock subscribeToSetlist to return current tracks (simulating re-read)
-      mockSubscribeToSetlist.mockImplementation((_id: string, _isPublic: boolean, cb: (setlist: Setlist | null) => void) => {
+      mockSubscribeToSetlist.mockImplementation((_id: string, cb: (setlist: Setlist | null) => void) => {
         // Simulate that another user added a track concurrently
         cb({
           ...setlist,
@@ -343,12 +340,12 @@ describe('useAddToSetlist', () => {
       expect(toastOptions.action.label).toBe('Undo')
 
       // Capture the added track ID
-      const addedTrackId = mockUpdateSetlist.mock.calls[0][2].tracks[
-        mockUpdateSetlist.mock.calls[0][2].tracks.length - 1
+      const addedTrackId = mockUpdateSetlist.mock.calls[0][1].tracks[
+        mockUpdateSetlist.mock.calls[0][1].tracks.length - 1
       ].id
 
       // Update the subscribeToSetlist mock to include the added track
-      mockSubscribeToSetlist.mockImplementation((_id: string, _isPublic: boolean, cb: (setlist: Setlist | null) => void) => {
+      mockSubscribeToSetlist.mockImplementation((_id: string, cb: (setlist: Setlist | null) => void) => {
         cb({
           ...setlist,
           tracks: [
@@ -369,7 +366,7 @@ describe('useAddToSetlist', () => {
 
       // Undo should have called updateSetlist
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
-      const undoData = mockUpdateSetlist.mock.calls[0][2]
+      const undoData = mockUpdateSetlist.mock.calls[0][1]
 
       // Should keep existing + concurrent, remove only the added track
       expect(undoData.tracks).toHaveLength(2)

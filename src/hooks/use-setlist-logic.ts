@@ -17,7 +17,6 @@ interface UseSetlistLogicProps {
     initialTracks?: SetlistTrack[]
     initialName?: string
     suggestedName?: string
-    initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
     initialRabbi?: string
@@ -33,7 +32,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         initialTracks = [],
         initialName = "",
         suggestedName = "",
-        initialIsPublic = false,
         initialOwnerId,
         initialRabbi = "",
         initialMusicians = [],
@@ -55,13 +53,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     }, [uid, displayName])
 
     // Determine if user can edit
-    const canEdit = (!initialOwnerId || initialOwnerId === user?.uid) || (isBandLeader && initialIsPublic)
+    const canEdit = (!initialOwnerId || initialOwnerId === user?.uid) || isBandLeader
 
     // Core state
     const [setlistId, setSetlistId] = useState<string | undefined>(initialSetlistId)
     const [name, setName] = useState(initialName || suggestedName || "")
     const [tracks, setTracks] = useState<SetlistTrack[]>(initialTracks)
-    const [isPublic, setIsPublic] = useState(initialIsPublic)
     const [eventDate, setEventDate] = useState<Date | null>(props.initialEventDate ? new Date(props.initialEventDate) : null)
     const [rabbi, setRabbi] = useState(initialRabbi)
     const [serviceNotes, setServiceNotes] = useState(initialServiceNotes)
@@ -239,14 +236,14 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     // Refs to always read latest values inside the debounced save
-    const latestRef = useRef({ setlistId, name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians })
+    const latestRef = useRef({ setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians })
     useEffect(() => {
-        latestRef.current = { setlistId, name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians }
-    }, [setlistId, name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians])
+        latestRef.current = { setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians }
+    }, [setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians])
 
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {
-        const { setlistId: id, name: n, tracks: t, isPublic: pub, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
+        const { setlistId: id, name: n, tracks: t, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
         if (!n || n.length === 0 || !canEdit || !setlistService) return
 
         setSaving(true)
@@ -277,13 +274,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 rabbi: rab,
                 serviceNotes: sn?.trim() || undefined,
                 musicians: mus.length > 0 ? mus : undefined,
-                isPublic: pub,
             }
 
             if (id) {
-                await setlistService.updateSetlist(id, pub, dataToSave)
+                await setlistService.updateSetlist(id, dataToSave)
             } else {
-                const newId = await setlistService.createSetlist(n, t, pub, {
+                const newId = await setlistService.createSetlist(n, t, {
                     eventDate: serializeDate(ed),
                     rabbi: rab,
                     serviceNotes: sn?.trim() || undefined,
@@ -356,7 +352,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 clearTimeout(saveTimeoutRef.current)
             }
         }
-    }, [name, tracks, isPublic, eventDate, rabbi, serviceNotes, musicians, canEdit])
+    }, [name, tracks, eventDate, rabbi, serviceNotes, musicians, canEdit])
 
     // Flush pending saves when user navigates away or switches apps
 
@@ -568,39 +564,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
-    const togglePublic = async () => {
-        if (!setlistService || !setlistId) return
-        if (!isPublic && !isBandLeader) {
-            toast.error("Only Leaders can make setlists public.")
-            return
-        }
-
-        const previousState = isPublic
-        const previousId = setlistId
-
-        // Optimistic Update
-        setIsPublic(!previousState)
-        setSaving(true)
-
-        try {
-            const newId = previousState
-                ? await setlistService.makePrivate(setlistId)
-                : await setlistService.makePublic(setlistId)
-
-            setSetlistId(newId)
-            toast.success(`Setlist is now ${!previousState ? 'public' : 'private'}!`)
-        } catch (e) {
-            // Revert on error
-            logger.error("Toggle visibility failed:", e)
-            setIsPublic(previousState)
-            setSetlistId(previousId)
-            toast.error("Failed to change visibility", {
-                description: "Reverting changes..."
-            })
-        }
-        setSaving(false)
-    }
-
     return {
         canEdit,
         isBandLeader,
@@ -608,8 +571,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         name,
         setName, // Exposed for UI inputs
         tracks,
-        isPublic,
-        setIsPublic, // Exposed for modal
         saving,
         lastSaved,
         isSyncing,
@@ -623,7 +584,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         addServiceItem,
         duplicateTrack,
         detectKeyForFile,
-        togglePublic,
         eventDate,
         setEventDate,
         rabbi,

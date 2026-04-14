@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Globe, Lock, Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
+import { Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
@@ -120,7 +120,6 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
 
                 <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{setlist.trackCount || 0} songs</span>
-                    {setlist.isPublic && <Globe className="h-3 w-3" />}
                     {offlineStatus === 'full' && (
                         <span className="flex items-center gap-1 text-green-500 text-xs">
                             <CheckCircle2 className="h-3 w-3" /> Offline ready
@@ -195,13 +194,6 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             )}
             <div className="flex items-start justify-between mb-2 w-full gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="shrink-0">
-                        {setlist.isPublic ? (
-                            <Globe className="h-4 w-4 text-muted-foreground/60" />
-                        ) : (
-                            <Lock className="h-4 w-4 text-muted-foreground/60" />
-                        )}
-                    </div>
                     <div className="flex flex-col min-w-0 flex-1">
                         <h3 className="text-xl font-semibold truncate text-foreground" title={setlist.name}>{setlist.name}</h3>
                         {setlist.eventDate && (
@@ -250,7 +242,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                 </div>
             </div>
 
-            {setlist.isPublic && setlist.ownerName && (
+            {setlist.ownerName && (
                 <div className="text-sm text-muted-foreground">
                     by {setlist.ownerName}
                 </div>

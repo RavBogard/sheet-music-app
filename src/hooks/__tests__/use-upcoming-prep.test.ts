@@ -66,7 +66,6 @@ function makeSetlist(overrides: Partial<Setlist> = {}): Setlist {
       { id: 't2', title: 'Song B', fileId: 'file-b' },
     ],
     trackCount: 2,
-    isPublic: true,
     eventDate: { seconds: Math.floor(Date.now() / 1000) + 86400, nanoseconds: 0 },
     ...overrides,
   }

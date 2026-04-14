@@ -48,7 +48,7 @@ You must return a JSON object with this structure:
 {
   "message": "Your text response to the user...",
   "commands": [
-    { "type": "CREATE_SETLIST", "payload": { "name": "Shabbat 1", "isPublic": false, "tracks": [] } },
+    { "type": "CREATE_SETLIST", "payload": { "name": "Shabbat 1", "tracks": [] } },
     { "type": "ADD_TO_SETLIST", "payload": { "fileId": "123", "title": "Adon Olam" } },
     { "type": "REMOVE_FROM_SETLIST", "payload": { "index": 0 } },
     { "type": "REMOVE_FROM_SETLIST", "payload": { "all": true } },
@@ -164,7 +164,6 @@ export const POST = createApiHandler(async (ctx) => {
                     type: 'CREATE_SETLIST',
                     payload: {
                         name: setlistGeneratedName,
-                        isPublic: false,
                         tracks: tracks.map(t => ({
                             title: t.title,
                             fileId: t.fileId,
@@ -232,27 +231,11 @@ export const POST = createApiHandler(async (ctx) => {
     let allSetlistsContext = ""
     try {
       const firestore = getFirestore()
-      // Only include public setlists + the requesting user's own setlists (privacy)
-      const [publicSnap, ownSnap] = await Promise.all([
-        firestore.collection('setlists')
-          .where('isPublic', '==', true)
-          .orderBy('date', 'desc')
-          .limit(80)
-          .get(),
-        firestore.collection('setlists')
-          .where('ownerId', '==', ctx.auth!.uid)
-          .orderBy('date', 'desc')
-          .limit(20)
-          .get(),
-      ])
-
-      // Merge and deduplicate
-      const seen = new Set<string>()
-      const allDocs = [...publicSnap.docs, ...ownSnap.docs].filter(doc => {
-        if (seen.has(doc.id)) return false
-        seen.add(doc.id)
-        return true
-      })
+      const snap = await firestore.collection('setlists')
+        .orderBy('date', 'desc')
+        .limit(100)
+        .get()
+      const allDocs = snap.docs
 
       if (allDocs.length > 0) {
         const setlistLines = allDocs.map(doc => {
@@ -264,7 +247,7 @@ export const POST = createApiHandler(async (ctx) => {
               `  ${i + 1}. ${t.title}${t.fileId ? ` (fileId: ${t.fileId})` : ''}`
             )
             .join('\n')
-          return `📋 "${data.name}" (ID: ${doc.id}, ${data.isPublic ? 'public' : 'private'}, ${data.trackCount || 0} tracks${rabbiTag})\n${trackList}`
+          return `📋 "${data.name}" (ID: ${doc.id}, ${data.trackCount || 0} tracks${rabbiTag})\n${trackList}`
         }).join('\n\n')
         allSetlistsContext = `\n--- ALL SETLISTS ---\n${setlistLines}\n--------------------\n`
       }

@@ -50,7 +50,6 @@ export default async function SetlistEditorPage({
             setlistId={isNew ? undefined : id}
             initialTracks={isNew ? [] : (existingSetlist?.tracks || [])}
             initialName={isNew ? "" : existingSetlist?.name}
-            initialIsPublic={existingSetlist?.isPublic || false}
             initialOwnerId={existingSetlist?.ownerId}
             initialEventDate={existingSetlist?.eventDate as any}
             initialRabbi={existingSetlist?.rabbi}

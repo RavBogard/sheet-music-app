@@ -50,11 +50,10 @@ describe('createSetlistSchema', () => {
         expect(result.success).toBe(true)
     })
 
-    it('accepts setlist with tracks and isPublic', () => {
+    it('accepts setlist with tracks', () => {
         const result = createSetlistSchema.safeParse({
             name: 'Friday Night',
             tracks: [{ title: 'Lecha Dodi' }],
-            isPublic: true
         })
         expect(result.success).toBe(true)
     })
@@ -81,13 +80,6 @@ describe('createSetlistSchema', () => {
         expect(result.success).toBe(false)
     })
 
-    it('isPublic is optional', () => {
-        const result = createSetlistSchema.safeParse({
-            name: 'Test',
-            tracks: []
-        })
-        expect(result.success).toBe(true)
-    })
 })
 
 describe('updateRoleSchema', () => {

@@ -55,7 +55,6 @@ export const GET = createApiHandler(
         // we might just fetch public setlists or setlists owned by this user.
         // For CRC, the Matrix should probably reflect the *actual* planned setlists (public ones).
         const snapshot = await db.collection('setlists')
-            .where('isPublic', '==', true)
             .where('date', '>=', startDate)
             .where('date', '<=', endDate)
             .get()

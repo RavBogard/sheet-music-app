@@ -66,7 +66,6 @@ describe('POST /api/setlist/publish', () => {
         mockDoc.exists = true
         mockDoc.data = () => ({
             ownerId: 'user123',
-            isPublic: false,
             name: 'Test Setlist',
             tracks: [{ fileId: 'f1', title: 'Adon Olam', type: 'song' }],
         })
@@ -214,7 +213,6 @@ describe('POST /api/setlist/email-packets', () => {
         mockDoc.exists = true
         mockDoc.data = () => ({
             ownerId: 'user123',
-            isPublic: false,
             name: 'Test Setlist',
             tracks: [{ fileId: 'f1', title: 'Adon Olam', type: 'song' }],
         })

@@ -64,7 +64,6 @@ interface SetlistEditorV2Props {
     initialTracks?: SetlistTrack[]
     initialName?: string
     suggestedName?: string
-    initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
     initialRabbi?: string
@@ -82,7 +81,6 @@ export function SetlistEditorV2({
     initialTracks = [],
     initialName = "",
     suggestedName = "",
-    initialIsPublic = false,
     initialOwnerId,
     initialEventDate,
     initialRabbi,
@@ -146,8 +144,6 @@ export function SetlistEditorV2({
         name,
         setName,
         tracks,
-        isPublic,
-        setIsPublic,
         eventDate,
         setEventDate,
         rabbi,
@@ -166,7 +162,6 @@ export function SetlistEditorV2({
         addSongsFromLibrary,
         addServiceItem,
         detectKeyForFile,
-        togglePublic,
         undo,
         redo,
         canUndo,
@@ -179,7 +174,6 @@ export function SetlistEditorV2({
         initialTracks,
         initialName,
         suggestedName,
-        initialIsPublic,
         initialOwnerId,
         initialEventDate,
         initialRabbi,
@@ -197,13 +191,6 @@ export function SetlistEditorV2({
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
-
-    // Bust Next.js aggressive Server Component cache when client-side togglePublic mutates Firestore
-    useEffect(() => {
-        if (isPublic !== initialIsPublic) {
-            router.refresh()
-        }
-    }, [isPublic, initialIsPublic, router])
 
     // Background offline syncing — silent to avoid toast spam on every track change
     // Skip initial mount to avoid racing with auto-save
@@ -249,19 +236,19 @@ export function SetlistEditorV2({
     const handleDeleteSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
         try {
-            await editorService.deleteSetlist(setlistId, isPublic)
+            await editorService.deleteSetlist(setlistId)
             toast.success("Setlist deleted")
             handleBack()
         } catch {
             toast.error("Failed to delete setlist")
         }
         setShowDeleteConfirm(false)
-    }, [editorService, setlistId, isPublic, handleBack])
+    }, [editorService, setlistId, handleBack])
 
     const handleDuplicateSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
         try {
-            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi } as Parameters<typeof editorService.duplicateSetlist>[1]
+            const currentSetlist = { id: setlistId, name, tracks, rabbi } as Parameters<typeof editorService.duplicateSetlist>[1]
             const newId = await editorService.duplicateSetlist(setlistId, currentSetlist)
             toast.success("Setlist duplicated!")
             router.push(`/setlists/${newId}`)
@@ -269,7 +256,7 @@ export function SetlistEditorV2({
             toast.error("Failed to duplicate setlist")
         }
         setShowDuplicateConfirm(false)
-    }, [editorService, setlistId, name, tracks, isPublic, rabbi, router])
+    }, [editorService, setlistId, name, tracks, rabbi, router])
 
     // Debounce empty state to prevent flash during AI batch edits
     const currentTrackFileIds = useMemo(() => new Set(tracks.filter(t => t.fileId).map(t => t.fileId!)), [tracks])
@@ -452,12 +439,10 @@ export function SetlistEditorV2({
                     setShowEditDetails(false)
                 }}
                 initialName={name}
-                initialIsPublic={isPublic}
                 initialDate={eventDate ? new Date(eventDate) : null}
                 isBandLeader={isBandLeader}
-                onConfirm={(newName, newIsPublic, newDate) => {
+                onConfirm={(newName, newDate) => {
                     setName(newName)
-                    setIsPublic(newIsPublic)
                     setEventDate(newDate)
                     setShowNamePrompt(false)
                     setShowEditDetails(false)
@@ -482,12 +467,10 @@ export function SetlistEditorV2({
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
                         onPublish={undefined}
-                        onTogglePublic={togglePublic}
                         onSetRabbi={canEdit ? setRabbi : undefined}
                         onOpenAI={() => useChatStore.getState().toggle()}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
-                        isPublic={isPublic}
                         isBandLeader={isBandLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
@@ -524,7 +507,6 @@ export function SetlistEditorV2({
                     setlistName={name}
                     eventDate={eventDate ? new Date(eventDate).toISOString() : null}
                     rabbiName={rabbi}
-                    isPublished={isPublic}
                 />
             )}
 
