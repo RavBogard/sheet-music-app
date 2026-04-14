@@ -11,9 +11,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
-Plan: 02-02 complete — S03 shipped; S01 + S03 closed. Phase 2 remainder: S02 (decision plan)
-Status: Ready for next plan (02-03 S02 bridge creds, decision checkpoint) or jump to Phase 4
-Last activity: 2026-04-14 — Unified 02-02 (drive file proxy narrowing; 12 new tests; applied P2-01 lesson proactively)
+Phase: 4 of 8 (P0 Data Integrity) — In progress
+Plan: 04-01 complete (D03 shipped). D01 + D02 remaining in Phase 4.
+Status: Ready for 04-02 (D01 cascade) or 04-03 (D02 .strict schemas). S02 in Phase 2 still deferred.
+Last activity: 2026-04-14 — Unified 04-01 (scheduling/assign runTransaction; 8 new tests)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -31,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [02-02 closed; Phase 2 has S02 remaining]
+  ✓        ✓        ✓     [04-01 closed; D03 shipped. Phase 4 has D01 + D02 pending]
 ```
 
 ## How to resume
@@ -129,10 +130,16 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (02-02 complete)
-Stopped at: S03 shipped; loop closed; pushed to origin/master
-Next action: `/paul:plan` 02-03 (S02 bridge credentials — decision checkpoint plan) OR jump to Phase 4 (P0 data integrity: D01/D02/D03)
-Resume file: `.paul/phases/v43-02-security-triage/02-02-SUMMARY.md`
+Last session: 2026-04-14 (04-01 complete)
+Stopped at: D03 shipped; 1182/1182 tests; pushed to origin/master
+Next action: `/paul:plan` 04-02 (D01 setlist delete cascade) OR 04-03 (D02 .passthrough → .strict)
+Resume file: `.paul/phases/v43-04-data-integrity/04-01-SUMMARY.md`
+
+## v4.3 Phase Progress
+- ✓ Phase 1 (audit)
+- 2/3 Phase 2 security triage: S01 ✓, S03 ✓, S02 deferred (decision plan needed)
+- 1/3 Phase 4 data integrity: D03 ✓, D01 pending, D02 pending
+- Phases 3, 5–8 not started
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
