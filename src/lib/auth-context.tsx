@@ -4,7 +4,9 @@ import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactN
 import {
     User,
     onAuthStateChanged,
+    signInWithRedirect,
     signInWithPopup,
+    getRedirectResult,
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
@@ -101,6 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false)
             return
         }
+
+        // Complete the signInWithRedirect round-trip. If we're arriving back
+        // from Google with a redirect payload, this call finalizes the auth
+        // state in the main window context. No-op (resolves to null) if we
+        // didn't just return from a redirect sign-in.
+        getRedirectResult(auth).catch((err) => {
+            logger.warn("getRedirectResult error:", err)
+        })
 
         let unsubscribeProfile: (() => void) | null = null
         let sessionReady = false
@@ -263,44 +273,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [user])
 
     const signIn = async (): Promise<void> => {
+        // signInWithRedirect is the correct primary flow under Chrome's
+        // Cross-Origin-Opener-Policy. signInWithPopup's credential-handoff
+        // from popup→parent is unreliable under COOP — auth.currentUser
+        // appears populated but the ID token isn't attached, so every
+        // Firestore read fails with "Missing or insufficient permissions"
+        // (including the user's own /users/{uid} doc). Redirect avoids
+        // the popup entirely: full-page navigation to Google, full-page
+        // return with getRedirectResult() providing the credential in the
+        // main window context. Firebase JS rehydrates auth cleanly.
         try {
-            const result = await signInWithPopup(auth, googleProvider)
-
-            // COOP-safe rehydration: Chrome's Cross-Origin-Opener-Policy can
-            // prevent the popup from cleanly handing the credential to the
-            // parent window, leaving Firebase JS with a partially-initialized
-            // auth state — currentUser appears present but the internal ID
-            // token isn't attached, so every Firestore read fails with
-            // "Missing or insufficient permissions" even on the user's own
-            // /users/{uid} doc. Forcing a token refresh + cookie sync here
-            // ensures the session cookie is minted from a live token before
-            // any data subscription fires. If that still fails, a hard
-            // navigation lets Firebase re-hydrate from IndexedDB cleanly.
-            if (result.user) {
-                try {
-                    await result.user.getIdToken(true)
-                    await syncSessionCookie(result.user)
-                } catch (err) {
-                    logger.warn("Post-popup token/cookie prime failed; reloading:", err)
-                    window.location.reload()
-                    return
-                }
-                // Navigate to the app home so the dashboard mounts with a
-                // fully-initialized auth context.
-                window.location.replace("/setlists")
-            }
+            await signInWithRedirect(auth, googleProvider)
         } catch (error: unknown) {
+            // Redirect shouldn't throw for user-cancel (that happens on the
+            // return trip), but handle unexpected initialization errors.
             const code = (error as { code?: string })?.code
-            if (
-                code === "auth/popup-blocked" ||
-                code === "auth/popup-closed-by-user" ||
-                code === "auth/cancelled-popup-request"
-            ) {
-                logger.warn("Popup sign-in cancelled or blocked:", code)
-                return // User cancelled, don't throw to avoid unhandled rejections
+            logger.error("signInWithRedirect error:", code, error)
+            // Last-resort fallback to popup for environments where redirect
+            // fails to initiate (rare — mostly test harnesses / file:// URLs).
+            try {
+                await signInWithPopup(auth, googleProvider)
+            } catch (fallbackErr) {
+                logger.error("Fallback popup sign-in also failed:", fallbackErr)
+                throw error
             }
-            logger.error("Sign in error:", error)
-            throw error
         }
     }
 
