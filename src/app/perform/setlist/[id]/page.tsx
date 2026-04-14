@@ -66,13 +66,13 @@ export default function SetlistPerformPage() {
     const handleSwapSelect = useCallback(async (file: DriveFile) => {
         if (!swapTarget || !setlistService) return
         lastOwnSwapRef.current = swapTarget.index
-        await setlistService.swapTrack(resolvedSetlistId, swapTarget.index, tracks, {
+        await setlistService.swapTrack(resolvedSetlistId, swapTarget.index, {
             fileId: file.id,
             title: file.name.replace(/\.[^.]+$/, ''),
             key: file.metadata?.key,
         })
         setSwapTarget(null)
-    }, [swapTarget, setlistService, resolvedSetlistId, tracks])
+    }, [swapTarget, setlistService, resolvedSetlistId])
 
     // Offline connectivity indicator
     const [isOffline, setIsOffline] = useState(false)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService } from "@/lib/setlist-firebase"
@@ -121,11 +122,13 @@ export function useAddToSetlist() {
     // Close sheet optimistically
     setIsOpen(false)
 
-    // Perform Firestore write
+    // Perform Firestore write. Pass the updatedAt we last saw as the
+    // concurrency precondition so we don't clobber a concurrent edit.
+    const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
     await setlistService.updateSetlist(setlistId, {
       tracks: updatedTracks,
       trackCount: updatedTracks.length,
-    })
+    }, expected)
 
     // Build toast message
     let message: string

@@ -48,6 +48,7 @@ import dynamic from "next/dynamic"
 const PrintModal = dynamic(() => import("../PrintModal").then(m => m.PrintModal), { ssr: false })
 import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
+import { SetlistChangedBanner } from "./SetlistChangedBanner"
 import { NamePrompt } from "../modals/NamePrompt"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
@@ -169,6 +170,9 @@ export function SetlistEditorV2({
         addToHistory,
         setTracks,
         restoreTracks,
+        staleDetected,
+        takeRemote,
+        keepLocalChanges,
     } = useSetlistLogic({
         initialSetlistId,
         initialTracks,
@@ -481,7 +485,9 @@ export function SetlistEditorV2({
                 }
             />
 
-
+            {staleDetected && (
+                <SetlistChangedBanner onTakeRemote={takeRemote} onKeepLocal={keepLocalChanges} />
+            )}
 
             {/* History panel */}
             {showHistory && setlistId && (

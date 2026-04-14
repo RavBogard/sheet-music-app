@@ -83,7 +83,12 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
         }
 
-        // Step 1: Publish (stamp publishedAt + snapshot for change detection)
+        // Step 1: Publish (stamp publishedAt + snapshot for change detection).
+        // Intentionally skips the concurrent-edit precondition used by
+        // updateSetlist — publish is a user-initiated action that bumps a
+        // snapshot + notification state; it's OK if it races with a recent
+        // edit (the snapshot captures whatever tracks are in the doc right now).
+        // We still advance `updatedAt` so open editors see the change.
         const songTracks = tracks.filter((t: { type?: string }) => !t.type || t.type === 'song')
         const publishedSnapshot = songTracks.map((t: { title: string; key?: string; fileId?: string }) => ({
             title: t.title, key: t.key || '', fileId: t.fileId || ''
@@ -94,12 +99,14 @@ export const POST = createApiHandler(
                 publishedAt: FieldValue.serverTimestamp(),
                 publishedSnapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
             })
         } else {
             // Re-notify: update snapshot and timestamp
             await setlistRef.update({
                 publishedSnapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
             })
         }
 

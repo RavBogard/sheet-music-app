@@ -13,8 +13,50 @@ import {
     Timestamp,
     where,
     getDocs,
-    writeBatch
+    writeBatch,
+    runTransaction,
+    type DocumentReference,
 } from "firebase/firestore";
+
+/** Thrown when a write precondition (expectedUpdatedAt) doesn't match the remote doc. */
+export class StaleWriteError extends Error {
+    remoteUpdatedAt: Timestamp | null
+    constructor(remoteUpdatedAt: Timestamp | null) {
+        super('STALE_WRITE')
+        this.name = 'StaleWriteError'
+        this.remoteUpdatedAt = remoteUpdatedAt
+    }
+}
+
+function timestampsMatch(a: Timestamp | null, b: Timestamp | null): boolean {
+    if (a === null && b === null) return true
+    if (a === null || b === null) return false
+    return a.seconds === b.seconds && a.nanoseconds === b.nanoseconds
+}
+
+/**
+ * Concurrency-safe partial update. Reads the doc inside a transaction, verifies
+ * expectedUpdatedAt matches, applies the patch, and stamps a new updatedAt.
+ * Pass expectedUpdatedAt=null to skip the precondition (only for legacy docs
+ * that have never been touched since the backfill).
+ */
+async function updateSetlistWithVersion(
+    ref: DocumentReference,
+    expectedUpdatedAt: Timestamp | null,
+    patch: Record<string, unknown>,
+): Promise<void> {
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists()) throw new Error('NOT_FOUND')
+        const remote = snap.data() as { updatedAt?: Timestamp }
+        const remoteUpdatedAt = remote.updatedAt ?? null
+        // Skip precondition only when both sides know there's no stamp yet.
+        if (expectedUpdatedAt !== null && !timestampsMatch(remoteUpdatedAt, expectedUpdatedAt)) {
+            throw new StaleWriteError(remoteUpdatedAt)
+        }
+        tx.update(ref, { ...patch, updatedAt: serverTimestamp() })
+    })
+}
 
 import { SetlistTrack } from "@/types/api"
 import { logSetlistChange } from "@/lib/setlist-audit"
@@ -88,12 +130,15 @@ export function createSetlistService(userId: string | null, userName?: string | 
             });
         },
 
-        // Update a setlist (sanitize undefined → null for Firestore)
-        async updateSetlist(id: string, data: Partial<Setlist>) {
+        // Update a setlist with concurrency protection. Pass expectedUpdatedAt
+        // to enforce the precondition; the write will throw StaleWriteError
+        // if the remote doc has been modified since the caller last saw it.
+        async updateSetlist(id: string, data: Partial<Setlist>, expectedUpdatedAt: Timestamp | null = null) {
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = stripUndefined(data as Record<string, unknown>);
-            cleanData.updatedAt = serverTimestamp();
-            await updateDoc(docRef, cleanData);
+            // updateSetlistWithVersion adds its own updatedAt; don't double-set
+            delete cleanData.updatedAt;
+            await updateSetlistWithVersion(docRef, expectedUpdatedAt, cleanData);
 
             // Determine what changed for audit
             const action = data.name !== undefined ? 'renamed'
@@ -237,21 +282,37 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Swap a single track in a setlist (inline song replacement)
-        async swapTrack(setlistId: string, trackIndex: number, currentTracks: SetlistTrack[], replacement: { fileId: string; title: string; key?: string }) {
-            const newTracks = [...currentTracks]
-            newTracks[trackIndex] = {
-                ...newTracks[trackIndex],
-                fileId: replacement.fileId,
-                title: replacement.title,
-                key: replacement.key || newTracks[trackIndex].key,
-            }
+        // Swap a single track in a setlist (inline song replacement). Reads the
+        // current tracks inside a transaction so a concurrent write can't be
+        // silently clobbered.
+        async swapTrack(setlistId: string, trackIndex: number, replacement: { fileId: string; title: string; key?: string }) {
             const docRef = doc(db, 'setlists', setlistId)
-            await updateDoc(docRef, {
-                tracks: stripUndefinedDeep(newTracks),
-                trackCount: newTracks.length,
+            let committedTrackCount = 0
+            let committedTracks: SetlistTrack[] = []
+            await runTransaction(db, async (tx) => {
+                const snap = await tx.get(docRef)
+                if (!snap.exists()) throw new Error('NOT_FOUND')
+                const remote = snap.data() as { tracks?: SetlistTrack[] }
+                const currentTracks = (remote.tracks || []) as SetlistTrack[]
+                if (trackIndex < 0 || trackIndex >= currentTracks.length) {
+                    throw new Error('TRACK_INDEX_OUT_OF_RANGE')
+                }
+                const newTracks = [...currentTracks]
+                newTracks[trackIndex] = {
+                    ...newTracks[trackIndex],
+                    fileId: replacement.fileId,
+                    title: replacement.title,
+                    key: replacement.key || newTracks[trackIndex].key,
+                }
+                tx.update(docRef, {
+                    tracks: stripUndefinedDeep(newTracks),
+                    trackCount: newTracks.length,
+                    updatedAt: serverTimestamp(),
+                })
+                committedTrackCount = newTracks.length
+                committedTracks = newTracks
             })
-            logSetlistChange(setlistId, 'tracks_updated', userId || '', userName || 'Anonymous', { trackCount: newTracks.length }, newTracks as SetlistTrack[])
+            logSetlistChange(setlistId, 'tracks_updated', userId || '', userName || 'Anonymous', { trackCount: committedTrackCount }, committedTracks)
         }
     };
 }

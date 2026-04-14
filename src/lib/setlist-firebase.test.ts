@@ -1,29 +1,57 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockAddDoc = vi.fn().mockResolvedValue({ id: 'new-setlist-id' })
-const mockUpdateDoc = vi.fn().mockResolvedValue(undefined)
-const mockDeleteDoc = vi.fn().mockResolvedValue(undefined)
-const mockGetDoc = vi.fn()
-const mockOnSnapshot = vi.fn()
+const hoisted = vi.hoisted(() => {
+    class MockTimestamp {
+        seconds: number
+        nanoseconds: number
+        constructor(seconds: number, nanoseconds: number) {
+            this.seconds = seconds
+            this.nanoseconds = nanoseconds
+        }
+        toDate() { return new Date(this.seconds * 1000) }
+        static fromDate(d: Date) { return new MockTimestamp(Math.floor(d.getTime() / 1000), 0) }
+    }
+    return {
+        MockTimestamp,
+        mockAddDoc: vi.fn().mockResolvedValue({ id: 'new-setlist-id' }),
+        mockUpdateDoc: vi.fn().mockResolvedValue(undefined),
+        mockDeleteDoc: vi.fn().mockResolvedValue(undefined),
+        mockGetDoc: vi.fn(),
+        mockOnSnapshot: vi.fn(),
+        mockBatchDelete: vi.fn(),
+        mockBatchCommit: vi.fn().mockResolvedValue(undefined),
+        // Mutable state the tests can set before each case.
+        txRemoteDoc: { exists: true, data: { updatedAt: null } as Record<string, unknown> },
+        txUpdatePayloads: [] as Array<Record<string, unknown>>,
+    }
+})
 
-const mockBatchDelete = vi.fn()
-const mockBatchCommit = vi.fn().mockResolvedValue(undefined)
+const {
+    MockTimestamp: _MockTimestamp,
+    mockAddDoc,
+    mockUpdateDoc: _mockUpdateDoc,
+    mockDeleteDoc,
+    mockOnSnapshot: _mockOnSnapshot,
+    mockBatchDelete,
+    mockBatchCommit,
+} = hoisted
+void _MockTimestamp; void _mockUpdateDoc; void _mockOnSnapshot
 
 vi.mock('./firebase', () => ({ db: {} }))
 vi.mock('firebase/firestore', () => ({
     collection: vi.fn((_db: unknown, path: string) => ({ path })),
-    addDoc: (...args: unknown[]) => mockAddDoc(...args),
-    updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
-    deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
+    addDoc: (...args: unknown[]) => hoisted.mockAddDoc(...args),
+    updateDoc: (...args: unknown[]) => hoisted.mockUpdateDoc(...args),
+    deleteDoc: (...args: unknown[]) => hoisted.mockDeleteDoc(...args),
     doc: vi.fn((_db: unknown, _path: string, id: string) => ({ path: `setlists/${id}`, id })),
-    onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
+    onSnapshot: (...args: unknown[]) => hoisted.mockOnSnapshot(...args),
     query: vi.fn(),
     orderBy: vi.fn(),
     limit: vi.fn(),
     where: vi.fn(),
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
-    Timestamp: { fromDate: (d: Date) => ({ seconds: Math.floor(d.getTime() / 1000), nanoseconds: 0, toDate: () => d }) },
-    getDoc: (...args: unknown[]) => mockGetDoc(...args),
+    Timestamp: hoisted.MockTimestamp,
+    getDoc: (...args: unknown[]) => hoisted.mockGetDoc(...args),
     getDocs: vi.fn().mockResolvedValue({
         size: 1,
         docs: [
@@ -31,9 +59,21 @@ vi.mock('firebase/firestore', () => ({
         ]
     }),
     writeBatch: vi.fn(() => ({
-        delete: mockBatchDelete,
-        commit: mockBatchCommit,
+        delete: hoisted.mockBatchDelete,
+        commit: hoisted.mockBatchCommit,
     })),
+    runTransaction: async (_db: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+            get: async () => ({
+                exists: () => hoisted.txRemoteDoc.exists,
+                data: () => hoisted.txRemoteDoc.data,
+            }),
+            update: (_ref: unknown, payload: Record<string, unknown>) => {
+                hoisted.txUpdatePayloads.push(payload)
+            },
+        }
+        return fn(tx)
+    },
 }))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))
 vi.mock('@/lib/notification-store', () => ({
@@ -68,13 +108,16 @@ vi.mock('@/types/schemas', () => ({
     setlistConverter: {},
 }))
 
-import { createSetlistService } from './setlist-firebase'
+import { createSetlistService, StaleWriteError } from './setlist-firebase'
+import { Timestamp } from 'firebase/firestore'
 
 describe('createSetlistService', () => {
     let service: ReturnType<typeof createSetlistService>
 
     beforeEach(() => {
         vi.clearAllMocks()
+        hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
+        hoisted.txUpdatePayloads.length = 0
         service = createSetlistService('user123', 'Test User')
     })
 
@@ -127,20 +170,77 @@ describe('createSetlistService', () => {
     })
 
     describe('updateSetlist', () => {
-        it('updates setlist fields', async () => {
-            const tracks = [
-                { id: 'a', title: 'Song A', fileName: 'Song A', type: 'song' as const },
-                { id: 'b', title: 'Song B', fileName: 'Song B', type: 'song' as const },
-                { id: 'c', title: 'Song C', fileName: 'Song C', type: 'song' as const },
-            ]
+        it('updates fields inside a transaction and stamps updatedAt', async () => {
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
 
             await service.updateSetlist('setlist-xyz', {
-                tracks,
-                trackCount: 3,
+                tracks: [{ id: 'a', title: 'Song A', fileName: 'Song A', type: 'song' as const }],
+                trackCount: 1,
                 name: 'Test Setlist',
             })
 
-            expect(mockUpdateDoc).toHaveBeenCalledTimes(1)
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(payload.name).toBe('Test Setlist')
+            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
+        })
+
+        it('with a matching expectedUpdatedAt, commits successfully', async () => {
+            const expected = new Timestamp(1_700_000_000, 0)
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: expected } }
+
+            await service.updateSetlist('s1', { name: 'ok' }, expected)
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+        })
+
+        it('with a stale expectedUpdatedAt, throws StaleWriteError and does not write', async () => {
+            const stale = new Timestamp(1_700_000_000, 0)
+            const remote = new Timestamp(1_700_000_001, 0)
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: remote } }
+
+            await expect(
+                service.updateSetlist('s1', { name: 'nope' }, stale)
+            ).rejects.toBeInstanceOf(StaleWriteError)
+            expect(hoisted.txUpdatePayloads).toHaveLength(0)
+        })
+
+        it('null expectedUpdatedAt acts as skip-check (legacy doc path)', async () => {
+            const remote = new Timestamp(1_700_000_001, 0)
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: remote } }
+
+            await service.updateSetlist('s1', { name: 'legacy' }, null)
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+        })
+
+        it('regression guard: every updateSetlist write advances updatedAt', async () => {
+            await service.updateSetlist('s1', { name: 'x' })
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(Object.keys(payload)).toContain('updatedAt')
+            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
+        })
+    })
+
+    describe('swapTrack', () => {
+        it('reads remote tracks, mutates only the target index, writes back', async () => {
+            hoisted.txRemoteDoc = {
+                exists: true,
+                data: {
+                    tracks: [
+                        { id: 't0', title: 'A', fileId: 'f0', type: 'song' },
+                        { id: 't1', title: 'B', fileId: 'f1', type: 'song' },
+                    ],
+                },
+            }
+
+            await service.swapTrack('s1', 1, { fileId: 'f-new', title: 'B-new', key: 'G' })
+
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
+            const newTracks = payload.tracks as Array<{ title: string }>
+            expect(newTracks).toHaveLength(2)
+            expect(newTracks[0].title).toBe('A')
+            expect(newTracks[1].title).toBe('B-new')
         })
     })
 

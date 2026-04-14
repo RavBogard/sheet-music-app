@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { createSetlistService } from "@/lib/setlist-firebase"
+import { Timestamp } from "firebase/firestore"
+import { createSetlistService, StaleWriteError } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOffline } from "@/hooks/use-offline"
 import { useChatStore, ChatEditAction } from "@/lib/chat-store"
@@ -65,6 +66,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     const [musicians, setMusicians] = useState<SetlistMusician[]>(initialMusicians)
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
+    // Concurrency: track the remote updatedAt we last saw, use it as the
+    // precondition on every write. If a write is rejected as STALE_WRITE,
+    // surface a banner instead of silently losing data.
+    const lastSeenUpdatedAtRef = useRef<Timestamp | null>(null)
+    const pendingRemoteSnapshotRef = useRef<Setlist | null>(null)
+    const [staleDetected, setStaleDetected] = useState(false)
 
     // Offline Sync Hook
     const {
@@ -277,7 +284,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
 
             if (id) {
-                await setlistService.updateSetlist(id, dataToSave)
+                await setlistService.updateSetlist(id, dataToSave, lastSeenUpdatedAtRef.current)
             } else {
                 const newId = await setlistService.createSetlist(n, t, {
                     eventDate: serializeDate(ed),
@@ -313,6 +320,14 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 }
             }
         } catch (e) {
+            if (e instanceof StaleWriteError) {
+                // Another device wrote first. Don't toast — surface a banner
+                // so the user can choose "Take remote" or "Keep my changes".
+                logger.warn("Auto-save rejected: setlist changed on another device")
+                setStaleDetected(true)
+                setSaving(false)
+                return
+            }
             logger.error("Auto-save failed:", e)
             const msg = e instanceof Error ? e.message : String(e)
             const isPermissionError = msg.includes("permission") || msg.includes("PERMISSION_DENIED")
@@ -564,6 +579,74 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         })
     }
 
+    // Subscribe to the setlist doc so we (a) know the remote updatedAt for
+    // concurrency preconditions and (b) can surface a "setlist changed"
+    // banner when another device writes while we have unsaved edits.
+    useEffect(() => {
+        if (!setlistId || !setlistService) return
+        const unsub = setlistService.subscribeToSetlist(setlistId, (remote) => {
+            if (!remote) return
+            const remoteUpdatedAt = (remote.updatedAt instanceof Timestamp)
+                ? remote.updatedAt
+                : null
+            const prev = lastSeenUpdatedAtRef.current
+            // First snapshot — adopt it as baseline silently.
+            if (prev === null) {
+                lastSeenUpdatedAtRef.current = remoteUpdatedAt
+                return
+            }
+            // Unchanged — nothing to do.
+            if (remoteUpdatedAt && prev
+                && remoteUpdatedAt.seconds === prev.seconds
+                && remoteUpdatedAt.nanoseconds === prev.nanoseconds) {
+                return
+            }
+            // Remote advanced. If we have pending local edits, store the
+            // remote snapshot and surface the banner; otherwise silently
+            // merge (user is just reading).
+            if (hasPendingSave.current || saving) {
+                pendingRemoteSnapshotRef.current = remote
+                setStaleDetected(true)
+            } else {
+                // Silent merge — remote is the new truth.
+                lastSeenUpdatedAtRef.current = remoteUpdatedAt
+                if (Array.isArray(remote.tracks)) setTracks(remote.tracks as SetlistTrack[])
+                if (typeof remote.name === 'string') setName(remote.name)
+                if (remote.rabbi !== undefined) setRabbi(remote.rabbi || '')
+                if (remote.serviceNotes !== undefined) setServiceNotes(remote.serviceNotes || '')
+                if (Array.isArray(remote.musicians)) setMusicians(remote.musicians as SetlistMusician[])
+            }
+        })
+        return () => unsub?.()
+    }, [setlistId, setlistService, saving])
+
+    // Banner actions: user picks "Take remote" (discard local, use remote)
+    // or "Keep my changes" (force-overwrite remote).
+    const takeRemote = useCallback(() => {
+        const remote = pendingRemoteSnapshotRef.current
+        if (!remote) { setStaleDetected(false); return }
+        const remoteUpdatedAt = (remote.updatedAt instanceof Timestamp) ? remote.updatedAt : null
+        lastSeenUpdatedAtRef.current = remoteUpdatedAt
+        if (Array.isArray(remote.tracks)) setTracks(remote.tracks as SetlistTrack[])
+        if (typeof remote.name === 'string') setName(remote.name)
+        if (remote.rabbi !== undefined) setRabbi(remote.rabbi || '')
+        if (remote.serviceNotes !== undefined) setServiceNotes(remote.serviceNotes || '')
+        if (Array.isArray(remote.musicians)) setMusicians(remote.musicians as SetlistMusician[])
+        pendingRemoteSnapshotRef.current = null
+        hasPendingSave.current = false
+        setStaleDetected(false)
+    }, [])
+
+    const keepLocalChanges = useCallback(() => {
+        // Force-overwrite: pretend we saw the remote updatedAt, then save.
+        const remote = pendingRemoteSnapshotRef.current
+        lastSeenUpdatedAtRef.current = (remote?.updatedAt instanceof Timestamp) ? remote.updatedAt : null
+        pendingRemoteSnapshotRef.current = null
+        setStaleDetected(false)
+        // Fire a save immediately; the next save won't be stale.
+        performSaveRef.current()
+    }, [])
+
     return {
         canEdit,
         isBandLeader,
@@ -600,5 +683,9 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         setTracks,
         /** Replace entire track list (used by history restore) */
         restoreTracks: (newTracks: SetlistTrack[]) => setTracks(newTracks),
+        // Concurrency UI
+        staleDetected,
+        takeRemote,
+        keepLocalChanges,
     }
 }
