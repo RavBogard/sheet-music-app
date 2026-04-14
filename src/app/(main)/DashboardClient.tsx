@@ -6,17 +6,13 @@ import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { getContextualGreeting, Greeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
-import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { PendingAccountIllustration } from "@/components/ui/illustrations"
-import { NudgeAdminButton } from "@/components/people/NudgeAdminButton"
 import { Button } from "@/components/ui/button"
-import { Music2 } from "lucide-react"
 import { useCongregation } from "@/lib/congregation-store"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { CompactSetlistRow } from "@/components/dashboard"
+import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { cn } from "@/lib/utils"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
@@ -26,11 +22,6 @@ import { cn } from "@/lib/utils"
 // import { buildPerformQueue } from "@/lib/queue-utils"
 // import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"
 // import { HeroCard, CommandRow, UpcomingTimeline, WhatsChangedBanner, TaskCards, PrepRecommendations } from "@/components/dashboard"
-
-const INSTRUMENTS = [
-    'Guitar', 'Bass', 'Drums', 'Keys/Piano', 'Vocals',
-    'Trumpet', 'Saxophone', 'Clarinet', 'Violin', 'Flute', 'Other'
-]
 
 export interface DashboardServerProps {
     /** Pre-computed greeting from the server (avoids blank flash before JS boots) */
@@ -56,16 +47,6 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
     const [recentSetlists, setRecentSetlists] = useState<Setlist[]>([])
     const [setlistsLoaded, setSetlistsLoaded] = useState(false)
-
-    // Quick-setup inline form state — reset when role changes to avoid stuck UI
-    const [showQuickSetup, setShowQuickSetup] = useState(false)
-    const [selectedInstrument, setSelectedInstrument] = useState('')
-    const [saving, setSaving] = useState(false)
-    useEffect(() => {
-        setShowQuickSetup(false)
-        setSelectedInstrument('')
-        setSaving(false)
-    }, [profile?.role])
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -281,153 +262,16 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                ══════════════════════════════════════════ */}
             <div className="flex flex-col gap-6 px-4 md:px-6 pt-6 max-w-2xl mx-auto w-full">
 
-                {/* ── Onboarding: Pending User ── */}
-                {user && profile?.role === "pending" && (
-                    <div className={cn("bg-card border border-brand/15 rounded-2xl p-6 space-y-4", stagger(2))}>
-                        <div className="flex flex-col items-center text-center gap-3">
-                            <PendingAccountIllustration className="w-20 h-20 text-muted-foreground" />
-                            <div>
-                                <h2 className="text-lg font-semibold">Welcome to {congregation.shortName}!</h2>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Your account is being reviewed. An admin will approve you shortly.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            {!showQuickSetup ? (
-                                <Button
-                                    variant="outline"
-                                    className="w-full gap-2"
-                                    onClick={() => setShowQuickSetup(true)}
-                                >
-                                    <Music2 className="w-4 h-4" />
-                                    Set Up My Instrument
-                                </Button>
-                            ) : (
-                                <div className="space-y-3">
-                                    <label htmlFor="instrument-select" className="text-sm font-medium text-foreground">What do you play?</label>
-                                    <select
-                                        id="instrument-select"
-                                        value={selectedInstrument}
-                                        onChange={e => setSelectedInstrument(e.target.value)}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                                    >
-                                        <option value="">Select instrument...</option>
-                                        {INSTRUMENTS.map(inst => (
-                                            <option key={inst} value={inst}>{inst}</option>
-                                        ))}
-                                    </select>
-                                    <Button
-                                        className="w-full"
-                                        disabled={!selectedInstrument || saving}
-                                        onClick={async () => {
-                                            if (!user || !selectedInstrument) return
-                                            setSaving(true)
-                                            try {
-                                                const userRef = doc(db, "users", user.uid)
-                                                await updateDoc(userRef, { "musicianProfile.instrument": selectedInstrument })
-                                            } catch {
-                                                // Silent fail -- user can set instrument later in settings
-                                            } finally {
-                                                setSaving(false)
-                                                setShowQuickSetup(false)
-                                            }
-                                        }}
-                                    >
-                                        {saving ? 'Saving...' : 'Save & Continue'}
-                                    </Button>
-                                </div>
-                            )}
-                            <NudgeAdminButton />
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Onboarding: First-time approved ── */}
-                {user && isMember && profile && !profile.musicianProfile?.instrument && !profile.viewedWelcomeModal && (
-                    <div className={cn("bg-card border-2 border-brand/30 rounded-2xl p-6 space-y-4", stagger(2))}>
-                        <div className="text-center">
-                            <span className="text-2xl">{'\uD83C\uDF89'}</span>
-                            <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Set up your instrument to get transposed charts and personalized gig packets.
-                            </p>
-                        </div>
-                        {!showQuickSetup ? (
-                            <div className="flex gap-2">
-                                <Button
-                                    className="flex-1 gap-2"
-                                    onClick={() => setShowQuickSetup(true)}
-                                >
-                                    <Music2 className="w-4 h-4" />
-                                    Set Up Instrument
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    className="text-muted-foreground"
-                                    onClick={async () => {
-                                        if (user) {
-                                            const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
-                                            await markWelcomeModalViewed(user.uid)
-                                        }
-                                    }}
-                                >
-                                    Skip
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                <label htmlFor="instrument-select-approved" className="text-sm font-medium text-foreground">What do you play?</label>
-                                <select
-                                    id="instrument-select-approved"
-                                    value={selectedInstrument}
-                                    onChange={e => setSelectedInstrument(e.target.value)}
-                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                                >
-                                    <option value="">Select instrument...</option>
-                                    {INSTRUMENTS.map(inst => (
-                                        <option key={inst} value={inst}>{inst}</option>
-                                    ))}
-                                </select>
-                                <div className="flex gap-2">
-                                    <Button
-                                        className="flex-1"
-                                        disabled={!selectedInstrument || saving}
-                                        onClick={async () => {
-                                            if (!user || !selectedInstrument) return
-                                            setSaving(true)
-                                            try {
-                                                const userRef = doc(db, "users", user.uid)
-                                                await updateDoc(userRef, { "musicianProfile.instrument": selectedInstrument })
-                                                const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
-                                                await markWelcomeModalViewed(user.uid)
-                                            } catch {
-                                                // Silent fail -- user can set instrument later in settings
-                                            } finally {
-                                                setSaving(false)
-                                                setShowQuickSetup(false)
-                                            }
-                                        }}
-                                    >
-                                        {saving ? 'Saving...' : 'Save & Continue'}
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        className="text-muted-foreground"
-                                        onClick={async () => {
-                                            if (user) {
-                                                const { markWelcomeModalViewed } = await import("@/lib/users-firebase")
-                                                await markWelcomeModalViewed(user.uid)
-                                            }
-                                            setShowQuickSetup(false)
-                                        }}
-                                    >
-                                        Skip
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                {/* ── Onboarding (pending or approved — mutually exclusive) ── */}
+                {user && (
+                    <OnboardingCard
+                        role={profile?.role}
+                        isMember={isMember}
+                        profile={profile}
+                        congregationShortName={congregation.shortName}
+                        userId={user.uid}
+                        staggerClass={stagger(2)}
+                    />
                 )}
 
                 {/* ── Recent Public Setlists (non-member / no upcoming) ── */}

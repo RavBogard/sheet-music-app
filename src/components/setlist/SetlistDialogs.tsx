@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import {
     AlertDialog,
@@ -82,16 +81,21 @@ interface TransferDialogProps {
 }
 
 export function TransferSetlistDialog({ open, onClose, setlistName, email, onEmailChange, onConfirm, transferring }: TransferDialogProps) {
-    if (!open) return null
-
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-card border border-border p-6 rounded-xl max-w-md w-full space-y-4">
-                <h3 className="text-xl font-bold">Transfer Ownership</h3>
-                <p className="text-muted-foreground">
-                    Transferring <strong>{setlistName}</strong> to another user.
-                    You will lose access unless they share it back with you.
-                </p>
+        <AlertDialog
+            open={open}
+            onOpenChange={(next) => {
+                if (!next && !transferring) onClose()
+            }}
+        >
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Transfer Ownership</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Transferring <strong>{setlistName}</strong> to another user.
+                        You will lose access unless they share it back with you.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
                 <input
                     type="email"
                     placeholder="New Owner's Email"
@@ -100,14 +104,22 @@ export function TransferSetlistDialog({ open, onClose, setlistName, email, onEma
                     onChange={(e) => onEmailChange(e.target.value)}
                     disabled={transferring}
                 />
-                <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="ghost" onClick={onClose} disabled={transferring}>Cancel</Button>
-                    <Button onClick={onConfirm} disabled={!email || transferring}>
-                        {transferring && <Loader2 className="h-4 w-4 animate-spin" />}
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={transferring}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={(e) => {
+                            // Prevent the primitive's auto-close so we can stay open
+                            // while the async transfer resolves.
+                            e.preventDefault()
+                            onConfirm()
+                        }}
+                        disabled={!email || transferring}
+                    >
+                        {transferring && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                         {transferring ? "Transferring..." : "Transfer"}
-                    </Button>
-                </div>
-            </div>
-        </div>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     )
 }
