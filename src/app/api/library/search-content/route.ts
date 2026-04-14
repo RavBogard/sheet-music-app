@@ -12,6 +12,17 @@ export const dynamic = 'force-dynamic'
  * Looks in library_index/chordData subcollections for matching content.
  *
  * Returns matching file IDs with the context of where the match was found.
+ *
+ * S06 NOTE (wontfix in v4.3):
+ * Audit finding S06 flagged this route for "returning results across all
+ * users' libraries with no per-user filtering". In this app's single-
+ * congregation model, the library is an intentionally shared congregational
+ * asset — there is no per-user library scope. Every authenticated member is
+ * supposed to search the same catalog.
+ *
+ * Revisit if: (a) multi-congregation tenancy is introduced, or (b) a
+ * per-user / per-band-leader private library tier is added. At that point,
+ * filter results by ownerId / tenantId.
  */
 export const GET = createApiHandler(
     async (ctx) => {

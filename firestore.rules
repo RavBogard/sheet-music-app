@@ -257,12 +257,25 @@ service cloud.firestore {
       allow write: if false; // Bridge writes via Admin SDK only
     }
 
-    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK
+    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK.
+    // S05: schema-check `type` against known allowlist and shape-fields by type.
     match /monitor-live/commands/pending/{commandId} {
       allow read: if false; // Bridge reads via Admin SDK
       allow create: if isSignedIn()
                     && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.createdAt is number;
+                    && request.resource.data.createdAt is number
+                    && request.resource.data.type in [
+                        'set_bus_master',
+                        'set_send_level',
+                        'set_send_on',
+                        'set_matrix_fader',
+                        'set_matrix_on'
+                    ]
+                    && (!('busIndex' in request.resource.data)     || request.resource.data.busIndex is int)
+                    && (!('channelIndex' in request.resource.data) || request.resource.data.channelIndex is int)
+                    && (!('matrixIndex' in request.resource.data)  || request.resource.data.matrixIndex is int)
+                    && (!('value' in request.resource.data)        || request.resource.data.value is number
+                                                                     || request.resource.data.value is bool);
       allow update, delete: if false; // Bridge deletes via Admin SDK
     }
 
