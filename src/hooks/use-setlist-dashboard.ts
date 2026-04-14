@@ -76,9 +76,13 @@ export function useSetlistDashboard({
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user?.uid, user?.displayName])
 
-    // Subscribe to all setlists (v4.0: single unified list)
+    // Subscribe to all setlists (v4.0: single unified list).
+    // Gated on authUser?.uid: subscribing before Firebase JS finishes hydrating
+    // auth fires a Firestore read with no credential, which Firestore answers
+    // with "Missing or insufficient permissions" — a noisy false-alarm error
+    // during the pre-sign-in page load.
     useEffect(() => {
-        if (!setlistService) {
+        if (!setlistService || !authUser?.uid) {
             setLoading(false)
             return
         }
@@ -93,7 +97,7 @@ export function useSetlistDashboard({
             }
         )
         return () => unsubscribe()
-    }, [setlistService])
+    }, [setlistService, authUser?.uid])
 
     // Load library in background
     useLibrary()
