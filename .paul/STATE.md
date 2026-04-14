@@ -12,53 +12,110 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 Milestone: v4.2 UX Polish & Band Onboarding
 Phase: 1.3 of 8 (Security Hardening) — next up
 Plan: Not started
-Status: Phase 1.2 complete; ready to plan Phase 1.3
-Last activity: 2026-04-13 — Phase 1.2 (Offline Truthiness) shipped. IndexedDB blob store is now the single source of truth; Cache API reads + only-if-cached fetches fully eliminated. 1102/1102 tests pass (+13). Fresh-browser offline smoke test pending human verification.
+Status: Phases 1, 1.1, 1.2 complete. Ready to plan Phase 1.3.
+Last activity: 2026-04-13 — Phase 1.2 (Offline Truthiness) shipped.
 
 Progress:
-- v4.2: [█░░░░░░░░░] ~12% (1 of 8 phases complete)
+- v4.2: [███░░░░░░░] ~37% (3 of 8 phases complete)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Ready to plan Phase 1.1]
+  ○        ○        ○     [Ready to plan Phase 1.3]
 ```
 
-## Accumulated Context
+## How to resume
 
-### Phase 1 research outcome (2026-04-13)
+Run `/paul:plan` for Phase 1.3. The plan template lives at the phase dir `.paul/phases/01_3-security-hardening/`. Scope source-of-truth is `.paul/phases/01-recursive-research/FINDINGS.md` §P1-x/y/z + §Routing.
 
-Two waves of parallel agents produced 53+ findings. **Two P0s confirmed** (concurrent-edit silent-destroy, dead offline feature lying), each became its own decimal phase ahead of Phase 2. One small security phase (1.3) added. ~20 P1s folded into Phases 2–5 scopes. Full routing in `.paul/phases/01-recursive-research/FINDINGS.md`.
+## Phase order (for context)
 
-### v4.2 phase order after research
+1. ✓ Recursive research (complete, 2026-04-13)
+2. ✓ Phase 1.1 — Concurrent-edit safety (complete, 2026-04-13)
+3. ✓ Phase 1.2 — Offline truthiness (complete, 2026-04-13)
+4. **▶ Phase 1.3 — Security hardening (~4h, plan next)**
+5. Phase 2 — Weekly workflow polish (expanded scope, /ui-ux-pro-max)
+6. Phase 3 — Stage UX for the band (expanded, /ui-ux-pro-max)
+7. Phase 4 — Editor ergonomics + noise cleanup (expanded, /ui-ux-pro-max)
+8. Phase 5 — Navigation + schedule hygiene (expanded, /ui-ux-pro-max)
 
-1. ✓ Recursive research (complete)
-2. Phase 1.1 — Concurrent-edit safety (~12h, P0)
-3. Phase 1.2 — Offline truthiness (~7h, P0)
-4. Phase 1.3 — Security hardening (~4h)
-5. Phase 2 — Weekly workflow polish (expanded scope)
-6. Phase 3 — Stage UX (expanded scope)
-7. Phase 4 — Editor cleanup (expanded scope)
-8. Phase 5 — Nav + schedule hygiene (expanded scope)
+## Phase 1.3 scope (ready to plan)
+
+Three small independent items from FINDINGS.md:
+
+1. **Commit `storage.rules`** mirroring the Firestore `isMember()` gate for `library/**`; add to `firebase.json`; CI dry-run check. Currently deployed rules exist in the Firebase console only — invisible to version control. Wave 2 confirmed: `match /library/{allPaths=**}` → `read: if request.auth != null`, `write: if false`. Tightening to `isMember()` via custom claim brings Storage in line with Firestore.
+
+2. **Bridge setup-code entropy + rate limit.** `/api/bridge/setup-code` GET returns the raw `FIREBASE_PRIVATE_KEY` to anyone presenting a valid 6-char code (~30 bits). Raise entropy to 10+ chars (50+ bits) and tighten the rate-limit tier specifically for this endpoint.
+
+3. **Rate-limit `/api/nudge-admin` and `/api/scheduling/calendar-feed/[token]`.** Add `checkRateLimit` (pattern already used elsewhere).
+
+Estimated effort: ~4h total.
+
+## Accumulated context (key facts)
+
+### v4.2 theme
+Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded. **No per-musician scheduling features** (blockout/availability/auto-assign all dropped). Publish-and-notify emails, MusicianPicker, and the assignment RSVP flow **do** stay.
 
 ### Required skill
-`/ui-ux-pro-max` mandatory for Phases 2–5. Not needed for 1.1–1.3 (backend/plumbing work).
+`/ui-ux-pro-max` mandatory for Phases 2–5. Not needed for 1, 1.1, 1.2, 1.3 (backend / plumbing / security).
 
-### v4.1 shipped (2026-04-13)
-Code, migration (25/26 setlists stripped, idempotent), tests (1084/1084 pass with regression guard). Human smoke-test pending.
+### What shipped in Phase 1.1 (Concurrent-edit safety)
+- `StaleWriteError` + `updateSetlistWithVersion` helper in `src/lib/setlist-firebase.ts`
+- `updateSetlist` + `swapTrack` rewired through `runTransaction` with `expectedUpdatedAt` precondition
+- `use-setlist-logic` subscribes to the setlist doc; silent-merges when no pending edits; surfaces banner when stale
+- `SetlistChangedBanner` with "Keep my changes" / "Take remote"
+- Migration: `scripts/backfill-setlist-rev.ts` stamped 10 legacy docs on prod; idempotent
+- 5 new tests
+- **Two-tab smoke test still pending human verification**
 
-### Git State
-Last commit: b8feaac (v4.1 migration run log)
-Branch: master
+### What shipped in Phase 1.2 (Offline truthiness)
+- New IndexedDB blob store: `src/lib/offline-idb.ts` — putFile / getFile / hasFile / listFileIds / clearAll / totalBytes
+- `use-offline.ts` rewritten to actually persist bodies and report honest outcomes (all-success / partial / all-failure toasts)
+- `cache-utils` + `offline-manager` + `prefetch` all re-pointed at IDB
+- `PDFOverlay` resolves URL to `URL.createObjectURL(blob)` when the file is in IDB
+- Added `fake-indexeddb` to devDependencies
+- Zero `caches.*` + zero `only-if-cached` callers remain in `src/`
+- 13 new tests; full suite 1102/1102
+- **Fresh-browser offline smoke test still pending human verification**
+
+### What shipped in v4.1 (prior milestone, 2026-04-13)
+- Removed `isPublic` from the whole app (type, schema, service signature, Firestore queries, API routes)
+- One-shot migration `scripts/migrate-remove-isPublic.ts` stripped 25/26 setlists on prod; idempotent confirmed
+- Regression-guard test "never writes isPublic to Firestore"
+- **Production smoke test (create setlist via all 4 paths, verify cross-user visibility) still pending human verification**
+
+### Deferred human smoke tests (running list)
+1. **v4.1**: create setlists via wizard / chat / import / transfer on prod; confirm second user sees them.
+2. **Phase 1.1**: open same setlist in 2 tabs, make conflicting edits, confirm banner or silent-merge behavior.
+3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
+
+### Git state
+Last commit: `a33af57` (Phase 1.2 summary + state)
+Branch: `master` — clean working tree, pushed to `origin/master`.
+Vercel auto-deploys `master` to production.
+
+### Key repo locations
+- Planning root: `sheet-music-app/.paul/`
+- Current phase plans live at `.paul/phases/<NN>-<slug>/<NN>-PP-PLAN.md`
+- FINDINGS.md (scope source for Phases 1.3+): `.paul/phases/01-recursive-research/FINDINGS.md`
+- Research waves: `.paul/phases/01-recursive-research/WAVE-{1,2}-*.md`
+- Migration scripts: `sheet-music-app/scripts/*.ts` (run with `npx tsx`)
+- Firebase admin creds: `.env.local` (`FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`)
+
+### User preferences (durable)
+- Push to `origin master` (not `master:main`)
+- Deploy straight to production on Vercel; no preview branches
+- User works from multiple computers — pull before starting
+- Must be "bulletproof and easy and intuitive" before onboarding band
 
 ## Session Continuity
 
-Last session: 2026-04-13
-Stopped at: Phase 1.2 complete (SUMMARY at .paul/phases/01_2-offline-truthiness/01_2-01-SUMMARY.md)
-Next action: /paul:plan for Phase 1.3 (Security Hardening)
-Resume file: .paul/phases/01-recursive-research/FINDINGS.md
+Last session: 2026-04-13 (context cleared after Phase 1.2)
+Stopped at: Phase 1.2 complete; ready to plan Phase 1.3 (Security Hardening)
+Next action: `/paul:plan` for Phase 1.3
+Resume file: `.paul/phases/01-recursive-research/FINDINGS.md` (scope source) + this STATE.md
 
 ---
 *STATE.md — Updated after every significant action*
