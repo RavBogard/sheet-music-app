@@ -80,8 +80,11 @@ service cloud.firestore {
     // SETLISTS Collection (The new root collection)
     // v4.0: All setlists are public — no private/public distinction for access control.
     match /setlists/{setlistId} {
-      // 1. READ: All members can read all setlists
-      allow read: if isMember();
+      // 1. READ: Any signed-in user can read any setlist.
+      // v4.3 hotfix: was isMember() but musicians without a `role` custom claim
+      // (legacy users whose role is only in Firestore users/{uid}.role) were
+      // locked out. isSignedIn() is consistent with v4.0 "all setlists public".
+      allow read: if isSignedIn();
 
       // 2. CREATE: Any signed-in user, must set ownerId to self
       allow create: if isSignedIn()
