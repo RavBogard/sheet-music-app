@@ -7,7 +7,7 @@
  *  - SYSTEM_PROMPT: does NOT instruct the model to echo ADMIN CONTEXT
  */
 import { describe, it, expect } from "vitest"
-import { sanitizeUserMessage, SYSTEM_PROMPT } from "@/app/api/chat/route"
+import { sanitizeUserMessage, SYSTEM_PROMPT } from "@/lib/chat-prompt"
 
 describe("sanitizeUserMessage (S01)", () => {
     it("rejects non-string input", () => {

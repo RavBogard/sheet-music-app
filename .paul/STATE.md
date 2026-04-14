@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
-Plan: 02-01 complete (loop closed) — S01 shipped
-Status: Ready for 02-02 PLAN (S03 drive file proxy) or 02-03 (S02 bridge creds decision)
-Last activity: 2026-04-14 — Unified 02-01 (chat prompt injection hardening; 9 new tests)
+Plan: 02-02 created, awaiting approval (S03 drive file proxy tightening)
+Status: PLAN created, ready for APPLY
+Last activity: 2026-04-14 — Wrote 02-02-PLAN (narrow hasBrowserFetchMetadata; diagnostic logging)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v4.3 02-01 closed; Phase 2 has more plans pending]
+  ✓        ○        ○     [v4.3 02-02 plan created, awaiting approval]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (02-01 complete)
-Stopped at: S01 shipped; loop closed; pushed to origin/master
-Next action: `/paul:plan` for 02-02 (S03 drive file proxy tightening) — or 02-03 (S02 bridge credentials; needs decision checkpoint)
-Resume file: `.paul/phases/v43-02-security-triage/02-01-SUMMARY.md`
+Last session: 2026-04-14 (02-02 plan drafted)
+Stopped at: 02-02 PLAN written (S03 drive file proxy); awaiting approval
+Next action: `/paul:apply .paul/phases/v43-02-security-triage/02-02-PLAN.md`
+Resume file: `.paul/phases/v43-02-security-triage/02-02-PLAN.md`
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
