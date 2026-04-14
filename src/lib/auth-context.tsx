@@ -264,7 +264,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signIn = async (): Promise<void> => {
         try {
-            await signInWithPopup(auth, googleProvider)
+            const result = await signInWithPopup(auth, googleProvider)
+
+            // COOP-safe rehydration: Chrome's Cross-Origin-Opener-Policy can
+            // prevent the popup from cleanly handing the credential to the
+            // parent window, leaving Firebase JS with a partially-initialized
+            // auth state — currentUser appears present but the internal ID
+            // token isn't attached, so every Firestore read fails with
+            // "Missing or insufficient permissions" even on the user's own
+            // /users/{uid} doc. Forcing a token refresh + cookie sync here
+            // ensures the session cookie is minted from a live token before
+            // any data subscription fires. If that still fails, a hard
+            // navigation lets Firebase re-hydrate from IndexedDB cleanly.
+            if (result.user) {
+                try {
+                    await result.user.getIdToken(true)
+                    await syncSessionCookie(result.user)
+                } catch (err) {
+                    logger.warn("Post-popup token/cookie prime failed; reloading:", err)
+                    window.location.reload()
+                    return
+                }
+                // Navigate to the app home so the dashboard mounts with a
+                // fully-initialized auth context.
+                window.location.replace("/setlists")
+            }
         } catch (error: unknown) {
             const code = (error as { code?: string })?.code
             if (
