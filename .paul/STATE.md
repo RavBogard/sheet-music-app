@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 1.2 of 8 (Offline Truthiness) — Planning
-Plan: 01_2-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-04-13 — Created .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
+Phase: 1.3 of 8 (Security Hardening) — next up
+Plan: Not started
+Status: Phase 1.2 complete; ready to plan Phase 1.3
+Last activity: 2026-04-13 — Phase 1.2 (Offline Truthiness) shipped. IndexedDB blob store is now the single source of truth; Cache API reads + only-if-cached fetches fully eliminated. 1102/1102 tests pass (+13). Fresh-browser offline smoke test pending human verification.
 
 Progress:
 - v4.2: [█░░░░░░░░░] ~12% (1 of 8 phases complete)
@@ -56,9 +56,9 @@ Branch: master
 ## Session Continuity
 
 Last session: 2026-04-13
-Stopped at: Plan 01_2-01 created for Phase 1.2 (Offline Truthiness)
-Next action: Approve plan, then /paul:apply .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
-Resume file: .paul/phases/01_2-offline-truthiness/01_2-01-PLAN.md
+Stopped at: Phase 1.2 complete (SUMMARY at .paul/phases/01_2-offline-truthiness/01_2-01-SUMMARY.md)
+Next action: /paul:plan for Phase 1.3 (Security Hardening)
+Resume file: .paul/phases/01-recursive-research/FINDINGS.md
 
 ---
 *STATE.md — Updated after every significant action*
