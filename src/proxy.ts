@@ -96,13 +96,15 @@ export function proxy(request: NextRequest) {
     // Role Verification via Claims
     if (session && !isPublicRoute) {
         const role = decodedSession?.role
-        
-        // Pending users AND users with no explicitly granted role yet are blocked from secure routes
-        if (!role || role === 'pending') {
-            if (pathname !== '/') {
-                return detectRedirectLoop('/')
-            }
-        }
+
+        // Do NOT redirect role-less users from non-leader routes.
+        // The session cookie can lag behind Firestore role promotion (e.g.,
+        // a just-approved musician whose cookie was minted before the admin
+        // set the role claim). Firestore rules remain authoritative for data
+        // reads; page-level UX can render a degraded state if truly pending.
+        // Previously redirected to '/' here — that created a loop for newly
+        // approved users whose cookie/claim hadn't caught up yet.
+        void role
 
         if (isLeaderRoute) {
             if (role !== 'admin' && role !== 'band_leader') {
