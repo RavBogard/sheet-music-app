@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
 Phase: 5 of 8 (P0 Bugs + UX) — In progress
-Plan: 05-03 APPLY complete (U01 touch targets ≥44px) — human-verified on prod
-Status: APPLY complete, ready for UNIFY
+Plan: 05-03 complete (U01 touch targets ≥44px)
+Status: UNIFY complete — loop closed; ready for next plan
 Open P0 items: S02 (bridge creds, decision), D01 (cascade delete, larger), U02 (mobile keyboard)
-Last activity: 2026-04-14 — U01 remediation shipped; 4 commits on origin/master; human-verified
+Last activity: 2026-04-14 — U01 SUMMARY written; 7/10 v4.3 P0s closed
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -33,7 +33,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [05-03 APPLY complete (U01), awaiting unify]
+  ✓        ✓        ✓     [05-03 closed (U01 shipped)]
 ```
 
 ## How to resume
@@ -131,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (05-03 plan created — U01 touch targets)
-Stopped at: PLAN 05-03 drafted, awaiting approval before APPLY
-Next action: Review plan, load /ui-ux-pro-max, then `/paul:apply .paul/phases/v43-05-bugs-ux/05-03-PLAN.md`
-Resume file: `.paul/phases/v43-05-bugs-ux/05-03-PLAN.md`
+Last session: 2026-04-14 (05-03 closed — U01 shipped)
+Stopped at: Loop closed; U01 on prod + regression test green
+Next action: `/paul:plan` for next P0 — U02 (AddBar keyboard), D01 (cascade delete), or S02 (bridge creds decision)
+Resume file: `.paul/phases/v43-05-bugs-ux/05-03-SUMMARY.md`
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
