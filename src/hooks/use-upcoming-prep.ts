@@ -7,6 +7,7 @@ import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache,
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
+import { reportSaveError } from "@/lib/save-error"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }
@@ -58,8 +59,8 @@ export function useUpcomingPrep() {
             const ts = snap.data()?.lastVisitedAt
             if (ts?.toDate) setLastVisitedAt(ts.toDate())
             else if (ts) setLastVisitedAt(new Date(ts))
-            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => { })
-        }).catch(() => { })
+            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(err => reportSaveError(err, "last-visit timestamp", { silent: true }))
+        }).catch(err => reportSaveError(err, "dashboard prefetch", { silent: true }))
         return () => { cancelled = true }
     }, [user?.uid])
 
