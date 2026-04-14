@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Search, ListMusic, Radio } from "lucide-react"
+import { Search, ListMusic, Radio, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
@@ -213,6 +213,40 @@ export function MobileTabBar(props: AppNavigationProps) {
                         Setlist
                     </span>
                 </button>
+
+                {/* Schedule button */}
+                {(() => {
+                    const scheduleActive = pathname.startsWith("/schedule")
+                    return (
+                        <button
+                            aria-label="Schedule"
+                            onClick={() => router.push("/schedule")}
+                            aria-current={scheduleActive ? "page" : undefined}
+                            className={cn(
+                                "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group cursor-pointer",
+                                scheduleActive ? "text-brand" : "text-muted-foreground hover:text-brand/70"
+                            )}
+                        >
+                            <div className={cn(
+                                "relative flex items-center justify-center w-14 h-10 rounded-2xl transition-all duration-300",
+                                scheduleActive
+                                    ? "bg-brand/15 shadow-[var(--shadow-brand-glow)] scale-100"
+                                    : "bg-transparent scale-90"
+                            )} style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}>
+                                <Calendar className={cn(
+                                    "w-6 h-6 transition-all duration-300",
+                                    scheduleActive ? "text-brand stroke-[2.5px]" : "stroke-2"
+                                )} />
+                            </div>
+                            <span className={cn(
+                                "text-[11px] font-medium transition-colors",
+                                scheduleActive ? "text-brand font-bold" : "text-muted-foreground"
+                            )}>
+                                Schedule
+                            </span>
+                        </button>
+                    )
+                })()}
 
                 {/* Monitor button */}
                 {showMonitor ? (
