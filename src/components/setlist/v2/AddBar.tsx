@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Plus, Music, BookOpen, ArrowLeftRight, StickyNote, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TrackType } from "@/types/models"
+import { cn } from "@/lib/utils"
 
 interface AddBarProps {
     onAddSongs: () => void
@@ -16,8 +18,28 @@ interface AddBarProps {
 }
 
 export function AddBar({ onAddSongs, onAddItem }: AddBarProps) {
+    // Hide when mobile soft keyboard is open — otherwise the sticky bar
+    // overlaps whatever input (service notes, title) the user is editing.
+    // Mirrors MobileTabBar's visualViewport pattern.
+    const [keyboardOpen, setKeyboardOpen] = useState(false)
+    useEffect(() => {
+        const vv = window.visualViewport
+        if (!vv) return
+        const handler = () => {
+            setKeyboardOpen(vv.height < window.innerHeight * 0.75)
+        }
+        vv.addEventListener("resize", handler)
+        return () => vv.removeEventListener("resize", handler)
+    }, [])
+
     return (
-        <div className="sticky bottom-[72px] sm:bottom-[88px] md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-brand/10 px-4 py-3 flex items-center justify-center pb-safe md:pb-3">
+        <div
+            data-testid="add-bar"
+            className={cn(
+                "sticky bottom-[72px] sm:bottom-[88px] md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-brand/10 px-4 py-3 flex items-center justify-center pb-safe md:pb-3",
+                keyboardOpen && "hidden"
+            )}
+        >
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="default" className="w-full sm:w-64 h-11 gap-2 rounded-xl shadow-md bg-brand hover:bg-brand/90 text-primary-foreground">
