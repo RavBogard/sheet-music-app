@@ -14,7 +14,7 @@ Phases: 6 of 8 complete (75%)
 | 2 | Weekly Workflow Polish | 4/4 | ✅ Complete | 2026-04-13 |
 | 3 | Stage UX for the Band | 4/4 | ✅ Complete | 2026-04-14 |
 | 4 | Editor Ergonomics + Noise Cleanup | TBD | Not started | - |
-| 5 | Navigation + Schedule Hygiene | TBD | Not started | - |
+| 5 | Navigation + Schedule Hygiene | 1+ | Planning | - |
 
 ### Phase 1: Recursive Research: Bugs, Gaps, Failures ✓
 

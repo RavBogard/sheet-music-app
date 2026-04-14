@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.2 UX Polish & Band Onboarding
-Phase: 4 of 8 (Editor Ergonomics + Noise Cleanup) — Planning
-Plan: 04-06 complete; 04-07 audit-only (no code change — see 04-07-AUDIT-NOTE.md)
-Status: Phase 4 at 6 plans + 1 audit note; ready for milestone-end audit/handoff
-Last activity: 2026-04-14 — Investigated triple-modal "chain"; decided NOT to consolidate; documented rationale in 04-07-AUDIT-NOTE.md
+Phase: 5 of 8 (Navigation + Schedule Hygiene) — Planning
+Plan: 05-01 complete (loop closed)
+Status: Ready for 05-02 PLAN
+Last activity: 2026-04-14 — Unified 05-01 (SUMMARY written)
 
 Progress:
 - v4.2: [███████▌░░] 75% (6 of 8 phases complete)
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [04-03 loop closed; more Phase 4 plans remain]
+  ✓        ✓        ✓     [05-01 loop closed; more Phase 5 plans remain]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (Phase 4 complete — 6 plans + 1 audit note)
-Stopped at: All Phase 4 loops closed; HANDOFF written; clean tree pushed to origin/master
-Next action: `/paul:plan` for Phase 5 (Navigation + Schedule Hygiene — /ui-ux-pro-max required). Scope per ROADMAP.md: mobile bottom-bar Schedule tab, strip blockout/availability UI, delete dead musician_availability index + UnifiedCalendar code, delete orphan routes (/settings/users, /settings/sound), remove SetlistDrawer if dead, trace monitor-live/commands/pending if dead. Preserve RSVP, scheduling_assignments, MusicianPicker, publish-and-notify emails.
-Resume file: `.paul/HANDOFF-2026-04-14.md`
+Last session: 2026-04-14 (Plan 05-01 complete)
+Stopped at: 05-01 SUMMARY written; tree clean; pushed to origin/master
+Next action: `/paul:plan` for 05-02 (orphan route + dead-code cleanup — /settings/users, /settings/sound, SetlistDrawer, monitor-live/commands/pending)
+Resume file: `.paul/phases/05-nav-schedule-hygiene/05-01-SUMMARY.md`
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
