@@ -10,13 +10,13 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.3 Deep Audit Remediation
-Phase: 2 of 8 (P0 Security Triage) — In progress (S02 pending)
+Phase: 3 of 8 (Bridge Credentials Design) — ✅ Complete (2/2 plans)
 Phase: 4 of 8 (P0 Data Integrity) — In progress (D01 pending)
 Phase: 5 of 8 (P0 Bugs + UX) — ✅ Complete (4/4 items shipped)
-Plan: 03-01 complete (S02 decision = Option A)
-Status: UNIFY complete — loop closed; ready for next plan
-Open P0 items: S02 implementation (plan 03-02, ~2hr), D01 (cascade delete)
-Last activity: 2026-04-14 — 03-01 SUMMARY written; Option A locked in; 03-02 scope ready
+Plan: 03-02 complete (S02 audit + admin email shipped)
+Status: UNIFY complete — loop closed; Phase 3 done
+Open P0 items: D01 (cascade delete) — only remaining P0
+Last activity: 2026-04-14 — S02 shipped + human-verified; Phase 3 complete; 9/10 v4.3 P0s closed
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -34,7 +34,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [03-01 closed (S02 → Option A; implementation queued as 03-02)]
+  ✓        ✓        ✓     [03-02 closed; Phase 3 ✅ complete; S02 shipped]
 ```
 
 ## How to resume
@@ -133,10 +133,12 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (03-01 closed — S02 decision = Option A)
-Stopped at: Loop closed; 03-02 implementation scope ready (~2hr)
-Next action: `/paul:plan` 03-02 (S02 audit-log + admin email implementation) or pick D01 (cascade delete)
-Resume file: `.paul/phases/v43-03-bridge-credentials/03-01-SUMMARY.md`
+Last session: 2026-04-14 (03-02 closed — S02 shipped; Phase 3 complete)
+Stopped at: 9/10 v4.3 P0s closed; only D01 (cascade delete) remains
+Next action: `/paul:plan` for D01 (cascade delete orphans — Phase 4) — last v4.3 P0
+Resume file: `.paul/phases/v43-03-bridge-credentials/03-02-SUMMARY.md`
+
+⚠️ Manual deploy pending: `firebase deploy --only firestore:rules` to push bridge-redemptions rule to prod.
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
