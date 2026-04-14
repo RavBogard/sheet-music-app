@@ -21,13 +21,11 @@ interface UnifiedCalendarProps {
 }
 
 /**
- * Unified Calendar — replaces CalendarView, SchedulingCalendar, and AvailabilityManager
- * with a single, mode-aware component.
+ * Unified Calendar — single, mode-aware component.
  *
  * Modes:
- *   - viewer:      setlists + tasks (everyone)
- *   - planning:    setlists + assignment coverage + blockout counts (band leaders)
- *   - availability: blockout selection/management (musicians)
+ *   - viewer:   setlists + my assignments (everyone)
+ *   - planning: setlists + all assignment coverage (band leaders)
  */
 export function UnifiedCalendar({
     mode,
