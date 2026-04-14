@@ -9,9 +9,9 @@ Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 find
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Recursive Audit (bugs/security/UX/data/perf/dead-code) | 1/1 | ✅ Complete | 2026-04-14 |
-| 2 | P0 Security Triage (S01 chat prompt injection, S03 drive-file auth) | TBD | Planning | - |
+| 2 | P0 Security Triage (S01 chat prompt injection, S03 drive-file auth) | 2/2 | ✅ Complete | 2026-04-14 |
 | 3 | Bridge Credentials Design (S02 — CRIT-003) | 2/2 | ✅ Complete | 2026-04-14 |
-| 4 | P0 Data Integrity (D01 orphan cascade, D02 .passthrough, D03 assign race) | TBD | Not started | - |
+| 4 | P0 Data Integrity (D01 orphan cascade, D02 .passthrough, D03 assign race) | 3/3 | ✅ Complete | 2026-04-14 |
 | 5 | P0 Bugs + UX (B01 silent catches, B02 alert-store, U01 touch, U02 keyboard) | 4/4 | ✅ Complete | 2026-04-14 |
 | 6 | P1 Security + Bugs (S04-S06, B03-B06) | TBD | Not started | - |
 | 7 | P1 Data + UX (D04-D07, U03-U08) | TBD | Not started | - |

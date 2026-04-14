@@ -10,13 +10,15 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Milestone: v4.3 Deep Audit Remediation
-Phase: 3 of 8 (Bridge Credentials Design) — ✅ Complete (2/2 plans)
-Phase: 4 of 8 (P0 Data Integrity) — In progress (D01 pending)
-Phase: 5 of 8 (P0 Bugs + UX) — ✅ Complete (4/4 items shipped)
-Plan: 03-02 complete (S02 audit + admin email shipped)
-Status: UNIFY complete — loop closed; Phase 3 done
-Open P0 items: D01 (cascade delete) — only remaining P0
-Last activity: 2026-04-14 — S02 shipped + human-verified; Phase 3 complete; 9/10 v4.3 P0s closed
+Phase 2 (P0 Security Triage) — ✅ Complete
+Phase 3 (Bridge Credentials Design) — ✅ Complete
+Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
+Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
+Plan: 04-03 complete (D01 cascade delete shipped + human-verified)
+Status: UNIFY complete — 10/10 v4.3 P0s resolved 🎉
+Open P0 items: **none — all P0s closed**
+Remaining milestone work: Phase 6 (P1 security/bugs S04-S06, B03-B06), 7 (P1 data/UX D04-D07, U03-U08), 8 (performance P01-P05 + dead-code C01-C04)
+Last activity: 2026-04-14 — D01 shipped + human-verified; Phase 4 complete; 10/10 v4.3 P0s done
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -34,7 +36,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [03-02 closed; Phase 3 ✅ complete; S02 shipped]
+  ✓        ✓        ✓     [04-03 closed; Phase 4 ✅; 10/10 v4.3 P0s shipped]
 ```
 
 ## How to resume
@@ -133,12 +135,12 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (03-02 closed — S02 shipped; Phase 3 complete)
-Stopped at: 9/10 v4.3 P0s closed; only D01 (cascade delete) remains
-Next action: `/paul:plan` for D01 (cascade delete orphans — Phase 4) — last v4.3 P0
-Resume file: `.paul/phases/v43-03-bridge-credentials/03-02-SUMMARY.md`
+Last session: 2026-04-14 (04-03 closed — D01 shipped; Phase 4 complete; 10/10 v4.3 P0s)
+Stopped at: All v4.3 P0s done. Remaining v4.3 scope is P1-class (Phases 6-8).
+Next action: `/paul:plan` for Phase 6 (P1 security + bugs: S04-S06, B03-B06) OR pause v4.3 and prep band onboarding. Rabbi's call.
+Resume file: `.paul/phases/v43-04-data-integrity/04-03-SUMMARY.md`
 
-⚠️ Manual deploy pending: `firebase deploy --only firestore:rules` to push bridge-redemptions rule to prod.
+All firebase rules + indexes deployed. No operational debt.
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
