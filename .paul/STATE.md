@@ -14,11 +14,10 @@ Phase 2 (P0 Security Triage) — ✅ Complete
 Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
-Plan: 09-01 complete (Role-claim sync shipped + human-verified)
-Status: UNIFY complete — Phase 9 ✅ complete; claim-drift class of bug structurally repaired
-Open P0 items: none
-Remaining milestone work: Phase 6 (P1 security/bugs), 7 (P1 data/UX), 8 (perf + dead-code). Deferred follow-up: restore `isMember()` on /setlists once Phase 9 has been stable for a few days.
-Last activity: 2026-04-14 — 09-01 shipped; auto-sync live; drift users self-repair on next sign-in
+Plan: 06-01 complete (S05 schema + S06 wontfix shipped + human-verified)
+Status: UNIFY complete — 06-01 closed
+Open P1 items remaining in Phase 6: B03-B06 (bundle as 06-02); S04 (design call needed → 06-03)
+Last activity: 2026-04-15 — S05 shipped; S06 documented; monitor UI verified on prod
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -36,7 +35,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [09-01 closed; Phase 9 ✅ complete; auto-sync live]
+  ✓        ✓        ✓     [06-01 closed; S05 shipped, S06 wontfix documented]
 ```
 
 ## How to resume
@@ -135,12 +134,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (09-01 closed — role-claim sync shipped; Phase 9 complete)
-Stopped at: Phases 1-5 + 9 complete. Claim-drift repaired. /setlists read still permissive (isSignedIn) — follow-up plan can restore isMember() after a stability window.
-Next action: `/paul:plan` for Phase 6 (P1 security + bugs) OR for the isMember-restore follow-up OR pause v4.3 and prep band onboarding.
-Resume file: `.paul/phases/v43-09-role-claim-sync/09-01-SUMMARY.md`
-
-All firebase rules + indexes deployed. No operational debt.
+Last session: 2026-04-15 (06-01 closed — S05 monitor rule + S06 wontfix)
+Stopped at: Phase 6 plan 1 of ~3 complete
+Next action: `/paul:plan` 06-02 (bugs B03-B06: monitor debounce race, loadLibraryMeta closure, DashboardClient unsub, swapTrack tracks-array assertion) OR 06-03 (S04 QR design)
+Resume file: `.paul/phases/v43-06-p1-security-bugs/06-01-SUMMARY.md`
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
