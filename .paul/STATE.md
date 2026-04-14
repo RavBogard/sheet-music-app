@@ -11,10 +11,10 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress
-Phase: 5 of 8 (P0 Bugs + UX) — In progress
-Plan: 05-01 complete (B01 shipped — user-visible writes surface errors). B02 + U01 + U02 remain.
-Status: Ready for next plan. Open: Phase 2 S02, Phase 4 D01+D02, Phase 5 B02+U01+U02, Phases 3/6/7/8
-Last activity: 2026-04-14 — Unified 05-01 (reportSaveError helper; scope trimmed at execution from 9→5 sites)
+Phase: 4 of 8 (P0 Data Integrity) — In progress
+Plan: 04-02 complete (D02 shipped — strict flush write-boundary schemas)
+Status: Open: Phase 2 S02, Phase 4 D01, Phase 5 B02+U01+U02, Phases 3/6/7/8
+Last activity: 2026-04-14 — Unified 04-02 (flush schemas .strict; 11 new tests)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
