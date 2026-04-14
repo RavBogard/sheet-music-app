@@ -1,16 +1,30 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v4.3 — TBD (awaiting scope)**
-Status: Planning
+**v4.3 Deep Audit Remediation**
+Status: 🚧 In Progress
+Phases: 1 of 8 complete (recursive audit)
+Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 findings) before the band onboards.
 
-Likely focus: band-onboarding bring-up (invitations, first-service dry-run, remaining deferred smoke tests) and any issues surfaced during initial band usage. Scope to be defined at `/paul:discuss-milestone`.
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Recursive Audit (bugs/security/UX/data/perf/dead-code) | 1/1 | ✅ Complete | 2026-04-14 |
+| 2 | P0 Security Triage (S01 chat prompt injection, S03 drive-file auth) | TBD | Planning | - |
+| 3 | Bridge Credentials Design (S02 — CRIT-003) | TBD + decision | Not started | - |
+| 4 | P0 Data Integrity (D01 orphan cascade, D02 .passthrough, D03 assign race) | TBD | Not started | - |
+| 5 | P0 Bugs + UX (B01 silent catches, B02 alert-store, U01 touch, U02 keyboard) | TBD | Not started | - |
+| 6 | P1 Security + Bugs (S04-S06, B03-B06) | TBD | Not started | - |
+| 7 | P1 Data + UX (D04-D07, U03-U08) | TBD | Not started | - |
+| 8 | Performance + Dead-Code Sweep (P01-P05, C01-C04) | TBD | Not started | - |
 
-Carry-over items available for v4.3:
-- Human smoke tests deferred from v4.2: setlist creation paths (v4.1), two-tab conflict (P1.1), fresh-browser offline (P1.2)
-- CRIT-003 bridge credentials design (v1.3 carryover)
-- LOW-004 `leader → band_leader` Firestore migration (v1.3 carryover)
-- Firebase remote `musician_availability` index deletion on next `firebase deploy --only firestore:indexes`
+Carry-over items available:
+- Human smoke tests deferred from v4.2 (setlist creation paths, two-tab conflict, fresh-browser offline)
+- LOW-004 `leader → band_leader` Firestore data migration
+- Firebase remote `musician_availability` index deletion on next `firebase deploy`
+
+### Phase 1: Recursive Audit ✓
+Deliverable: `.paul/phases/v43-01-recursive-research/FINDINGS.md`
+6 parallel deep-audit agents → 83 raw findings synthesized into 10 P0 + ~20 P1 + balance P2. Prioritized action list and phase split drafted.
 
 ## Previous Milestone
 **v4.2 UX Polish & Band Onboarding**

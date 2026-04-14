@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Milestone: v4.3 — TBD (awaiting scope)
-Prior milestone: v4.2 UX Polish & Band Onboarding — ✅ Complete 2026-04-14 (audited)
-Plan: none — milestone scope pending
-Status: Ready for `/paul:discuss-milestone` v4.3
-Last activity: 2026-04-14 — Closed milestone v4.2 (audit passed; ROADMAP + PROJECT archived)
+Milestone: v4.3 Deep Audit Remediation
+Phase: 2 of 8 (P0 Security Triage) — Planning
+Plan: 02-01 created, awaiting approval (S01 chat prompt injection)
+Status: PLAN created, ready for APPLY
+Last activity: 2026-04-14 — FINDINGS synthesized; ROADMAP formalized v4.3; wrote 02-01-PLAN
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -31,7 +31,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [05-02 closed; Phase 5 complete; milestone v4.2 100%]
+  ✓        ○        ○     [v4.3 02-01 plan created, awaiting approval]
 ```
 
 ## How to resume
@@ -129,10 +129,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-14 (milestone v4.2 closed)
-Stopped at: v4.2 audited + archived; ROADMAP/PROJECT rolled forward; clean tree pushed to origin/master
-Next action: `/paul:discuss-milestone` to scope v4.3 (band onboarding bring-up), or pause for actual band dry-run feedback
-Resume file: `.paul/ROADMAP.md`
+Last session: 2026-04-14 (v4.3 audit + plan 02-01 drafted)
+Stopped at: v4.3 Phase 2 Plan 01 written (S01 chat prompt injection); awaiting approval
+Next action: `/paul:apply .paul/phases/v43-02-security-triage/02-01-PLAN.md`
+Resume file: `.paul/phases/v43-02-security-triage/02-01-PLAN.md`
 Resume context:
 - Phase 4 closed: 6 atomic commits (P4-01 through P4-06) + audit note (P4-07)
 - Suite 1153 green; tsc clean; 1 pre-existing env-vars test failure unrelated and untouched
