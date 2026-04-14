@@ -13,10 +13,10 @@ Milestone: v4.3 Deep Audit Remediation
 Phase: 2 of 8 (P0 Security Triage) — In progress (S02 pending)
 Phase: 4 of 8 (P0 Data Integrity) — In progress (D01 pending)
 Phase: 5 of 8 (P0 Bugs + UX) — ✅ Complete (4/4 items shipped)
-Plan: 05-04 complete (U02 AddBar hide-on-keyboard)
-Status: Phase 5 complete; ready for next plan (Phase 3/4 remaining P0s)
-Open P0 items: S02 (bridge creds, decision), D01 (cascade delete)
-Last activity: 2026-04-14 — U02 shipped + human-verified; Phase 5 complete (8/10 P0 closed overall)
+Plan: 03-01 APPLY complete (S02 decision = Option A)
+Status: APPLY complete, ready for UNIFY
+Open P0 items: S02 implementation pending (plan 03-02), D01 (cascade delete)
+Last activity: 2026-04-14 — S02 decision made: Option A (audit-log + admin email); DECISION.md finalized
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -34,7 +34,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [05-04 closed (U02 shipped); Phase 5 ✅ complete]
+  ✓        ✓        ○     [03-01 APPLY complete (S02 → Option A), awaiting unify]
 ```
 
 ## How to resume
@@ -129,6 +129,7 @@ Vercel auto-deploys `master` to production.
 |----------|-------|--------|
 | 2026-04-13: Auth path for /api/setlist/flush — keepalive fetch (Bearer) over sendBeacon (no headers) | Phase 2 P01 | sendBeacon dropped; keepalive fetch sole transport for unload-flush |
 | 2026-04-13: /api/setlist/flush rate-limit tier — shared `api` (60/min) | Phase 2 P01 | No new tier; flush shares user's general-api budget |
+| 2026-04-14: S02 bridge-cred approach = Option A (audit-log + admin email on redemption) | v4.3 P3-01 | Fast detection over credential wrapping; accepts bridge-machine compromise as out-of-scope; Option C (IAM per-install) deferred until multi-congregation |
 
 ## Session Continuity
 
