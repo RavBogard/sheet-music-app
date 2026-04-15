@@ -343,26 +343,32 @@ describe('updateUserRole', () => {
 })
 
 describe('updateUserDisplayName', () => {
-    it('calls updateDoc with correct field updates', async () => {
+    // v4.4 DL-010: now routes through POST /api/profile/update so the server can
+    // fan the new name out to every scheduling_assignments copy.
+    it('POSTs to /api/profile/update with displayName body', async () => {
+        global.fetch = vi.fn(async () => ({
+            ok: true,
+            text: async () => 'ok',
+        })) as any
+
         await updateUserDisplayName('user-1', 'New Name')
 
-        expect(mockUpdateDoc).toHaveBeenCalledTimes(1)
-        expect(mockUpdateDoc).toHaveBeenCalledWith(
-            expect.anything(),
-            { displayName: 'New Name' }
-        )
+        expect(global.fetch).toHaveBeenCalledWith('/api/profile/update', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ displayName: 'New Name' }),
+        }))
+        // The direct Firestore write is gone — updateDoc must NOT be called.
+        expect(mockUpdateDoc).not.toHaveBeenCalled()
     })
 
-    it('no-ops when db is empty', async () => {
-        const firebase = await import('@/lib/firebase')
-        const originalDb = firebase.db
-        Object.defineProperty(firebase, 'db', { value: {}, writable: true, configurable: true })
+    it('throws when the server returns non-OK', async () => {
+        global.fetch = vi.fn(async () => ({
+            ok: false,
+            status: 500,
+            text: async () => 'server error',
+        })) as any
 
-        await updateUserDisplayName('user-1', 'New Name')
-
-        expect(mockUpdateDoc).not.toHaveBeenCalled()
-
-        Object.defineProperty(firebase, 'db', { value: originalDb, writable: true, configurable: true })
+        await expect(updateUserDisplayName('user-1', 'New Name')).rejects.toThrow(/Failed to update display name/)
     })
 })
 

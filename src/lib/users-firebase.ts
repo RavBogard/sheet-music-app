@@ -144,11 +144,27 @@ export async function updateUserRole(targetUid: string, newRole: UserRole) {
 }
 
 /**
- * Update user's profile display name
+ * Update user's profile display name.
+ *
+ * v4.4 DL-010: routes through /api/profile/update so the server can fan out the
+ * new name to every scheduling_assignments doc (musicianName / assignedByName)
+ * in the same round-trip. Direct Firestore writes from the browser would leave
+ * the denormalized copies drifting until the assignment reached a terminal state.
+ *
+ * The `uid` parameter is retained for backwards-compatibility with callers but
+ * the server route uses ctx.auth.uid — users can only self-update.
  */
-export async function updateUserDisplayName(uid: string, displayName: string) {
-    if (!db || Object.keys(db).length === 0) return
-    await updateDoc(doc(db, "users", uid), { displayName })
+export async function updateUserDisplayName(_uid: string, displayName: string) {
+    const { apiFetch } = await import("@/lib/api-client")
+    const res = await apiFetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName }),
+    })
+    if (!res.ok) {
+        const detail = await res.text().catch(() => "")
+        throw new Error(`Failed to update display name (${res.status}): ${detail}`)
+    }
 }
 
 /**

@@ -270,6 +270,11 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         latestRef.current = { setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians }
     }, [setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians])
 
+    // v4.4 DL-010: track the last name we actually persisted. When the editor
+    // changes ONLY the name, route it through /api/setlist/rename so the
+    // server can fan out the new name to all scheduling_assignments copies.
+    const lastSavedNameRef = useRef<string>(initialName)
+
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {
         const { setlistId: id, name: n, tracks: t, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
@@ -288,7 +293,25 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
 
             if (id) {
-                await setlistService.updateSetlist(id, dataToSave, lastSeenUpdatedAtRef.current)
+                // v4.4 DL-010: route name changes through the rename endpoint
+                // so scheduling_assignments denormalized setlistName stays fresh.
+                // Other fields still go through updateSetlist unchanged.
+                if (n !== lastSavedNameRef.current) {
+                    const res = await apiFetch('/api/setlist/rename', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ setlistId: id, name: n }),
+                    })
+                    if (!res.ok) {
+                        const detail = await res.text().catch(() => '')
+                        throw new Error(`Failed to rename setlist (${res.status}): ${detail}`)
+                    }
+                    lastSavedNameRef.current = n
+                }
+                // Strip name from the generic update — already written by the rename route.
+                const { name: _omit, ...rest } = dataToSave
+                void _omit
+                await setlistService.updateSetlist(id, rest, lastSeenUpdatedAtRef.current)
             } else {
                 const newId = await setlistService.createSetlist(n, t, {
                     eventDate: serializeEventDate(ed),
@@ -297,6 +320,7 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                     musicians: mus.length > 0 ? mus : undefined,
                 })
                 setSetlistId(newId)
+                lastSavedNameRef.current = n
                 onSave?.(newId)
             }
             setLastSaved(new Date())
