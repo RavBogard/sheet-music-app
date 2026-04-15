@@ -11,7 +11,7 @@ Goal: Close the architectural debt surfaced by the v4.3 + v4.4 full-project audi
 | 0 | Full-project audit (R1+R2, 186 findings, batches 1+2 shipped) | done | ✅ Complete | 2026-04-15 |
 | 1 | Data-layer atomicity — scheduling transactions (DL-001/002/003/012/013/014) | 1/1 | ✅ Complete | 2026-04-15 |
 | 2 | Denormalization reconciliation — user-rename + setlist-rename fan-out (DL-010) | 1/1 | ✅ Complete | 2026-04-15 |
-| 3 | Client async safety — AbortController sweep (~11 sites from R2B) | TBD | Not started | - |
+| 3 | Client async safety — AbortController sweep (~11 sites from R2B) | 1/1 | ✅ Complete | 2026-04-15 |
 | 4 | File-size refactor — 5 files >600 LOC | TBD | Not started | - |
 | 5 | Observability — request IDs + SSE status (L-001, S-004) | TBD | Not started | - |
 | 6 | Modal state hygiene — 4 modals with state-reset bugs | TBD | Not started | - |

@@ -10,11 +10,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: v4.4 Deferred Audit Sweep — Architectural Polish
-Phase: 3 of 8 (Client async safety — R2B AbortController sweep) — Planning
-Plan: v44-03-01 created, awaiting approval
-Status: PLAN created, awaiting approval for APPLY
-Previous: v4.4 Phase 2 closed (DL-010 rename fan-out); SUMMARY at `.paul/phases/v44-02-denorm-reconciliation/v44-02-SUMMARY.md`
-Last activity: 2026-04-15 — v44-03-01-PLAN.md created (11 async sites + 3 stale closures + UX-007 retry cap; 5 regression tests)
+Phase: 3 of 8 (Client async safety) — ✅ Complete
+Plan: v44-03 shipped and unified
+Status: Loop closed. Ready for Phase 4 planning.
+Previous: v4.4 Phase 2 closed (DL-010 rename fan-out)
+Last activity: 2026-04-15 — v44-03 UNIFY complete. 6 commits on origin/master: 52a19c2, 01fb601, 54aba81, c0aed9a, 76cd0d8, 20108f6. 1297/1297 tests green (+5). AC-1..AC-6 all satisfied.
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Phase 3 plan created, awaiting approval]
+  ✓        ✓        ✓     [Phase 3 complete — ready for Phase 4 PLAN]
 ```
 
 ## How to resume
@@ -131,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — Phase 2 UNIFY complete; loop closed
-Stopped at: DL-010 rename fan-out shipped. SUMMARY written, ROADMAP marked Phase 2 complete, 4 feat commits + docs commit pushed to origin/master. 1292/1292 tests green.
-Next action: `/paul:plan` for Phase 3 (Client async safety, DL-011 + R2B AbortController sweep across ~11 sites).
-Resume file: `.paul/phases/v44-02-denorm-reconciliation/v44-02-SUMMARY.md`
+Last session: 2026-04-15 — Phase 3 UNIFY complete; loop closed
+Stopped at: Async-safety sweep shipped — 11 AbortController sites + 3 stale-closure refs + PDFViewer retry cap (3) + 5-test regression suite. 6 commits pushed to origin/master, auto-deploying to Vercel. 1297/1297 tests green.
+Next action: `/paul:plan` for Phase 4 (File-size refactor — 5 files >600 LOC).
+Resume file: `.paul/phases/v44-03-client-async-safety/v44-03-SUMMARY.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
