@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const respondSchema = z.object({
@@ -12,6 +13,10 @@ const respondSchema = z.object({
 
 export const POST = createApiHandler(
     async (ctx) => {
+        // v4.4 SEC-005: rate-limit accept/decline toggles to prevent notification spam
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { assignmentId, action, declineReason } = ctx.body!
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')

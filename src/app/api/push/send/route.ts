@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
@@ -25,6 +26,10 @@ const schema = z.object({
  */
 export const POST = createApiHandler(
     async (ctx) => {
+        // v4.4 SEC-002: rate-limit bulk push sends to prevent FCM token abuse
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         if (!initAdmin()) {
             return NextResponse.json(
                 { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },

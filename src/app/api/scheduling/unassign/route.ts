@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingCancellationSMS } from "@/lib/sms"
@@ -14,6 +15,10 @@ const unassignSchema = z.object({
 
 export const POST = createApiHandler(
     async (ctx) => {
+        // v4.4 SEC-004: rate-limit cancellation cascade (email + SMS + push)
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { assignmentId } = ctx.body!
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')

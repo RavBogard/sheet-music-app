@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingAssignmentSMS } from "@/lib/sms"
@@ -27,6 +28,10 @@ const assignSchema = z.object({
 
 export const POST = createApiHandler(
     async (ctx) => {
+        // v4.4 SEC-003: rate-limit bulk assigns (each fires email + SMS + notification)
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { setlistId, setlistName, eventDate, serviceType, musicians } = ctx.body!
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')

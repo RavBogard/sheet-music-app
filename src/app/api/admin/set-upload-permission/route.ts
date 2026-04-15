@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server"
-import { createApiHandler, apiError } from "@/lib/api-wrapper"
+import { z } from "zod"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+
+// v4.4 SEC-001: narrow validated body so attackers can't smuggle extra
+// fields (e.g., `role: 'admin'`) onto the update.
+const setUploadPermissionSchema = z.union([
+    z.object({ migrate: z.literal(true) }),
+    z.object({ uid: z.string().min(1), canUpload: z.boolean() }),
+])
 
 /**
  * POST /api/admin/set-upload-permission
@@ -29,7 +37,7 @@ export const POST = createApiHandler(
 
         const body = ctx.body!
 
-        if (body.migrate) {
+        if ('migrate' in body) {
             // Migration: set canUpload=true for existing band_leaders and admins
             const snapshot = await db.collection('users')
                 .where('role', 'in', ['admin', 'band_leader'])
@@ -42,13 +50,9 @@ export const POST = createApiHandler(
             return NextResponse.json({ migrated: snapshot.size })
         }
 
-        // Single user toggle
-        if (!body.uid || typeof body.canUpload !== 'boolean') {
-            return apiError("uid and canUpload required", 400, "MISSING_FIELDS")
-        }
-
+        // Single user toggle (zod-validated)
         await db.collection('users').doc(body.uid).update({ canUpload: body.canUpload })
         return NextResponse.json({ success: true, uid: body.uid, canUpload: body.canUpload })
     },
-    { role: 'admin' }
+    { role: 'admin', schema: setUploadPermissionSchema }
 )

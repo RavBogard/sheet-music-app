@@ -37,7 +37,11 @@ const mockFirestore = {
             return {
                 doc: (_id: string) => ({
                     id: _id,
-                    get: async () => ({ exists: setlistExists }),
+                    // v4.4 SEC-006: owner check — return ownerId matching test auth uid
+                    get: async () => ({
+                        exists: setlistExists,
+                        data: () => ({ ownerId: "user-1" }),
+                    }),
                 }),
             }
         }

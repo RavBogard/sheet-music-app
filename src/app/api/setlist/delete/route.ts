@@ -66,6 +66,15 @@ export const POST = createApiHandler(
             return apiError("Setlist not found", 404, "setlist_not_found")
         }
 
+        // v4.4 SEC-006: band_leader role alone is not enough — require
+        // ownership or admin to delete. Prevents a compromised/rogue band
+        // leader from destroying another leader's work.
+        const setlistData = setlistSnap.data()
+        const isOwner = setlistData?.ownerId === ctx.auth.uid
+        if (!isOwner && !ctx.auth.isAdmin) {
+            return apiError("Only the owner or an admin can delete this setlist", 403, "forbidden")
+        }
+
         const errors: string[] = []
         let assignments = 0
         let tasks = 0

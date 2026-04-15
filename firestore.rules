@@ -93,10 +93,10 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.resource.data.ownerId == request.auth.uid;
 
-      // 3. UPDATE: Owner, Band Leader, or Admin
-      allow update: if isOwner(resource)
-                    || isBandLeader()
-                    || isAdmin();
+      // 3. UPDATE: Owner, Band Leader, or Admin; ownerId is immutable
+      //    except by admins (v4.4 SEC-008).
+      allow update: if (isOwner(resource) || isBandLeader() || isAdmin())
+                    && (isAdmin() || request.resource.data.ownerId == resource.data.ownerId);
 
       // 4. DELETE: Owner, Band Leader, or Admin
       allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
