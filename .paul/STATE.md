@@ -14,11 +14,12 @@ Phase 2 (P0 Security Triage) — ✅ Complete
 Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
-Plan: 06-01 complete (S05 schema + S06 wontfix shipped + human-verified)
-Status: Auth incident triage done — both admin and musician sign-in working on prod
-Open P1 items remaining in Phase 6: B03-B06 (bundle as 06-02); S04 (design call needed → 06-03)
-Queued: Plan 09-02 (server-minted session-role companion cookie) — replaces tonight's proxy hotfix with the principled fix
-Last activity: 2026-04-15 — Auth firefighting: setlists subscription pre-auth gate (c7dff08), proxy role-redirect relax (945478b, patch), brief signInWithRedirect attempt then revert. Both admin + musician verified working on prod.
+Phase 9 (Role-claim sync) — ✅ Complete (2/2: 09-01 sync-claims, 09-02 signed companion cookie)
+Phase 10 (Auth deep-dive hardening) — In progress (1/5: 10-01 fail-fast env + guards + loop-breaker shipped, human-verified)
+Plan: 10-01 complete (env/config hardening; today's silent-degrade failure class closed)
+Status: Suite 1264/1264; Vercel prod deploy green; user confirmed working
+Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call (paused); P10-02 through P10-06 queued
+Last activity: 2026-04-15 — Plan 10-01 complete: 6 commits (env fail-fast, 24 initAdmin guards, bounce-cookie path fix, deploy checklist, CRON_SECRET hotfix)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -36,7 +37,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [06-01 closed; auth incident resolved; 09-02 plan queued]
+  ✓        ✓        ✓     [10-01 closed; P10 phase underway; next plan 10-02 queued]
 ```
 
 ## How to resume
@@ -135,10 +136,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 (auth incident triage — admin + musician both working again on prod)
-Stopped at: Sign-in flow stable on signInWithPopup. Plan 09-02 written and queued for principled session-cookie fix.
-Next action: Two reasonable paths — (a) `/paul:apply .paul/phases/v43-09-role-claim-sync/09-02-PLAN.md` to retire the proxy hotfix with the principled session-role cookie; OR (b) `/paul:plan` 06-02 for B03-B06 bug bundle. User's call — 09-02 is higher leverage (closes a hotfix); 06-02 is more closing-out value (clears the audit P1s).
-Resume file: `.paul/phases/v43-09-role-claim-sync/09-02-PLAN.md`
+Last session: 2026-04-15 (P10-01 shipped + human-verified on prod — "works!")
+Stopped at: Auth env/config hardening complete. The cold-load race (`/setlists ↔ /login` symptom) is NOT yet fixed — that is P10-02's explicit scope.
+Next action: `/paul:plan` for P10-02 (cold-load race: await cookie before loading=false + router.refresh after sign-in + cold-load session refresh). This is the direct fix for the remaining user-visible symptom.
+Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md` (§2 lists P10-02's intended scope)
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
