@@ -12,9 +12,9 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 2.5.0 |
-| Status | Production |
-| Last Updated | 2026-03-12 |
+| Version | v4.4 |
+| Status | Production — band-onboarding-ready |
+| Last Updated | 2026-04-15 |
 
 **Production URLs:**
 - CentralReform.live: Main application
@@ -52,9 +52,18 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v4.4 — TBD (awaiting scope)**: band onboarding blockers + carry-over P1 polish (D06 stale musicianName, D07 delete-user TOCTOU, U03–U08 UX nits) + perf/dead-code sweep (P01–P05, C01–C04). Deferred human smoke tests from v4.2 + LOW-004 data migration.
+**v4.5 — TBD (awaiting scope)**: deferred from v4.4 — Phase 4 file-size refactor (5 files >600 LOC), Phase 7 type-safety tail, Phase 8 perf tail. Deferred human smoke tests still pending (v4.1, Phase 1.1, Phase 1.2, plus new ones for v4.4 Phases 5+6).
 
 ### Validated (Shipped this cycle)
+
+**v4.4 Deferred Audit Sweep — Architectural Polish — 5 of 8 phases complete (3 deferred), 2026-04-15**
+- [x] v4.4 Phase 1: Data-layer atomicity — DL-001/002/003/012/013/014 (scheduling assign/decline transactions) (2026-04-15)
+- [x] v4.4 Phase 2: Denormalization reconciliation — user/setlist rename fan-out (DL-010) (2026-04-15)
+- [x] v4.4 Phase 3: Client async safety — 11 AbortController sites + 3 stale closures + UX-007 retry cap + 5-test suite (2026-04-15)
+- [x] v4.4 Phase 5: Observability — request-ID via AsyncLocalStorage + chat SSE meta/heartbeat/done + client error enrichment (L-001 + S-004) (2026-04-15)
+- [x] v4.4 Phase 6: Modal state hygiene — UX-001/002/011/015/018 closed, last R2B "must fix before release" items (2026-04-15)
+- ⏭ v4.4 Phase 4 (file-size refactor): deferred to v4.5 as P2 cosmetic
+- ⏭ v4.4 Phase 7 (type-safety tail) + Phase 8 (perf tail): deferred to v4.5 as P2 polish
 
 **v4.3 Deep Audit Remediation — 10 of 10 phases complete, 2026-04-15**
 - [x] v4.3 Phase 1: Recursive audit (83 findings synthesized into P0/P1/P2 action list) (2026-04-14)
@@ -242,7 +251,14 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Service Notes always visible (no "+ Add" gate) | v4.2 P2-04 | Progressive disclosure on a primary authoring field is an anti-pattern; placeholder carries the purpose |
 | Field-aware global keyboard shortcuts | v4.2 P2-04 | Skip on INPUT/TEXTAREA/SELECT/contenteditable so native field undo works |
 | Canonical "Gig Packet" copy (drop "Print") | v4.2 P2-04 | "Print" undersells a multi-page PDF; "Gig Packet" is the in-house term |
+| AsyncLocalStorage for request-ID propagation across all API routes | v4.4 P5 | Logger auto-tags every call within a request scope; no manual plumbing at call sites |
+| globalThis.__requestIdGetter__ resolver in logger to avoid client-bundle ALS leak | v4.4 P5 | Static import of node:async_hooks broke webpack via error-boundary.tsx |
+| Chat SSE adds additive meta/heartbeat/done frames; assistant token format byte-identical | v4.4 P5 | ChatPanel parser unchanged (ignores unknown event types); zero client churn for observability |
+| CollapsibleSection localStorage opt-in via storageKey prop | v4.4 P6 | Backward compatible — sites without storageKey keep in-memory behavior |
+| Modal state-reset effect deps = [isOpen] only (NOT initial* props) | v4.4 P6 | Adding initial* deps would clobber in-progress edits on parent re-render |
+| ref-stabilise prop callbacks in long-lived effect handlers | v4.4 P3 | TempoFlash/PDFOverlay Escape handler invokes latest callback, not the one captured at mount |
+| PDFViewer retry cap at 3 attempts → terminal error UI | v4.4 P3 | Prevents infinite thrash on consistently-broken charts |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-14 after v4.2 Phase 3 (Stage UX for the Band — 4 plans)*
+*Last updated: 2026-04-15 after v4.4 milestone close (Phases 1, 2, 3, 5, 6 shipped; 4, 7, 8 deferred to v4.5)*

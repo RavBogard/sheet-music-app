@@ -9,12 +9,12 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: v4.4 Deferred Audit Sweep — Architectural Polish
-Phase: 6 of 8 (Modal state hygiene) — ✅ Complete
-Plan: v44-06 shipped and unified
-Status: Loop closed. All R2B "must fix before release" items now closed. Ready for Phase 7 planning OR milestone gate review.
-Previous: v4.4 Phase 5 closed (observability). Phase 4 deferred (P2).
-Last activity: 2026-04-15 — v44-06 APPLY+UNIFY complete. EditDetails/NamePrompt re-seed, UserRow reset, CollapsibleSection storageKey, SwapPicker selection/query reset. Commits 5664255, 2e9b310, f36c101, 31d4b85. 1324/1324 tests green (+3).
+Milestone: ✅ v4.4 complete — Awaiting next milestone scope
+Phase: None active
+Plan: None
+Status: v4.4 milestone closed; band-onboarding UX gate cleared. Ready for `/paul:discuss-milestone` to define v4.5.
+Previous: v4.4 shipped 5 of 8 phases (1, 2, 3, 5, 6); Phases 4, 7, 8 deferred to v4.5 as P2.
+Last activity: 2026-04-15 — v4.4 milestone closed. MILESTONES.md updated, PROJECT.md evolved, ROADMAP collapsed to Previous, archive at `.paul/milestones/v4.4-ROADMAP.md`. Git tag v4.4 created.
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 6 complete — band onboarding gate clear]
+  ○        ○        ○     [Milestone v4.4 complete — awaiting next milestone]
 ```
 
 ## How to resume
@@ -131,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — Phase 6 UNIFY complete; loop closed. Band-onboarding UX gate now CLEAR.
-Stopped at: Modal state hygiene shipped — UX-001/002/011/015/018 closed. 4 commits on origin/master. 1324/1324 tests green (+3). Last R2B "must fix before release" items done.
-Next action: User decision — close v4.4 milestone now (Phases 1, 2, 3, 5, 6 shipped; 4 deferred; 7, 8 are P2 tail) OR continue to Phase 7/8 P2 work.
-Resume file: `.paul/phases/v44-06-modal-state/v44-06-SUMMARY.md`
+Last session: 2026-04-15 — v4.4 milestone CLOSED. Band-onboarding UX gate is CLEAR.
+Stopped at: 5 phases shipped (1, 2, 3, 5, 6), 3 deferred to v4.5 (4, 7, 8). Git tag v4.4 created. 1324/1324 tests green. All P0/P1 audit findings + all R2B "must fix before release" items closed.
+Next action: `/paul:discuss-milestone` (or `/paul:milestone`) to define v4.5 scope. Likely carry-over: Phase 4 file-size refactor, Phase 7 type-safety tail, Phase 8 perf tail, plus band-onboarding feedback.
+Resume file: `.paul/MILESTONES.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)

@@ -25,6 +25,46 @@ Completed milestone log for this project.
 | v3.3 Live Mode Activation | 2026-04-04 | absorbed | absorbed into v3.4 |
 | v3.4 Fixes & Live Mode Activation | 2026-04-04 | 1 session | 3 phases, 2 plans |
 | v4.0 Live Swap Redesign | 2026-04-04 | 1 session | 3 phases, 3 plans |
+| v4.4 Deferred Audit Sweep — Architectural Polish | 2026-04-15 | 1 session | 5 phases shipped (3 deferred to v4.5), 5 plans |
+
+---
+
+## ✅ v4.4 Deferred Audit Sweep — Architectural Polish
+
+**Completed:** 2026-04-15
+**Duration:** 1 session
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases shipped | 5 of 8 (Phase 4 deferred P2; Phases 7+8 deferred to v4.5) |
+| Plans | 5 |
+| Files modified | ~30 |
+| Tests added | +37 (1287 → 1324) |
+| Commits | ~24 (5 phase summaries + atomic task commits) |
+
+### Key Accomplishments
+
+- **Phase 1 — Data-layer atomicity**: scheduling assign/decline transactions (DL-001/002/003/012/013/014) consolidated; eliminated split-write races
+- **Phase 2 — Denormalization reconciliation**: user-rename + setlist-rename fan-out (DL-010) so musicianName/userName never goes stale on assignments
+- **Phase 3 — Client async safety**: 11 AbortController sites + 3 stale-closure refs + PDFViewer retry cap (3) + 5-test regression suite
+- **Phase 5 — Observability**: request-ID end-to-end via AsyncLocalStorage; chat SSE meta/heartbeat/done frames; api-client surfaces server requestId on errors (closes L-001 + S-004)
+- **Phase 6 — Modal state hygiene**: EditDetails/NamePrompt re-seed on open; UserRow role-confirm reset; CollapsibleSection localStorage opt-in (storageKey); SwapPicker selection/query reset (closes UX-001/002/011/015/018 — last R2B "must fix before release" items)
+- **Band-onboarding UX gate cleared**: All P0/P1 audit findings closed; app ready for first-band rollout
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| Phases 4, 7, 8 deferred to v4.5 (P2 cosmetic vs. real user feedback) | Milestone close | Ship now, polish post-onboarding |
+| AsyncLocalStorage for request-ID propagation (no manual plumbing) | Phase 5 | Logger auto-tags every call within a request scope |
+| globalThis.__requestIdGetter__ resolver instead of static import | Phase 5 | Prevents `node:async_hooks` leaking into client bundle |
+| Chat SSE: meta/heartbeat/done frames are additive (assistant token format byte-identical) | Phase 5 | ChatPanel parser unchanged; existing tests pass unmodified |
+| CollapsibleSection localStorage opt-in via storageKey prop | Phase 6 | Backward compatible; no surprise persistence |
+| EditDetails re-seed deps narrowed to [isOpen] only | Phase 6 | Prior implementation clobbered in-progress edits on parent re-render |
+| ref-stabilise onDismiss/onClose to prevent stale closures (TempoFlash, PDFOverlay) | Phase 3 | Latest callback fires, not the one captured at mount |
+| PDFViewer retry cap = 3 attempts (terminal error on exhaustion) | Phase 3 | Prevents infinite thrash on broken charts |
 
 ---
 
