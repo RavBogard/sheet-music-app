@@ -88,7 +88,8 @@ export function MobileTabBar(props: AppNavigationProps) {
     // Focus input when search popover opens
     useEffect(() => {
         if (searchOpen) {
-            setTimeout(() => inputRef.current?.focus(), 100)
+            const t = setTimeout(() => inputRef.current?.focus(), 100)
+            return () => clearTimeout(t)
         } else {
             setSearchQuery("")
         }

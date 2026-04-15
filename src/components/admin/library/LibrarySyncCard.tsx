@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { apiFetch } from "@/lib/api-client"
 import { clearLibraryCache, broadcastCacheInvalidation } from "@/lib/library-cache"
 import { SyncStats } from "@/lib/sync-engine"
@@ -12,22 +12,36 @@ import { Repeat, CheckCircle } from "lucide-react"
 export function LibrarySyncCard() {
     const [syncing, setSyncing] = useState(false)
     const [lastStats, setLastStats] = useState<SyncStats | null>(null)
+    const controllerRef = useRef<AbortController | null>(null)
+
+    // Abort any in-flight sync when the card unmounts.
+    useEffect(() => {
+        return () => { controllerRef.current?.abort() }
+    }, [])
 
     const handleSync = async () => {
         setSyncing(true)
         setLastStats(null)
+        controllerRef.current?.abort()
+        const controller = new AbortController()
+        controllerRef.current = controller
         try {
-            const res = await apiFetch("/api/library/sync", { method: "POST" })
+            const res = await apiFetch("/api/library/sync", { method: "POST", signal: controller.signal, timeout: 0 })
+            if (controller.signal.aborted) return
             if (!res.ok) throw new Error(await res.text())
-            setLastStats((await res.json()).stats)
+            const json = await res.json()
+            if (controller.signal.aborted) return
+            setLastStats(json.stats)
             // Invalidate local cache so next library load fetches fresh data
             await clearLibraryCache()
+            if (controller.signal.aborted) return
             broadcastCacheInvalidation()
             toast.success("Library sync complete!")
         } catch (e: unknown) {
+            if ((e as Error).name === 'AbortError') return
             toast.error("Sync failed: " + (e instanceof Error ? e.message : "Unknown"))
         } finally {
-            setSyncing(false)
+            if (!controller.signal.aborted) setSyncing(false)
         }
     }
 

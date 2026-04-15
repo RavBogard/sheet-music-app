@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
@@ -44,6 +44,18 @@ export function SoundSystemSection() {
     const [generatingCode, setGeneratingCode] = useState(false)
 
     const configRef = useMemo(() => doc(db, "config", "monitor"), [])
+    const scanControllerRef = useRef<AbortController | null>(null)
+    const setupCodeControllerRef = useRef<AbortController | null>(null)
+    const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Cancel all in-flight network and pending timers on unmount.
+    useEffect(() => {
+        return () => {
+            scanControllerRef.current?.abort()
+            setupCodeControllerRef.current?.abort()
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+        }
+    }, [])
     const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef)
 
     useEffect(() => {
@@ -101,46 +113,69 @@ export function SoundSystemSection() {
         const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
         const apiProto = isSecure ? "https" : "http"
 
+        // Compose a fresh unmount controller with the 8s timeout so either triggers abort.
+        scanControllerRef.current?.abort()
+        const unmountController = new AbortController()
+        scanControllerRef.current = unmountController
+        const timeoutSignal = AbortSignal.timeout(8000)
+        const signal = AbortSignal.any
+            ? AbortSignal.any([unmountController.signal, timeoutSignal])
+            : unmountController.signal
+
         try {
-            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal: AbortSignal.timeout(8000) })
+            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal })
+            if (unmountController.signal.aborted) return
             const data = await res.json()
+            if (unmountController.signal.aborted) return
             if (data.found) {
                 setX32Address(data.address)
                 setScanResult(`Found ${data.name} (${data.model}) at ${data.address}`)
             } else {
                 setScanResult("No X32 found on the network")
             }
-        } catch {
+        } catch (e) {
+            if ((e as Error).name === 'AbortError' && unmountController.signal.aborted) return
             setScanResult("Could not reach bridge server. If it's running, you may need to accept its local security certificate.")
             if (isSecure) {
                 setTrustUrl(`${apiProto}://${wsUrl.hostname}:${apiPort}/trust`)
             }
-        } finally { setScanning(false) }
+        } finally {
+            if (!unmountController.signal.aborted) setScanning(false)
+        }
     }, [bridgeUrl])
 
     const handleGenerateSetupCode = useCallback(async () => {
         setGeneratingCode(true)
+        setupCodeControllerRef.current?.abort()
+        const controller = new AbortController()
+        setupCodeControllerRef.current = controller
         try {
             const { auth: firebaseAuth } = await import("@/lib/firebase")
+            if (controller.signal.aborted) return
             const user = firebaseAuth.currentUser
             if (!user) throw new Error("Not signed in")
             const token = await user.getIdToken()
+            if (controller.signal.aborted) return
             const res = await fetch("/api/bridge/setup-code", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
+                signal: controller.signal,
             })
+            if (controller.signal.aborted) return
             if (!res.ok) {
                 const data = await res.json()
                 throw new Error(data.error || "Failed to generate code")
             }
             const { code, expiresAt } = await res.json()
+            if (controller.signal.aborted) return
             setSetupCode(code)
             setSetupCodeExpiry(expiresAt)
             toast.success("Setup code generated")
         } catch (err) {
+            if ((err as Error).name === 'AbortError') return
             toast.error(err instanceof Error ? err.message : "Failed to generate setup code")
         } finally {
-            setGeneratingCode(false)
+            if (!controller.signal.aborted) setGeneratingCode(false)
         }
     }, [])
 
@@ -159,7 +194,8 @@ export function SoundSystemSection() {
             else { await setDoc(ref, { ...parsed, busAssignments: {} }) }
             setMonitorSaved(true)
             toast.success("Monitor config saved")
-            setTimeout(() => setMonitorSaved(false), 2000)
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+            savedTimerRef.current = setTimeout(() => setMonitorSaved(false), 2000)
         } catch (err) {
             logger.error("Failed to save:", err)
             toast.error("Failed to save monitor config")

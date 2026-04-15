@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,16 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const [success, setSuccess] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const dropZoneRef = useRef<HTMLDivElement>(null)
+    const abortControllerRef = useRef<AbortController | null>(null)
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Cancel in-flight upload and any pending close-timer on unmount.
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort()
+            if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+        }
+    }, [])
 
     const reset = useCallback(() => {
         setFile(null)
@@ -89,6 +99,10 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
         if (!file || !user) return
 
         setUploading(true)
+        // Replace any stale controller from a previous attempt.
+        abortControllerRef.current?.abort()
+        const controller = new AbortController()
+        abortControllerRef.current = controller
 
         try {
             const formData = new FormData()
@@ -101,7 +115,10 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             const res = await apiFetch('/api/library/upload', {
                 method: 'POST',
                 body: formData,
+                signal: controller.signal,
             })
+
+            if (controller.signal.aborted) return
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({ error: 'Upload failed' }))
@@ -109,19 +126,22 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             }
 
             const data = await res.json()
+            if (controller.signal.aborted) return
             setSuccess(true)
             toast.success(data.message || 'File uploaded successfully')
 
             // Notify parent
             onUploadComplete?.(data.fileId, data.title)
 
-            // Close after a moment
-            setTimeout(() => {
+            // Close after a moment — track timer so unmount can clear it.
+            if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+            closeTimerRef.current = setTimeout(() => {
                 setOpen(false)
                 reset()
             }, 1500)
 
         } catch (err) {
+            if ((err as Error).name === 'AbortError') return
             toast.error(err instanceof Error ? err.message : 'Upload failed')
             setUploading(false)
         }

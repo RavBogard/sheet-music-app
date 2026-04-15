@@ -175,6 +175,7 @@ export function PDFOverlay({
         if (nextFiles.length === 0) return
 
         // Delay prefetching slightly so we don't steal bandwidth from the current PDF
+        const controller = new AbortController()
         const prefetchTimer = setTimeout(() => {
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(() => doPrefetch(nextFiles))
@@ -184,23 +185,30 @@ export function PDFOverlay({
         }, 1000)
 
         const doPrefetch = async (fileIds: string[]) => {
+            if (controller.signal.aborted) return
             const { hasFile, putFile } = await import("@/lib/offline-idb")
             for (const id of fileIds) {
+                if (controller.signal.aborted) return
                 if (prefetchedRef.current.has(id)) continue
                 prefetchedRef.current.add(id)
                 try {
                     if (await hasFile(id)) continue
-                    const res = await fetch(`/api/drive/file/${id}`)
+                    const res = await fetch(`/api/drive/file/${id}`, { signal: controller.signal })
                     if (!res.ok) { prefetchedRef.current.delete(id); continue }
                     const blob = await res.blob()
+                    if (controller.signal.aborted) return
                     if (blob && blob.size > 0) await putFile(id, blob)
-                } catch {
+                } catch (e) {
+                    if ((e as Error).name === 'AbortError') return
                     prefetchedRef.current.delete(id)
                 }
             }
         }
 
-        return () => clearTimeout(prefetchTimer)
+        return () => {
+            clearTimeout(prefetchTimer)
+            controller.abort()
+        }
     }, [queueIndex])
 
     // Track menu open state to keep toolbar visible
