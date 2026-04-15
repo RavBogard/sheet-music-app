@@ -1,7 +1,9 @@
 {
-  "version": "2.11.9",
-  "commit": "ee71218",
+  "version": "2.11.10",
+  "commit": "b1f6aab",
   "branch": "master",
   "buildDate": "4/14/2026",
-  "changelog": []
+  "changelog": [
+    "2.11.10 - fix: batch 2 — JSON.parse crashes, silent pref save, UX error toasts"
+  ]
 }
