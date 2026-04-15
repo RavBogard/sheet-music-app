@@ -14,6 +14,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, verifyIdToken } from "@/lib/firebase-admin"
 import { DecodedIdToken } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
+import {
+    generateRequestId,
+    requestIdStorage,
+    validateInboundRequestId,
+} from "@/lib/request-id"
 
 export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
@@ -139,4 +144,32 @@ export async function withAuth(
         logger.error("Auth middleware error:", error)
         return NextResponse.json({ error: "Authentication failed" }, { status: 500 })
     }
+}
+
+/**
+ * Request-ID wrapper for routes that don't use `createApiHandler` (e.g., the
+ * chat SSE route). Additive — preserves any existing handler wiring. Runs the
+ * handler inside the AsyncLocalStorage request-id scope and stamps the
+ * returned response with the `x-request-id` header.
+ *
+ * Usage:
+ *   export const POST = (req: NextRequest) => wrapWithRequestId(req, async (rid) => {
+ *     // ...build streaming response...
+ *   })
+ */
+export async function wrapWithRequestId(
+    req: NextRequest | Request,
+    handler: (requestId: string) => Promise<NextResponse | Response> | NextResponse | Response,
+): Promise<NextResponse | Response> {
+    const inbound = validateInboundRequestId(req.headers.get("x-request-id"))
+    const requestId = inbound ?? generateRequestId()
+    return requestIdStorage.run({ requestId }, async () => {
+        const response = await handler(requestId)
+        try {
+            response.headers.set("x-request-id", requestId)
+        } catch {
+            // Some Response objects have immutable headers — best-effort only.
+        }
+        return response
+    })
 }
