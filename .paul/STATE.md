@@ -15,9 +15,10 @@ Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
 Plan: 06-01 complete (S05 schema + S06 wontfix shipped + human-verified)
-Status: UNIFY complete — 06-01 closed
+Status: Auth incident triage done — both admin and musician sign-in working on prod
 Open P1 items remaining in Phase 6: B03-B06 (bundle as 06-02); S04 (design call needed → 06-03)
-Last activity: 2026-04-15 — S05 shipped; S06 documented; monitor UI verified on prod
+Queued: Plan 09-02 (server-minted session-role companion cookie) — replaces tonight's proxy hotfix with the principled fix
+Last activity: 2026-04-15 — Auth firefighting: setlists subscription pre-auth gate (c7dff08), proxy role-redirect relax (945478b, patch), brief signInWithRedirect attempt then revert. Both admin + musician verified working on prod.
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -35,7 +36,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [06-01 closed; S05 shipped, S06 wontfix documented]
+  ✓        ✓        ✓     [06-01 closed; auth incident resolved; 09-02 plan queued]
 ```
 
 ## How to resume
@@ -134,10 +135,19 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 (06-01 closed — S05 monitor rule + S06 wontfix)
-Stopped at: Phase 6 plan 1 of ~3 complete
-Next action: `/paul:plan` 06-02 (bugs B03-B06: monitor debounce race, loadLibraryMeta closure, DashboardClient unsub, swapTrack tracks-array assertion) OR 06-03 (S04 QR design)
-Resume file: `.paul/phases/v43-06-p1-security-bugs/06-01-SUMMARY.md`
+Last session: 2026-04-15 (auth incident triage — admin + musician both working again on prod)
+Stopped at: Sign-in flow stable on signInWithPopup. Plan 09-02 written and queued for principled session-cookie fix.
+Next action: Two reasonable paths — (a) `/paul:apply .paul/phases/v43-09-role-claim-sync/09-02-PLAN.md` to retire the proxy hotfix with the principled session-role cookie; OR (b) `/paul:plan` 06-02 for B03-B06 bug bundle. User's call — 09-02 is higher leverage (closes a hotfix); 06-02 is more closing-out value (clears the audit P1s).
+Resume file: `.paul/phases/v43-09-role-claim-sync/09-02-PLAN.md`
+
+Tonight's auth-incident commit chain (for context on resume):
+- c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
+- 945478b hotfix(proxy): relax role-less redirect — kept (patch; supersede via Plan 09-02)
+- 2fb2db6 fix(auth): post-popup token+cookie prime + window.location.replace — superseded by d3d0466
+- d3d0466 fix(auth): switch to signInWithRedirect — REVERTED in 7446a08 (needs Firebase Hosting auth handler we don't have on Vercel)
+- 7446a08 revert: back to signInWithPopup with original simple body — current state on prod, both admin + musician verified working
+
+Net code state: signInWithPopup (vanilla), proxy role-redirect relaxed, setlists subscription gated on authUser.uid. Plan 09-02 will replace the proxy patch with a server-signed companion cookie.
 
 ## v4.3 Phase Progress (6 of ~10 P0 closed)
 - ✓ Phase 1 (audit — 83 findings)
