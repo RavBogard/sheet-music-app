@@ -6,6 +6,7 @@ import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingCancellationSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
+import { formatEventDate } from "@/lib/firestore-helpers"
 
 const unassignSchema = z.object({
     assignmentId: z.string().min(1),
@@ -61,13 +62,10 @@ export const POST = createApiHandler(
         }
 
         const baseUrl = BASE_URL
-        const eventDateStr = assignment.eventDate
-            ? (typeof assignment.eventDate === 'string'
-                ? new Date(assignment.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-                : assignment.eventDate?.seconds
-                    ? new Date(assignment.eventDate.seconds * 1000).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-                    : 'TBD')
-            : 'TBD'
+        // v4.3 D05: route was handling string + {seconds} shapes but not the
+        // native Timestamp from server-side Admin SDK reads. formatEventDate
+        // already handles all three shapes uniformly.
+        const eventDateStr = formatEventDate(assignment.eventDate) ?? 'TBD'
 
         // Send cancellation email (fire-and-forget)
         if (emailEnabled && assignment.musicianEmail) {
