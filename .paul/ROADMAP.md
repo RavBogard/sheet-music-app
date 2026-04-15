@@ -1,9 +1,15 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v4.4 — TBD (awaiting scope)**
+Status: ⏳ Pending
+Goal: Band onboarding blockers + carry-over P1 polish (D06, D07, U03–U08) + perf/dead-code sweep (P01–P05, C01–C04).
+
+## Previous Milestone
 **v4.3 Deep Audit Remediation**
-Status: 🚧 In Progress
-Phases: 5 of 9 complete (P0s all shipped; P1 work + claim-sync remain)
+Status: ✅ Complete
+Completed: 2026-04-15
+Phases: 10 (original 9 + Phase 10 auth deep-dive added mid-cycle)
 Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 findings) + the role-claim-sync latent bug surfaced during 04-03 rollout before the band onboards.
 
 | Phase | Name | Plans | Status | Completed |
@@ -13,19 +19,18 @@ Goal: Close the P0/P1 gaps surfaced by the v4.3 Phase 1 recursive audit (83 find
 | 3 | Bridge Credentials Design (S02 — CRIT-003) | 2/2 | ✅ Complete | 2026-04-14 |
 | 4 | P0 Data Integrity (D01 orphan cascade, D02 .passthrough, D03 assign race) | 3/3 | ✅ Complete | 2026-04-14 |
 | 5 | P0 Bugs + UX (B01 silent catches, B02 alert-store, U01 touch, U02 keyboard) | 4/4 | ✅ Complete | 2026-04-14 |
-| 6 | P1 Security + Bugs (S04-S06, B03-B06) | TBD | Not started | - |
-| 7 | P1 Data + UX (D04-D07, U03-U08) | TBD | Not started | - |
-| 8 | Performance + Dead-Code Sweep (P01-P05, C01-C04) | TBD | Not started | - |
-| 9 | Role-Claim Sync (latent auth bug surfaced during 04-03) | 1/1 | ✅ Complete | 2026-04-14 |
-
-Carry-over items available:
-- Human smoke tests deferred from v4.2 (setlist creation paths, two-tab conflict, fresh-browser offline)
-- LOW-004 `leader → band_leader` Firestore data migration
-- Firebase remote `musician_availability` index deletion on next `firebase deploy`
+| 6 | P1 Security + Bugs (S04 QR role gate, S05 schema wontfix, S06 wontfix, B03 monitor race, B06 swapTrack guard; B04/B05 false positive on review) | 2/2 | ✅ Complete | 2026-04-15 |
+| 7 | P1 Data sweep (D05 eventDate shape; D04 auto-indexed, false positive) | 1/1 | ✅ Complete | 2026-04-15 |
+| 8 | Performance + Dead-Code Sweep (P01-P05, C01-C04) | 0/TBD | ⏭️ Deferred to v4.4 | - |
+| 9 | Role-Claim Sync (latent auth bug surfaced during 04-03) | 2/2 | ✅ Complete | 2026-04-15 |
+| 10 | Auth Deep-Dive Hardening (added mid-cycle) | 6/6 | ✅ Complete | 2026-04-15 |
 
 ### Phase 1: Recursive Audit ✓
 Deliverable: `.paul/phases/v43-01-recursive-research/FINDINGS.md`
 6 parallel deep-audit agents → 83 raw findings synthesized into 10 P0 + ~20 P1 + balance P2. Prioritized action list and phase split drafted.
+
+### Phase 10 (added mid-cycle): Auth Deep-Dive Hardening
+After a recurring `/setlists ↔ /login` regression surfaced the architectural fragility of the auth flow, ran a fresh 2-wave 4-agents-each recursive research pass (WAVE-1A/B/C/D + WAVE-2A/B/C/D) producing FINDINGS + FINDINGS-v2. Shipped 6 plans: 10-01 fail-fast env + initAdmin guards + bounce-cookie path, 10-02 cold-load race kill (router.refresh after cookie + cold-load mount refresh + login UX), 10-03 drift-repair module with 3× retry + `[drift]` telemetry, 10-04 restore Firestore isMember() gate on setlists, 10-05 Playwright smoke + CI job, 10-06 cross-tab sign-out via BroadcastChannel.
 
 ## Previous Milestone
 **v4.2 UX Polish & Band Onboarding**

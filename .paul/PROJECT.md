@@ -52,9 +52,20 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v4.3 — TBD (awaiting scope)**: band-onboarding bring-up + deferred smoke tests + carry-over items (CRIT-003, LOW-004).
+**v4.4 — TBD (awaiting scope)**: band onboarding blockers + carry-over P1 polish (D06 stale musicianName, D07 delete-user TOCTOU, U03–U08 UX nits) + perf/dead-code sweep (P01–P05, C01–C04). Deferred human smoke tests from v4.2 + LOW-004 data migration.
 
 ### Validated (Shipped this cycle)
+
+**v4.3 Deep Audit Remediation — 10 of 10 phases complete, 2026-04-15**
+- [x] v4.3 Phase 1: Recursive audit (83 findings synthesized into P0/P1/P2 action list) (2026-04-14)
+- [x] v4.3 Phase 2: P0 Security Triage — S01 chat prompt injection sanitization, S03 drive-file auth (2026-04-14)
+- [x] v4.3 Phase 3: Bridge Credentials Design — S02/CRIT-003 audit log + admin email on redemption (2026-04-14)
+- [x] v4.3 Phase 4: P0 Data Integrity — D01 orphan cascade server-side, D02 .passthrough schemas, D03 assign race (2026-04-14)
+- [x] v4.3 Phase 5: P0 Bugs + UX — B01 silent catches, B02 alert-store, U01 touch targets, U02 keyboard (2026-04-14)
+- [x] v4.3 Phase 6: P1 Security + Bugs — S04 QR role gate, S05 schema wontfix, B03 monitor-client disconnect race, B06 swapTrack array guard (B04/B05 confirmed false-positive on re-review) (2026-04-15)
+- [x] v4.3 Phase 7: P1 Data sweep — D05 eventDate shape in unassign (D04 found to be auto-indexed by Firestore, no change needed) (2026-04-15)
+- [x] v4.3 Phase 9: Role-Claim Sync — self-service sync-claims endpoint + client drift handler + server-signed __session_role companion cookie retiring the 945478b proxy hotfix (2026-04-15)
+- [x] v4.3 Phase 10: Auth Deep-Dive Hardening (added mid-cycle) — fail-fast env + initAdmin guards + armed loop-breaker + cold-load race kill + drift-repair module with 3× retry + restored Firestore isMember() gate + Playwright CI + cross-tab sign-out (2026-04-15)
 
 **v4.2 UX Polish & Band Onboarding — 8 of 8 phases complete, 2026-04-14**
 - [x] v4.2 Phase 1: Recursive research — 53+ findings, bugs/gaps mapped (2026-04-13)

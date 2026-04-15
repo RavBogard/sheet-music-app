@@ -2,25 +2,18 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-04-04)
+See: .paul/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v4.2 — UX polish + band-onboarding hardening (band onboards ~1 month out)
+**Current focus:** v4.3 complete; v4.4 pending scope
 
 ## Current Position
 
-Milestone: v4.3 Deep Audit Remediation
-Phase 2 (P0 Security Triage) — ✅ Complete
-Phase 3 (Bridge Credentials Design) — ✅ Complete
-Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
-Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
-Phase 9 (Role-claim sync) — ✅ Complete (2/2: 09-01 sync-claims, 09-02 signed companion cookie)
-Phase 10 (Auth deep-dive hardening) — ✅ ALL 6 PLANS SHIPPED (10-01 through 10-06)
-Phase 6 (P1 security/bugs) — ✅ 06-02 bundle shipped: B03 + B06 + S04 closed (B04/B05 false positives on review)
-Plan: 06-02 complete
-Status: Suite 1270/1270; all v4.3 P0 + P1 audit findings closed; milestone ready for end-of-milestone smoke test
-Open items: v4.3 milestone audit/close; v4.4 planning
-Last activity: 2026-04-15 — autonomous burst: P10-05 Playwright CI + P10-06 cross-tab sign-out + P6-02 B03/B06/S04 bundle (5 commits, 1270/1270 green)
+Milestone: v4.3 Deep Audit Remediation — ✅ CLOSED 2026-04-15
+All 10 phases shipped (Phases 1–7, 9, 10 complete; Phase 8 perf sweep deferred to v4.4).
+Status: Suite 1270/1270; Vercel + Firebase prod in sync; end-of-milestone smoke test pending at user's convenience
+Active: v4.4 — TBD (awaiting scope)
+Last activity: 2026-04-15 — milestone closed: sweep plan shipped D05 eventDate fix + ROADMAP/PROJECT updated, v4.3 archived as complete
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
