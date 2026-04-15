@@ -70,13 +70,20 @@ export async function proxy(request: NextRequest) {
             // Loop detected! Send to fallback page and clear the bounce cookie
             const fallbackUrl = new URL('/auth-error', request.url)
             const response = createNoCacheRedirect(fallbackUrl)
-            response.cookies.delete('auth_bounce_count')
+            response.cookies.set('auth_bounce_count', '', { maxAge: 0, path: '/' })
             return response
         }
 
-        // Increment bounce count and set a short expiry (10 seconds)
+        // Increment bounce count and set a short expiry (10 seconds).
+        // path:'/' is critical — without it the cookie defaults to the
+        // current request path so the counter can't accumulate across
+        // /setlists→/login→/manage bounces and the escape hatch never
+        // fires. (v4.3 P10-01.)
         const response = createNoCacheRedirect(new URL(targetPath, request.url))
-        response.cookies.set('auth_bounce_count', (bounceCount + 1).toString(), { maxAge: 10 })
+        response.cookies.set('auth_bounce_count', (bounceCount + 1).toString(), {
+            maxAge: 10,
+            path: '/',
+        })
         return response
     }
 
@@ -132,7 +139,7 @@ export async function proxy(request: NextRequest) {
     // Clear the bounce cookie on successful load of any non-redirected page
     const response = NextResponse.next()
     if (request.cookies.has('auth_bounce_count')) {
-        response.cookies.delete('auth_bounce_count')
+        response.cookies.set('auth_bounce_count', '', { maxAge: 0, path: '/' })
     }
     return response
 }

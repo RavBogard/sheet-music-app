@@ -78,4 +78,29 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         // In jsdom environment with Next.js polyfills, a NextResponse.rewrite() adds an x-middleware-rewrite header
         expect(resAdmin.headers.get('x-middleware-rewrite')).toBe('http://localhost/unauthorized')
     })
+
+    // v4.3 P10-01 — the bounce-count cookie must use path:'/' so the
+    // counter accumulates across different target paths. Without it,
+    // the >3-bounce → /auth-error escape hatch never fires.
+    it('bounce counter accumulates across paths and trips /auth-error once >3', async () => {
+        // Simulate a loop: unauthenticated user keeps getting bounced to /login.
+        // Carry the cookie forward manually to mimic the browser. Threshold is
+        // `bounceCount > 3`, so the 5th request (arriving with cookie=4) lands on /auth-error.
+        let bounce = '0'
+        const paths = ['/setlists', '/library', '/manage', '/setlists', '/library']
+        let lastLocation: string | null = null
+        for (let i = 0; i < paths.length; i++) {
+            const req = makeReq(paths[i], { auth_bounce_count: bounce })
+            const res = await proxy(req)
+            lastLocation = res.headers.get('location')
+            const setCookie = res.headers.get('set-cookie') || ''
+            const match = setCookie.match(/auth_bounce_count=([^;]+)/)
+            if (match) {
+                bounce = match[1]
+                // Every set-cookie must include Path=/ so the counter accumulates across paths
+                expect(setCookie).toMatch(/Path=\//)
+            }
+        }
+        expect(lastLocation).toBe('http://localhost/auth-error')
+    })
 })
