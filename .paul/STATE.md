@@ -15,11 +15,11 @@ Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
 Phase 9 (Role-claim sync) — ✅ Complete (2/2: 09-01 sync-claims, 09-02 signed companion cookie)
-Phase 10 (Auth deep-dive hardening) — In progress (1/5: 10-01 fail-fast env + guards + loop-breaker shipped, human-verified)
-Plan: 10-01 complete (env/config hardening; today's silent-degrade failure class closed)
-Status: Suite 1264/1264; Vercel prod deploy green; user confirmed working
-Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call (paused); P10-02 through P10-06 queued
-Last activity: 2026-04-15 — Plan 10-01 complete: 6 commits (env fail-fast, 24 initAdmin guards, bounce-cookie path fix, deploy checklist, CRON_SECRET hotfix)
+Phase 10 (Auth deep-dive hardening) — In progress (2/5: 10-01 env hardening + 10-02 cold-load race killed, both human-verified)
+Plan: 10-02 complete (router.refresh after cookie sync; mount bypasses throttle; login button disable + error surface)
+Status: Suite 1264/1264; Vercel prod deploy green; user's /setlists ↔ /login loop should be non-reproducible
+Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call (paused); P10-03 (drift retries+telemetry), P10-04 (restore isMember setlist gate), P10-05 (Playwright smoke), P10-06 (cross-tab sign-out, optional)
+Last activity: 2026-04-15 — Plan 10-02 complete: 2 commits (router.refresh after cookie, login UX hardening)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -37,7 +37,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [10-01 closed; P10 phase underway; next plan 10-02 queued]
+  ✓        ✓        ✓     [10-02 closed; next plan 10-03 (drift retries + telemetry) queued]
 ```
 
 ## How to resume
@@ -136,10 +136,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 (P10-01 shipped + human-verified on prod — "works!")
-Stopped at: Auth env/config hardening complete. The cold-load race (`/setlists ↔ /login` symptom) is NOT yet fixed — that is P10-02's explicit scope.
-Next action: `/paul:plan` for P10-02 (cold-load race: await cookie before loading=false + router.refresh after sign-in + cold-load session refresh). This is the direct fix for the remaining user-visible symptom.
-Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md` (§2 lists P10-02's intended scope)
+Last session: 2026-04-15 (P10-02 shipped + human-verified on prod — "approved")
+Stopped at: Cold-load + sign-in race eliminated. User's /setlists ↔ /login symptom should no longer reproduce. Auth surface is substantially hardened.
+Next action: User's call — `/paul:plan` for P10-03 (drift chain awaited + retries + telemetry), or jump to P10-04 (restore isMember rule), P10-05 (Playwright smoke), or pivot to non-auth work (v4.3 Phase 6 P1 bugs B03–B06).
+Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md` (§2 lists the remaining P10 slate)
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
