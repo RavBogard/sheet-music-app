@@ -229,6 +229,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid])
 
+    // v4.3 P10-06: cross-tab sign-out. If another tab signs out, reload this
+    // tab so it doesn't keep showing stale authenticated UI until the next
+    // user interaction.
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return
+        let channel: BroadcastChannel | null = null
+        try {
+            channel = new BroadcastChannel('auth-signout')
+        } catch {
+            return
+        }
+        const onMessage = () => {
+            // Keep it simple: mirror the sign-out tab's hard-reload behavior.
+            // The middleware on next request sees the cleared cookies and
+            // routes to /login, matching the source tab's end state.
+            localStorage.removeItem('crc_cached_user')
+            localStorage.removeItem('crc_session_refreshed_at')
+            window.location.reload()
+        }
+        channel.addEventListener('message', onMessage)
+        return () => {
+            channel?.removeEventListener('message', onMessage)
+            channel?.close()
+        }
+    }, [])
+
     // Re-register push token if user previously opted in (once per session).
     // Separated from the auth listener to keep concerns clean.
     useEffect(() => {
@@ -263,12 +289,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Add a smooth loading overlay to mask the hard reload
             if (typeof document !== 'undefined') {
                 document.body.insertAdjacentHTML(
-                    'beforeend', 
+                    'beforeend',
                     '<div id="logout-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(var(--background),0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;"><div style="width:32px;height:32px;border:3px solid transparent;border-top-color:hsl(var(--primary));border-radius:50%;animation:spin 1s linear infinite;"></div><p style="color:hsl(var(--foreground));font-size:14px;font-weight:500;">Logging out securely...</p></div>'
                 )
             }
             localStorage.removeItem('crc_cached_user')
             localStorage.removeItem('crc_session_refreshed_at')
+            // v4.3 P10-06: notify sibling tabs so they reload too instead of
+            // sitting on stale UI until the user interacts with them.
+            if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+                try {
+                    const channel = new BroadcastChannel('auth-signout')
+                    channel.postMessage({ at: Date.now() })
+                    channel.close()
+                } catch { /* unsupported browser — fall through */ }
+            }
             // Clear server session cookie
             await fetch("/api/auth/session", { method: "DELETE" }).catch(() => { })
             await firebaseSignOut(auth)
