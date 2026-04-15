@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
@@ -55,6 +55,14 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [pendingRole, setPendingRole] = useState<string | null>(null)
+
+    // v44-06 UX-011: if the parent refreshes and the user's role has changed
+    // (either via this confirmation succeeding or an out-of-band update),
+    // clear any stale pending-role confirmation so the row returns to idle
+    // and the select reflects the latest props.
+    useEffect(() => {
+        setPendingRole(null)
+    }, [user.role])
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'
