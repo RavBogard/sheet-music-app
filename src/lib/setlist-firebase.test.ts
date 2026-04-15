@@ -37,7 +37,7 @@ const {
 } = hoisted
 void _MockTimestamp; void _mockUpdateDoc; void _mockOnSnapshot
 
-vi.mock('./firebase', () => ({ db: {} }))
+vi.mock('./firebase', () => ({ db: {}, auth: { currentUser: null } }))
 vi.mock('firebase/firestore', () => ({
     collection: vi.fn((_db: unknown, path: string) => ({ path })),
     addDoc: (...args: unknown[]) => hoisted.mockAddDoc(...args),
@@ -118,6 +118,10 @@ describe('createSetlistService', () => {
         vi.clearAllMocks()
         hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
         hoisted.txUpdatePayloads.length = 0
+        // apiFetch (via deleteSetlist task cleanup) bypasses the real network
+        globalThis.fetch = vi.fn(async () =>
+            new Response(JSON.stringify({ ok: true }), { status: 200 }),
+        ) as unknown as typeof fetch
         service = createSetlistService('user123', 'Test User')
     })
 
@@ -158,14 +162,22 @@ describe('createSetlistService', () => {
     })
 
     describe('deleteSetlist', () => {
-        it('deletes the setlist document directly and attempts task cleanup', async () => {
+        it('delegates to /api/setlist/delete (server-side cascade via Admin SDK)', async () => {
+            const fetchSpy = vi.fn(async () =>
+                new Response(JSON.stringify({ ok: true }), { status: 200 }),
+            ) as unknown as typeof fetch
+            globalThis.fetch = fetchSpy
+
             await service.deleteSetlist('setlist-abc')
 
-            // Setlist doc is deleted directly (not via batch)
-            expect(mockDeleteDoc).toHaveBeenCalledTimes(1)
-            // Task cleanup is best-effort via batch (may fail due to Firestore rules)
-            expect(mockBatchDelete).toHaveBeenCalledTimes(1) // 1 mocked task
-            expect(mockBatchCommit).toHaveBeenCalledTimes(1)
+            // D01: deletion is fully server-side now — client never touches Firestore directly
+            expect(fetchSpy).toHaveBeenCalledTimes(1)
+            const [url, init] = (fetchSpy as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0]
+            expect(url).toContain('/api/setlist/delete')
+            expect((init as RequestInit).method).toBe('POST')
+            expect((init as RequestInit).body).toBe(JSON.stringify({ setlistId: 'setlist-abc' }))
+            expect(mockDeleteDoc).not.toHaveBeenCalled()
+            expect(mockBatchDelete).not.toHaveBeenCalled()
         })
     })
 

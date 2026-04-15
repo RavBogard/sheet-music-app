@@ -164,6 +164,24 @@ vi.mock("@/components/audio/AudioPlayer", () => ({
 vi.mock("@/components/ui/scroll-area", () => ({
     ScrollArea: ({ children, ...props }: { children: React.ReactNode }) => <div {...props}>{children}</div>,
 }))
+// Mock add-to-setlist hook + sheet — they pull setlist-firebase which needs db
+vi.mock("@/hooks/use-add-to-setlist", () => ({
+    useAddToSetlist: () => ({
+        canAddToSetlist: false,
+        openForSongs: vi.fn(),
+        isOpen: false,
+        setIsOpen: vi.fn(),
+        editableSetlists: [],
+        loading: false,
+        searchQuery: "",
+        setSearchQuery: vi.fn(),
+        addToSetlist: vi.fn(),
+        pendingSongs: [],
+    }),
+}))
+vi.mock("../AddToSetlistSheet", () => ({
+    AddToSetlistSheet: () => <div data-testid="add-to-setlist-sheet" />,
+}))
 
 import { SongChartsLibrary } from "../SongChartsLibrary"
 
@@ -198,9 +216,11 @@ describe("SongChartsLibrary", () => {
         expect(screen.getByTestId("file-row-chart-2")).toBeDefined()
     })
 
-    it("shows file count in header", () => {
+    it("shows file count in tabs", () => {
         render(<SongChartsLibrary />)
-        expect(screen.getByText("2 charts")).toBeDefined()
+        // Component renders counts inside the CRC Charts / Shireinu tabs
+        expect(screen.getByText(/CRC Charts \(\d+\)/)).toBeDefined()
+        expect(screen.getByText(/Shireinu \(\d+\)/)).toBeDefined()
     })
 
     it("shows audio tab only when audio files exist", () => {
