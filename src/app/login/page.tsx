@@ -24,30 +24,36 @@ export default function LoginPage() {
     const congregation = useCongregation()
     const router = useRouter()
     const [signInState, setSignInState] = useState<"idle" | "loading">("idle")
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!loading && user) {
             router.replace("/setlists")
         }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, loading, router])
 
+    // v4.3 P10-02: when loading flips back to false without a user populated,
+    // the sign-in attempt failed or was cancelled. Reset UI + surface error.
+    useEffect(() => {
+        if (signInState === "loading" && !loading && !user) {
+            setSignInState("idle")
+            setError(
+                "Sign-in didn't complete. Check your connection and try again. If this keeps happening, clear cookies for this site and retry.",
+            )
+        }
+    }, [signInState, loading, user])
+
     const handleGoogleSignIn = async () => {
+        setError(null)
         setSignInState("loading")
         try {
             await signIn()
-            // If the user cancelled the popup, signIn resolves but user won't be set.
-            // We need to check if user is populated or loading is still true.
-            // Actually, onAuthStateChanged will handle the redirect via useEffect.
-            // If the popup was closed, user remains null, so we reset state if still idle.
-            // But we can just rely on the user state from context.
-            // Reset to idle so they can try again if it didn't trigger a redirect.
-            setTimeout(() => {
-                setSignInState((prev) => prev === "loading" ? "idle" : prev)
-            }, 1000)
+            // onAuthStateChanged drives the rest (useEffect above redirects to /setlists).
+            // The follow-up effect handles popup-cancelled / session-POST-failed cases.
         } catch {
             setSignInState("idle")
+            setError("Sign-in failed. Please try again.")
         }
     }
 
@@ -90,15 +96,19 @@ export default function LoginPage() {
                         size="lg"
                         className="w-full bg-foreground text-background hover:opacity-90 transition-opacity h-12 text-base font-medium rounded-xl"
                         onClick={handleGoogleSignIn}
-                        disabled={signInState !== "idle"}
+                        disabled={signInState !== "idle" || loading}
                     >
-                        {signInState !== "idle" ? (
+                        {signInState !== "idle" || loading ? (
                             <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                         ) : (
                             <GoogleIcon className="h-5 w-5 mr-3" />
                         )}
-                        {signInState === "loading" ? "Signing in..." : "Sign in with Google"}
+                        {signInState === "loading" || loading ? "Signing in..." : "Sign in with Google"}
                     </Button>
+
+                    {error && (
+                        <p className="text-xs text-destructive" role="alert">{error}</p>
+                    )}
 
                     <p className="text-xs text-muted-foreground/60">
                         Only authorized accounts can access the full library.
