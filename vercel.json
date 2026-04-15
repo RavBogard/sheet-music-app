@@ -11,6 +11,10 @@
         {
             "path": "/api/cron/scheduling-reminder",
             "schedule": "0 10 * * *"
+        },
+        {
+            "path": "/api/cron/admin-consistency",
+            "schedule": "0 4 * * *"
         }
     ]
 }

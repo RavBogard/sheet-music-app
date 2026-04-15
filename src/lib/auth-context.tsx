@@ -186,6 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             unsubscribeAuth()
             if (unsubscribeProfile) unsubscribeProfile()
         }
+    // router is stable across renders (next/navigation); safe to omit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // Refresh session cookie when user returns to the app.

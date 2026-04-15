@@ -24,6 +24,16 @@ const eslintConfig = defineConfig([
       "react-hooks/exhaustive-deps": "warn",
     },
   },
+  {
+    // v4.3 C01 — API routes and server libs must use the `logger` helper
+    // instead of raw `console.*` so production Vercel logs stay structured
+    // and greppable. Test files and scripts/ are exempt.
+    files: ["src/app/api/**/*.ts", "src/lib/**/*.ts"],
+    ignores: ["src/lib/logger.ts", "**/__tests__/**", "**/*.test.ts"],
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

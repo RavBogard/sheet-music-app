@@ -37,6 +37,9 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
     const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
 
+    // Kept local (not @/lib/roles ROLE_LABELS) because this surface wants
+    // ALL-CAPS stencil styling baked in — can be swapped to a `uppercase`
+    // CSS util plus the shared label if that styling changes.
     const roleLabels: Record<string, string> = {
         admin: 'ADMIN',
         band_leader: 'BAND LEADER',

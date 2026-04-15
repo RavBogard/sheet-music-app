@@ -1,6 +1,7 @@
 "use client"
 
 import { UserProfile, UserRole, updateUserRole } from "@/lib/users-firebase"
+import { ROLE_LABELS } from "@/lib/roles"
 import { toDate } from "@/lib/firestore-helpers"
 import { notifyRoleChanged } from "@/lib/notification-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,13 +40,6 @@ const ROLE_HIERARCHY: Record<string, number> = {
     admin: 4,
 }
 
-const ROLE_LABELS: Record<string, string> = {
-    pending: 'Pending',
-    member: 'Member',
-    musician: 'Musician',
-    band_leader: 'Band Leader',
-    admin: 'Admin',
-}
 
 interface UserRowProps {
     user: UserProfile

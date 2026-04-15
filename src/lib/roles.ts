@@ -24,6 +24,20 @@
 
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending'
 
+/**
+ * User-facing labels for each role, including 'denied' which exists in
+ * the wider UserRole in @/types/models (used by admin screens) but not
+ * in the narrower role-hierarchy UserRole in this module.
+ */
+export const ROLE_LABELS: Record<string, string> = {
+    admin: 'Admin',
+    band_leader: 'Band Leader',
+    musician: 'Musician',
+    member: 'Member',
+    pending: 'Pending',
+    denied: 'Denied',
+}
+
 const ROLE_HIERARCHY: Record<string, number> = {
     admin: 100,
     band_leader: 80,
