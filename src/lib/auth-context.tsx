@@ -182,6 +182,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 } catch (err) {
                                     logger.warn("[sync-claims] token+cookie refresh failed", err)
                                 }
+
+                                // v4.3 P9-02: refresh the server-signed
+                                // companion cookie so the proxy's role gate
+                                // sees the Firestore role on the next nav.
+                                try {
+                                    const r = await apiFetch("/api/auth/refresh-session", {
+                                        method: "POST",
+                                    })
+                                    if (!r.ok) logger.warn("[refresh-session] failed", r.status)
+                                } catch (err) {
+                                    logger.warn("[refresh-session] threw", err)
+                                }
                             })
                             .catch((err) =>
                                 logger.warn("[sync-claims] getIdTokenResult failed", err),
