@@ -19,6 +19,7 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const beatOffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Check for reduced motion preference
     const [reducedMotion, setReducedMotion] = useState(false)
@@ -33,11 +34,13 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
         const intervalMs = 60000 / bpm
         intervalRef.current = setInterval(() => {
             setIsBeat(true)
-            setTimeout(() => setIsBeat(false), 100)
+            if (beatOffTimeoutRef.current) clearTimeout(beatOffTimeoutRef.current)
+            beatOffTimeoutRef.current = setTimeout(() => setIsBeat(false), 100)
         }, intervalMs)
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current)
+            if (beatOffTimeoutRef.current) clearTimeout(beatOffTimeoutRef.current)
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bpm])

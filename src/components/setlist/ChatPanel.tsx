@@ -97,6 +97,13 @@ export function ChatPanel() {
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter() // For navigation commands
+    const streamControllerRef = useRef<AbortController | null>(null)
+
+    // Abort any in-flight SSE stream when the panel unmounts so the reader
+    // rejects and we don't commit chunks to an unmounted component.
+    useEffect(() => {
+        return () => { streamControllerRef.current?.abort() }
+    }, [])
 
     const { pendingPrompt, clearPendingPrompt } = useChatStore()
 
@@ -132,6 +139,11 @@ export function ChatPanel() {
         setInput("")
         setLoading(true)
 
+        // Abort any previous in-flight stream before starting a new one.
+        streamControllerRef.current?.abort()
+        const controller = new AbortController()
+        streamControllerRef.current = controller
+
         try {
             // Send to AI API (now returns SSE stream)
             const res = await apiFetch('/api/chat', {
@@ -142,8 +154,12 @@ export function ChatPanel() {
                     setlistName: contextData.setlistName,
                     rabbi: contextData.rabbi,
                     libraryFiles: allFiles.map(f => ({ id: f.id, name: f.name }))
-                })
+                }),
+                signal: controller.signal,
+                timeout: 0,
             })
+
+            if (controller.signal.aborted) return
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}))
@@ -160,8 +176,13 @@ export function ChatPanel() {
             let sseBuffer = "" // M1 fix: buffer for SSE chunks split across TCP boundaries
 
             while (true) {
+                if (controller.signal.aborted) {
+                    try { await reader.cancel() } catch { /* already closed */ }
+                    return
+                }
                 const { done, value } = await reader.read()
                 if (done) break
+                if (controller.signal.aborted) return
 
                 sseBuffer += decoder.decode(value, { stream: true })
                 const lines = sseBuffer.split('\n')
@@ -227,10 +248,11 @@ export function ChatPanel() {
             }
 
         } catch (error: unknown) {
+            if ((error as Error).name === 'AbortError') return
             logger.error(error)
             addMessage({ role: 'assistant', content: `Error: ${error instanceof Error ? error.message : "I had trouble connecting."}` })
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
     }
 
