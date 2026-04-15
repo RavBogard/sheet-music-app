@@ -3,13 +3,13 @@
 ## Current Milestone
 **v4.4 Deferred Audit Sweep — Architectural Polish**
 Status: 🚧 In Progress
-Phases: 0 of 8 complete
+Phases: 1 of 8 complete
 Goal: Close the architectural debt surfaced by the v4.3 + v4.4 full-project audit (186 findings across 6 parallel agents) that couldn't be patched with targeted diffs. Band onboarding is ~2 weeks out; P0/P1 phases must land before the band touches the app.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 0 | Full-project audit (R1+R2, 186 findings, batches 1+2 shipped) | done | ✅ Complete | 2026-04-15 |
-| 1 | Data-layer atomicity — scheduling transactions (DL-001/002/012/013/015) | TBD | Not started | - |
+| 1 | Data-layer atomicity — scheduling transactions (DL-001/002/003/012/013/014) | 1/1 | ✅ Complete | 2026-04-15 |
 | 2 | Denormalization reconciliation — user-rename fan-out (DL-010) | TBD | Not started | - |
 | 3 | Client async safety — AbortController sweep (~11 sites from R2B) | TBD | Not started | - |
 | 4 | File-size refactor — 5 files >600 LOC | TBD | Not started | - |

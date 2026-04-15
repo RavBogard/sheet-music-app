@@ -10,11 +10,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: v4.4 Deferred Audit Sweep — Architectural Polish
-Phase: 1 of 8 (Data-layer atomicity)
-Plan: Not started
-Status: Ready to plan
-Previous: v4.3 fully closed + v4.4 Phase 0 full-project audit (186 findings surveyed, batches 1+2 shipped) — summary at `.paul/phases/v44-00-full-audit/SUMMARY.md`
-Last activity: 2026-04-15 — v4.4 milestone scaffolded; 8 phase dirs created; ROADMAP + STATE updated
+Phase: 2 of 8 — Ready to plan (Denormalization reconciliation, DL-010)
+Plan: v44-01-01 ✅ Complete (loop closed)
+Status: Phase 1 shipped; ready to plan Phase 2
+Previous: v4.4 Phase 1 closed (DL-001/002/003/012/013/014); SUMMARY at `.paul/phases/v44-01-data-atomicity/v44-01-SUMMARY.md`
+Last activity: 2026-04-15 — Phase 1 UNIFY complete, atomic commits 5e9ca1e..7276dc1 on origin/master
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [v4.4 scaffolded; ready to plan Phase 1 — data-layer atomicity]
+  ✓        ✓        ✓     [Loop complete — Phase 1 shipped to origin/master]
 ```
 
 ## How to resume
@@ -131,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — v4.4 milestone scaffolded from MILESTONE-CONTEXT (8 phases)
-Stopped at: v4.3 closed, v4.4 Phase 0 full-project audit shipped (batches 1+2), milestone structure created. Paused at context 79% for fresh session.
-Next action: `/paul:plan` for Phase 1 — data-layer atomicity. Scope: DL-001/002/012/013/015 (collapse scheduling assign + decline writes into single transactions). Source in `.paul/phases/v44-00-full-audit/R2A-data-layer.md`.
-Resume file: `.paul/phases/v44-00-full-audit/SUMMARY.md`
+Last session: 2026-04-15 — Phase 1 UNIFY complete; loop closed
+Stopped at: SUMMARY written, ROADMAP marked Phase 1 complete, 6 atomic commits pushed to origin/master (5e9ca1e..7276dc1). Vercel auto-deploying.
+Next action: `/paul:plan` for Phase 2 (Denormalization reconciliation, DL-010 — user-rename fan-out across scheduling_assignments).
+Resume file: `.paul/phases/v44-01-data-atomicity/v44-01-SUMMARY.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
