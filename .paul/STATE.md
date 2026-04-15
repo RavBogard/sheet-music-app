@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: v4.3 Deep Audit Remediation — ✅ CLOSED 2026-04-15
-All 10 phases shipped (Phases 1–7, 9, 10 complete; Phase 8 perf sweep deferred to v4.4).
-Status: Suite 1270/1270; Vercel + Firebase prod in sync; end-of-milestone smoke test pending at user's convenience
+Milestone: v4.3 Deep Audit Remediation — ✅ FULLY CLOSED 2026-04-15
+All 10 phases + audit tail shipped. EVERY P0/P1/P2 finding from the v4.3 audit is resolved or confirmed false-positive on review. Including: D06/D07 data hardening, U03-U08 UX/accessibility, P01/P03/P04/P05 perf optimizations, C01-C04 dead code + consistency cron + ROLE_LABELS promotion + archived migration scripts. LOW-004 leader-role migration verified 0 stragglers on prod.
+Status: Suite 1270/1270; lint clean; Vercel + Firebase prod in sync
 Active: v4.4 — TBD (awaiting scope)
-Last activity: 2026-04-15 — milestone closed: sweep plan shipped D05 eventDate fix + ROADMAP/PROJECT updated, v4.3 archived as complete
+Last activity: 2026-04-15 — zero-outstanding close: shipped D06/D07/U/P/C bundle (3 commits), swept leader-role prod, reviewed audit finding false-positives
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
