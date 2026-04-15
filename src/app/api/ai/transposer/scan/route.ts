@@ -97,7 +97,13 @@ export const POST = createApiHandler(
         });
 
         const responseText = result.response.text();
-        const chords = JSON.parse(responseText);
+        // v4.4 V-003: parse model output defensively
+        let chords: unknown
+        try {
+            chords = JSON.parse(responseText)
+        } catch {
+            chords = []
+        }
 
         return NextResponse.json({ chords });
     }

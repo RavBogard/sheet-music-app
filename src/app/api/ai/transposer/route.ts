@@ -107,7 +107,13 @@ export const POST = createApiHandler(
             cleanJson = cleanJson.substring(start, end + 1);
         }
 
-        const data = JSON.parse(cleanJson);
+        // v4.4 V-002: parse model output defensively
+        let data: unknown
+        try {
+            data = JSON.parse(cleanJson)
+        } catch {
+            return NextResponse.json({ results: [] })
+        }
 
         return NextResponse.json({ results: data });
     }

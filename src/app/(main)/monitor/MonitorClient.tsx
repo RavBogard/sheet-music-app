@@ -13,6 +13,8 @@ import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Loader2, Radio } from "lucide-react"
+import { logger } from "@/lib/logger"
+import { toast } from "sonner"
 
 export default function MonitorClient() {
     const { user, loading: authLoading, isAdmin } = useAuth()
@@ -69,14 +71,19 @@ export default function MonitorClient() {
             ? starredChannels.filter(c => c !== channelIndex)
             : [...starredChannels, channelIndex]
         setStarredChannels(next)
-        // Persist to Firestore using existing pinnedChannels field name
+        // Persist to Firestore using existing pinnedChannels field name.
+        // v4.4 E-005: was silent; surface failures so the user knows their
+        // starred channels won't survive a reload.
         try {
             await setDoc(
                 doc(db, "users", user.uid, "preferences", "monitor"),
                 { pinnedChannels: next },
                 { merge: true }
             )
-        } catch { /* ignore */ }
+        } catch (err) {
+            logger.warn("[MonitorClient] pinnedChannels save failed", err)
+            toast.error("Couldn't save starred channels — try again")
+        }
     }, [user, starredChannels, setStarredChannels])
 
     // Fader handlers -- own bus

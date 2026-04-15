@@ -75,8 +75,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
         }
 
-        const event = JSON.parse(body)
-        const eventType: string = event.type
+        // v4.4 V-005: webhook body may be malformed; don't crash the route
+        let event: { type?: string; data?: { email_id?: string } }
+        try {
+            event = JSON.parse(body)
+        } catch {
+            logger.warn("[Webhook] Invalid JSON body")
+            return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+        }
+        const eventType: string = event.type ?? ""
         const status = EVENT_STATUS_MAP[eventType]
 
         if (!status) {

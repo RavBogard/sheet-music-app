@@ -73,7 +73,15 @@ export const POST = createApiHandler(
             cleanJson = cleanJson.substring(start, end + 1)
         }
 
-        const chords = JSON.parse(cleanJson) as { text: string; x: number; y: number }[]
+        // v4.4 V-001: parse is user-influenced (Gemini output) — never trust shape.
+        let chords: { text: string; x: number; y: number }[]
+        try {
+            const parsed = JSON.parse(cleanJson)
+            chords = Array.isArray(parsed) ? parsed : []
+        } catch (err) {
+            logger.warn('[chord-validate] invalid JSON from model', err)
+            return NextResponse.json({ chords: [] })
+        }
 
         // Validate structure
         const validChords = chords.filter(c =>

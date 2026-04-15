@@ -86,7 +86,10 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             toast.success(`Updated ${user.displayName} to ${ROLE_LABELS[newRole] || newRole}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to update role")
+            // v4.4 U-001: surface the real reason so admins can act (permission
+            // denied? network? server error?).
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't update role: ${msg}`)
         } finally {
             setLoading(false)
         }
@@ -104,11 +107,16 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({ targetUserId: user.uid, soundEngineer: !user.soundEngineer }),
             })
-            if (!res.ok) throw new Error("Failed")
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data.error || `Request failed (${res.status})`)
+            }
             toast.success(`${user.displayName}: sound engineer ${user.soundEngineer ? 'removed' : 'enabled'}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to update sound engineer flag")
+            // v4.4 U-002: surface the real failure reason
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't update sound engineer flag: ${msg}`)
         } finally {
             setSoundEngLoading(false)
         }
@@ -140,7 +148,9 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             toast.success(`Removed ${user.displayName}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to remove user")
+            // v4.4 U-003: surface the real failure
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't remove user: ${msg}`)
         } finally {
             setDeleteLoading(false)
             setConfirmDelete(false)
