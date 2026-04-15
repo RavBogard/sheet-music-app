@@ -23,9 +23,15 @@ export const mockUsersSnap = {
     docs: [] as Array<{ id: string; data: () => Record<string, unknown> }>,
 }
 
-export const mockWhere = vi.fn(() => ({
-    get: vi.fn(() => mockUsersSnap),
-}))
+export const mockWhere: ReturnType<typeof vi.fn> = vi.fn(() => {
+    const chain = {
+        where: mockWhere,
+        orderBy: vi.fn(() => chain),
+        limit: vi.fn(() => chain),
+        get: vi.fn(() => mockUsersSnap),
+    }
+    return chain
+})
 
 export const mockUpdate = vi.fn()
 export const mockSet = vi.fn()
@@ -45,11 +51,16 @@ export const mockFirestore = {
     })),
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
         const transaction = {
-            // tx.get(ref) returns the shared mockDoc so transactional reads
-            // mirror what a docRef.get() would return in the same test setup.
-            // Callers that need the "collection query" shape can override
-            // per-test with `mockFirestore.runTransaction.mockImplementationOnce(...)`.
-            get: vi.fn(async () => mockDoc),
+            // tx.get(ref | query) returns a union-shaped snapshot: both
+            // DocumentSnapshot fields (exists/data/ref) AND QuerySnapshot
+            // fields (docs/empty), so callers needing either shape can read it.
+            get: vi.fn(async () => ({
+                exists: mockDoc.exists,
+                data: mockDoc.data,
+                ref: mockDoc.ref,
+                docs: mockUsersSnap.docs,
+                empty: mockUsersSnap.docs.length === 0,
+            })),
             set: mockSet,
             update: mockUpdate,
         }

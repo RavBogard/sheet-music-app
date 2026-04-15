@@ -235,17 +235,23 @@ describe('POST /api/scheduling/assign', () => {
         expect(setCall.autoConfirmed).toBe(true)
     })
 
-    it('skips duplicate assignment when musician already assigned', async () => {
+    it('skips duplicate assignment when musician already has an active assignment', async () => {
         mockAuth('band_leader')
-        existingAssignmentDocs = [{ id: 'existing-1', data: () => ({}) }]
+        existingAssignmentDocs = [{
+            id: 'existing-1',
+            data: () => ({ musicianUid: 'musician-1', status: 'pending' }),
+        }]
         const req = makeReq('/api/scheduling/assign', { method: 'POST', token: 'valid', body: validBody })
         const res = await POST(req)
         const json = await res.json()
 
         expect(json.success).toBe(true)
         expect(json.assigned).toBe(0)
-        // add should not be called for scheduling_assignments (only the duplicate check query ran)
-        expect(mockAdd).not.toHaveBeenCalled()
+        // transaction.set should NOT have been called for a new assignment
+        expect(mockSet).not.toHaveBeenCalled()
+        // Response should surface the skip as an error entry so UI can show it
+        expect(json.errors).toBeDefined()
+        expect(json.errors?.[0]).toMatch(/already has an active assignment/i)
     })
 
     it('sends email when email notifications enabled (default)', async () => {

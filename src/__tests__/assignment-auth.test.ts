@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { makeReq } from '@/__tests__/api-test-helpers'
-import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockUpdate, mockWhere } from '@/__tests__/mock-firebase-admin'
+import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockUpdate, mockUsersSnap, mockWhere } from '@/__tests__/mock-firebase-admin'
 
 vi.mock('@/lib/firebase-admin', () => firebaseAdminMock)
 vi.mock('@/lib/rate-limit', () => ({ checkRateLimit: vi.fn(() => null) }))
@@ -20,7 +20,7 @@ describe('POST /api/scheduling/assign', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
-        
+
         // Setup initial setlist doc mock inside the API route
         mockDoc.exists = true
         mockDoc.data = () => ({
@@ -32,6 +32,19 @@ describe('POST /api/scheduling/assign', () => {
             ],
             assignedUids: ['musician-1']
         })
+
+        // v4.4 DL-001: assign route now rebuilds setlist.musicians from the
+        // canonical scheduling_assignments snapshot read inside the tx. Seed
+        // an active assignment for musician-1 so they survive the rebuild.
+        mockUsersSnap.docs = [
+            { id: 'asn-musician-1', data: () => ({
+                musicianUid: 'musician-1',
+                musicianName: 'Alice',
+                musicianEmail: 'alice@test.com',
+                instrument: null,
+                status: 'confirmed',
+            }) },
+        ]
     })
 
     it('injects assignedUids array when appending new musicians to a setlist', async () => {
