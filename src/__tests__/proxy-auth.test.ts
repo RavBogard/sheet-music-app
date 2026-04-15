@@ -23,48 +23,48 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         return req
     }
 
-    it('allows public routes without authentication', () => {
+    it('allows public routes without authentication', async () => {
         const req = makeReq('/perform/setlist/123')
-        const res = proxy(req)
+        const res = await proxy(req)
         
         // A "NextResponse.next()" has no headers by default and a 200 status in edge mock
         expect(res.headers.get('location')).toBeNull()
     })
 
-    it('redirects unauthenticated users to /login for secure routes', () => {
+    it('redirects unauthenticated users to /login for secure routes', async () => {
         const req = makeReq('/setlists')
-        const res = proxy(req)
+        const res = await proxy(req)
         
         expect(res.headers.get('location')).toBe('http://localhost/login')
     })
 
-    it('blocks "pending" users from all secure routes except /', () => {
+    it('blocks "pending" users from all secure routes except /', async () => {
         const token = createSessionToken({ role: 'pending' })
         const req = makeReq('/setlists', { __session: token })
-        const res = proxy(req)
+        const res = await proxy(req)
         
         expect(res.headers.get('location')).toBe('http://localhost/')
     })
 
-    it('blocks "undefined" role users from all secure routes except / (Ghost User Bug)', () => {
+    it('blocks "undefined" role users from all secure routes except / (Ghost User Bug)', async () => {
         // A brand new user with no claims
-        const token = createSessionToken({ email: 'new@test.com' }) 
+        const token = createSessionToken({ email: 'new@test.com' })
         const req = makeReq('/setlists', { __session: token })
-        const res = proxy(req)
+        const res = await proxy(req)
         
         expect(res.headers.get('location')).toBe('http://localhost/')
     })
 
-    it('allows "member" users to access /library but blocks them from /admin', () => {
+    it('allows "member" users to access /library but blocks them from /admin', async () => {
         const token = createSessionToken({ role: 'member' })
-        
+
         const reqLibrary = makeReq('/library', { __session: token })
-        const resLibrary = proxy(reqLibrary)
+        const resLibrary = await proxy(reqLibrary)
         expect(resLibrary.headers.get('location')).toBeNull() // Allowed
 
         // Use a leader route other than exactly '/admin' to avoid the redirect to '/manage' first
         const reqAdmin = makeReq('/manage/settings', { __session: token })
-        const resAdmin = proxy(reqAdmin)
+        const resAdmin = await proxy(reqAdmin)
         
         // The middleware rewrites to /unauthorized for leader routes.
         expect(resAdmin).toBeDefined()

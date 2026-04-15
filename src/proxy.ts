@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
 
 // Base64Url decode for Edge Runtime without Buffer
 function decodeJwtPayload(token: string) {
@@ -27,10 +28,11 @@ const publicExactRoutes = ['/login', '/', '/auth-error']
 // /live/*   — public live display view for screens and lobby
 const publicPrefixes = ['/perform', '/qr', '/live']
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const session = request.cookies.get('__session')?.value
     const decodedSession = session ? decodeJwtPayload(session) : null
+    const roleCookie = request.cookies.get(SESSION_ROLE_COOKIE)?.value
     const ua = request.headers.get('user-agent') || ''
 
     const isPublicRoute =
@@ -93,18 +95,23 @@ export function proxy(request: NextRequest) {
         return createNoCacheRedirect(new URL('/manage', request.url))
     }
 
-    // Role Verification via Claims
+    // Role Verification — prefer the server-signed companion cookie
+    // (__session_role) when present and matching the Firebase session
+    // uid; otherwise fall back to whatever role claim the Firebase
+    // session carries. See v4.3 P9-02.
     if (session && !isPublicRoute) {
-        const role = decodedSession?.role
+        let role: string | undefined = decodedSession?.role as string | undefined
+        if (roleCookie) {
+            const verified = await verifyRoleCookie(roleCookie)
+            if (verified && verified.uid === decodedSession?.uid) {
+                role = verified.role ?? undefined
+            }
+            // tampered, expired, or uid mismatch → ignore companion, fall through
+        }
 
-        // Do NOT redirect role-less users from non-leader routes.
-        // The session cookie can lag behind Firestore role promotion (e.g.,
-        // a just-approved musician whose cookie was minted before the admin
-        // set the role claim). Firestore rules remain authoritative for data
-        // reads; page-level UX can render a degraded state if truly pending.
-        // Previously redirected to '/' here — that created a loop for newly
-        // approved users whose cookie/claim hadn't caught up yet.
-        void role
+        if (!role || role === 'pending') {
+            if (pathname !== '/') return detectRedirectLoop('/')
+        }
 
         if (isLeaderRoute) {
             if (role !== 'admin' && role !== 'band_leader') {
