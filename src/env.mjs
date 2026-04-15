@@ -26,7 +26,9 @@ export const env = createEnv({
         RESEND_FROM_EMAIL: z.string().email().optional(),
         RESEND_WEBHOOK_SECRET: z.string().optional(),
         BRIDGE_ALERT_EMAIL: z.string().email().optional(),
-        CRON_SECRET: prodRequired("CRON_SECRET"),
+        // Optional — cron routes reject with 401 when missing, which is
+        // fine if no Vercel cron is configured. Not required-in-prod.
+        CRON_SECRET: z.string().optional(),
         SUPER_ADMIN_UID: z.string().optional(),
         SESSION_ROLE_SECRET: prodRequired("SESSION_ROLE_SECRET"),
         BACKUP_BUCKET: z.string().optional(),

@@ -23,7 +23,6 @@ These are enforced at build time by `src/env.mjs` **when `VERCEL_ENV=production`
 | `SESSION_ROLE_SECRET` | HMAC-sign the `__session_role` companion cookie | `/api/auth/session` throws; auth is unusable |
 | `FIREBASE_CLIENT_EMAIL` | Firebase Admin SDK credentials | All server auth / API routes return `FIREBASE_NOT_INITIALIZED` 500 |
 | `FIREBASE_PRIVATE_KEY` | Firebase Admin SDK credentials | Same |
-| `CRON_SECRET` | Vercel cron job auth | Cron routes return 401, backups / enrichment stop running |
 
 ## Optional-but-important secrets
 
@@ -31,6 +30,7 @@ Declared in `env.mjs` as optional; the app starts without them but specific feat
 
 | Variable | Purpose | Degrade mode |
 |---|---|---|
+| `CRON_SECRET` | Vercel cron job auth | Cron routes return 401; backups/enrichment won't run. Fine if no cron is scheduled. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Rate limiting | Limiter opens (permits all requests) — see `src/lib/rate-limit.ts` |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Outbound email | Setlist email packets and admin notifications silently drop |
 | `RESEND_WEBHOOK_SECRET` | Resend delivery webhook verification | Webhook rejects all inbound deliverability events |
