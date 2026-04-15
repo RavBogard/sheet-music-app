@@ -25,6 +25,17 @@ export const POST = createApiHandler(
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
 
+        // v4.3 D07: revoke active tokens FIRST so the deleted user can't
+        // continue acting with a cached ID token during the brief window
+        // between Firestore delete and Auth delete. revokeRefreshTokens
+        // invalidates anything older than the call; subsequent
+        // verifyIdToken({checkRevoked:true}) calls reject.
+        try {
+            await fbAuth.revokeRefreshTokens(targetUserId)
+        } catch (e) {
+            logger.warn("[Delete User] revokeRefreshTokens failed:", e)
+        }
+
         // 1. Atomically delete Firestore doc + write audit log
         const batch = db.batch()
         batch.delete(db.collection("users").doc(targetUserId))

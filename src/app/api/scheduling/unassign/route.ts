@@ -46,6 +46,19 @@ export const POST = createApiHandler(
 
         // Check musician's notification preferences
         const musicianUid = assignment.musicianUid
+        // v4.3 D06: re-read the user profile to get the current display name
+        // so renamed users don't see a stale name in cancellation emails/SMS.
+        let freshName: string | undefined
+        if (musicianUid) {
+            try {
+                const userSnap = await db.collection('users').doc(musicianUid).get()
+                const displayName = userSnap.data()?.displayName
+                if (typeof displayName === 'string' && displayName.trim()) {
+                    freshName = displayName.trim()
+                }
+            } catch { /* fall back to denormalized assignment.musicianName */ }
+        }
+        const musicianName = freshName || assignment.musicianName || 'Musician'
         let emailEnabled = true
         let smsEnabled = false
         let pushEnabled = true
@@ -71,7 +84,7 @@ export const POST = createApiHandler(
         if (emailEnabled && assignment.musicianEmail) {
             sendSchedulingEmail({
                 to: assignment.musicianEmail,
-                recipientName: assignment.musicianName || 'Musician',
+                recipientName: musicianName,
                 setlistName: assignment.setlistName || 'a service',
                 eventDate: eventDateStr,
                 instrument: assignment.instrument,
@@ -87,7 +100,7 @@ export const POST = createApiHandler(
         if (smsEnabled && assignment.musicianPhone) {
             sendSchedulingCancellationSMS({
                 to: assignment.musicianPhone,
-                musicianName: assignment.musicianName || 'Musician',
+                musicianName,
                 setlistName: assignment.setlistName || 'a service',
                 eventDate: eventDateStr,
             }).catch(e => {
