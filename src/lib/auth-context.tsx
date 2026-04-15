@@ -4,9 +4,7 @@ import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactN
 import {
     User,
     onAuthStateChanged,
-    signInWithRedirect,
     signInWithPopup,
-    getRedirectResult,
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
@@ -103,14 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false)
             return
         }
-
-        // Complete the signInWithRedirect round-trip. If we're arriving back
-        // from Google with a redirect payload, this call finalizes the auth
-        // state in the main window context. No-op (resolves to null) if we
-        // didn't just return from a redirect sign-in.
-        getRedirectResult(auth).catch((err) => {
-            logger.warn("getRedirectResult error:", err)
-        })
 
         let unsubscribeProfile: (() => void) | null = null
         let sessionReady = false
@@ -273,30 +263,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [user])
 
     const signIn = async (): Promise<void> => {
-        // signInWithRedirect is the correct primary flow under Chrome's
-        // Cross-Origin-Opener-Policy. signInWithPopup's credential-handoff
-        // from popup→parent is unreliable under COOP — auth.currentUser
-        // appears populated but the ID token isn't attached, so every
-        // Firestore read fails with "Missing or insufficient permissions"
-        // (including the user's own /users/{uid} doc). Redirect avoids
-        // the popup entirely: full-page navigation to Google, full-page
-        // return with getRedirectResult() providing the credential in the
-        // main window context. Firebase JS rehydrates auth cleanly.
         try {
-            await signInWithRedirect(auth, googleProvider)
+            await signInWithPopup(auth, googleProvider)
         } catch (error: unknown) {
-            // Redirect shouldn't throw for user-cancel (that happens on the
-            // return trip), but handle unexpected initialization errors.
             const code = (error as { code?: string })?.code
-            logger.error("signInWithRedirect error:", code, error)
-            // Last-resort fallback to popup for environments where redirect
-            // fails to initiate (rare — mostly test harnesses / file:// URLs).
-            try {
-                await signInWithPopup(auth, googleProvider)
-            } catch (fallbackErr) {
-                logger.error("Fallback popup sign-in also failed:", fallbackErr)
-                throw error
+            if (
+                code === "auth/popup-blocked" ||
+                code === "auth/popup-closed-by-user" ||
+                code === "auth/cancelled-popup-request"
+            ) {
+                logger.warn("Popup sign-in cancelled or blocked:", code)
+                return
             }
+            logger.error("Sign in error:", error)
+            throw error
         }
     }
 
