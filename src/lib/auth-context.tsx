@@ -13,30 +13,8 @@ import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
 import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
-import { apiFetch } from "@/lib/api-client"
-
-/** Sync session cookie to server. Retries once on failure. Returns true on success. */
-async function syncSessionCookie(user: User): Promise<boolean> {
-    for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 8000)
-            const idToken = await user.getIdToken(attempt > 0) // force refresh on retry
-            const res = await fetch("/api/auth/session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ idToken }),
-                signal: controller.signal,
-            })
-            clearTimeout(timeout)
-            if (res.ok) return true
-            logger.warn(`Session cookie sync attempt ${attempt + 1} failed: ${res.status}`)
-        } catch (err) {
-            logger.warn(`Session cookie sync attempt ${attempt + 1} error:`, err)
-        }
-    }
-    return false
-}
+import { syncSessionCookie } from "@/lib/session-cookie"
+import { repairDrift } from "@/lib/drift-repair"
 
 interface CachedUser {
     displayName: string | null
@@ -156,58 +134,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                     lastClaimsUpdate.current = claimsTs
 
-                    // v4.3 P9: repair Firestore↔claim drift for both
-                    //   (a) server-side drift (Firestore role, no auth claim) —
-                    //       sync-claims sets the claim + bumps claimsUpdatedAt
-                    //   (b) client-side staleness (server has claim already,
-                    //       but our cached ID token predates it) — we must
-                    //       force-refresh the token AND re-mint the session
-                    //       cookie so the proxy middleware sees the new role
+                    // v4.3 P10-03: Firestore↔claim↔cookie drift repair, now
+                    // a retried + telemetry-tagged chain in src/lib/drift-repair.ts.
                     if (p?.role && p.role !== "pending") {
                         currentUser
                             .getIdTokenResult()
                             .then(async (res) => {
                                 const claimRole = res.claims.role as string | undefined
                                 if (claimRole === p.role) return
-
-                                // Ask the server to fix server-side drift first (no-op if already in sync)
-                                try {
-                                    const r = await apiFetch("/api/auth/sync-claims", { method: "POST" })
-                                    if (!r.ok) logger.warn("[sync-claims] failed", r.status)
-                                } catch (err) {
-                                    logger.warn("[sync-claims] threw", err)
-                                }
-
-                                // Force-refresh the client token to pick up the
-                                // latest custom claims, then re-mint the session
-                                // cookie so the middleware sees them too.
-                                try {
-                                    await currentUser.getIdToken(true)
-                                    const ok = await syncSessionCookie(currentUser)
-                                    if (!ok) logger.warn("[sync-claims] cookie re-sync failed")
-                                } catch (err) {
-                                    logger.warn("[sync-claims] token+cookie refresh failed", err)
-                                }
-
-                                // v4.3 P9-02: refresh the server-signed
-                                // companion cookie so the proxy's role gate
-                                // sees the Firestore role on the next nav.
-                                try {
-                                    const r = await apiFetch("/api/auth/refresh-session", {
-                                        method: "POST",
-                                    })
-                                    if (!r.ok) logger.warn("[refresh-session] failed", r.status)
-                                } catch (err) {
-                                    logger.warn("[refresh-session] threw", err)
-                                }
-
-                                // v4.3 P10-02: re-evaluate middleware with the
-                                // newly-minted cookies so role gates see them
-                                // without waiting for the next nav.
+                                const summary = await repairDrift(currentUser)
+                                logger.info(
+                                    `[drift] complete syncClaims=${summary.syncClaims} idToken=${summary.idTokenRefresh} cookie=${summary.sessionCookie} refresh=${summary.refreshSession}`,
+                                )
                                 router.refresh()
                             })
                             .catch((err) =>
-                                logger.warn("[sync-claims] getIdTokenResult failed", err),
+                                logger.warn("[drift] getIdTokenResult failed", err),
                             )
                     }
 
