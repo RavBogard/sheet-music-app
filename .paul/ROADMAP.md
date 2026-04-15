@@ -1,9 +1,24 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v4.4 — TBD (awaiting scope)**
-Status: ⏳ Pending
-Goal: Band onboarding blockers + carry-over P1 polish (D06, D07, U03–U08) + perf/dead-code sweep (P01–P05, C01–C04).
+**v4.4 Deferred Audit Sweep — Architectural Polish**
+Status: 🚧 In Progress
+Phases: 0 of 8 complete
+Goal: Close the architectural debt surfaced by the v4.3 + v4.4 full-project audit (186 findings across 6 parallel agents) that couldn't be patched with targeted diffs. Band onboarding is ~2 weeks out; P0/P1 phases must land before the band touches the app.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 0 | Full-project audit (R1+R2, 186 findings, batches 1+2 shipped) | done | ✅ Complete | 2026-04-15 |
+| 1 | Data-layer atomicity — scheduling transactions (DL-001/002/012/013/015) | TBD | Not started | - |
+| 2 | Denormalization reconciliation — user-rename fan-out (DL-010) | TBD | Not started | - |
+| 3 | Client async safety — AbortController sweep (~11 sites from R2B) | TBD | Not started | - |
+| 4 | File-size refactor — 5 files >600 LOC | TBD | Not started | - |
+| 5 | Observability — request IDs + SSE status (L-001, S-004) | TBD | Not started | - |
+| 6 | Modal state hygiene — 4 modals with state-reset bugs | TBD | Not started | - |
+| 7 | Type-safety tail — remaining `any`s + UserRole dedup + zod coverage | TBD | Not started | - |
+| 8 | Perf tail — useCallback + SearchResults memo | TBD | Not started | - |
+
+Priority: P1=Phase 1/2/3/5 (ship before band onboarding); P2=Phase 4/6/7/8 (ship if small, defer otherwise).
 
 ## Previous Milestone
 **v4.3 Deep Audit Remediation**

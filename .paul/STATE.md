@@ -9,11 +9,12 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: v4.3 Deep Audit Remediation — ✅ FULLY CLOSED 2026-04-15
-All 10 phases + audit tail shipped. EVERY P0/P1/P2 finding from the v4.3 audit is resolved or confirmed false-positive on review. Including: D06/D07 data hardening, U03-U08 UX/accessibility, P01/P03/P04/P05 perf optimizations, C01-C04 dead code + consistency cron + ROLE_LABELS promotion + archived migration scripts. LOW-004 leader-role migration verified 0 stragglers on prod.
-Status: Suite 1270/1270; lint clean; Vercel + Firebase prod in sync
-Active: v4.4 — TBD (awaiting scope)
-Last activity: 2026-04-15 — zero-outstanding close: shipped D06/D07/U/P/C bundle (3 commits), swept leader-role prod, reviewed audit finding false-positives
+Milestone: v4.4 Deferred Audit Sweep — Architectural Polish
+Phase: 1 of 8 (Data-layer atomicity)
+Plan: Not started
+Status: Ready to plan
+Previous: v4.3 fully closed + v4.4 Phase 0 full-project audit (186 findings surveyed, batches 1+2 shipped) — summary at `.paul/phases/v44-00-full-audit/SUMMARY.md`
+Last activity: 2026-04-15 — v4.4 milestone scaffolded; 8 phase dirs created; ROADMAP + STATE updated
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -31,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [all v4.3 audit items closed; candidates: milestone audit + close, or v4.4 new milestone]
+  ○        ○        ○     [v4.4 scaffolded; ready to plan Phase 1 — data-layer atomicity]
 ```
 
 ## How to resume
@@ -130,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — autonomous completion of v4.3 milestone auth + P1 work
-Stopped at: All v4.3 audit items (P0 + P1) closed. Phase 10 all 6 plans shipped. Phase 6 bundle (B03/B06/S04) shipped. User scheduled for end-of-milestone smoke.
-Next action: `/paul:complete-milestone` to audit/close v4.3, OR `/paul:discuss-milestone` to shape v4.4, OR pivot to non-audit work (feature land ahead of band onboarding).
-Resume file: None — milestone ready to close
+Last session: 2026-04-15 — v4.4 milestone scaffolded from MILESTONE-CONTEXT (8 phases)
+Stopped at: v4.3 closed, v4.4 Phase 0 full-project audit shipped (batches 1+2), milestone structure created. Paused at context 79% for fresh session.
+Next action: `/paul:plan` for Phase 1 — data-layer atomicity. Scope: DL-001/002/012/013/015 (collapse scheduling assign + decline writes into single transactions). Source in `.paul/phases/v44-00-full-audit/R2A-data-layer.md`.
+Resume file: `.paul/phases/v44-00-full-audit/SUMMARY.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
