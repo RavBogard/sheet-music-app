@@ -15,11 +15,12 @@ Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
 Phase 9 (Role-claim sync) — ✅ Complete (2/2: 09-01 sync-claims, 09-02 signed companion cookie)
-Phase 10 (Auth deep-dive hardening) — Core complete (4/4 shipped: 10-01 env + 10-02 race + 10-03 drift telemetry + 10-04 rules restore); 10-05 Playwright + 10-06 cross-tab DEFERRED (non-urgent infrastructure)
-Plan: 10-04 complete (firestore.rules isMember() restored on setlists, deployed live via firebase deploy)
-Status: Suite 1270/1270; all 4 core plans on prod; user scheduled to smoke-test at milestone end
-Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call; P10-05 (Playwright smoke, requires test-account setup) + P10-06 (cross-tab sign-out polish) deferrable
-Last activity: 2026-04-15 — P10 autonomous burst: 10-03 (drift retries+telemetry, 3 commits) + 10-04 (rules restore + firebase deploy, 1 commit)
+Phase 10 (Auth deep-dive hardening) — ✅ ALL 6 PLANS SHIPPED (10-01 through 10-06)
+Phase 6 (P1 security/bugs) — ✅ 06-02 bundle shipped: B03 + B06 + S04 closed (B04/B05 false positives on review)
+Plan: 06-02 complete
+Status: Suite 1270/1270; all v4.3 P0 + P1 audit findings closed; milestone ready for end-of-milestone smoke test
+Open items: v4.3 milestone audit/close; v4.4 planning
+Last activity: 2026-04-15 — autonomous burst: P10-05 Playwright CI + P10-06 cross-tab sign-out + P6-02 B03/B06/S04 bundle (5 commits, 1270/1270 green)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -37,7 +38,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [10-04 closed; P10 core (01-04) done; 10-05/10-06 deferred; pivot candidates: v4.3 Phase 6 P1 bugs or close milestone]
+  ✓        ✓        ✓     [all v4.3 audit items closed; candidates: milestone audit + close, or v4.4 new milestone]
 ```
 
 ## How to resume
@@ -136,10 +137,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 (P10-03 approved + P10-04 shipped autonomously with firebase deploy)
-Stopped at: Phase 10 core (plans 01-04) complete and deployed. Auth surface is substantially hardened: silent-degrade class closed, cold-load race fixed, drift chain with retry+telemetry, Firestore isMember() gate restored. Rabbi Daniel will smoke-test everything at milestone end.
-Next action: User's call — `/paul:plan` for P10-05 (Playwright E2E, requires test-account setup), P10-06 (cross-tab sign-out polish, XS), pivot to v4.3 Phase 6 P1 bugs (B03–B06), or close the v4.3 milestone.
-Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md`
+Last session: 2026-04-15 — autonomous completion of v4.3 milestone auth + P1 work
+Stopped at: All v4.3 audit items (P0 + P1) closed. Phase 10 all 6 plans shipped. Phase 6 bundle (B03/B06/S04) shipped. User scheduled for end-of-milestone smoke.
+Next action: `/paul:complete-milestone` to audit/close v4.3, OR `/paul:discuss-milestone` to shape v4.4, OR pivot to non-audit work (feature land ahead of band onboarding).
+Resume file: None — milestone ready to close
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
