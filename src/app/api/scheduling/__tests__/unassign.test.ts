@@ -11,14 +11,15 @@ let assignmentDoc: { exists: boolean; data: () => Record<string, unknown> | unde
 let musicianPrefs: Record<string, unknown> | undefined
 let setlistDoc: { exists: boolean; data: () => Record<string, unknown> | undefined }
 
+// Ref-tagged docs so the transaction mock can route get() / update() by ref.
+const ASSIGNMENT_REF = { __kind: 'assignment' as const }
+const SETLIST_REF = { __kind: 'setlist' as const }
+
 const mockFirestoreLocal = {
     collection: vi.fn((name: string) => {
         if (name === 'scheduling_assignments') {
             return {
-                doc: vi.fn(() => ({
-                    get: vi.fn(async () => assignmentDoc),
-                    update: mockAssignmentUpdate,
-                })),
+                doc: vi.fn(() => ASSIGNMENT_REF),
             }
         }
         if (name === 'users') {
@@ -38,18 +39,22 @@ const mockFirestoreLocal = {
         }
         if (name === 'setlists') {
             return {
-                doc: vi.fn(() => ({
-                    get: vi.fn(async () => setlistDoc),
-                    update: mockSetlistUpdate,
-                })),
+                doc: vi.fn(() => SETLIST_REF),
             }
         }
         return { doc: vi.fn(() => ({ get: vi.fn(async () => ({ exists: false })) })) }
     }),
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
         const transaction = {
-            get: vi.fn(async () => assignmentDoc),
-            update: mockAssignmentUpdate,
+            get: vi.fn(async (ref: { __kind: string }) => {
+                if (ref.__kind === 'assignment') return assignmentDoc
+                if (ref.__kind === 'setlist') return setlistDoc
+                return { exists: false }
+            }),
+            update: vi.fn((ref: { __kind: string }, data: Record<string, unknown>) => {
+                if (ref.__kind === 'assignment') mockAssignmentUpdate(ref, data)
+                if (ref.__kind === 'setlist') mockSetlistUpdate(ref, data)
+            }),
         }
         return fn(transaction)
     }),
@@ -128,6 +133,7 @@ describe('POST /api/scheduling/unassign', () => {
         assignmentDoc = {
             exists: true,
             data: () => ({
+                status: 'confirmed',
                 musicianUid: 'musician-1',
                 musicianEmail: 'musician@example.com',
                 musicianName: 'Test Musician',
@@ -210,10 +216,13 @@ describe('POST /api/scheduling/unassign', () => {
 
         await POST(req)
 
-        expect(mockSetlistUpdate).toHaveBeenCalledWith({
-            musicians: [{ uid: 'musician-2' }],
-            assignedUids: ['musician-2'],
-        })
+        expect(mockSetlistUpdate).toHaveBeenCalledWith(
+            expect.anything(), // setlistRef
+            {
+                musicians: [{ uid: 'musician-2' }],
+                assignedUids: ['musician-2'],
+            }
+        )
     })
 
     it('returns 404 for missing assignments', async () => {

@@ -13,6 +13,8 @@ const unassignSchema = z.object({
     assignmentId: z.string().min(1),
 })
 
+type SetlistMusicianEntry = { uid?: string; name?: string; email?: string; instrument?: string | null }
+
 export const POST = createApiHandler(
     async (ctx) => {
         // v4.4 SEC-004: rate-limit cancellation cascade (email + SMS + push)
@@ -23,7 +25,10 @@ export const POST = createApiHandler(
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
 
-        // Use transaction to prevent race with concurrent respond/unassign
+        // v4.4 DL-003 + DL-014: single transaction covers the assignment status
+        // flip AND the setlist.musicians / assignedUids mutation. State-machine
+        // guard rejects transitions from terminal states (declined / cancelled)
+        // so a late cancel click can't overwrite a valid decline.
         const assignmentRef = db.collection('scheduling_assignments').doc(assignmentId)
         let assignment: FirebaseFirestore.DocumentData
 
@@ -36,6 +41,31 @@ export const POST = createApiHandler(
                 }
 
                 const data = assignmentDoc.data()!
+
+                if (data.status !== 'pending' && data.status !== 'confirmed') {
+                    throw new Error(`INVALID_TRANSITION:${data.status}`)
+                }
+
+                const setlistId = data.setlistId as string | undefined
+                const musicianUid = data.musicianUid as string | undefined
+
+                // Read the setlist inside the same transaction so the filter
+                // baseline is coherent with the concurrent-assign path.
+                if (setlistId) {
+                    const setlistRef = db.collection('setlists').doc(setlistId)
+                    const setlistDoc = await transaction.get(setlistRef)
+                    if (setlistDoc.exists) {
+                        const musicians = ((setlistDoc.data()?.musicians ?? []) as SetlistMusicianEntry[])
+                        const filtered = musicians.filter(m => m.uid !== musicianUid)
+                        if (filtered.length !== musicians.length) {
+                            transaction.update(setlistRef, {
+                                musicians: filtered,
+                                assignedUids: filtered.map(m => m.uid).filter(Boolean),
+                            })
+                        }
+                    }
+                }
+
                 transaction.update(assignmentRef, {
                     status: 'cancelled',
                     respondedAt: FieldValue.serverTimestamp(),
@@ -43,8 +73,17 @@ export const POST = createApiHandler(
                 return data
             })
         } catch (e) {
-            if (e instanceof Error && e.message === 'NOT_FOUND') {
-                return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+            if (e instanceof Error) {
+                if (e.message === 'NOT_FOUND') {
+                    return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+                }
+                if (e.message.startsWith('INVALID_TRANSITION:')) {
+                    const currentStatus = e.message.slice('INVALID_TRANSITION:'.length)
+                    return NextResponse.json({
+                        error: `Cannot cancel assignment in '${currentStatus}' state`,
+                        currentStatus,
+                    }, { status: 400 })
+                }
             }
             throw e
         }
@@ -129,22 +168,6 @@ export const POST = createApiHandler(
             } catch (e) {
                 logger.warn('[Scheduling] Failed to notify musician of cancellation:', e)
             }
-        }
-
-        // Remove from the setlist's musicians array
-        try {
-            const setlistRef = db.collection('setlists').doc(assignment.setlistId)
-            const setlistDoc = await setlistRef.get()
-            if (setlistDoc.exists) {
-                const musicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string }>
-                const filtered = musicians.filter(m => m.uid !== assignment.musicianUid)
-                await setlistRef.update({
-                    musicians: filtered,
-                    assignedUids: filtered.map(m => m.uid).filter(Boolean),
-                })
-            }
-        } catch (e) {
-            logger.warn('[Scheduling] Failed to remove musician from setlist:', e)
         }
 
         return NextResponse.json({
