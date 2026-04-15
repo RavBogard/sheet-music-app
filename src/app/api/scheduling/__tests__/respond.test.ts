@@ -10,14 +10,14 @@ const mockSetlistUpdate = vi.fn()
 let assignmentDoc: { exists: boolean; data: () => Record<string, unknown> | undefined }
 let setlistDoc: { exists: boolean; data: () => Record<string, unknown> | undefined }
 
+const ASSIGNMENT_REF = { __kind: 'assignment' as const }
+const SETLIST_REF = { __kind: 'setlist' as const }
+
 const mockFirestoreLocal = {
     collection: vi.fn((name: string) => {
         if (name === 'scheduling_assignments') {
             return {
-                doc: vi.fn(() => ({
-                    get: vi.fn(async () => assignmentDoc),
-                    update: mockAssignmentUpdate,
-                })),
+                doc: vi.fn(() => ASSIGNMENT_REF),
             }
         }
         if (name === 'users') {
@@ -31,18 +31,22 @@ const mockFirestoreLocal = {
         }
         if (name === 'setlists') {
             return {
-                doc: vi.fn(() => ({
-                    get: vi.fn(async () => setlistDoc),
-                    update: mockSetlistUpdate,
-                })),
+                doc: vi.fn(() => SETLIST_REF),
             }
         }
         return { doc: vi.fn(() => ({ get: vi.fn(async () => ({ exists: false })) })) }
     }),
     runTransaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => {
         const transaction = {
-            get: vi.fn(async () => assignmentDoc),
-            update: mockAssignmentUpdate,
+            get: vi.fn(async (ref: { __kind: string }) => {
+                if (ref.__kind === 'assignment') return assignmentDoc
+                if (ref.__kind === 'setlist') return setlistDoc
+                return { exists: false }
+            }),
+            update: vi.fn((ref: { __kind: string }, data: Record<string, unknown>) => {
+                if (ref.__kind === 'assignment') mockAssignmentUpdate(ref, data)
+                if (ref.__kind === 'setlist') mockSetlistUpdate(ref, data)
+            }),
         }
         return fn(transaction)
     }),
@@ -157,10 +161,14 @@ describe('POST /api/scheduling/respond', () => {
                 declineReason: 'Out of town',
             })
         )
-        // Should remove musician from setlist
-        expect(mockSetlistUpdate).toHaveBeenCalledWith({
-            musicians: [{ uid: 'musician-2' }],
-        })
+        // Should remove musician from setlist atomically within the same tx
+        expect(mockSetlistUpdate).toHaveBeenCalledWith(
+            expect.anything(), // setlistRef
+            {
+                musicians: [{ uid: 'musician-2' }],
+                assignedUids: ['musician-2'],
+            }
+        )
     })
 
     it('creates notification for assigner on respond', async () => {

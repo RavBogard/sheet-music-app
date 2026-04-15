@@ -11,6 +11,8 @@ const respondSchema = z.object({
     declineReason: z.string().optional(),
 })
 
+type SetlistMusicianEntry = { uid?: string; name?: string; email?: string; instrument?: string | null }
+
 export const POST = createApiHandler(
     async (ctx) => {
         // v4.4 SEC-005: rate-limit accept/decline toggles to prevent notification spam
@@ -25,7 +27,9 @@ export const POST = createApiHandler(
         const assignmentRef = db.collection('scheduling_assignments').doc(assignmentId)
         let assignment: FirebaseFirestore.DocumentData
 
-        // Use transaction to prevent race with concurrent respond/unassign
+        // v4.4 DL-002: single transaction covers the assignment status flip
+        // AND (on decline) the setlist.musicians / assignedUids removal, so
+        // concurrent declines/assigns can't clobber each other's denorm writes.
         try {
             assignment = await db.runTransaction(async (transaction) => {
                 const assignmentDoc = await transaction.get(assignmentRef)
@@ -42,6 +46,23 @@ export const POST = createApiHandler(
 
                 if (data.status !== 'pending') {
                     throw new Error(`ALREADY_${data.status.toUpperCase()}`)
+                }
+
+                // For decline, read the setlist inside the same tx so the
+                // filter baseline is coherent with any concurrent assign.
+                if (action === 'decline' && typeof data.setlistId === 'string') {
+                    const setlistRef = db.collection('setlists').doc(data.setlistId)
+                    const setlistDoc = await transaction.get(setlistRef)
+                    if (setlistDoc.exists) {
+                        const musicians = ((setlistDoc.data()?.musicians ?? []) as SetlistMusicianEntry[])
+                        const filtered = musicians.filter(m => m.uid !== ctx.auth.uid)
+                        if (filtered.length !== musicians.length) {
+                            transaction.update(setlistRef, {
+                                musicians: filtered,
+                                assignedUids: filtered.map(m => m.uid).filter(Boolean),
+                            })
+                        }
+                    }
                 }
 
                 const updateData: Record<string, unknown> = {
@@ -74,7 +95,8 @@ export const POST = createApiHandler(
             throw e
         }
 
-        // Notify the assigner (band leader) about the response
+        // Notify the assigner (band leader) about the response — side-effect,
+        // kept post-commit so it doesn't bloat the transaction's contention set.
         try {
             const assignerUid = assignment.assignedBy
             if (assignerUid && assignerUid !== ctx.auth.uid) {
@@ -94,21 +116,6 @@ export const POST = createApiHandler(
             }
         } catch (e) {
             logger.warn('[Scheduling] Failed to notify assigner:', e)
-        }
-
-        // If declined, remove from the setlist's musicians array
-        if (action === 'decline') {
-            try {
-                const setlistRef = db.collection('setlists').doc(assignment.setlistId)
-                const setlistDoc = await setlistRef.get()
-                if (setlistDoc.exists) {
-                    const musicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string }>
-                    const filtered = musicians.filter(m => m.uid !== ctx.auth.uid)
-                    await setlistRef.update({ musicians: filtered })
-                }
-            } catch (e) {
-                logger.warn('[Scheduling] Failed to remove declined musician from setlist:', e)
-            }
         }
 
         return NextResponse.json({
