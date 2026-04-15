@@ -39,6 +39,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // Track which URL we've resolved to avoid re-running
     const resolvedUrlRef = useRef<string | null>(null)
     const retryCountRef = useRef(0)
+    const MAX_RETRIES = 3
 
     const fetchPdf = useCallback(async (fetchUrl: string, signal?: AbortSignal, isRetry = false) => {
         if (resolvedUrlRef.current === fetchUrl && !isRetry) return
@@ -99,6 +100,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // Tracks a bust-counter to force-rerun the fetch effect for retries.
     const [retryBust, setRetryBust] = useState(0)
 
+    // Reset retry counter when the URL prop changes — a new chart gets a
+    // fresh 3-attempt budget.
+    useEffect(() => {
+        retryCountRef.current = 0
+        setRetryBust(0)
+    }, [url])
+
     // Resolve source when URL changes. A 60s timeout covers hung venue networks.
     useEffect(() => {
         const controller = new AbortController()
@@ -117,13 +125,20 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         }
     }, [url, retryBust, fetchPdf])
 
+    // UX-007: cap manual retries at MAX_RETRIES so a genuinely-broken chart
+    // doesn't loop forever. resolvedUrlRef is not reset on url change, so if
+    // the caller passes a new URL the counter naturally resets via the retry
+    // auto-reset on successful fetch (retryCountRef.current = 0 in fetchPdf).
     const handleRetry = () => {
+        if (retryCountRef.current >= MAX_RETRIES) return
         retryCountRef.current++
         resolvedUrlRef.current = null
         // Bumping the bust counter retriggers the effect, which creates a fresh
         // AbortController + timer. Cache-bust param is appended in the effect.
         setRetryBust(retryCountRef.current)
     }
+
+    const exhausted = retryCountRef.current >= MAX_RETRIES && !!error
 
     // Auto-Resize
     const containerRef = useRef<HTMLDivElement>(null)
@@ -170,17 +185,21 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
 
                     {error && !loading && (
                         <div className="p-10 text-center space-y-3">
-                            <p className="font-semibold text-destructive text-lg">Failed to load PDF</p>
+                            <p className="font-semibold text-destructive text-lg">
+                                {exhausted ? 'Could not load chart — please try again later' : 'Failed to load PDF'}
+                            </p>
                             <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
                                 {error}
                             </p>
-                            <Button
-                                variant="secondary"
-                                onClick={handleRetry}
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current})` : ''}
-                            </Button>
+                            {!exhausted && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRetry}
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current}/${MAX_RETRIES})` : ''}
+                                </Button>
+                            )}
                             <ChartSuggestions
                                 trackName={trackName}
                                 currentFileId={url.split('/').pop()}
@@ -203,13 +222,15 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             error={
                                 <div className="text-destructive p-10 text-center space-y-2">
                                     <p className="font-semibold">PDF render error</p>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={handleRetry}
-                                    >
-                                        <RefreshCw className="h-4 w-4" />
-                                        Retry
-                                    </Button>
+                                    {retryCountRef.current < MAX_RETRIES && (
+                                        <Button
+                                            variant="secondary"
+                                            onClick={handleRetry}
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                            Retry
+                                        </Button>
+                                    )}
                                 </div>
                             }
                             className="flex flex-col items-center min-h-screen"
