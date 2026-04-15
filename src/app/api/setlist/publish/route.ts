@@ -57,7 +57,12 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'At least one musician must be assigned' }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Load setlist

@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing idToken" }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const auth = getAuth()
 
         // Verify the ID token first — reject expired or invalid tokens
@@ -103,7 +108,12 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "No session" }, { status: 401 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const auth = getAuth()
         await auth.verifySessionCookie(sessionCookie)
 

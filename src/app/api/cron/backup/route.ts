@@ -63,7 +63,12 @@ export async function POST(req: NextRequest) {
         }
 
         const token = authHeader.slice(7)
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const { getAuth } = await import("firebase-admin/auth")
         const decoded = await getAuth().verifyIdToken(token)
 
@@ -82,7 +87,12 @@ export async function POST(req: NextRequest) {
 }
 
 async function runBackup(): Promise<NextResponse> {
-    initAdmin()
+    if (!initAdmin()) {
+        return NextResponse.json(
+            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { status: 500 },
+        )
+    }
 
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     const bucketName = process.env.BACKUP_BUCKET

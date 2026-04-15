@@ -33,7 +33,12 @@ export async function GET(req: NextRequest) {
         }
 
         logger.info("[Cron] Starting scheduled enrichment...")
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Find unenriched files (batch of 20 per run to stay within timeout)

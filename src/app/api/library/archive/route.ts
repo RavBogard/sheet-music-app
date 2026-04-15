@@ -26,7 +26,12 @@ export const PATCH = createApiHandler(
 
         const { fileId, archive } = ctx.body!
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         const docRef = db.collection('library_index').doc(fileId)

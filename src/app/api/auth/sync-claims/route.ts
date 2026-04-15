@@ -30,7 +30,12 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, "api")
         if (limited) return limited
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const uid = ctx.auth!.uid
         const db = getFirestore()
         const auth = getAuth()

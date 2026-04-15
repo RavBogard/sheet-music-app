@@ -34,7 +34,12 @@ export const GET = createApiHandler(
             return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
         const termLower = searchTerm.toLowerCase()
 

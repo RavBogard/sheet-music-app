@@ -27,7 +27,12 @@ export const GET = createApiHandler(
         const collectionFilter = url.searchParams.get("collection") // 'supplemental' or 'core'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // 3. Build query

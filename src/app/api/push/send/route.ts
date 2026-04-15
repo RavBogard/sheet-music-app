@@ -25,7 +25,12 @@ const schema = z.object({
  */
 export const POST = createApiHandler(
     async (ctx) => {
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
 
         const { targetUids, title, body, link } = ctx.body!
 

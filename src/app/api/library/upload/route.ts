@@ -42,7 +42,12 @@ export const POST = createApiHandler(
         if (limited) return limited
 
         // Check canUpload flag on user profile
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         const userDoc = await db.collection('users').doc(ctx.auth.uid).get()

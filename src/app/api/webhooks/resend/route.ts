@@ -91,7 +91,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Find and update the emailEvent doc
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // emailEvents are stored as: setlists/{setlistId}/emailEvents/{messageId}

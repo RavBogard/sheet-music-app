@@ -34,7 +34,12 @@ export const POST = createApiHandler(
         const items: ParsedItem[] = ctx.body!.items || []
         const setName = ctx.body!.name || "Imported Setlist"
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
         const resolvedTracks = []
         let trackCounter = 0

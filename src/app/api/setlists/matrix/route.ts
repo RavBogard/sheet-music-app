@@ -10,7 +10,12 @@ export const GET = createApiHandler(
         const { searchParams } = new URL(ctx.req.url)
         const type = searchParams.get('type') || 'friday_night'
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // 1. Generate the date columns (-3 weeks to +4 weeks)

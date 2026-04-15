@@ -29,7 +29,12 @@ export const POST = createApiHandler(
 
         const { targetUserId, soundEngineer } = ctx.body!
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
         const fbAuth = getAuth()
 

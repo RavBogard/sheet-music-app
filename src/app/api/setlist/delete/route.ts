@@ -50,7 +50,12 @@ async function batchDeleteByField(
 
 export const POST = createApiHandler(
     async (ctx) => {
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
         const { setlistId } = ctx.body!
 

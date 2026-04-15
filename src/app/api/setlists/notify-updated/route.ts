@@ -43,7 +43,12 @@ export const POST = createApiHandler(
 
         const { setlistId, setlistName, trackCount } = ctx.body!
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Fetch active member UIDs (Admin SDK bypasses Firestore rules).

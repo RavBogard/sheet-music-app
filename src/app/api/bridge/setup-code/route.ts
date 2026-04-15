@@ -31,7 +31,12 @@ function generateCode(): string {
 
 // POST: Admin generates a setup code
 export const POST = createApiHandler(async (ctx) => {
-    initAdmin()
+    if (!initAdmin()) {
+        return NextResponse.json(
+            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { status: 500 },
+        )
+    }
     const db = getFirestore()
 
     // Invalidate any existing unused codes from this user
@@ -74,7 +79,12 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Atomically check and mark as used in a single transaction

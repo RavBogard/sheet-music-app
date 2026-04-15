@@ -139,7 +139,12 @@ ${contextStr}`
         const items = result.items || []
 
         // 4. Run extracted items against the library using Levenshtein distance
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         let existingLibrary: { id: string, name: string, normalizedName: string }[] = []
