@@ -8,7 +8,18 @@
  * No request ID present (client-side, outside a request) → behaviour unchanged.
  */
 
-import { getCurrentRequestId } from "./request-id"
+// Intentionally NO static import of request-id — it pulls `node:async_hooks`
+// which breaks the client bundle. We read a resolver off globalThis that the
+// server-only request-id module registers at its own import time. When this
+// logger runs in the browser, `__requestIdGetter__` is simply undefined and
+// annotation is a no-op.
+interface WithRequestIdGetter {
+    __requestIdGetter__?: () => string | undefined
+}
+function getCurrentRequestId(): string | undefined {
+    const getter = (globalThis as unknown as WithRequestIdGetter).__requestIdGetter__
+    return typeof getter === "function" ? getter() : undefined
+}
 
 const isDev = process.env.NODE_ENV === 'development'
 

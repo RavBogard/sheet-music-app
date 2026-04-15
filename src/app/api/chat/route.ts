@@ -4,6 +4,7 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { getCurrentRequestId } from "@/lib/request-id"
 import { z } from "zod"
 
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
@@ -98,9 +99,14 @@ export const POST = createApiHandler(async (ctx) => {
                 }],
                 edits: [],
             }
+            const requestId = getCurrentRequestId() ?? ''
             const stream = new ReadableStream({
                 start(controller) {
+                    if (requestId) {
+                        controller.enqueue(encoder.encode(`event: meta\ndata: ${JSON.stringify({ requestId })}\n\n`))
+                    }
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(responsePayload)}\n\n`))
+                    controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ requestId })}\n\n`))
                     controller.close()
                 },
             })
@@ -109,6 +115,7 @@ export const POST = createApiHandler(async (ctx) => {
                     'Content-Type': 'text/event-stream',
                     'Cache-Control': 'no-cache',
                     'Connection': 'keep-alive',
+                    ...(requestId && { 'x-request-id': requestId }),
                 },
             })
         }
@@ -261,9 +268,22 @@ ${cleanedLastMessage}
 
     // Stream response as Server-Sent Events
     const encoder = new TextEncoder()
+    const requestId = getCurrentRequestId() ?? ''
+    let heartbeat: ReturnType<typeof setInterval> | null = null
     const stream = new ReadableStream({
       async start(controller) {
+        // Heartbeat keeps proxies (Vercel / Cloudflare / corporate) from cutting
+        // idle connections during slow LLM generations. SSE comment lines are
+        // spec-compliant and ignored by EventSource consumers.
+        heartbeat = setInterval(() => {
+          try { controller.enqueue(encoder.encode(`: heartbeat\n\n`)) } catch { /* stream closed */ }
+        }, 15000)
         try {
+          // Meta frame first — unknown event types are ignored by ChatPanel's
+          // data:-only parser, so this is additive-only for the client.
+          if (requestId) {
+            controller.enqueue(encoder.encode(`event: meta\ndata: ${JSON.stringify({ requestId })}\n\n`))
+          }
           let accumulated = ""
           for await (const chunk of result.stream) {
             const text = chunk.text()
@@ -323,8 +343,15 @@ ${cleanedLastMessage}
           logger.error("[Chat] Stream error:", err)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`))
         } finally {
+          if (heartbeat) { clearInterval(heartbeat); heartbeat = null }
+          if (requestId) {
+            try { controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ requestId })}\n\n`)) } catch { /* stream closed */ }
+          }
           controller.close()
         }
+      },
+      cancel() {
+        if (heartbeat) { clearInterval(heartbeat); heartbeat = null }
       }
     })
 
@@ -333,6 +360,7 @@ ${cleanedLastMessage}
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        ...(requestId && { 'x-request-id': requestId }),
       }
     })
 

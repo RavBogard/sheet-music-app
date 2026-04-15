@@ -1,4 +1,5 @@
 import { auth } from "@/lib/firebase"
+import { logger } from "@/lib/logger"
 
 export interface ApiFetchOptions extends RequestInit {
     /**
@@ -74,11 +75,42 @@ export async function apiFetch(path: string, options?: ApiFetchOptions): Promise
     void _callerSignal
 
     try {
-        return await fetch(path, {
+        const response = await fetch(path, {
             ...rest,
             headers,
             signal: controller.signal,
         })
+        if (!response.ok) {
+            // Surface the server's request-id so client logs can be cross-referenced
+            // with Vercel logs. Body is canonical (matches header), but fall back to
+            // the header if the error body isn't JSON. Wrapped in try/catch because
+            // some test-mocked responses don't implement headers/clone.
+            let requestId: string | undefined
+            try {
+                const headerId = response.headers?.get?.('x-request-id') ?? undefined
+                let bodyId: string | undefined
+                if (typeof response.clone === 'function') {
+                    try {
+                        const errJson = await response.clone().json()
+                        if (errJson && typeof errJson === 'object' && typeof errJson.requestId === 'string') {
+                            bodyId = errJson.requestId
+                        }
+                    } catch {
+                        /* non-JSON body — header is fine */
+                    }
+                }
+                requestId = bodyId ?? headerId
+            } catch {
+                /* minimal response — skip id extraction */
+            }
+            logger.error({
+                event: 'api-fetch-failed',
+                url: path,
+                status: response.status,
+                requestId,
+            })
+        }
+        return response
     } finally {
         if (timer) clearTimeout(timer)
     }

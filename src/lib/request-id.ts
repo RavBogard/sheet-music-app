@@ -8,10 +8,16 @@
  * ⚠️  SERVER-ONLY. Do NOT import from client components / "use client" files.
  *     `node:async_hooks` is not available in the browser bundle.
  *
+ * The logger (src/lib/logger.ts) deliberately does NOT statically import this
+ * module — that would pull `node:async_hooks` into the client bundle via any
+ * client file that imports logger. Instead, this module registers a resolver on
+ * `globalThis.__requestIdGetter__` at import time, and logger reads from there
+ * with no import-graph dependency. Browser bundles simply see `undefined`.
+ *
  * Wiring points:
  *   - src/lib/api-wrapper.ts   — createApiHandler wraps every call in runWithRequestId
  *   - src/lib/api-auth.ts      — wrapWithRequestId helper for routes not using createApiHandler
- *   - src/lib/logger.ts        — reads getCurrentRequestId() on every emission
+ *   - src/lib/logger.ts        — reads globalThis.__requestIdGetter__() on every emission
  *   - src/app/api/chat/route.ts — emits { requestId } in SSE meta/done frames
  */
 import { AsyncLocalStorage } from "node:async_hooks"
@@ -49,3 +55,12 @@ export function getCurrentRequestId(): string | undefined {
 export function runWithRequestId<T>(requestId: string, fn: () => T): T {
     return requestIdStorage.run({ requestId }, fn)
 }
+
+// Register a resolver on globalThis so logger.ts can surface the current
+// request ID without a static import (which would drag node:async_hooks into
+// the client bundle). Server imports this module from api-wrapper / api-auth,
+// which runs at server route init time — always before a request.
+interface WithRequestIdGetter {
+    __requestIdGetter__?: () => string | undefined
+}
+;(globalThis as unknown as WithRequestIdGetter).__requestIdGetter__ = getCurrentRequestId
