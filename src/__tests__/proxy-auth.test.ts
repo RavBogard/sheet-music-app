@@ -38,21 +38,26 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(res.headers.get('location')).toBe('http://localhost/login')
     })
 
-    it('blocks "pending" users from all secure routes except /', async () => {
+    it('does NOT block "pending" users without a verified companion cookie (relaxed gate)', async () => {
+        // v4.3 P9-02 hotfix: without __session_role we can't trust the role
+        // claim, so the middleware admits the request and lets page-level UX
+        // handle truly-pending users. Prevents the newly-approved-musician
+        // redirect loop (945478b rationale).
         const token = createSessionToken({ role: 'pending' })
         const req = makeReq('/setlists', { __session: token })
         const res = await proxy(req)
-        
-        expect(res.headers.get('location')).toBe('http://localhost/')
+
+        expect(res.headers.get('location')).toBeNull()
     })
 
-    it('blocks "undefined" role users from all secure routes except / (Ghost User Bug)', async () => {
-        // A brand new user with no claims
+    it('does NOT block role-less users without a verified companion cookie (relaxed gate)', async () => {
+        // A brand new user with no claims — still admitted; page-level UX
+        // must show the waiting-for-approval state.
         const token = createSessionToken({ email: 'new@test.com' })
         const req = makeReq('/setlists', { __session: token })
         const res = await proxy(req)
-        
-        expect(res.headers.get('location')).toBe('http://localhost/')
+
+        expect(res.headers.get('location')).toBeNull()
     })
 
     it('allows "member" users to access /library but blocks them from /admin', async () => {

@@ -101,15 +101,23 @@ export async function proxy(request: NextRequest) {
     // session carries. See v4.3 P9-02.
     if (session && !isPublicRoute) {
         let role: string | undefined = decodedSession?.role as string | undefined
+        let hasVerifiedCompanion = false
         if (roleCookie) {
             const verified = await verifyRoleCookie(roleCookie)
             if (verified && verified.uid === decodedSession?.uid) {
                 role = verified.role ?? undefined
+                hasVerifiedCompanion = true
             }
             // tampered, expired, or uid mismatch → ignore companion, fall through
         }
 
-        if (!role || role === 'pending') {
+        // Only enforce the no-role / pending redirect when we have an
+        // authoritative companion cookie. Without it, the Firebase
+        // session cookie can legitimately lag Firestore role promotion
+        // (newly-approved musicians, post-claim-drift window); bouncing
+        // them to '/' creates the same loop 945478b hotfixed. Let
+        // page-level UX render a degraded state for truly pending users.
+        if (hasVerifiedCompanion && (!role || role === 'pending')) {
             if (pathname !== '/') return detectRedirectLoop('/')
         }
 
