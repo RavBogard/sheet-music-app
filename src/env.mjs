@@ -16,6 +16,7 @@ export const env = createEnv({
         BRIDGE_ALERT_EMAIL: z.string().email().optional(),
         CRON_SECRET: z.string().optional(),
         SUPER_ADMIN_UID: z.string().optional(),
+        SESSION_ROLE_SECRET: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -51,6 +52,7 @@ export const env = createEnv({
         BRIDGE_ALERT_EMAIL: process.env.BRIDGE_ALERT_EMAIL,
         CRON_SECRET: process.env.CRON_SECRET,
         SUPER_ADMIN_UID: process.env.SUPER_ADMIN_UID,
+        SESSION_ROLE_SECRET: process.env.SESSION_ROLE_SECRET,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,
