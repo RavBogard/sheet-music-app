@@ -15,11 +15,11 @@ Phase 3 (Bridge Credentials Design) — ✅ Complete
 Phase 4 (P0 Data Integrity) — ✅ Complete (3/3: D01, D02, D03)
 Phase 5 (P0 Bugs + UX) — ✅ Complete (4/4: B01, B02, U01, U02)
 Phase 9 (Role-claim sync) — ✅ Complete (2/2: 09-01 sync-claims, 09-02 signed companion cookie)
-Phase 10 (Auth deep-dive hardening) — In progress (2/5: 10-01 env hardening + 10-02 cold-load race killed, both human-verified)
-Plan: 10-02 complete (router.refresh after cookie sync; mount bypasses throttle; login button disable + error surface)
-Status: Suite 1264/1264; Vercel prod deploy green; user's /setlists ↔ /login loop should be non-reproducible
-Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call (paused); P10-03 (drift retries+telemetry), P10-04 (restore isMember setlist gate), P10-05 (Playwright smoke), P10-06 (cross-tab sign-out, optional)
-Last activity: 2026-04-15 — Plan 10-02 complete: 2 commits (router.refresh after cookie, login UX hardening)
+Phase 10 (Auth deep-dive hardening) — Core complete (4/4 shipped: 10-01 env + 10-02 race + 10-03 drift telemetry + 10-04 rules restore); 10-05 Playwright + 10-06 cross-tab DEFERRED (non-urgent infrastructure)
+Plan: 10-04 complete (firestore.rules isMember() restored on setlists, deployed live via firebase deploy)
+Status: Suite 1270/1270; all 4 core plans on prod; user scheduled to smoke-test at milestone end
+Open P1 items: v4.3 Phase 6 B03-B06 + S04 design call; P10-05 (Playwright smoke, requires test-account setup) + P10-06 (cross-tab sign-out polish) deferrable
+Last activity: 2026-04-15 — P10 autonomous burst: 10-03 (drift retries+telemetry, 3 commits) + 10-04 (rules restore + firebase deploy, 1 commit)
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -37,7 +37,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [10-02 closed; next plan 10-03 (drift retries + telemetry) queued]
+  ✓        ✓        ✓     [10-04 closed; P10 core (01-04) done; 10-05/10-06 deferred; pivot candidates: v4.3 Phase 6 P1 bugs or close milestone]
 ```
 
 ## How to resume
@@ -136,10 +136,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 (P10-02 shipped + human-verified on prod — "approved")
-Stopped at: Cold-load + sign-in race eliminated. User's /setlists ↔ /login symptom should no longer reproduce. Auth surface is substantially hardened.
-Next action: User's call — `/paul:plan` for P10-03 (drift chain awaited + retries + telemetry), or jump to P10-04 (restore isMember rule), P10-05 (Playwright smoke), or pivot to non-auth work (v4.3 Phase 6 P1 bugs B03–B06).
-Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md` (§2 lists the remaining P10 slate)
+Last session: 2026-04-15 (P10-03 approved + P10-04 shipped autonomously with firebase deploy)
+Stopped at: Phase 10 core (plans 01-04) complete and deployed. Auth surface is substantially hardened: silent-degrade class closed, cold-load race fixed, drift chain with retry+telemetry, Firestore isMember() gate restored. Rabbi Daniel will smoke-test everything at milestone end.
+Next action: User's call — `/paul:plan` for P10-05 (Playwright E2E, requires test-account setup), P10-06 (cross-tab sign-out polish, XS), pivot to v4.3 Phase 6 P1 bugs (B03–B06), or close the v4.3 milestone.
+Resume file: `.paul/phases/v43-10-auth-deep-dive/FINDINGS-v2.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
