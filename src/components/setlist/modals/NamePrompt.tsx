@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Calendar as CalendarIcon } from "lucide-react"
@@ -31,6 +31,17 @@ export function NamePrompt({
 }: NamePromptProps) {
     const [name, setName] = useState(initialName)
     const [date, setDate] = useState<Date | undefined>(initialDate || undefined)
+
+    // Re-seed on every false -> true open transition so a prior session's
+    // typed-but-not-confirmed draft doesn't bleed into a new setlist name.
+    // Deps intentionally limited to `isOpen` to avoid clobbering in-progress
+    // edits when the parent re-renders.
+    useEffect(() => {
+        if (!isOpen) return
+        setName(initialName)
+        setDate(initialDate || undefined)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const handleConfirm = () => {
         if (name.trim()) {

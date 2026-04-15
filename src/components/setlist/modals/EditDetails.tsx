@@ -55,14 +55,18 @@ export function EditDetails({
     const [serviceNotes, setServiceNotes] = useState(initialServiceNotes)
 
     // Re-seed local state every time the modal opens so a stale draft doesn't
-    // bleed across Edit Details sessions.
+    // bleed across Edit Details sessions. Deps are intentionally limited to
+    // `isOpen` — including the initial* props would clobber the user's
+    // in-progress edits whenever the parent re-rendered with a new Date
+    // instance or similar.
     useEffect(() => {
         if (!isOpen) return
         setName(initialName)
         setDate(initialDate ?? undefined)
         setRabbi(initialRabbi)
         setServiceNotes(initialServiceNotes)
-    }, [isOpen, initialName, initialDate, initialRabbi, initialServiceNotes])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const canSave = name.trim().length > 0
 
