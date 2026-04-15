@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "fs"
 import { join, relative, resolve } from "path"
 import { parse } from "@babel/parser"
-// @ts-ignore — @babel/traverse default export interop
+// @ts-expect-error — @babel/traverse default export interop
 import _traverse from "@babel/traverse"
 const traverse = (_traverse as any).default ?? _traverse
 
