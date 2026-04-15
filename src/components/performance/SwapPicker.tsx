@@ -41,6 +41,15 @@ export function SwapPicker({ open, onClose, currentTrack, onSelectReplacement }:
         setSelectedIndex(0)
     }, [results])
 
+    // v44-06 UX-015: clear search query and selection whenever the picker
+    // re-opens, so a prior session's typed query / arrow-selected row
+    // doesn't leak into the next swap.
+    useEffect(() => {
+        if (!open) return
+        setQuery("")
+        setSelectedIndex(0)
+    }, [open])
+
     // Autofocus: iOS Safari drops focus applied synchronously inside an animated
     // container. setTimeout past the slide-in, then a rAF re-focus, is the
     // known two-step workaround.
