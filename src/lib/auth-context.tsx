@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from "react"
+import { useRouter } from "next/navigation"
 import {
     User,
     onAuthStateChanged,
@@ -75,6 +76,7 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+    const router = useRouter()
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
@@ -124,6 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     if (!ok) logger.warn("Session cookie sync failed — SSR auth may not work")
                     sessionReady = true
                     if (profileReady) setLoading(false)
+                    // v4.3 P10-02: re-run the current route through middleware so
+                    // the proxy sees the freshly-set __session cookie. Fixes the
+                    // cold-load race where the first nav precedes Set-Cookie.
+                    if (ok) router.refresh()
                 }).catch((err) => {
                     logger.error("syncSessionCookie rejected:", err)
                     sessionReady = true
@@ -194,6 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 } catch (err) {
                                     logger.warn("[refresh-session] threw", err)
                                 }
+
+                                // v4.3 P10-02: re-evaluate middleware with the
+                                // newly-minted cookies so role gates see them
+                                // without waiting for the next nav.
+                                router.refresh()
                             })
                             .catch((err) =>
                                 logger.warn("[sync-claims] getIdTokenResult failed", err),
@@ -240,28 +251,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // users who open the app weekly would hit expired cookies — middleware
     // redirects to /login while Firebase client auth is still valid, and static
     // assets (like the PDF worker) get served as login HTML instead of JS.
-    // Throttled to once per day to avoid spamming the server.
+    // v4.3 P10-02: mount always refreshes (bypasses throttle); visibilitychange
+    // stays throttled to once per day.
     useEffect(() => {
         if (!user || typeof document === 'undefined') return
 
         const REFRESH_INTERVAL = 24 * 60 * 60 * 1000 // 1 day
         const STORAGE_KEY = 'crc_session_refreshed_at'
 
-        const maybeRefreshSession = () => {
+        const refreshOnMount = () => {
+            // Bypass throttle on first mount — stale-but-recent flag shouldn't
+            // block a refresh if the cookie was cleared between sessions.
+            localStorage.setItem(STORAGE_KEY, String(Date.now()))
+            syncSessionCookie(user)
+                .then((ok) => { if (ok) router.refresh() })
+                .catch(() => { })
+        }
+
+        const maybeRefreshOnVisibility = () => {
             if (document.visibilityState !== 'visible') return
             const lastRefresh = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
             if (Date.now() - lastRefresh < REFRESH_INTERVAL) return
 
             localStorage.setItem(STORAGE_KEY, String(Date.now()))
-            syncSessionCookie(user).catch(() => {})
+            syncSessionCookie(user)
+                .then((ok) => { if (ok) router.refresh() })
+                .catch(() => { })
         }
 
-        // Check on mount (covers first page load after days away)
-        maybeRefreshSession()
+        // Mount fires every time this effect re-runs for a new user uid.
+        refreshOnMount()
 
-        document.addEventListener('visibilitychange', maybeRefreshSession)
-        return () => document.removeEventListener('visibilitychange', maybeRefreshSession)
-    }, [user])
+        document.addEventListener('visibilitychange', maybeRefreshOnVisibility)
+        return () => document.removeEventListener('visibilitychange', maybeRefreshOnVisibility)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid])
 
     // Re-register push token if user previously opted in (once per session).
     // Separated from the auth listener to keep concerns clean.
