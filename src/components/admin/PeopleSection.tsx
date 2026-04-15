@@ -161,6 +161,7 @@ export function PeopleSection() {
                                 disabled={bulkLoading}
                                 className="text-xs bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 ml-2"
                                 title="Set role to denied (removes access)"
+                                aria-label="Deny access — set role to denied"
                             >
                                 {bulkLoading ? <Spinner size="sm" /> : null}
                                 Deny Access
@@ -212,6 +213,7 @@ export function PeopleSection() {
                         onClick={() => { setSearchQuery(""); setRoleFilter('all') }}
                         className="text-muted-foreground hover:text-foreground flex-shrink-0"
                         title="Clear filters"
+                        aria-label="Clear filters"
                     >
                         <FilterX className="w-4 h-4" />
                     </Button>

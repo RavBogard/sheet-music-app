@@ -219,6 +219,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
                             )}
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
+                            aria-label={user.soundEngineer ? 'Remove sound engineer role' : 'Make sound engineer'}
                         >
                             {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
                         </Button>
@@ -238,6 +239,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
                             )}
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
+                            aria-label={confirmDelete ? `Confirm removal of ${user.displayName || user.email || 'user'}` : `Remove ${user.displayName || user.email || 'user'}`}
                         >
                             {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
@@ -295,6 +297,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40"
                             )}
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
+                            aria-label={user.soundEngineer ? 'Remove sound engineer role' : 'Make sound engineer'}
                         >
                             {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
                         </Button>
@@ -314,6 +317,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                                     : "bg-muted/50 border-border/50 text-muted-foreground/40"
                             )}
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
+                            aria-label={confirmDelete ? `Confirm removal of ${user.displayName || user.email || 'user'}` : `Remove ${user.displayName || user.email || 'user'}`}
                         >
                             {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>

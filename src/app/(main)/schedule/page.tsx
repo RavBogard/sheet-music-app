@@ -146,8 +146,11 @@ export default function SchedulePage() {
                     {viewMode === 'services' && (
                         <button
                             onClick={() => setMineOnly(!mineOnly)}
+                            aria-pressed={mineOnly}
                             className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
+                                // v4.3 U07: add visible focus ring that works on both the
+                                // brand-tinted active state and the muted inactive state.
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                                 mineOnly
                                     ? "bg-brand/15 text-brand border border-brand/30"
                                     : "bg-muted/50 text-muted-foreground border border-border/40 hover:bg-muted hover:text-foreground"

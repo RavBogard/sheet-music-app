@@ -30,9 +30,11 @@ export function SwapPicker({ open, onClose, currentTrack, onSelectReplacement }:
         [pdfFiles]
     )
 
+    // v4.3 U04: show top 20 as a "jump-start" but reveal the rest once the
+    // user types so large libraries aren't silently truncated.
     const results = useMemo(() => {
         if (!query.trim()) return pdfFiles.slice(0, 20)
-        return fuse.search(query).map((r) => r.item).slice(0, 20)
+        return fuse.search(query).map((r) => r.item)
     }, [query, fuse, pdfFiles])
 
     useEffect(() => {
