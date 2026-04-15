@@ -45,16 +45,22 @@ export function TempoFlash({ bpm, onDismiss }: TempoFlashProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bpm])
 
-    // Auto-dismiss after ~10 seconds (fade at 9.7s, remove at 10s)
+    // Auto-dismiss after ~10 seconds (fade at 9.7s, remove at 10s).
+    // A ref keeps the LATEST onDismiss callback so a parent prop-swap
+    // mid-flight still invokes the new handler — and crucially the effect
+    // does not re-register (which would reset the 10-s countdown).
+    const onDismissRef = useRef(onDismiss)
+    useEffect(() => { onDismissRef.current = onDismiss }, [onDismiss])
+
     useEffect(() => {
         fadeTimeoutRef.current = setTimeout(() => setFading(true), 9700)
-        timeoutRef.current = setTimeout(onDismiss, 10000)
+        timeoutRef.current = setTimeout(() => onDismissRef.current(), 10000)
 
         return () => {
             if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current)
             if (timeoutRef.current) clearTimeout(timeoutRef.current)
         }
-    }, [onDismiss])
+    }, [])
 
     return (
         <div

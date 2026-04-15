@@ -216,19 +216,23 @@ export function PDFOverlay({
     const [showPrintModal, setShowPrintModal] = useState(false)
 
     // Escape closes the open child modal first, then the overlay itself.
+    // A ref carries the latest onClose so a parent prop-swap isn't lost to a
+    // stale closure, without re-registering the listener on every render.
+    const onCloseRef = useRef(onClose)
+    useEffect(() => { onCloseRef.current = onClose }, [onClose])
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key !== "Escape" || e.defaultPrevented) return
             if (showPrintModal) {
                 setShowPrintModal(false)
             } else {
-                onClose()
+                onCloseRef.current()
             }
             e.stopPropagation()
         }
         document.addEventListener("keydown", handler)
         return () => document.removeEventListener("keydown", handler)
-    }, [showPrintModal, onClose])
+    }, [showPrintModal])
 
     // Find setlist metadata if available (from parent hook or store)
     // The performance view is mounted under /perform/setlist/[id], so we can extract ID
