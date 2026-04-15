@@ -10,11 +10,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: v4.4 Deferred Audit Sweep — Architectural Polish
-Phase: 5 of 8 (Observability — L-001 + S-004) — ✅ Complete
-Plan: v44-05 shipped and unified
-Status: Loop closed. Ready for Phase 6 planning.
-Previous: v4.4 Phase 3 closed (client async safety); Phase 4 deferred (P2).
-Last activity: 2026-04-15 — v44-05 APPLY+UNIFY complete. Request-ID end-to-end via AsyncLocalStorage; chat SSE meta/heartbeat/done frames; api-client surfaces server requestId on errors. Commits c5200a6, e7e568c, f15cb18. 1321/1321 tests green (+24).
+Phase: 6 of 8 (Modal state hygiene) — ✅ Complete
+Plan: v44-06 shipped and unified
+Status: Loop closed. All R2B "must fix before release" items now closed. Ready for Phase 7 planning OR milestone gate review.
+Previous: v4.4 Phase 5 closed (observability). Phase 4 deferred (P2).
+Last activity: 2026-04-15 — v44-06 APPLY+UNIFY complete. EditDetails/NamePrompt re-seed, UserRow reset, CollapsibleSection storageKey, SwapPicker selection/query reset. Commits 5664255, 2e9b310, f36c101, 31d4b85. 1324/1324 tests green (+3).
 
 Progress:
 - v4.2: [██████████] 100% (8 of 8 phases complete)
@@ -32,7 +32,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 5 complete — ready for Phase 6 PLAN]
+  ✓        ✓        ✓     [Phase 6 complete — band onboarding gate clear]
 ```
 
 ## How to resume
@@ -131,10 +131,10 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — Phase 5 UNIFY complete; loop closed
-Stopped at: Observability shipped — request-ID via AsyncLocalStorage, chat SSE meta/heartbeat/done, api-client error enrichment. 3 commits + summary on origin/master, Vercel auto-deploying. 1321/1321 tests green (+24).
-Next action: `/paul:plan` for Phase 6 (Modal state hygiene — 4 modals with state-reset bugs).
-Resume file: `.paul/phases/v44-05-observability/v44-05-SUMMARY.md`
+Last session: 2026-04-15 — Phase 6 UNIFY complete; loop closed. Band-onboarding UX gate now CLEAR.
+Stopped at: Modal state hygiene shipped — UX-001/002/011/015/018 closed. 4 commits on origin/master. 1324/1324 tests green (+3). Last R2B "must fix before release" items done.
+Next action: User decision — close v4.4 milestone now (Phases 1, 2, 3, 5, 6 shipped; 4 deferred; 7, 8 are P2 tail) OR continue to Phase 7/8 P2 work.
+Resume file: `.paul/phases/v44-06-modal-state/v44-06-SUMMARY.md`
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
