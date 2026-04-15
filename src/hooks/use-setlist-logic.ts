@@ -128,9 +128,18 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
     }, [tracks, checkOfflineStatus])
 
-    // Calculate sync progress
-    const totalTracksWithFiles = tracks.filter(t => t.fileId).length
-    const offlineCount = tracks.filter(t => t.fileId && offlineStatus[t.fileId]).length
+    // Calculate sync progress — v4.3 P03: memoize the dual-pass counts so
+    // parent renders don't re-filter the tracks array on every paint.
+    const { totalTracksWithFiles, offlineCount } = useMemo(() => {
+        let total = 0
+        let offline = 0
+        for (const t of tracks) {
+            if (!t.fileId) continue
+            total++
+            if (offlineStatus[t.fileId]) offline++
+        }
+        return { totalTracksWithFiles: total, offlineCount: offline }
+    }, [tracks, offlineStatus])
     const isFullyOffline = totalTracksWithFiles > 0 && offlineCount === totalTracksWithFiles
     const isSyncing = Object.values(downloading).some(Boolean)
 

@@ -76,19 +76,20 @@ export function LibraryDataSection() {
     useEffect(() => {
         const load = async () => {
             try {
-                // Get latest sync run
+                // v4.3 P05: parallelize the two independent reads (~half the
+                // wall-time for the admin Data tab first-paint).
                 const syncRunsQuery = query(
                     collection(db, "sync_runs"),
                     orderBy("startedAt", "desc"),
                     limit(1)
                 )
-                const syncSnap = await getDocs(syncRunsQuery)
+                const [syncSnap, countSnap] = await Promise.all([
+                    getDocs(syncRunsQuery),
+                    getCountFromServer(collection(db, "library_index")),
+                ])
                 if (!syncSnap.empty) {
                     setLastSync(syncSnap.docs[0].data() as SyncRunData)
                 }
-
-                // Get file count from library_index
-                const countSnap = await getCountFromServer(collection(db, "library_index"))
                 setFileCount(countSnap.data().count)
             } catch {
                 // Silent -- will show "No sync data" state

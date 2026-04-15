@@ -164,9 +164,18 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const files = tab === "supplemental" ? allFilteredSupplemental : allFilteredCore
     const combinedItems = tab === "audio" ? audioFiles : files
 
+    // v4.3 P01: memoize the id-key so the effect below has a stable dep.
+    // Previously deps used `combinedItems.map(i=>i.id).join(',')` inline,
+    // which is a fresh string every render → effect re-ran and re-fetched
+    // usage on every render.
+    const combinedItemIdsKey = useMemo(
+        () => combinedItems.map(i => i.id).join(','),
+        [combinedItems],
+    )
+
     useEffect(() => {
         if (!user) return // Wait for Firebase client auth token to initialize
-        
+
         const fileIds = combinedItems
             .filter(f => !isAudioFile(f))
             .map(f => f.id)
@@ -179,7 +188,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
             .then(data => setUsageMap(data))
             .catch(() => { }) // Silent -- usage badges are non-critical
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [combinedItems.map(i => i.id).join(','), user])
+    }, [combinedItemIdsKey, user])
 
     const hasAudio = audioFiles.length > 0
 

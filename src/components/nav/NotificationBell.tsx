@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { reportSaveError } from "@/lib/save-error"
@@ -34,7 +34,12 @@ export function NotificationBell() {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
 
-    const unreadCount = notifications.filter(n => !n.read).length
+    // v4.3 P04: memoize so unrelated parent re-renders don't reduce over
+    // the notifications list on every paint.
+    const unreadCount = useMemo(
+        () => notifications.reduce((acc, n) => acc + (n.read ? 0 : 1), 0),
+        [notifications],
+    )
 
     const gigModeActive = useMusicStore(s => s.gigModeActive)
 
