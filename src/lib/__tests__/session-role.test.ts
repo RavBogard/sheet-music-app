@@ -67,16 +67,38 @@ describe("session-role sign/verify", () => {
         expect(await verifyRoleCookie(undefined)).toBeNull()
     })
 
-    it("returns null when secret is missing", async () => {
+    it("returns null when secret is missing outside Vercel prod (graceful degrade)", async () => {
         vi.resetModules()
-        const saved = process.env.SESSION_ROLE_SECRET
+        const savedSecret = process.env.SESSION_ROLE_SECRET
+        const savedVercelEnv = process.env.VERCEL_ENV
         delete process.env.SESSION_ROLE_SECRET
+        delete process.env.VERCEL_ENV
         try {
             const mod = await import("@/lib/session-role")
             const signed = await mod.signRoleCookie("u-1", "musician")
             expect(signed).toBeNull()
         } finally {
-            process.env.SESSION_ROLE_SECRET = saved
+            process.env.SESSION_ROLE_SECRET = savedSecret
+            if (savedVercelEnv !== undefined) process.env.VERCEL_ENV = savedVercelEnv
+            vi.resetModules()
+        }
+    })
+
+    it("throws when secret is missing on Vercel production (fail fast)", async () => {
+        vi.resetModules()
+        const savedSecret = process.env.SESSION_ROLE_SECRET
+        const savedVercelEnv = process.env.VERCEL_ENV
+        delete process.env.SESSION_ROLE_SECRET
+        process.env.VERCEL_ENV = "production"
+        try {
+            const mod = await import("@/lib/session-role")
+            await expect(mod.signRoleCookie("u-1", "musician")).rejects.toThrow(
+                /SESSION_ROLE_SECRET is required on Vercel Production/,
+            )
+        } finally {
+            process.env.SESSION_ROLE_SECRET = savedSecret
+            if (savedVercelEnv !== undefined) process.env.VERCEL_ENV = savedVercelEnv
+            else delete process.env.VERCEL_ENV
             vi.resetModules()
         }
     })

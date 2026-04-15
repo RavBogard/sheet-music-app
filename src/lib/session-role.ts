@@ -68,13 +68,23 @@ export async function signRoleCookie(
     uid: string,
     role: string | null,
 ): Promise<string | null> {
-    const key = await getKey()
-    if (!key) {
+    // v4.3 P10-01: fail loud on Vercel Production, graceful elsewhere.
+    // Silent-null-in-prod was the footgun that caused the 2026-04-15 lockout.
+    // Key on VERCEL_ENV (set only on Vercel) rather than NODE_ENV (which
+    // is "production" during any local `next build`).
+    if (!process.env.SESSION_ROLE_SECRET) {
+        if (process.env.VERCEL_ENV === "production") {
+            throw new Error(
+                "SESSION_ROLE_SECRET is required on Vercel Production (see docs/DEPLOY-CHECKLIST.md)",
+            )
+        }
         logger.warn(
-            "[session-role] SESSION_ROLE_SECRET not set — companion cookie disabled",
+            "[session-role] SESSION_ROLE_SECRET missing — companion cookie disabled",
         )
         return null
     }
+    const key = await getKey()
+    if (!key) return null
     const iat = Math.floor(Date.now() / 1000)
     const payload: RolePayload = { uid, role, iat, exp: iat + SESSION_ROLE_MAX_AGE }
     const payloadB64 = b64urlEncodeString(JSON.stringify(payload))
