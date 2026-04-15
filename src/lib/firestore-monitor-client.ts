@@ -59,6 +59,7 @@ export class FirestoreMonitorClient {
     private _firstSnapshot = true
     private _consecutiveErrors = 0
     private _retryTimer: ReturnType<typeof setTimeout> | null = null
+    private _disconnected = false // v4.3 P6-B03: guards against post-teardown forwardSnapshot
     private _lastCommandError = 0
 
     constructor(options: FirestoreMonitorClientOptions) {
@@ -124,6 +125,8 @@ export class FirestoreMonitorClient {
                     clearTimeout(this._snapshotDebounceTimer)
                 }
                 this._snapshotDebounceTimer = setTimeout(() => {
+                    // v4.3 P6-B03: bail if teardown happened between schedule + fire
+                    if (this._disconnected) return
                     if (this._pendingSnapshot) {
                         this.forwardSnapshot(this._pendingSnapshot)
                         this._pendingSnapshot = null
@@ -161,6 +164,10 @@ export class FirestoreMonitorClient {
     }
 
     private forwardSnapshot(snapshot: MixerSnapshot): void {
+        // v4.3 P6-B03: guard against post-teardown forwarding. onSnapshot
+        // unsubscription is asynchronous in Firestore, so a snapshot
+        // callback can still fire briefly after disconnect().
+        if (this._disconnected) return
         this._lastSnapshotAt = Date.now()
         logger.debug("[MonitorFS] Snapshot forwarded to store (total: %d)", this._snapshotCount)
         this.options.onStateUpdate(snapshot)
@@ -170,6 +177,7 @@ export class FirestoreMonitorClient {
      * Stop listening and clean up.
      */
     disconnect(): void {
+        this._disconnected = true
         if (this.stateUnsub) {
             this.stateUnsub()
             this.stateUnsub = null

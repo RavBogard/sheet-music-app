@@ -289,7 +289,12 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const snap = await tx.get(docRef)
                 if (!snap.exists()) throw new Error('NOT_FOUND')
                 const remote = snap.data() as { tracks?: SetlistTrack[] }
-                const currentTracks = (remote.tracks || []) as SetlistTrack[]
+                // v4.3 P6-B06: defensive — corrupted docs may store `tracks` as
+                // something non-array (empty object from a bad migration, etc.).
+                // Treat any non-array as "empty" rather than crashing on `.length`.
+                const currentTracks: SetlistTrack[] = Array.isArray(remote.tracks)
+                    ? remote.tracks
+                    : []
                 if (trackIndex < 0 || trackIndex >= currentTracks.length) {
                     throw new Error('TRACK_INDEX_OUT_OF_RANGE')
                 }
