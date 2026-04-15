@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { initAdmin } from "@/lib/firebase-admin"
+import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import {
+    SESSION_ROLE_COOKIE,
+    SESSION_ROLE_MAX_AGE,
+    signRoleCookie,
+} from "@/lib/session-role"
 
 const COOKIE_NAME = "__session"
 // Session cookie lives for 14 days (Firebase maximum).
@@ -45,6 +50,19 @@ export async function POST(req: NextRequest) {
             expiresIn: SESSION_MAX_AGE * 1000, // API expects milliseconds
         })
 
+        // v4.3 P9-02: read Firestore role and sign a companion cookie so
+        // the proxy has an authoritative role source independent of
+        // whatever claim the client's ID token happened to carry.
+        let firestoreRole: string | null = null
+        try {
+            const db = getFirestore()
+            const snap = await db.collection("users").doc(decoded.uid).get()
+            const r = snap.data()?.role
+            if (typeof r === "string") firestoreRole = r
+        } catch (err) {
+            logger.warn("[session] Firestore role read failed:", err)
+        }
+
         const response = NextResponse.json({ status: "ok" })
         response.cookies.set(COOKIE_NAME, sessionCookie, {
             maxAge: SESSION_MAX_AGE,
@@ -53,6 +71,17 @@ export async function POST(req: NextRequest) {
             path: "/",
             sameSite: "lax",
         })
+
+        const signed = await signRoleCookie(decoded.uid, firestoreRole)
+        if (signed) {
+            response.cookies.set(SESSION_ROLE_COOKIE, signed, {
+                maxAge: SESSION_ROLE_MAX_AGE,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                path: "/",
+                sameSite: "lax",
+            })
+        }
 
         return response
     } catch (error) {
@@ -86,11 +115,25 @@ export async function DELETE(req: NextRequest) {
             path: "/",
             sameSite: "lax",
         })
+        response.cookies.set(SESSION_ROLE_COOKIE, "", {
+            maxAge: 0,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            sameSite: "lax",
+        })
         return response
     } catch {
         // Invalid/expired session — clear cookie anyway since it's useless
         const response = NextResponse.json({ status: "ok" })
         response.cookies.set(COOKIE_NAME, "", {
+            maxAge: 0,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            sameSite: "lax",
+        })
+        response.cookies.set(SESSION_ROLE_COOKIE, "", {
             maxAge: 0,
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
