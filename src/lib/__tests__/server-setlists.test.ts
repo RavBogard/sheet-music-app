@@ -34,7 +34,7 @@ const queryChain = {
 }
 
 vi.mock('@/lib/firebase-admin', () => ({
-    initAdmin: vi.fn(),
+    initAdmin: vi.fn().mockReturnValue(true),
 }))
 
 vi.mock('firebase-admin/firestore', () => ({

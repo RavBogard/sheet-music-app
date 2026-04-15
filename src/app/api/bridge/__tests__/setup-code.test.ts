@@ -22,7 +22,7 @@ const fakeDb = {
 }
 
 vi.mock("@/lib/firebase-admin", () => ({
-    initAdmin: vi.fn(),
+    initAdmin: vi.fn().mockReturnValue(true),
     getFirestore: () => fakeDb,
 }))
 

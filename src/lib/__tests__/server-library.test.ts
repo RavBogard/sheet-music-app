@@ -30,7 +30,7 @@ const queryChain: Record<string, unknown> = {
 }
 
 vi.mock('@/lib/firebase-admin', () => ({
-    initAdmin: vi.fn(),
+    initAdmin: vi.fn().mockReturnValue(true),
     getFirestore: vi.fn(() => ({
         collection: vi.fn(() => queryChain),
     })),
