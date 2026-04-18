@@ -38,4 +38,6 @@ export const flushTrackSchema = z.object({
     description: z.string().nullable().optional(),
     performer: z.string().nullable().optional(),
     estimatedMinutes: z.number().nullable().optional(),
+    tune: z.string().nullable().optional(),
+    pageNumber: z.number().nullable().optional(),
 }).strict()

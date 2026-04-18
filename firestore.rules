@@ -282,6 +282,12 @@ service cloud.firestore {
       allow update, delete: if false; // Bridge deletes via Admin SDK
     }
 
+    // System-wide alerts (read by all signed-in users, written by admins).
+    match /system/globalAlert {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

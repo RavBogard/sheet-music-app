@@ -136,7 +136,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // if the remote doc has been modified since the caller last saw it.
         async updateSetlist(id: string, data: Partial<Setlist>, expectedUpdatedAt: Timestamp | null = null) {
             const docRef = doc(db, COLLECTION_PATH, id);
-            const cleanData = stripUndefined(data as Record<string, unknown>);
+            const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
             // updateSetlistWithVersion adds its own updatedAt; don't double-set
             delete cleanData.updatedAt;
             await updateSetlistWithVersion(docRef, expectedUpdatedAt, cleanData);
