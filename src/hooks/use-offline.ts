@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useCallback } from 'react'
-import { isFileCached } from '@/lib/cache-utils'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { SetlistTrack } from '@/types/models'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
+import { getFile, hasFile, putFile } from '@/lib/offline-idb'
 
 /**
- * Unified offline hook.
- * 
- * Combines the old useOfflineManager (bulk download) and useOfflineSync
- * (per-track status) into a single hook backed by the Browser Cache API.
+ * Unified offline hook, backed by IndexedDB (via offline-idb).
+ *
+ * Ground truth for "is this file available offline." A file is offline iff
+ * its blob is in IDB. Failed downloads do NOT mark it available.
  */
 export function useOffline() {
     const [downloading, setDownloading] = useState<Record<string, boolean>>({})
@@ -21,46 +21,74 @@ export function useOffline() {
     const checkOfflineStatus = useCallback(async (tracks: SetlistTrack[]) => {
         const status: Record<string, boolean> = {}
         for (const track of tracks) {
-            if (track.fileId) {
-                status[track.fileId] = await isFileCached(track.fileId)
-            }
-            if (track.audioFileId) {
-                status[track.audioFileId] = await isFileCached(track.audioFileId)
-            }
+            if (track.fileId) status[track.fileId] = await hasFile(track.fileId)
+            if (track.audioFileId) status[track.audioFileId] = await hasFile(track.audioFileId)
         }
         setOfflineStatus(status)
         return status
     }, [])
 
-    /** Download a single file to IndexedDB */
+    const downloadingRef = useRef(downloading)
+    downloadingRef.current = downloading
+    const controllersRef = useRef<Map<string, AbortController>>(new Map())
+
+    // Abort all in-progress downloads on unmount
+    useEffect(() => {
+        const controllers = controllersRef.current
+        return () => {
+            for (const controller of controllers.values()) controller.abort()
+            controllers.clear()
+        }
+    }, [])
+
+    /**
+     * Fetch a file from the API and persist its blob to IDB. Returns true
+     * iff the blob was written. Failed fetches do NOT update offlineStatus.
+     */
+    const fetchAndStore = useCallback(async (fileId: string, signal: AbortSignal): Promise<boolean> => {
+        const res = await fetch(`/api/drive/file/${fileId}`, { signal })
+        if (!res.ok) return false
+        const blob = await res.blob()
+        if (!blob || blob.size === 0) return false
+        await putFile(fileId, blob)
+        return true
+    }, [])
+
     const downloadFile = useCallback(async (fileId: string, fileName: string) => {
-        if (downloading[fileId]) return
+        if (downloadingRef.current[fileId]) return
+
+        const controller = new AbortController()
+        controllersRef.current.set(fileId, controller)
 
         setDownloading(prev => ({ ...prev, [fileId]: true }))
+        let stored = false
         try {
-            const res = await fetch(`/api/drive/file/${fileId}`)
-            if (!res.ok) throw new Error('Download failed')
-
-            // Fetch caching saves this transparently in the background
-            setOfflineStatus(prev => ({ ...prev, [fileId]: true }))
+            stored = await fetchAndStore(fileId, controller.signal)
         } catch (error) {
-            logger.error(`Failed to download ${fileName}:`, error)
+            if (!controller.signal.aborted) {
+                logger.error(`Failed to download ${fileName}:`, error)
+            }
         } finally {
-            setDownloading(prev => ({ ...prev, [fileId]: false }))
+            controllersRef.current.delete(fileId)
+            if (!controller.signal.aborted) {
+                setDownloading(prev => ({ ...prev, [fileId]: false }))
+                // Only set true when the blob actually made it into IDB.
+                if (stored) setOfflineStatus(prev => ({ ...prev, [fileId]: true }))
+            }
         }
-    }, [downloading])
+    }, [fetchAndStore])
 
-    /** Bulk download all files in a setlist to cache.
+    /** Bulk download all files in a setlist.
      *  Pass `silent: true` to suppress toast notifications (e.g., for background sync). */
     const downloadSetlist = useCallback(async (tracks: SetlistTrack[], options?: { silent?: boolean }) => {
         const silent = options?.silent ?? false
         const filesToDownload: Array<{ id: string; name: string }> = []
 
         for (const track of tracks) {
-            if (track.fileId && !(await isFileCached(track.fileId))) {
+            if (track.fileId && !(await hasFile(track.fileId))) {
                 filesToDownload.push({ id: track.fileId, name: track.title })
             }
-            if (track.audioFileId && !(await isFileCached(track.audioFileId))) {
+            if (track.audioFileId && !(await hasFile(track.audioFileId))) {
                 filesToDownload.push({ id: track.audioFileId, name: `${track.title} (Audio)` })
             }
         }
@@ -72,49 +100,53 @@ export function useOffline() {
 
         if (!silent) setBulkProgress({ current: 0, total: filesToDownload.length })
 
-        let completed = 0
+        const controller = new AbortController()
+        let succeeded = 0
+        let failed = 0
         for (const file of filesToDownload) {
             try {
-                const res = await fetch(`/api/drive/file/${file.id}`)
-                if (res.ok) {
+                const stored = await fetchAndStore(file.id, controller.signal)
+                if (stored) {
+                    succeeded++
                     setOfflineStatus(prev => ({ ...prev, [file.id]: true }))
+                } else {
+                    failed++
                 }
             } catch (e) {
+                failed++
                 logger.error(`[Offline] Failed to cache ${file.name}:`, e)
             }
-            completed++
-            if (!silent) setBulkProgress({ current: completed, total: filesToDownload.length })
+            if (!silent) setBulkProgress({ current: succeeded + failed, total: filesToDownload.length })
         }
 
         if (!silent) {
             setBulkProgress(null)
-            toast.success(`${completed} files saved for offline use`)
+            if (succeeded === 0) {
+                toast.error('Could not save any files for offline use')
+            } else if (failed > 0) {
+                toast.warning(`${succeeded} of ${filesToDownload.length} files saved — ${failed} failed`)
+            } else {
+                toast.success(`${succeeded} files saved for offline use`)
+            }
         }
-    }, [])
+    }, [fetchAndStore])
 
     /** Get a cached file blob (returns null if not cached) */
     const getCachedFile = useCallback(async (fileId: string) => {
-        try {
-            const res = await fetch(`/api/drive/file/${fileId}`, { cache: "only-if-cached" })
-            if (res.ok) return await res.blob()
-        } catch { }
-        return null
+        return getFile(fileId)
     }, [])
 
     // Computed
     const isDownloading = bulkProgress !== null || Object.values(downloading).some(Boolean)
 
     return {
-        // Status
         offlineStatus,
         checkOfflineStatus,
         isDownloading,
         bulkProgress,
-        // Actions
         downloadFile,
         downloadSetlist,
         getCachedFile,
-        // Per-file downloading state
         downloading,
     }
 }

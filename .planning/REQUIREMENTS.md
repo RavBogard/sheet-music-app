@@ -1,141 +1,137 @@
-# Requirements: CentralReform.Live — Outline & Stability
-
-**Defined:** 2026-03-01
-**Core Value:** Musicians can glance at the app during a live service and instantly know tune, key, and lead — without fumbling through paper or charts.
-
 ## v1 Requirements
 
-Requirements for this milestone. Each maps to roadmap phases.
+### Architecture & Tech Debt
+- [ ] **ARCH-01**: Remove `src/components/views/PerformerView.tsx` and `FlowItemView.tsx`.
+- [ ] **ARCH-02**: Delete the `/perform/[id]` route.
+- [ ] **ARCH-03**: Remove global keyboard/footswitch event listeners tied to the legacy view.
 
-### Data Model
+### Authentication & Sessions
+- [ ] **AUTH-01**: Integrate `next-firebase-auth-edge` to handle server-side cookie minting and token refresh automatically.
+- [ ] **AUTH-02**: Replace all instances of `signInWithRedirect` with `signInWithPopup`.
+- [ ] **AUTH-03**: Ensure the "Logout" action calls `/api/logout` (to clear cookie) and executes `window.location.reload()` to purge Next.js Router Cache.
 
-- [x] **DATA-01**: Setlist track has a `tune` field for arrangement/version name (e.g., "Klepper", "Friedman", "Moshav")
-- [x] **DATA-02**: Tune field threads through all 3 type hierarchies: `SetlistTrack`, `QueueItem`, `PrintTrack`
-- [x] **DATA-03**: Tune field is editable in the track editor (TrackSheet) with free-text input
-- [x] **DATA-04**: Existing setlists with no tune data display gracefully (no errors, empty field shown as blank)
+### Routing & Public Boundary
+- [ ] **SEC-01**: Remove `?public=true` bypass logic from `/setlists/[id]/page.tsx` (the editor).
+- [ ] **SEC-02**: Update the "Share" functionality to link strictly to the `/perform/setlist/[id]` route.
+- [ ] **SEC-03**: Verify `src/proxy.ts` correctly permits unauthenticated access to the performance route but blocks the editor.
 
-### Live Performance View
+### UI Permissions (Gating)
+- [ ] **UI-01**: Update `DashboardClient.tsx` (or parent layout) to receive server-verified roles.
+- [ ] **UI-02**: Update `SetlistDashboard.tsx` to conditionally render "Edit", "Duplicate", and "Delete" buttons server-side.
+- [ ] **UI-03**: Ensure Monitor controls are only rendered on the server if the user is a Sound Engineer or has an assigned bus.
 
-- [ ] **LIVE-01**: Performance view defaults to an outline mode showing all tracks in a scannable list
-- [ ] **LIVE-02**: Outline shows tune name, key, and lead for each track at a glance
-- [ ] **LIVE-03**: Section headers (liturgical groupings) visually separate the outline into service sections
-- [ ] **LIVE-04**: Current track is highlighted with clear NOW indicator; next track visible as NEXT
-- [ ] **LIVE-05**: User can drill down from outline to chart view for any individual track
-- [ ] **LIVE-06**: Text is readable from music-stand distance (arm's length, ~24-36 inches) — minimum 14px body, 18px+ for current track
-- [ ] **LIVE-07**: Foot pedal / keyboard navigation (PageDown/PageUp) advances through outline
+### API Security
+- [ ] **API-01**: Audit all `export async function GET/POST` routes in `src/app/api`.
+- [ ] **API-02**: Refactor insecure endpoints (e.g., `/api/drive/file`, `/api/chat`) to use `createApiHandler`.
 
-### Printed Outline
+### v1.1 Gating Requirements
 
-- [ ] **PRNT-01**: Printed outline has clean columnar format: Song, Tune, Key, Lead per row
-- [ ] **PRNT-02**: Section headers render as bold section dividers in the printed outline
-- [ ] **PRNT-03**: Outline fits on standard letter paper, readable from a music stand (~arm's length)
-- [ ] **PRNT-04**: Print outline is available as a standalone print mode (outline only, no charts)
-- [ ] **PRNT-05**: Font size is 12pt+ for readability at distance
+#### Auth & Routing Fixes
+- [ ] **AUTH-04**: Perform a deep dive analysis of role-based routing, UI gating, and authentication state flow.
+- [ ] **AUTH-05**: Musicians cannot see administrative actions like 'Clone Setlist' or 'Duplicate'.
+- [ ] **AUTH-06**: Ensure zero UI/Auth flashes when loading protected pages.
+- [ ] **AUTH-07**: Investigate and fix 403 Forbidden error when Admins upload files to `/api/library/upload`.
 
-### Critical Stability
+#### Schedule & Data Fetching
+- [ ] **DATA-01**: Display a straightforward list of upcoming public setlists associated with dates on the schedule page (regardless of musician assignment).
+- [ ] **DATA-02**: Ensure unauthenticated users immediately see the hero card on the dashboard.
 
-- [x] **STAB-01**: Print cache hash (`computeContentHash`) includes all cover page fields (title, key, lead, tune, notes) to prevent stale PDFs
-- [x] **STAB-02**: Publish route surfaces email delivery failures to user instead of silent swallowing
-- [ ] **STAB-03**: Fix npm critical vulnerability in opensheetmusicdisplay dependency chain
-- [ ] **STAB-04**: Replace `as any` type assertions in API routes with proper Firestore Timestamp type guards (~10 instances in scheduling/admin routes)
-- [ ] **STAB-05**: Add Zod schema validation to API routes that currently skip it (publish, tasks/update)
-- [ ] **STAB-06**: Replace silent `.catch(() => {})` in critical paths (publish, Firestore writes) with logged error handling
+### v1.2 Library Expansion Requirements
 
-### Type Safety
+#### PDF Processing Pipeline
+- [ ] **DATA-03**: Create a local Node script to batch process a directory of PDFs, removing the first page (title page) from each file.
+- [ ] **DATA-04**: Extract `Title` and `Author` from the source PDF filenames using Regex, converting titles from ALL CAPS to Title Case.
+- [ ] **DATA-05**: Upload processed PDFs to Firebase Storage via the script.
+- [ ] **DATA-06**: Create corresponding Firestore `songs` documents for each uploaded PDF, populated with the extracted metadata and a `collection` identifier.
 
-- [ ] **TYPE-01**: Create shared `toTimestamp()` utility for safe Firestore Timestamp conversion, replacing all `(value as any).seconds` patterns
-- [ ] **TYPE-02**: Fix `as any` assertions in setlist/library page components (~5 instances)
-- [ ] **TYPE-03**: Fix `as any` assertions in admin components (LiveServiceSection, UserRow, etc.)
-- [ ] **TYPE-04**: Replace `Promise.all()` in critical data loads with `Promise.allSettled()` and error handling
+#### UI Segregation & Segregation
+- [ ] **UI-04**: Add visual indicators (badges, color tints) to search results in `SongChartsLibrary.tsx` to differentiate between Core and Supplemental collections.
+- [ ] **UI-05**: Add a "Collection" filter to the library search toolbar.
+- [ ] **UI-06**: Update the `UploadDialog.tsx` to require selecting a destination collection when manually uploading new charts.
+- [ ] **ARCH-04**: Update the `Song` type definition and Firestore schema to include the `collection` field.
 
-### Live Monitoring
+### v1.2 MuseScore Import Requirements
 
-- [ ] **MON-01**: Live monitoring connects reliably from the host/leader device to the Firebase live state system
-- [ ] **MON-02**: Leader can advance through the setlist and all connected devices update in real-time
-- [ ] **MON-03**: Monitoring interface is fast, intuitive, and requires minimal taps to advance
-- [ ] **MON-04**: Connection status is clearly visible (connected/disconnected/reconnecting)
+#### MuseScore File Conversion
+- [x] **MS-01**: Extract .mscx XML content from .mscz ZIP archives using jszip.
+- [x] **MS-02**: Convert MSCX XML to valid MusicXML (score-partwise) via XSLT transform, preserving core notation (notes, rests, chords, key/time signatures, parts).
+- [x] **MS-03**: Extend the upload API route (`/api/library/upload`) to accept .mscz and .mscx files, converting them to MusicXML server-side.
+- [x] **MS-04**: Store both the original MuseScore file and the converted MusicXML in Firebase Storage.
+- [x] **MS-05**: Preserve the original file buffer alongside the conversion output for archival and potential re-conversion.
+- [x] **MS-06**: Update UploadDialog.tsx to accept .mscz and .mscx file types in the file picker.
 
-### Feature Evaluation
+### v1.2 Native Transposition Requirements
 
-- [ ] **EVAL-01**: Comprehensive evaluation of existing features with improvement suggestions documented
+#### MusicXML Transposition
+- [x] **T19-01**: SmartScoreViewer must initialize OSMD's `TransposeCalculator` so that `Sheet.Transpose` actually affects rendered output (notes, chords, key signatures).
+- [x] **T19-02**: PDFOverlay must detect MusicXML file types from queue items (db- prefix, .musicxml, .xml, .mxl extensions) instead of hardcoding `type: "pdf"`.
+- [x] **T19-03**: PDFOverlay must render SmartScoreViewer for MusicXML files and PDFViewer for PDF files based on queue item type.
+- [x] **T19-04**: SmartTransposer AI chord overlay must NOT render for MusicXML files (chords are in the score data, not AI-detected overlays).
+- [x] **T19-05**: Queue items built in PDFOverlay must use `toQueueItem()` from queue-utils.ts for correct file-type detection.
+- [x] **T19-06**: Transposition of MusicXML files must change actual notation (notes + chords + key signatures) natively via OSMD, not just chord label overlays.
+- [x] **T19-07**: Print output of transposed MusicXML scores must reflect the transposed notation.
 
-## v2 Requirements
+### v1.2 Add to Setlist Requirements
 
-Deferred to future milestone. Tracked but not in current roadmap.
-
-### Outline Enhancements
-
-- **OUTL-01**: Lead-in / cue notes as a dedicated field on SetlistTrack
-- **OUTL-02**: Tune library autocomplete from accumulated tune names
-- **OUTL-03**: Per-musician transposed keys displayed on printed outline
-- **OUTL-04**: Cumulative time tracking per section and total service duration
-- **OUTL-05**: Real-time outline sync across devices (leader advances, musicians follow)
-- **OUTL-06**: Liturgical section templates for pre-populating service structure
-
-### Remaining Technical Debt
-
-- **DEBT-01**: Refactor MusicianPicker.tsx (855 lines) into smaller components
-- **DEBT-02**: Refactor print-pipeline.ts (701 lines) — extract chord caching and result caching
-- **DEBT-03**: Refactor SetlistEditorV2.tsx (617 lines) into smaller components
-- **DEBT-04**: Add comprehensive E2E tests for core user journeys
-- **DEBT-05**: Fix remaining `as any` assertions beyond API routes (~20 instances in hooks/components)
-- **DEBT-06**: Implement offline sync conflict resolution
-- **DEBT-07**: Add backup/restore functionality
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| MIDI integration | No musicians use programmable gear; zero users benefit |
-| Backing track player | Live musicians only; audio engine adds massive scope |
-| Lyrics projection / ProPresenter | Congregation uses siddur (prayer book), not projected lyrics |
-| Autoscroll / teleprompter | Outline fits one screen; foot pedal handles charts |
-| Song requests during performance | Services follow fixed liturgical structure |
-| Multi-band / multi-project | Single congregation, single team |
-| Stage messaging / flash alerts | Musicians communicate musically, not via screen flashes |
-| Complex timeline automation | Services flow organically; rigid timelines break |
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| DATA-01 | Phase 1 | Complete |
-| DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Complete |
-| DATA-04 | Phase 1 | Complete |
-| STAB-01 | Phase 1 | Complete |
-| STAB-02 | Phase 1 | Complete |
-| LIVE-01 | Phase 2 | Pending |
-| LIVE-02 | Phase 2 | Pending |
-| LIVE-03 | Phase 2 | Pending |
-| LIVE-04 | Phase 2 | Pending |
-| LIVE-05 | Phase 2 | Pending |
-| LIVE-06 | Phase 2 | Pending |
-| LIVE-07 | Phase 2 | Pending |
-| PRNT-01 | Phase 3 | Pending |
-| PRNT-02 | Phase 3 | Pending |
-| PRNT-03 | Phase 3 | Pending |
-| PRNT-04 | Phase 3 | Pending |
-| PRNT-05 | Phase 3 | Pending |
-| MON-01 | Phase 4 | Pending |
-| MON-02 | Phase 4 | Pending |
-| MON-03 | Phase 4 | Pending |
-| MON-04 | Phase 4 | Pending |
-| STAB-03 | Phase 5 | Pending |
-| STAB-04 | Phase 5 | Pending |
-| STAB-05 | Phase 5 | Pending |
-| STAB-06 | Phase 5 | Pending |
-| TYPE-01 | Phase 5 | Pending |
-| TYPE-02 | Phase 5 | Pending |
-| TYPE-03 | Phase 5 | Pending |
-| TYPE-04 | Phase 5 | Pending |
-| EVAL-01 | Phase 6 | Pending |
-
-**Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31
-- Unmapped: 0
+#### Add Song to Setlist from Library
+- [x] **P20-01**: "Add to Setlist..." context menu item appears as FIRST item on LibraryFileRow for band leaders and admins on non-folder, non-audio files.
+- [x] **P20-02**: Context menu item and batch action button hidden for musicians (non-admin, non-band-leader roles).
+- [x] **P20-03**: Bottom sheet picker opens with editable setlists (personal + public), sorted by most recent, with search/filter.
+- [x] **P20-04**: Selecting a setlist adds the song(s) as tracks (matching addSongsFromLibrary ID format), auto-closes the sheet.
+- [x] **P20-05**: Toast with undo action shown after successful add, matching existing delete-track toast pattern.
+- [x] **P20-06**: Undo removes only the specific added track IDs (not snapshot restore) to handle concurrent edits safely.
+- [x] **P20-07**: Duplicate song in setlist: warn but allow, toast says '"Song Name" is already in this setlist. Added again.'
+- [x] **P20-08**: Batch add from SelectionActionBar sends all selected songs to the sheet picker, single aggregate toast.
 
 ---
-*Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after roadmap creation*
+
+## Traceability
+- ARCH-01 -> Phase 1
+- ARCH-02 -> Phase 1
+- ARCH-03 -> Phase 1
+- AUTH-01 -> Phase 2
+- AUTH-02 -> Phase 2
+- AUTH-03 -> Phase 2
+- SEC-01 -> Phase 3
+- SEC-02 -> Phase 3
+- SEC-03 -> Phase 3
+- UI-01 -> Phase 4
+- UI-02 -> Phase 4
+- UI-03 -> Phase 4
+- API-01 -> Phase 5
+- API-02 -> Phase 5
+- AUTH-04 -> Phase 12
+- AUTH-05 -> Phase 13
+- AUTH-06 -> Phase 13
+- AUTH-07 -> Phase 12
+- DATA-01 -> Phase 14
+- DATA-02 -> Phase 14
+- DATA-03 -> TBD
+- DATA-04 -> TBD
+- DATA-05 -> TBD
+- DATA-06 -> TBD
+- UI-04 -> TBD
+- UI-05 -> TBD
+- UI-06 -> TBD
+- ARCH-04 -> TBD
+- MS-01 -> Phase 18
+- MS-02 -> Phase 18
+- MS-03 -> Phase 18
+- MS-04 -> Phase 18
+- MS-05 -> Phase 18
+- MS-06 -> Phase 18
+- T19-01 -> Phase 19
+- T19-02 -> Phase 19
+- T19-03 -> Phase 19
+- T19-04 -> Phase 19
+- T19-05 -> Phase 19
+- T19-06 -> Phase 19
+- T19-07 -> Phase 19
+- P20-01 -> Phase 20
+- P20-02 -> Phase 20
+- P20-03 -> Phase 20
+- P20-04 -> Phase 20
+- P20-05 -> Phase 20
+- P20-06 -> Phase 20
+- P20-07 -> Phase 20
+- P20-08 -> Phase 20

@@ -49,14 +49,17 @@ export interface OverlayDimensions {
     minWidthPx: number
     /** Horizontal padding applied to the overlay div */
     padH: number
+    /** Exact height in px to geometrically cover the original chord text */
+    coverHeightPx: number
 }
 
 // Minimum font size to remain legible
 const FONT_MIN_PX = 10
 
-// Multiplier from measured span height to font-size.
-// DOM span height includes line-height padding; 0.90 brings the overlay
-// font visually in line with the PDF's own rendered chord text.
+// Multiplier from absolute box height to font-size.
+// Since web fonts sit inside a line-height box with built in ascender/descender padding,
+// matching font size 1:1 with geometric bounds causes letters to render too large.
+// 0.90 shrinks the glyph so it visually fits inside the rigid geometric box.
 const H_PCT_TO_FONT_SCALE = 0.90
 
 // Default chord row height as percentage of page (for AI-added chords with no size data).
@@ -84,22 +87,26 @@ export function computeOverlayDimensions(
     // Priority 1: explicit user size override
     if (chord.sizeOverride?.pxHeight && chord.sizeOverride.pxHeight > 4) {
         const fontSizePx = Math.max(FONT_MIN_PX, chord.sizeOverride.pxHeight)
-        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, padH)
+        const coverHeightPx = chord.sizeOverride.pxHeight
+        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, coverHeightPx, padH)
     }
 
     // Priority 2: h% x containerHeightPx — zoom-reactive, stale-proof
     const hPct = chord.h ?? 0
     if (hPct > 0 && containerHeightPx > 0) {
         const rawPx = (hPct / 100) * containerHeightPx
+        const coverHeightPx = rawPx
         const fontSizePx = Math.max(FONT_MIN_PX, rawPx * H_PCT_TO_FONT_SCALE)
-        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, padH)
+        return buildDimensions(chord, displayText, containerWidthPx, fontSizePx, coverHeightPx, padH)
     }
 
     // Priority 3: AI-added chords have no h — estimate from container height
+    const rawPx = (containerHeightPx * DEFAULT_CHORD_H_PCT / 100)
+    const coverHeightPx = containerHeightPx > 0 ? rawPx : 16
     const fallbackPx = containerHeightPx > 0
-        ? Math.max(FONT_MIN_PX, (containerHeightPx * DEFAULT_CHORD_H_PCT / 100) * H_PCT_TO_FONT_SCALE)
+        ? Math.max(FONT_MIN_PX, rawPx * H_PCT_TO_FONT_SCALE)
         : 16
-    return buildDimensions(chord, displayText, containerWidthPx, fallbackPx, padH)
+    return buildDimensions(chord, displayText, containerWidthPx, fallbackPx, coverHeightPx, padH)
 }
 
 function buildDimensions(
@@ -107,6 +114,7 @@ function buildDimensions(
     displayText: string,
     containerWidthPx: number,
     fontSizePx: number,
+    coverHeightPx: number,
     padH: number,
 ): OverlayDimensions {
     // --- Cover width: must cover the ORIGINAL chord text in the PDF ---
@@ -132,5 +140,5 @@ function buildDimensions(
     // --- Final: accommodate whichever is larger ---
     const minWidthPx = Math.max(coverWidthPx, transposedWidthPx)
 
-    return { fontSizePx, coverWidthPx, minWidthPx, padH }
+    return { fontSizePx, coverWidthPx, minWidthPx, padH, coverHeightPx }
 }

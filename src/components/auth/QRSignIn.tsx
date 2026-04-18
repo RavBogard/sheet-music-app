@@ -17,6 +17,7 @@ import { signInWithCustomToken } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { QRCodeSVG } from "qrcode.react"
 import { Smartphone, RefreshCw, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
 
 type QRState = "active" | "registering" | "approved" | "signing-in" | "error"
@@ -96,41 +97,53 @@ export function QRSignIn() {
     useEffect(() => {
         if (state !== "active" || !session) return
 
-        pollRef.current = setInterval(async () => {
-            try {
-                const res = await fetch(`/api/auth/qr?code=${session.code}`)
+        let pollInterval = 2000
+        const startPolling = () => {
+            pollRef.current = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/auth/qr?code=${session.code}`)
 
-                if (res.status === 503) {
-                    // Firebase Admin not available — stop polling entirely
-                    cleanup()
-                    setState("error")
-                    return
+                    if (res.status === 503) {
+                        // Firebase Admin not available — stop polling entirely
+                        cleanup()
+                        setState("error")
+                        return
+                    }
+
+                    if (res.status === 429) {
+                        // Rate limited — back off: stop current interval, restart slower
+                        if (pollRef.current) clearInterval(pollRef.current)
+                        pollInterval = Math.min(pollInterval * 2, 30000)
+                        startPolling()
+                        return
+                    }
+
+                    if (res.status === 410 || res.status === 404) {
+                        // Expired or not found — auto-refresh
+                        createSession()
+                        return
+                    }
+
+                    if (!res.ok) return
+
+                    const data = await res.json()
+
+                    if (data.status === "approved" && data.token) {
+                        cleanup()
+                        setApprovedName(data.userName || null)
+                        setState("signing-in")
+
+                        // Sign in on this device
+                        await signInWithCustomToken(auth, data.token)
+                        setState("approved")
+                        // Auth state change will trigger the app to reload/redirect
+                    }
+                } catch {
+                    // Silent — will retry on next poll
                 }
-
-                if (res.status === 410 || res.status === 404) {
-                    // Expired or not found — auto-refresh
-                    createSession()
-                    return
-                }
-
-                if (!res.ok) return
-
-                const data = await res.json()
-
-                if (data.status === "approved" && data.token) {
-                    cleanup()
-                    setApprovedName(data.userName || null)
-                    setState("signing-in")
-
-                    // Sign in on this device
-                    await signInWithCustomToken(auth, data.token)
-                    setState("approved")
-                    // Auth state change will trigger the app to reload/redirect
-                }
-            } catch {
-                // Silent — will retry on next poll
-            }
-        }, 2000)
+            }, pollInterval)
+        }
+        startPolling()
 
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, [state, session, createSession, cleanup])
@@ -179,12 +192,14 @@ export function QRSignIn() {
         return (
             <div className="flex flex-col items-center gap-3 py-4">
                 <p className="text-xs text-muted-foreground">Couldn&apos;t generate QR code</p>
-                <button
+                <Button
+                    variant="link"
+                    size="xs"
                     onClick={createSession}
-                    className="text-xs text-violet-500 hover:text-violet-400 flex items-center gap-1"
+                    className="text-xs text-violet-500 hover:text-violet-400"
                 >
                     <RefreshCw className="h-3 w-3" /> Try again
-                </button>
+                </Button>
             </div>
         )
     }
@@ -210,12 +225,14 @@ export function QRSignIn() {
 
             {/* Countdown + registration status */}
             {registerFailed ? (
-                <button
+                <Button
+                    variant="link"
+                    size="xs"
                     onClick={createSession}
-                    className="text-[10px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1"
+                    className="text-[10px] text-yellow-500 hover:text-yellow-400"
                 >
                     <RefreshCw className="h-2.5 w-2.5" /> Connection issue — tap to retry
-                </button>
+                </Button>
             ) : (
                 <p className="text-[10px] text-muted-foreground/60 tabular-nums">
                     Expires in {minutes}:{seconds.toString().padStart(2, "0")}

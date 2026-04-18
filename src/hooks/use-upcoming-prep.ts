@@ -7,6 +7,7 @@ import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache,
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist } from "@/lib/setlist-firebase"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
+import { reportSaveError } from "@/lib/save-error"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }
@@ -49,16 +50,19 @@ export function useUpcomingPrep() {
 
     // Track last visit time — cache-first for instant load
     useEffect(() => {
-        if (!user) return
+        if (!user?.uid) return
+        let cancelled = false
         const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
         // Read from cache first, then update in background
         getDocFromCache(prefRef).catch(() => getDoc(prefRef)).then(snap => {
+            if (cancelled) return
             const ts = snap.data()?.lastVisitedAt
             if (ts?.toDate) setLastVisitedAt(ts.toDate())
             else if (ts) setLastVisitedAt(new Date(ts))
-            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(() => { })
-        }).catch(() => { })
-    }, [user])
+            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(err => reportSaveError(err, "last-visit timestamp", { silent: true }))
+        }).catch(err => reportSaveError(err, "dashboard prefetch", { silent: true }))
+        return () => { cancelled = true }
+    }, [user?.uid])
 
     // Subscribe to upcoming public setlists (next 7 days)
     const q = useMemo(() => {
@@ -71,7 +75,6 @@ export function useUpcomingPrep() {
 
         return query(
             collection(db, 'setlists'),
-            where('isPublic', '==', true),
             where('eventDate', '>=', Timestamp.fromDate(now)),
             where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
             orderBy('eventDate', 'asc'),
@@ -79,11 +82,11 @@ export function useUpcomingPrep() {
         )
     }, [user, isMember])
 
-    const { data } = useSafeFirestoreSync<Setlist>(q as any)
+    const { data, loading: subLoading } = useSafeFirestoreSync<Setlist[]>(q)
 
     useEffect(() => {
         if (data) {
-            setSetlists(data as unknown as Setlist[])
+            setSetlists(data)
         } else {
             setSetlists([])
         }
@@ -93,6 +96,8 @@ export function useUpcomingPrep() {
     // Firestore `in` queries support up to 30 items per batch, so we chunk if needed.
     useEffect(() => {
         if (!user || setlists.length === 0) return
+
+        let cancelled = false
 
         const fileIds = new Set<string>()
         for (const s of setlists) {
@@ -109,6 +114,7 @@ export function useUpcomingPrep() {
             const prefs: Record<string, SongPref> = {}
 
             for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+                if (cancelled) return
                 const batch = allIds.slice(i, i + BATCH_SIZE)
                 try {
                     const colRef = collection(db, 'users', user.uid, 'songPreferences')
@@ -118,6 +124,7 @@ export function useUpcomingPrep() {
                 } catch {
                     // Fallback: read individually from cache on query failure
                     for (const fileId of batch) {
+                        if (cancelled) return
                         try {
                             const ref = doc(db, 'users', user.uid, 'songPreferences', fileId)
                             const snap = await getDocFromCache(ref).catch(() => getDoc(ref))
@@ -127,10 +134,11 @@ export function useUpcomingPrep() {
                 }
             }
 
-            setSongPrefs(prefs)
+            if (!cancelled) setSongPrefs(prefs)
         }
 
         loadBatches()
+        return () => { cancelled = true }
     }, [user, setlists])
 
     // Build enriched list
@@ -191,7 +199,10 @@ export function useUpcomingPrep() {
 
     return {
         items: enriched,
-        isLoading: user !== null && isMember && setlists.length === 0,
+        // Honest loading signal: reflects the subscription's own loading state,
+        // not "setlists is empty" — an empty snapshot (no upcoming services)
+        // previously left this stuck at true forever.
+        isLoading: !!user && isMember && q !== null && subLoading,
         hasData: enriched.length > 0,
     }
 }

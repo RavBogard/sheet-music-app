@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { FileMusic, ListMusic, Plus, Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /**
@@ -67,9 +68,9 @@ export function CommandRow({
                 }
 
                 return (
-                    <button key={label} onClick={onClick} className={sharedClasses}>
+                    <Button key={label} variant="ghost" onClick={onClick} className={sharedClasses}>
                         {content}
-                    </button>
+                    </Button>
                 )
             })}
         </div>

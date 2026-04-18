@@ -24,15 +24,17 @@ export function useMetronome(initialBpm: number = 100) {
         intervalRef.current = null
     }, [])
 
-    const start = useCallback(() => {
+    const start = useCallback((skipFirstBeat = false) => {
         if (intervalRef.current) clearInterval(intervalRef.current)
 
         setIsPlaying(true)
 
-        // Initial beat
-        setIsBeat(true)
-        if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current)
-        blinkTimeoutRef.current = setTimeout(() => setIsBeat(false), 100)
+        // Initial beat (skip when restarting due to BPM change)
+        if (!skipFirstBeat) {
+            setIsBeat(true)
+            if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current)
+            blinkTimeoutRef.current = setTimeout(() => setIsBeat(false), 100)
+        }
 
         const intervalMs = 60000 / bpm
 
@@ -51,10 +53,10 @@ export function useMetronome(initialBpm: number = 100) {
         }
     }, [isPlaying, start, stop])
 
-    // Update interval if BPM changes while playing
+    // Update interval if BPM changes while playing (skip the immediate beat)
     useEffect(() => {
         if (isPlaying) {
-            start()
+            start(true)
         }
     }, [bpm, isPlaying, start])
 

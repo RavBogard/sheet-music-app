@@ -200,10 +200,15 @@ async function main() {
     // 6. Watch for config changes
     config.startWatching()
 
-    // Re-sync when monitor buses change
-    config.onChange(async (newConfig) => {
-        if (x32.isConnected()) {
-            console.log("[Bridge] Config changed — resyncing buses:", newConfig.monitorBuses)
+    // Re-sync only when X32-relevant config changes (not heartbeat, defaultChannels, etc.)
+    config.onChange(async (newConfig, prevConfig) => {
+        if (!x32.isConnected()) return
+
+        const busesChanged = JSON.stringify(newConfig.monitorBuses) !== JSON.stringify(prevConfig.monitorBuses)
+        const x32Changed = newConfig.x32Address !== prevConfig.x32Address || newConfig.x32Port !== prevConfig.x32Port
+
+        if (busesChanged || x32Changed) {
+            console.log("[Bridge] X32-relevant config changed — resyncing buses:", newConfig.monitorBuses)
             await x32.syncFullState(newConfig.monitorBuses)
         }
     })

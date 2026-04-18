@@ -97,6 +97,13 @@ export function ChatPanel() {
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter() // For navigation commands
+    const streamControllerRef = useRef<AbortController | null>(null)
+
+    // Abort any in-flight SSE stream when the panel unmounts so the reader
+    // rejects and we don't commit chunks to an unmounted component.
+    useEffect(() => {
+        return () => { streamControllerRef.current?.abort() }
+    }, [])
 
     const { pendingPrompt, clearPendingPrompt } = useChatStore()
 
@@ -120,6 +127,7 @@ export function ChatPanel() {
             const timer = setTimeout(() => handleSend(pendingPrompt), 100)
             return () => clearTimeout(timer)
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, pendingPrompt])
 
     const handleSend = async (overrideInput?: string) => {
@@ -131,6 +139,11 @@ export function ChatPanel() {
         setInput("")
         setLoading(true)
 
+        // Abort any previous in-flight stream before starting a new one.
+        streamControllerRef.current?.abort()
+        const controller = new AbortController()
+        streamControllerRef.current = controller
+
         try {
             // Send to AI API (now returns SSE stream)
             const res = await apiFetch('/api/chat', {
@@ -141,8 +154,12 @@ export function ChatPanel() {
                     setlistName: contextData.setlistName,
                     rabbi: contextData.rabbi,
                     libraryFiles: allFiles.map(f => ({ id: f.id, name: f.name }))
-                })
+                }),
+                signal: controller.signal,
+                timeout: 0,
             })
+
+            if (controller.signal.aborted) return
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}))
@@ -159,8 +176,13 @@ export function ChatPanel() {
             let sseBuffer = "" // M1 fix: buffer for SSE chunks split across TCP boundaries
 
             while (true) {
+                if (controller.signal.aborted) {
+                    try { await reader.cancel() } catch { /* already closed */ }
+                    return
+                }
                 const { done, value } = await reader.read()
                 if (done) break
+                if (controller.signal.aborted) return
 
                 sseBuffer += decoder.decode(value, { stream: true })
                 const lines = sseBuffer.split('\n')
@@ -226,10 +248,11 @@ export function ChatPanel() {
             }
 
         } catch (error: unknown) {
+            if ((error as Error).name === 'AbortError') return
             logger.error(error)
             addMessage({ role: 'assistant', content: `Error: ${error instanceof Error ? error.message : "I had trouble connecting."}` })
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
     }
 
@@ -251,7 +274,7 @@ export function ChatPanel() {
         // ── Batch all setlist modifications into edits ──
         // This ensures all changes go through local React state (via onApplyEdits)
         // instead of writing directly to Firestore (which causes stale-read races).
-        const edits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+        const edits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number; key?: string; bpm?: number; afterTitle?: string }[] = []
         let shouldClearFirst = false
 
         for (const cmd of commands) {
@@ -280,8 +303,7 @@ export function ChatPanel() {
 
                             const newId = await setlistService.createSetlist(
                                 String(p.name),
-                                normalizedTracks,
-                                !!p.isPublic
+                                normalizedTracks
                             )
                             lastCreatedSetlistId = newId
                             toast.success(`Created setlist: ${p.name}`)
@@ -299,7 +321,7 @@ export function ChatPanel() {
                             if (!resolvedId) {
                                 toast.error("No setlist to publish — create one first")
                             } else {
-                                await setlistService.updateSetlist(resolvedId, false, {
+                                await setlistService.updateSetlist(resolvedId, {
                                     eventDate: String(p.date)
                                 })
                                 toast.success(`Scheduled for ${p.date}`)
@@ -316,6 +338,9 @@ export function ChatPanel() {
                             type: p.type ? String(p.type) : undefined,
                             performer: p.performer ? String(p.performer) : undefined,
                             estimatedMinutes: p.estimatedMinutes ? Number(p.estimatedMinutes) : undefined,
+                            key: p.key ? String(p.key) : undefined,
+                            bpm: p.bpm ? Number(p.bpm) : undefined,
+                            afterTitle: p.afterTitle ? String(p.afterTitle) : undefined,
                         })
                         break;
 
@@ -336,7 +361,7 @@ export function ChatPanel() {
                         break;
 
                     case 'SEARCH_LIBRARY':
-                        useLibraryStore.getState().setFilter(null, String(p.query))
+                        useLibraryStore.getState().setFilter(String(p.query))
                         router.push('/library')
                         break;
 
@@ -365,7 +390,7 @@ export function ChatPanel() {
 
         // ── Apply batched setlist edits ──
         if ((shouldClearFirst || edits.length > 0) && onApplyEdits) {
-            const batchedEdits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number }[] = []
+            const batchedEdits: { action: string; title?: string; fileId?: string; index?: number; type?: string; performer?: string; estimatedMinutes?: number; key?: string; bpm?: number; afterTitle?: string }[] = []
 
             if (shouldClearFirst) {
                 // Remove all tracks by index, from last to first

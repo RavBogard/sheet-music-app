@@ -73,6 +73,63 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok
 }
 
 /**
+ * S02 — Alert the admin on every bridge setup-code redemption.
+ * Graceful-degrades if RESEND_API_KEY or BRIDGE_ALERT_EMAIL is unset.
+ * Callers must ignore the result — failures here must not block redemption.
+ */
+export async function sendBridgeRedemptionAlert(params: {
+  code: string
+  redeemedAt: Date
+  redeemerIp: string
+  redeemerUserAgent: string
+}): Promise<{ ok: boolean; reason?: string; messageId?: string }> {
+  const client = getResend()
+  if (!client) return { ok: false, reason: 'no_api_key' }
+
+  const to = process.env.BRIDGE_ALERT_EMAIL
+  if (!to) return { ok: false, reason: 'no_recipient' }
+
+  const iso = params.redeemedAt.toISOString()
+  const subject = 'Bridge credentials redeemed — centralreform.live'
+  const text = [
+    'A bridge setup code was just redeemed.',
+    '',
+    `Time: ${iso}`,
+    `IP:   ${params.redeemerIp}`,
+    `UA:   ${params.redeemerUserAgent}`,
+    `Code: ${params.code}`,
+    '',
+    'If you did not install a bridge in the last few minutes, rotate',
+    'FIREBASE_PRIVATE_KEY in the Firebase Console immediately.',
+  ].join('\n')
+  const html = `<pre style="font-family:ui-monospace,monospace;white-space:pre-wrap">${text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')}</pre>`
+
+  try {
+    const { data, error } = await client.emails.send({
+      from: `CRC Security <${getFromEmail()}>`,
+      to,
+      subject,
+      text,
+      html,
+    })
+    if (error) {
+      const msg = error.message || JSON.stringify(error)
+      logger.error(`[Email] Bridge alert error: ${msg}`)
+      return { ok: false, reason: msg }
+    }
+    logger.info(`[Email] Sent bridge redemption alert to ${to}`)
+    return { ok: true, messageId: data?.id }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[Email] Bridge alert threw: ${msg}`)
+    return { ok: false, reason: msg }
+  }
+}
+
+/**
  * Send setlist email notifications to all active members with emails.
  * Returns structured result with count and any error details.
  */

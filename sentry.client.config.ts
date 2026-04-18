@@ -13,9 +13,16 @@ if (dsn) {
         Sentry.init({
             dsn,
             environment: process.env.NODE_ENV,
+            integrations: [Sentry.browserTracingIntegration()],
             tracesSampleRate: 0.1,
             replaysSessionSampleRate: 0,
             replaysOnErrorSampleRate: 1.0,
+            ignoreErrors: [
+                // React streaming hydration internals — fires when browser extensions
+                // or rapid navigation remove DOM nodes before React can swap Suspense fallbacks.
+                // Not actionable; does not affect functionality.
+                "Cannot read properties of null (reading 'parentNode')",
+            ],
         })
     })
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const respondSchema = z.object({
@@ -10,49 +11,92 @@ const respondSchema = z.object({
     declineReason: z.string().optional(),
 })
 
+type SetlistMusicianEntry = { uid?: string; name?: string; email?: string; instrument?: string | null }
+
 export const POST = createApiHandler(
     async (ctx) => {
+        // v4.4 SEC-005: rate-limit accept/decline toggles to prevent notification spam
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { assignmentId, action, declineReason } = ctx.body!
         const db = getFirestore()
         const { FieldValue } = await import('firebase-admin/firestore')
 
-        // Fetch the assignment
-        const assignmentRef = db.collection('scheduling_assignments').doc(assignmentId)
-        const assignmentDoc = await assignmentRef.get()
-
-        if (!assignmentDoc.exists) {
-            return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
-        }
-
-        const assignment = assignmentDoc.data()!
-
-        // Verify the responding user is the assigned musician
-        if (assignment.musicianUid !== ctx.auth.uid) {
-            return NextResponse.json({ error: "Not your assignment" }, { status: 403 })
-        }
-
-        // Can only respond to pending assignments
-        if (assignment.status !== 'pending') {
-            return NextResponse.json({
-                error: `Assignment already ${assignment.status}`,
-                currentStatus: assignment.status,
-            }, { status: 400 })
-        }
-
         const newStatus = action === 'accept' ? 'confirmed' : 'declined'
+        const assignmentRef = db.collection('scheduling_assignments').doc(assignmentId)
+        let assignment: FirebaseFirestore.DocumentData
 
-        // Update assignment status
-        const updateData: Record<string, unknown> = {
-            status: newStatus,
-            respondedAt: FieldValue.serverTimestamp(),
+        // v4.4 DL-002: single transaction covers the assignment status flip
+        // AND (on decline) the setlist.musicians / assignedUids removal, so
+        // concurrent declines/assigns can't clobber each other's denorm writes.
+        try {
+            assignment = await db.runTransaction(async (transaction) => {
+                const assignmentDoc = await transaction.get(assignmentRef)
+
+                if (!assignmentDoc.exists) {
+                    throw new Error('NOT_FOUND')
+                }
+
+                const data = assignmentDoc.data()!
+
+                if (data.musicianUid !== ctx.auth.uid) {
+                    throw new Error('FORBIDDEN')
+                }
+
+                if (data.status !== 'pending') {
+                    throw new Error(`ALREADY_${data.status.toUpperCase()}`)
+                }
+
+                // For decline, read the setlist inside the same tx so the
+                // filter baseline is coherent with any concurrent assign.
+                if (action === 'decline' && typeof data.setlistId === 'string') {
+                    const setlistRef = db.collection('setlists').doc(data.setlistId)
+                    const setlistDoc = await transaction.get(setlistRef)
+                    if (setlistDoc.exists) {
+                        const musicians = ((setlistDoc.data()?.musicians ?? []) as SetlistMusicianEntry[])
+                        const filtered = musicians.filter(m => m.uid !== ctx.auth.uid)
+                        if (filtered.length !== musicians.length) {
+                            transaction.update(setlistRef, {
+                                musicians: filtered,
+                                assignedUids: filtered.map(m => m.uid).filter(Boolean),
+                            })
+                        }
+                    }
+                }
+
+                const updateData: Record<string, unknown> = {
+                    status: newStatus,
+                    respondedAt: FieldValue.serverTimestamp(),
+                }
+                if (action === 'decline' && declineReason) {
+                    updateData.declineReason = declineReason
+                }
+
+                transaction.update(assignmentRef, updateData)
+                return data
+            })
+        } catch (e) {
+            if (e instanceof Error) {
+                if (e.message === 'NOT_FOUND') {
+                    return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+                }
+                if (e.message === 'FORBIDDEN') {
+                    return NextResponse.json({ error: "Not your assignment" }, { status: 403 })
+                }
+                if (e.message.startsWith('ALREADY_')) {
+                    const currentStatus = e.message.replace('ALREADY_', '').toLowerCase()
+                    return NextResponse.json({
+                        error: `Assignment already ${currentStatus}`,
+                        currentStatus,
+                    }, { status: 400 })
+                }
+            }
+            throw e
         }
-        if (action === 'decline' && declineReason) {
-            updateData.declineReason = declineReason
-        }
 
-        await assignmentRef.update(updateData)
-
-        // Notify the assigner (band leader) about the response
+        // Notify the assigner (band leader) about the response — side-effect,
+        // kept post-commit so it doesn't bloat the transaction's contention set.
         try {
             const assignerUid = assignment.assignedBy
             if (assignerUid && assignerUid !== ctx.auth.uid) {
@@ -72,21 +116,6 @@ export const POST = createApiHandler(
             }
         } catch (e) {
             logger.warn('[Scheduling] Failed to notify assigner:', e)
-        }
-
-        // If declined, remove from the setlist's musicians array
-        if (action === 'decline') {
-            try {
-                const setlistRef = db.collection('setlists').doc(assignment.setlistId)
-                const setlistDoc = await setlistRef.get()
-                if (setlistDoc.exists) {
-                    const musicians = (setlistDoc.data()?.musicians || []) as Array<{ uid?: string }>
-                    const filtered = musicians.filter(m => m.uid !== ctx.auth.uid)
-                    await setlistRef.update({ musicians: filtered })
-                }
-            } catch (e) {
-                logger.warn('[Scheduling] Failed to remove declined musician from setlist:', e)
-            }
         }
 
         return NextResponse.json({

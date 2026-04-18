@@ -5,7 +5,7 @@ export function LibrarySkeleton() {
     return (
         <div className="flex-1 p-4 grid grid-cols-1 gap-2 max-w-3xl mx-auto w-full">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="w-full text-left p-6 rounded-2xl flex items-center gap-5 bg-card border border-border">
+                <div key={i} className="w-full text-left p-6 rounded-2xl flex items-center gap-5 bg-card border border-brand/10">
                     <Skeleton className="h-10 w-10 rounded-lg" /> {/* Icon matches size */}
                     <div className="flex-1 min-w-0 space-y-2">
                         <Skeleton className="h-6 w-1/3" />     {/* Title */}

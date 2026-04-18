@@ -14,6 +14,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, verifyIdToken } from "@/lib/firebase-admin"
 import { DecodedIdToken } from "firebase-admin/auth"
 import { logger } from "@/lib/logger"
+import {
+    generateRequestId,
+    requestIdStorage,
+    validateInboundRequestId,
+} from "@/lib/request-id"
 
 export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
@@ -37,24 +42,34 @@ function getSuperAdminUid(): string | null {
  * 
  * Returns AuthResult on success, throws NextResponse on failure.
  */
+export async function requireAuth(req: NextRequest | Request, requiredRole?: AuthRole, optional?: false): Promise<AuthResult>;
+export async function requireAuth(req: NextRequest | Request, requiredRole: AuthRole | undefined, optional: true): Promise<AuthResult | null>;
 export async function requireAuth(
     req: NextRequest | Request,
-    requiredRole?: AuthRole
-): Promise<AuthResult> {
+    requiredRole?: AuthRole,
+    optional: boolean = false
+): Promise<AuthResult | null> {
     const authHeader = req.headers.get("Authorization")
     const rawToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null
 
     if (!rawToken) {
+        if (optional) return null;
         throw NextResponse.json(
             { error: "Authentication required" },
             { status: 401 }
         )
     }
 
-    initAdmin()
+    if (!initAdmin()) {
+        throw NextResponse.json(
+            { error: "Firebase Admin not available" },
+            { status: 500 }
+        )
+    }
     const decoded = await verifyIdToken(rawToken)
 
     if (!decoded) {
+        if (optional) return null;
         throw NextResponse.json(
             { error: "Invalid or expired token" },
             { status: 403 }
@@ -64,8 +79,7 @@ export async function requireAuth(
     const userRole = (decoded.role as string) || undefined
     const superAdminUid = getSuperAdminUid()
     const isAdmin = (superAdminUid && decoded.uid === superAdminUid) || userRole === 'admin'
-    // Backward compat: old 'leader' maps to band_leader
-    const isBandLeader = isAdmin || userRole === 'band_leader' || userRole === 'leader'
+    const isBandLeader = isAdmin || userRole === 'band_leader'
     const isMusician = isBandLeader || userRole === 'musician'
 
     // Role hierarchy: admin > band_leader > musician > member > pending
@@ -94,9 +108,6 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
     if (isAdmin) return true
     if (required === 'admin') return false
 
-    // Backward compat: old 'leader' = band_leader
-    const effectiveRole = userRole === 'leader' ? 'band_leader' : userRole
-
     const hierarchy: Record<string, number> = {
         'admin': 4,
         'band_leader': 3,
@@ -105,7 +116,7 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
         'pending': 0,
     }
 
-    const userLevel = hierarchy[effectiveRole || ''] ?? -1
+    const userLevel = hierarchy[userRole || ''] ?? -1
     const requiredLevel = hierarchy[required] ?? 99
     return userLevel >= requiredLevel
 }
@@ -117,15 +128,48 @@ function checkRoleHierarchy(userRole: string | undefined, isAdmin: boolean, requ
  *   const auth = await withAuth(req)
  *   if (auth instanceof NextResponse) return auth
  */
+export async function withAuth(req: NextRequest | Request, requiredRole?: AuthRole, optional?: false): Promise<AuthResult | NextResponse>;
+export async function withAuth(req: NextRequest | Request, requiredRole: AuthRole | undefined, optional: true): Promise<AuthResult | null | NextResponse>;
 export async function withAuth(
     req: NextRequest | Request,
-    requiredRole?: AuthRole
-): Promise<AuthResult | NextResponse> {
+    requiredRole?: AuthRole,
+    optional: boolean = false
+): Promise<AuthResult | null | NextResponse> {
     try {
-        return await requireAuth(req, requiredRole)
+        return optional
+            ? await requireAuth(req, requiredRole, true)
+            : await requireAuth(req, requiredRole)
     } catch (error) {
         if (error instanceof NextResponse) return error
         logger.error("Auth middleware error:", error)
         return NextResponse.json({ error: "Authentication failed" }, { status: 500 })
     }
+}
+
+/**
+ * Request-ID wrapper for routes that don't use `createApiHandler` (e.g., the
+ * chat SSE route). Additive — preserves any existing handler wiring. Runs the
+ * handler inside the AsyncLocalStorage request-id scope and stamps the
+ * returned response with the `x-request-id` header.
+ *
+ * Usage:
+ *   export const POST = (req: NextRequest) => wrapWithRequestId(req, async (rid) => {
+ *     // ...build streaming response...
+ *   })
+ */
+export async function wrapWithRequestId(
+    req: NextRequest | Request,
+    handler: (requestId: string) => Promise<NextResponse | Response> | NextResponse | Response,
+): Promise<NextResponse | Response> {
+    const inbound = validateInboundRequestId(req.headers.get("x-request-id"))
+    const requestId = inbound ?? generateRequestId()
+    return requestIdStorage.run({ requestId }, async () => {
+        const response = await handler(requestId)
+        try {
+            response.headers.set("x-request-id", requestId)
+        } catch {
+            // Some Response objects have immutable headers — best-effort only.
+        }
+        return response
+    })
 }

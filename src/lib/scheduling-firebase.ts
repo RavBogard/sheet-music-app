@@ -7,10 +7,10 @@
 
 import { db } from '@/lib/firebase'
 import {
-    collection, query, where, orderBy, onSnapshot, getDocs,
-    addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
+    collection, query, where, orderBy, onSnapshot,
+    updateDoc, doc, Timestamp,
 } from 'firebase/firestore'
-import type { SchedulingAssignment, MusicianBlockout } from '@/types/models'
+import type { SchedulingAssignment } from '@/types/models'
 import { logger } from '@/lib/logger'
 
 // ── Scheduling Assignments ──
@@ -90,107 +90,33 @@ export function subscribeToAllUpcomingAssignments(
     })
 }
 
-// ── Musician Availability (Blockout Dates) ──
-
 /**
- * Subscribe to a musician's blockout dates.
+ * Subscribe to all public setlists with upcoming event dates.
+ * Used by the schedule page to show services even without assignments.
  */
-export function subscribeToMyBlockouts(
-    uid: string,
-    callback: (blockouts: MusicianBlockout[]) => void
+export function subscribeToUpcomingSetlists(
+    callback: (setlists: Array<{ id: string; name: string; eventDate: unknown }>) => void
 ): () => void {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+
     const q = query(
-        collection(db, 'musician_availability'),
-        where('musicianUid', '==', uid),
-        orderBy('startDate', 'asc'),
+        collection(db, 'setlists'),
+        where('eventDate', '>=', Timestamp.fromDate(now)),
+        orderBy('eventDate', 'asc'),
     )
 
     return onSnapshot(q, (snap) => {
-        const blockouts = snap.docs.map(d => ({
+        const setlists = snap.docs.map(d => ({
             id: d.id,
-            ...d.data(),
-        } as MusicianBlockout))
-        callback(blockouts)
+            name: (d.data().name as string) || 'Untitled',
+            eventDate: d.data().eventDate,
+        }))
+        callback(setlists)
     }, (err) => {
-        logger.warn('[Scheduling] Subscribe to my blockouts failed:', err)
+        logger.warn('[Scheduling] Subscribe to upcoming setlists failed:', err)
         callback([])
     })
-}
-
-/**
- * Subscribe to ALL musicians' blockouts (band leader view).
- */
-export function subscribeToAllBlockouts(
-    callback: (blockouts: MusicianBlockout[]) => void
-): () => void {
-    const q = query(
-        collection(db, 'musician_availability'),
-        orderBy('startDate', 'asc'),
-    )
-
-    return onSnapshot(q, (snap) => {
-        const blockouts = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-        } as MusicianBlockout))
-        callback(blockouts)
-    }, (err) => {
-        logger.warn('[Scheduling] Subscribe to all blockouts failed:', err)
-        callback([])
-    })
-}
-
-/**
- * Create a blockout date range (client-side write — allowed by Firestore rules).
- */
-export async function createBlockout(
-    uid: string,
-    startDate: string,
-    endDate: string,
-    reason?: string,
-): Promise<string> {
-    const ref = await addDoc(collection(db, 'musician_availability'), {
-        musicianUid: uid,
-        startDate,
-        endDate,
-        reason: reason || null,
-        recurring: false,
-        createdAt: serverTimestamp(),
-    })
-    return ref.id
-}
-
-/**
- * Delete a blockout date.
- */
-export async function deleteBlockout(blockoutId: string): Promise<void> {
-    await deleteDoc(doc(db, 'musician_availability', blockoutId))
-}
-
-// ── Helpers ──
-
-/**
- * Check if a musician is blocked out for a given date.
- */
-export function isBlockedOut(
-    blockouts: MusicianBlockout[],
-    date: string, // 'YYYY-MM-DD'
-): boolean {
-    return blockouts.some(b => date >= b.startDate && date <= b.endDate)
-}
-
-/**
- * Get availability status for a musician on a given date.
- * Returns 'available', 'blocked', or 'unknown'.
- */
-export function getAvailabilityStatus(
-    blockouts: MusicianBlockout[],
-    musicianUid: string,
-    date: string,
-): 'available' | 'blocked' | 'unknown' {
-    const musicianBlockouts = blockouts.filter(b => b.musicianUid === musicianUid)
-    if (musicianBlockouts.length === 0) return 'available' // No blockouts = assume available
-    return isBlockedOut(musicianBlockouts, date) ? 'blocked' : 'available'
 }
 
 // ── API Wrappers ──

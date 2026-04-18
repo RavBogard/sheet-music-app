@@ -19,7 +19,7 @@ export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: Di
     })
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
         outline: 'none' as const,
@@ -44,11 +44,11 @@ export const DividerRow = memo(function DividerRow({ track, canEdit, onTap }: Di
                     <GripVertical className="h-4 w-4" />
                 </div>
             )}
-            <div className="h-px bg-border flex-1" />
+            <div className="h-px bg-brand/10 flex-1" />
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 shrink-0">
                 {track.title || "Section"}
             </span>
-            <div className="h-px bg-border flex-1" />
+            <div className="h-px bg-brand/10 flex-1" />
         </div>
     )
 })

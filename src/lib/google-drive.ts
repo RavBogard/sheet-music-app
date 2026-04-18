@@ -2,26 +2,67 @@ import { drive } from "@googleapis/drive"
 import { GoogleAuth } from "google-auth-library"
 import { logger } from "@/lib/logger"
 
+const DRIVE_REQUEST_TIMEOUT_MS = 30_000
+const MAX_CONCURRENT_SUBFOLDER_REQUESTS = 5
+
 /**
- * Exponential backoff wrapper for Google Drive API calls
- * Retries on 429 (Rate Limit) and 50x (Transient Server Errors)
+ * Escape a string for use in Google Drive API query `name contains '...'`.
+ * Drive query language requires escaping backslashes and single quotes.
+ */
+function sanitizeDriveQuery(input: string): string {
+    return input.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+/**
+ * Run async operations with bounded concurrency.
+ * Prevents flooding the Drive API with parallel requests.
+ */
+async function mapWithConcurrency<T, R>(
+    items: T[],
+    fn: (item: T) => Promise<R>,
+    limit: number
+): Promise<R[]> {
+    const results: R[] = new Array(items.length)
+    let index = 0
+    async function worker() {
+        while (index < items.length) {
+            const i = index++
+            results[i] = await fn(items[i])
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()))
+    return results
+}
+
+/**
+ * Exponential backoff wrapper for Google Drive API calls.
+ * Retries on 429 (Rate Limit) and 50x (Transient Server Errors).
+ * Includes a 30-second timeout per attempt to prevent hanging requests.
  */
 async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3, baseDelayMs = 1500): Promise<T> {
     let attempt = 0;
     while (true) {
         try {
-            return await operation();
+            // Race between the operation and a timeout
+            const result = await Promise.race([
+                operation(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error(`Drive API timeout after ${DRIVE_REQUEST_TIMEOUT_MS}ms`)), DRIVE_REQUEST_TIMEOUT_MS)
+                ),
+            ]);
+            return result;
         } catch (error: any) {
             attempt++;
             if (attempt > maxRetries) throw error;
 
             const status = error?.status || error?.code;
-            if (status !== 429 && status !== 500 && status !== 502 && status !== 503 && status !== 504) {
+            const isTimeout = error?.message?.includes('timeout')
+            if (!isTimeout && status !== 429 && status !== 500 && status !== 502 && status !== 503 && status !== 504) {
                 throw error; // Let other errors bubble up
             }
 
             const delay = baseDelayMs * Math.pow(2, attempt - 1);
-            logger.warn(`[Drive API Retry] Attempt ${attempt} failed with ${status}. Retrying in ${delay}ms...`);
+            logger.warn(`[Drive API Retry] Attempt ${attempt} failed with ${isTimeout ? 'timeout' : status}. Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -116,13 +157,15 @@ export class DriveClient {
                 nextPageToken = res.data.nextPageToken
             } while (nextPageToken)
 
-            // Recursion ONLY if we are in folder-mode
+            // Recursion ONLY if we are in folder-mode — bounded to 5 concurrent
             if (folderId) {
                 const folders = allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
                 if (folders.length > 0) {
-                    logger.info(`[Drive] Digging into ${folders.length} subfolders...`)
-                    const subFolderResults = await Promise.all(
-                        folders.map(folder => this.listAllFiles(folder.id))
+                    logger.info(`[Drive] Digging into ${folders.length} subfolders (max ${MAX_CONCURRENT_SUBFOLDER_REQUESTS} concurrent)...`)
+                    const subFolderResults = await mapWithConcurrency(
+                        folders,
+                        folder => this.listAllFiles(folder.id),
+                        MAX_CONCURRENT_SUBFOLDER_REQUESTS
                     )
                     subFolderResults.forEach(subFiles => allFiles.push(...subFiles))
                 }
@@ -154,8 +197,7 @@ export class DriveClient {
 
             // 2. Text Search (if provided)
             if (query) {
-                // Escape simple quotes for safety (basic)
-                const safeQuery = query.replace(/'/g, "\\'")
+                const safeQuery = sanitizeDriveQuery(query)
                 q += ` and name contains '${safeQuery}'`
             }
 
@@ -264,4 +306,3 @@ export class DriveClient {
         }
     }
 }
-

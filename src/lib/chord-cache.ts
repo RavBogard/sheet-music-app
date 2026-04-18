@@ -138,6 +138,24 @@ export function saveNativeKey(
 }
 
 /**
+ * Save last-used key to library_index document.
+ * Fire-and-forget — persists the key a musician chose so it "sticks"
+ * when the same song is added to a future setlist.
+ */
+export function saveLastUsedKey(
+    fileId: string,
+    lastUsedKey: string,
+    lastUsedTransposition: number,
+): void {
+    apiFetch('/api/library/chord-cache', {
+        method: 'PATCH',
+        body: JSON.stringify({ fileId, lastUsedKey, lastUsedTransposition })
+    }).catch(err => {
+        logger.warn('[ChordCache] Last-used key save failed:', err)
+    })
+}
+
+/**
  * Save chord verification status.
  * Fire-and-forget.
  */
@@ -158,7 +176,7 @@ export function saveVerification(
  */
 export async function loadLibraryMeta(
     fileId: string,
-): Promise<{ nativeKey?: string; nativeKeySource?: string; chordsVerified?: boolean; chordsVerifiedBy?: string } | null> {
+): Promise<{ nativeKey?: string; nativeKeySource?: string; chordsVerified?: boolean; chordsVerifiedBy?: string; lastUsedKey?: string; lastUsedTransposition?: number } | null> {
     try {
         const res = await apiFetch(
             `/api/library/chord-cache?fileId=${encodeURIComponent(fileId)}&meta=true`

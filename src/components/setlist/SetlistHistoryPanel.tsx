@@ -4,6 +4,16 @@ import { useState, useEffect } from "react"
 import { getSetlistHistory, AuditEntry, AuditAction } from "@/lib/setlist-audit"
 import { History, RotateCcw, Plus, Minus, ArrowUpDown, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { SetlistTrack } from "@/types/models"
 import { toDate } from "@/lib/firestore-helpers"
 
@@ -59,15 +69,25 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
     const [entries, setEntries] = useState<AuditEntry[]>([])
     const [loading, setLoading] = useState(true)
     const [restoring, setRestoring] = useState<number | null>(null)
+    const [pendingRestore, setPendingRestore] = useState<{ idx: number; snapshot: TrackSnapshot[]; label: string } | null>(null)
 
     useEffect(() => {
         getSetlistHistory(setlistId, 30).then(setEntries).finally(() => setLoading(false))
     }, [setlistId])
 
-    const handleRestore = (index: number, snapshot: TrackSnapshot[]) => {
-        if (!confirm('Restore setlist to this version? This will replace the current track list.')) return
+    const openRestoreConfirm = (index: number, snapshot: TrackSnapshot[]) => {
+        const entry = entries[index]
+        const actionLabel = entry ? (actionLabels[entry.action] || entry.action) : 'this version'
+        const ts = entry ? toDate(entry.timestamp as unknown as Parameters<typeof toDate>[0]) : null
+        const when = ts ? ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
+        const label = when ? `${actionLabel} (${when})` : actionLabel
+        setPendingRestore({ idx: index, snapshot, label })
+    }
 
-        setRestoring(index)
+    const runRestore = () => {
+        if (!pendingRestore) return
+        const { idx, snapshot } = pendingRestore
+        setRestoring(idx)
         // Convert snapshot back to SetlistTrack format
         const tracks: SetlistTrack[] = snapshot.map((t, i) => ({
             id: `restored-${i}-${Date.now()}`,
@@ -78,6 +98,7 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
         }))
         onRestore(tracks)
         setRestoring(null)
+        setPendingRestore(null)
     }
 
     return (
@@ -134,7 +155,7 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-6 px-2 text-xs"
-                                                    onClick={() => handleRestore(idx, entry.trackSnapshot!)}
+                                                    onClick={() => openRestoreConfirm(idx, entry.trackSnapshot!)}
                                                     disabled={restoring !== null}
                                                 >
                                                     {restoring === idx ? (
@@ -184,6 +205,24 @@ export function SetlistHistoryPanel({ setlistId, onRestore, onClose }: Props) {
                     </div>
                 )}
             </div>
+
+            <AlertDialog
+                open={!!pendingRestore}
+                onOpenChange={(next) => { if (!next) setPendingRestore(null) }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will replace the current track list with the snapshot from {pendingRestore?.label ?? 'this version'}.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={runRestore}>Restore</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

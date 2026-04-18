@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { SetlistMusician, UserProfile, SchedulingAssignment, MusicianBlockout } from "@/types/models"
+import { SetlistMusician, UserProfile, SchedulingAssignment } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { subscribeToAllUsers } from "@/lib/users-firebase"
 import { useAuth } from "@/lib/auth-context"
@@ -9,14 +9,16 @@ import { useCongregation } from "@/lib/congregation-store"
 import { db } from "@/lib/firebase"
 import { doc, updateDoc, collection } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, Star, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Clock, Loader2, Ban, UserSearch, Sparkles } from "lucide-react"
+import { Users, Plus, X, ChevronDown, ChevronUp, Guitar, UserPlus, Mail, MailCheck, MailOpen, MailX, Send, Check, Loader2, UserSearch, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { ErrorBoundary } from "react-error-boundary"
 import { FallbackError } from "@/components/ui/fallback-error"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
-import { subscribeToSetlistAssignments, subscribeToAllBlockouts, assignMusicians, getAvailabilityStatus } from "@/lib/scheduling-firebase"
+import { subscribeToSetlistAssignments, assignMusicians } from "@/lib/scheduling-firebase"
 import { RabbiBanner } from "@/components/scheduling/RabbiBanner"
+import { MusicianChip } from "./MusicianChip"
+import { BandSuggestionsPanel } from "./BandSuggestionsPanel"
+import { AddGuestForm } from "./AddGuestForm"
 
 interface MusicianPickerProps {
     musicians: SetlistMusician[]
@@ -34,25 +36,16 @@ interface EmailStatus {
     status: 'sent' | 'delivered' | 'opened' | 'bounced' | 'complained' | 'delayed'
 }
 
-const INSTRUMENT_OPTIONS = Object.entries(INSTRUMENT_PRESETS).map(([key, val]) => ({
-    key,
-    label: val.label,
-}))
-
 export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlistName, eventDate, rabbiName, isPublished }: MusicianPickerProps) {
     const { isAdmin, isBandLeader, user: currentUser } = useAuth()
     const congregation = useCongregation()
     const [expanded, setExpanded] = useState(musicians.length > 0)
     const [allUsers, setAllUsers] = useState<UserProfile[]>([])
     const [showAddGuest, setShowAddGuest] = useState(false)
-    const [guestName, setGuestName] = useState("")
-    const [guestEmail, setGuestEmail] = useState("")
-    const [guestInstrument, setGuestInstrument] = useState("")
     const [editingInstrumentUid, setEditingInstrumentUid] = useState<string | null>(null)
     const instrumentRef = useRef<HTMLDivElement>(null)
     const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailStatus>>(new Map())
     const [schedulingAssignments, setSchedulingAssignments] = useState<SchedulingAssignment[]>([])
-    const [allBlockouts, setAllBlockouts] = useState<MusicianBlockout[]>([])
     const [isSendingRequests, setIsSendingRequests] = useState(false)
     const [suggestingFor, setSuggestingFor] = useState<string | null>(null) // declined musician instrument
     const [suggestions, setSuggestions] = useState<Array<{ uid: string; name: string; email: string; instrument: string | null; instrumentMatch: boolean | null }>>([])
@@ -62,7 +55,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
     const [bandSuggestions, setBandSuggestions] = useState<Array<{
         uid: string; name: string; email: string; phone: string | null;
         instrumentKey: string | null; instrumentLabel: string | null;
-        schedulingTier: string; score: number; isBlocked: boolean;
+        schedulingTier: string; score: number;
         reasons: string[];
     }>>([])
     const [bandSuggestionsGap, setBandSuggestionsGap] = useState<string[]>([])
@@ -75,7 +68,7 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
 
     // Subscribe to email delivery status after publish
     const emailEventsRef = useMemo(() => setlistId && isPublished ? collection(db, "setlists", setlistId, "emailEvents") : null, [setlistId, isPublished])
-    const { data: emailEventsData } = useSafeFirestoreSync(emailEventsRef as any)
+    const { data: emailEventsData } = useSafeFirestoreSync(emailEventsRef)
 
     useEffect(() => {
         if (!emailEventsData) {
@@ -99,13 +92,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         const unsub = subscribeToSetlistAssignments(setlistId, setSchedulingAssignments)
         return unsub
     }, [setlistId])
-
-    // Subscribe to all blockouts for availability indicators (band leaders only)
-    useEffect(() => {
-        if (!isBandLeader) return
-        const unsub = subscribeToAllBlockouts(setAllBlockouts)
-        return unsub
-    }, [isBandLeader])
 
     // Get scheduling status for a musician
     const getSchedulingStatus = useCallback((uid: string): SchedulingAssignment | undefined => {
@@ -161,13 +147,6 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         }
     }, [setlistId, setlistName, eventDate, musicians, allUsers, getSchedulingStatus])
 
-    // Get availability status for a musician on the event date
-    const getMusicianAvailability = useCallback((uid: string): 'available' | 'blocked' | 'unknown' => {
-        if (!eventDate || !isBandLeader) return 'unknown'
-        const dateOnly = eventDate.split('T')[0]
-        return getAvailabilityStatus(allBlockouts, uid, dateOnly)
-    }, [eventDate, isBandLeader, allBlockouts])
-
     // Fetch replacement suggestions when a musician declines
     const handleSuggestReplacement = useCallback(async (instrument?: string) => {
         if (!setlistId) return
@@ -221,9 +200,8 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         const unsub = subscribeToAllUsers((users) => {
             // Only show musicians, band leaders, and admins in the picker
             // (not plain members — they're community, not band)
-            // Backward compat: old 'leader' role maps to band_leader
             let active = users.filter(u =>
-                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin' || u.role === ('leader' as string)
+                u.role === 'musician' || u.role === 'band_leader' || u.role === 'admin'
             )
             if (currentUser && !active.some(u => u.uid === currentUser.uid)) {
                 active = [{
@@ -292,18 +270,10 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
         setEditingInstrumentUid(null)
     }, [musicians, onChange])
 
-    const addGuest = useCallback(() => {
-        if (!guestName.trim() || !guestEmail.trim()) return
-        onChange([...musicians, {
-            name: guestName.trim(),
-            email: guestEmail.trim(),
-            instrument: guestInstrument.trim() || undefined,
-        }])
-        setGuestName("")
-        setGuestEmail("")
-        setGuestInstrument("")
+    const addGuest = useCallback((name: string, email: string, instrument?: string) => {
+        onChange([...musicians, { name, email, instrument }])
         setShowAddGuest(false)
-    }, [musicians, onChange, guestName, guestEmail, guestInstrument])
+    }, [musicians, onChange])
 
     const removeGuest = useCallback((index: number) => {
         if (!canEdit) return
@@ -442,138 +412,25 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                             <div className="space-y-1.5">
                                 <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Members</p>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {allUsers.map((user) => {
-                                        const selected = isSelected(user.uid)
-                                        const instrument = getInstrumentLabel(user)
-                                        const showInstrumentPicker = editingInstrumentUid === user.uid
-                                        const isDefault = defaultUids.has(user.uid)
-                                        const schedulingStatus = getSchedulingStatus(user.uid)
-                                        const availability = getMusicianAvailability(user.uid)
-
-                                        return (
-                                            <div key={user.uid} className="relative">
-                                                <button
-                                                    onClick={() => toggleUser(user)}
-                                                    disabled={!canEdit}
-                                                    className={`
-                                                        inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-sm
-                                                        transition-all duration-150 border
-                                                        ${selected
-                                                            ? 'bg-primary/15 border-primary/40 text-foreground'
-                                                            : availability === 'blocked'
-                                                                ? 'bg-red-500/5 border-red-500/30 text-muted-foreground'
-                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border'
-                                                        }
-                                                        ${!canEdit ? 'opacity-60 cursor-default' : 'cursor-pointer'}
-                                                    `}
-                                                >
-                                                    {/* Availability dot (band leaders only) */}
-                                                    {isBandLeader && availability !== 'unknown' && (
-                                                        <span
-                                                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                                                availability === 'blocked' ? 'bg-red-500' : 'bg-emerald-500'
-                                                            }`}
-                                                            title={availability === 'blocked' ? 'Unavailable (blockout)' : 'Available'}
-                                                        />
-                                                    )}
-                                                    {selected && availability === 'unknown' && (
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                                                    )}
-                                                    <span>{user.displayName || user.email?.split('@')[0]}</span>
-                                                    {instrument ? (
-                                                        <span
-                                                            className={`text-xs text-muted-foreground/60 ${selected && isAdmin ? 'underline decoration-dotted cursor-pointer' : ''}`}
-                                                            onClick={(e) => {
-                                                                if (selected && isAdmin) {
-                                                                    e.stopPropagation()
-                                                                    setEditingInstrumentUid(user.uid)
-                                                                }
-                                                            }}
-                                                        >
-                                                            {instrument}
-                                                        </span>
-                                                    ) : selected && isAdmin ? (
-                                                        <span
-                                                            className="text-xs text-muted-foreground/40 underline decoration-dotted cursor-pointer"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setEditingInstrumentUid(user.uid)
-                                                            }}
-                                                        >
-                                                            + instrument
-                                                        </span>
-                                                    ) : null}
-                                                    {/* Default star — admins only (config/congregation write requires admin) */}
-                                                    {isAdmin && (
-                                                        <span
-                                                            className={`ml-0.5 cursor-pointer transition-colors ${isDefault
-                                                                ? 'text-amber-400 hover:text-amber-300'
-                                                                : 'text-muted-foreground/20 hover:text-muted-foreground/50'
-                                                                }`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                toggleDefault(user)
-                                                            }}
-                                                            title={isDefault ? 'Remove from default band' : 'Add to default band'}
-                                                        >
-                                                            <Star className={`h-3 w-3 ${isDefault ? 'fill-current' : ''}`} />
-                                                        </span>
-                                                    )}
-                                                    {/* Scheduling status indicator */}
-                                                    {selected && schedulingStatus && (
-                                                        <span title={`Scheduling: ${schedulingStatus.status}`}>
-                                                            {schedulingStatus.status === 'confirmed' ? (
-                                                                <Check className="h-3 w-3 text-emerald-500" />
-                                                            ) : schedulingStatus.status === 'pending' ? (
-                                                                <Clock className="h-3 w-3 text-amber-500" />
-                                                            ) : schedulingStatus.status === 'declined' ? (
-                                                                <X className="h-3 w-3 text-red-500" />
-                                                            ) : null}
-                                                        </span>
-                                                    )}
-                                                    {/* Blocked indicator */}
-                                                    {availability === 'blocked' && !selected && (
-                                                        <Ban className="h-3 w-3 text-red-400" />
-                                                    )}
-                                                    {/* Email delivery status */}
-                                                    {selected && (() => {
-                                                        const es = getEmailStatus(user.email)
-                                                        if (!es) return null
-                                                        const StatusIcon = es.status === 'opened' ? MailOpen
-                                                            : es.status === 'delivered' ? MailCheck
-                                                                : es.status === 'bounced' || es.status === 'complained' ? MailX
-                                                                    : Mail
-                                                        const color = es.status === 'opened' ? 'text-blue-400'
-                                                            : es.status === 'delivered' ? 'text-green-400'
-                                                                : es.status === 'bounced' || es.status === 'complained' ? 'text-red-400'
-                                                                    : 'text-muted-foreground/40'
-                                                        return (
-                                                            <span title={`Email ${es.status}`}>
-                                                                <StatusIcon className={`h-3 w-3 ${color}`} />
-                                                            </span>
-                                                        )
-                                                    })()}
-                                                </button>
-
-                                                {showInstrumentPicker && (
-                                                    <div
-                                                        ref={instrumentRef}
-                                                        className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-1 max-h-48 overflow-y-auto w-48"
-                                                    >
-                                                        {INSTRUMENT_OPTIONS.map((opt) => (
-                                                            <button
-                                                                key={opt.key}
-                                                                className="w-full text-left px-2.5 py-1.5 text-sm rounded hover:bg-muted/50 transition-colors"
-                                                                onClick={() => setInstrumentForUser(user.uid, opt.label)}
-                                                            >
-                                                                {opt.label}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
+                                    {allUsers.map((user) => (
+                                        <MusicianChip
+                                            key={user.uid}
+                                            user={user}
+                                            selected={isSelected(user.uid)}
+                                            instrument={getInstrumentLabel(user)}
+                                            isDefault={defaultUids.has(user.uid)}
+                                            schedulingStatus={getSchedulingStatus(user.uid)}
+                                            emailStatus={getEmailStatus(user.email)}
+                                            canEdit={canEdit}
+                                            isAdmin={isAdmin}
+                                            showInstrumentPicker={editingInstrumentUid === user.uid}
+                                            instrumentRef={instrumentRef}
+                                            onToggle={() => toggleUser(user)}
+                                            onEditInstrument={() => setEditingInstrumentUid(user.uid)}
+                                            onSetInstrument={(instrument) => setInstrumentForUser(user.uid, instrument)}
+                                            onToggleDefault={() => toggleDefault(user)}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -719,83 +576,15 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
 
                         {/* Smart Band Suggestions panel */}
                         {showBandSuggestions && (
-                            <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                                        <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                                        Smart Suggestions
-                                    </p>
-                                    <button onClick={() => setShowBandSuggestions(false)} className="text-muted-foreground hover:text-foreground">
-                                        <X className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-
-                                {bandSuggestionsGuidance && (
-                                    <p className="text-[11px] text-muted-foreground italic">{bandSuggestionsGuidance}</p>
-                                )}
-
-                                {bandSuggestionsGap.length > 0 && (
-                                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                                        Missing: {bandSuggestionsGap.map(k => INSTRUMENT_PRESETS[k]?.label || k).join(', ')}
-                                    </p>
-                                )}
-
-                                {loadingBandSuggestions ? (
-                                    <div className="flex justify-center py-4">
-                                        <Loader2 className="h-5 w-5 animate-spin text-purple-500/60" />
-                                    </div>
-                                ) : bandSuggestions.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground text-center py-3">No suggestions available</p>
-                                ) : (
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {bandSuggestions.filter(s => !s.isBlocked).map(s => {
-                                            const alreadySelected = musicians.some(m => m.uid === s.uid)
-                                            return (
-                                                <button
-                                                    key={s.uid}
-                                                    onClick={() => {
-                                                        if (alreadySelected) return
-                                                        onChange([...musicians, {
-                                                            uid: s.uid,
-                                                            name: s.name,
-                                                            email: s.email,
-                                                            instrument: s.instrumentLabel || undefined,
-                                                        }])
-                                                        toast.success(`Added ${s.name}`)
-                                                    }}
-                                                    disabled={alreadySelected}
-                                                    className={`
-                                                        inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs
-                                                        border transition-all
-                                                        ${alreadySelected
-                                                            ? 'bg-primary/10 border-primary/30 text-muted-foreground opacity-60 cursor-default'
-                                                            : s.schedulingTier === 'core'
-                                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground hover:bg-emerald-500/20'
-                                                                : 'bg-muted/30 border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
-                                                        }
-                                                    `}
-                                                    title={s.reasons.join(' · ')}
-                                                >
-                                                    {alreadySelected ? (
-                                                        <Check className="h-2.5 w-2.5 text-primary" />
-                                                    ) : (
-                                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                                            s.schedulingTier === 'core' ? 'bg-emerald-500'
-                                                                : s.schedulingTier === 'regular' ? 'bg-blue-500'
-                                                                : 'bg-muted-foreground/40'
-                                                        }`} />
-                                                    )}
-                                                    {s.name}
-                                                    {s.instrumentLabel && (
-                                                        <span className="text-muted-foreground/60">{s.instrumentLabel}</span>
-                                                    )}
-                                                    <span className="text-[10px] text-muted-foreground/40">{s.score}</span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                            <BandSuggestionsPanel
+                                suggestions={bandSuggestions}
+                                gap={bandSuggestionsGap}
+                                guidance={bandSuggestionsGuidance}
+                                loading={loadingBandSuggestions}
+                                musicians={musicians}
+                                onChange={onChange}
+                                onClose={() => setShowBandSuggestions(false)}
+                            />
                         )}
 
                         {canEdit && !showAddGuest && (
@@ -809,43 +598,10 @@ export function MusicianPicker({ musicians, onChange, canEdit, setlistId, setlis
                         )}
 
                         {canEdit && showAddGuest && (
-                            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
-                                <p className="text-xs font-medium text-muted-foreground">Add Guest</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                        placeholder="Name"
-                                        value={guestName}
-                                        onChange={(e) => setGuestName(e.target.value)}
-                                        className="h-8 text-sm"
-                                    />
-                                    <Input
-                                        placeholder="Instrument"
-                                        value={guestInstrument}
-                                        onChange={(e) => setGuestInstrument(e.target.value)}
-                                        className="h-8 text-sm"
-                                    />
-                                </div>
-                                <Input
-                                    placeholder="Email"
-                                    type="email"
-                                    value={guestEmail}
-                                    onChange={(e) => setGuestEmail(e.target.value)}
-                                    className="h-8 text-sm"
-                                />
-                                <div className="flex gap-2">
-                                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowAddGuest(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={addGuest}
-                                        disabled={!guestName.trim() || !guestEmail.trim()}
-                                    >
-                                        Add
-                                    </Button>
-                                </div>
-                            </div>
+                            <AddGuestForm
+                                onAdd={addGuest}
+                                onCancel={() => setShowAddGuest(false)}
+                            />
                         )}
                     </div>
                 )}

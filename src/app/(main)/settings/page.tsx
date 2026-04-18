@@ -16,6 +16,8 @@ import {
     LogOut, Pencil, Check, Lock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
@@ -98,7 +100,7 @@ export default function SettingsPage() {
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
+                    <Button variant="ghost" size="icon" aria-label="Back" onClick={() => router.back()} className="rounded-full hover:bg-accent md:hidden">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
@@ -112,13 +114,12 @@ export default function SettingsPage() {
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account</h2>
 
                     <div className="bg-card border border-border p-5 rounded-2xl flex items-center gap-4">
-                        {user?.photoURL ? (
-                            <img src={user.photoURL} alt="Profile" className="w-14 h-14 rounded-full border border-border" />
-                        ) : (
-                            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border border-border">
+                        <Avatar className="h-14 w-14 border border-border">
+                            <AvatarImage src={user?.photoURL ?? undefined} alt="Profile" />
+                            <AvatarFallback className="bg-muted">
                                 <User className="w-7 h-7 text-muted-foreground" />
-                            </div>
-                        )}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                             {editingName ? (
                                 <form
@@ -141,7 +142,7 @@ export default function SettingsPage() {
                                         className="h-8 text-sm font-semibold"
                                         autoFocus
                                     />
-                                    <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={savingName}>
+                                    <Button type="submit" size="icon" variant="ghost" aria-label="Save name" className="h-8 w-8 shrink-0" disabled={savingName}>
                                         <Check className="h-4 w-4" />
                                     </Button>
                                 </form>
@@ -179,10 +180,11 @@ export default function SettingsPage() {
                                 <button
                                     key={value}
                                     onClick={() => setTheme(value)}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${theme === value
-                                        ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
-                                        }`}
+                                    className={cn("flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+                                        theme === value
+                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border"
+                                    )}
                                 >
                                     <Icon className="w-4 h-4" />
                                     {label}
@@ -263,7 +265,7 @@ export default function SettingsPage() {
                                     </div>
                                 )}
                                 {passwordSuccess && (
-                                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm rounded-xl p-3">
+                                    <div className="bg-success/10 border border-success/20 text-success text-sm rounded-xl p-3">
                                         Password updated successfully.
                                     </div>
                                 )}
@@ -298,7 +300,7 @@ export default function SettingsPage() {
                     <Button
                         onClick={() => signOut()}
                         variant="ghost"
-                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 gap-2 px-8 rounded-xl"
+                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 gap-2 px-8 rounded-xl"
                     >
                         <LogOut className="w-4 h-4" />
                         Log Out

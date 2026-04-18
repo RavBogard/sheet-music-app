@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { env } from "@/env.mjs"
 
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -30,7 +31,7 @@ export const maxDuration = 300
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization')
-        const cronSecret = process.env.CRON_SECRET
+        const cronSecret = env.CRON_SECRET
 
         if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -62,7 +63,12 @@ export async function POST(req: NextRequest) {
         }
 
         const token = authHeader.slice(7)
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const { getAuth } = await import("firebase-admin/auth")
         const decoded = await getAuth().verifyIdToken(token)
 
@@ -81,7 +87,12 @@ export async function POST(req: NextRequest) {
 }
 
 async function runBackup(): Promise<NextResponse> {
-    initAdmin()
+    if (!initAdmin()) {
+        return NextResponse.json(
+            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { status: 500 },
+        )
+    }
 
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     const bucketName = process.env.BACKUP_BUCKET

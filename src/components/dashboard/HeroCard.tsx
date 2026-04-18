@@ -6,6 +6,7 @@ import { toDate } from "@/lib/firestore-helpers"
 import { isFileCached, cacheSetlistFiles } from "@/lib/cache-utils"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { PlayCircle, ArrowRight, CheckCircle2, Circle, Clock, Download, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /**
@@ -94,13 +95,14 @@ export function HeroCard({
     const allCached = offlineStatus && offlineStatus.cached === offlineStatus.total
 
     return (
-        <button
+        <Button
+            variant="ghost"
             onClick={isImminent ? onPerform : onClick}
             className={cn(
-                "w-full text-left rounded-2xl p-5 shadow-lg active:scale-[0.98] transition-all group border relative overflow-hidden",
+                "w-full h-auto text-left rounded-2xl p-5 shadow-lg active:scale-[0.98] group border relative overflow-hidden items-start whitespace-normal flex-col",
                 isImminent
-                    ? "bg-gradient-to-br from-brand to-brand/80 border-white/15 shadow-brand/20"
-                    : "bg-gradient-to-br from-brand/90 to-brand/80 border-white/10"
+                    ? "bg-gradient-to-br from-brand to-brand/80 border-white/15 shadow-brand/20 hover:from-brand hover:to-brand/70"
+                    : "bg-gradient-to-br from-brand/90 to-brand/80 border-white/10 hover:from-brand/95 hover:to-brand/85"
             )}
         >
             {/* Urgency badge */}
@@ -129,7 +131,7 @@ export function HeroCard({
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold text-white leading-snug mb-4 font-display">
+            <h3 className="text-lg sm:text-xl font-bold text-white leading-snug mb-4 font-display line-clamp-2">
                 {setlist.name}
             </h3>
 
@@ -166,14 +168,17 @@ export function HeroCard({
                                 <Circle className="w-3 h-3" />
                                 {offlineStatus.cached}/{offlineStatus.total} cached
                             </span>
-                            <span
-                                role="button"
+                            <Button
+                                variant="ghost"
+                                size="xs"
                                 onClick={handleDownloadForOffline}
+                                disabled={downloading}
+                                aria-label="Download all charts for offline use"
                                 className={cn(
-                                    "inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                    "font-semibold rounded-full",
                                     downloading
                                         ? "bg-white/10 text-white/60 cursor-wait"
-                                        : "bg-white/20 text-white hover:bg-white/30 cursor-pointer"
+                                        : "bg-white/20 text-white hover:bg-white/30"
                                 )}
                             >
                                 {downloading ? (
@@ -181,7 +186,7 @@ export function HeroCard({
                                 ) : (
                                     <><Download className="w-3 h-3" /> Download all</>
                                 )}
-                            </span>
+                            </Button>
                         </>
                     )}
                 </div>
@@ -195,12 +200,14 @@ export function HeroCard({
                         Perform
                         <ArrowRight className="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                     </div>
-                    <button
+                    <Button
+                        variant="link"
+                        size="xs"
                         onClick={(e) => { e.stopPropagation(); onClick() }}
-                        className="ml-auto text-xs text-white/50 hover:text-white/80 underline underline-offset-2 transition-colors"
+                        className="ml-auto text-xs text-white/50 hover:text-white/80"
                     >
                         Edit setlist
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 <div className="flex items-center gap-2 text-white text-sm font-semibold group-hover:text-white transition-colors">
@@ -209,6 +216,6 @@ export function HeroCard({
                     <ArrowRight className="w-4 h-4 ml-auto opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                 </div>
             )}
-        </button>
+        </Button>
     )
 }

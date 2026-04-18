@@ -3,9 +3,13 @@ import { resolve } from 'path'
 
 export default defineConfig({
     test: {
-        environment: 'node',
+        environment: 'jsdom',
         globals: true,
-        include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+        include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'bridge/src/**/*.test.ts'],
+        env: {
+            // Skip @t3-oss/env-nextjs validation — tests don't need real Firebase creds
+            SKIP_ENV_VALIDATION: '1',
+        },
     },
     resolve: {
         alias: {

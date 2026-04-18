@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { useSetlistStore } from "@/lib/setlist-store"
 import { useMusicStore, FileType } from "@/lib/store"
 import {
     DndContext,
@@ -13,14 +12,17 @@ import {
     useSensor,
     useSensors,
     DragEndEvent,
+    DragStartEvent,
 } from "@dnd-kit/core"
 import {
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { SetlistTrack, TrackType, SetlistMusician } from "@/types/models"
+import { Button } from "@/components/ui/button"
+import { SetlistTrack, TrackType, SetlistMusician, DriveFile } from "@/types/models"
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
+import { logger } from "@/lib/logger"
 import { useAuth } from "@/lib/auth-context"
 import { useChatStore } from "@/lib/chat-store"
 import { SERVICE_FLOW_TYPES } from "@/lib/validations"
@@ -36,29 +38,40 @@ import { SwipeToDelete } from "./SwipeToDelete"
 import { BatchActionBar } from "./BatchActionBar"
 import { AddBar } from "./AddBar"
 import { MusicianPicker } from "./MusicianPicker"
+import { SearchOverlay } from "./SearchOverlay"
+import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
+import { AddToSetlistSheet } from "@/components/library/AddToSetlistSheet"
+
+import dynamic from "next/dynamic"
 
 // Shared components (kept from v1)
-import { PrintModal } from "../PrintModal"
-import { PublishDialog } from "../PublishDialog"
+const PrintModal = dynamic(() => import("../PrintModal").then(m => m.PrintModal), { ssr: false })
 import { DeleteSetlistDialog, DuplicateSetlistDialog } from "../SetlistDialogs"
 import { SetlistHistoryPanel } from "../SetlistHistoryPanel"
+import { SetlistChangedBanner } from "./SetlistChangedBanner"
 import { NamePrompt } from "../modals/NamePrompt"
+import { EditDetails } from "../modals/EditDetails"
 import { AddSongsModal } from "../modals/AddSongsModal"
 import { MatchFileModal } from "../modals/MatchFileModal"
 import { createSetlistService } from "@/lib/setlist-firebase"
+import { syncTemplateSlot } from "@/lib/template-firebase"
+import { useBatchSelection } from "@/hooks/use-batch-selection"
+
 import { toast } from "sonner"
+import { ErrorBoundary } from "react-error-boundary"
+import { FallbackError } from "@/components/ui/fallback-error"
 
 interface SetlistEditorV2Props {
     setlistId?: string
     initialTracks?: SetlistTrack[]
     initialName?: string
     suggestedName?: string
-    initialIsPublic?: boolean
     initialOwnerId?: string
     initialEventDate?: string | Date | null
     initialRabbi?: string
     initialServiceNotes?: string
     initialMusicians?: SetlistMusician[]
+    initialTemplateType?: string
     isNew?: boolean
     onBack?: () => void
     onSave?: (id: string) => void
@@ -70,12 +83,12 @@ export function SetlistEditorV2({
     initialTracks = [],
     initialName = "",
     suggestedName = "",
-    initialIsPublic = false,
     initialOwnerId,
     initialEventDate,
     initialRabbi,
     initialServiceNotes,
     initialMusicians,
+    initialTemplateType,
     isNew = false,
     onBack,
     onSave,
@@ -83,27 +96,29 @@ export function SetlistEditorV2({
 }: SetlistEditorV2Props) {
     const { user } = useAuth()
     const router = useRouter()
-    const { items: pendingItems, clear: clearPending } = useSetlistStore()
     const { setQueue } = useMusicStore()
+    const addToSetlistHook = useAddToSetlist()
 
-    const tracksToUse = isNew
-        ? pendingItems.map((item) => ({
-            id: item.id,
-            title: item.name,
-            fileId: item.fileId,
-            transposition: item.transposition,
-        } as SetlistTrack))
-        : initialTracks
-
-    const handleBack = () => {
+    const handleBack = useCallback(() => {
         if (onBack) return onBack()
-        clearPending()
+        // Honor same-origin referrer via browser history — takes the user back
+        // to wherever they came from (schedule, library, perform view…) instead
+        // of always teleporting to /setlists or /perform.
+        try {
+            const ref = typeof document !== 'undefined' ? document.referrer : ''
+            if (ref) {
+                const refOrigin = new URL(ref).origin
+                if (refOrigin === window.location.origin && ref !== window.location.href) {
+                    router.back()
+                    return
+                }
+            }
+        } catch { /* malformed referrer — fall through */ }
         router.push(initialSetlistId ? `/perform/setlist/${initialSetlistId}` : "/setlists")
-    }
+    }, [onBack, router, initialSetlistId])
 
     const handleSave = (id: string) => {
         if (onSave) return onSave(id)
-        clearPending()
         router.push("/setlists")
     }
 
@@ -144,8 +159,6 @@ export function SetlistEditorV2({
         name,
         setName,
         tracks,
-        isPublic,
-        setIsPublic,
         eventDate,
         setEventDate,
         rabbi,
@@ -163,7 +176,7 @@ export function SetlistEditorV2({
         matchFile,
         addSongsFromLibrary,
         addServiceItem,
-        togglePublic,
+        detectKeyForFile,
         undo,
         redo,
         canUndo,
@@ -171,12 +184,14 @@ export function SetlistEditorV2({
         addToHistory,
         setTracks,
         restoreTracks,
+        staleDetected,
+        takeRemote,
+        keepLocalChanges,
     } = useSetlistLogic({
         initialSetlistId,
-        initialTracks: tracksToUse,
+        initialTracks,
         initialName,
         suggestedName,
-        initialIsPublic,
         initialOwnerId,
         initialEventDate,
         initialRabbi,
@@ -192,38 +207,71 @@ export function SetlistEditorV2({
                 useChatStore.getState().open()
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // Bust Next.js aggressive Server Component cache when client-side togglePublic mutates Firestore
+    // Global Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z + Ctrl+Y redo.
+    // Skips when focus is inside an input/textarea/contenteditable so native
+    // field undo still works for typing-in-name, service-notes editing, etc.
     useEffect(() => {
-        if (isPublic !== initialIsPublic) {
-            router.refresh()
+        if (!canEdit) return
+        const handler = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null
+            if (target && (
+                target.isContentEditable ||
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT'
+            )) return
+            if (!(e.metaKey || e.ctrlKey)) return
+            const key = e.key.toLowerCase()
+            const isUndo = key === 'z' && !e.shiftKey
+            const isRedoZ = key === 'z' && e.shiftKey
+            const isRedoY = key === 'y' && !e.shiftKey
+            if (isUndo) {
+                if (canUndo) { e.preventDefault(); undo() }
+            } else if (isRedoZ || isRedoY) {
+                if (canRedo) { e.preventDefault(); redo() }
+            }
         }
-    }, [isPublic, initialIsPublic, router])
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [canEdit, canUndo, canRedo, undo, redo])
 
     // Background offline syncing — silent to avoid toast spam on every track change
+    // Skip initial mount to avoid racing with auto-save
+    const hasMountedForSync = useRef(false)
     useEffect(() => {
-        if (tracks.length > 0) {
-            syncSetlist(tracks, { silent: true }).catch(console.error)
+        if (!hasMountedForSync.current) {
+            hasMountedForSync.current = true
+            return
         }
-    }, [tracks])
+        if (tracks.length > 0) {
+            syncSetlist(tracks, { silent: true }).catch(e => logger.error("[SetlistEditor] Sync failed:", e))
+        }
+    }, [tracks, syncSetlist])
 
     // ── UI State ──
 
     const [showNamePrompt, setShowNamePrompt] = useState(!initialSetlistId && !initialName)
     const [showEditDetails, setShowEditDetails] = useState(false)
     const [showAddSongs, setShowAddSongs] = useState(false)
+    const [showSearchOverlay, setShowSearchOverlay] = useState(false)
+    const [replacingTrackId, setReplacingTrackId] = useState<string | null>(null)
+    const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null)
     const [matchingTrackId, setMatchingTrackId] = useState<string | null>(null)
     const [editingTrack, setEditingTrack] = useState<SetlistTrack | null>(null)
+    const [focusedTrackIndex, setFocusedTrackIndex] = useState<number | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
-    const [showPublishDialog, setShowPublishDialog] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false)
 
     // Batch select mode
-    const [selectMode, setSelectMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const {
+        selectMode, setSelectMode, selectedIds, setSelectedIds,
+        toggleSelectId, handleBatchDelete, handleBatchDuplicate, exitSelectMode,
+    } = useBatchSelection({ tracks, addToHistory, setTracks, undo })
 
     // Service for delete/duplicate operations
     const editorService = useMemo(
@@ -231,30 +279,48 @@ export function SetlistEditorV2({
         [user]
     )
 
+    const handleSaveAsTemplate = useCallback(async () => {
+        if (!editorService || !setlistId) return
+        const toastId = toast.loading("Saving template…")
+        try {
+            await editorService.saveAsTemplate({
+                id: setlistId,
+                name,
+                tracks,
+                trackCount: tracks.length,
+                ownerId: initialOwnerId ?? user?.uid,
+                ownerName: user?.displayName ?? "",
+            } as unknown as Parameters<typeof editorService.saveAsTemplate>[0])
+            toast.success(`Template "${name}" saved`, { id: toastId })
+        } catch {
+            toast.error("Failed to save template", { id: toastId })
+        }
+    }, [editorService, setlistId, name, tracks, initialOwnerId, user?.uid, user?.displayName])
+
     const handleDeleteSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
         try {
-            await editorService.deleteSetlist(setlistId, isPublic)
+            await editorService.deleteSetlist(setlistId)
             toast.success("Setlist deleted")
             handleBack()
         } catch {
             toast.error("Failed to delete setlist")
         }
         setShowDeleteConfirm(false)
-    }, [editorService, setlistId, isPublic, handleBack])
+    }, [editorService, setlistId, handleBack])
 
     const handleDuplicateSetlist = useCallback(async () => {
         if (!editorService || !setlistId) return
         try {
-            const currentSetlist = { id: setlistId, name, tracks, isPublic, rabbi } as Parameters<typeof editorService.copyToPersonal>[1]
-            const newId = await editorService.copyToPersonal(setlistId, currentSetlist)
+            const currentSetlist = { id: setlistId, name, tracks, rabbi } as Parameters<typeof editorService.duplicateSetlist>[1]
+            const newId = await editorService.duplicateSetlist(setlistId, currentSetlist)
             toast.success("Setlist duplicated!")
             router.push(`/setlists/${newId}`)
         } catch {
             toast.error("Failed to duplicate setlist")
         }
         setShowDuplicateConfirm(false)
-    }, [editorService, setlistId, name, tracks, isPublic, rabbi, router])
+    }, [editorService, setlistId, name, tracks, rabbi, router])
 
     // Debounce empty state to prevent flash during AI batch edits
     const currentTrackFileIds = useMemo(() => new Set(tracks.filter(t => t.fileId).map(t => t.fileId!)), [tracks])
@@ -293,6 +359,11 @@ export function SetlistEditorV2({
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     )
 
+    const handleDragStart = (_event: DragStartEvent) => {
+        // Collapse any expanded row when drag starts
+        setExpandedTrackId(null)
+    }
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         if (over && active.id !== over.id) {
@@ -300,71 +371,118 @@ export function SetlistEditorV2({
         }
     }
 
-    // ── Batch select operations ──
-
-    const toggleSelectId = useCallback((id: string) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }, [])
-
-    const handleBatchDelete = useCallback(() => {
-        if (selectedIds.size === 0) return
-        addToHistory(tracks)
-        setTracks(prev => prev.filter(t => !selectedIds.has(t.id)))
-        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} deleted`, {
-            action: { label: "Undo", onClick: () => undo() },
-            duration: 5000,
-        })
-        setSelectedIds(new Set())
-    }, [selectedIds, tracks, addToHistory, setTracks, undo])
-
-    const handleBatchDuplicate = useCallback(() => {
-        if (selectedIds.size === 0) return
-        addToHistory(tracks)
-        const newTracks = [...tracks]
-        // Insert duplicates after the last selected item
-        const selectedArr = tracks.filter(t => selectedIds.has(t.id))
-        const lastSelectedIdx = tracks.findIndex(t => t.id === selectedArr[selectedArr.length - 1]?.id)
-        const duplicates = selectedArr.map(t => ({
-            ...t,
-            id: crypto.randomUUID(),
-        }))
-        newTracks.splice(lastSelectedIdx + 1, 0, ...duplicates)
-        setTracks(newTracks)
-        toast(`${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''} duplicated`)
-        setSelectedIds(new Set())
-    }, [selectedIds, tracks, addToHistory, setTracks])
-
-    const exitSelectMode = useCallback(() => {
-        setSelectMode(false)
-        setSelectedIds(new Set())
-    }, [])
-
     // ── Track rendering ──
+
+    const handleToggleExpand = useCallback((track: SetlistTrack) => {
+        if (canEdit) {
+            setExpandedTrackId(prev => prev === track.id ? null : track.id)
+            // Track focused position for insert-at-position
+            const idx = tracks.findIndex(t => t.id === track.id)
+            if (idx >= 0) setFocusedTrackIndex(idx)
+        } else {
+            // Read-only mode: fall back to the TrackSheet modal
+            setEditingTrack(track)
+        }
+    }, [canEdit, tracks])
+
+    const handleReplace = useCallback((track: SetlistTrack) => {
+        setReplacingTrackId(track.id)
+        setShowSearchOverlay(true)
+    }, [])
+
+    const handleSearchSelect = useCallback((file: DriveFile) => {
+        const cleanName = file.name
+            .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
+            .replace(/_/g, ' ')
+            .replace(/-/g, ' ')
+            .trim() || "Untitled"
+
+        const hasKey = !!file.metadata?.key
+
+        if (replacingTrackId) {
+            // Replace mode: update existing track with new file
+            updateTrack(replacingTrackId, {
+                title: cleanName,
+                fileId: file.id,
+                fileName: file.name,
+                key: file.metadata?.key || "",
+            })
+            // Detect key in background if file doesn't already have one
+            if (!hasKey && file.id) {
+                detectKeyForFile(file.id)
+            }
+            // Sync to template if this setlist was created from one
+            if (initialTemplateType && user?.uid) {
+                const trackIndex = tracks.findIndex(t => t.id === replacingTrackId)
+                if (trackIndex >= 0) {
+                    syncTemplateSlot(initialTemplateType, trackIndex, {
+                        fileId: file.id,
+                        fileName: file.name,
+                        label: cleanName,
+                    }, user.uid).catch(() => { /* best-effort */ })
+                }
+            }
+            setReplacingTrackId(null)
+            setExpandedTrackId(null)
+        } else {
+            // Add mode: insert after focused track, or append
+            // Key detection handled internally by addSongsFromLibrary
+            addSongsFromLibrary([file], focusedTrackIndex ?? undefined)
+        }
+        setShowSearchOverlay(false)
+    }, [replacingTrackId, updateTrack, addSongsFromLibrary, focusedTrackIndex, detectKeyForFile, tracks, initialTemplateType, user])
 
     const renderTrack = (track: SetlistTrack) => {
         // In select mode, suppress tap/play behaviors
-        const tapHandler = selectMode ? () => { } : setEditingTrack
+        const tapHandler = selectMode ? () => { } : handleToggleExpand
         const playHandler = selectMode ? undefined : handlePlayTrack
+
+        // Pre-compute neighbour ids so the inline panel's Move-Up/Move-Down
+        // buttons can call moveTrack — same hook the drag handler uses.
+        const idx = tracks.indexOf(track)
+        const prevId = idx > 0 ? tracks[idx - 1].id : undefined
+        const nextId = idx >= 0 && idx < tracks.length - 1 ? tracks[idx + 1].id : undefined
+        const onMoveUp = prevId ? () => moveTrack(track.id, prevId) : undefined
+        const onMoveDown = nextId ? () => moveTrack(track.id, nextId) : undefined
+        const canMoveUp = !!prevId
+        const canMoveDown = !!nextId
 
         const row = (() => {
             if (track.type === "header") {
                 return <DividerRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
             }
             if (track.type && (SERVICE_FLOW_TYPES as readonly string[]).includes(track.type)) {
-                return <FlowRow key={track.id} track={track} canEdit={canEdit} onTap={tapHandler} />
+                return (
+                    <FlowRow
+                        key={track.id}
+                        track={track}
+                        canEdit={canEdit}
+                        isExpanded={expandedTrackId === track.id}
+                        onTap={tapHandler}
+                        onUpdate={updateTrack}
+                        onDelete={deleteTrack}
+                        onMoveUp={onMoveUp}
+                        onMoveDown={onMoveDown}
+                        canMoveUp={canMoveUp}
+                        canMoveDown={canMoveDown}
+                    />
+                )
             }
             return (
                 <SongRow
                     key={track.id}
                     track={track}
                     canEdit={canEdit}
+                    isExpanded={expandedTrackId === track.id}
                     onTap={tapHandler}
                     onPlayFile={playHandler}
+                    onUpdate={updateTrack}
+                    onReplace={handleReplace}
+                    onDelete={deleteTrack}
+                    onMoveUp={onMoveUp}
+                    onMoveDown={onMoveDown}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
                 />
             )
         })()
@@ -374,10 +492,10 @@ export function SetlistEditorV2({
             return (
                 <div
                     key={track.id}
-                    className={`flex items-center gap-2 cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 rounded-lg' : ''}`}
+                    className={`flex items-center gap-2 cursor-pointer transition-colors ${isSelected ? 'bg-brand/10 rounded-lg' : ''}`}
                     onClick={() => toggleSelectId(track.id)}
                 >
-                    <div className={`ml-2 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                    <div className={`ml-2 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'}`}>
                         {isSelected && <span className="text-white text-xs font-bold">✓</span>}
                     </div>
                     <div className="flex-1 min-w-0">{row}</div>
@@ -393,23 +511,34 @@ export function SetlistEditorV2({
     }
 
     return (
-        <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100vh-5rem)]">
-            {/* Name prompt for new setlists */}
+        <ErrorBoundary FallbackComponent={(props) => <FallbackError {...props} title="Editor Error" />}>
+        <div className="flex flex-col bg-background text-foreground h-full relative min-h-[calc(100dvh-5rem)]">
+            {/* Name prompt — create-new flow only */}
             <NamePrompt
-                isOpen={showNamePrompt || showEditDetails}
-                onClose={() => {
-                    setShowNamePrompt(false)
-                    setShowEditDetails(false)
-                }}
+                isOpen={showNamePrompt}
+                onClose={() => setShowNamePrompt(false)}
                 initialName={name}
-                initialIsPublic={isPublic}
                 initialDate={eventDate ? new Date(eventDate) : null}
-                isBandLeader={isBandLeader}
-                onConfirm={(newName, newIsPublic, newDate) => {
+                onConfirm={(newName, newDate) => {
                     setName(newName)
-                    setIsPublic(newIsPublic)
                     setEventDate(newDate)
                     setShowNamePrompt(false)
+                }}
+            />
+
+            {/* Edit details — edit-existing flow (name + date + rabbi + notes) */}
+            <EditDetails
+                isOpen={showEditDetails}
+                onClose={() => setShowEditDetails(false)}
+                initialName={name}
+                initialDate={eventDate ? new Date(eventDate) : null}
+                initialRabbi={rabbi}
+                initialServiceNotes={serviceNotes}
+                onConfirm={({ name: n, date, rabbi: r, serviceNotes: sn }) => {
+                    setName(n)
+                    setEventDate(date)
+                    setRabbi(r)
+                    setServiceNotes(sn)
                     setShowEditDetails(false)
                 }}
             />
@@ -431,13 +560,12 @@ export function SetlistEditorV2({
                 overflowTrigger={
                     <OverflowMenu
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
-                        onPublish={setlistId ? () => setShowPublishDialog(true) : undefined}
-                        onTogglePublic={togglePublic}
+                        onPublish={undefined}
                         onSetRabbi={canEdit ? setRabbi : undefined}
                         onOpenAI={() => useChatStore.getState().toggle()}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
-                        isPublic={isPublic}
+                        onSaveAsTemplate={canEdit && setlistId ? handleSaveAsTemplate : undefined}
                         isBandLeader={isBandLeader}
                         canEdit={canEdit}
                         setlistId={setlistId}
@@ -448,7 +576,9 @@ export function SetlistEditorV2({
                 }
             />
 
-
+            {staleDetected && (
+                <SetlistChangedBanner onTakeRemote={takeRemote} onKeepLocal={keepLocalChanges} />
+            )}
 
             {/* History panel */}
             {showHistory && setlistId && (
@@ -474,44 +604,34 @@ export function SetlistEditorV2({
                     setlistName={name}
                     eventDate={eventDate ? new Date(eventDate).toISOString() : null}
                     rabbiName={rabbi}
-                    isPublished={isPublic}
                 />
             )}
 
-            {/* Service notes */}
+            {/* Service notes — always visible to editors; read-only viewers see it only when populated */}
             {(canEdit || serviceNotes) && (
-                <div className="border-b border-border/50 px-4 py-2">
-                    {!serviceNotes && canEdit ? (
-                        <button
-                            onClick={() => setServiceNotes(" ")}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            <span>+ Add service notes</span>
-                        </button>
-                    ) : (
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>
-                            {canEdit ? (
-                                <textarea
-                                    value={serviceNotes?.trim() || ""}
-                                    onChange={(e) => setServiceNotes(e.target.value)}
-                                    placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
-                                    className="w-full text-sm bg-muted/30 rounded-lg border border-border/50 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    rows={2}
-                                />
-                            ) : (
-                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{serviceNotes}</p>
-                            )}
-                        </div>
-                    )}
+                <div className="border-b border-brand/10 px-4 py-2">
+                    <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Service Notes</p>
+                        {canEdit ? (
+                            <textarea
+                                value={serviceNotes ?? ""}
+                                onChange={(e) => setServiceNotes(e.target.value)}
+                                placeholder="Instructions for the band (e.g. starting 15 min early, new arrangement)…"
+                                className="w-full text-sm bg-muted/30 rounded-lg border border-brand/10 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand/30"
+                                rows={2}
+                            />
+                        ) : (
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{serviceNotes}</p>
+                        )}
+                    </div>
                 </div>
             )}
 
             {/* Track list */}
             <div className="flex-1 overflow-y-auto">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext items={tracks} strategy={verticalListSortingStrategy}>
-                        <div className="max-w-3xl mx-auto px-2 sm:px-4 py-4 space-y-1">
+                        <div className="max-w-3xl mx-auto px-1 sm:px-4 py-4 pb-32 space-y-1">
                             {showEmpty && tracks.length === 0 && (
                                 <div className="text-center py-16 text-muted-foreground">
                                     <p className="text-lg font-medium mb-1">Empty setlist</p>
@@ -527,8 +647,11 @@ export function SetlistEditorV2({
             {/* Add bar (sticky bottom) - only for editors, hidden in select mode */}
             {canEdit && !selectMode && (
                 <AddBar
-                    onAddSongs={() => setShowAddSongs(true)}
-                    onAddItem={(type: TrackType) => addServiceItem(type)}
+                    onAddSongs={() => {
+                        setReplacingTrackId(null)
+                        setShowSearchOverlay(true)
+                    }}
+                    onAddItem={(type: TrackType) => addServiceItem(type, undefined, focusedTrackIndex ?? undefined)}
                 />
             )}
 
@@ -564,7 +687,7 @@ export function SetlistEditorV2({
                 isOpen={showAddSongs && canEdit}
                 onClose={() => setShowAddSongs(false)}
                 onAdd={(files) => {
-                    addSongsFromLibrary(files)
+                    addSongsFromLibrary(files, focusedTrackIndex ?? undefined)
                     setShowAddSongs(false)
                 }}
                 currentTrackFileIds={currentTrackFileIds}
@@ -582,20 +705,10 @@ export function SetlistEditorV2({
                     setlistName={name}
                     tracks={tracks}
                     setlistId={setlistId || undefined}
+                    assignedMusicians={musicians}
+                    eventDate={eventDate?.toISOString() ?? null}
+                    rabbi={rabbi}
                     onClose={() => setShowPrintModal(false)}
-                />
-            )}
-
-            {setlistId && (
-                <PublishDialog
-                    isOpen={showPublishDialog}
-                    onClose={() => setShowPublishDialog(false)}
-                    setlistId={setlistId}
-                    setlistName={name}
-                    songCount={songCount}
-                    musicians={musicians}
-                    isPublished={isPublic}
-                    onPublished={() => setIsPublic(true)}
                 />
             )}
 
@@ -612,6 +725,33 @@ export function SetlistEditorV2({
                 setlistName={name}
                 onConfirm={handleDuplicateSetlist}
             />
+
+            {/* Search overlay for adding/replacing songs */}
+            <SearchOverlay
+                isOpen={showSearchOverlay}
+                onClose={() => {
+                    setShowSearchOverlay(false)
+                    setReplacingTrackId(null)
+                }}
+                onSelect={handleSearchSelect}
+                replacingTrackId={replacingTrackId}
+                currentTrackFileIds={currentTrackFileIds}
+                canAddToSetlist={addToSetlistHook.canAddToSetlist}
+                onAddToSetlist={(file) => addToSetlistHook.openForSongs([file])}
+            />
+
+            {/* Add to Setlist Sheet (for SearchOverlay "Add to Setlist..." action) */}
+            <AddToSetlistSheet
+                isOpen={addToSetlistHook.isOpen}
+                onOpenChange={addToSetlistHook.setIsOpen}
+                setlists={addToSetlistHook.editableSetlists}
+                loading={addToSetlistHook.loading}
+                searchQuery={addToSetlistHook.searchQuery}
+                onSearchChange={addToSetlistHook.setSearchQuery}
+                onSelectSetlist={addToSetlistHook.addToSetlist}
+                pendingCount={addToSetlistHook.pendingSongs.length}
+            />
         </div>
+        </ErrorBoundary>
     )
 }

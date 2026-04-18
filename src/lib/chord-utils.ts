@@ -9,6 +9,20 @@
  */
 
 /**
+ * Sorts objects containing absolute percentage coordinates (x, y) into reading order.
+ * Chords within 2.5% vertical height of each other are grouped as the same horizontal line.
+ */
+export function sortChordsByTopLeft<T extends { x: number; y: number }>(chords: T[]): T[] {
+    return [...chords].sort((a, b) => {
+        // Elements within ~2.5% vertical height (approx 27px) belong to the same line
+        if (Math.abs(a.y - b.y) < 2.5) {
+            return a.x - b.x;
+        }
+        return a.y - b.y;
+    });
+}
+
+/**
  * Regex for matching chord symbols commonly found in lead sheets.
  * Handles: A-G root notes, sharps/flats, qualities (m, maj, dim, aug, sus, add),
  * extensions (7, 9, 11, 13), alterations in parens, and slash bass notes.

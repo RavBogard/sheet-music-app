@@ -1,47 +1,37 @@
-import { NextRequest, NextResponse } from "next/server"
-import { PrintRequest } from "@/lib/print-pipeline"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
-import { inngest } from "@/inngest/client"
-import { randomUUID } from "crypto"
+import { z } from "zod"
 
 export const maxDuration = 120
 
-export async function POST(request: NextRequest) {
-    try {
-        // Auth
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
+// No Firestore write — .passthrough() is acceptable here; tracks are
+// forwarded to the PDF print pipeline and not persisted.
+const schema = z.object({
+    title: z.string().min(1),
+    tracks: z.array(z.any()).min(1),
+}).passthrough()
 
-        // Rate limit (API tier — PDF generation is CPU-intensive)
-        const limited = await checkRateLimit(request, 'api')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const body: PrintRequest = await request.json()
-        const { title, tracks } = body
+        const body = ctx.body! as unknown as PrintRequest
 
-        if (!title || !tracks || tracks.length === 0) {
-            return NextResponse.json({ error: "Missing title or tracks" }, { status: 400 })
-        }
+        const result = await generatePrintPdf(body)
+        const filename = `${(body.title || 'Gig_Packet').replace(/[^a-z0-9]/gi, '_')}.pdf`
 
-        const jobId = randomUUID()
-        const uid = auth.uid // Extract the user ID from the successful auth context
+        logger.info(`[Print] Generated: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)
 
-        await inngest.send({
-            name: "pdf/generate",
-            data: {
-                jobId,
-                uid,
-                printReq: body
-            }
+        return new NextResponse(Buffer.from(result.pdf), {
+            headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${filename}"`,
+            },
         })
-
-        logger.info(`[Print] Dispatched background generation job: ${jobId}`)
-
-        return NextResponse.json({ jobId })
-    } catch (error: unknown) {
-        logger.error("[Print] Generation dispatch error:", error)
-        return NextResponse.json({ error: "Failed to start PDF generation" }, { status: 500 })
-    }
-}
+    },
+    { schema }
+)

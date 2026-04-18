@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from "next/server"
+import { timingSafeEqual } from "crypto"
 import { syncLibraryIndex } from "@/lib/sync-engine"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
+import { env } from "@/env.mjs"
+
+function safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false
+    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 /**
  * GET /api/cron/sync
- * 
+ *
  * Automated hourly library sync via Vercel Cron.
  * Syncs Google Drive → Firestore library_index.
  * Also auto-invalidates chord caches for files whose modifiedTime changed.
- * 
+ *
  * Authenticated via CRON_SECRET header (set in Vercel env vars).
  */
 export async function GET(req: NextRequest) {
     try {
-        // Verify cron secret to prevent unauthorized triggers
+        // Verify cron secret (constant-time comparison to prevent timing attacks)
         const authHeader = req.headers.get('authorization')
-        const cronSecret = process.env.CRON_SECRET
+        const cronSecret = env.CRON_SECRET
 
-        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        if (!cronSecret || !authHeader || !safeCompare(authHeader, `Bearer ${cronSecret}`)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

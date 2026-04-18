@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2 } from "lucide-react"
+import { ChevronRight, FileMusic, Folder, Loader2, Wand2, Play, Pause, Headphones, CloudOff, CheckCircle2, Pencil, ListPlus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-import { toast } from "sonner"
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
-import { useSetlistStore } from "@/lib/setlist-store"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -15,6 +14,7 @@ interface LibraryFileRowProps {
     isAdmin: boolean
     onDigitize?: () => void
     onArchive?: () => void
+    onRename?: (item: DriveFile) => void
     getCleanName: (name: string) => string
     isPlaying?: boolean
     selectMode?: boolean
@@ -22,6 +22,8 @@ interface LibraryFileRowProps {
     onToggleSelect?: (id: string) => void
     onLongPress?: (id: string) => void
     usageInfo?: { lastUsedDate: string; totalUses: number } | null
+    canAddToSetlist?: boolean
+    onAddToSetlist?: (item: DriveFile) => void
 }
 
 function isAudioMime(item: DriveFile) {
@@ -36,21 +38,23 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist }: LibraryFileRowProps) {
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
 
     useEffect(() => {
         if (isFolder || !item.id) return
-        isFileCached(item.id).then(setIsCached)
+        isFileCached(item.id).then(setIsCached).catch(() => {})
     }, [item.id, isFolder])
 
     const displayName = isFolder
         ? item.name
-        : isAudio
-            ? getAudioCleanName(item.name)
-            : getCleanName(item.name)
+        : item.displayName
+            ? item.displayName
+            : isAudio
+                ? getAudioCleanName(item.name)
+                : getCleanName(item.name)
 
     const handleClick = () => {
         if (selectMode && !isFolder && onToggleSelect) {
@@ -87,7 +91,8 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={handleClick}
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEndOrMove}
@@ -96,23 +101,23 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     type="button"
                     aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
                     aria-pressed={selectMode ? isSelected : undefined}
-                    className={`w-full text-left transition-all group relative ${isSelected
-                        ? 'bg-blue-500/10'
+                    className={`w-full h-auto text-left rounded-none whitespace-normal group relative active:scale-100 ${isSelected
+                        ? 'bg-brand/10'
                         : isFolder
                             ? ''
                             : isAudio
                                 ? isPlaying
-                                    ? 'bg-violet-500/10'
+                                    ? 'bg-brand/10'
                                     : ''
                                 : isDigitizing
-                                    ? 'bg-purple-900/10 cursor-wait'
+                                    ? 'bg-brand/10 cursor-wait'
                                     : ''
                         }`}
                 >
                     <div className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-2 sm:px-4 list-cell">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-muted-foreground/40'
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'
                                 }`}>
                                 {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                             </div>
@@ -121,20 +126,20 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         {isFolder ? (
                             <Folder className="h-7 w-7 sm:h-10 sm:w-10 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
                         ) : isAudio ? (
-                            <div className="h-7 w-7 sm:h-10 sm:w-10 shrink-0 rounded-full bg-violet-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <div className="h-7 w-7 sm:h-10 sm:w-10 shrink-0 rounded-full bg-brand/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                                 {isPlaying ? (
-                                    <Pause className="h-5 w-5 text-violet-500" />
+                                    <Pause className="h-5 w-5 text-brand" />
                                 ) : (
-                                    <Play className="h-5 w-5 text-violet-500 ml-0.5" />
+                                    <Play className="h-5 w-5 text-brand ml-0.5" />
                                 )}
                             </div>
                         ) : isDigitizing ? (
                             <div className="relative">
-                                <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-purple-500 shrink-0 opacity-50" />
-                                <Loader2 className="h-5 w-5 text-purple-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+                                <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-brand shrink-0 opacity-50" />
+                                <Loader2 className="h-5 w-5 text-brand/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
                             </div>
                         ) : (
-                            <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
+                            <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-brand shrink-0 group-hover:scale-110 transition-transform" />
                         )}
 
                         <div className="flex-1 min-w-0">
@@ -144,20 +149,32 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 </div>
 
                                 {isAudio && (
-                                    <span className="text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md flex items-center gap-1">
                                         <Headphones className="w-3 h-3" />
                                         Audio
                                     </span>
                                 )}
 
                                 {!isFolder && !isAudio && item.metadata?.key && (
-                                    <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-md border border-border font-mono">
+                                    <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md border border-brand/20 font-mono">
                                         {item.metadata.key}
                                     </span>
                                 )}
                                 {!isFolder && !isAudio && item.metadata?.bpm && (
                                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border font-mono">
                                         {item.metadata.bpm} bpm
+                                    </span>
+                                )}
+
+                                {!isFolder && !isAudio && item.collection === 'supplemental' && (
+                                    <span className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                        Shireinu
+                                    </span>
+                                )}
+
+                                {!isFolder && !isAudio && item.collection !== 'supplemental' && (
+                                    <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
+                                        CRC
                                     </span>
                                 )}
 
@@ -171,7 +188,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 {!isFolder && !isAudio && item.metadata?.topics && item.metadata.topics.length > 0 && (
                                     <div className="hidden sm:flex gap-1">
                                         {item.metadata.topics.slice(0, 2).map(topic => (
-                                            <span key={topic} className="text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md">
+                                            <span key={topic} className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md">
                                                 {topic}
                                             </span>
                                         ))}
@@ -186,7 +203,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                 )}
 
                                 {isDigitizing && (
-                                    <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
+                                    <span className="text-xs bg-brand/20 text-brand px-2 py-1 rounded-full animate-pulse">
                                         Digitizing...
                                     </span>
                                 )}
@@ -194,34 +211,27 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         </div>
                         {!isAudio && <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/60 group-hover:text-foreground" />}
                     </div>
-                </button>
+                </Button>
             </ContextMenuTrigger>
             <ContextMenuContent>
+                {canAddToSetlist && !isFolder && !isAudio && onAddToSetlist && (
+                    <ContextMenuItem onClick={() => onAddToSetlist(item)}>
+                        <span className="flex items-center gap-2">
+                            <ListPlus className="h-4 w-4" /> Add to Setlist...
+                        </span>
+                    </ContextMenuItem>
+                )}
                 <ContextMenuItem onClick={onClick}>
                     {isFolder ? "Open Folder" : isAudio ? "Play" : "Select / View"}
                 </ContextMenuItem>
 
                 {!isFolder && !isAudio && (
                     <>
-                        <ContextMenuItem onClick={() => {
-                            const isXml = item.mimeType.includes('xml') || item.name.endsWith('.xml') || item.name.endsWith('.musicxml')
-                            useSetlistStore.getState().addItem({
-                                fileId: item.id,
-                                name: getCleanName(item.name),
-                                type: isXml ? 'musicxml' : 'pdf'
-                            })
-                            toast.success(`Added ${getCleanName(item.name)} to setlist`)
-                            // Optional: auto-return
-                            // onClick() 
-                        }}>
-                            Add to Setlist
-                        </ContextMenuItem>
-
                         {isAdmin && item.mimeType.includes("pdf") && onDigitize && (
                             <ContextMenuItem
                                 onClick={onDigitize}
                                 disabled={isDigitizing}
-                                className="text-purple-400 focus:text-purple-300 focus:bg-purple-900/50"
+                                className="text-brand focus:text-brand/80 focus:bg-brand/10"
                             >
                                 {isDigitizing ? (
                                     <span className="flex items-center gap-2">
@@ -232,6 +242,16 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                         <Wand2 className="h-4 w-4" /> Digitize (AI)
                                     </span>
                                 )}
+                            </ContextMenuItem>
+                        )}
+
+                        {isAdmin && onRename && (
+                            <ContextMenuItem
+                                onClick={() => onRename(item)}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Pencil className="h-4 w-4" /> Rename
+                                </span>
                             </ContextMenuItem>
                         )}
 

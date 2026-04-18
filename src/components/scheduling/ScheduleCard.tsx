@@ -28,7 +28,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
     const isConfirmed = assignment.status === 'confirmed'
     const isDeclined = assignment.status === 'declined'
 
-    const eventDateStr = formatEventDate(assignment.eventDate)
+    const eventDateStr = formatAssignmentDate(assignment.eventDate)
 
     async function handleRespond(action: 'accept' | 'decline') {
         setResponding(action)
@@ -111,7 +111,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="default"
-                                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="gap-1.5 h-11 bg-emerald-600 hover:bg-emerald-700 text-white"
                                 onClick={() => handleRespond('accept')}
                                 disabled={responding !== null}
                             >
@@ -125,7 +125,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="gap-1.5 text-red-600 hover:bg-red-500/10 hover:text-red-600 border-red-500/30"
+                                className="gap-1.5 h-11 text-red-600 hover:bg-red-500/10 hover:text-red-600 border-red-500/30"
                                 onClick={() => handleRespond('decline')}
                                 disabled={responding !== null}
                             >
@@ -140,7 +140,7 @@ export function ScheduleCard({ assignment, otherMusicians, className }: Schedule
                     )}
 
                     <Link href={`/setlists/${assignment.setlistId}`} className="ml-auto">
-                        <Button size="sm" variant="ghost" className="gap-1.5 text-muted-foreground">
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-11 text-muted-foreground">
                             View Setlist <ChevronRight className="h-3.5 w-3.5" />
                         </Button>
                     </Link>
@@ -178,7 +178,13 @@ function StatusBadge({ status, autoConfirmed }: { status: string; autoConfirmed?
     }
 }
 
-function formatEventDate(eventDate: unknown): string {
+/**
+ * Compact assignment-card date format ("Fri, Feb 14", year shown only when
+ * different from current). Intentionally distinct from the canonical
+ * `formatEventDate` in `@/lib/firestore-helpers` (which uses long forms) —
+ * the card layout needs a tighter string under the service title.
+ */
+function formatAssignmentDate(eventDate: unknown): string {
     if (!eventDate) return 'Date TBD'
 
     try {

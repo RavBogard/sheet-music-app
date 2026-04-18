@@ -1,25 +1,28 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
+import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { MonitorConfig } from "@/types/monitor"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
 import {
     Loader2, Radio, CheckCircle,
     Radar, Save, Settings2, Download, Copy, KeyRound,
 } from "lucide-react"
+import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
     bridgeUrl: "wss://192.168.1.50:9001",
     x32Address: "192.168.1.100",
     x32Port: 10023,
-    monitorBuses: [1, 2, 3, 4],
+    monitorBuses: [1, 2, 3, 4, 5],
     busAssignments: {},
 }
 
@@ -41,7 +44,19 @@ export function SoundSystemSection() {
     const [generatingCode, setGeneratingCode] = useState(false)
 
     const configRef = useMemo(() => doc(db, "config", "monitor"), [])
-    const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef as any)
+    const scanControllerRef = useRef<AbortController | null>(null)
+    const setupCodeControllerRef = useRef<AbortController | null>(null)
+    const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Cancel all in-flight network and pending timers on unmount.
+    useEffect(() => {
+        return () => {
+            scanControllerRef.current?.abort()
+            setupCodeControllerRef.current?.abort()
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+        }
+    }, [])
+    const { data: configData, loading: configLoading } = useSafeFirestoreSync<Partial<MonitorConfig>>(configRef)
 
     useEffect(() => {
         if (configLoading) return
@@ -98,46 +113,69 @@ export function SoundSystemSection() {
         const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
         const apiProto = isSecure ? "https" : "http"
 
+        // Compose a fresh unmount controller with the 8s timeout so either triggers abort.
+        scanControllerRef.current?.abort()
+        const unmountController = new AbortController()
+        scanControllerRef.current = unmountController
+        const timeoutSignal = AbortSignal.timeout(8000)
+        const signal = AbortSignal.any
+            ? AbortSignal.any([unmountController.signal, timeoutSignal])
+            : unmountController.signal
+
         try {
-            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal: AbortSignal.timeout(8000) })
+            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal })
+            if (unmountController.signal.aborted) return
             const data = await res.json()
+            if (unmountController.signal.aborted) return
             if (data.found) {
                 setX32Address(data.address)
                 setScanResult(`Found ${data.name} (${data.model}) at ${data.address}`)
             } else {
                 setScanResult("No X32 found on the network")
             }
-        } catch {
+        } catch (e) {
+            if ((e as Error).name === 'AbortError' && unmountController.signal.aborted) return
             setScanResult("Could not reach bridge server. If it's running, you may need to accept its local security certificate.")
             if (isSecure) {
                 setTrustUrl(`${apiProto}://${wsUrl.hostname}:${apiPort}/trust`)
             }
-        } finally { setScanning(false) }
+        } finally {
+            if (!unmountController.signal.aborted) setScanning(false)
+        }
     }, [bridgeUrl])
 
     const handleGenerateSetupCode = useCallback(async () => {
         setGeneratingCode(true)
+        setupCodeControllerRef.current?.abort()
+        const controller = new AbortController()
+        setupCodeControllerRef.current = controller
         try {
             const { auth: firebaseAuth } = await import("@/lib/firebase")
+            if (controller.signal.aborted) return
             const user = firebaseAuth.currentUser
             if (!user) throw new Error("Not signed in")
             const token = await user.getIdToken()
+            if (controller.signal.aborted) return
             const res = await fetch("/api/bridge/setup-code", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
+                signal: controller.signal,
             })
+            if (controller.signal.aborted) return
             if (!res.ok) {
                 const data = await res.json()
                 throw new Error(data.error || "Failed to generate code")
             }
             const { code, expiresAt } = await res.json()
+            if (controller.signal.aborted) return
             setSetupCode(code)
             setSetupCodeExpiry(expiresAt)
             toast.success("Setup code generated")
         } catch (err) {
+            if ((err as Error).name === 'AbortError') return
             toast.error(err instanceof Error ? err.message : "Failed to generate setup code")
         } finally {
-            setGeneratingCode(false)
+            if (!controller.signal.aborted) setGeneratingCode(false)
         }
     }, [])
 
@@ -156,7 +194,8 @@ export function SoundSystemSection() {
             else { await setDoc(ref, { ...parsed, busAssignments: {} }) }
             setMonitorSaved(true)
             toast.success("Monitor config saved")
-            setTimeout(() => setMonitorSaved(false), 2000)
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+            savedTimerRef.current = setTimeout(() => setMonitorSaved(false), 2000)
         } catch (err) {
             logger.error("Failed to save:", err)
             toast.error("Failed to save monitor config")
@@ -164,10 +203,11 @@ export function SoundSystemSection() {
     }, [bridgeUrl, x32Address, x32Port, monitorBusesStr])
 
     return (
+        <SectionErrorBoundary label="Sound System">
         <section className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Radio className="w-5 h-5 text-blue-500" />
+                    <Radio className="w-5 h-5 text-brand" />
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                         Sound System
                     </h2>
@@ -215,7 +255,7 @@ export function SoundSystemSection() {
                                         <code className="bg-muted px-4 py-2 rounded-lg text-lg font-mono font-bold tracking-[0.3em] select-all">
                                             {setupCode}
                                         </code>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                        <Button variant="ghost" size="icon" aria-label="Copy setup code" className="min-h-11 min-w-11" onClick={() => {
                                             navigator.clipboard.writeText(setupCode)
                                             toast.success("Copied!")
                                         }}>
@@ -243,13 +283,15 @@ export function SoundSystemSection() {
                             </div>
 
                             {bridgeStatus && (
-                                <div className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
-                                    ? "bg-green-500/10 border border-green-500/20"
-                                    : "bg-red-500/10 border border-red-500/20"
-                                    }`}>
-                                    <div className={`w-2 h-2 rounded-full ${bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
-                                        ? "bg-green-500 animate-pulse" : "bg-red-500"
-                                        }`} />
+                                <div className={cn("flex items-center gap-3 rounded-lg px-4 py-3 text-sm",
+                                    bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                        ? "bg-success/10 border border-success/20"
+                                        : "bg-destructive/10 border border-destructive/20"
+                                )}>
+                                    <div className={cn("w-2 h-2 rounded-full",
+                                        bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
+                                            ? "bg-success animate-pulse" : "bg-destructive"
+                                    )} />
                                     <div className="flex-1 min-w-0">
                                         <span className="font-medium">
                                             {bridgeStatus.status === "online" && bridgeStatus.lastSeen && (Date.now() - bridgeStatus.lastSeen.getTime()) < 120000
@@ -279,9 +321,9 @@ export function SoundSystemSection() {
                                     </div>
                                     {scanResult && (
                                         <div className="mt-1">
-                                            <p className={`text-xs ${scanResult.includes("Found") ? "text-success" : "text-yellow-500"}`}>{scanResult}</p>
+                                            <p className={cn("text-xs", scanResult.includes("Found") ? "text-success" : "text-amber-500")}>{scanResult}</p>
                                             {trustUrl && (
-                                                <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block">
+                                                <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand hover:text-brand/80 underline mt-1 block">
                                                     Trust Bridge Certificate &rarr;
                                                 </a>
                                             )}
@@ -295,14 +337,22 @@ export function SoundSystemSection() {
                             </div>
 
                             <div>
-                                <label className="text-sm text-muted-foreground mb-1 block">Monitor Buses</label>
-                                <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4" />
+                                <div className="flex items-center gap-2 mb-1">
+                                    <label className="text-sm text-muted-foreground">Monitor Buses</label>
+                                    <span className="text-xs bg-brand/15 text-brand px-1.5 py-0.5 rounded font-mono">
+                                        {monitorBusesStr.split(",").map(s => s.trim()).filter(Boolean).length} buses
+                                    </span>
+                                </div>
+                                <Input value={monitorBusesStr} onChange={e => setMonitorBusesStr(e.target.value)} placeholder="1, 2, 3, 4, 5" />
                                 <p className="text-xs text-muted-foreground mt-1">X32 mix buses used as monitor sends (1–16, comma-separated)</p>
                             </div>
                         </div>
+                        {/* Default Channel Picker -- sound engineer picks global defaults */}
+                        <DefaultChannelPicker />
                     </div>
                 )}
             </div>
         </section>
+        </SectionErrorBoundary>
     )
 }

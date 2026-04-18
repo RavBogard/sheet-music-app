@@ -53,6 +53,18 @@ describe('rate-limit', () => {
         expect(result?.status).toBe(429)
     })
 
+    it('blocks requests after bridgeSetup tier limit (5/min)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.77'
+        for (let i = 0; i < 5; i++) {
+            const ok = await checkRateLimit(mockReq(ip), 'bridgeSetup')
+            expect(ok).toBeNull()
+        }
+        const result = await checkRateLimit(mockReq(ip), 'bridgeSetup')
+        expect(result).not.toBeNull()
+        expect(result?.status).toBe(429)
+    })
+
     it('returns proper 429 response with headers', async () => {
         const { checkRateLimit } = await import('./rate-limit')
         const ip = '10.0.0.100'

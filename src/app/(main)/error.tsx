@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 export default function MainError({
     error,
@@ -11,7 +12,7 @@ export default function MainError({
     reset: () => void
 }) {
     useEffect(() => {
-        console.error("[MainError] Caught:", error)
+        logger.error("[MainError] Caught:", error)
     }, [error])
 
     return (
@@ -26,9 +27,22 @@ export default function MainError({
                     {error.message}
                 </pre>
             )}
-            <Button onClick={reset}>
-                Retry
-            </Button>
+            <div className="flex items-center gap-3">
+                <Button onClick={reset} variant="default">
+                    Retry
+                </Button>
+                <Button 
+                    variant="outline" 
+                    onClick={() => { 
+                        if (typeof window !== 'undefined') {
+                            localStorage.clear()
+                            window.location.href = '/'
+                        }
+                    }}
+                >
+                    Hard Reset
+                </Button>
+            </div>
         </div>
     )
 }

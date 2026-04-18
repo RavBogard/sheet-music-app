@@ -15,34 +15,6 @@
       ]
     },
     {
-      "collectionGroup": "setlists",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isPublic",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "setlists",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isPublic",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "eventDate",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "bridge-setup-codes",
       "queryScope": "COLLECTION",
       "fields": [
@@ -97,40 +69,26 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "musician_availability",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "musicianUid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "startDate",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "musician_availability",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "startDate",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "endDate",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": [
     {
       "collectionGroup": "emailEvents",
       "fieldPath": "resendMessageId",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "fieldPath": "entityId",
       "indexes": [
         {
           "order": "ASCENDING",

@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Papa from "papaparse"
+import { z } from "zod"
 
 export const maxDuration = 60 // Allow up to 60s for Vercel/Gemini
 
@@ -22,17 +23,17 @@ interface ParsedItem {
     similarityScore?: number
 }
 
-export async function POST(req: NextRequest) {
-    try {
-        const limited = await checkRateLimit(req, 'upload')
+const schema = z.object({
+    url: z.string().optional(),
+    csvText: z.string().optional(),
+})
+
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'upload')
         if (limited) return limited
 
-        // Strict access control: only band leaders and admins should import whole setlists
-        const auth = await withAuth(req, 'band_leader')
-        if (auth instanceof NextResponse) return auth
-
-        const body = await req.json()
-        const { url, csvText } = body
+        const { url, csvText } = ctx.body!
 
         if (!url && !csvText) {
             return NextResponse.json({ error: "Missing 'url' or 'csvText' in request body." }, { status: 400 })
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Parse CSV to ensure it's not astronomically large
         logger.info("[Setlist Importer] Papa Parsing CSV...")
-        const parsed = Papa.parse(rawCsv, { header: true, skipEmptyLines: true })
+        const parsed = Papa.parse(rawCsv!, { header: true, skipEmptyLines: true })
         if (parsed.data.length === 0) {
             return NextResponse.json({ error: "Spreadsheet appears to be empty." }, { status: 400 })
         }
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
 
         // 3. Prompt Gemini for strictly typed extraction
         const prompt = `You are an expert musical setlist parser. Your job is to take a raw JSON array representing rows from a spreadsheet and extract a clean list of setlist items.
-                    
+
 Return a JSON object with a single root key 'items' containing an array of objects.
 Each item must have a 'type' of either "header" or "song".
 
@@ -138,7 +139,12 @@ ${contextStr}`
         const items = result.items || []
 
         // 4. Run extracted items against the library using Levenshtein distance
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         let existingLibrary: { id: string, name: string, normalizedName: string }[] = []
@@ -205,12 +211,6 @@ ${contextStr}`
             success: true,
             items: processedItems
         })
-
-    } catch (error: unknown) {
-        logger.error("[Setlist Importer] Parse Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to parse setlist." },
-            { status: 500 }
-        )
-    }
-}
+    },
+    { role: 'band_leader', schema }
+)

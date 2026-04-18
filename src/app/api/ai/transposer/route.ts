@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { geminiFlash } from "@/lib/gemini"; // Already configured as 'gemini-3-flash-preview'
-import { withAuth } from "@/lib/api-auth";
+import { NextResponse } from "next/server";
+import { geminiFlash } from "@/lib/gemini";
+import { createApiHandler } from "@/lib/api-wrapper";
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
-export const maxDuration = 60; // Shorter than OMR, we expect this to be fast-ish
+export const maxDuration = 60;
 
 const systemPrompt = `You are a specialized musical chord symbol detector for lead sheet PDFs. Your task is PRECISE chord identification and positioning.
 
@@ -69,29 +69,19 @@ interface TransposeRequestChunk {
     image: string; // base64
 }
 
-export async function POST(req: NextRequest) {
-    try {
+export const POST = createApiHandler(
+    async (ctx) => {
         // Rate limit: 20 AI requests/min
-        const limited = await checkRateLimit(req, 'ai')
+        const limited = await checkRateLimit(ctx.req, 'ai')
         if (limited) return limited
 
-        // 1. Auth
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        // 2. Parse Body
-        const { strips } = await req.json() as { strips: TransposeRequestChunk[] };
+        const { strips } = await ctx.req.json() as { strips: TransposeRequestChunk[] };
         if (!strips || !Array.isArray(strips) || strips.length === 0) {
             return NextResponse.json({ error: "No strips provided" }, { status: 400 });
         }
 
-        // 3. Construct Multimodal Prompt
-        // We will send all strips in one go to save latency/cost
-        // Format: [Intro Text, "Strip ID 1:", Image1, "Strip ID 2:", Image2, ..., "Output JSON rules"]
-
         const parts: (string | { inlineData: { mimeType: string; data: string } })[] = [systemPrompt];
 
-        // Interleave images
         strips.forEach(strip => {
             parts.push(`Strip ID: "${strip.id}"`);
             parts.push({
@@ -104,31 +94,27 @@ export async function POST(req: NextRequest) {
 
         parts.push("Begin analysis:");
 
-        // 4. Call Gemini
         logger.info(`[AI Transposer] Sending ${strips.length} strips to Gemini 3 Flash Preview...`);
         const result = await geminiFlash().generateContent(parts);
         const responseText = result.response.text();
 
         logger.info("[AI Transposer] Raw Response:", responseText.substring(0, 100) + "...");
 
-        // 5. Parse JSON
         let cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        // Sometimes LLMs add text before/after. Try to find the array [ ... ]
         const start = cleanJson.indexOf('[');
         const end = cleanJson.lastIndexOf(']');
         if (start !== -1 && end !== -1) {
             cleanJson = cleanJson.substring(start, end + 1);
         }
 
-        const data = JSON.parse(cleanJson);
+        // v4.4 V-002: parse model output defensively
+        let data: unknown
+        try {
+            data = JSON.parse(cleanJson)
+        } catch {
+            return NextResponse.json({ results: [] })
+        }
 
         return NextResponse.json({ results: data });
-
-    } catch (error: unknown) {
-        logger.error("[AI Transposer] Error:", error);
-        return NextResponse.json(
-            { error: "Failed to process chord detection" },
-            { status: 500 }
-        );
     }
-}
+)

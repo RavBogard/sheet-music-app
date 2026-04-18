@@ -2,35 +2,41 @@ import { NextResponse } from "next/server"
 import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const setRoleSchema = z.object({
     targetUserId: z.string().min(1),
-    newRole: z.enum(['admin', 'band_leader', 'leader', 'musician', 'member', 'pending'])
+    newRole: z.enum(['admin', 'band_leader', 'musician', 'member', 'pending'])
 })
 
 export const POST = createApiHandler(
     async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { targetUserId, newRole } = ctx.body!
 
-        // Set Custom Claims — preserve existing claims (like soundEngineer)
         const fbAuth = getAuth()
-        const existingUser = await fbAuth.getUser(targetUserId)
-        const existingClaims = existingUser.customClaims || {}
-        await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
-
-        // Update Firestore for UI consistency
         const { FieldValue } = await import('firebase-admin/firestore')
         const db = getFirestore()
 
-        await db.collection("users").doc(targetUserId).update({
-            role: newRole,
-            claimsUpdatedAt: FieldValue.serverTimestamp(),
-        })
+        // Read existing claims before transaction (Auth is external)
+        const existingUser = await fbAuth.getUser(targetUserId)
+        const existingClaims = existingUser.customClaims || {}
 
-        // Audit Log
-        try {
-            await db.collection("auditLogs").add({
+        // Firestore transaction: user doc update + audit log + demotion guard
+        await db.runTransaction(async (txn) => {
+            const userRef = db.collection("users").doc(targetUserId)
+
+            // Update user role
+            txn.update(userRef, {
+                role: newRole,
+                claimsUpdatedAt: FieldValue.serverTimestamp(),
+            })
+
+            // Audit log
+            txn.create(db.collection("auditLogs").doc(), {
                 action: "ROLE_CHANGE",
                 targetUserId,
                 newRole,
@@ -39,32 +45,14 @@ export const POST = createApiHandler(
                 actorEmail: ctx.auth.email || "unknown",
                 timestamp: FieldValue.serverTimestamp()
             })
+
+        })
+
+        // Update Auth custom claims (external service, after Firestore transaction succeeds)
+        try {
+            await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
         } catch (e) {
-            logger.error("Failed to write audit log:", e)
-        }
-
-        // Leader Demotion Guard: Lock public setlists
-        if (newRole === 'member' || newRole === 'pending') {
-            try {
-                const publicSetlists = await db.collection("setlists")
-                    .where("createdBy.uid", "==", targetUserId)
-                    .where("isPublic", "==", true)
-                    .get()
-
-                if (!publicSetlists.empty) {
-                    const batch = db.batch()
-                    publicSetlists.docs.forEach(doc => {
-                        batch.update(doc.ref, {
-                            isPublic: false,
-                            updatedAt: FieldValue.serverTimestamp()
-                        })
-                    })
-                    await batch.commit()
-                    logger.info(`[Demotion Guard] Locked ${publicSetlists.size} public setlists for demoted user ${targetUserId}`)
-                }
-            } catch (e) {
-                logger.error("[Demotion Guard] Failed to lock setlists:", e)
-            }
+            logger.error("[Set Role] Auth claims update failed after Firestore commit:", e)
         }
 
         return NextResponse.json({ success: true, role: newRole })

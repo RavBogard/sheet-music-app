@@ -2,96 +2,74 @@
 
 import { useEffect, useCallback, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useMonitorStore } from "@/lib/monitor-store"
+import { useMonitorStore, getVisibleChannels } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { getMonitorClient } from "@/hooks/use-monitor-connection"
-import { FaderStrip } from "@/components/monitor/FaderStrip"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { VerticalFaderStrip } from "@/components/monitor/VerticalFaderStrip"
+import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { BridgeStatus } from "@/types/monitor"
-import { Loader2, Star, Wifi, WifiOff, Server, ServerOff, PlusCircle } from "lucide-react"
+import { Loader2, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
+import { ScrollFade } from "@/components/ui/scroll-fade"
+import { isBridgeOnline, getBridgeStatusMessage } from "@/components/monitor/ConnectionIndicator"
 
-/**
- * Check if the bridge heartbeat indicates it's online.
- * Considers staleness: if lastSeen > 2 minutes ago, treat as offline.
- */
-function isBridgeOnline(bridge?: BridgeStatus): boolean {
-    if (!bridge?.lastSeen) return true // No heartbeat data = legacy bridge, assume online
-    if (bridge.status === "offline") return false
-
-    let lastSeen: Date
-    try {
-        const ts = bridge.lastSeen as { toDate?: () => Date; seconds?: number }
-        if (ts.toDate) lastSeen = ts.toDate()
-        else if (ts.seconds) lastSeen = new Date(ts.seconds * 1000)
-        else lastSeen = new Date(bridge.lastSeen as string)
-    } catch {
-        return true
-    }
-
-    const ageMs = Date.now() - lastSeen.getTime()
-    return ageMs < 120_000
-}
-
-function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
-    if (!bridge?.lastSeen) return null
-    if (!isBridgeOnline(bridge)) return "Bridge is offline"
-    if (bridge.x32Connected === false) return "Bridge online — mixer disconnected"
-    return null
-}
+const noop = () => {} // Stable reference to prevent memo breaking
 
 /**
  * Compact monitor mixer panel for the performance toolbar.
- * Shows master fader + active/pinned channel sends.
- * Uses singleton connection — shared with MonitorPage.
+ * Shows master fader + starred/default channel sends as vertical faders.
+ * Uses singleton connection -- shared with MonitorPage.
+ *
+ * Live mode popup: vertical faders in horizontal row, no "More Me!" macro,
+ * channels filtered via getVisibleChannels (defaults + starred).
  */
 export function QuickMonitorPanel() {
     const { user } = useAuth()
     const { hasAccess } = useMonitorAccess()
-    const [pinnedChannels, setPinnedChannels] = useState<number[]>([])
 
-    const {
-        status, channels, buses, config, myBusIndex,
-        updateBusFader, updateSendLevel, updateSendOn,
-    } = useMonitorStore()
+    // Granular selectors — only re-render when specific data changes
+    const status = useMonitorStore(s => s.status)
+    const channels = useMonitorStore(s => s.channels)
+    const buses = useMonitorStore(s => s.buses)
+    const config = useMonitorStore(s => s.config)
+    const myBusIndex = useMonitorStore(s => s.myBusIndex)
+    const starredChannels = useMonitorStore(s => s.starredChannels)
+    const defaultChannels = useMonitorStore(s => s.defaultChannels)
+    const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
+    const updateBusFader = useMonitorStore(s => s.updateBusFader)
+    const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
+    const updateSendOn = useMonitorStore(s => s.updateSendOn)
 
-    // Load pinned channels from Firestore
+    // Load starred channels from Firestore (backward compat: pinnedChannels field)
     useEffect(() => {
         if (!user) return
         getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
-            if (snap.exists()) setPinnedChannels(snap.data().pinnedChannels || [])
+            if (snap.exists()) {
+                const data = snap.data()
+                const channels = data.pinnedChannels || []
+                // Only set if store doesn't already have starred channels
+                // (store may have been populated by configure mode)
+                if (channels.length > 0) {
+                    setStarredChannels(channels)
+                }
+            }
         }).catch(() => { })
-
-    }, [user])
-
-    // Save pinned channels
-    const togglePin = useCallback(async (channelIndex: number) => {
-        if (!user) return
-        setPinnedChannels(prev => {
-            const next = prev.includes(channelIndex)
-                ? prev.filter(c => c !== channelIndex)
-                : [...prev, channelIndex]
-            setDoc(doc(db, "users", user.uid, "preferences", "monitor"), { pinnedChannels: next }, { merge: true }).catch(() => { })
-            return next
-        })
-
-    }, [user])
+    }, [user, setStarredChannels])
 
     // Fader handlers
     const handleBusMaster = useCallback((value: number) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateBusFader(myBusIndex, value)
         getMonitorClient()?.setBusMaster(myBusIndex, value)
     }, [myBusIndex, updateBusFader])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateSendLevel(myBusIndex, channelIndex, value)
         getMonitorClient()?.setSendLevel(myBusIndex, channelIndex, value)
     }, [myBusIndex, updateSendLevel])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
-        if (!myBusIndex) return
+        if (myBusIndex == null) return
         updateSendOn(myBusIndex, channelIndex, on)
         getMonitorClient()?.setSendOn(myBusIndex, channelIndex, on)
     }, [myBusIndex, updateSendOn])
@@ -100,41 +78,14 @@ export function QuickMonitorPanel() {
     const myBus = buses.find(b => b.index === myBusIndex)
     const channelMap = new Map(channels.map(c => [c.index, c]))
 
-    // Find "Me" channel - simple heuristic: channel name matches bus name, or bus name matches part of channel name
-    const myChannelSend = myBus?.sends.find(s => {
-        const ch = channelMap.get(s.channelIndex);
-        if (!ch || !ch.name || !myBus.name) return false;
-        const busName = myBus.name.toLowerCase();
-        const chName = ch.name.toLowerCase();
-        return chName === busName ||
-            chName.includes(busName) ||
-            (busName.includes("vox") && chName.includes("vox") && busName.split(' ')[0] === chName.split(' ')[0]);
-    });
-
-    // "More Me" Macro: Increases my channel up to 10% (max 100%), lowers all other active sends by 5%
-    const handleMoreMe = useCallback(() => {
-        if (!myBusIndex || !myBus || !myChannelSend) return;
-
-        const currentMeLevel = myChannelSend.level;
-        const newMeLevel = Math.min(1.0, currentMeLevel + 0.10);
-
-        // Optimistically apply local, then send
-        updateSendLevel(myBusIndex, myChannelSend.channelIndex, newMeLevel);
-        getMonitorClient()?.setSendLevel(myBusIndex, myChannelSend.channelIndex, newMeLevel);
-
-        // Lower everything else slightly to create space
-        myBus.sends.forEach(send => {
-            if (send.channelIndex !== myChannelSend.channelIndex && send.level > 0.05) {
-                const newLevel = Math.max(0.01, send.level - 0.05);
-                updateSendLevel(myBusIndex, send.channelIndex, newLevel);
-                getMonitorClient()?.setSendLevel(myBusIndex, send.channelIndex, newLevel);
-            }
-        });
-    }, [myBusIndex, myBus, myChannelSend, updateSendLevel]);
-
-    // Show active channels (non-zero level) + pinned channels
+    // Filter channels using getVisibleChannels (defaults + starred, filtered to bus sends)
+    const visibleChannelIndices = getVisibleChannels(
+        defaultChannels,
+        starredChannels,
+        myBus?.sends || []
+    )
     const visibleSends = myBus?.sends.filter(s =>
-        s.on || s.level > 0.001 || pinnedChannels.includes(s.channelIndex)
+        visibleChannelIndices.includes(s.channelIndex)
     ) || []
 
     // Not ready states
@@ -145,7 +96,7 @@ export function QuickMonitorPanel() {
     if (bridgeMessage) {
         const isMixerOnly = bridgeMessage.includes("mixer disconnected")
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 {isMixerOnly ? <ServerOff className="w-4 h-4 text-yellow-600" /> : <ServerOff className="w-4 h-4" />}
                 <span className="text-xs">{bridgeMessage}</span>
             </div>
@@ -154,7 +105,7 @@ export function QuickMonitorPanel() {
 
     if (status === "connecting") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-400">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Connecting to mixer...</span>
             </div>
@@ -163,7 +114,7 @@ export function QuickMonitorPanel() {
 
     if (status === "error" || status === "disconnected") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-zinc-500">
+            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
                 <WifiOff className="w-4 h-4" />
                 <span className="text-xs">Mixer offline</span>
             </div>
@@ -172,22 +123,22 @@ export function QuickMonitorPanel() {
 
     if (!myBusIndex || !myBus) {
         return (
-            <div className="flex items-center justify-center py-6 text-zinc-500 text-xs">
+            <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
                 No monitor bus assigned
             </div>
         )
     }
 
     return (
-        <div className="w-80 max-h-[60vh] overflow-y-auto">
+        <div className="w-full">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div>
-                    <div className="text-sm font-semibold text-zinc-200 truncate pr-2 max-w-[180px]">
-                        {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : `My Monitor`}
+                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[140px]">
+                        {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                     </div>
-                    <div className="text-[10px] text-zinc-500">
-                        Bus {myBusIndex} {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? "" : `— ${myBus.name}`}
+                    <div className="text-[10px] text-muted-foreground">
+                        Bus {myBusIndex}
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -205,66 +156,45 @@ export function QuickMonitorPanel() {
                 </div>
             </div>
 
-            {/* Master */}
-            <div className="px-3 pb-1">
-                <FaderStrip
-                    label={myBus.name && myBus.name !== `Bus ${myBusIndex}` ? `🔊 ${myBus.name} Master` : "🔊 Master"}
+            {/* Vertical faders in horizontal row */}
+            <ScrollFade snap scrollClassName="flex flex-row gap-3 p-3 min-h-[280px]">
+                {/* Master bus fader (leftmost) */}
+                <VerticalFaderStrip
+                    label="Master"
                     value={myBus.fader}
                     on={true}
                     isMaster
                     onChange={handleBusMaster}
+                    onMuteToggle={noop}
                 />
-            </div>
 
-            {/* "More Me" Macro Button (only if we found a matching channel) */}
-            {myChannelSend && (
-                <div className="px-3 py-1">
-                    <button
-                        onClick={handleMoreMe}
-                        className="w-full py-2 bg-violet-900/40 hover:bg-violet-800/60 border border-violet-500/30 rounded-lg flex items-center justify-center gap-2 text-violet-200 text-xs font-semibold transition-colors active:scale-[0.98]"
-                    >
-                        <PlusCircle className="w-4 h-4" />
-                        More Me!
-                    </button>
-                </div>
-            )}
+                {/* Divider between master and channels */}
+                {visibleSends.length > 0 && (
+                    <div className="w-px bg-brand/20 mx-1 self-stretch" />
+                )}
 
-            {/* Divider */}
-            <div className="border-t border-zinc-800 mx-3 my-1" />
-
-            {/* Channel sends */}
-            <div className="px-3 pb-3 space-y-0.5">
+                {/* Channel sends */}
                 {visibleSends.length === 0 ? (
-                    <p className="text-[10px] text-zinc-600 text-center py-3">No active channels</p>
+                    <div className="flex items-center justify-center flex-1 text-[10px] text-muted-foreground">
+                        No channels starred
+                    </div>
                 ) : (
                     visibleSends.map(send => {
                         const ch = channelMap.get(send.channelIndex)
                         const name = ch?.name || `Ch ${send.channelIndex}`
-                        const isPinned = pinnedChannels.includes(send.channelIndex)
                         return (
-                            <div key={send.channelIndex} className="flex items-center gap-1">
-                                <button
-                                    onClick={() => togglePin(send.channelIndex)}
-                                    className={`shrink-0 p-1 rounded transition-colors ${isPinned ? "text-yellow-500" : "text-zinc-700 hover:text-zinc-500"
-                                        }`}
-                                    title={isPinned ? "Unpin" : "Pin (always show)"}
-                                >
-                                    <Star className="w-3 h-3" fill={isPinned ? "currentColor" : "none"} />
-                                </button>
-                                <div className="flex-1 min-w-0">
-                                    <FaderStrip
-                                        label={name}
-                                        value={send.level}
-                                        on={send.on}
-                                        onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                        onUnmuteCheck={() => handleSendOn(send.channelIndex, true)}
-                                    />
-                                </div>
-                            </div>
+                            <VerticalFaderStrip
+                                key={send.channelIndex}
+                                label={name}
+                                value={send.level}
+                                on={send.on}
+                                onChange={(val) => handleSendLevel(send.channelIndex, val)}
+                                onMuteToggle={() => handleSendOn(send.channelIndex, !send.on)}
+                            />
                         )
                     })
                 )}
-            </div>
+            </ScrollFade>
         </div>
     )
 }

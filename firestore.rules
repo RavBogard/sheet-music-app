@@ -15,16 +15,15 @@ service cloud.firestore {
 
     // Helper to check if the CURRENT user is an Admin
     function isAdmin() {
-      // 1. Check strict UID (Bootstrap)
-      // 2. Check Custom Claim
-      return request.auth.uid == '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3' 
-          || request.auth.token.role == 'admin';
+      // 1. Check Custom Claim (primary path)
+      // 2. Check config/admins document (bootstrap fallback, replaces hardcoded UID)
+      return request.auth.token.role == 'admin'
+          || request.auth.uid in get(/databases/$(database)/documents/config/admins).data.uids;
     }
 
     // Band Leader: Can Create/Edit/Publish Setlists, Manage People
     function isBandLeader() {
-      return isAdmin() || request.auth.token.role == 'band_leader'
-          || request.auth.token.role == 'leader'; // backward compat
+      return isAdmin() || request.auth.token.role == 'band_leader';
     }
 
     // Musician: Band member — appears in picker, receives emails, performs
@@ -73,38 +72,35 @@ service cloud.firestore {
         allow read: if isSignedIn() && request.auth.uid == userId;
         allow update: if isSignedIn() && request.auth.uid == userId
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        allow create: if isSignedIn(); // Other users/admin can create notifications
+        allow create: if isSignedIn() && (isAdmin() || isBandLeader()); // Server writes via admin SDK; client-side only for admin/leader
         allow delete: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
     // SETLISTS Collection (The new root collection)
+    // v4.0: All setlists are public among band members — no private/public
+    // distinction for access control beyond role-gating.
     match /setlists/{setlistId} {
-      // 1. READ: Allow if Public OR User is Owner
-      allow read: if (resource.data.isPublic == true) || isOwner(resource);
+      // 1. READ: Members (musicians+) and the setlist's owner.
+      // v4.3 P10-04: restored isMember() gate. The claim-sync race that
+      // forced the 0b10ecf relaxation is structurally addressed by the
+      // P9/P10 drift-repair chain (sync-claims + getIdToken(true) + cookie
+      // refresh fire on profile updates). Owners keep read access during
+      // the brief post-creation sync window.
+      allow read: if isMember() || isOwner(resource);
 
-      // 2. CREATE: 
-      //    - Members can create private setlists.
-      //    - Only Leaders/Admins can create PUBLIC setlists.
-      allow create: if isSignedIn() 
-                    && request.resource.data.ownerId == request.auth.uid
-                    && (request.resource.data.isPublic != true || isBandLeader());
+      // 2. CREATE: Any signed-in user, must set ownerId to self
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid;
 
-      // 3. UPDATE: 
-      //    - Owner can always update.
-      //    - Leaders/Admins can update ANY Public setlist.
-      allow update: if isOwner(resource) 
-                    || (resource.data.isPublic == true && isBandLeader());
+      // 3. UPDATE: Owner, Band Leader, or Admin; ownerId is immutable
+      //    except by admins (v4.4 SEC-008).
+      allow update: if (isOwner(resource) || isBandLeader() || isAdmin())
+                    && (isAdmin() || request.resource.data.ownerId == resource.data.ownerId);
 
-      // 4. DELETE: Owner OR Admin (Leaders generally shouldn't delete others' lists unless Admin)
-      allow delete: if isOwner(resource) || isAdmin();
+      // 4. DELETE: Owner, Band Leader, or Admin
+      allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
 
-      // D1: Presence subcollection — users write their own presence doc
-      match /presence/{odinguid} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && request.auth.uid == odinguid;
-        allow delete: if isSignedIn() && request.auth.uid == odinguid;
-      }
     }
     
     // TASKS Collection
@@ -133,10 +129,27 @@ service cloud.firestore {
       allow write: if false; // Read-only archive
     }
 
+    // LITURGICAL TEMPLATES — custom overrides for setlist templates
+    // Read: Any signed-in user (wizard needs to load custom templates)
+    // Write: Band leaders and admins (template editor)
+    match /templates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isBandLeader();
+    }
+
     // CONGREGATION CONFIG (branding, feature flags)
     match /config/congregation {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    // ADMIN BOOTSTRAP CONFIG (super-admin UIDs for isAdmin() fallback)
+    // Seeded via Firebase Admin SDK or console. isAdmin() reads this doc.
+    // Write locked to Admin SDK only — this doc is read by isAdmin() itself,
+    // so client-side writes would create a circular trust issue.
+    match /config/admins {
+      allow read: if isSignedIn();
+      allow write: if false;
     }
 
     // MONITOR CONFIGURATION
@@ -234,6 +247,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Bridge redemption audit log — server-only (Admin SDK)
+    match /bridge-redemptions/{id} {
+      allow read, write: if false;
+    }
+
     // MONITOR LIVE STATE — Firestore transport for mixer control
     // Bridge writes state via Admin SDK (bypasses rules).
     // Clients read state and write commands.
@@ -242,13 +260,32 @@ service cloud.firestore {
       allow write: if false; // Bridge writes via Admin SDK only
     }
 
-    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK
+    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK.
+    // S05: schema-check `type` against known allowlist and shape-fields by type.
     match /monitor-live/commands/pending/{commandId} {
       allow read: if false; // Bridge reads via Admin SDK
       allow create: if isSignedIn()
                     && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.createdAt is number;
+                    && request.resource.data.createdAt is number
+                    && request.resource.data.type in [
+                        'set_bus_master',
+                        'set_send_level',
+                        'set_send_on',
+                        'set_matrix_fader',
+                        'set_matrix_on'
+                    ]
+                    && (!('busIndex' in request.resource.data)     || request.resource.data.busIndex is int)
+                    && (!('channelIndex' in request.resource.data) || request.resource.data.channelIndex is int)
+                    && (!('matrixIndex' in request.resource.data)  || request.resource.data.matrixIndex is int)
+                    && (!('value' in request.resource.data)        || request.resource.data.value is number
+                                                                     || request.resource.data.value is bool);
       allow update, delete: if false; // Bridge deletes via Admin SDK
+    }
+
+    // Deny-all fallback — any collection not explicitly matched above is locked.
+    // Prevents new collections from being accidentally accessible.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

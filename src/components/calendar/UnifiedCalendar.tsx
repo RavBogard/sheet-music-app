@@ -4,11 +4,8 @@ import { useState, useMemo } from "react"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCalendarData, type CalendarMode } from "@/hooks/use-calendar-data"
-import { useBlockoutSelection } from "@/hooks/use-blockout-selection"
 import { CalendarHeader } from "./CalendarHeader"
 import { CalendarGrid } from "./CalendarGrid"
-import { BlockoutConfirmPanel } from "./BlockoutConfirmPanel"
-import { BlockoutList } from "./BlockoutList"
 import type { Setlist } from "@/lib/setlist-firebase"
 
 interface UnifiedCalendarProps {
@@ -24,13 +21,11 @@ interface UnifiedCalendarProps {
 }
 
 /**
- * Unified Calendar — replaces CalendarView, SchedulingCalendar, and AvailabilityManager
- * with a single, mode-aware component.
+ * Unified Calendar — single, mode-aware component.
  *
  * Modes:
- *   - viewer:      setlists + tasks (everyone)
- *   - planning:    setlists + assignment coverage + blockout counts (band leaders)
- *   - availability: blockout selection/management (musicians)
+ *   - viewer:   setlists + my assignments (everyone)
+ *   - planning: setlists + all assignment coverage (band leaders)
  */
 export function UnifiedCalendar({
     mode,
@@ -41,9 +36,7 @@ export function UnifiedCalendar({
 }: UnifiedCalendarProps) {
     const [currentDate, setCurrentDate] = useState(new Date())
 
-    const { dayMap, blockouts, isMyBlockedDate, loading } = useCalendarData(mode, setlists)
-
-    const blockoutSelection = useBlockoutSelection(isMyBlockedDate)
+    const { dayMap, loading } = useCalendarData(mode, setlists)
 
     const { monthLabel, year, month } = useMemo(() => {
         const y = currentDate.getFullYear()
@@ -82,20 +75,11 @@ export function UnifiedCalendar({
                     currentDate={currentDate}
                     mode={mode}
                     dayMap={dayMap}
-                    isMyBlockedDate={isMyBlockedDate}
-                    blockoutSelection={mode === 'availability' ? blockoutSelection : undefined}
                     onSelectSetlist={handleSelectSetlist}
                     onCreateSetlist={onCreateSetlist}
                 />
             )}
 
-            {/* Availability mode: confirm panel + blockout list */}
-            {mode === 'availability' && (
-                <>
-                    <BlockoutConfirmPanel selection={blockoutSelection} />
-                    <BlockoutList blockouts={blockouts} />
-                </>
-            )}
         </div>
     )
 }

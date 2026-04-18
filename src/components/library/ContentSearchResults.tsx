@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { FileText, Search, Loader2 } from "lucide-react"
+import { FileText, Search, Loader2, ListPlus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ContentMatch {
     page: number
@@ -24,11 +25,15 @@ export function ContentSearchResults({
     results,
     searching,
     query,
+    canAddToSetlist,
+    onAddToSetlist,
 }: {
     results: ContentSearchResult[]
     searching: boolean
     query: string
     onSelectFile?: (file: DriveFile) => void
+    canAddToSetlist?: boolean
+    onAddToSetlist?: (fileId: string, fileName: string) => void
 }) {
     if (!query || query.length < 2) return null
 
@@ -76,6 +81,21 @@ export function ContentSearchResults({
                                 </div>
                             ))}
                         </div>
+                        {canAddToSetlist && onAddToSetlist && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="shrink-0 text-xs"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    onAddToSetlist(result.fileId, result.fileName)
+                                }}
+                            >
+                                <ListPlus className="h-3.5 w-3.5 mr-1" />
+                                Add to Setlist...
+                            </Button>
+                        )}
                     </Link>
                 ))}
             </div>
@@ -93,7 +113,7 @@ function HighlightedContext({ context, term }: { context: string; term: string }
     return (
         <span>
             {context.slice(0, idx)}
-            <span className="text-violet-500 font-medium">{context.slice(idx, idx + term.length)}</span>
+            <span className="text-brand font-medium">{context.slice(idx, idx + term.length)}</span>
             {context.slice(idx + term.length)}
         </span>
     )

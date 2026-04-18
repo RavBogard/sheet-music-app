@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getFirestore } from "firebase-admin/firestore"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 interface ChordPosition {
     text: string
@@ -27,17 +27,14 @@ interface PageChordData {
  * GET /api/library/chord-cache?fileId=xxx&page=0
  * GET /api/library/chord-cache?fileId=xxx&meta=true
  */
-export async function GET(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const fileId = req.nextUrl.searchParams.get("fileId")
-        const page = req.nextUrl.searchParams.get("page")
-        const meta = req.nextUrl.searchParams.get("meta")
+        const fileId = ctx.req.nextUrl.searchParams.get("fileId")
+        const page = ctx.req.nextUrl.searchParams.get("page")
+        const meta = ctx.req.nextUrl.searchParams.get("meta")
 
         if (!fileId) {
             return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
@@ -55,6 +52,8 @@ export async function GET(req: NextRequest) {
                 nativeKeySource: data?.nativeKeySource || undefined,
                 chordsVerified: data?.chordsVerified || false,
                 chordsVerifiedBy: data?.chordsVerifiedBy || undefined,
+                lastUsedKey: data?.lastUsedKey || undefined,
+                lastUsedTransposition: data?.lastUsedTransposition ?? undefined,
             })
         }
 
@@ -75,31 +74,28 @@ export async function GET(req: NextRequest) {
             snapshot.forEach(doc => { pages[doc.id] = doc.data() as PageChordData })
             return NextResponse.json({ cached: Object.keys(pages).length > 0, pages })
         }
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("[Chord Cache GET] Error:", error)
-        return NextResponse.json({ error: "Failed to load chord cache" }, { status: 500 })
     }
-}
+)
+
+const postSchema = z.object({
+    fileId: z.string().min(1),
+    page: z.number(),
+    chords: z.array(z.any()),
+    scanMethod: z.string().optional(),
+    cacheVersion: z.number().optional(),
+    aiValidated: z.boolean().optional(),
+})
 
 /**
  * POST /api/library/chord-cache
  * Save scanned chord positions for a file page
  */
-export async function POST(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const body = await req.json()
-        const { fileId, page, chords, scanMethod, cacheVersion, aiValidated } = body
-
-        if (!fileId || page === undefined || page === null || !Array.isArray(chords)) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-        }
+        const { fileId, page, chords, scanMethod, cacheVersion, aiValidated } = ctx.body!
 
         const db = getFirestore()
 
@@ -117,7 +113,7 @@ export async function POST(req: NextRequest) {
                 }
             }),
             scannedAt: new Date().toISOString(),
-            scanMethod: scanMethod || 'textLayer',
+            scanMethod: scanMethod as PageChordData['scanMethod'] || 'textLayer',
             aiValidated: aiValidated || false,
             cacheVersion: cacheVersion || 1
         }
@@ -127,28 +123,27 @@ export async function POST(req: NextRequest) {
             .set(cacheData, { merge: true })
 
         return NextResponse.json({ success: true, chordsCount: cacheData.chords.length })
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("[Chord Cache POST] Error:", error)
-        return NextResponse.json({ error: "Failed to save chord cache" }, { status: 500 })
-    }
-}
+    },
+    { schema: postSchema }
+)
+
+const patchSchema = z.object({
+    fileId: z.string().min(1),
+    nativeKey: z.string().optional(),
+    nativeKeySource: z.string().optional(),
+    chordsVerified: z.boolean().optional(),
+    chordsVerifiedBy: z.string().nullable().optional(),
+    lastUsedKey: z.string().optional(),
+    lastUsedTransposition: z.number().optional(),
+})
 
 /**
  * PATCH /api/library/chord-cache
  * Update library-level metadata (native key, verification)
  */
-export async function PATCH(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const body = await req.json()
-        const { fileId, nativeKey, nativeKeySource, chordsVerified, chordsVerifiedBy } = body
-
-        if (!fileId) {
-            return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
-        }
+export const PATCH = createApiHandler(
+    async (ctx) => {
+        const { fileId, nativeKey, nativeKeySource, chordsVerified, chordsVerifiedBy, lastUsedKey, lastUsedTransposition } = ctx.body!
 
         const db = getFirestore()
         const updates: Record<string, unknown> = {}
@@ -161,28 +156,26 @@ export async function PATCH(req: NextRequest) {
             updates.chordsVerified = chordsVerified
             updates.chordsVerifiedBy = chordsVerifiedBy || null
         }
+        if (lastUsedKey !== undefined) {
+            updates.lastUsedKey = lastUsedKey
+            updates.lastUsedTransposition = lastUsedTransposition ?? 0
+        }
 
         if (Object.keys(updates).length > 0) {
             await db.collection("library_index").doc(fileId).set(updates, { merge: true })
         }
 
         return NextResponse.json({ success: true })
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("[Chord Cache PATCH] Error:", error)
-        return NextResponse.json({ error: "Failed to update metadata" }, { status: 500 })
-    }
-}
+    },
+    { role: 'musician', schema: patchSchema }
+)
 
 /**
  * DELETE /api/library/chord-cache?fileId=xxx
  */
-export async function DELETE(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const fileId = req.nextUrl.searchParams.get("fileId")
+export const DELETE = createApiHandler(
+    async (ctx) => {
+        const fileId = ctx.req.nextUrl.searchParams.get("fileId")
         if (!fileId) {
             return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
         }
@@ -202,9 +195,6 @@ export async function DELETE(req: NextRequest) {
         )
 
         return NextResponse.json({ success: true, pagesDeleted: snapshot.size })
-    } catch (error: unknown) {
-        if (error instanceof NextResponse) return error
-        logger.error("[Chord Cache DELETE] Error:", error)
-        return NextResponse.json({ error: "Failed to clear chord cache" }, { status: 500 })
-    }
-}
+    },
+    { role: 'band_leader' }
+)

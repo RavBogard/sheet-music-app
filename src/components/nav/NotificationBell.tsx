@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { reportSaveError } from "@/lib/save-error"
 import {
     Notification,
     subscribeToNotifications,
@@ -10,7 +11,8 @@ import {
     markAllAsRead,
 } from "@/lib/notification-store"
 import { useMusicStore } from "@/lib/store"
-import { Bell, ListMusic, Upload, Shield } from "lucide-react"
+import { Bell, ListMusic, Upload, Shield, Calendar, CalendarCheck, CalendarX } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const ICON_MAP: Record<string, typeof Bell> = {
     setlist_published: ListMusic,
@@ -18,6 +20,11 @@ const ICON_MAP: Record<string, typeof Bell> = {
     chart_uploaded: Upload,
     role_changed: Shield,
     general: Bell,
+    scheduling_request: Calendar,
+    scheduling_confirmed: CalendarCheck,
+    scheduling_declined: CalendarX,
+    scheduling_reminder: Calendar,
+    scheduling_cancelled: CalendarX,
 }
 
 export function NotificationBell() {
@@ -27,7 +34,12 @@ export function NotificationBell() {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
 
-    const unreadCount = notifications.filter(n => !n.read).length
+    // v4.3 P04: memoize so unrelated parent re-renders don't reduce over
+    // the notifications list on every paint.
+    const unreadCount = useMemo(
+        () => notifications.reduce((acc, n) => acc + (n.read ? 0 : 1), 0),
+        [notifications],
+    )
 
     const gigModeActive = useMusicStore(s => s.gigModeActive)
 
@@ -53,7 +65,7 @@ export function NotificationBell() {
 
     const handleClick = async (notif: Notification) => {
         if (!notif.read) {
-            await markAsRead(user.uid, notif.id).catch(() => { })
+            await markAsRead(user.uid, notif.id).catch(err => reportSaveError(err, "notification"))
         }
         if (notif.link) {
             router.push(notif.link)
@@ -62,15 +74,17 @@ export function NotificationBell() {
     }
 
     const handleMarkAllRead = async () => {
-        await markAllAsRead(user.uid).catch(() => { })
+        await markAllAsRead(user.uid).catch(err => reportSaveError(err, "notifications"))
     }
 
     return (
         <div className="relative" ref={ref}>
             {/* Bell button */}
-            <button
+            <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setOpen(!open)}
-                className="relative p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="relative"
                 aria-label="Notifications"
             >
                 <Bell className="w-5 h-5" />
@@ -79,7 +93,7 @@ export function NotificationBell() {
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
-            </button>
+            </Button>
 
             {/* Dropdown */}
             {open && (
@@ -88,12 +102,14 @@ export function NotificationBell() {
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
                         <span className="text-sm font-semibold text-foreground">Notifications</span>
                         {unreadCount > 0 && (
-                            <button
+                            <Button
+                                variant="link"
+                                size="xs"
                                 onClick={handleMarkAllRead}
-                                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                             >
                                 Mark all read
-                            </button>
+                            </Button>
                         )}
                     </div>
 
@@ -111,10 +127,11 @@ export function NotificationBell() {
                                     : ''
 
                                 return (
-                                    <button
+                                    <Button
+                                        variant="ghost"
                                         key={notif.id}
                                         onClick={() => handleClick(notif)}
-                                        className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-accent/50 transition-colors text-left ${!notif.read ? 'bg-violet-500/5' : ''}`}
+                                        className={`w-full h-auto items-start gap-3 px-4 py-3 rounded-none justify-start text-left hover:bg-accent/50 ${!notif.read ? 'bg-violet-500/5' : ''}`}
                                     >
                                         <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${!notif.read ? 'bg-violet-500/10 text-violet-500' : 'bg-muted text-muted-foreground'}`}>
                                             <Icon className="w-3.5 h-3.5" />
@@ -135,7 +152,7 @@ export function NotificationBell() {
                                         {!notif.read && (
                                             <div className="w-2 h-2 rounded-full bg-violet-500 mt-2 shrink-0" />
                                         )}
-                                    </button>
+                                    </Button>
                                 )
                             })
                         )}

@@ -1,6 +1,7 @@
 "use client"
 
 import { User, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { MusicianProfile } from "@/types/models"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 
@@ -35,8 +36,8 @@ export function PrintModeSelector({
                     className="accent-blue-500"
                 />
                 <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium">Standard</span>
-                    <span className="text-xs text-muted-foreground ml-2">No transposition</span>
+                    <span className="text-sm font-medium">Generic (concert pitch)</span>
+                    <span className="text-xs text-muted-foreground ml-2">For guests, no transposition</span>
                 </div>
             </label>
 
@@ -55,7 +56,7 @@ export function PrintModeSelector({
                     />
                     <User className="h-4 w-4 text-violet-500 shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium">Just me</span>
+                        <span className="text-sm font-medium">Personalized (transposed)</span>
                         <span className="text-xs text-muted-foreground ml-2">{myLabel}</span>
                     </div>
                 </label>
@@ -77,7 +78,7 @@ export function PrintModeSelector({
                         />
                         <Users className="h-4 w-4 text-violet-500 shrink-0" />
                         <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium">Select musicians</span>
+                            <span className="text-sm font-medium">Personalized (per musician)</span>
                             {printMode === "select-musicians" && selectedUids.length > 0 && (
                                 <span className="text-xs text-violet-500 ml-2">
                                     {selectedUids.length} selected
@@ -90,19 +91,23 @@ export function PrintModeSelector({
                     {printMode === "select-musicians" && (
                         <div className="px-3 pb-3 space-y-1">
                             <div className="flex gap-2 mb-2">
-                                <button
+                                <Button
+                                    variant="link"
+                                    size="xs"
                                     onClick={() => setSelectedUids(musicians.map(m => m.uid))}
-                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
                                     Select all
-                                </button>
+                                </Button>
                                 <span className="text-muted-foreground/30">·</span>
-                                <button
+                                <Button
+                                    variant="link"
+                                    size="xs"
                                     onClick={() => setSelectedUids([])}
-                                    className="text-xs text-muted-foreground hover:text-foreground"
+                                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                                 >
                                     Deselect all
-                                </button>
+                                </Button>
                             </div>
                             {musicians.map(m => {
                                 const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null

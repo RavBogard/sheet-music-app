@@ -1,9 +1,9 @@
 import { QueueItem } from "@/lib/store"
-import { isFileCached } from "@/lib/cache-utils"
+import { hasFile, putFile } from "@/lib/offline-idb"
 
 /**
- * Prefetch upcoming files in the setlist queue for instant page turns.
- * Uses ServiceWorker / Cache API for consistent offline storage.
+ * Prefetch upcoming files in the setlist queue into the IDB blob store
+ * for instant page turns AND real offline availability.
  *
  * Called when entering performance mode or advancing to a new song.
  */
@@ -19,28 +19,23 @@ export async function prefetchUpcoming(
 
     for (const item of upcoming) {
         if (!item.fileId || item.fileId.startsWith('flow-')) continue
+        if (await hasFile(item.fileId)) continue
 
-        // Skip if already cached
-        const cached = await isFileCached(item.fileId)
-        if (cached) continue
-
-        // Prefetch in background — don't block UI
         try {
-            const url = `/api/drive/file/${item.fileId}`
-            // Browser service worker captures this automatically
-            await fetch(url)
+            const res = await fetch(`/api/drive/file/${item.fileId}`)
+            if (!res.ok) continue
+            const blob = await res.blob()
+            if (blob && blob.size > 0) await putFile(item.fileId, blob)
         } catch {
             // Silent fail — prefetch is best-effort
         }
     }
 }
 
-/**
- * Check if a specific file is already cached offline.
- */
+/** Check if a specific file is already available offline. */
 export async function isFilePrefetched(fileId: string): Promise<boolean> {
     try {
-        return await isFileCached(fileId)
+        return await hasFile(fileId)
     } catch {
         return false
     }
@@ -64,30 +59,31 @@ export async function prefetchSetlistPDFs(
     for (let i = 0; i < unique.length; i++) {
         const fileId = unique[i]
 
-        // Flow items are synthetic non-song elements, not valid drive IDs
         if (fileId.startsWith('flow-')) {
             onProgress?.(i + 1, unique.length)
             continue
         }
 
-        // Skip if already cached
-        const cached = await isFileCached(fileId)
-        if (cached) {
+        if (await hasFile(fileId)) {
             onProgress?.(i + 1, unique.length)
             continue
         }
 
         try {
-            const url = `/api/drive/file/${fileId}`
-            const response = await fetch(url)
-            if (response.ok) newlyCached++
+            const res = await fetch(`/api/drive/file/${fileId}`)
+            if (res.ok) {
+                const blob = await res.blob()
+                if (blob && blob.size > 0) {
+                    await putFile(fileId, blob)
+                    newlyCached++
+                }
+            }
         } catch {
             // Silent fail — best-effort
         }
 
         onProgress?.(i + 1, unique.length)
 
-        // Small delay between fetches to avoid overwhelming the connection
         if (i < unique.length - 1) {
             await new Promise(r => setTimeout(r, 100))
         }

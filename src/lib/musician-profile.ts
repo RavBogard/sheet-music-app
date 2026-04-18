@@ -1,6 +1,7 @@
 import { db, auth } from "./firebase"
-import { doc, updateDoc, onSnapshot, collection } from "firebase/firestore"
+import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
+import { logger } from "@/lib/logger"
 
 /**
  * Save the current user's musician profile to Firestore.
@@ -33,6 +34,8 @@ export function subscribeToMusicianProfile(
         } else {
             callback(null)
         }
+    }, (err) => {
+        logger.error("[MusicianProfile] Listener error:", err)
     })
 }
 
@@ -70,6 +73,26 @@ export const INSTRUMENT_PRESETS: Record<string, { label: string; transposition: 
 }
 
 /**
+ * Slug keys surfaced in onboarding / quick-setup flows.
+ * Subset of INSTRUMENT_PRESETS — Settings shows the full registry.
+ * Stored value at `musicianProfile.instrument` must be a slug key; the
+ * dropdown shows the preset's `label`.
+ */
+export const ONBOARDING_INSTRUMENT_KEYS = [
+    'acoustic_guitar',
+    'electric_bass',
+    'hand_drums',
+    'piano',
+    'voice',
+    'electric_guitar',
+    'bb_trumpet',
+    'eb_alto_sax',
+    'bb_clarinet',
+    'violin',
+    'other',
+] as const
+
+/**
  * Subscribe to all users who have musician profiles set up.
  * Used by the "Print for..." feature in the gig packet generator.
  */
@@ -78,7 +101,7 @@ export function subscribeToAllMusicianProfiles(
 ): () => void {
     if (!db || Object.keys(db).length === 0) return () => { }
 
-    const q = collection(db, "users")
+    const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
     return onSnapshot(q, (snap) => {
         const musicians = snap.docs
             .map(d => {
@@ -93,5 +116,7 @@ export function subscribeToAllMusicianProfiles(
                 !!m.profile && !!m.profile.instrument
             )
         callback(musicians)
+    }, (err) => {
+        logger.error("[MusicianProfile] All profiles listener error:", err)
     })
 }

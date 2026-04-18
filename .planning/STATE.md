@@ -3,92 +3,51 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T20:52:54.939Z"
+last_updated: "2026-03-19T00:54:09.329Z"
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_phases: 8
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 6
 ---
 
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T20:48:56.325Z"
-progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
----
-
-# Project State
+# Project State: Architecture Refinement & UX Polish
 
 ## Project Reference
-
-See: .planning/PROJECT.md (updated 2026-03-01)
-
-**Core value:** Musicians can glance at the app during a live service and instantly know tune, key, and lead -- without fumbling through paper or charts.
-**Current focus:** Phase 1: Data Foundation + Critical Stability
+**Core Value**: Frictionless, instant access for all users, blazing fast PDF loading, and zero UI layout shifts or authorization flashes.
+**Current Focus**: Milestone v1.2 Library Expansion
 
 ## Current Position
-
-Phase: 1 of 6 (Data Foundation + Critical Stability)
-Plan: 3 of 3 in current phase
-Status: Phase 1 Complete
-Last activity: 2026-03-01 -- Completed 01-03 (email error surfacing + resend)
-
-Progress: [##########] 3/3 plans (Phase 1)
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 3
-- Average duration: ~3 min
-- Total execution time: ~0.15 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-data-foundation | 3/3 | ~9 min | ~3 min |
-
-**Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 01-02 (3 min), 01-03 (3 min)
-- Trend: Consistent
-
-*Updated after each plan completion*
+**Phase**: 20 - Add Song to Existing Setlist from Library View
+**Plan**: 2 of 2 complete
+**Status**: Phase complete (all plans done, human verification approved)
+**Last activity**: 2026-03-18 — 20-02 human verification approved, phase 20 complete
 
 ## Accumulated Context
-
 ### Decisions
+- [20-02] Added useAddToSetlist mock to SetlistEditorV2 tests to prevent hook subscription failures in test environment
+- [20-01] Case-insensitive substring match for setlist search (simpler than fuse.js for small lists)
+- [20-01] Undo re-reads current tracks via subscribeToSetlist, filters by added IDs (concurrent-edit safe)
+- [20-01] Separate personalLoaded/publicLoaded flags for dual-subscription loading state
+- [19-01] TransposeCalculator imported directly from opensheetmusicdisplay (confirmed exported from main package)
+- [19-01] Reused existing toQueueItem from queue-utils for PDFOverlay file type detection
+- Completed exhaustive UI/UX audit against `ui-ux-pro-max`.
+- Fixed remaining minor UI/UX bugs (accessibility labels, anti-pattern hover states, edge-case routing for pending users).
+- Project is stable and complete.
+- [18-01] Used SaxonJS with pre-compiled SEF for XSLT transformation (faster than raw XSL at runtime)
+- [18-01] TPC-based pitch mapping for accurate enharmonic note resolution
+- [18-01] Quarter note = 1 division for MusicXML simplicity
+- [Phase 18-02]: Extension-based MuseScore detection since browsers send generic MIME for .mscz
+- [Phase 18-02]: Dual storage pattern: originals at library/originals/, converted at library/
+- [Phase 19-02]: Used conditional render in PDFOverlay JSX (Option A) for file-type branching
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+### Todos
+- None.
 
-- 01-01: Placed tune after key in all interfaces for logical grouping (Title, Key, Tune, Lead, Notes)
-- 01-01: Used identical Zod pattern as key/notes/leadMusician for consistency
-- 01-02: Tune input placed in Key+Tune grid row, Lead in its own row below for cleaner layout
-- 01-02: Column widths redistributed for Tune column; notes text at 10pt italic for visual hierarchy
-- 01-03: Re-send to ALL recipients (not just failed) for simplicity -- ESP handles dedup
-- 01-03: Used existing api rate limit tier rather than custom resend limiter
-- Roadmap: Phases 2 and 3 can run in parallel (live view and print touch different files, both depend only on Phase 1 data model)
-- Roadmap: Monitoring separated into its own phase -- may have Firebase connection bug needing investigation
-- Roadmap: Type safety sequenced after features to avoid blocking Bat Mitzvah deadline
+### Roadmap Evolution
+- Phase 18 added: MuseScore file import and MusicXML conversion
+- Phase 19 added: Native transposition for MusicXML and structured score files
+- Phase 20 added: Add song to existing setlist from library view (requires /ui-ux-pro-max for UI design)
 
-### Pending Todos
-
-None yet.
-
-### Blockers/Concerns
-
-- Bat Mitzvah this week -- Phase 1 (and ideally Phase 2/3) delivery is time-sensitive
-- /monitor route may have Firebase connection bug -- needs investigation in Phase 4
-
-## Session Continuity
-
-Last session: 2026-03-01
-Stopped at: Completed 01-02-PLAN.md (tune editor + cover page) -- Phase 1 all 3 plans complete
-Resume file: .planning/phases/01-data-foundation/01-02-SUMMARY.md
+### Blockers
+- None.

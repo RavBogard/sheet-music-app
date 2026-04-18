@@ -6,6 +6,7 @@ import { z } from "zod"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
+import { formatEventDate } from "@/lib/firestore-helpers"
 
 const remindSchema = z.object({
     setlistId: z.string().min(1),
@@ -32,7 +33,17 @@ export const POST = createApiHandler(
         }
 
         const snap = await query.get()
-        const pending = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Array<any>
+        interface PendingAssignment {
+            id: string
+            eventDate: unknown
+            musicianEmail: string
+            musicianName: string
+            musicianPhone: string | null
+            musicianUid: string
+            setlistName: string
+            instrument: string | undefined
+        }
+        const pending: PendingAssignment[] = snap.docs.map(d => ({ id: d.id, ...d.data() }) as PendingAssignment)
 
         // If no setlistId, filter to assignments within the next 48 hours
         const filtered = setlistId
@@ -42,7 +53,7 @@ export const POST = createApiHandler(
                 let dateMs: number
                 if (typeof a.eventDate === 'string') {
                     dateMs = new Date(a.eventDate).getTime()
-                } else if (a.eventDate?.seconds) {
+                } else if (hasSeconds(a.eventDate)) {
                     dateMs = a.eventDate.seconds * 1000
                 } else {
                     return false
@@ -120,19 +131,13 @@ export const POST = createApiHandler(
     { role: 'band_leader', schema: remindSchema }
 )
 
+function hasSeconds(v: unknown): v is { seconds: number } {
+    return typeof v === 'object' && v !== null && 'seconds' in v && typeof (v as Record<string, unknown>).seconds === 'number'
+}
+
 function formatEventDateForEmail(eventDate: unknown): string {
-    if (!eventDate) return 'TBD'
-    try {
-        let date: Date
-        if (typeof eventDate === 'string') {
-            date = new Date(eventDate)
-        } else if (eventDate && typeof eventDate === 'object' && 'seconds' in (eventDate as any)) {
-            date = new Date((eventDate as any).seconds * 1000)
-        } else {
-            return 'TBD'
-        }
-        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    } catch {
-        return 'TBD'
-    }
+    // Thin wrapper around the canonical helper with an email-friendly 'TBD'
+    // fallback. Format ("Friday, February 14") is identical to the canonical —
+    // previously duplicated inline here.
+    return formatEventDate(eventDate as Parameters<typeof formatEventDate>[0]) ?? 'TBD'
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Plus, Music, BookOpen, ArrowLeftRight, StickyNote, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TrackType } from "@/types/models"
+import { cn } from "@/lib/utils"
 
 interface AddBarProps {
     onAddSongs: () => void
@@ -16,44 +18,65 @@ interface AddBarProps {
 }
 
 export function AddBar({ onAddSongs, onAddItem }: AddBarProps) {
-    return (
-        <div className="sticky bottom-16 sm:bottom-20 md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">
-            <Button
-                variant="outline"
-                className="flex-1 h-10 gap-2"
-                onClick={onAddSongs}
-            >
-                <Music className="h-4 w-4" />
-                Add Song
-            </Button>
+    // Hide when mobile soft keyboard is open — otherwise the sticky bar
+    // overlaps whatever input (service notes, title) the user is editing.
+    // Mirrors MobileTabBar's visualViewport pattern.
+    const [keyboardOpen, setKeyboardOpen] = useState(false)
+    useEffect(() => {
+        const vv = window.visualViewport
+        if (!vv) return
+        const handler = () => {
+            setKeyboardOpen(vv.height < window.innerHeight * 0.75)
+        }
+        vv.addEventListener("resize", handler)
+        return () => vv.removeEventListener("resize", handler)
+    }, [])
 
+    return (
+        <div
+            data-testid="add-bar"
+            className={cn(
+                "sticky bottom-[72px] sm:bottom-[88px] md:bottom-0 z-20 bg-background/95 backdrop-blur-sm border-t border-brand/10 px-4 py-3 flex items-center justify-center pb-safe md:pb-3",
+                keyboardOpen && "hidden"
+            )}
+        >
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-10 gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Item
+                    <Button variant="default" className="w-full sm:w-64 h-11 gap-2 rounded-xl shadow-md bg-brand hover:bg-brand/90 text-primary-foreground">
+                        <Plus className="h-5 w-5" />
+                        <span className="font-semibold text-[15px]">Add Item</span>
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => onAddItem("header")}>
-                        <Minus className="h-4 w-4 mr-2" />
-                        Section Header
+                <DropdownMenuContent align="center" className="w-56 rounded-xl p-1.5 shadow-xl">
+                    <DropdownMenuItem 
+                        onClick={onAddSongs}
+                        className="py-2.5 px-3 cursor-pointer mb-1"
+                    >
+                        <Music className="h-4 w-4 mr-3 text-brand" />
+                        <span className="font-medium">Song from Library</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAddItem("reading")}>
-                        <BookOpen className="h-4 w-4 mr-2 text-amber-500" />
-                        Reading
+                    
+                    <div className="h-px bg-border/50 my-1 mx-2" />
+                    
+                    <DropdownMenuItem onClick={() => onAddItem("header")} className="py-2.5 px-3 cursor-pointer">
+                        <Minus className="h-4 w-4 mr-3 text-muted-foreground" />
+                        <span>Section Header</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAddItem("prayer")}>
-                        <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
-                        Prayer
+                    <DropdownMenuItem onClick={() => onAddItem("reading")} className="py-2.5 px-3 cursor-pointer">
+                        <BookOpen className="h-4 w-4 mr-3 text-amber-500" />
+                        <span>Reading</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAddItem("transition")}>
-                        <ArrowLeftRight className="h-4 w-4 mr-2" />
-                        Transition
+                    <DropdownMenuItem onClick={() => onAddItem("prayer")} className="py-2.5 px-3 cursor-pointer">
+                        <BookOpen className="h-4 w-4 mr-3 text-blue-500" />
+                        <span>Prayer</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAddItem("note")}>
-                        <StickyNote className="h-4 w-4 mr-2" />
-                        Note
+                    <DropdownMenuItem onClick={() => onAddItem("transition")} className="py-2.5 px-3 cursor-pointer">
+                        <ArrowLeftRight className="h-4 w-4 mr-3 text-emerald-500" />
+                        <span>Transition</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAddItem("note")} className="py-2.5 px-3 cursor-pointer">
+                        <StickyNote className="h-4 w-4 mr-3 text-muted-foreground" />
+                        <span>Stage Note</span>
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>

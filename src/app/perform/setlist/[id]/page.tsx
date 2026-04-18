@@ -1,176 +1,125 @@
 "use client"
 
 /**
- * Setlist Performance View
+ * Setlist Performance View (v2)
  *
- * The primary way musicians interact with a setlist. Shows all tracks
- * in a dark, stage-friendly layout. Tapping a track sets the playback
- * queue starting at that position and navigates to the chart.
+ * Dense, scannable setlist -- the core performance experience.
+ * Shows the full service flow at a glance: song titles in their transposed
+ * key, tempo, lead, and liturgical items. Wake lock keeps the screen on.
  *
- * Edit mode is secondary — accessed via the pencil icon in the header.
+ * Architecture: useSetlistPerformance hook + SetlistView component
+ * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
  */
 
-import { useEffect, useState, useMemo, useRef, useCallback } from "react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
-import { doc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { useMusicStore } from "@/lib/store"
-import { toQueueItem } from "@/lib/queue-utils"
+import { useParams } from "next/navigation"
+import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Loader2, ArrowLeft, Pencil, PlayCircle, Music, BookOpen, Mic2, ChevronRight, Printer, ExternalLink, ListTodo } from "lucide-react"
-import { PrintModal } from "@/components/setlist/PrintModal"
-import { TaskSheet } from "@/components/setlist/tasks/TaskSheet"
-import { Metronome } from "@/components/performance/Metronome"
-import { SetlistTrack } from "@/types/models"
-import { QueueItem } from "@/lib/store"
-import { cn } from "@/lib/utils"
-import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
-
-type Section = {
-    label: string | null
-    tracks: { item: QueueItem; globalIndex: number; track: SetlistTrack }[]
-}
+import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
+import { useAuth } from "@/lib/auth-context"
+import { SetlistView } from "@/components/performance/SetlistView"
+import { PDFOverlay } from "@/components/performance/PDFOverlay"
+import { SwapPicker } from "@/components/performance/SwapPicker"
+import { SwapChangeToast } from "@/components/performance/SwapChangeToast"
+import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
+import { createSetlistService } from "@/lib/setlist-firebase"
+import { useLibrary } from "@/hooks/use-library"
+import type { SetlistTrack, DriveFile } from "@/types/models"
+const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 export default function SetlistPerformPage() {
-    const router = useRouter()
     const params = useParams()
     const setlistId = params?.id as string
-    const { setQueue } = useMusicStore()
 
-    const [name, setName] = useState("")
-    const [tracks, setTracks] = useState<SetlistTrack[]>([])
-    const [serviceNotes, setServiceNotes] = useState<string | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [tappedIndex, setTappedIndex] = useState<number | null>(null)
-    const [changesSummary, setChangesSummary] = useState<string | null>(null)
-    const [showChangeBanner, setShowChangeBanner] = useState(true)
+    const {
+        tracks,
+        name,
+        serviceNotes,
+        loading,
+        error,
+        currentTrackIndex,
+        defaultTransposition,
+        isLeader,
+        isPublicView,
+        setCurrentPosition,
+        musicians,
+        setlistId: resolvedSetlistId,
+        rabbi,
+    } = useSetlistPerformance(setlistId)
+
+    const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
     const [showPrintModal, setShowPrintModal] = useState(false)
-    const searchParams = useSearchParams()
-    // Auto-open tasks panel when linked from a task email (?tasks=1)
-    const [showTaskSheet, setShowTaskSheet] = useState(searchParams?.get('tasks') === '1')
+    const [swapTarget, setSwapTarget] = useState<{ index: number; track: SetlistTrack } | null>(null)
+    const lastOwnSwapRef = useRef<number | null>(null)
+    const { user, isMusician, isBandLeader, isAdmin } = useAuth()
+    const canPrint = isMusician || isBandLeader || isAdmin
 
-    // Real-time subscription to setlist
-    const setlistRef = useMemo(() => setlistId ? doc(db, "setlists", setlistId) : null, [setlistId])
-    const { data: setlistData, loading: setlistLoading, error: setlistError } = useSafeFirestoreSync<any>(setlistRef as any)
+    // Ensure library data is loaded for SwapPicker search
+    useLibrary()
 
-    useEffect(() => {
-        setLoading(setlistLoading)
-        if (setlistLoading) return
+    const setlistService = useMemo(
+        () => createSetlistService(user?.uid || null, user?.displayName || null),
+        [user]
+    )
 
-        if (setlistError) {
-            console.error("[SetlistPerform]", setlistError)
-            // Distinguish error types for clear user messaging
-            const code = (setlistError as { code?: string })?.code
-            if (code === 'permission-denied') {
-                setError("This setlist hasn't been published yet, or you don't have access.")
-            } else if (code === 'not-found') {
-                setError("Setlist not found — it may have been deleted.")
-            } else {
-                setError("Couldn't load setlist — check your connection and try again.")
-            }
-            return
-        }
-
-        if (setlistData) {
-            const data = setlistData
-            setName(data.name || "Untitled")
-            setTracks(data.tracks || [])
-            setServiceNotes(data.serviceNotes || null)
-
-            // Compute diff against last published snapshot
-            const snapshot = data.publishedSnapshot as Array<{ title: string }> | undefined
-            if (snapshot && data.isPublic) {
-                const currentSongs = (data.tracks || [])
-                    .filter((t: SetlistTrack) => !t.type || t.type === 'song')
-                    .map((t: SetlistTrack) => t.title)
-                const snapshotSongs = snapshot.map((s: { title: string }) => s.title)
-                const added = currentSongs.filter((t: string) => !snapshotSongs.includes(t))
-                const removed = snapshotSongs.filter((t: string) => !currentSongs.includes(t))
-                if (added.length > 0 || removed.length > 0) {
-                    const parts: string[] = []
-                    if (added.length) parts.push(`+${added.join(', +')}`)
-                    if (removed.length) parts.push(`−${removed.join(', −')}`)
-                    setChangesSummary(parts.join(' · '))
-                } else {
-                    setChangesSummary(null)
-                }
-            }
-        } else if (!setlistLoading) {
-            setError("Setlist not found")
-        }
-    }, [setlistData, setlistLoading, setlistError])
-
-    // Build queue items from tracks
-    const queue = useMemo(() => tracks.map(toQueueItem), [tracks])
-
-    // Group by section headers
-    const sections = useMemo((): Section[] => {
-        const result: Section[] = []
-        let current: Section = { label: null, tracks: [] }
-
-        queue.forEach((item, index) => {
-            if (item.trackType === "header") {
-                if (current.tracks.length > 0 || current.label !== null) {
-                    result.push(current)
-                }
-                current = { label: item.name, tracks: [] }
-            } else {
-                current.tracks.push({ item, globalIndex: index, track: tracks[index] })
-            }
+    const handleSwapSelect = useCallback(async (file: DriveFile) => {
+        if (!swapTarget || !setlistService) return
+        lastOwnSwapRef.current = swapTarget.index
+        await setlistService.swapTrack(resolvedSetlistId, swapTarget.index, {
+            fileId: file.id,
+            title: file.name.replace(/\.[^.]+$/, ''),
+            key: file.metadata?.key,
         })
-        if (current.tracks.length > 0 || current.label !== null) {
-            result.push(current)
-        }
-        return result
-    }, [queue, tracks])
+        setSwapTarget(null)
+    }, [swapTarget, setlistService, resolvedSetlistId])
 
-    const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+    // Song fileIds for the offline indicator's IDB ground-truth count.
+    const songFileIds = useMemo(
+        () => tracks
+            .filter(t => (!t.type || t.type === "song") && t.fileId)
+            .map(t => t.fileId as string),
+        [tracks]
+    )
 
-    // Navigate to a track
-    const handleTrackTap = useCallback((globalIndex: number) => {
-        const item = queue[globalIndex]
-        if (!item) return
-
-        setTappedIndex(globalIndex)
-        setQueue(queue, globalIndex, `/perform/setlist/${setlistId}`, setlistId)
-        router.push(`/perform/${item.fileId}`)
-    }, [queue, setQueue, setlistId, router])
-
-    const trackIcon = (type?: string) => {
-        switch (type) {
-            case "reading":
-            case "prayer":
-                return <BookOpen className="h-4 w-4" />
-            case "moment":
-                return <Mic2 className="h-4 w-4" />
-            default:
-                return <Music className="h-4 w-4" />
-        }
-    }
-
-    // Track count (excluding headers)
+    // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
     const totalCount = tracks.filter((t) => t.type !== "header").length
+
+    // Back link: authenticated users go to /setlists, public users go to /perform (public listing)
+    const backHref = isPublicView ? "/perform" : "/setlists"
+
+    // Error messages based on error type
+    const errorMessage = (() => {
+        if (!error) return null
+        const code = (error as { code?: string })?.code
+        if (code === "permission-denied") {
+            return "This setlist hasn't been published yet, or you don't have access."
+        }
+        if (code === "not-found") {
+            return "Setlist not found -- it may have been deleted."
+        }
+        return "Couldn't load setlist -- check your connection and try again."
+    })()
 
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh] md:pt-20">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground font-medium">Loading setlist…</p>
+                    <p className="text-sm text-muted-foreground font-medium">Loading setlist...</p>
                 </div>
             </div>
         )
     }
 
-    if (error) {
+    if (errorMessage) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
-                <p className="text-muted-foreground">{error}</p>
+                <p className="text-muted-foreground">{errorMessage}</p>
                 <Button asChild variant="outline">
-                    <Link href="/setlists">Back to Setlists</Link>
+                    <Link href={backHref}>Back to {isPublicView ? "Home" : "Setlists"}</Link>
                 </Button>
             </div>
         )
@@ -178,263 +127,121 @@ export default function SetlistPerformPage() {
 
     return (
         <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 glass border-b-0 z-20 relative">
+            {/* Header — compact for maximum setlist visibility */}
+            <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
                 <Link
-                    href="/setlists"
-                    className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+                    href={backHref}
+                    aria-label={isPublicView ? "Back to home" : "Back to setlists"}
+                    className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
                 >
                     <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-lg font-bold truncate">{name}</h1>
-                    <p className="text-xs text-muted-foreground">
+                    <h1 className="text-base font-bold truncate">{name}</h1>
+                    <p className="text-[11px] text-muted-foreground">
                         {songCount} song{songCount !== 1 ? "s" : ""}
-                        {totalCount > songCount ? ` · ${totalCount} items` : ""}
+                        {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
                     </p>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setShowTaskSheet(true)}
-                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors relative"
-                        title="Setlist Tasks"
-                    >
-                        <ListTodo className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                    </button>
-                    <button
-                        onClick={() => setShowPrintModal(true)}
-                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
-                        title="Print gig packet"
-                    >
-                        <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                    </button>
-                    <Link
-                        href={`/setlists/${setlistId}`}
-                        className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
-                        title="Edit setlist"
-                    >
-                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                    </Link>
-                </div>
-            </div>
-
-            {/* Track list */}
-            <div className="flex-1 overflow-y-auto w-full">
-                <div className="flex flex-col p-2 pb-24 gap-0.5">
-
-                    {/* Service notes banner */}
-                    {serviceNotes && (
-                        <div className="mx-1 mb-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                            <p className="text-sm text-blue-200 whitespace-pre-wrap">{serviceNotes}</p>
-                        </div>
+                <div className="flex items-center gap-1 shrink-0">
+                    {canPrint && (
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Open gig packet" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                            <Printer className="h-4 w-4" />
+                            <span className="text-xs hidden sm:inline">Gig Packet</span>
+                        </Button>
                     )}
-
-                    {/* Changes since last notification */}
-                    {changesSummary && showChangeBanner && (
-                        <div className="mx-1 mb-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
-                            <span className="text-amber-400 text-xs font-semibold whitespace-nowrap mt-0.5">UPDATED</span>
-                            <p className="text-xs text-amber-200/80 flex-1">{changesSummary}</p>
-                            <button
-                                onClick={() => setShowChangeBanner(false)}
-                                className="text-amber-400/50 hover:text-amber-400 text-xs shrink-0"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    )}
-
-                    {tracks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                            <Music className="h-12 w-12 mb-3 opacity-30" />
-                            <p className="text-lg font-medium">No tracks yet</p>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="mt-4"
-                            >
-                                <Link href={`/setlists/${setlistId}`}>
-                                    <Pencil className="h-4 w-4 mr-2" /> Add tracks
-                                </Link>
-                            </Button>
-                        </div>
-                    ) : (
-                        sections.map((section, sectionIdx) => (
-                            <div
-                                key={`section-${sectionIdx}`}
-                                ref={(el) => {
-                                    if (el && section.label) sectionRefs.current.set(section.label, el)
-                                }}
-                            >
-                                {/* Section header */}
-                                {section.label && (
-                                    <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm px-4 py-2 mt-3 first:mt-0
-                                        text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground border-b border-border/50">
-                                        {section.label}
-                                    </div>
-                                )}
-
-                                {/* Tracks in section */}
-                                {section.tracks.map(({ item: track, globalIndex, track: rawTrack }) => {
-                                    const isFlowItem = track.trackType && track.trackType !== "song"
-                                    const isTapped = tappedIndex === globalIndex
-                                    const hasChart = !track.fileId.startsWith("flow-")
-
-                                    return (
-                                        <div
-                                            key={`${track.fileId}-${globalIndex}`}
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={() => handleTrackTap(globalIndex)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTrackTap(globalIndex) }}
-                                            className={cn(
-                                                "flex items-center gap-3 py-3 px-4 rounded-2xl fluid-interaction text-left w-full glass-card",
-                                                isTapped
-                                                    ? "bg-blue-600/90 border-blue-400/50 shadow-blue-900/20 text-white"
-                                                    : "hover:bg-card/90",
-                                                isFlowItem && !isTapped && "opacity-70",
-                                                tappedIndex !== null && !isTapped && "opacity-50 pointer-events-none"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm transition-colors",
-                                                isTapped
-                                                    ? "bg-white text-blue-600 shadow-md"
-                                                    : isFlowItem
-                                                        ? "bg-transparent text-muted-foreground"
-                                                        : "glass border border-white/10 text-foreground"
-                                            )}>
-                                                {isTapped ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : isFlowItem ? (
-                                                    trackIcon(track.trackType)
-                                                ) : (
-                                                    globalIndex + 1
-                                                )}
-                                            </div>
-
-                                            {/* Track info */}
-                                            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn(
-                                                        "font-medium truncate",
-                                                        isFlowItem ? "text-sm text-muted-foreground" : "text-base text-foreground",
-                                                        isTapped && "text-white font-semibold"
-                                                    )}>
-                                                        {track.name}
-                                                    </div>
-
-                                                    {/* Key Badge */}
-                                                    {track.key && (
-                                                        <span className={cn(
-                                                            "px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 shadow-sm",
-                                                            isTapped
-                                                                ? "bg-white/20 text-white border border-white/10"
-                                                                : "bg-muted text-muted-foreground border border-border/50"
-                                                        )}>
-                                                            {track.key}
-                                                        </span>
-                                                    )}
-
-                                                    {/* BPM Metronome Badge */}
-                                                    {rawTrack.bpm && (
-                                                        <Metronome bpm={rawTrack.bpm} />
-                                                    )}
-
-                                                    {/* Lead Musician Badge */}
-                                                    {(rawTrack.leadMusician || rawTrack.performer) && (
-                                                        <span className={cn(
-                                                            "px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 max-w-[80px] truncate",
-                                                            isTapped
-                                                                ? "bg-white/10 text-white/90"
-                                                                : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                                                        )}>
-                                                            {rawTrack.leadMusician || rawTrack.performer}
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* Subtitle info / Notes */}
-                                                {(rawTrack.notes || rawTrack.referenceLink || isFlowItem) && (
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {isFlowItem && track.trackType && (
-                                                            <span className={cn("text-[10px] uppercase font-medium tracking-wide", isTapped ? "text-white/70" : "text-muted-foreground/60")}>
-                                                                {track.trackType}
-                                                            </span>
-                                                        )}
-                                                        {rawTrack.notes && !isFlowItem && (
-                                                            <span className={cn("text-xs truncate", isTapped ? "text-white/80" : "text-muted-foreground")}>{rawTrack.notes}</span>
-                                                        )}
-                                                        {rawTrack.referenceLink && !isFlowItem && (
-                                                            <a
-                                                                href={rawTrack.referenceLink}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className={cn(
-                                                                    "inline-flex items-center gap-1 text-[10px] font-medium rounded px-1.5 py-0.5 ml-1 transition-colors shadow-sm",
-                                                                    isTapped
-                                                                        ? "bg-white/20 text-white hover:bg-white/30"
-                                                                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50"
-                                                                )}
-                                                            >
-                                                                Ref Audio <ExternalLink className="h-2.5 w-2.5" />
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Right Chevron */}
-                                            {hasChart && !isTapped && (
-                                                <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                                            )}
-                                            {isTapped && (
-                                                <PlayCircle className="h-5 w-5 fill-white text-blue-600 shrink-0 shadow-sm rounded-full" />
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        ))
+                    {isLeader && (
+                        <Button asChild size="sm" variant="ghost" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                            <Link href={`/setlists/${setlistId}`} aria-label="Edit setlist">
+                                <Pencil className="h-4 w-4" />
+                                <span className="text-xs hidden sm:inline">Edit</span>
+                            </Link>
+                        </Button>
                     )}
                 </div>
             </div>
 
-            {/* Bottom action bar */}
-            {tracks.length > 0 && (
-                <div className="px-4 py-3 glass border-t-0 z-20 pb-safe">
-                    <Button
-                        className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-                        onClick={() => {
-                            const firstSongIdx = queue.findIndex((q) => !q.fileId.startsWith("flow-"))
-                            if (firstSongIdx >= 0) handleTrackTap(firstSongIdx)
-                        }}
-                        disabled={tappedIndex !== null}
-                    >
-                        <PlayCircle className="h-5 w-5" />
-                        Play from start
-                    </Button>
+            {/* Offline indicator — IDB ground truth for N/M charts ready */}
+            <PerformanceOfflineIndicator setlistFileIds={songFileIds} />
+
+
+            {/* Who's playing */}
+            {musicians.length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 overflow-x-auto scrollbar-hide">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    {musicians.map((m, i) => (
+                        <span
+                            key={m.uid || i}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
+                        >
+                            <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || 'Unknown'}</span>
+                            {m.instrument && (
+                                <span className="text-muted-foreground/70">{m.instrument}</span>
+                            )}
+                        </span>
+                    ))}
                 </div>
             )}
 
-            {/* Print Modal Overlay */}
+            {/* Setlist content */}
+            <SetlistView
+                tracks={tracks}
+                currentTrackIndex={currentTrackIndex}
+                defaultTransposition={defaultTransposition}
+                isPublicView={isPublicView}
+                isLeader={isLeader}
+                onSongTap={(index) => setActiveSongIndex(index)}
+                onLeaderSetPosition={setCurrentPosition}
+                serviceNotes={serviceNotes}
+                onSwapTap={isLeader ? (index) => setSwapTarget({ index, track: tracks[index] }) : undefined}
+            />
+
+            {/* PDF overlay: renders on top of setlist when a song is tapped */}
+            {activeSongIndex !== null && tracks[activeSongIndex] && (
+                <PDFOverlay
+                    track={tracks[activeSongIndex]}
+                    tracks={tracks}
+                    currentIndex={activeSongIndex}
+                    onClose={() => setActiveSongIndex(null)}
+                    onNavigate={(index) => setActiveSongIndex(index)}
+                    isPublicView={isPublicView}
+                />
+            )}
+
+            {/* Empty state */}
+            {tracks.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                    <Music className="h-12 w-12 mb-3 opacity-30" />
+                    <p className="text-lg font-medium">No tracks yet</p>
+                    {!isPublicView && (
+                        <Button asChild variant="outline" className="mt-4">
+                            <Link href={`/setlists/${setlistId}`}>Add tracks</Link>
+                        </Button>
+                    )}
+                </div>
+            )}
+
             {showPrintModal && (
                 <PrintModal
                     setlistName={name}
                     tracks={tracks}
                     setlistId={setlistId}
+                    assignedMusicians={musicians}
+                    rabbi={rabbi}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}
 
-            {/* Tasks Slide-over */}
-            <TaskSheet
-                open={showTaskSheet}
-                onOpenChange={setShowTaskSheet}
-                setlistId={setlistId}
-                setlistName={name}
-                eventDate={setlistData?.eventDate?.toDate?.() || setlistData?.date?.toDate?.()}
-            />
+            <SwapChangeToast tracks={tracks} lastOwnSwapRef={lastOwnSwapRef} />
+
+            {swapTarget && (
+                <SwapPicker
+                    open={!!swapTarget}
+                    onClose={() => setSwapTarget(null)}
+                    currentTrack={swapTarget.track}
+                    onSelectReplacement={handleSwapSelect}
+                />
+            )}
         </div>
     )
 }

@@ -3,57 +3,38 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
 import { assignMusicians } from "@/lib/scheduling-firebase"
-import { apiFetch } from "@/lib/api-client"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
-
-export type WizardStep = 'details' | 'songs' | 'musicians' | 'tasks'
-
-const STEP_ORDER: WizardStep[] = ['details', 'songs', 'musicians', 'tasks']
-
-export interface WizardTask {
-    title: string
-    assigneeUid: string
-    assigneeName: string
-    assigneeEmail: string
-}
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
+import { getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
+import { useLibraryStore } from "@/lib/library-store"
+import { useCustomTemplates } from "@/lib/template-firebase"
 
 export interface UseCreationWizardReturn {
-    // Navigation
-    step: WizardStep
-    stepIndex: number
-    totalSteps: number
-    canGoBack: boolean
-    canGoNext: boolean
-    goNext: () => void
-    goBack: () => void
-    goToStep: (step: WizardStep) => void
-
-    // Step 1: Details
+    // Form state
     name: string
     setName: (v: string) => void
-    isPublic: boolean
-    setIsPublic: (v: boolean) => void
     eventDate: Date | null
     setEventDate: (v: Date | null) => void
     rabbi: string
     setRabbi: (v: string) => void
 
-    // Step 2: Songs
+    // Optional template shortcut
+    selectedTemplate: string | null
+    setSelectedTemplate: (key: string | null) => void
+    templateKeys: string[]
+
+    // Songs (auto-populated from template or editable)
     tracks: SetlistTrack[]
     setTracks: (v: SetlistTrack[]) => void
     addSongsFromFiles: (files: DriveFile[]) => void
 
-    // Step 3: Musicians
+    // Musicians
     musicians: SetlistMusician[]
     setMusicians: (v: SetlistMusician[]) => void
 
-    // Step 4: Tasks
-    tasks: WizardTask[]
-    addTask: (task: WizardTask) => void
-    removeTask: (index: number) => void
-
-    // Final
+    // Create action
+    canCreate: boolean
     creating: boolean
     create: () => Promise<void>
     reset: () => void
@@ -61,48 +42,40 @@ export interface UseCreationWizardReturn {
 
 export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
-    const { user, isBandLeader } = useAuth()
+    const { user } = useAuth()
 
-    const [step, setStep] = useState<WizardStep>('details')
     const [creating, setCreating] = useState(false)
+    const { overrides: customTemplates } = useCustomTemplates()
 
-    // Step 1
+    const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+
     const [name, setName] = useState("")
-    const [isPublic, setIsPublic] = useState(false)
     const [eventDate, setEventDate] = useState<Date | null>(null)
     const [rabbi, setRabbi] = useState("")
 
-    // Step 2
     const [tracks, setTracks] = useState<SetlistTrack[]>([])
-
-    // Step 3
     const [musicians, setMusicians] = useState<SetlistMusician[]>([])
 
-    // Step 4
-    const [tasks, setTasks] = useState<WizardTask[]>([])
+    const templateKeys = getAllTemplateKeys()
+    const canCreate = useMemo(() => name.trim().length > 0, [name])
 
-    const stepIndex = STEP_ORDER.indexOf(step)
-    const totalSteps = STEP_ORDER.length
+    // Selecting a template auto-fills name + date. Keeps the "shortcut" UX the
+    // two-step wizard had, without the extra click-through.
+    const handleTemplateSelect = useCallback(async (key: string | null) => {
+        setSelectedTemplate(key)
+        if (!key) return
 
-    const canGoBack = stepIndex > 0
-    const canGoNext = useMemo(() => {
-        if (step === 'details') return name.trim().length > 0
-        return true // Songs, musicians, tasks are all optional to skip
-    }, [step, name])
-
-    const goNext = useCallback(() => {
-        if (stepIndex < STEP_ORDER.length - 1) {
-            setStep(STEP_ORDER[stepIndex + 1])
+        try {
+            const baseDate = new Date()
+            const context = await getFullServiceContext(baseDate)
+            context.type = key as ServiceType
+            setName(generateSetlistName(context))
+            setEventDate(baseDate)
+        } catch {
+            const label = TEMPLATE_LABELS[key]?.label || 'Service'
+            setName(label)
         }
-    }, [stepIndex])
-
-    const goBack = useCallback(() => {
-        if (stepIndex > 0) {
-            setStep(STEP_ORDER[stepIndex - 1])
-        }
-    }, [stepIndex])
-
-    const goToStep = useCallback((s: WizardStep) => setStep(s), [])
+    }, [])
 
     const addSongsFromFiles = useCallback((files: DriveFile[]) => {
         const newTracks: SetlistTrack[] = files.map(f => ({
@@ -116,44 +89,48 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setTracks(prev => [...prev, ...newTracks])
     }, [])
 
-    const addTask = useCallback((task: WizardTask) => {
-        setTasks(prev => [...prev, task])
-    }, [])
-
-    const removeTask = useCallback((index: number) => {
-        setTasks(prev => prev.filter((_, i) => i !== index))
-    }, [])
-
     const reset = useCallback(() => {
-        setStep('details')
         setCreating(false)
+        setSelectedTemplate(null)
         setName("")
-        setIsPublic(false)
         setEventDate(null)
         setRabbi("")
         setTracks([])
         setMusicians([])
-        setTasks([])
     }, [])
 
     const create = useCallback(async () => {
         if (!user || creating) return
+        if (!name.trim()) return
         setCreating(true)
 
+        let loadingId: string | number | undefined
         try {
             const service = createSetlistService(user.uid, user.displayName)
 
-            // 1. Create the setlist
-            const setlistId = await service.createSetlist(name, tracks, isPublic, {
+            let finalTracks = tracks
+            if (selectedTemplate && finalTracks.length === 0) {
+                const template = getTemplate(selectedTemplate, customTemplates)
+                if (template && eventDate) {
+                    loadingId = toast.loading('Building setlist from template...')
+                    const baseContext = await getFullServiceContext(eventDate)
+                    baseContext.type = selectedTemplate as ServiceType
+                    const context = rabbi ? { ...baseContext, rabbi } : baseContext
+                    const { allFiles } = useLibraryStore.getState()
+                    finalTracks = buildSetlistFromTemplate(template, allFiles, context)
+                }
+            }
+
+            const setlistId = await service.createSetlist(name, finalTracks, {
                 eventDate: eventDate?.toISOString() ?? undefined,
                 rabbi: rabbi || undefined,
                 musicians,
+                templateType: selectedTemplate as Setlist['templateType'],
             })
 
-            // 2. Schedule musicians (if any selected and setlist is public)
-            if (musicians.length > 0 && isPublic) {
+            if (musicians.length > 0) {
                 const musiciansToAssign = musicians
-                    .filter(m => m.uid) // Only registered musicians
+                    .filter(m => m.uid)
                     .map(m => ({
                         uid: m.uid!,
                         name: m.name,
@@ -170,56 +147,34 @@ export function useCreationWizard(): UseCreationWizardReturn {
                             musicians: musiciansToAssign,
                         })
                     } catch {
-                        // Don't block creation if scheduling fails
                         toast.error('Setlist created but musician scheduling failed')
                     }
                 }
             }
 
-            // 3. Create tasks (if any)
-            for (const task of tasks) {
-                try {
-                    await apiFetch('/api/tasks/create', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            setlistId,
-                            setlistName: name,
-                            eventDate: eventDate?.toISOString() ?? null,
-                            title: task.title,
-                            assigneeId: task.assigneeUid,
-                            assigneeName: task.assigneeName,
-                            assigneeEmail: task.assigneeEmail,
-                            notifiedEmails: [],
-                        }),
-                    })
-                } catch {
-                    // Don't block for individual task failures
-                }
+            const successOpts = loadingId ? { id: loadingId } : undefined
+            if (selectedTemplate) {
+                const matched = finalTracks.filter(t => t.fileId).length
+                const total = finalTracks.filter(t => t.type === 'song').length
+                toast.success(`Created "${name}" — ${matched}/${total} songs matched`, successOpts)
+            } else {
+                toast.success(`"${name}" created!`, successOpts)
             }
 
-            toast.success(`"${name}" created!`)
             router.push(`/setlists/${setlistId}`)
-        } catch (err) {
-            toast.error('Failed to create setlist')
+        } catch {
+            toast.error('Failed to create setlist', loadingId ? { id: loadingId } : undefined)
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, isPublic, eventDate, rabbi, musicians, tasks, router])
+    }, [user, creating, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
 
     return {
-        step,
-        stepIndex,
-        totalSteps,
-        canGoBack,
-        canGoNext,
-        goNext,
-        goBack,
-        goToStep,
+        selectedTemplate,
+        setSelectedTemplate: handleTemplateSelect,
+        templateKeys,
         name,
         setName,
-        isPublic,
-        setIsPublic,
         eventDate,
         setEventDate,
         rabbi,
@@ -229,9 +184,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         addSongsFromFiles,
         musicians,
         setMusicians,
-        tasks,
-        addTask,
-        removeTask,
+        canCreate,
         creating,
         create,
         reset,

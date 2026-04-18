@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
-import { ChevronLeft, Music, Folder, Sparkles, FileText } from "lucide-react"
+import { Music, Sparkles, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { MIME_TYPES } from "@/lib/constants"
 import { DriveFile } from "@/types/models"
@@ -40,12 +41,6 @@ export function MatchFileModal({
 
     const [searchQuery, setSearchQuery] = useState("")
 
-    // Breadcrumbs State
-    const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string }[]>([
-        { id: null, name: 'Library' }
-    ])
-    const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id
-
     // Pre-populate search with track title when opening
     useEffect(() => {
         if (isOpen && trackTitle) {
@@ -55,9 +50,9 @@ export function MatchFileModal({
 
     useEffect(() => {
         if (isOpen) {
-            setFilter(currentFolderId, searchQuery)
+            setFilter(searchQuery)
         }
-    }, [isOpen, currentFolderId, searchQuery, setFilter])
+    }, [isOpen, searchQuery, setFilter])
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value)
@@ -72,7 +67,6 @@ export function MatchFileModal({
         if (terms.length === 0) return []
 
         return allFiles
-            .filter(f => !f.mimeType.includes('folder'))
             .map(f => {
                 const name = f.name.toLowerCase()
                 let score = 0
@@ -92,38 +86,12 @@ export function MatchFileModal({
             .map(s => s.file)
     }, [trackTitle, allFiles, initialized])
 
-    const { folders, files } = useMemo(() => {
-        const folders: DriveFile[] = []
-        const files: DriveFile[] = []
-
-        displayedFiles.forEach(f => {
-            if (f.mimeType.includes('folder')) {
-                folders.push(f)
-            } else if (
-                !f.mimeType.includes(MIME_TYPES.SPREADSHEET) &&
-                !f.mimeType.includes(MIME_TYPES.DOCUMENT)
-            ) {
-                files.push(f)
-            }
-        })
-        return { folders, files }
+    const files = useMemo(() => {
+        return displayedFiles.filter(f =>
+            !f.mimeType.includes(MIME_TYPES.SPREADSHEET) &&
+            !f.mimeType.includes(MIME_TYPES.DOCUMENT)
+        )
     }, [displayedFiles])
-
-    const combinedItems = [...folders, ...files]
-
-    const navigateFolder = (folder: DriveFile | null) => {
-        if (folder) {
-            setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }])
-        } else {
-            setBreadcrumbs([{ id: null, name: 'Library' }])
-        }
-        setSearchQuery("")
-    }
-
-    const handleBreadcrumbClick = (index: number) => {
-        setBreadcrumbs(prev => prev.slice(0, index + 1))
-        setSearchQuery("")
-    }
 
     const handleSelect = (fileId: string) => {
         onMatch(fileId)
@@ -154,10 +122,11 @@ export function MatchFileModal({
                                     const isAudio = file.mimeType.startsWith('audio/') || /\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)
                                     const Icon = isAudio ? Music : FileText
                                     return (
-                                        <button
+                                        <Button
                                             key={file.id}
+                                            variant="ghost"
                                             onClick={() => handleSelect(file.id)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-left group"
+                                            className="w-full h-auto flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-left group active:scale-100 whitespace-normal"
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <Icon className="h-4 w-4 text-primary" />
@@ -170,28 +139,11 @@ export function MatchFileModal({
                                                     {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                                 </p>
                                             </div>
-                                        </button>
+                                        </Button>
                                     )
                                 })}
                             </div>
                             <div className="border-b border-border/50 mt-4" />
-                        </div>
-                    )}
-
-                    {/* Breadcrumbs for Navigation */}
-                    {!searchQuery && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide shrink-0 py-2 border-y border-border">
-                            {breadcrumbs.map((crumb, i) => (
-                                <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
-                                    {i > 0 && <ChevronLeft className="h-3 w-3 rotate-180 opacity-50" />}
-                                    <button
-                                        onClick={() => handleBreadcrumbClick(i)}
-                                        className={cn("hover:text-primary truncate max-w-[120px]", i === breadcrumbs.length - 1 && "text-primary font-bold")}
-                                    >
-                                        {crumb.name}
-                                    </button>
-                                </div>
-                            ))}
                         </div>
                     )}
 
@@ -205,43 +157,27 @@ export function MatchFileModal({
 
                     <div className="flex-1 overflow-y-auto -mx-2 px-2">
                         <div className="grid grid-cols-1 gap-2 pb-2">
-                            {combinedItems.map(file => {
-                                const isFolder = file.mimeType.includes('folder')
-
-                                return (
-                                    <button
-                                        key={file.id}
-                                        onClick={() => {
-                                            if (isFolder) {
-                                                navigateFolder(file)
-                                            } else {
-                                                handleSelect(file.id)
-                                            }
-                                        }}
-                                        className={cn(
-                                            "w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3",
-                                            isFolder ? "bg-muted hover:bg-accent text-foreground" : "bg-muted border border-border hover:bg-muted text-foreground"
-                                        )}
-                                    >
-                                        {isFolder ? (
-                                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
-                                                <Folder className="h-5 w-5 text-yellow-500" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                                                <Music className="h-4 w-4" />
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-medium truncate">{file.name}</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                                                {isFolder ? "Folder" : file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
-                                            </div>
+                            {files.map(file => (
+                                <Button
+                                    key={file.id}
+                                    variant="ghost"
+                                    onClick={() => handleSelect(file.id)}
+                                    className={cn(
+                                        "w-full h-auto text-left p-3 rounded-lg flex items-center gap-3 active:scale-100 whitespace-normal",
+                                        "bg-muted border border-border hover:bg-muted text-foreground"
+                                    )}
+                                >
+                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                        <Music className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{file.name}</div>
+                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                            {file.mimeType.split('/').pop()?.replace('vnd.google-apps.', '')}
                                         </div>
-                                    </button>
-                                )
-                            })}
-
+                                    </div>
+                                </Button>
+                            ))}
                         </div>
                     </div>
                 </div>

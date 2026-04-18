@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Loader2, Radar, CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface WizardProps {
     bridgeUrl: string
@@ -48,10 +49,10 @@ export function MonitorSetupWizard({
                     return (
                         <div
                             key={i}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium transition-colors ${
-                                i === step ? "bg-blue-500/10 text-blue-400 border-b-2 border-blue-500"
+                            className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium transition-colors",
+                                i === step ? "bg-brand/10 text-foreground border-b-2 border-brand"
                                     : i < step ? "text-success" : "text-muted-foreground"
-                            }`}
+                            )}
                         >
                             {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
                             <span className="hidden sm:inline">{s.label}</span>
@@ -97,7 +98,7 @@ export function MonitorSetupWizard({
                             </Button>
                         </div>
                         {scanResult && (
-                            <p className={`text-xs ${scanResult.includes("Found") ? "text-success" : "text-yellow-500"}`}>
+                            <p className={cn("text-xs", scanResult.includes("Found") ? "text-success" : "text-amber-500")}>
                                 {scanResult}
                             </p>
                         )}
@@ -112,7 +113,7 @@ export function MonitorSetupWizard({
                         <Input
                             value={monitorBusesStr}
                             onChange={e => setMonitorBusesStr(e.target.value)}
-                            placeholder="1, 2, 3, 4"
+                            placeholder="1, 2, 3, 4, 5"
                         />
                     </div>
                 )}

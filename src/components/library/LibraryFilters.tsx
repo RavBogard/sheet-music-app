@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { X, Music, Tag, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { DriveFile } from "@/types/models"
 
@@ -84,49 +85,55 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
     if (availableKeys.length === 0 && availableTopics.length === 0) return null
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-4">
             {/* Filter chip bar */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide px-1">
                 {/* Key filter chip */}
                 {availableKeys.length > 0 && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setExpandedFilter(expandedFilter === 'key' ? null : 'key')}
                         className={cn(
-                            "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                            "shrink-0 rounded-full text-xs font-semibold border",
                             filters.keys.size > 0
-                                ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
                         <Music className="w-3 h-3" />
                         Key{filters.keys.size > 0 ? ` (${filters.keys.size})` : ''}
-                    </button>
+                    </Button>
                 )}
 
                 {/* Topic filter chip */}
                 {availableTopics.length > 0 && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setExpandedFilter(expandedFilter === 'topic' ? null : 'topic')}
                         className={cn(
-                            "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                            "shrink-0 rounded-full text-xs font-semibold border",
                             filters.topics.size > 0
-                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
                         <Tag className="w-3 h-3" />
                         Topic{filters.topics.size > 0 ? ` (${filters.topics.size})` : ''}
-                    </button>
+                    </Button>
                 )}
 
                 {/* Recency filter chip */}
                 {usageMap && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setExpandedFilter(expandedFilter === 'recency' ? null : 'recency')}
                         className={cn(
-                            "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                            "shrink-0 rounded-full text-xs font-semibold border",
                             filters.recency !== 'all'
-                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                ? "bg-brand/15 text-foreground border-brand/30"
                                 : "bg-muted/50 text-muted-foreground border-border hover:text-foreground"
                         )}
                     >
@@ -134,19 +141,20 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         {filters.recency === 'all' ? 'Recency' :
                          filters.recency === 'recent' ? 'Recent' :
                          filters.recency === 'stale' ? '60+ days' : 'Never played'}
-                    </button>
+                    </Button>
                 )}
 
                 {/* Clear all */}
                 {hasActiveFilters && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={clearAll}
-                        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium
-                            text-red-500 hover:bg-red-500/10 transition-colors"
+                        className="shrink-0 rounded-full text-xs font-medium text-red-500 hover:bg-red-500/10"
                     >
                         <X className="w-3 h-3" />
                         Clear
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -154,18 +162,19 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
             {expandedFilter === 'key' && (
                 <div className="flex flex-wrap gap-1.5 px-1 py-2 bg-muted/30 rounded-lg border border-border/50">
                     {availableKeys.map(key => (
-                        <button
+                        <Button
                             key={key}
+                            variant="ghost"
                             onClick={() => toggleKey(key)}
                             className={cn(
-                                "w-10 h-10 rounded-lg text-xs font-bold transition-colors",
+                                "w-10 h-10 rounded-lg text-xs font-bold px-0",
                                 filters.keys.has(key)
-                                    ? "bg-violet-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
                             {key}
-                        </button>
+                        </Button>
                     ))}
                 </div>
             )}
@@ -173,18 +182,20 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
             {expandedFilter === 'topic' && (
                 <div className="flex flex-wrap gap-1.5 px-1 py-2 bg-muted/30 rounded-lg border border-border/50">
                     {availableTopics.map(topic => (
-                        <button
+                        <Button
                             key={topic}
+                            variant="ghost"
+                            size="sm"
                             onClick={() => toggleTopic(topic)}
                             className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                                "rounded-full text-xs font-medium",
                                 filters.topics.has(topic)
-                                    ? "bg-blue-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
                             {topic}
-                        </button>
+                        </Button>
                     ))}
                 </div>
             )}
@@ -197,18 +208,20 @@ export function LibraryFilters({ allFiles, filters, onFiltersChange, usageMap }:
                         { value: 'stale', label: '60+ days ago' },
                         { value: 'never', label: 'Never played' },
                     ] as const).map(option => (
-                        <button
+                        <Button
                             key={option.value}
+                            variant="ghost"
+                            size="sm"
                             onClick={() => onFiltersChange({ ...filters, recency: option.value })}
                             className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                                "rounded-full text-xs font-medium",
                                 filters.recency === option.value
-                                    ? "bg-amber-500 text-white shadow-md"
+                                    ? "bg-brand text-white shadow-md hover:bg-brand/90"
                                     : "bg-muted hover:bg-accent text-foreground border border-border"
                             )}
                         >
                             {option.label}
-                        </button>
+                        </Button>
                     ))}
                 </div>
             )}

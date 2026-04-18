@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { DocumentReference, Query, onSnapshot, DocumentSnapshot, QuerySnapshot } from "firebase/firestore"
+import { DocumentReference, DocumentData, Query, onSnapshot, DocumentSnapshot, QuerySnapshot } from "firebase/firestore"
 import { logger } from "@/lib/logger"
 
-type FirestoreRef<T> = DocumentReference<T> | Query<T>
+type FirestoreRef = DocumentReference<DocumentData> | Query<DocumentData>
 
 interface SyncState<T> {
     data: T | null
@@ -18,7 +18,7 @@ interface SyncState<T> {
  * Also deduplicates network requests if multiple components mount with the same path path.
  */
 export function useSafeFirestoreSync<T = any>(
-    ref: FirestoreRef<T> | null | undefined,
+    ref: FirestoreRef | null | undefined,
     options: {
         timeoutMs?: number // how long to wait before declaring a timeout
         onError?: (err: Error) => void
@@ -62,7 +62,7 @@ export function useSafeFirestoreSync<T = any>(
 
         setState(prev => ({ ...prev, loading: true, error: null }))
 
-        let timeoutId: ReturnType<typeof setTimeout>
+        let timeoutId: ReturnType<typeof setTimeout> | undefined
 
         if (options.timeoutMs) {
             timeoutId = setTimeout(() => {
@@ -77,8 +77,8 @@ export function useSafeFirestoreSync<T = any>(
 
         try {
             unsubRef.current = onSnapshot(
-                ref as any, // TypeScript union trickiness with onSnapshot
-                (snapshot: DocumentSnapshot<T> | QuerySnapshot<T>) => {
+                ref as DocumentReference<DocumentData>,
+                (snapshot: DocumentSnapshot<DocumentData> | QuerySnapshot<DocumentData>) => {
                     if (!isMounted.current) return
                     if (timeoutId) clearTimeout(timeoutId)
 
@@ -116,7 +116,7 @@ export function useSafeFirestoreSync<T = any>(
                 }
             )
         } catch (setupError: any) {
-            if (timeoutId!) clearTimeout(timeoutId!)
+            if (timeoutId) clearTimeout(timeoutId)
             logger.error("[useSafeFirestoreSync] Setup error:", setupError)
             setState(prev => ({ ...prev, loading: false, error: setupError }))
             if (options.onError) options.onError(setupError)
@@ -131,6 +131,7 @@ export function useSafeFirestoreSync<T = any>(
                 unsubRef.current = null
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ref, options.timeoutMs]) // Intentionally not including options.onError to prevent thrashing
 
     return state

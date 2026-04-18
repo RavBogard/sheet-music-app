@@ -84,7 +84,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
             >
                 {/* Edit mode hint */}
                 {isEditingChords && (
-                    <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-[101]">
+                    <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-splash">
                         <span className="bg-zinc-900/80 text-zinc-400 text-[10px] px-3 py-1 rounded-full border border-zinc-700/50 backdrop-blur-sm">
                             Tap chord to edit &middot; Double-click empty space to add
                         </span>
@@ -128,7 +128,7 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                     const isVisible = needsOverlay || isEditingChords || showPopover
 
                     return (
-                        <div key={i} className="absolute" style={{ left: `${chord.x}%`, top: `${chord.y}%` }}>
+                        <div key={i} className="absolute animate-in fade-in duration-200" style={{ left: `${chord.x}%`, top: `${chord.y}%` }}>
                             <div
                                 ref={el => setChordRef(i, el)}
                                 className="cursor-pointer"
@@ -143,8 +143,9 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                         margin: `0 0 0 -${dims.padH}px`,
                                         padding: `0 ${dims.padH}px`,
                                         minWidth: `${dims.minWidthPx}px`,
+                                        height: `${dims.coverHeightPx}px`,
 
-                                        backgroundColor: isVisible ? 'rgba(255, 255, 255, 0.97)' : 'transparent',
+                                        backgroundColor: isVisible ? '#ffffff' : 'transparent',
                                         borderRadius: '2px',
                                         border: (isEditingChords || showPopover) ? '1px dashed rgba(139, 92, 246, 0.5)' : 'none',
 
@@ -152,9 +153,10 @@ export function SmartTransposer({ pageRef, pageNumber, isRendered }: SmartTransp
                                         fontSize: `${dims.fontSizePx}px`,
                                         fontWeight: 700,
                                         fontFamily: "'Times New Roman', 'Georgia', serif",
-                                        lineHeight: 1.1,
+                                        lineHeight: 1, // Minimize internal box padding
+                                        transform: 'translateY(-0.15em)', // Counteract web-font descender gap to align mathematically to bounds top
                                         whiteSpace: 'nowrap' as const,
-                                        zIndex: showPopover ? 150 : 100,
+                                        zIndex: showPopover ? 'var(--z-popover)' : 'var(--z-splash)',
                                         pointerEvents: 'auto' as const,
                                     }}
                                 >

@@ -1,57 +1,43 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
 
 export const dynamic = 'force-dynamic'
 
-interface PushPayload {
-    /** User IDs to send push notifications to */
-    targetUids: string[]
-    /** Notification title */
-    title: string
-    /** Notification body text */
-    body: string
-    /** Optional deep link path (e.g., /setlists/abc123) */
-    link?: string
-    /** Optional icon URL */
-    icon?: string
-}
+const schema = z.object({
+    targetUids: z.array(z.string()).min(1).max(500),
+    title: z.string().min(1).max(200),
+    body: z.string().min(1).max(500),
+    link: z.string().startsWith('/').optional(),
+    icon: z.string().optional(),
+})
 
 /**
  * POST /api/push/send
  *
  * Sends push notifications to specified users via FCM.
- * Requires admin or band_leader auth (handles legacy 'leader' role).
+ * Requires admin or band_leader auth.
  *
  * Reads FCM tokens from each user's `fcmTokens` array in Firestore,
  * then dispatches via Firebase Admin Messaging.
  */
-export async function POST(req: NextRequest) {
-    try {
-        // Verify auth — uses shared middleware that handles legacy 'leader' role
-        const auth = await withAuth(req, 'band_leader')
-        if (auth instanceof NextResponse) return auth
+export const POST = createApiHandler(
+    async (ctx) => {
+        // v4.4 SEC-002: rate-limit bulk push sends to prevent FCM token abuse
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
 
-        initAdmin()
-
-        const payload: PushPayload = await req.json()
-        const { targetUids, title, body, link } = payload
-
-        if (!targetUids?.length || !title || !body) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
         }
 
-        // H6: Input validation — prevent abuse
-        if (targetUids.length > 500) {
-            return NextResponse.json({ error: "Too many target users (max 500)" }, { status: 400 })
-        }
-        if (title.length > 200 || body.length > 500) {
-            return NextResponse.json({ error: "Title or body too long" }, { status: 400 })
-        }
-        if (link && !link.startsWith('/')) {
-            return NextResponse.json({ error: "Link must be an internal path" }, { status: 400 })
-        }
+        const { targetUids, title, body, link } = ctx.body!
 
         const db = getFirestore()
 
@@ -151,11 +137,6 @@ export async function POST(req: NextRequest) {
             failed: failureCount,
             staleTokensCleaned: staleTokens.length,
         })
-    } catch (err) {
-        logger.error('[Push] Send failed:', err)
-        return NextResponse.json(
-            { error: "Failed to send notifications" },
-            { status: 500 }
-        )
-    }
-}
+    },
+    { role: 'band_leader', schema }
+)

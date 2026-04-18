@@ -62,6 +62,7 @@ export interface ServiceContext {
     parasha: string | null
     holiday: string | null
     isShabbat: boolean
+    rabbi?: string
 }
 
 /**

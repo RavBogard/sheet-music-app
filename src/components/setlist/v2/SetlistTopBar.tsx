@@ -47,7 +47,7 @@ export function SetlistTopBar({
     }, [editing])
 
     return (
-        <div className="h-14 flex items-center px-3 gap-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 md:top-16 z-30">
+        <div className="h-14 flex items-center px-3 gap-2 border-b border-brand/10 bg-background/95 backdrop-blur-sm sticky top-0 md:top-16 z-30">
             <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={onBack}>
                 <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -74,17 +74,9 @@ export function SetlistTopBar({
                 )}
             </div>
 
-            {/* Save status dot — optimistic: green unless actively saving */}
+            {/* Save status — dot (glanceable) + text (contextual) */}
             <div className="shrink-0 flex items-center gap-1">
-                {lastSaved && !saving && (
-                    <div className="h-2 w-2 rounded-full bg-success mr-1" title={`Saved ${lastSaved.toLocaleTimeString()}`} />
-                )}
-                {saving && (
-                    <div className="h-2 w-2 rounded-full bg-success animate-pulse mr-1" title="Saving..." />
-                )}
-                {!lastSaved && !saving && (
-                    <div className="h-2 w-2 rounded-full bg-muted-foreground/30 mr-1" title="Not yet saved" />
-                )}
+                <SaveStatus saving={saving} lastSaved={lastSaved} />
 
                 {/* Undo / Redo */}
                 {canEdit && onUndo && (
@@ -113,16 +105,17 @@ export function SetlistTopBar({
                 )}
             </div>
 
-            {/* Print action */}
+            {/* Gig Packet action */}
             {onPrint && (
                 <Button
-                    size="icon"
+                    size="sm"
                     variant="outline"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
                     onClick={onPrint}
-                    title="Print Gig Packets"
+                    title="Generate Gig Packet"
                 >
                     <Printer className="h-4 w-4" />
+                    <span className="hidden sm:inline">Gig Packet</span>
                 </Button>
             )}
 
@@ -131,10 +124,10 @@ export function SetlistTopBar({
                 <Button
                     size="sm"
                     variant="default"
-                    className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+                    className="h-8 gap-1.5 bg-brand hover:bg-brand/90 text-white shadow-sm"
                     onClick={onPerform}
                 >
-                    <Play className="h-4 w-4 fill-white" />
+                    <Play className="h-4 w-4 fill-current" />
                     <span className="hidden sm:inline">Perform</span>
                 </Button>
             )}
@@ -143,4 +136,47 @@ export function SetlistTopBar({
             {overflowTrigger}
         </div>
     )
+}
+
+function SaveStatus({ saving, lastSaved }: { saving: boolean; lastSaved: Date | null }) {
+    // Re-render every 10s so "Saved Ns ago" climbs while idle
+    const [, tick] = useState(0)
+    useEffect(() => {
+        if (!lastSaved || saving) return
+        const id = setInterval(() => tick(n => n + 1), 10_000)
+        return () => clearInterval(id)
+    }, [lastSaved, saving])
+
+    let dotClass: string
+    let text: string
+    let textClass = "text-xs text-muted-foreground"
+
+    if (saving) {
+        dotClass = "bg-success animate-pulse"
+        text = "Saving…"
+    } else if (lastSaved) {
+        dotClass = "bg-success"
+        text = formatSince(lastSaved)
+    } else {
+        dotClass = "bg-muted-foreground/30"
+        text = "Not saved"
+        textClass = "text-xs text-muted-foreground/70"
+    }
+
+    return (
+        <div className="flex items-center gap-1.5 mr-1" aria-live="polite">
+            <div className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
+            <span className={`${textClass} hidden sm:inline`}>{text}</span>
+        </div>
+    )
+}
+
+function formatSince(d: Date): string {
+    const secs = Math.round((Date.now() - d.getTime()) / 1000)
+    if (secs < 5) return "Saved just now"
+    if (secs < 60) return `Saved ${secs}s ago`
+    const mins = Math.round(secs / 60)
+    if (mins < 60) return `Saved ${mins}m ago`
+    const hrs = Math.round(mins / 60)
+    return `Saved ${hrs}h ago`
 }

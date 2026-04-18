@@ -16,6 +16,7 @@ const MAX_SWIPE = -120
 export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProps) {
     const [offsetX, setOffsetX] = useState(0)
     const [swiping, setSwiping] = useState(false)
+    const [confirmDelete, setConfirmDelete] = useState(false)
     const startX = useRef(0)
     const startY = useRef(0)
     const locked = useRef<"x" | "y" | null>(null)
@@ -55,12 +56,30 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
     const handleTouchEnd = useCallback(() => {
         setSwiping(false)
         if (currentOffset.current < DELETE_THRESHOLD) {
-            onDelete()
+            // Hold at delete position and show confirmation
+            setConfirmDelete(true)
+            setOffsetX(DELETE_THRESHOLD)
+            currentOffset.current = DELETE_THRESHOLD
+            locked.current = null
+            return
         }
         currentOffset.current = 0
         setOffsetX(0)
         locked.current = null
+    }, [])
+
+    const handleConfirmDelete = useCallback(() => {
+        setConfirmDelete(false)
+        currentOffset.current = 0
+        setOffsetX(0)
+        onDelete()
     }, [onDelete])
+
+    const handleCancelDelete = useCallback(() => {
+        setConfirmDelete(false)
+        currentOffset.current = 0
+        setOffsetX(0)
+    }, [])
 
     // Disable swipe when not in edit mode or when a dnd-kit drag is active
     if (!enabled || active) {
@@ -74,13 +93,30 @@ export function SwipeToDelete({ children, onDelete, enabled }: SwipeToDeleteProp
         <div className="relative overflow-hidden rounded-lg touch-pan-y">
             {/* Red background revealed on swipe */}
             <div
-                className="absolute inset-0 flex items-center justify-end pr-6 bg-red-500 rounded-lg"
-                style={{ opacity: bgOpacity }}
+                className="absolute inset-0 flex items-center justify-end pr-4 bg-red-500 rounded-lg"
+                style={{ opacity: confirmDelete ? 1 : bgOpacity }}
             >
-                <Trash2
-                    className="h-5 w-5 text-white"
-                    style={{ transform: `scale(${iconScale})` }}
-                />
+                {confirmDelete ? (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleCancelDelete}
+                            className="px-3 py-1.5 text-xs font-medium text-white/90 bg-white/20 rounded-md"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirmDelete}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-white/30 rounded-md"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                ) : (
+                    <Trash2
+                        className="h-5 w-5 text-white"
+                        style={{ transform: `scale(${iconScale})` }}
+                    />
+                )}
             </div>
 
             {/* Swipeable content */}

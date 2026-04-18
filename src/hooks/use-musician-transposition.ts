@@ -71,6 +71,7 @@ export function useMusicianTransposition() {
             try {
                 // If leader set a track transposition, that wins
                 if (trackTransposition !== undefined && trackTransposition !== 0) {
+                    if (cancelled) return
                     setAppliedForFile(fileId)
                     lastAppliedTranspositionRef.current = trackTransposition
                     return
@@ -89,6 +90,7 @@ export function useMusicianTransposition() {
 
                 // Fall back to musician profile default
                 if (profile?.defaultTransposition && profile.defaultTransposition !== 0) {
+                    if (cancelled) return
                     setTransposition(profile.defaultTransposition)
                     lastAppliedTranspositionRef.current = profile.defaultTransposition
                     setAppliedForFile(fileId)
@@ -96,9 +98,11 @@ export function useMusicianTransposition() {
                 }
 
                 // No preference — use current
+                if (cancelled) return
                 setAppliedForFile(fileId)
                 lastAppliedTranspositionRef.current = transposition
             } catch {
+                if (cancelled) return
                 setAppliedForFile(fileId)
             }
         }
@@ -108,6 +112,7 @@ export function useMusicianTransposition() {
         loadPref()
         return () => { cancelled = true }
      
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, fileId, profile, trackTransposition])
 
     // Auto-save when user manually changes transposition (debounced)

@@ -1,85 +1,44 @@
 /**
- * Server-side file fetcher with Storage-first, Drive-fallback pattern.
- * 
+ * Server-side file fetcher — Firebase Storage only.
+ *
  * Used by: file proxy API, print pipeline, enrichment engine.
- * Centralizes the "check Storage → fall back to Drive → cache-through" logic
- * so we don't have multiple implementations with different bugs.
+ * Files must be synced from Google Drive to Storage via the sync engine.
+ * There is no Drive fallback — if a file isn't in Storage, it returns null.
  */
 
-import { DriveClient } from "@/lib/google-drive"
-import { downloadFromStorage, uploadToStorage } from "@/lib/firebase-storage"
+import { downloadFromStorage } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
-
-const EXPORTABLE_GOOGLE_TYPES = [
-    'application/vnd.google-apps.document',
-    'application/vnd.google-apps.spreadsheet',
-    'application/vnd.google-apps.presentation',
-]
 
 export interface FetchedFile {
     buffer: Buffer
     contentType: string
-    source: 'firebase-storage' | 'google-drive'
+    source: 'firebase-storage'
 }
 
 /**
- * Fetch a file by ID, checking Firebase Storage first, then Google Drive.
- * Automatically caches Drive results to Storage for next time.
- * 
- * @param fileId - Google Drive file ID
+ * Fetch a file by ID from Firebase Storage.
+ *
+ * @param fileId - File ID (originally from Google Drive)
  * @param mimeType - Optional MIME type hint for Storage lookup
- * @returns FetchedFile or null if not found anywhere
+ * @returns FetchedFile or null if not in Storage
  */
 export async function fetchFileById(fileId: string, mimeType?: string): Promise<FetchedFile | null> {
-    // 1. Try Firebase Storage first (fast, CDN-cached)
-    try {
-        const storageResult = await downloadFromStorage(fileId, mimeType)
-        if (storageResult) {
-            return {
-                buffer: storageResult.buffer,
-                contentType: storageResult.contentType,
-                source: 'firebase-storage',
-            }
+    // If the frontend passed a raw storageUrl with an extension, strip it so the candidate logic works correctly 
+    const cleanId = fileId.replace(/\.(pdf|xml|musicxml|mp3)$/i, '')
+    
+    const storageResult = await downloadFromStorage(cleanId, mimeType)
+    if (storageResult.success) {
+        return {
+            buffer: storageResult.data.buffer,
+            contentType: storageResult.data.contentType,
+            source: 'firebase-storage',
         }
-    } catch (e) {
-        logger.warn(`[FileFetcher] Storage lookup failed for ${fileId}:`, e instanceof Error ? e.message : e)
     }
 
-    // 2. Fall back to Google Drive
-    try {
-        const drive = new DriveClient()
-        const metadata = await drive.getFileMetadata(fileId)
-
-        let fileData: ArrayBuffer
-        let contentType: string
-
-        if (EXPORTABLE_GOOGLE_TYPES.includes(metadata.mimeType || '')) {
-            fileData = await drive.exportDoc(fileId, 'application/pdf') as ArrayBuffer
-            contentType = 'application/pdf'
-        } else if (metadata.mimeType === 'application/vnd.google-apps.folder') {
-            // Folders can't be downloaded
-            logger.warn(`[FileFetcher] Skipping folder: ${fileId}`)
-            return null
-        } else {
-            fileData = await drive.getFile(fileId) as ArrayBuffer
-            contentType = metadata.mimeType || 'application/octet-stream'
-        }
-
-        const buffer = Buffer.from(fileData)
-
-        if (buffer.byteLength < 50) {
-            logger.warn(`[FileFetcher] File too small (${buffer.byteLength}B): ${fileId}`)
-            return null
-        }
-
-        // 3. Cache-through: store in Firebase Storage for next time (fire-and-forget)
-        uploadToStorage(fileId, buffer, contentType).catch(e => {
-            logger.warn(`[FileFetcher] Cache-through failed for ${fileId}:`, e instanceof Error ? e.message : e)
-        })
-
-        return { buffer, contentType, source: 'google-drive' }
-    } catch (e) {
-        logger.error(`[FileFetcher] Drive fetch failed for ${fileId}:`, e instanceof Error ? e.message : e)
-        return null
+    if (storageResult.reason === 'network') {
+        logger.warn(`[FileFetcher] Storage error for ${fileId}: ${storageResult.message}`)
+    } else {
+        logger.warn(`[FileFetcher] File not in Storage: ${fileId} — run a sync to copy from Drive`)
     }
+    return null
 }

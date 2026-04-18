@@ -10,6 +10,7 @@
  */
 
 import { DriveFile } from "@/types/models"
+import { apiFetch } from "@/lib/api-client"
 
 export interface UsageInfo {
     lastUsedDate: string
@@ -38,7 +39,7 @@ export async function fetchUsageData(
     for (let i = 0; i < fileIds.length; i += 100) {
         const chunk = fileIds.slice(i, i + 100)
         try {
-            const res = await fetch(`/api/library/usage?fileIds=${chunk.join(',')}`)
+            const res = await apiFetch(`/api/library/usage?fileIds=${chunk.join(',')}`)
             if (!res.ok) continue
             const data = await res.json()
             for (const [id, info] of Object.entries(data)) {

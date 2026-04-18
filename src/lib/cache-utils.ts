@@ -1,30 +1,19 @@
+import { hasFile, putFile } from './offline-idb'
+
+/** Is the blob for this file in our offline IDB store? */
 export async function isFileCached(fileId: string): Promise<boolean> {
-    if (typeof caches === 'undefined') return false
-
-    try {
-        const cacheInfos = await caches.keys()
-
-        for (const cacheName of cacheInfos) {
-            const cache = await caches.open(cacheName)
-            if (await cache.match(`/api/drive/file/${fileId}`)) {
-                return true
-            }
-        }
-    } catch {
-        // Fallback or ignore
-    }
-
-    return false
+    return hasFile(fileId)
 }
 
-/**
- * Download a single file into the browser cache for offline access.
- * The service worker intercepts fetches and caches responses automatically.
- */
+/** Download a single file into IDB. Returns true iff the blob was written. */
 async function cacheFileForOffline(fileId: string): Promise<boolean> {
     try {
         const res = await fetch(`/api/drive/file/${fileId}`)
-        return res.ok
+        if (!res.ok) return false
+        const blob = await res.blob()
+        if (!blob || blob.size === 0) return false
+        await putFile(fileId, blob)
+        return true
     } catch {
         return false
     }
@@ -44,7 +33,7 @@ export async function cacheSetlistFiles(
     const total = fileIds.length
 
     for (const fileId of fileIds) {
-        const alreadyCached = await isFileCached(fileId)
+        const alreadyCached = await hasFile(fileId)
         if (alreadyCached) {
             cached++
             onProgress?.(cached, total)

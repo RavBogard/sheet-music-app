@@ -30,6 +30,10 @@ export default async function DashboardPage() {
         <DashboardClient
             serverGreeting={greeting}
             serverShortName={shortName}
+            serverIsMember={user?.isMember || false}
+            serverIsBandLeader={user?.isBandLeader || false}
+            serverIsAdmin={user?.isAdmin || false}
+            serverUid={user?.uid || null}
         />
     )
 }

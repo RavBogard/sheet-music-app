@@ -2,6 +2,8 @@
 
 import { Component, ReactNode, ErrorInfo } from "react"
 import { ShieldAlert } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 /**
  * Lightweight error boundary that contains crashes within a single section.
@@ -18,7 +20,7 @@ export class SectionErrorBoundary extends Component<
     }
 
     componentDidCatch(error: Error, info: ErrorInfo) {
-        console.error(`[Section] ${this.props.label} crashed:`, error, info.componentStack)
+        logger.error(`[Section] ${this.props.label} crashed:`, error, info.componentStack)
     }
 
     render() {
@@ -34,12 +36,13 @@ export class SectionErrorBoundary extends Component<
                             {this.state.error.message}
                         </pre>
                     )}
-                    <button
+                    <Button
+                        variant="link"
                         onClick={() => this.setState({ hasError: false, error: undefined })}
-                        className="text-sm font-medium text-red-500 hover:text-red-400 underline"
+                        className="text-sm font-medium text-red-500 hover:text-red-400"
                     >
                         Retry
-                    </button>
+                    </Button>
                 </div>
             )
         }

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowRight, ArrowDown, Hand } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const STORAGE_KEY = "cr-perform-intro-seen"
 
 export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
     return (
         <div
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+            className="fixed inset-0 z-splash bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
             onClick={onDismiss}
         >
             <div className="max-w-xs space-y-6 text-center" onClick={e => e.stopPropagation()}>
@@ -16,7 +17,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
 
                 <div className="space-y-4">
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowLeft className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -25,7 +26,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowRight className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -34,7 +35,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <Hand className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -43,7 +44,7 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
 
                     <div className="flex items-center gap-4 text-zinc-300">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
                             <ArrowDown className="w-5 h-5" />
                         </div>
                         <div className="text-left text-sm">
@@ -52,12 +53,13 @@ export function PerformanceIntro({ onDismiss }: { onDismiss: () => void }) {
                     </div>
                 </div>
 
-                <button
+                <Button
+                    variant="brand"
                     onClick={onDismiss}
-                    className="w-full py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
+                    className="w-full py-3 rounded-xl"
                 >
                     Got it
-                </button>
+                </Button>
             </div>
         </div>
     )

@@ -44,13 +44,13 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
             uid: user.uid,
             email: user.email || "",
             displayName: user.displayName || "Unknown",
-            photoURL: user.photoURL || undefined,
+            photoURL: user.photoURL ?? undefined,
             role: 'pending',
             createdAt: Timestamp.now(),
             lastLoginAt: Timestamp.now()
         }
 
-        await setDoc(ref, newProfile as any)
+        await setDoc(doc(db, "users", user.uid), { ...newProfile })
         return newProfile
     }
 }
@@ -65,7 +65,12 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
     if (!db || Object.keys(db).length === 0) return () => { }
     const ref = doc(db, "users", uid).withConverter(userProfileConverter)
-    let lastProfile: string | null = null
+    // Use sentinel to distinguish "never fired" from "fired with null".
+    // Without this, a new user whose profile doc doesn't exist yet would
+    // never get the initial null callback (lastProfile starts null, guard
+    // `lastProfile !== null` would be false), leaving loading stuck forever.
+    const NEVER_FIRED = '__NEVER_FIRED__'
+    let lastProfile: string | null = NEVER_FIRED as string | null
 
     return onSnapshot(ref, (snap) => {
         if (snap.exists()) {
@@ -83,6 +88,8 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
                 callback(null)
             }
         }
+    }, (err) => {
+        logger.error("[Users] Profile listener error:", err)
     })
 }
 
@@ -137,11 +144,27 @@ export async function updateUserRole(targetUid: string, newRole: UserRole) {
 }
 
 /**
- * Update user's profile display name
+ * Update user's profile display name.
+ *
+ * v4.4 DL-010: routes through /api/profile/update so the server can fan out the
+ * new name to every scheduling_assignments doc (musicianName / assignedByName)
+ * in the same round-trip. Direct Firestore writes from the browser would leave
+ * the denormalized copies drifting until the assignment reached a terminal state.
+ *
+ * The `uid` parameter is retained for backwards-compatibility with callers but
+ * the server route uses ctx.auth.uid — users can only self-update.
  */
-export async function updateUserDisplayName(uid: string, displayName: string) {
-    if (!db || Object.keys(db).length === 0) return
-    await updateDoc(doc(db, "users", uid), { displayName })
+export async function updateUserDisplayName(_uid: string, displayName: string) {
+    const { apiFetch } = await import("@/lib/api-client")
+    const res = await apiFetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName }),
+    })
+    if (!res.ok) {
+        const detail = await res.text().catch(() => "")
+        throw new Error(`Failed to update display name (${res.status}): ${detail}`)
+    }
 }
 
 /**

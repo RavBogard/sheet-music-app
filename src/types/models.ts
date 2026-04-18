@@ -1,5 +1,5 @@
-/** Firestore Timestamp — may come as raw object or with toDate() method */
-export type FirestoreDate = string | Date | { seconds: number; nanoseconds: number; toDate?: () => Date }
+/** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
+export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
 // corrections for AI Transposer
 export interface OMRCorrection {
@@ -14,8 +14,10 @@ export interface OMRCorrection {
 export interface DriveFile {
     id: string
     name: string
+    displayName?: string
     mimeType: string
     parents?: string[]
+    collection?: 'core' | 'supplemental'
     webContentLink?: string
     thumbnailLink?: string
     metadata?: {
@@ -25,6 +27,7 @@ export interface DriveFile {
         topics?: string[]
         enrichedAt?: string
         omrCorrections?: OMRCorrection[]
+        liturgicalSlot?: string // e.g. "L'cha Dodi", "Shema", "Mi Chamocha"
     }
 }
 
@@ -51,6 +54,7 @@ export interface SetlistTrack {
     description?: string // Body text for readings/prayers (responsive reading text, stage directions)
     performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
+    pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
 }
 
 /** A musician assigned to play a specific service/setlist */
@@ -69,7 +73,6 @@ export interface Setlist {
     updatedAt?: FirestoreDate
     tracks: SetlistTrack[]
     trackCount: number
-    isPublic?: boolean
     ownerId?: string
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service
@@ -79,6 +82,7 @@ export interface Setlist {
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
     transferredAt?: string
     previousOwnerId?: string
+    assignedUids?: string[]
 }
 
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'
@@ -91,6 +95,7 @@ export interface UserProfile {
     viewedWelcomeModal?: boolean
     role: UserRole
     soundEngineer?: boolean
+    canUpload?: boolean
     createdAt?: FirestoreDate
     lastLoginAt?: FirestoreDate
     claimsUpdatedAt?: FirestoreDate
@@ -155,17 +160,6 @@ export interface SchedulingAssignment {
     notifiedVia?: ('email' | 'sms' | 'push' | 'in_app')[]
 }
 
-/** Musician availability blockout */
-export interface MusicianBlockout {
-    id: string
-    musicianUid: string
-    startDate: string             // 'YYYY-MM-DD' for date-only comparison
-    endDate: string               // 'YYYY-MM-DD' (inclusive)
-    reason?: string               // Optional note: "vacation", "out of town"
-    recurring?: boolean           // Future: weekly recurring unavailability
-    createdAt: FirestoreDate
-}
-
 /** Rabbi musical profile for scheduling guidance */
 export interface RabbiProfile {
     name: string                  // "Rabbi Daniel", "Rabbi Randy", "Rabbi Karen"
@@ -186,29 +180,4 @@ export interface SchedulingHistory {
     recordedAt: FirestoreDate
 }
 
-// ── Task Types ──
-
-export type TaskStatus = 'todo' | 'completed'
-
-export interface SetlistTask {
-    id: string
-    setlistId: string
-    setlistName: string // Denormalized for the global dashboard
-    eventDate?: FirestoreDate | null // Denormalized for sorting priority
-    title: string
-    description?: string
-    status: TaskStatus
-
-    // Assignment
-    assigneeId: string
-    assigneeName: string
-    assigneeEmail: string
-
-    // Audit & Notification
-    createdBy: string
-    createdByName: string
-    createdAt: FirestoreDate
-    completedAt?: FirestoreDate | null
-    notifiedEmails?: string[] // CCs who receive the initial assignment email
-}
 

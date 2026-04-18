@@ -1,19 +1,46 @@
 /**
  * Shared role hierarchy for the application.
  *
- * The hierarchy is: admin > band_leader > musician > member > pending
- * Backward compat: 'leader' is the legacy name for 'band_leader'.
+ * AUTH-04 Role Model (verified 2026-03):
+ *
+ * Hierarchy: admin > band_leader > musician > member > pending
+ *   - admin (100):       Full access — all booleans true. Daniel's role.
+ *   - band_leader (80):  Setlist management, edit access, musician capabilities.
+ *
+ *   - musician (60):     Performance + profile: view setlists, set transposition, PDF access.
+ *   - member (40):       Basic membership — no special music capabilities.
+ *   - pending (0):       Awaiting approval — no access beyond public pages.
+ *
+ * Sound Engineer: NOT a role in this hierarchy.
+ *   - `soundEngineer: boolean` on UserProfile is orthogonal to role.
+ *   - Per research decision: "Keep the boolean flag approach. It's orthogonal to the role hierarchy."
+ *   - Sound engineers get monitor bus assignment access via useMonitorAccess():
+ *       hasAccess = isAdmin || isSoundEngineer || hasBusAssigned
+ *   - A musician with soundEngineer=true is still a musician in the role hierarchy.
  *
  * Used by both client-side (auth-context) and server-side (api-auth) code
  * to ensure consistent role checks across the entire application.
  */
 
-export type UserRole = 'admin' | 'band_leader' | 'leader' | 'musician' | 'member' | 'pending'
+export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending'
+
+/**
+ * User-facing labels for each role, including 'denied' which exists in
+ * the wider UserRole in @/types/models (used by admin screens) but not
+ * in the narrower role-hierarchy UserRole in this module.
+ */
+export const ROLE_LABELS: Record<string, string> = {
+    admin: 'Admin',
+    band_leader: 'Band Leader',
+    musician: 'Musician',
+    member: 'Member',
+    pending: 'Pending',
+    denied: 'Denied',
+}
 
 const ROLE_HIERARCHY: Record<string, number> = {
     admin: 100,
     band_leader: 80,
-    leader: 80, // backward compat
     musician: 60,
     member: 40,
     pending: 0,
@@ -25,7 +52,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
  * @example
  *   hasRole('admin', 'band_leader')  // true — admin outranks band_leader
  *   hasRole('musician', 'band_leader')  // false — musician is below band_leader
- *   hasRole('leader', 'band_leader')  // true — 'leader' is legacy alias for band_leader
+ *   hasRole('member', 'musician')     // false — member is below musician
  */
 export function hasRole(userRole: string | null | undefined, minimumRole: UserRole): boolean {
     if (!userRole) return false

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Document, pdfjs } from 'react-pdf'
 import { Loader2, RefreshCw } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useMusicStore } from '@/lib/store'
 import { PDFPageWrapper } from './PDFPageWrapper'
 import { ChartSuggestions } from './ChartSuggestions'
@@ -11,11 +13,10 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 
-// Configure PDF.js worker — version MUST match react-pdf's bundled pdfjs-dist.
-// react-pdf re-exports pdfjs, so pdfjs.version gives us the exact version it uses.
-// Using unpkg CDN with pinned version guarantees version match and eliminates
-// the worker/library mismatch that caused AbortErrors.
-const PDFJS_VERSION = pdfjs.version // e.g. "5.4.296"
+// Configure PDF.js worker — use local copy from public/ (copied by
+// scripts/copy-pdf-worker.js during postinstall + build). Local worker
+// eliminates CDN dependency and guarantees version match with react-pdf's
+// bundled pdfjs-dist.
 
 interface PDFViewerProps {
     url: string
@@ -29,16 +30,18 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Sandbox PDF Worker init to prevent main-thread execution on non-perform routes
+    // Use versioned worker URL for cache busting — prevents stale Service Worker
+    // or CDN cache from serving a mismatched worker after deploys.
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`
+        pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
     }
 
     // Track which URL we've resolved to avoid re-running
     const resolvedUrlRef = useRef<string | null>(null)
     const retryCountRef = useRef(0)
+    const MAX_RETRIES = 3
 
-    const fetchPdf = useCallback(async (fetchUrl: string, isRetry = false) => {
+    const fetchPdf = useCallback(async (fetchUrl: string, signal?: AbortSignal, isRetry = false) => {
         if (resolvedUrlRef.current === fetchUrl && !isRetry) return
 
         setLoading(true)
@@ -48,7 +51,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         // Rely on standard ServiceWorker caching instead of IndexedDB.
         // Fetch the PDF ourselves so we can diagnose failures
         try {
-            const res = await fetch(fetchUrl)
+            const res = await fetch(fetchUrl, { signal })
 
             if (!res.ok) {
                 // Try to read error body for diagnostics
@@ -81,32 +84,61 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             setError(null)
             retryCountRef.current = 0
         } catch (e) {
+            // Abort is an expected outcome on unmount / URL change — swallow quietly.
+            if (e instanceof Error && e.name === 'AbortError') return
             const msg = e instanceof Error ? e.message : String(e)
             logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
             setError(msg)
             setSource(null)
         } finally {
-            setLoading(false)
+            // Guard against setting loading=false after an abort already triggered
+            // a re-fetch with a new signal.
+            if (!signal?.aborted) setLoading(false)
         }
     }, [])
 
-    // Resolve source when URL changes
-    useEffect(() => {
-        // Cache-bust v2: forces CDN cache invalidation after fix for
-        // stale error responses being cached. Can be removed after 2026-02-20.
-        const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-        fetchPdf(bustUrl)
-    }, [url, fetchPdf])
+    // Tracks a bust-counter to force-rerun the fetch effect for retries.
+    const [retryBust, setRetryBust] = useState(0)
 
+    // Reset retry counter when the URL prop changes — a new chart gets a
+    // fresh 3-attempt budget.
+    useEffect(() => {
+        retryCountRef.current = 0
+        setRetryBust(0)
+    }, [url])
+
+    // Resolve source when URL changes. A 60s timeout covers hung venue networks.
+    useEffect(() => {
+        const controller = new AbortController()
+        const timer = setTimeout(() => {
+            controller.abort(new DOMException('PDF fetch timeout', 'AbortError'))
+        }, 60_000)
+
+        const effectiveUrl = retryBust > 0
+            ? (url.includes('?') ? `${url}&_r=${retryBust}` : `${url}?_r=${retryBust}`)
+            : url
+        fetchPdf(effectiveUrl, controller.signal, retryBust > 0)
+
+        return () => {
+            clearTimeout(timer)
+            controller.abort()
+        }
+    }, [url, retryBust, fetchPdf])
+
+    // UX-007: cap manual retries at MAX_RETRIES so a genuinely-broken chart
+    // doesn't loop forever. resolvedUrlRef is not reset on url change, so if
+    // the caller passes a new URL the counter naturally resets via the retry
+    // auto-reset on successful fetch (retryCountRef.current = 0 in fetchPdf).
     const handleRetry = () => {
+        if (retryCountRef.current >= MAX_RETRIES) return
         retryCountRef.current++
         resolvedUrlRef.current = null
-        // Add cache-bust param to bypass any stale CDN-cached errors
-        const bustUrl = url.includes('?')
-            ? `${url}&_r=${retryCountRef.current}`
-            : `${url}?_r=${retryCountRef.current}`
-        fetchPdf(bustUrl, true)
+        // Bumping the bust counter retriggers the effect, which creates a fresh
+        // AbortController + timer. Cache-bust param is appended in the effect.
+        setRetryBust(retryCountRef.current)
     }
+
+    const exhausted = retryCountRef.current >= MAX_RETRIES && !!error
 
     // Auto-Resize
     const containerRef = useRef<HTMLDivElement>(null)
@@ -144,25 +176,30 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             <div ref={containerRef} className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-center relative pb-32">
                 <div className="relative">
                     {loading && (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4 mt-20">
-                            <Loader2 className="animate-spin h-10 w-10" />
-                            <p>Loading Chart...</p>
+                        <div className="flex flex-col items-center mt-4 gap-3">
+                            <Skeleton className="w-full max-w-[600px] aspect-[8.5/11] rounded-lg" />
+                            <Skeleton className="h-4 w-32 rounded" />
+                            <p className="text-sm text-muted-foreground">Loading Chart...</p>
                         </div>
                     )}
 
                     {error && !loading && (
                         <div className="p-10 text-center space-y-3">
-                            <p className="font-semibold text-destructive text-lg">Failed to load PDF</p>
+                            <p className="font-semibold text-destructive text-lg">
+                                {exhausted ? 'Could not load chart — please try again later' : 'Failed to load PDF'}
+                            </p>
                             <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
                                 {error}
                             </p>
-                            <button
-                                onClick={handleRetry}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current})` : ''}
-                            </button>
+                            {!exhausted && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRetry}
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Retry{retryCountRef.current > 0 ? ` (${retryCountRef.current}/${MAX_RETRIES})` : ''}
+                                </Button>
+                            )}
                             <ChartSuggestions
                                 trackName={trackName}
                                 currentFileId={url.split('/').pop()}
@@ -185,13 +222,15 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             error={
                                 <div className="text-destructive p-10 text-center space-y-2">
                                     <p className="font-semibold">PDF render error</p>
-                                    <button
-                                        onClick={handleRetry}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-accent text-sm font-medium text-foreground transition-colors"
-                                    >
-                                        <RefreshCw className="h-4 w-4" />
-                                        Retry
-                                    </button>
+                                    {retryCountRef.current < MAX_RETRIES && (
+                                        <Button
+                                            variant="secondary"
+                                            onClick={handleRetry}
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                            Retry
+                                        </Button>
+                                    )}
                                 </div>
                             }
                             className="flex flex-col items-center min-h-screen"

@@ -14,6 +14,7 @@ export interface ServerUser {
     isAdmin: boolean
     isBandLeader: boolean
     isMember: boolean
+    isSoundEngineer: boolean
 }
 
 /**
@@ -42,19 +43,21 @@ export async function getServerUser(): Promise<ServerUser | null> {
 
         const role = (profile?.role as string) || null
         const isAdmin = role === "admin"
-        const isBandLeader = isAdmin || role === "band_leader" || role === "leader"
+        const isBandLeader = isAdmin || role === "band_leader"
         const isMember = isBandLeader || role === "musician" || role === "member"
+        const isSoundEngineer = !!profile?.soundEngineer
 
         return {
             uid: decoded.uid,
             email: decoded.email || null,
-            displayName: profile?.displayName || decoded.name || null,
+            displayName: decoded.name || null,
             role,
             isAdmin,
             isBandLeader,
             isMember,
+            isSoundEngineer,
         }
-    } catch {
+    } catch (error) {
         // Cookie expired, revoked, or invalid — treat as unauthenticated
         return null
     }

@@ -86,19 +86,24 @@ export function TrackSheet({
         }
     }, [track])
 
-    // Fetch native key from library when track has a fileId
+    // Fetch native key from library when track has a fileId.
+    // A `cancelled` flag gates the post-await setState so an unmount or
+    // fileId-change mid-flight can't commit stale data.
     useEffect(() => {
         if (!track?.fileId) {
             setNativeKey(null)
             setNativeKeySource(null)
             return
         }
+        let cancelled = false
         loadLibraryMeta(track.fileId).then(meta => {
+            if (cancelled) return
             if (meta?.nativeKey) {
                 setNativeKey(meta.nativeKey)
                 setNativeKeySource(meta.nativeKeySource || 'auto')
             }
         }).catch(() => { })
+        return () => { cancelled = true }
     }, [track?.fileId])
 
     // When user picks a "Play In" key, calculate transposition from native key

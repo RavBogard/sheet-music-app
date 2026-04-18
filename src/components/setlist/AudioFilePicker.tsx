@@ -59,6 +59,12 @@ export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFileP
                             <AlertCircle className="h-8 w-8 opacity-50" />
                             <p>No audio files found in library</p>
                             <p className="text-xs max-w-xs">Make sure you have MP3 or WAV files uploaded to the same Google Drive folder.</p>
+                            <a
+                                href="/library"
+                                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                            >
+                                Open library →
+                            </a>
                         </div>
                     )}
 

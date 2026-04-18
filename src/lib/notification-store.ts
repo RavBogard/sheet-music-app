@@ -73,8 +73,12 @@ export function subscribeToNotifications(
  * Mark a single notification as read.
  */
 export async function markAsRead(uid: string, notificationId: string): Promise<void> {
-    const ref = doc(db, 'users', uid, 'notifications', notificationId)
-    await updateDoc(ref, { read: true })
+    try {
+        const ref = doc(db, 'users', uid, 'notifications', notificationId)
+        await updateDoc(ref, { read: true })
+    } catch (err) {
+        logger.warn('[Notifications] markAsRead failed:', err)
+    }
 }
 
 /**
@@ -96,21 +100,25 @@ export async function markAllAsRead(uid: string): Promise<void> {
         // No Firebase app (test environment) — skip the check, Firestore rules still enforce
     }
 
-    const q = query(
-        collection(db, 'users', uid, 'notifications'),
-        where('read', '==', false)
-    )
-    const snap = await getDocs(q)
-    if (snap.empty) return
+    try {
+        const q = query(
+            collection(db, 'users', uid, 'notifications'),
+            where('read', '==', false)
+        )
+        const snap = await getDocs(q)
+        if (snap.empty) return
 
-    // M3 fix: Chunk batches to stay under Firestore's 500 operations limit
-    const BATCH_LIMIT = 450
-    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
-        const batch = writeBatch(db)
-        snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => {
-            batch.update(d.ref, { read: true })
-        })
-        await batch.commit()
+        // M3 fix: Chunk batches to stay under Firestore's 500 operations limit
+        const BATCH_LIMIT = 450
+        for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+            const batch = writeBatch(db)
+            snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => {
+                batch.update(d.ref, { read: true })
+            })
+            await batch.commit()
+        }
+    } catch (err) {
+        logger.warn('[Notifications] markAllAsRead failed:', err)
     }
 }
 
@@ -122,12 +130,16 @@ export async function createNotification(
     uid: string,
     notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
 ): Promise<void> {
-    const ref = collection(db, 'users', uid, 'notifications')
-    await addDoc(ref, {
-        ...notification,
-        read: false,
-        createdAt: serverTimestamp(),
-    })
+    try {
+        const ref = collection(db, 'users', uid, 'notifications')
+        await addDoc(ref, {
+            ...notification,
+            read: false,
+            createdAt: serverTimestamp(),
+        })
+    } catch (err) {
+        logger.warn('[Notifications] createNotification failed:', err)
+    }
 }
 
 /**
@@ -195,7 +207,7 @@ async function getActiveMemberUids(excludeUid?: string): Promise<string[]> {
     // M2 fix: Use filtered query instead of fetching all users
     const q = query(
         collection(db, 'users'),
-        where('role', 'in', ['admin', 'band_leader', 'leader', 'musician', 'member'])
+        where('role', 'in', ['admin', 'band_leader', 'musician', 'member'])
     )
     const snap = await getDocs(q)
     const uids: string[] = []
@@ -233,23 +245,30 @@ export async function notifySetlistPublished(
 
 /**
  * Notify all members about a setlist track update.
+ *
+ * Delegates to POST /api/setlists/notify-updated — broadcast writes happen
+ * server-side via Admin SDK. The previous client-side implementation read
+ * the `users` collection, which Firestore rules block for non-privileged
+ * roles. Fire-and-forget: caller ignores the promise.
+ *
+ * The `editorUid` argument is kept for signature compatibility with existing
+ * callers (the server derives the caller from the Bearer token).
  */
 export async function notifySetlistUpdated(
     setlistName: string,
     setlistId: string,
     trackCount: number,
-    editorUid?: string
+    _editorUid?: string
 ): Promise<void> {
     try {
-        const uids = await getActiveMemberUids(editorUid)
-        if (uids.length === 0) return
-        await broadcastNotification(uids, {
-            type: 'setlist_updated',
-            title: 'Setlist updated',
-            body: `"${setlistName}" was updated (${trackCount} tracks)`,
-            link: `/setlist/${setlistId}`,
-            entityId: setlistId,
+        const { apiFetch } = await import('@/lib/api-client')
+        const res = await apiFetch('/api/setlists/notify-updated', {
+            method: 'POST',
+            body: JSON.stringify({ setlistId, setlistName, trackCount }),
         })
+        if (!res.ok) {
+            logger.warn('[Notifications] notify-updated responded non-2xx:', res.status)
+        }
     } catch (e) {
         logger.warn('[Notifications] Failed to broadcast setlist_updated:', e)
     }

@@ -54,7 +54,8 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
     // Sync subject default when dialog opens (useState initializer only runs once)
     useEffect(() => {
         if (isOpen) setSubject(defaultSubject)
-    }, [isOpen])  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const noMusicians = musicians.length === 0
     const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
@@ -236,14 +237,15 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             {/* Email subject */}
                             {!noMusicians && (
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground">
+                                    <label htmlFor="publish-subject" className="text-xs font-medium text-muted-foreground">
                                         Email subject
                                     </label>
                                     <input
+                                        id="publish-subject"
                                         type="text"
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
-                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     />
                                 </div>
                             )}
@@ -251,14 +253,15 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             {/* Custom note */}
                             {!noMusicians && (
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground">
+                                    <label htmlFor="publish-note" className="text-xs font-medium text-muted-foreground">
                                         Add a note to the email <span className="text-muted-foreground/50">(optional)</span>
                                     </label>
                                     <textarea
+                                        id="publish-note"
                                         value={note}
                                         onChange={(e) => setNote(e.target.value.slice(0, 2000))}
                                         placeholder="e.g. Please review Lecha Dodi — new arrangement this week"
-                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm resize-y focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                         rows={4}
                                     />
                                     {note.length > 0 && (

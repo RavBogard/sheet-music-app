@@ -59,7 +59,8 @@ export function useContentSearch() {
         } finally {
             setSearching(false)
         }
-    }, [user?.uid])  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid])
 
     const clear = useCallback(() => {
         setResults([])

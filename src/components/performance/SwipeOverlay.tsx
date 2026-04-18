@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { Hand } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export function SwipeOverlay() {
     const [visible, setVisible] = useState(false)
@@ -38,12 +39,13 @@ export function SwipeOverlay() {
                     <h2 className="text-2xl font-bold text-white tracking-tight">Swipe to Navigate</h2>
                     <p className="text-white/80 mt-2">Swipe left or right across the screen to change songs.</p>
                 </div>
-                <button
-                    className="mt-6 px-8 py-3 bg-white hover:bg-white/90 text-black rounded-full font-bold transition-colors"
+                <Button
+                    variant="ghost"
+                    className="mt-6 px-8 py-3 bg-white hover:bg-white/90 text-black rounded-full font-bold"
                     onClick={handleDismiss}
                 >
                     Got it
-                </button>
+                </Button>
             </div>
         </div>
     )

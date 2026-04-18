@@ -1,6 +1,7 @@
 "use client"
 
 import { UserProfile, UserRole, updateUserRole } from "@/lib/users-firebase"
+import { ROLE_LABELS } from "@/lib/roles"
 import { toDate } from "@/lib/firestore-helpers"
 import { notifyRoleChanged } from "@/lib/notification-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,11 +13,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { logger } from "@/lib/logger"
-import { Headphones, Trash2 } from "lucide-react"
+import { Headphones, Trash2, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils"
 
 const ROLE_HIERARCHY: Record<string, number> = {
     pending: 0,
@@ -27,13 +40,6 @@ const ROLE_HIERARCHY: Record<string, number> = {
     admin: 4,
 }
 
-const ROLE_LABELS: Record<string, string> = {
-    pending: 'Pending',
-    member: 'Member',
-    musician: 'Musician',
-    band_leader: 'Band Leader',
-    admin: 'Admin',
-}
 
 interface UserRowProps {
     user: UserProfile
@@ -45,25 +51,41 @@ interface UserRowProps {
 
 export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onSelect }: UserRowProps) {
     const [loading, setLoading] = useState(false)
+    const [soundEngLoading, setSoundEngLoading] = useState(false)
+    const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
+    const [pendingRole, setPendingRole] = useState<string | null>(null)
+
+    // v44-06 UX-011: if the parent refreshes and the user's role has changed
+    // (either via this confirmation succeeding or an out-of-band update),
+    // clear any stale pending-role confirmation so the row returns to idle
+    // and the select reflects the latest props.
+    useEffect(() => {
+        setPendingRole(null)
+    }, [user.role])
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'
     const isCurrentBandLeaderOrAbove = currentLevel >= ROLE_HIERARCHY.band_leader
     const isSelf = user.uid === currentUserUid
 
-    const handleRoleChange = async (newRole: string) => {
+    const requestRoleChange = (newRole: string) => {
         if (isSelf) {
             toast.error("You cannot change your own role here.")
             return
         }
-
-        // Can only assign up to your own level
         const targetLevel = ROLE_HIERARCHY[newRole] ?? 0
         if (targetLevel > currentLevel) {
             toast.error(`You can only assign roles up to ${ROLE_LABELS[currentUserRole]}.`)
             return
         }
+        setPendingRole(newRole)
+    }
+
+    const confirmRoleChange = async () => {
+        if (!pendingRole) return
+        const newRole = pendingRole
+        setPendingRole(null)
 
         setLoading(true)
         try {
@@ -72,13 +94,17 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             toast.success(`Updated ${user.displayName} to ${ROLE_LABELS[newRole] || newRole}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to update role")
+            // v4.4 U-001: surface the real reason so admins can act (permission
+            // denied? network? server error?).
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't update role: ${msg}`)
         } finally {
             setLoading(false)
         }
     }
 
     const handleSoundEngineerToggle = async () => {
+        setSoundEngLoading(true)
         try {
             const { auth: firebaseAuth } = await import("@/lib/firebase")
             const currentUser = firebaseAuth.currentUser
@@ -89,11 +115,18 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({ targetUserId: user.uid, soundEngineer: !user.soundEngineer }),
             })
-            if (!res.ok) throw new Error("Failed")
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}))
+                throw new Error(data.error || `Request failed (${res.status})`)
+            }
             toast.success(`${user.displayName}: sound engineer ${user.soundEngineer ? 'removed' : 'enabled'}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to update sound engineer flag")
+            // v4.4 U-002: surface the real failure reason
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't update sound engineer flag: ${msg}`)
+        } finally {
+            setSoundEngLoading(false)
         }
     }
 
@@ -103,6 +136,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             setTimeout(() => setConfirmDelete(false), 3000)
             return
         }
+        setDeleteLoading(true)
         try {
             // Use server-side Admin SDK route for proper cleanup
             // (deletes both Firestore doc and Firebase Auth user)
@@ -122,27 +156,34 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             toast.success(`Removed ${user.displayName}`)
         } catch (e) {
             logger.error(e)
-            toast.error("Failed to remove user")
+            // v4.4 U-003: surface the real failure
+            const msg = e instanceof Error ? e.message : String(e)
+            toast.error(`Couldn't remove user: ${msg}`)
+        } finally {
+            setDeleteLoading(false)
+            setConfirmDelete(false)
         }
-        setConfirmDelete(false)
     }
 
     const isPending = user.role === 'pending'
-    const effectiveRole = user.role === ('leader' as string) ? 'band_leader' : user.role
+    const effectiveRole = user.role
 
     // Roles this user can see/assign (up to their own level)
     const assignableRoles = (['pending', 'member', 'musician', 'band_leader', 'admin'] as const)
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
     return (
-        <div className={`flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50 ${isSelected ? 'bg-violet-500/5 hover:bg-violet-500/10' : ''}`}>
+        <>
+        <div className={cn("flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50", isSelected && "bg-brand/5 hover:bg-brand/10")}>
             {/* Checkbox Column */}
-            <input
-                type="checkbox"
-                checked={isSelected || false}
-                onChange={onSelect}
-                className="h-4 w-4 rounded border-border accent-violet-600 shrink-0 cursor-pointer"
-            />
+            <label className="min-h-11 min-w-11 flex items-center justify-center shrink-0 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={isSelected || false}
+                    onChange={onSelect}
+                    className="h-4 w-4 rounded border-border accent-brand shrink-0 cursor-pointer"
+                />
+            </label>
 
             <div className="min-w-0 flex-1 grid grid-cols-12 gap-4 items-center pl-2">
                 {/* User Info Column (col-span-12 on mobile, col-span-5 on sm) */}
@@ -162,12 +203,12 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
 
                 {/* Attributes Column (hidden on mobile, col-span-3 on sm) */}
                 <div className="hidden sm:flex col-span-3 items-center gap-1.5 flex-wrap">
-                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[10px] h-5 px-1.5">Admin</Badge>}
-                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-blue-500/20 text-blue-300 border-blue-500/50 text-[10px] h-5 px-1.5">Leader</Badge>}
-                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-green-500/20 text-green-300 border-green-500/50 text-[10px] h-5 px-1.5">Musician</Badge>}
+                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[10px] h-5 px-1.5">Admin</Badge>}
+                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[10px] h-5 px-1.5">Leader</Badge>}
+                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[10px] h-5 px-1.5">Member</Badge>}
-                    {user.soundEngineer && <Badge variant="default" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
-                    {isPending && <Badge variant="destructive" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
+                    {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
+                    {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
 
                     <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={user.createdAt ? toDate(user.createdAt)?.toLocaleString() : ""}>
                         {user.createdAt ? formatDistanceToNow(toDate(user.createdAt) || new Date(), { addSuffix: true }) : ""}
@@ -178,30 +219,42 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 <div className="hidden sm:flex col-span-4 items-center justify-end gap-2 pr-2">
                     {/* Sound Engineer toggle */}
                     {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={handleSoundEngineerToggle}
-                            className={`p-1.5 rounded-lg border transition-colors ${user.soundEngineer
-                                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-500 dark:text-emerald-400'
-                                    : 'bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted'
-                                }`}
+                            disabled={soundEngLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                user.soundEngineer
+                                    ? "bg-success/20 border-success/40 text-success"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
+                            )}
                             title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
+                            aria-label={user.soundEngineer ? 'Remove sound engineer role' : 'Make sound engineer'}
                         >
-                            <Headphones className="h-3.5 w-3.5" />
-                        </button>
+                            {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
+                        </Button>
                     )}
 
                     {/* Delete (admin only, not self) */}
                     {isCurrentAdmin && !isSelf && (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={handleDelete}
-                            className={`p-1.5 rounded-lg border transition-colors ${confirmDelete
-                                    ? 'bg-red-500/20 border-red-500/40 text-red-500 dark:text-red-400'
-                                    : 'bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20'
-                                }`}
+                            disabled={deleteLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                confirmDelete
+                                    ? "bg-destructive/20 border-destructive/40 text-destructive"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                            )}
                             title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
+                            aria-label={confirmDelete ? `Confirm removal of ${user.displayName || user.email || 'user'}` : `Remove ${user.displayName || user.email || 'user'}`}
                         >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                            {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
                     )}
 
                     {/* Role selector */}
@@ -209,9 +262,9 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                         <Select
                             disabled={loading}
                             value={effectiveRole}
-                            onValueChange={handleRoleChange}
+                            onValueChange={requestRoleChange}
                         >
-                            <SelectTrigger className="w-[120px] bg-background border-border h-8 text-xs font-medium">
+                            <SelectTrigger className="w-[120px] bg-background border-border h-11 text-xs font-medium">
                                 <SelectValue placeholder="Role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -233,21 +286,62 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             {/* Mobile Actions (visible only < sm) */}
             <div className="sm:hidden basis-full flex items-center justify-between px-2 pt-2 mt-1 border-t border-border/50">
                 <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-purple-500/20 text-purple-300 border-purple-500/50 text-[9px] h-4 px-1.5">Admin</Badge>}
-                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-blue-500/20 text-blue-300 border-blue-500/50 text-[9px] h-4 px-1.5">Leader</Badge>}
-                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-green-500/20 text-green-300 border-green-500/50 text-[9px] h-4 px-1.5">Musician</Badge>}
+                    {effectiveRole === 'admin' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[9px] h-4 px-1.5">Admin</Badge>}
+                    {effectiveRole === 'band_leader' && <Badge variant="default" className="bg-brand/20 text-brand border-brand/50 text-[9px] h-4 px-1.5">Leader</Badge>}
+                    {effectiveRole === 'musician' && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">Musician</Badge>}
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
-                    {user.soundEngineer && <Badge variant="default" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
+                    {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
+                    {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">Pending</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1">
+                    {/* Sound Engineer toggle (mobile) */}
+                    {isCurrentBandLeaderOrAbove && !isSelf && effectiveRole !== 'pending' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleSoundEngineerToggle}
+                            disabled={soundEngLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                user.soundEngineer
+                                    ? "bg-success/20 border-success/40 text-success"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
+                            )}
+                            title={user.soundEngineer ? 'Remove sound engineer' : 'Make sound engineer'}
+                            aria-label={user.soundEngineer ? 'Remove sound engineer role' : 'Make sound engineer'}
+                        >
+                            {soundEngLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Headphones className="h-4 w-4" />}
+                        </Button>
+                    )}
+
+                    {/* Delete (mobile, admin only) */}
+                    {isCurrentAdmin && !isSelf && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDelete}
+                            disabled={deleteLoading}
+                            className={cn(
+                                "rounded-lg border",
+                                confirmDelete
+                                    ? "bg-destructive/20 border-destructive/40 text-destructive"
+                                    : "bg-muted/50 border-border/50 text-muted-foreground/40"
+                            )}
+                            title={confirmDelete ? 'Tap again to confirm' : 'Remove user'}
+                            aria-label={confirmDelete ? `Confirm removal of ${user.displayName || user.email || 'user'}` : `Remove ${user.displayName || user.email || 'user'}`}
+                        >
+                            {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                    )}
+
                     {!isSelf && (
                         <Select
                             disabled={loading}
                             value={effectiveRole}
-                            onValueChange={handleRoleChange}
+                            onValueChange={requestRoleChange}
                         >
-                            <SelectTrigger className="w-[100px] bg-background border-border h-7 text-[10px]">
+                            <SelectTrigger className="w-[100px] bg-background border-border h-11 text-[10px]">
                                 <SelectValue placeholder="Role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -262,5 +356,22 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 </div>
             </div>
         </div>
+
+        {/* Role change confirmation dialog */}
+        <AlertDialog open={!!pendingRole} onOpenChange={(open) => { if (!open) setPendingRole(null) }}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Change Role?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Change {user.displayName}&apos;s role from {ROLE_LABELS[effectiveRole]} to {ROLE_LABELS[pendingRole || ''] || pendingRole}?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmRoleChange}>Change Role</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     )
 }

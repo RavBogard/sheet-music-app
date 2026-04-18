@@ -122,6 +122,10 @@ export class X32Client extends EventEmitter {
     private lastMessageAt: number = 0
     private connected = false
     private reconnecting = false
+    private shouldStopReconnecting = false
+    currentBackoff: number = 2000 // Exposed for testing; starts at 2s
+    private static readonly INITIAL_BACKOFF = 2000
+    private static readonly MAX_BACKOFF = 60000
     private pendingCallbacks = new Map<string, (msg: ParsedOSCMessage) => void>()
 
     // Cached mixer state
@@ -176,6 +180,7 @@ export class X32Client extends EventEmitter {
     }
 
     disconnect(): void {
+        this.stopReconnecting()
         if (this.xremoteInterval) {
             clearInterval(this.xremoteInterval)
             this.xremoteInterval = null
@@ -219,18 +224,26 @@ export class X32Client extends EventEmitter {
         }, 5000)
     }
 
+    /**
+     * Stop the reconnection loop. Called on bridge shutdown/destroy.
+     */
+    stopReconnecting(): void {
+        this.shouldStopReconnecting = true
+    }
+
     private async attemptReconnect(): Promise<void> {
         if (this.reconnecting) return
         this.reconnecting = true
+        this.shouldStopReconnecting = false
+        this.currentBackoff = X32Client.INITIAL_BACKOFF
 
-        const MAX_ATTEMPTS = 60  // Try for ~10 minutes
-        const INTERVAL = 10000   // Every 10 seconds
-
-        for (let i = 1; i <= MAX_ATTEMPTS; i++) {
-            console.log(`[X32] Reconnect attempt ${i}/${MAX_ATTEMPTS}...`)
+        let attempt = 0
+        while (!this.shouldStopReconnecting) {
+            attempt++
+            console.log(`[X32] Reconnect attempt ${attempt} (backoff: ${this.currentBackoff}ms)...`)
 
             try {
-                // Send /xinfo and wait for response
+                // Send /xinfo and wait for response with 5s timeout
                 const responded = await new Promise<boolean>((resolve) => {
                     const timeout = setTimeout(() => resolve(false), 5000)
                     const handler = (msg: ParsedOSCMessage) => {
@@ -247,7 +260,8 @@ export class X32Client extends EventEmitter {
                     this.connected = true
                     this.lastMessageAt = Date.now()
                     this.reconnecting = false
-                    console.log("[X32] ✓ Reconnected!")
+                    this.currentBackoff = X32Client.INITIAL_BACKOFF
+                    console.log("[X32] Reconnected!")
                     this.emit("reconnected")
                     return
                 }
@@ -255,12 +269,19 @@ export class X32Client extends EventEmitter {
                 // Ignore, will retry
             }
 
-            // Wait before next attempt
-            await new Promise(r => setTimeout(r, INTERVAL))
+            if (this.shouldStopReconnecting) break
+
+            // Wait with exponential backoff before next attempt
+            await new Promise(r => setTimeout(r, this.currentBackoff))
+
+            // Double the backoff, capped at MAX_BACKOFF
+            this.currentBackoff = Math.min(
+                this.currentBackoff * 2,
+                X32Client.MAX_BACKOFF,
+            )
         }
 
         this.reconnecting = false
-        console.error("[X32] ✗ Failed to reconnect after 10 minutes. Will keep trying via /xremote.")
     }
 
     private send(address: string, args: Array<{ type: "f" | "i" | "s"; value: number | string }> = []): void {

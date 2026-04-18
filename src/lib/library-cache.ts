@@ -103,3 +103,31 @@ export async function clearLibraryCache(): Promise<void> {
         logger.warn('IndexedDB clear failed:', err)
     }
 }
+
+/**
+ * Broadcast cache invalidation to other open tabs via BroadcastChannel.
+ * Call after sync completion alongside clearLibraryCache().
+ */
+export function broadcastCacheInvalidation(): void {
+    try {
+        if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
+        const channel = new BroadcastChannel('library-cache')
+        channel.postMessage({ type: 'invalidate' })
+        channel.close()
+    } catch {
+        // BroadcastChannel not supported — single-tab fallback is fine
+    }
+}
+
+/**
+ * Listen for cache invalidation events from other tabs.
+ * Returns a cleanup function to stop listening.
+ */
+export function listenForCacheInvalidation(callback: () => void): () => void {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return () => {}
+    const channel = new BroadcastChannel('library-cache')
+    channel.onmessage = (event) => {
+        if (event.data?.type === 'invalidate') callback()
+    }
+    return () => channel.close()
+}

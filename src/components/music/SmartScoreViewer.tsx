@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
+import { OpenSheetMusicDisplay, TransposeCalculator } from 'opensheetmusicdisplay'
 import { Loader2, Music2 } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { Card } from '@/components/ui/card'
@@ -60,6 +60,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                         drawingParameters: 'compacttight',
                         drawTitle: true,
                     })
+                    osmdRef.current.TransposeCalculator = new TransposeCalculator()
                 } else {
                     return
                 }

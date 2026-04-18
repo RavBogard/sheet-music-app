@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { sendBridgeRedemptionAlert } from "@/lib/email"
 import { randomBytes } from "crypto"
 
 /**
@@ -16,83 +17,81 @@ import { randomBytes } from "crypto"
  * GET  /api/bridge/setup-code?code=ABC123  — Bridge: redeem code for credentials
  */
 
+const CODE_LENGTH = 10
+
 function generateCode(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // No 0/O/1/I confusion
-    const bytes = randomBytes(6)
+    const bytes = randomBytes(CODE_LENGTH)
     let code = ""
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < CODE_LENGTH; i++) {
         code += chars[bytes[i] % chars.length]
     }
     return code
 }
 
 // POST: Admin generates a setup code
-export async function POST(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        initAdmin()
-        const db = getFirestore()
-
-        // Verify the user is an admin
-        const userDoc = await db.collection("users").doc(auth.uid).get()
-        const userData = userDoc.data()
-        if (!userData?.role || !["admin", "band_leader", "leader"].includes(userData.role)) {
-            return NextResponse.json({ error: "Admin access required" }, { status: 403 })
-        }
-
-        // Invalidate any existing unused codes from this user
-        const existing = await db.collection("bridge-setup-codes")
-            .where("createdBy", "==", auth.uid)
-            .where("used", "==", false)
-            .get()
-        if (!existing.empty) {
-            const batch = db.batch()
-            existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
-            await batch.commit()
-        }
-
-        // Generate a new code
-        const code = generateCode()
-        const now = Date.now()
-        const expiresAt = now + 10 * 60 * 1000 // 10 minutes
-
-        await db.collection("bridge-setup-codes").doc(code).set({
-            createdBy: auth.uid,
-            createdAt: now,
-            expiresAt,
-            used: false,
-        })
-
-        return NextResponse.json({ code, expiresAt })
-    } catch (error) {
-        logger.error("Setup code generation error:", error)
-        return NextResponse.json({ error: "Failed to generate code" }, { status: 500 })
+export const POST = createApiHandler(async (ctx) => {
+    if (!initAdmin()) {
+        return NextResponse.json(
+            { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+            { status: 500 },
+        )
     }
-}
+    const db = getFirestore()
+
+    // Invalidate any existing unused codes from this user
+    const existing = await db.collection("bridge-setup-codes")
+        .where("createdBy", "==", ctx.auth!.uid)
+        .where("used", "==", false)
+        .get()
+    if (!existing.empty) {
+        const batch = db.batch()
+        existing.docs.forEach(doc => batch.update(doc.ref, { used: true }))
+        await batch.commit()
+    }
+
+    // Generate a new code
+    const code = generateCode()
+    const now = Date.now()
+    const expiresAt = now + 10 * 60 * 1000 // 10 minutes
+
+    await db.collection("bridge-setup-codes").doc(code).set({
+        createdBy: ctx.auth!.uid,
+        createdAt: now,
+        expiresAt,
+        used: false,
+    })
+
+    return NextResponse.json({ code, expiresAt })
+}, { role: 'band_leader' })
 
 // GET: Bridge redeems a setup code for credentials
 export async function GET(req: NextRequest) {
     try {
         // Rate limit redemption attempts to prevent brute-force
-        const limited = await checkRateLimit(req, 'api')
+        const limited = await checkRateLimit(req, 'bridgeSetup')
         if (limited) return limited
 
         const url = new URL(req.url)
         const code = url.searchParams.get("code")?.toUpperCase().trim()
 
-        if (!code || code.length !== 6) {
+        if (!code || code.length !== CODE_LENGTH) {
             return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Atomically check and mark as used in a single transaction
         // Prevents race condition where two requests both pass the check
         const codeRef = db.collection("bridge-setup-codes").doc(code)
 
+        let createdBy: string | undefined
         const redeemed = await db.runTransaction(async (tx) => {
             const snap = await tx.get(codeRef)
             if (!snap.exists) return { error: "Invalid code", status: 404 }
@@ -100,6 +99,8 @@ export async function GET(req: NextRequest) {
             const data = snap.data()!
             if (data.used) return { error: "Code already used", status: 410 }
             if (Date.now() > data.expiresAt) return { error: "Code expired", status: 410 }
+
+            createdBy = data.createdBy
 
             // Mark as used atomically
             tx.update(codeRef, { used: true, usedAt: Date.now() })
@@ -109,6 +110,34 @@ export async function GET(req: NextRequest) {
         if ("error" in redeemed) {
             return NextResponse.json({ error: redeemed.error }, { status: redeemed.status })
         }
+
+        // S02 — audit-log + admin email on successful redemption.
+        // Best-effort: failures here must never fail the redemption itself.
+        const redeemedAt = new Date()
+        const redeemerIp =
+            req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            req.headers.get("x-real-ip") ??
+            "unknown"
+        const redeemerUserAgent = req.headers.get("user-agent") ?? "unknown"
+
+        await db
+            .collection("bridge-redemptions")
+            .add({
+                code,
+                createdBy: createdBy ?? null,
+                redeemedAt,
+                redeemerIp,
+                redeemerUserAgent,
+                success: true,
+            })
+            .catch((err) => logger.error("bridge audit write failed:", err))
+
+        // Fire-and-forget: don't block the response on email delivery.
+        sendBridgeRedemptionAlert({ code, redeemedAt, redeemerIp, redeemerUserAgent })
+            .then((r) => {
+                if (!r.ok) logger.warn("bridge alert email:", r.reason)
+            })
+            .catch((err) => logger.error("bridge alert email threw:", err))
 
         // Build a minimal service account key from environment variables
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID

@@ -25,7 +25,7 @@ export function BatchActionBar({
     const allSelected = selectedCount === totalCount && totalCount > 0
 
     return (
-        <div className="sticky bottom-16 sm:bottom-20 md:bottom-0 z-30 bg-background/95 backdrop-blur border-t border-border px-4 py-3 flex items-center gap-2">
+        <div className="sticky bottom-16 sm:bottom-20 md:bottom-0 z-30 bg-background/95 backdrop-blur border-t border-brand/10 px-4 py-3 flex items-center gap-2">
             <span className="text-sm text-muted-foreground mr-auto">
                 {selectedCount} selected
             </span>

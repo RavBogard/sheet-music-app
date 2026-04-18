@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getUsageSummaries } from "@/lib/song-usage"
-import { logger } from "@/lib/logger"
 
 /**
  * GET /api/library/usage?fileIds=abc,def,ghi
@@ -10,15 +9,12 @@ import { logger } from "@/lib/logger"
  * Returns song usage summaries keyed by fileId.
  * Used by the library page to show "Last: Jan 31 · 4×" badges.
  */
-export async function GET(request: NextRequest) {
-    try {
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(request, 'api')
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const fileIdsParam = request.nextUrl.searchParams.get('fileIds')
+        const fileIdsParam = ctx.req.nextUrl.searchParams.get('fileIds')
         if (!fileIdsParam) {
             return NextResponse.json({ error: 'fileIds parameter required' }, { status: 400 })
         }
@@ -53,8 +49,5 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json(result)
-    } catch (err) {
-        logger.error('[API] Library usage error:', err)
-        return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 })
     }
-}
+)

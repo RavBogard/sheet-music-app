@@ -1,41 +1,51 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { requireAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/library/search-content?q=bridge&q=modulation
- * 
+ *
  * Searches extracted chord/text data across the library.
  * Looks in library_index/chordData subcollections for matching content.
- * 
+ *
  * Returns matching file IDs with the context of where the match was found.
+ *
+ * S06 NOTE (wontfix in v4.3):
+ * Audit finding S06 flagged this route for "returning results across all
+ * users' libraries with no per-user filtering". In this app's single-
+ * congregation model, the library is an intentionally shared congregational
+ * asset — there is no per-user library scope. Every authenticated member is
+ * supposed to search the same catalog.
+ *
+ * Revisit if: (a) multi-congregation tenancy is introduced, or (b) a
+ * per-user / per-band-leader private library tier is added. At that point,
+ * filter results by ownerId / tenantId.
  */
-export async function GET(req: NextRequest) {
-    try {
-        await requireAuth(req)
-    } catch (response) {
-        return response as NextResponse
-    }
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
 
-    const limited = await checkRateLimit(req, 'api')
-    if (limited) return limited
+        const searchTerm = ctx.req.nextUrl.searchParams.get('q')?.trim()
+        if (!searchTerm || searchTerm.length < 2) {
+            return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 })
+        }
 
-    const searchTerm = req.nextUrl.searchParams.get('q')?.trim()
-    if (!searchTerm || searchTerm.length < 2) {
-        return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 })
-    }
-
-    try {
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
         const termLower = searchTerm.toLowerCase()
 
         // Use collectionGroup query to search all chordData across all files at once
         // This avoids the N+1 pattern of querying each file's subcollection individually
-        const chordGroupSnap = await db.collectionGroup('chordData').get()
+        const chordGroupSnap = await db.collectionGroup('chordData').limit(2000).get()
 
         // Build a map of fileId → file name for display
         const fileNameCache = new Map<string, string>()
@@ -107,10 +117,5 @@ export async function GET(req: NextRequest) {
             results,
             totalMatches: results.reduce((sum, r) => sum + r.matches.length, 0),
         })
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Search failed" },
-            { status: 500 }
-        )
     }
-}
+)

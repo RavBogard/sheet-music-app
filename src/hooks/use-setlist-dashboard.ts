@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useOffline } from "@/hooks/use-offline"
 import { toast } from "sonner"
-import { getNextFriday, getNextSaturday, getFullServiceContext } from "@/lib/liturgical-calendar"
+import { getNextFriday, getNextSaturday, getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
+import { useCustomTemplates } from "@/lib/template-firebase"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
@@ -16,22 +17,44 @@ export interface UseSetlistDashboardProps {
     onBack?: () => void
     onSelect?: (setlist: Setlist) => void
     onCreateNew?: () => void
+    /** @deprecated Use initialSetlists instead */
     initialPersonalSetlists?: Setlist[]
+    /** @deprecated Use initialSetlists instead */
     initialPublicSetlists?: Setlist[]
+    initialSetlists?: Setlist[]
+    serverIsBandLeader?: boolean
+    serverIsMember?: boolean
+    serverIsAdmin?: boolean
+    serverUid?: string | null
 }
 
 export function useSetlistDashboard({
     onBack, onSelect, onCreateNew,
     initialPersonalSetlists = [],
-    initialPublicSetlists = []
+    initialPublicSetlists = [],
+    initialSetlists,
+    serverIsBandLeader = false,
+    serverIsMember = false,
+    serverIsAdmin = false,
+    serverUid = null
 }: UseSetlistDashboardProps) {
     const router = useRouter()
-    const { user, signIn, isMember, isBandLeader } = useAuth()
+    const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader, isAdmin: authIsAdmin } = useAuth()
+
+    // Use server-provided values for initial render to prevent hydration flashes
+    const isMember = authIsMember || serverIsMember
+    const isBandLeader = authIsBandLeader || serverIsBandLeader
+    const isAdmin = authIsAdmin || serverIsAdmin
+    const effectiveUid = authUser?.uid || serverUid
+    // We construct a minimal user object if auth hasn't loaded but we have a server user
+    const user = authUser || (serverUid ? { uid: serverUid, displayName: null } : null)
+
     const { downloadSetlist, isDownloading } = useOffline()
 
-    const [personalSetlists, setPersonalSetlists] = useState<Setlist[]>(initialPersonalSetlists)
-    const [publicSetlists, setPublicSetlists] = useState<Setlist[]>(initialPublicSetlists)
-    const [loading, setLoading] = useState(initialPersonalSetlists.length === 0 && initialPublicSetlists.length === 0)
+    // v4.0: single unified setlist list (no personal/public split)
+    const mergedInitial = initialSetlists || [...initialPublicSetlists, ...initialPersonalSetlists]
+    const [setlists, setSetlists] = useState<Setlist[]>(mergedInitial)
+    const [loading, setLoading] = useState(mergedInitial.length === 0)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar' | 'matrix'>('list')
@@ -53,42 +76,34 @@ export function useSetlistDashboard({
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user?.uid, user?.displayName])
 
-    // Subscribe to personal setlists
+    // Subscribe to all setlists (v4.0: single unified list).
+    // Gated on authUser?.uid: subscribing before Firebase JS finishes hydrating
+    // auth fires a Firestore read with no credential, which Firestore answers
+    // with "Missing or insufficient permissions" — a noisy false-alarm error
+    // during the pre-sign-in page load.
     useEffect(() => {
-        if (!user?.uid || !setlistService) {
+        if (!setlistService || !authUser?.uid) {
             setLoading(false)
             return
         }
         setLoading(true)
         setError(null)
-        const unsubscribe = setlistService.subscribeToPersonalSetlists(
-            (data) => { setPersonalSetlists(data); setLoading(false) },
+        const unsubscribe = setlistService.subscribeToAllSetlists(
+            (data) => { setSetlists(data); setLoading(false) },
             (err) => {
-                logger.error("Personal setlist subscription error:", err)
-                setError("Failed to load your personal setlists. Please check your connection.")
+                logger.error("Setlist subscription error:", err)
+                setError("Failed to load setlists. Please check your connection.")
                 setLoading(false)
             }
         )
         return () => unsubscribe()
-    }, [setlistService, user?.uid])
-
-    // Subscribe to public setlists
-    useEffect(() => {
-        if (!setlistService) return
-        const unsubscribe = setlistService.subscribeToPublicSetlists(
-            (data) => setPublicSetlists(data),
-            (err) => logger.error("Public setlist subscription error:", err)
-        )
-        return () => unsubscribe()
-    }, [setlistService])
-
-    // Force 'public' tab if guest
-    useEffect(() => {
-        if (!user?.uid) setActiveTab('public')
-    }, [user?.uid])
+    }, [setlistService, authUser?.uid])
 
     // Load library in background
     useLibrary()
+
+    // Load custom templates from Firestore (overrides hardcoded defaults)
+    const { overrides: customTemplates } = useCustomTemplates()
 
     // Handlers
     const handleSelect = (setlist: Setlist) => {
@@ -96,13 +111,13 @@ export function useSetlistDashboard({
         if (onSelect) {
             onSelect(setlist)
         } else {
-            router.push(`/perform/setlist/${setlist.id}`)
+            router.push(`/setlists/${setlist.id}`)
         }
     }
 
     const handleDeleteClick = (setlist: Setlist, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (setlist.isPublic && setlist.ownerId !== user?.uid) {
+        if (setlist.ownerId !== user?.uid && !isAdmin && !isBandLeader) {
             toast.error("You can only delete setlists you created")
             return
         }
@@ -113,7 +128,7 @@ export function useSetlistDashboard({
     const confirmDelete = async () => {
         if (!setlistService || !setlistToDelete) return
         try {
-            await setlistService.deleteSetlist(setlistToDelete.id, setlistToDelete.isPublic || false)
+            await setlistService.deleteSetlist(setlistToDelete.id)
             toast.success("Setlist deleted")
         } catch {
             toast.error("Failed to delete setlist")
@@ -131,9 +146,8 @@ export function useSetlistDashboard({
     const confirmDuplicate = async () => {
         if (!setlistService || !user || !setlistToDuplicate) return
         try {
-            await setlistService.copyToPersonal(setlistToDuplicate.id, setlistToDuplicate)
+            await setlistService.duplicateSetlist(setlistToDuplicate.id, setlistToDuplicate)
             toast.success("Setlist duplicated successfully!")
-            setActiveTab('personal')
         } catch {
             toast.error("Failed to duplicate setlist.")
         }
@@ -146,8 +160,7 @@ export function useSetlistDashboard({
         if (!setlistService || !user) return
         const toastId = toast.loading("Creating next week’s setlist…")
         try {
-            const currentSetlist = { ...setlist, date: setlist.eventDate } as unknown as Parameters<typeof setlistService.cloneForNextWeek>[0]
-            const newId = await setlistService.cloneForNextWeek(currentSetlist)
+            const newId = await setlistService.cloneForNextWeek(setlist)
             toast.success("Cloned for next week!", { id: toastId })
             router.push(`/setlists/${newId}`)
         } catch {
@@ -167,79 +180,119 @@ export function useSetlistDashboard({
         }
     }
 
+    const [transferring, setTransferring] = useState(false)
+    const isMountedRef = useRef(true)
+    useEffect(() => { return () => { isMountedRef.current = false } }, [])
+
     const handleTransfer = async () => {
         if (!selectedSetlistForTransfer || !transferEmail) return
+        setTransferring(true)
         try {
             const res = await apiFetch('/api/setlist/transfer', {
                 method: 'POST',
                 body: JSON.stringify({ setlistId: selectedSetlistForTransfer.id, newOwnerEmail: transferEmail })
             })
             if (!res.ok) throw new Error(await res.text())
+            if (!isMountedRef.current) return
             toast.success("Transfer Successful!")
             setShowTransferDialog(false)
             setTransferEmail("")
             setSelectedSetlistForTransfer(null)
         } catch (err: unknown) {
+            if (!isMountedRef.current) return
             toast.error(`Transfer Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+        } finally {
+            if (isMountedRef.current) setTransferring(false)
         }
     }
 
     const handleCreateFromCalendar = async (date: Date, type?: 'shabbat_morning') => {
         if (!setlistService || !user) return
+
+        // Determine template type: explicit type, Saturday → shabbat_morning, Friday → friday_night
+        const templateType = type
+            || (date.getDay() === 6 ? 'shabbat_morning' : undefined)
+            || (date.getDay() === 5 ? 'friday_night' : undefined)
+
+        // If we have a matching template, build a full setlist from it (like "From Template")
+        if (templateType) {
+            const template = getTemplate(templateType, customTemplates)
+            if (template) {
+                let toastId: string | number | undefined
+                try {
+                    toastId = toast.loading('Building setlist from template...')
+                    const context = await getFullServiceContext(date)
+                    context.type = templateType as ServiceType
+                    const { allFiles } = useLibraryStore.getState()
+                    const tracks = buildSetlistFromTemplate(template, allFiles, context)
+                    const name = generateSetlistName(context)
+
+                    const id = await setlistService.createSetlist(name, tracks, {
+                        eventDate: date.toISOString(),
+                        templateType: templateType as Setlist['templateType'],
+                        isTemplate: false,
+                    })
+
+                    const matched = tracks.filter(t => t.fileId).length
+                    const total = tracks.filter(t => t.type === 'song').length
+                    toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: toastId })
+
+                    router.push(`/setlists/${id}`)
+                    return
+                } catch (err: unknown) {
+                    toast.error("Failed to create setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: toastId })
+                    return
+                }
+            }
+        }
+
+        // Fallback: no matching template, create blank setlist
         const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-        const name = (type === 'shabbat_morning' || date.getDay() === 6)
-            ? `Shabbat Morning ${formattedDate}`
-            : 'New Setlist'
+        const name = 'New Setlist — ' + formattedDate
         try {
-            const id = await setlistService.createSetlist(name, [], true, {
+            const id = await setlistService.createSetlist(name, [], {
                 eventDate: date.toISOString(),
-                templateType: type || undefined
             })
-            handleSelect({
-                id, name, tracks: [], trackCount: 0,
-                date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                eventDate: date.toISOString(), ownerId: user.uid, isPublic: false
-            })
+            router.push(`/setlists/${id}`)
         } catch {
             toast.error("Failed to create setlist")
         }
     }
 
-    const handleCreateFromTemplate = async (templateType: 'friday_night' | 'shabbat_morning') => {
+    const handleCreateFromTemplate = async (templateType: string) => {
         if (!setlistService || !user) return
 
-        const targetDate = templateType === 'friday_night' ? getNextFriday() : getNextSaturday()
-        const template = getTemplate(templateType)
+        const isFriday = templateType.includes('friday') || templateType === 'shir_shabbat'
+        const targetDate = isFriday ? getNextFriday() : getNextSaturday()
+        const template = getTemplate(templateType, customTemplates)
         if (!template) return
 
+        let templateToastId: string | number | undefined
         try {
-            toast.loading('Building setlist from template...')
+            templateToastId = toast.loading('Building setlist from template...')
             const context = await getFullServiceContext(targetDate)
-            context.type = templateType
+            context.type = templateType as ServiceType
             const { allFiles } = useLibraryStore.getState()
             const tracks = buildSetlistFromTemplate(template, allFiles, context)
             const name = generateSetlistName(context)
 
-            const id = await setlistService.createSetlist(name, tracks, true, {
+            const id = await setlistService.createSetlist(name, tracks, {
                 eventDate: targetDate.toISOString(),
-                templateType,
+                templateType: templateType as Setlist['templateType'],
                 isTemplate: false,
             })
 
-            toast.dismiss()
-
             const matched = tracks.filter(t => t.fileId).length
             const total = tracks.filter(t => t.type === 'song').length
-            toast.success(`Created "${name}" — ${matched}/${total} songs matched`)
+            toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: templateToastId })
 
             handleSelect({
                 id, name, tracks, trackCount: tracks.length,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-                eventDate: targetDate.toISOString(), ownerId: user.uid, isPublic: false,
+                eventDate: targetDate.toISOString(), ownerId: user.uid,
             })
         } catch (err: unknown) {
-            toast.dismiss()
-            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"))
+            toast.error("Failed to create template setlist: " + (err instanceof Error ? err.message : "Unknown"), { id: templateToastId })
         }
     }
 
@@ -251,16 +304,16 @@ export function useSetlistDashboard({
         }
     }
 
-    // Derived data
-    const allSetlists = activeTab === 'personal' ? personalSetlists : publicSetlists
+    // Derived data (v4.0: single list, no tab switching)
+    const allSetlists = setlists
 
     const availableRabbis = useMemo(() => {
         const rabbis = new Set<string>()
-            ;[...personalSetlists, ...publicSetlists].forEach(s => {
-                if (s.rabbi) rabbis.add(s.rabbi)
-            })
+        setlists.forEach(s => {
+            if (s.rabbi) rabbis.add(s.rabbi)
+        })
         return Array.from(rabbis).sort()
-    }, [personalSetlists, publicSetlists])
+    }, [setlists])
 
     const displayedSetlists = useMemo(() => {
         let filtered = allSetlists
@@ -295,15 +348,26 @@ export function useSetlistDashboard({
         .filter(s => { const d = getDate(s); return d && d >= today })
         .sort((a, b) => getDate(a)!.getTime() - getDate(b)!.getTime())
 
-    const pastOrNoDate = displayedSetlists
-        .filter(s => { const d = getDate(s); return !d || d < today })
+    // Past list: dated-past sorted DESC (most recent first — usually the
+    // clone source for "next week"); null-dated trail in stable/original order.
+    const pastOrNoDate = (() => {
+        const dated: Setlist[] = []
+        const undated: Setlist[] = []
+        for (const s of displayedSetlists) {
+            const d = getDate(s)
+            if (!d) undated.push(s)
+            else if (d < today) dated.push(s)
+        }
+        dated.sort((a, b) => getDate(b)!.getTime() - getDate(a)!.getTime())
+        return [...dated, ...undated]
+    })()
 
     const placeholders: { date: Date }[] = []
-    if (user && activeTab === 'public') {
+    if (user) {
         for (let i = 0; i < 7; i++) {
             const d = new Date(today)
             d.setDate(today.getDate() + i)
-            const exists = publicSetlists.some(s => { const sd = getDate(s); return sd && sd.toDateString() === d.toDateString() })
+            const exists = setlists.some(s => { const sd = getDate(s); return sd && sd.toDateString() === d.toDateString() })
             if (!exists && d.getDay() === 6) {
                 placeholders.push({ date: d })
             }
@@ -313,7 +377,7 @@ export function useSetlistDashboard({
     const hasUpcoming = upcoming.length > 0 || placeholders.length > 0
 
     return {
-        router, user, signIn, isMember, isBandLeader, onBack, onCreateNew,
+        router, user, signIn, isMember, isBandLeader, isAdmin, onBack, onCreateNew,
         loading, error, activeTab, setActiveTab, view, setView,
         searchQuery, setSearchQuery, rabbiFilter, setRabbiFilter, navigatingTo,
         deleteConfirmOpen, setDeleteConfirmOpen, setlistToDelete,
@@ -324,7 +388,7 @@ export function useSetlistDashboard({
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleTransfer, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading

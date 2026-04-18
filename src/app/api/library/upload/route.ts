@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { levenshteinDistance } from "@/lib/string-utils"
+import { processMuseScoreFile } from "@/lib/musescore-converter"
 
 // Max file size: 25MB
 const MAX_FILE_SIZE = 25 * 1024 * 1024
@@ -17,11 +18,13 @@ const ALLOWED_TYPES: Record<string, string> = {
     'text/xml': '.xml',
     'application/vnd.recordare.musicxml+xml': '.musicxml',
     'application/vnd.recordare.musicxml': '.musicxml',
+    'application/x-musescore': '.mscz',
+    'application/x-musescore+xml': '.mscx',
 }
 
 /**
  * POST /api/library/upload
- * 
+ *
  * Upload a file directly to the library.
  * Accepts multipart/form-data with:
  *   - file: The PDF or MusicXML file
@@ -29,20 +32,35 @@ const ALLOWED_TYPES: Record<string, string> = {
  *   - key: (optional) Musical key
  *   - bpm: (optional) Tempo
  *   - tags: (optional) Comma-separated tags
- * 
- * Requires 'band_leader' role or above.
+ *
+ * Requires canUpload flag on user profile.
  */
-export async function POST(req: NextRequest) {
-    try {
+export const POST = createApiHandler(
+    async (ctx) => {
         // Rate limit: 10 uploads/min
-        const limited = await checkRateLimit(req, 'upload')
+        const limited = await checkRateLimit(ctx.req, 'upload')
         if (limited) return limited
 
-        // Auth check: leaders and admins can upload
-        const auth = await withAuth(req, 'band_leader')
-        if (auth instanceof NextResponse) return auth
+        // Check canUpload flag on user profile
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
+        const db = getFirestore()
 
-        const formData = await req.formData()
+        const userDoc = await db.collection('users').doc(ctx.auth.uid).get()
+        const isPrivilegedRole = ctx.auth.isAdmin || ctx.auth.isBandLeader || ctx.auth.isMusician
+        
+        if (!isPrivilegedRole && (!userDoc.exists || !userDoc.data()?.canUpload)) {
+            return NextResponse.json(
+                { error: "Upload permission required. Ask an admin to enable uploads for your account." },
+                { status: 403 }
+            )
+        }
+
+        const formData = await ctx.req.formData()
         const file = formData.get('file') as File | null
 
         if (!file) {
@@ -51,9 +69,9 @@ export async function POST(req: NextRequest) {
 
         // Validate file type
         const mimeType = file.type || 'application/octet-stream'
-        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl)$/i)) {
+        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx)$/i)) {
             return NextResponse.json(
-                { error: "Only PDF and MusicXML files are supported" },
+                { error: "Only PDF, MusicXML, and MuseScore files are supported" },
                 { status: 400 }
             )
         }
@@ -67,37 +85,64 @@ export async function POST(req: NextRequest) {
         }
 
         // Read file buffer
-        const buffer = Buffer.from(await file.arrayBuffer())
+        let buffer = Buffer.from(await file.arrayBuffer())
 
         // Generate a unique ID (prefixed to distinguish from Drive files)
         const fileId = `upload-${crypto.randomUUID()}`
+
+        // Detect MuseScore files by extension
+        const msExt = file.name.match(/\.(mscz|mscx)$/i)?.[1]?.toLowerCase() as 'mscz' | 'mscx' | undefined
+        let originalStorageUrl: string | undefined
+        let sourceFormat: string | undefined
+
+        if (msExt) {
+            logger.info(`[Upload] Converting ${file.name} from ${msExt} to MusicXML`)
+            try {
+                const { musicXml, originalContent } = await processMuseScoreFile(buffer, msExt)
+
+                // Store the original MuseScore file for archival
+                const originalPath = `library/originals/${fileId}.${msExt}`
+                await uploadToStorage(`originals/${fileId}.${msExt}`, originalContent, 'application/octet-stream')
+                originalStorageUrl = originalPath
+                sourceFormat = msExt
+
+                // Replace buffer with converted MusicXML
+                buffer = Buffer.from(musicXml, 'utf-8')
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Unknown error'
+                return NextResponse.json(
+                    { error: `Failed to convert MuseScore file: ${message}` },
+                    { status: 422 }
+                )
+            }
+        }
 
         // Extract metadata from form
         const rawTitle = formData.get('title') as string | null
         const title = rawTitle?.trim() || file.name.replace(/\.[^/.]+$/, '')
         const key = (formData.get('key') as string | null)?.trim() || undefined
-        const bpm = formData.get('bpm') ? Number(formData.get('bpm')) : undefined
+        const bpmRaw = formData.get('bpm') ? Number(formData.get('bpm')) : undefined
+        const bpm = bpmRaw != null && !isNaN(bpmRaw) && bpmRaw > 0 ? bpmRaw : undefined
         const tagsRaw = (formData.get('tags') as string | null)?.trim()
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
 
         // Determine content type for storage
-        const contentType = mimeType.includes('pdf') ? 'application/pdf'
-            : mimeType.includes('xml') ? 'application/xml'
-                : mimeType
+        // MuseScore files are already converted to MusicXML at this point
+        const contentType = msExt ? 'application/xml'
+            : mimeType.includes('pdf') ? 'application/pdf'
+                : (mimeType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)) ? 'application/xml'
+                    : mimeType
 
-        initAdmin()
-        const db = getFirestore()
-
-        // 1. Duplicate Prevention Check — query by nameLower prefix to avoid scanning all docs
+        // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs
         const nameLower = title.toLowerCase()
         const exactMatch = await db.collection('library_index')
-            .where('status', '==', 'active')
             .where('nameLower', '==', nameLower)
-            .limit(1)
+            .limit(5)
             .get()
 
-        if (!exactMatch.empty) {
-            const existingName = exactMatch.docs[0].data().name
+        const activeExactMatch = exactMatch.docs.find(d => d.data().status === 'active')
+        if (activeExactMatch) {
+            const existingName = activeExactMatch.data().name
             return NextResponse.json({ error: `A chart with the same name ("${existingName}") already exists.` }, { status: 409 })
         }
 
@@ -106,15 +151,16 @@ export async function POST(req: NextRequest) {
         if (prefix.length >= 3) {
             const prefixEnd = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
             const similarSnap = await db.collection('library_index')
-                .where('status', '==', 'active')
                 .where('nameLower', '>=', prefix)
                 .where('nameLower', '<', prefixEnd)
-                .select('name')
+                .select('name', 'status')
                 .limit(20)
                 .get()
 
             const normalizedNewTitle = nameLower.replace(/[^a-z0-9]/g, '')
             for (const doc of similarSnap.docs) {
+                if (doc.data().status !== 'active') continue;
+                
                 const existingName = doc.data().name as string
                 const normalizedExisting = existingName.toLowerCase().replace(/[^a-z0-9]/g, '')
                 const distance = levenshteinDistance(normalizedNewTitle, normalizedExisting)
@@ -137,8 +183,8 @@ export async function POST(req: NextRequest) {
             mimeType: contentType,
             fileSize: file.size,
             source: 'upload' as const,
-            uploadedBy: auth.uid,
-            uploadedByEmail: auth.email || 'unknown',
+            uploadedBy: ctx.auth.uid,
+            uploadedByEmail: ctx.auth.email || 'unknown',
             uploadedAt: new Date().toISOString(),
             modifiedTime: new Date().toISOString(),
             // Optional musical metadata
@@ -147,13 +193,16 @@ export async function POST(req: NextRequest) {
             ...(tags.length > 0 && { tags }),
             // Storage reference
             storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : '.xml'}`,
+            // MuseScore-specific fields
+            ...(originalStorageUrl && { originalStorageUrl }),
+            ...(sourceFormat && { sourceFormat }),
             // Status
             status: 'active',
         }
 
         await db.collection('library_index').doc(fileId).set(indexEntry)
 
-        logger.info(`[Upload] ✅ ${title} uploaded successfully as ${fileId}`)
+        logger.info(`[Upload] ${title} uploaded successfully as ${fileId}`)
 
         // Purge CDN and Next.js data caches so the next library fetch sees the upload
         revalidatePath('/api/library/list')
@@ -164,13 +213,6 @@ export async function POST(req: NextRequest) {
             fileId,
             title,
             message: `"${title}" uploaded to library`
-        })
-
-    } catch (error: unknown) {
-        logger.error("[Upload] Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Upload failed" },
-            { status: 500 }
-        )
+        }, { status: 201 })
     }
-}
+)

@@ -1,0 +1,315 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, fireEvent } from "@testing-library/react"
+import { SetlistTrack } from "@/types/models"
+
+// Mock SmartScoreViewer before dynamic mock (so dynamic loader can resolve it)
+vi.mock("@/components/music/SmartScoreViewer", () => ({
+    SmartScoreViewer: ({ url }: { url: string }) => (
+        <div data-testid="smart-score-viewer" data-url={url}>MusicXML Viewer</div>
+    ),
+}))
+
+// Mock PDFViewer module
+vi.mock("@/components/music/PDFViewer", () => ({
+    PDFViewer: ({ url, trackName }: { url: string; trackName?: string }) => (
+        <div data-testid="pdf-viewer" data-url={url}>
+            {trackName}
+        </div>
+    ),
+}))
+
+// Mock next/dynamic to synchronously resolve the loader
+vi.mock("next/dynamic", () => ({
+    __esModule: true,
+    default: (loader: () => Promise<{ default?: unknown; [key: string]: unknown }>) => {
+        // Resolve the module synchronously for testing
+        let resolved: unknown = null
+        loader().then((mod: { default?: unknown; [key: string]: unknown }) => {
+            resolved = mod.default || mod
+        })
+        // In test environment, promises resolve synchronously in the mock chain
+        // Return a wrapper that renders the resolved component
+        const DynamicWrapper = (props: Record<string, unknown>) => {
+            if (!resolved) return null
+            const Component = resolved as React.ComponentType<Record<string, unknown>>
+            return <Component {...props} />
+        }
+        DynamicWrapper.displayName = "DynamicWrapper"
+        return DynamicWrapper
+    },
+}))
+
+// Mock QuickMonitorPanel as stub
+vi.mock("@/components/monitor/QuickMonitorPanel", () => ({
+    QuickMonitorPanel: () => <div data-testid="monitor-panel">Monitor</div>,
+}))
+
+// Mock cn utility
+vi.mock("@/lib/utils", () => ({
+    cn: (...args: (string | boolean | undefined | null)[]) =>
+        args.filter(Boolean).join(" "),
+}))
+
+// Mock the music store used by PDFOverlay and PerformanceToolbar
+const mockStoreState = {
+    setQueue: vi.fn(),
+    queueIndex: 0,
+    playbackQueue: [],
+    aiState: { isEnabled: false, pageData: {}, scanningPages: [], error: null },
+    setAiEnabled: vi.fn(),
+    capoFret: null,
+    transposition: 0,
+    zoom: 1,
+    setZoom: vi.fn(),
+    currentSetlistId: null,
+    jumpToSong: vi.fn(),
+}
+vi.mock("@/lib/store", () => ({
+    useMusicStore: Object.assign(
+        (selectorOrUndefined?: (s: Record<string, unknown>) => unknown) => {
+            if (typeof selectorOrUndefined === "function") return selectorOrUndefined(mockStoreState)
+            return mockStoreState
+        },
+        { getState: () => mockStoreState }
+    ),
+    QueueItem: {},
+}))
+
+// Mock hooks used by PerformanceToolbar
+vi.mock("@/hooks/use-monitor-access", () => ({ useMonitorAccess: () => ({ hasAccess: false }) }))
+vi.mock("@/hooks/use-monitor-connection", () => ({ useMonitorConnection: () => {} }))
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null, isAdmin: false, isBandLeader: false }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ id: 'test-setlist' }) }))
+vi.mock("@/lib/live-session-firebase", () => ({ subscribeToLiveSessions: () => () => {} }))
+
+// Mock sub-components of PerformanceToolbar
+vi.mock("@/components/music/TransposerMenu", () => ({
+    TransposerMenu: () => <div>Transposer</div>,
+}))
+vi.mock("@/components/music/ChordEditBar", () => ({
+    ChordEditBar: () => null,
+}))
+vi.mock("@/components/performance/MetronomeControl", () => ({
+    MetronomeControl: () => <div>Metronome</div>,
+}))
+vi.mock("@/components/performance/SongNavigation", () => ({
+    SongNavigation: () => <div data-testid="song-nav">Nav</div>,
+}))
+vi.mock("@/components/performance/SetlistDrawer", () => ({
+    SetlistDrawer: () => <div>Drawer</div>,
+}))
+
+// Mock PrintModal which is rendered conditionally
+vi.mock("@/components/setlist/PrintModal", () => ({
+    PrintModal: () => <div data-testid="print-modal">Print Modal</div>,
+}))
+
+import { PDFOverlay } from "../PDFOverlay"
+
+const songA: SetlistTrack = {
+    id: "song-a",
+    title: "Ma Tovu",
+    key: "D",
+    bpm: 120,
+    type: "song",
+    fileId: "file-a",
+}
+
+const prayer: SetlistTrack = {
+    id: "prayer-1",
+    title: "Opening Prayer",
+    type: "prayer",
+}
+
+const songB: SetlistTrack = {
+    id: "song-b",
+    title: "Shalom Aleichem",
+    key: "Am",
+    bpm: 100,
+    type: "song",
+    fileId: "file-b",
+}
+
+const header: SetlistTrack = {
+    id: "header-1",
+    title: "Kabbalat Shabbat",
+    type: "header",
+}
+
+const songNoFile: SetlistTrack = {
+    id: "song-c",
+    title: "Untitled Song",
+    type: "song",
+    // No fileId -- should be skipped by prev/next
+}
+
+const allTracks = [songA, prayer, songB, header, songNoFile]
+
+describe("PDFOverlay", () => {
+    const defaultProps = {
+        track: songA,
+        tracks: allTracks,
+        currentIndex: 0,
+        onClose: vi.fn(),
+        onNavigate: vi.fn(),
+        isPublicView: false,
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it("renders PDFViewer with correct URL", () => {
+        render(<PDFOverlay {...defaultProps} />)
+        const viewer = screen.getByTestId("pdf-viewer")
+        expect(viewer.getAttribute("data-url")).toBe("/api/drive/file/file-a")
+    })
+
+    it("renders the full PerformanceToolbar", () => {
+        render(<PDFOverlay {...defaultProps} />)
+        // PerformanceToolbar renders mobile + desktop layouts (both visible in jsdom)
+        expect(screen.getAllByTestId("song-nav").length).toBeGreaterThanOrEqual(1)
+    })
+
+    it("renders Exit button from PerformanceToolbar", () => {
+        render(<PDFOverlay {...defaultProps} />)
+        // Mobile + desktop layouts each render an Exit button
+        expect(screen.getAllByText("Exit").length).toBeGreaterThanOrEqual(1)
+    })
+
+    describe("queue building file type detection", () => {
+        it('assigns type "pdf" for a regular file', () => {
+            render(<PDFOverlay {...defaultProps} track={songA} tracks={[songA]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("pdf")
+        })
+
+        it('assigns type "musicxml" for a track with db- prefix fileId', () => {
+            const dbTrack: SetlistTrack = {
+                id: "mxml-1",
+                title: "DB MusicXML",
+                type: "song",
+                fileId: "db-abc123",
+            }
+            render(<PDFOverlay {...defaultProps} track={dbTrack} tracks={[dbTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .musicxml extension', () => {
+            const mxmlTrack: SetlistTrack = {
+                id: "mxml-2",
+                title: "MusicXML File",
+                type: "song",
+                fileId: "song.musicxml",
+            }
+            render(<PDFOverlay {...defaultProps} track={mxmlTrack} tracks={[mxmlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .xml extension', () => {
+            const xmlTrack: SetlistTrack = {
+                id: "mxml-3",
+                title: "XML File",
+                type: "song",
+                fileId: "song.xml",
+            }
+            render(<PDFOverlay {...defaultProps} track={xmlTrack} tracks={[xmlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+
+        it('assigns type "musicxml" for a track with .mxl extension', () => {
+            const mxlTrack: SetlistTrack = {
+                id: "mxml-4",
+                title: "MXL File",
+                type: "song",
+                fileId: "song.mxl",
+            }
+            render(<PDFOverlay {...defaultProps} track={mxlTrack} tracks={[mxlTrack]} />)
+            expect(mockStoreState.setQueue).toHaveBeenCalled()
+            const queueItems = mockStoreState.setQueue.mock.calls[0][0]
+            expect(queueItems[0].type).toBe("musicxml")
+        })
+    })
+
+    describe("file-type branching", () => {
+        const songMxml: SetlistTrack = {
+            id: "song-mxml",
+            title: "Test Score",
+            type: "song",
+            fileId: "db-test123",
+        }
+
+        it("renders SmartScoreViewer for musicxml queue items", () => {
+            mockStoreState.playbackQueue = [
+                { name: "Test Score", fileId: "db-test123", type: "musicxml", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={songMxml}
+                    tracks={[songMxml]}
+                    currentIndex={0}
+                />
+            )
+            expect(screen.getByTestId("smart-score-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("renders PDFViewer for pdf queue items", () => {
+            mockStoreState.playbackQueue = [
+                { name: "Ma Tovu", fileId: "file-a", type: "pdf", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={songA}
+                    tracks={[songA]}
+                    currentIndex={0}
+                />
+            )
+            expect(screen.getByTestId("pdf-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("smart-score-viewer")).toBeNull()
+        })
+
+        it("does not render SmartScoreViewer for pdf queue items", () => {
+            mockStoreState.playbackQueue = [
+                { name: "Ma Tovu", fileId: "file-a", type: "pdf", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={songA}
+                    tracks={[songA]}
+                    currentIndex={0}
+                />
+            )
+            expect(screen.queryByTestId("smart-score-viewer")).toBeNull()
+        })
+
+        it("does not render PDFViewer for musicxml queue items", () => {
+            mockStoreState.playbackQueue = [
+                { name: "Test Score", fileId: "db-test123", type: "musicxml", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={songMxml}
+                    tracks={[songMxml]}
+                    currentIndex={0}
+                />
+            )
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+    })
+})

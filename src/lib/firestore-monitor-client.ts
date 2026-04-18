@@ -34,16 +34,33 @@ export interface FirestoreMonitorClientOptions {
 // into at most 1 command per 50ms per parameter
 const COMMAND_THROTTLE_MS = 50
 
+// Snapshot debounce: coalesce rapid bridge writes into at most
+// 1 store update per 150ms (first snapshot fires immediately)
+const SNAPSHOT_DEBOUNCE_MS = 150
+
 interface ThrottledCommand {
     timer: ReturnType<typeof setTimeout>
     data: Record<string, unknown>
 }
+
+// Retry constants for transient Firestore errors
+const ERROR_RETRY_DELAY_MS = 2000
+const MAX_CONSECUTIVE_ERRORS = 3
 
 export class FirestoreMonitorClient {
     private options: FirestoreMonitorClientOptions
     private stateUnsub: Unsubscribe | null = null
     private throttleMap = new Map<string, ThrottledCommand>()
     private _connected = false
+    private _snapshotCount = 0
+    private _lastSnapshotAt = 0
+    private _snapshotDebounceTimer: ReturnType<typeof setTimeout> | null = null
+    private _pendingSnapshot: MixerSnapshot | null = null
+    private _firstSnapshot = true
+    private _consecutiveErrors = 0
+    private _retryTimer: ReturnType<typeof setTimeout> | null = null
+    private _disconnected = false // v4.3 P6-B03: guards against post-teardown forwardSnapshot
+    private _lastCommandError = 0
 
     constructor(options: FirestoreMonitorClientOptions) {
         this.options = options
@@ -54,6 +71,7 @@ export class FirestoreMonitorClient {
      */
     connect(): void {
         this.options.onStatusChange("connecting")
+        this._firstSnapshot = true
 
         // Listen to the live mixer state document
         this.stateUnsub = onSnapshot(
@@ -68,43 +86,122 @@ export class FirestoreMonitorClient {
                 }
 
                 const data = snap.data() as MixerSnapshot & { updatedAt?: unknown }
-                
+
                 if (!this._connected) {
                     this._connected = true
                     this.options.onStatusChange("connected")
                 }
+                this._consecutiveErrors = 0
 
-                this.options.onStateUpdate({
-                    channels: data.channels || [],
-                    buses: data.buses || [],
-                    matrices: data.matrices || [],
+                // Firestore may return arrays as objects with numeric keys —
+                // ensure we always pass real arrays to the store
+                const toArray = <T>(val: unknown): T[] =>
+                    Array.isArray(val) ? val : val && typeof val === "object" ? Object.values(val) : []
+
+                const parsed: MixerSnapshot = {
+                    channels: toArray(data.channels),
+                    buses: toArray<Record<string, unknown>>(data.buses).map((b) => ({
+                        ...b,
+                        sends: toArray(b.sends),
+                    })) as MixerSnapshot["buses"],
+                    matrices: toArray(data.matrices),
                     config: data.config,
-                })
-
-                if (data.config) {
-                    this.options.onConfigUpdate(data.config)
                 }
+
+                this._snapshotCount++
+
+                // First snapshot fires immediately so UI populates instantly
+                if (this._firstSnapshot) {
+                    this._firstSnapshot = false
+                    logger.debug("[MonitorFS] First snapshot — forwarding immediately")
+                    this.forwardSnapshot(parsed)
+                    return
+                }
+
+                // Debounce subsequent snapshots
+                logger.debug("[MonitorFS] Snapshot received (debouncing)")
+                this._pendingSnapshot = parsed
+                if (this._snapshotDebounceTimer) {
+                    clearTimeout(this._snapshotDebounceTimer)
+                }
+                this._snapshotDebounceTimer = setTimeout(() => {
+                    // v4.3 P6-B03: bail if teardown happened between schedule + fire
+                    if (this._disconnected) return
+                    if (this._pendingSnapshot) {
+                        this.forwardSnapshot(this._pendingSnapshot)
+                        this._pendingSnapshot = null
+                    }
+                    this._snapshotDebounceTimer = null
+                }, SNAPSHOT_DEBOUNCE_MS)
+
+                // Note: we intentionally do NOT call onConfigUpdate here.
+                // The dedicated config/monitor Firestore listener in useMonitorConnection
+                // handles config updates. Calling it here would reset defaultChannels
+                // on every bridge state push (since bridge config lacks that field).
             },
             (err) => {
-                logger.error("[MonitorFS] State listener error:", err.message)
-                this._connected = false
-                this.options.onStatusChange("error", err.message)
+                this._consecutiveErrors++
+                logger.error("[MonitorFS] State listener error (%d/%d):", this._consecutiveErrors, MAX_CONSECUTIVE_ERRORS, err.message)
+
+                if (this._consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    // Too many consecutive errors — surface to UI
+                    this._connected = false
+                    this.options.onStatusChange("error", err.message)
+                } else {
+                    // Transient error — retry after delay without flashing error UI
+                    logger.info("[MonitorFS] Retrying listener in %dms...", ERROR_RETRY_DELAY_MS)
+                    this._retryTimer = setTimeout(() => {
+                        this._retryTimer = null
+                        if (this.stateUnsub) {
+                            this.stateUnsub()
+                            this.stateUnsub = null
+                        }
+                        this.connect()
+                    }, ERROR_RETRY_DELAY_MS)
+                }
             }
         )
+    }
+
+    private forwardSnapshot(snapshot: MixerSnapshot): void {
+        // v4.3 P6-B03: guard against post-teardown forwarding. onSnapshot
+        // unsubscription is asynchronous in Firestore, so a snapshot
+        // callback can still fire briefly after disconnect().
+        if (this._disconnected) return
+        this._lastSnapshotAt = Date.now()
+        logger.debug("[MonitorFS] Snapshot forwarded to store (total: %d)", this._snapshotCount)
+        this.options.onStateUpdate(snapshot)
     }
 
     /**
      * Stop listening and clean up.
      */
     disconnect(): void {
+        this._disconnected = true
         if (this.stateUnsub) {
             this.stateUnsub()
             this.stateUnsub = null
         }
 
-        // Clear all throttled commands
+        // Clear retry timer
+        if (this._retryTimer) {
+            clearTimeout(this._retryTimer)
+            this._retryTimer = null
+        }
+        this._consecutiveErrors = 0
+
+        // Clear snapshot debounce timer
+        if (this._snapshotDebounceTimer) {
+            clearTimeout(this._snapshotDebounceTimer)
+            this._snapshotDebounceTimer = null
+        }
+        this._pendingSnapshot = null
+
+        // Flush any pending throttled commands before disconnecting
+        // This ensures the last fader position is always sent
         for (const [, throttled] of this.throttleMap) {
             clearTimeout(throttled.timer)
+            this.sendCommandImmediate(throttled.data).catch(() => {})
         }
         this.throttleMap.clear()
 
@@ -203,11 +300,24 @@ export class FirestoreMonitorClient {
                 createdAt: Date.now(),
             })
         } catch (err) {
+            this._lastCommandError = Date.now()
             logger.error("[MonitorFS] Command send failed:", (err as Error).message)
         }
     }
 
+    get lastCommandError(): number {
+        return this._lastCommandError
+    }
+
     get isConnected(): boolean {
         return this._connected
+    }
+
+    get snapshotCount(): number {
+        return this._snapshotCount
+    }
+
+    get lastSnapshotAt(): number {
+        return this._lastSnapshotAt
     }
 }

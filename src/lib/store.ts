@@ -26,7 +26,6 @@ export interface MusicState {
     fileUrl: string | null
     transposition: number // 0 = original key, +1 = semitone up
     zoom: number // 1 = 100%
-    currentVisiblePage: number // 1-indexed, tracks which PDF page is most visible
 
     // AI Transposer State
     aiState: {
@@ -54,10 +53,6 @@ export interface MusicState {
         isLooping: boolean
     }
 
-    // Live Follow-the-Leader Sync
-    syncedBroadcasterId: string | null
-    setSyncedBroadcasterId: (id: string | null) => void
-
     // Chord Edit Mode
     isEditingChords: boolean
     setEditingChords: (editing: boolean) => void
@@ -75,7 +70,6 @@ export interface MusicState {
     setFile: (url: string | null, type: FileType | null, returnPath?: string) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
-    setCurrentVisiblePage: (page: number) => void
 
     // AI Actions
     setAiEnabled: (enabled: boolean) => void
@@ -111,7 +105,6 @@ export const useMusicStore = create<MusicState>()(
             fileUrl: null,
             transposition: 0,
             zoom: 1,
-            currentVisiblePage: 1,
             aiXmlContent: null, // Init
 
             playbackQueue: [],
@@ -125,8 +118,6 @@ export const useMusicStore = create<MusicState>()(
                 pageData: {},
                 error: null
             },
-
-            syncedBroadcasterId: null,
 
             isEditingChords: false,
             pendingEditCount: 0,
@@ -150,11 +141,9 @@ export const useMusicStore = create<MusicState>()(
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null, // Clear AI content
-                syncedBroadcasterId: null // Clear sync on new file if manually changed
             }),
             setTransposition: (t: number) => set({ transposition: t }),
             setZoom: (z: number) => set({ zoom: z }),
-            setCurrentVisiblePage: (page: number) => set({ currentVisiblePage: page }),
 
             setQueue: (items, startIndex = 0, returnPath, setlistId) => {
                 // Apply per-track transposition from the first song
@@ -243,8 +232,6 @@ export const useMusicStore = create<MusicState>()(
 
             setCapoFret: (fret) => set({ capoFret: fret }),
 
-            setSyncedBroadcasterId: (id) => set({ syncedBroadcasterId: id }),
-
             setEditingChords: (editing) => set({ isEditingChords: editing, ...(editing ? {} : { pendingEditCount: 0 }) }),
             incrementPendingEdits: () => set(s => ({ pendingEditCount: s.pendingEditCount + 1 })),
             resetPendingEdits: () => set({ pendingEditCount: 0 }),
@@ -255,7 +242,6 @@ export const useMusicStore = create<MusicState>()(
                 fileUrl: null,
                 transposition: 0,
                 zoom: 1,
-                currentVisiblePage: 1,
                 aiXmlContent: null,
                 isEditingChords: false,
                 pendingEditCount: 0,
@@ -265,8 +251,7 @@ export const useMusicStore = create<MusicState>()(
                 queueIndex: -1,
                 returnPath: null,
                 currentSetlistId: null,
-                audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false },
-                syncedBroadcasterId: null
+                audio: { fileId: null, url: null, isPlaying: false, volume: 1, isLooping: false }
             })
         }),
         {

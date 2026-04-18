@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { Trash2, Minus, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { transposeChord } from "@/lib/music-math"
 import type { ChordOverlay } from "@/lib/chord-cache"
 
@@ -91,14 +92,14 @@ export function ChordEditPopover({
         <>
             {/* Backdrop to catch outside clicks */}
             <div
-                className="fixed inset-0 z-[199]"
+                className="fixed inset-0 z-popover"
                 onClick={onClose}
                 aria-hidden
             />
 
             <div
                 ref={popoverRef}
-                className="fixed z-[200] bg-zinc-900/95 backdrop-blur-md border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+                className="fixed z-toast bg-zinc-900/95 backdrop-blur-md border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
                 style={{ top: position.top, left: position.left, width: 210 }}
                 onClick={e => e.stopPropagation()}
             >
@@ -107,26 +108,29 @@ export function ChordEditPopover({
                     <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
                         Edit Chord
                     </span>
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => onDelete(chordIndex)}
-                        className="p-1 rounded hover:bg-red-500/15 text-zinc-600 hover:text-red-400 transition-colors"
+                        className="hover:bg-red-500/15 text-zinc-600 hover:text-red-400"
                         title="Delete chord"
                     >
                         <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Suggestion chips */}
                 {suggestions.length > 0 && (
                     <div className="flex gap-1 px-3 pt-2.5">
                         {suggestions.map(s => (
-                            <button
+                            <Button
                                 key={s}
+                                variant="ghost"
                                 onClick={() => onCorrect(chordIndex, s)}
-                                className="flex-1 min-h-[36px] bg-zinc-800 hover:bg-violet-600 active:bg-violet-700 rounded-lg text-sm font-mono font-bold text-white transition-colors"
+                                className="flex-1 min-h-[36px] h-auto bg-zinc-800 hover:bg-violet-600 active:bg-violet-700 rounded-lg font-mono font-bold text-white"
                             >
                                 {transposeChord(s, transposition, preferFlats)}
-                            </button>
+                            </Button>
                         ))}
                     </div>
                 )}
@@ -145,12 +149,14 @@ export function ChordEditPopover({
                         className="flex-1 min-w-0 bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-lg px-2.5 py-2 text-sm text-white font-mono placeholder:text-zinc-600 focus:outline-none transition-colors"
                         placeholder="Chord..."
                     />
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleSubmit}
-                        className="shrink-0 px-2.5 py-2 bg-violet-600 hover:bg-violet-500 active:bg-violet-700 rounded-lg text-white text-xs font-semibold transition-colors"
+                        className="shrink-0 px-2.5 bg-violet-600 hover:bg-violet-500 active:bg-violet-700 rounded-lg text-white text-xs font-semibold"
                     >
                         Set
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Size nudge controls */}
@@ -159,23 +165,27 @@ export function ChordEditPopover({
                         Size
                     </span>
                     <div className="flex items-center gap-1 ml-auto">
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => onResize(chordIndex, -0.3)}
-                            className="h-7 w-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white transition-colors"
+                            className="h-7 w-7 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
                             title="Narrower"
                         >
                             <Minus className="h-3 w-3" />
-                        </button>
+                        </Button>
                         <span className="text-[10px] text-zinc-500 w-12 text-center font-mono">
                             {(chord.sizeOverride?.wPct ?? chord.w ?? 0).toFixed(1)}%
                         </span>
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => onResize(chordIndex, 0.3)}
-                            className="h-7 w-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white transition-colors"
+                            className="h-7 w-7 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
                             title="Wider"
                         >
                             <Plus className="h-3 w-3" />
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { geminiFlash } from "@/lib/gemini"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 
@@ -28,15 +28,12 @@ Return ONLY valid JSON, no markdown fences:
 If no chords found, return: []
 `
 
-export async function POST(req: NextRequest) {
-    try {
-        const limited = await checkRateLimit(req, 'ai')
+export const POST = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'ai')
         if (limited) return limited
 
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const { image, existingChords } = await req.json() as {
+        const { image, existingChords } = await ctx.req.json() as {
             image: string // base64 JPEG
             existingChords: { text: string; x: number; y: number }[]
         }
@@ -76,7 +73,15 @@ export async function POST(req: NextRequest) {
             cleanJson = cleanJson.substring(start, end + 1)
         }
 
-        const chords = JSON.parse(cleanJson) as { text: string; x: number; y: number }[]
+        // v4.4 V-001: parse is user-influenced (Gemini output) — never trust shape.
+        let chords: { text: string; x: number; y: number }[]
+        try {
+            const parsed = JSON.parse(cleanJson)
+            chords = Array.isArray(parsed) ? parsed : []
+        } catch (err) {
+            logger.warn('[chord-validate] invalid JSON from model', err)
+            return NextResponse.json({ chords: [] })
+        }
 
         // Validate structure
         const validChords = chords.filter(c =>
@@ -86,11 +91,5 @@ export async function POST(req: NextRequest) {
         )
 
         return NextResponse.json({ chords: validChords })
-    } catch (error: unknown) {
-        logger.error("[AI Chord Validate] Error:", error)
-        return NextResponse.json(
-            { error: "Failed to validate chords" },
-            { status: 500 }
-        )
     }
-}
+)

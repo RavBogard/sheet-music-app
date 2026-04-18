@@ -19,26 +19,26 @@ export function PerformanceStatusStrip() {
     return (
         <div
             className="fixed top-3 right-3 z-40 pointer-events-none
-                material-thin !bg-black/40 rounded-full px-3 py-1.5
-                flex items-center gap-2 text-white/80 text-xs font-medium
-                select-none shadow-lg border-white/10"
+                material-thin !bg-background/40 rounded-full px-3 py-1.5
+                flex items-center gap-2 text-foreground/80 text-xs font-medium
+                select-none shadow-lg border-border/10"
             aria-label={`Song ${queueIndex + 1} of ${playbackQueue.length}: ${current.name}`}
             role="status"
             aria-live="polite"
         >
             <span className="tabular-nums opacity-60">{queueIndex + 1}/{playbackQueue.length}</span>
-            <span className="truncate max-w-[150px] sm:max-w-[200px] text-white/90">{current.name}</span>
+            <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] text-foreground/90">{current.name}</span>
 
             {(current.key || transposition !== 0 || (capoFret && capoFret > 0)) && (
                 <div className="flex items-center gap-1.5 ml-1 relative">
                     {current.key && (
-                        <span className={transposition !== 0 || capoFret ? "text-white/40 line-through" : "text-violet-300 font-semibold"}>
+                        <span className={transposition !== 0 || capoFret ? "text-foreground/40 line-through" : "text-brand font-semibold"}>
                             {current.key}
                         </span>
                     )}
 
                     {transposition !== 0 && (
-                        <span className="bg-purple-600/40 text-purple-200 border border-purple-500/50 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide flex items-center leading-none">
+                        <span className="bg-brand/40 text-foreground border border-brand/50 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide flex items-center leading-none">
                             {transposition > 0 ? '+' : ''}{transposition}
                         </span>
                     )}

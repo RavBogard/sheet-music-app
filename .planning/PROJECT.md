@@ -1,99 +1,31 @@
-# CentralReform.Live — Milestone: Outline & Stability
+# CentralReform.live: Architecture Refinement & UX Polish
 
 ## What This Is
-
-A web app for worship musicians at Central Reform Congregation to manage sheet music, build setlists for services, and perform live with real-time synchronization. Musicians use it to know what's coming in a service — which tune, what key, who leads — and optionally view the chart if they need it.
+A continuation of the Bulletproof Auth project. Having secured the foundation (Phases 1-5), this project focuses on edge-case UX friction, performance optimization, and rigorous UI/UX standards compliance based on the `ui-ux-pro-max` guidelines.
 
 ## Core Value
+Frictionless, instant access for all users (especially unauthenticated and pending users), blazing fast PDF loading, and zero UI layout shifts or authorization flashes.
 
-Musicians can glance at the app during a live service and instantly know what's happening: the tune, the key, and who's leading — without fumbling through paper or scrolling through charts.
+## Current Milestone: v1.2 Library Expansion
+
+**Goal:** Expand the repertoire by ingesting hundreds of supplemental PDF song files, parsing their metadata from file names, and adding visual distinctions for different collections in the UI.
+
+**Target features:**
+- Process local directory of PDFs to strip identical title pages (first page)
+- Extract "Title" and "Author" from semi-structured PDF file names via script/Regex
+- Upload cleaned PDFs and their metadata to Firebase Storage and Firestore
+- Distinguish the new PDFs with a "collection" schema (e.g., Core vs. Supplemental)
+- Add frontend UI support for displaying the collections distinctively in the Library and Search
 
 ## Requirements
 
-### Validated
-
-<!-- Shipped and confirmed valuable. -->
-
-- ✓ Firebase Authentication with Google OAuth — existing
-- ✓ Sheet music library with Google Drive integration — existing
-- ✓ Setlist creation, editing, and drag-drop reordering — existing
-- ✓ Track types: songs, headers (sections), readings, prayers, transitions, notes — existing
-- ✓ Per-track metadata: key, lead musician, performer, BPM, notes, transposition — existing
-- ✓ Real-time live performance mode with NOW/NEXT tracking — existing
-- ✓ PDF print pipeline with cover page outline, per-musician transposition — existing
-- ✓ Smart transposition with AI chord extraction — existing
-- ✓ Musician roster and assignment management — existing
-- ✓ Service-level metadata: rabbi, event date, service notes — existing
-- ✓ Role-based access control (admin, band_leader, musician, member) — existing
-- ✓ PWA with offline caching — existing
-- ✓ Email delivery via Resend for published setlists — existing
-- ✓ Background job processing via Inngest — existing
-- ✓ Real-time Firestore sync for collaborative features — existing
-- ✓ QR code login flow — existing
-
 ### Active
-
-<!-- Current scope. Building toward these. -->
-
-- [ ] Add tune/arrangement field to setlist tracks (e.g., "Klepper", "Moshav", "Shur")
-- [ ] Redesign live performance view to prioritize outline info (tune, key, lead) over chart display
-- [ ] Charts available as drill-down for unfamiliar pieces, not the default view
-- [ ] Redesign printed outline to be clean, scannable, music-stand-ready
-- [ ] Print outline includes tune name, key, lead, and section headers
-- [ ] Fix critical npm vulnerabilities (17 total, 1 critical in opensheetmusicdisplay)
-- [ ] Replace unsafe `as any` type assertions (~30+ instances) with proper types
-- [ ] Fix silent error swallowing (40+ `.catch(() => {})` patterns)
-- [ ] Add proper error handling for unhandled promise rejections
-- [ ] Fix incomplete request validation in API routes (publish, tasks, etc.)
-- [ ] Add Firebase Admin credential validation (fail fast on missing keys)
-- [ ] Fix N+1 chord extraction in print pipeline (batch-load chord data)
-- [ ] Comprehensive feature evaluation with improvement suggestions
-
-### Out of Scope
-
-<!-- Explicit boundaries. Includes reasoning to prevent re-adding. -->
-
-- Multi-user simultaneous editing — Complex CRDT/locking needed; not urgent for current team size
-- Offline sync conflict resolution — Partial offline works; full sync deferred
-- Mobile native app — PWA sufficient for now
-- Video/media attachments — PDF/audio covers current needs
-- Real-time chat during performance — Not how musicians communicate during a service
-- Backup/restore UI — Can be addressed in a future milestone
-
-## Context
-
-**Who uses this:** 5-10 worship musicians at Central Reform Congregation, Austin TX. They play Shabbat services (Friday night, Saturday morning), B'nei Mitzvah, and special events.
-
-**The outline problem:** Today, someone prints an Excel spreadsheet outline and puts it on music stands. The outline shows the service order with tune names, keys, and who leads each piece. Musicians glance at this outline far more than actual sheet music — for standard liturgical tunes they know well, the outline is all they need. Charts are only needed for unfamiliar or new arrangements.
-
-**The attached sample outline** (Cypress Penrod Bat Mitzvah) shows the format:
-- Organized by liturgical sections (Pre service, Awakening, Birchot Hashachar, Shema, T'filah, Torah service, Concluding prayers)
-- Each entry: Song/Prayer name, Tune/Arrangement, Key, Lead, Page #, Lead in
-- Section structure is mostly consistent across Saturday services
-- Page numbers are per-event (families print their own siddurim for B'nei Mitzvah)
-
-**Missing data field:** The app has no "tune/arrangement" field on tracks. This is critical — musicians identify pieces by tune name (e.g., "Friedman Barchu" vs "standard Barchu"). The tune name is often more important than the song title itself.
-
-**Time sensitivity:** A Bat Mitzvah service is coming up this week. The outline features need to be usable for that event.
-
-**Concerns interleaving:** Technical debt fixes should be interleaved with feature work — fix critical issues first, then outline features, then remaining concerns.
-
-## Constraints
-
-- **Stack**: Next.js 16 / React 19 / Firebase / TailwindCSS — existing stack, no major changes
-- **Timeline**: Bat Mitzvah this week — outline refinements are urgent
-- **Users**: Small team (5-10 musicians) — performance at scale not a concern
-- **Print**: Must work on standard letter paper, readable from a music stand (~arm's length)
-- **Live view**: Must be glanceable on phone/tablet during performance
-
-## Key Decisions
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Outline-first performance view | Musicians look at outlines 90% of the time, charts only for unfamiliar pieces | — Pending |
-| Add tune/arrangement as dedicated field | Not just a note — it's the primary identifier musicians use | — Pending |
-| Interleave concerns with features | Critical stability issues affect the features being built | — Pending |
-| Keep Excel-like outline format for print | Musicians are used to this format; make it prettier, don't redesign from scratch | — Pending |
+- [ ] **UX-01 (Dashboard)**: Ensure unauthenticated and pending users see the `<NextServiceCard>` hero immediately on the dashboard.
+- [ ] **SEC-04 (Monitor Gating)**: Apply `getServerUser` to `/monitor/page.tsx` to prevent unauthorized WebSocket initialization.
+- [ ] **SEC-05 (Manage Gating)**: Apply `getServerUser` to `/manage/page.tsx` to prevent client-side tab flashing for Admin vs. Band Leader views.
+- [ ] **PERF-01 (PDF Cache)**: Implement background pre-fetching for the next 2 songs in a setlist to eliminate loading times during live performance.
+- [ ] **ARCH-04 (Real-time State)**: Transition ephemeral `LiveState` from Firestore to a faster, cheaper real-time layer (e.g., RTDB or Zustand enhancements).
+- [ ] **QA-01 (UI/UX Audit)**: Perform a recursive audit against the `ui-ux-pro-max` guidelines (contrast, cursor states, SVG icons, touch targets).
 
 ---
-*Last updated: 2026-03-01 after initialization*
+*Last updated: 2026-03-13 — Milestone v1.1 Gating started*

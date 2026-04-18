@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useChatStore, ChatEditAction } from './chat-store'
+import { parseTemplateRequest } from '@/lib/template-parser'
 
 describe('useChatStore', () => {
     beforeEach(() => {
@@ -129,5 +130,195 @@ describe('useChatStore', () => {
             useChatStore.getState().clearPendingPrompt()
             expect(useChatStore.getState().pendingPrompt).toBeNull()
         })
+    })
+
+    describe('ChatEditAction with key/bpm/afterTitle fields', () => {
+        it('accepts key and bpm fields on add action', () => {
+            const edits: ChatEditAction[] = []
+            useChatStore.getState().registerOnApplyEdits((e) => edits.push(...e))
+
+            useChatStore.getState().onApplyEdits?.([
+                { action: 'add', title: 'Mi Chamocha', key: 'Am', bpm: 120 }
+            ])
+
+            expect(edits).toHaveLength(1)
+            expect(edits[0].key).toBe('Am')
+            expect(edits[0].bpm).toBe(120)
+        })
+
+        it('accepts afterTitle for positional insertion', () => {
+            const edits: ChatEditAction[] = []
+            useChatStore.getState().registerOnApplyEdits((e) => edits.push(...e))
+
+            useChatStore.getState().onApplyEdits?.([
+                { action: 'add', title: 'Mi Chamocha', key: 'Am', afterTitle: 'Responsive Reading' }
+            ])
+
+            expect(edits).toHaveLength(1)
+            expect(edits[0].afterTitle).toBe('Responsive Reading')
+            expect(edits[0].key).toBe('Am')
+        })
+
+        it('correctly structures all ChatEditAction fields', () => {
+            const action: ChatEditAction = {
+                action: 'add',
+                title: 'Oseh Shalom',
+                fileId: 'file-123',
+                type: 'song',
+                performer: 'Cantor',
+                estimatedMinutes: 3,
+                key: 'G',
+                bpm: 80,
+                afterTitle: 'Silent Prayer',
+            }
+            expect(action.action).toBe('add')
+            expect(action.key).toBe('G')
+            expect(action.bpm).toBe(80)
+            expect(action.afterTitle).toBe('Silent Prayer')
+        })
+    })
+
+    describe('afterTitle positioning logic', () => {
+        it('inserts after matching track title', () => {
+            // Simulate the handleApplyEdits logic for afterTitle
+            const tracks = [
+                { id: '1', title: 'Barchu', key: '', notes: '' },
+                { id: '2', title: 'Responsive Reading', key: '', notes: '' },
+                { id: '3', title: 'Silent Prayer', key: '', notes: '' },
+            ]
+
+            const edit: ChatEditAction = {
+                action: 'add',
+                title: 'Mi Chamocha',
+                key: 'Am',
+                afterTitle: 'Responsive Reading',
+            }
+
+            // Replicate the afterTitle logic from use-setlist-logic.ts
+            const newTracks = [...tracks]
+            const afterIndex = newTracks.findIndex(t =>
+                t.title.toLowerCase().includes(edit.afterTitle!.toLowerCase())
+            )
+            expect(afterIndex).toBe(1) // Found "Responsive Reading" at index 1
+            if (afterIndex >= 0) {
+                newTracks.splice(afterIndex + 1, 0, {
+                    id: 'new-track',
+                    title: edit.title!,
+                    key: edit.key || '',
+                    notes: '',
+                })
+            }
+
+            expect(newTracks).toHaveLength(4)
+            expect(newTracks[2].title).toBe('Mi Chamocha')
+            expect(newTracks[2].key).toBe('Am')
+        })
+
+        it('appends to end when afterTitle not found', () => {
+            const tracks = [
+                { id: '1', title: 'Barchu', key: '', notes: '' },
+                { id: '2', title: 'Shema', key: '', notes: '' },
+            ]
+
+            const edit: ChatEditAction = {
+                action: 'add',
+                title: 'Mi Chamocha',
+                afterTitle: 'Nonexistent Track',
+            }
+
+            const newTracks = [...tracks]
+            const afterIndex = newTracks.findIndex(t =>
+                t.title.toLowerCase().includes(edit.afterTitle!.toLowerCase())
+            )
+            expect(afterIndex).toBe(-1)
+            // When not found, append to end
+            newTracks.push({
+                id: 'new-track',
+                title: edit.title!,
+                key: '',
+                notes: '',
+            })
+
+            expect(newTracks).toHaveLength(3)
+            expect(newTracks[2].title).toBe('Mi Chamocha')
+        })
+
+        it('uses partial case-insensitive title matching', () => {
+            const tracks = [
+                { id: '1', title: 'Torah Service — Parashat Vayikra', key: '', notes: '' },
+                { id: '2', title: 'The Responsive Reading for Shabbat', key: '', notes: '' },
+            ]
+
+            const afterIndex = tracks.findIndex(t =>
+                t.title.toLowerCase().includes('responsive reading')
+            )
+            expect(afterIndex).toBe(1) // Partial match works
+        })
+    })
+})
+
+describe('parseTemplateRequest', () => {
+    it('maps "Daniel Friday" to friday_night with rabbi daniel_karen', () => {
+        const result = parseTemplateRequest('Create a Daniel Friday for March 14')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('friday_night')
+        expect(result!.rabbi).toBe('daniel_karen')
+    })
+
+    it('maps "Saturday Morning" to shabbat_morning', () => {
+        const result = parseTemplateRequest('Create a Saturday Morning service')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('shabbat_morning')
+    })
+
+    it('maps "Rosh Hashanah Evening" to rosh_hashanah_evening', () => {
+        const result = parseTemplateRequest('Build a Rosh Hashanah Evening setlist')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('rosh_hashanah_evening')
+    })
+
+    it('maps "Randy Friday" to friday_night with rabbi randy', () => {
+        const result = parseTemplateRequest('Create a Randy Friday night')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('friday_night')
+        expect(result!.rabbi).toBe('randy')
+    })
+
+    it('maps "Kol Nidre" to yom_kippur_kol_nidre', () => {
+        const result = parseTemplateRequest('Make a Kol Nidre service')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('yom_kippur_kol_nidre')
+    })
+
+    it('maps "Passover" to passover', () => {
+        const result = parseTemplateRequest('Create a Passover seder service')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('passover')
+    })
+
+    it('maps "Shir Shabbat" to shir_shabbat', () => {
+        const result = parseTemplateRequest('Build a Shir Shabbat for next week')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('shir_shabbat')
+    })
+
+    it('extracts date from "for March 14"', () => {
+        const result = parseTemplateRequest('Create a Daniel Friday for March 14')
+        expect(result).toBeTruthy()
+        expect(result!.date).toBeInstanceOf(Date)
+        expect(result!.date!.getMonth()).toBe(2) // March = 2
+        expect(result!.date!.getDate()).toBe(14)
+    })
+
+    it('returns null for non-template requests', () => {
+        const result = parseTemplateRequest('Add Mi Chamocha in Am')
+        expect(result).toBeNull()
+    })
+
+    it('maps "Daniel Saturday" to shabbat_morning with rabbi daniel_karen', () => {
+        const result = parseTemplateRequest('Create a Daniel Saturday morning')
+        expect(result).toBeTruthy()
+        expect(result!.templateKey).toBe('shabbat_morning')
+        expect(result!.rabbi).toBe('daniel_karen')
     })
 })

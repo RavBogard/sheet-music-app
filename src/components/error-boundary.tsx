@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { AlertTriangle } from "lucide-react"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
+import { clearFirestoreIndexedDB } from "@/lib/firebase"
 
 interface Props {
     children?: ReactNode
@@ -31,6 +32,18 @@ export class ErrorBoundary extends Component<Props, State> {
             location: 'ErrorBoundary',
             extra: { componentStack: errorInfo.componentStack }
         })
+
+        // Auto-recover from Firestore assertion errors caused by corrupted IndexedDB
+        const msg = error.message || ""
+        if (
+            (msg.includes("INTERNAL ASSERTION FAILED") || msg.includes("Unexpected state")) &&
+            typeof window !== "undefined" &&
+            !sessionStorage.getItem("firestore-idb-recovery-attempted")
+        ) {
+            logger.warn("[ErrorBoundary] Firestore assertion error detected, clearing IndexedDB")
+            sessionStorage.setItem("firestore-idb-recovery-attempted", "1")
+            clearFirestoreIndexedDB().catch(e => logger.error("Failed to clear IDB", e))
+        }
     }
 
     public render() {

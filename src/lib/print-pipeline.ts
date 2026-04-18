@@ -25,11 +25,11 @@ export interface PrintTrack {
     key: string
     notes: string
     leadMusician?: string
-    tune?: string
     fileId?: string
     transposition?: number
     preferFlats?: boolean
     capoFret?: number
+    omitPdf?: boolean
     // Service flow fields
     type?: string
     performer?: string
@@ -42,7 +42,9 @@ export interface PrintRequest {
     date: string
     musicianName?: string
     eventName?: string
+    rabbi?: string
     tracks: PrintTrack[]
+    coverOnly?: boolean
 }
 
 export interface PrintProgress {
@@ -73,20 +75,17 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
+        cacheVersion: 2, // Increment when PDF rendering logic changes to bypass stale cache
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
-        eventName: req.eventName,
+        coverOnly: req.coverOnly || false,
         tracks: req.tracks.map(t => ({
             fileId: t.fileId,
             transposition: t.transposition || 0,
             preferFlats: t.preferFlats || false,
             capoFret: t.capoFret || 0,
-            title: t.title,
-            key: t.key || '',
-            notes: t.notes || '',
-            leadMusician: t.leadMusician || '',
-            tune: t.tune || '',
+            omitPdf: t.omitPdf || false,
         })),
     }
     return createHash('sha256').update(JSON.stringify(significant)).digest('hex').slice(0, 16)
@@ -254,6 +253,14 @@ async function buildCoverPage(
         yOffset -= 22
     }
 
+    if (req.rabbi) {
+        coverPage.drawText(`Led by: ${req.rabbi}`, {
+            x: 50, y: yOffset, size: 13,
+            font: helvetica, color: rgb(0.4, 0.4, 0.4),
+        })
+        yOffset -= 22
+    }
+
     if (req.musicianName) {
         coverPage.drawText(`Prepared for: ${req.musicianName}`, {
             x: 50, y: yOffset, size: 13,
@@ -270,49 +277,69 @@ async function buildCoverPage(
     })
     yOffset -= 25
 
-    // Column positions — redistributed to fit Tune column on 612pt page
+    // Column positions
     const colNum = 50
     const colTitle = 75
-    const colTune = hasTranspositions ? 195 : 210
-    const colLead = hasTranspositions ? 275 : 295
-    const colKey = hasTranspositions ? 365 : 380
-    const colTransKey = 420
-    const colNotes = hasTranspositions ? 460 : 425
+    const colKey = hasTranspositions ? 280 : 310
+    const colLead = hasTranspositions ? 380 : 430
+    const colTransKey = 430
+    const colNotes = hasTranspositions ? 490 : 475
 
-    // Header row (14pt for readability at arm's length)
-    coverPage.drawText("#", { x: colNum, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Tune", { x: colTune, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Key", { x: colKey, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    // Header
+    coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     if (hasTranspositions) {
-        coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     }
-    coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 14, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
 
-    yOffset -= 10
+    yOffset -= 8
     coverPage.drawLine({
         start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
         thickness: 0.5, color: rgb(0.8, 0.8, 0.8),
     })
-    yOffset -= 18
+    yOffset -= 16
 
-    // Rows (12pt body text for readability)
-    req.tracks.forEach((track, index) => {
+    // Rows — show all items in the order of service (songs, readings, prayers, headers)
+    const printableTracks = req.tracks
+    let rowNum = 0
+    let songNum = 0
+    printableTracks.forEach((track) => {
         if (yOffset < 60) return
 
         const trackType = track.type || 'song'
         const isServiceFlow = trackType !== 'song'
 
-        const maxTitleLen = hasTranspositions ? 16 : 18
-        const songTitle = track.title.length > maxTitleLen
-            ? track.title.substring(0, maxTitleLen - 3) + "..." : track.title
+        // Determine font and max width constraints based on layout and track type
+        const titleFont = isServiceFlow ? helveticaOblique : helvetica
+        const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
+        let finalTitleSize = 10
+        let songTitle = track.title
+        
+        if (trackType === 'header') {
+            const headerMax = 300
+            let headerTitle = songTitle.toUpperCase()
+            while (finalTitleSize > 7 && helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) finalTitleSize -= 0.5
+            if (helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) {
+                let truncateLen = headerTitle.length
+                while (truncateLen > 5 && helveticaBold.widthOfTextAtSize(headerTitle.substring(0, truncateLen) + "...", finalTitleSize) > headerMax) truncateLen--
+                headerTitle = headerTitle.substring(0, truncateLen) + "..."
+            }
+            songTitle = headerTitle
+        } else {
+            const maxAvailableWidth = hasTranspositions ? 190 : 220
+            while (finalTitleSize > 6.5 && titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) finalTitleSize -= 0.5
+            if (titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) {
+                let truncateLen = songTitle.length
+                while (truncateLen > 5 && titleFont.widthOfTextAtSize(songTitle.substring(0, truncateLen) + "...", finalTitleSize) > maxAvailableWidth) truncateLen--
+                songTitle = songTitle.substring(0, truncateLen) + "..."
+            }
+        }
+
         const key = isServiceFlow ? "" : (track.key || "-")
-        const maxTuneLen = hasTranspositions ? 10 : 12
-        const tuneStr = isServiceFlow ? "" : (track.tune || "")
-        const tuneDisplay = tuneStr.length > maxTuneLen
-            ? tuneStr.substring(0, maxTuneLen - 3) + "..." : tuneStr
-        const maxLeadLen = hasTranspositions ? 10 : 12
+        const maxLeadLen = hasTranspositions ? 12 : 15
         const lead = isServiceFlow ? (track.performer || "") : (track.leadMusician || "")
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
@@ -324,40 +351,50 @@ async function buildCoverPage(
             const capoNote = `Capo ${track.capoFret}`
             notesStr = notesStr ? `${capoNote} • ${notesStr}` : capoNote
         }
-        const maxNotesLen = hasTranspositions ? 12 : 16
+        const maxNotesLen = hasTranspositions ? 14 : 18
         const notesDisplay = notesStr.length > maxNotesLen
             ? notesStr.substring(0, maxNotesLen - 3) + "..." : notesStr
 
         const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && track.key)
             ? getTransposedKeyName(track.key, track.transposition) : null
 
+        rowNum++
+
+        // Draw alternating background row for zebra striping for ALL rows (including headers)
+        if (rowNum % 2 === 0) {
+            coverPage.drawRectangle({
+                x: 45,
+                y: trackType === 'header' ? yOffset - 8 : yOffset - 4,
+                width: width - 90,
+                height: trackType === 'header' ? 18 : 14,
+                color: rgb(0.96, 0.96, 0.97), // very slightly gray/cool
+            })
+        }
+
         // Headers render as bold centered labels (no number)
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
-            coverPage.drawText(songTitle.toUpperCase(), { x: colTitle, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
-            yOffset -= 20
+            coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            yOffset -= 18
             return
         }
 
-        // Use italic font for non-song service flow items
-        const titleFont = isServiceFlow ? helveticaOblique : helvetica
-        const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
+        songNum++
 
-        coverPage.drawText(`${index + 1}.`, { x: colNum, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: 12, font: titleFont, color: titleColor })
-        if (tuneDisplay) coverPage.drawText(tuneDisplay, { x: colTune, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 12, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+        coverPage.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
+        if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
-            coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 12, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
+            coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
-        if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 10, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
+        if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
 
-        yOffset -= 20
+        yOffset -= 18
     })
 
     // Footer
-    const songCount = req.tracks.filter(t => !t.type || t.type === 'song').length
+    const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
     const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
     if (hasTranspositions) footerParts.push("transposed")
     footerParts.push(printFooter)
@@ -535,7 +572,7 @@ export async function generatePrintPdf(
     const hasTranspositions = req.tracks.some(t => t.transposition && t.transposition !== 0)
 
     // Read congregation branding
-    let printFooter = "Generated by CRC Music Books"
+    let printFooter = "Generated by CRC Music Books • a project of Rabbi Daniel Bogard"
     try {
         const configSnap = await getFirestore().collection("config").doc("congregation").get()
         if (configSnap.exists) {
@@ -546,6 +583,15 @@ export async function generatePrintPdf(
     // ── Step 1: Build merged PDF with cover page ──
     const mergedPdf = await PDFDocument.create()
     await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter)
+
+    // ── Step 1b: Cover-only mode — skip all track processing ──
+    if (req.coverOnly) {
+        const finalPdfBytes = await mergedPdf.save()
+        const pdf = new Uint8Array(finalPdfBytes)
+        cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
+        logger.info(`[PrintPipeline] Cover-only complete for "${req.title}"`)
+        return { pdf, stats }
+    }
 
     // ── Step 2: Lazy-load transposition modules ──
     let extractChordsFromPdf: typeof import("@/lib/pdf-chord-extractor")["extractChordsFromPdf"] | null = null
@@ -565,13 +611,12 @@ export async function generatePrintPdf(
     // ── Step 3: Process each track ──
     let trackIndex = 0
     for (const track of req.tracks) {
-        // Render non-song service flow items as formatted labels
+        // Skip non-song service flow items (they appear on cover page only)
         if (!track.fileId && track.type && track.type !== 'song') {
-            await renderServiceFlowItem(mergedPdf, track)
             continue
         }
 
-        if (!track.fileId) continue
+        if (!track.fileId || track.omitPdf) continue
         trackIndex++
 
         onProgress?.({

@@ -14,9 +14,9 @@ export function GlobalAlertBanner() {
     if (!alert || !alert.visible || !alert.message) return null
 
     const config = {
-        info: { bg: "bg-blue-500/10", border: "border-blue-500/20", text: "text-blue-600 dark:text-blue-400", icon: Info },
-        warning: { bg: "bg-yellow-500/10", border: "border-yellow-500/20", text: "text-yellow-600 dark:text-yellow-400", icon: TriangleAlert },
-        error: { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-600 dark:text-red-400", icon: AlertCircle },
+        info: { bg: "bg-blue-500/10 dark:bg-blue-400/10", border: "border-blue-500/20 dark:border-blue-400/20", text: "text-blue-600 dark:text-blue-400", icon: Info },
+        warning: { bg: "bg-yellow-500/10 dark:bg-yellow-400/10", border: "border-yellow-500/20 dark:border-yellow-400/20", text: "text-yellow-600 dark:text-yellow-400", icon: TriangleAlert },
+        error: { bg: "bg-red-500/10 dark:bg-red-400/10", border: "border-red-500/20 dark:border-red-400/20", text: "text-red-600 dark:text-red-400", icon: AlertCircle },
     }
     const c = config[alert.type || "info"] || config.info
     const Icon = c.icon

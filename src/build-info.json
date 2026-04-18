@@ -1,13 +1,7 @@
 {
-  "version": "0.1.0",
-  "commit": "4732d24",
+  "version": "2.11.12",
+  "commit": "c034a34",
   "branch": "master",
-  "buildDate": "2/23/2026",
-  "changelog": [
-    "0.1.0 - fix: Harden security, performance, type safety, a11y, and error logging",
-    "0.1.0 - feat: Add Follow the Leader Sync and AI Liturgical Matrix",
-    "0.1.0 - feat: implement task assignment and tracking system",
-    "0.1.0 - feat: phase 1 - error boundaries and legacy v1 component excision",
-    "0.1.0 - refactor: library sync optimizations, UI/UX polish, and offline improvements"
-  ]
+  "buildDate": "4/15/2026",
+  "changelog": []
 }

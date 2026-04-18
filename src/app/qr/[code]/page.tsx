@@ -47,6 +47,7 @@ export default function QRApprovePage() {
             handleApprove()
         }
      
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state, user?.uid])
 
     const handleApprove = async () => {

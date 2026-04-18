@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Lock, Globe, Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -18,28 +18,34 @@ interface NamePromptProps {
     isOpen: boolean
     onClose: () => void
     initialName: string
-    initialIsPublic: boolean
     initialDate?: Date | null
-    isBandLeader: boolean
-    onConfirm: (name: string, isPublic: boolean, date: Date | null) => void
+    onConfirm: (name: string, date: Date | null) => void
 }
 
 export function NamePrompt({
     isOpen,
     onClose,
     initialName,
-    initialIsPublic,
     initialDate,
-    isBandLeader,
     onConfirm
 }: NamePromptProps) {
     const [name, setName] = useState(initialName)
-    const [isPublic, setIsPublic] = useState(initialIsPublic)
     const [date, setDate] = useState<Date | undefined>(initialDate || undefined)
+
+    // Re-seed on every false -> true open transition so a prior session's
+    // typed-but-not-confirmed draft doesn't bleed into a new setlist name.
+    // Deps intentionally limited to `isOpen` to avoid clobbering in-progress
+    // edits when the parent re-renders.
+    useEffect(() => {
+        if (!isOpen) return
+        setName(initialName)
+        setDate(initialDate || undefined)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const handleConfirm = () => {
         if (name.trim()) {
-            onConfirm(name, isPublic, date || null)
+            onConfirm(name, date || null)
         }
     }
 
@@ -88,33 +94,6 @@ export function NamePrompt({
                                 </PopoverContent>
                             </Popover>
                         </div>
-                    </div>
-
-                    {/* Public/Private Toggle */}
-                    <div className="flex items-center gap-4 p-4 bg-muted rounded-lg border border-border/50">
-                        <button
-                            onClick={() => setIsPublic(false)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${!isPublic ? 'bg-blue-600 text-foreground shadow-lg shadow-blue-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                                }`}
-                        >
-                            <Lock className="h-4 w-4" />
-                            Personal
-                        </button>
-                        {isBandLeader ? (
-                            <button
-                                onClick={() => setIsPublic(true)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${isPublic ? 'bg-green-600 text-foreground shadow-lg shadow-green-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                                    }`}
-                            >
-                                <Globe className="h-4 w-4" />
-                                Public
-                            </button>
-                        ) : (
-                            <div className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground/60 cursor-not-allowed opacity-50" title="Only Leaders can create Public Setlists">
-                                <Globe className="h-4 w-4" />
-                                Public
-                            </div>
-                        )}
                     </div>
                 </div>
 

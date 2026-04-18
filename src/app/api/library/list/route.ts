@@ -1,35 +1,38 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
 
 /**
  * Library List API — Optimized with pagination + ETag caching
- * 
+ *
  * Modes:
  *   GET /api/library/list                    → All files, paginated (default 200)
  *   GET /api/library/list?cursor=XXXX        → Next page
  *   GET /api/library/list?folderId=XXXX      → Files in folder
  *   GET /api/library/list?all=true           → Full dump for client-side search (cached)
+ *   GET /api/library/list?status=archived   → Archived files only
  */
-export async function GET(req: NextRequest) {
-    try {
-        // 1. Auth
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(req, 'api')
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
         // 2. Parse params
-        const url = new URL(req.url)
+        const url = new URL(ctx.req.url)
         const folderId = url.searchParams.get("folderId")
         const cursor = url.searchParams.get("cursor")
         const all = url.searchParams.get("all") === "true"
+        const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
+        const collectionFilter = url.searchParams.get("collection") // 'supplemental' or 'core'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // 3. Build query
@@ -65,22 +68,41 @@ export async function GET(req: NextRequest) {
         // Track the most recent modification across all documents
         let maxModified = ''
 
-        const files = snapshot.docs.map(doc => {
-            const data = doc.data()
-            // Track latest modification for cache staleness
-            if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
-                maxModified = data.lastSyncedAt
-            }
-            return {
-                id: doc.id,
-                name: data.name,
-                mimeType: data.mimeType,
-                parents: data.parents,
-                modifiedTime: data.modifiedTime || null,
-                webViewLink: data.webViewLink,
-                metadata: data.metadata || null
-            }
-        })
+        const files = snapshot.docs
+            .filter(doc => {
+                const data = doc.data()
+                const status = data.status
+                if (statusFilter === 'archived' && status !== 'archived') return false
+                if (statusFilter !== 'archived' && status === 'archived') return false
+                
+                const col = data.collection || 'core'
+                if (collectionFilter && collectionFilter !== 'all' && col !== collectionFilter) return false
+                
+                return true
+            })
+            .map(doc => {
+                const data = doc.data()
+                // Track latest modification for cache staleness
+                if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
+                    maxModified = data.lastSyncedAt
+                }
+                return {
+                    id: doc.id,
+                    name: data.name,
+                    ...(data.displayName ? { displayName: data.displayName } : {}),
+                    mimeType: data.mimeType,
+                    parents: data.parents,
+                    modifiedTime: data.modifiedTime || null,
+                    webViewLink: data.webViewLink,
+                    metadata: data.metadata || null,
+                    collection: data.collection || 'core',
+                    status: (data.status as string) || 'active',
+                    ...(statusFilter === 'archived' ? {
+                        archivedAt: data.archivedAt || null,
+                        archivedBy: data.archivedBy || null,
+                    } : {}),
+                }
+            })
 
         // 5. Build response with caching headers
         const lastDoc = snapshot.docs[snapshot.docs.length - 1]
@@ -103,9 +125,5 @@ export async function GET(req: NextRequest) {
         }
 
         return response
-
-    } catch (error: unknown) {
-        logger.error("Library List Error:", error)
-        return NextResponse.json({ error: "Failed to load library" }, { status: 500 })
     }
-}
+)

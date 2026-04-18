@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'setlistId parameter required' }, { status: 400 })
         }
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // Load setlist
@@ -38,7 +43,7 @@ export async function GET(request: NextRequest) {
         const setlist = setlistDoc.data()!
 
         // Security: only published setlists can be downloaded without auth
-        if (setlist.isPublic !== true) {
+        if (!setlist.publishedAt) {
             return NextResponse.json({ error: 'Setlist is not published' }, { status: 403 })
         }
 

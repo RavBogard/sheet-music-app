@@ -100,19 +100,22 @@ export async function GET(req: NextRequest) {
         // Expired
         if (Date.now() > data.expiresAt) {
             // Clean up expired doc
-            await db.collection(COLLECTION).doc(code).delete().catch(() => {})
+            await db.collection(COLLECTION).doc(code).delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
             return NextResponse.json({ error: "Session expired" }, { status: 410 })
         }
 
         if (data.status === "approved" && data.customToken) {
             // Consume: delete session after delivering token
-            await db.collection(COLLECTION).doc(code).delete().catch(() => {})
-            return NextResponse.json({
+            await db.collection(COLLECTION).doc(code).delete().catch(e => logger.warn('[QR] Failed to clean up consumed session:', e))
+            const response = NextResponse.json({
                 status: "approved",
                 token: data.customToken,
                 userName: data.userName,
                 userPhoto: data.userPhoto,
             })
+            // Prevent proxy/CDN caching of sensitive token response
+            response.headers.set("Cache-Control", "no-store")
+            return response
         }
 
         return NextResponse.json({ status: data.status })
@@ -147,10 +150,23 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 })
         }
 
+        // v4.3 P6-S04: QR approval is a session-mint operation. Gate it to
+        // members (musician/band_leader/admin) so pending accounts can't
+        // participate in device sign-in. Pending users have no business on
+        // a shared iPad yet.
+        const role = decoded.role as string | undefined
+        const allowedRoles = new Set(["member", "musician", "band_leader", "admin"])
+        if (!role || !allowedRoles.has(role)) {
+            return NextResponse.json(
+                { error: "Approval requires an approved member account" },
+                { status: 403 },
+            )
+        }
+
         const body = await req.json()
         const { code } = body
-        if (!code) {
-            return NextResponse.json({ error: "Missing code" }, { status: 400 })
+        if (!code || typeof code !== "string" || !/^[A-Z0-9]{6}$/.test(code)) {
+            return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 
         const db = getFirestore()
@@ -164,7 +180,7 @@ export async function PUT(req: NextRequest) {
         const data = doc.data()!
 
         if (Date.now() > data.expiresAt) {
-            await docRef.delete().catch(() => {})
+            await docRef.delete().catch(e => logger.warn('[QR] Failed to clean up expired session:', e))
             return NextResponse.json({ error: "Session expired" }, { status: 410 })
         }
 

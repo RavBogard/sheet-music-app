@@ -1,0 +1,51 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { useCongregation } from "@/lib/congregation-store"
+import { MobileMenuDrawer } from "@/components/nav/MobileMenuDrawer"
+
+export function MobileHeader() {
+    const congregation = useCongregation()
+    const [drawerOpen, setDrawerOpen] = useState(false)
+
+    return (
+        <>
+            <header className="fixed top-0 left-0 right-0 h-14 z-50 flex md:hidden items-center justify-between px-3 material-thick border-b border-brand/10">
+                {/* Left: Hamburger */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Open menu"
+                    onClick={() => setDrawerOpen(true)}
+                    className={cn(
+                        "rounded-full transition-colors",
+                        drawerOpen ? "text-brand bg-brand/15" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
+                    )}
+                >
+                    <Menu className={cn("w-6 h-6", drawerOpen && "stroke-[2.5px]")} />
+                </Button>
+
+                {/* Center: Logo + Name */}
+                <Link href="/" className="flex items-center gap-2 group">
+                    <img
+                        src="/logo.jpg"
+                        alt="Logo"
+                        className="w-7 h-7 rounded-full border border-border transition-opacity group-hover:opacity-80"
+                    />
+                    <span className="font-display font-bold text-sm text-foreground">
+                        {congregation.shortName}
+                    </span>
+                </Link>
+
+                {/* Right: spacer for symmetry */}
+                <div className="w-10" />
+            </header>
+
+            <MobileMenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
+        </>
+    )
+}

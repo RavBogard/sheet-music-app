@@ -1,22 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAuth } from "@/lib/api-auth"
+import { NextResponse } from "next/server"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
 import { getTemplate } from "@/lib/liturgical-templates"
 import { Setlist } from "@/types/models"
 
-export async function GET(req: NextRequest) {
-    try {
-        const auth = await withAuth(req)
-        if (auth instanceof NextResponse) return auth // 401
-
-        const uid = auth.uid
-        if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-        const { searchParams } = new URL(req.url)
+export const GET = createApiHandler(
+    async (ctx) => {
+        const { searchParams } = new URL(ctx.req.url)
         const type = searchParams.get('type') || 'friday_night'
 
-        initAdmin()
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
+        }
         const db = getFirestore()
 
         // 1. Generate the date columns (-3 weeks to +4 weeks)
@@ -58,10 +57,9 @@ export async function GET(req: NextRequest) {
         endDate.setHours(23, 59, 59, 999)
 
         // Note: We fetch from the 'setlists' collection. Since we want an overarching matrix,
-        // we might just fetch public setlists or setlists owned by this user. 
+        // we might just fetch public setlists or setlists owned by this user.
         // For CRC, the Matrix should probably reflect the *actual* planned setlists (public ones).
         const snapshot = await db.collection('setlists')
-            .where('isPublic', '==', true)
             .where('date', '>=', startDate)
             .where('date', '<=', endDate)
             .get()
@@ -133,9 +131,5 @@ export async function GET(req: NextRequest) {
             rows,
             grid
         })
-
-    } catch (e: unknown) {
-        console.error("Matrix API Error:", e)
-        return NextResponse.json({ error: e instanceof Error ? e.message : "Matrix generation failed" }, { status: 500 })
     }
-}
+)

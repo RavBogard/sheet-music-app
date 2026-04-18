@@ -1,35 +1,37 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { z } from "zod"
+
+const schema = z.object({
+    fileId: z.string().min(1),
+    archive: z.boolean().default(true),
+})
 
 /**
  * PATCH /api/library/archive
- * 
+ *
  * Soft-deletes a library item by setting its status to 'archived'.
  * Requires 'band_leader' role or above.
- * 
+ *
  * Body: { fileId: string, archive: boolean }
  */
-export async function PATCH(req: NextRequest) {
-    try {
-        // Rate limit
-        const limited = await checkRateLimit(req, 'api')
+export const PATCH = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        // Auth check: leaders and admins can archive
-        const auth = await withAuth(req, 'band_leader')
-        if (auth instanceof NextResponse) return auth
+        const { fileId, archive } = ctx.body!
 
-        const { fileId, archive = true } = await req.json()
-
-        if (!fileId) {
-            return NextResponse.json({ error: "Missing fileId" }, { status: 400 })
+        if (!initAdmin()) {
+            return NextResponse.json(
+                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
+                { status: 500 },
+            )
         }
-
-        initAdmin()
         const db = getFirestore()
 
         const docRef = db.collection('library_index').doc(fileId)
@@ -43,7 +45,7 @@ export async function PATCH(req: NextRequest) {
         await docRef.update({
             status: archive ? 'archived' : 'active',
             modifiedTime: new Date().toISOString(),
-            archivedBy: archive ? auth.uid : null,
+            archivedBy: archive ? ctx.auth.uid : null,
             archivedAt: archive ? new Date().toISOString() : null,
         })
 
@@ -54,12 +56,6 @@ export async function PATCH(req: NextRequest) {
         revalidatePath('/(main)/library', 'page')
 
         return NextResponse.json({ success: true, archived: archive })
-
-    } catch (error: unknown) {
-        logger.error("[Archive] Error:", error)
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Archive failed" },
-            { status: 500 }
-        )
-    }
-}
+    },
+    { role: 'band_leader', schema }
+)

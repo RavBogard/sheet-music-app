@@ -36,6 +36,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [items, setItems] = useState<ParsedItem[]>([])
+    const [isParsing, setIsParsing] = useState(false)
     const [isExecuting, setIsExecuting] = useState(false)
 
     // Reset state on open
@@ -62,6 +63,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             return
         }
 
+        setIsParsing(true)
         setStep('processing')
         try {
             let csvText = undefined
@@ -91,6 +93,8 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Error parsing spreadsheet.")
             setStep('input')
+        } finally {
+            setIsParsing(false)
         }
     }
 
@@ -200,10 +204,11 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             <div className="pt-4 flex justify-end">
                                 <Button
                                     onClick={handleParse}
-                                    disabled={!url && !csvFile}
+                                    disabled={(!url && !csvFile) || isParsing}
                                     className="gap-2 shrink-0 bg-blue-600 hover:bg-blue-500"
                                 >
-                                    Next: Analyze Spreadsheet <ChevronRight className="h-4 w-4" />
+                                    {isParsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                                    {isParsing ? "Analyzing..." : "Next: Analyze Spreadsheet"}
                                 </Button>
                             </div>
                         </div>

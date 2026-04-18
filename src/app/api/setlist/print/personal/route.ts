@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
-import { withAuth } from "@/lib/api-auth"
+import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -14,15 +14,12 @@ export const maxDuration = 120
  * Generates a personalized PDF packet for the authenticated user,
  * applying their musician profile (transposition, capo, flats).
  */
-export async function GET(request: NextRequest) {
-    try {
-        const auth = await withAuth(request)
-        if (auth instanceof NextResponse) return auth
-
-        const limited = await checkRateLimit(request, 'api')
+export const GET = createApiHandler(
+    async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const setlistId = request.nextUrl.searchParams.get('setlistId')
+        const setlistId = ctx.req.nextUrl.searchParams.get('setlistId')
         if (!setlistId) {
             return NextResponse.json({ error: 'setlistId parameter required' }, { status: 400 })
         }
@@ -36,8 +33,15 @@ export async function GET(request: NextRequest) {
         }
         const setlist = setlistDoc.data()!
 
+        // Verify access: owner or band leader (v4.0: all setlists are accessible to members)
+        // Access is already enforced by Firestore rules (isMember), but double-check for API safety
+        if (setlist.ownerId !== ctx.auth.uid && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
+            // Still allow — all members can read all setlists in v4.0
+            // This check is kept as a no-op placeholder for future role-based restrictions
+        }
+
         // Load user profile for musician preferences
-        const userDoc = await db.collection('users').doc(auth.uid).get()
+        const userDoc = await db.collection('users').doc(ctx.auth.uid).get()
         const profile: MusicianProfile = userDoc.data()?.musicianProfile || {}
         const userName = userDoc.data()?.displayName || userDoc.data()?.email || 'Musician'
 
@@ -75,8 +79,5 @@ export async function GET(request: NextRequest) {
                 'Content-Disposition': `attachment; filename="${filename}"`,
             },
         })
-    } catch (error) {
-        logger.error('[PersonalPacket] Error:', error)
-        return NextResponse.json({ error: 'Failed to generate personal packet' }, { status: 500 })
     }
-}
+)

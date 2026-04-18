@@ -15,27 +15,29 @@ import {
     MoreVertical,
     Play,
     Bell,
-    Globe,
-    Lock,
     Check,
     Sparkles,
     Trash2,
     Clock,
     User,
+    Printer,
+    BookmarkPlus,
+    Pencil,
 } from "lucide-react"
+import { useCongregation } from "@/lib/congregation-store"
 
 interface OverflowMenuProps {
     // Actions
     onPerform?: () => void
     onPublish?: () => void
-    onTogglePublic: () => void
     onOpenAI: () => void
     onDelete?: () => void
     onEditDetails?: () => void
+    onSaveAsTemplate?: () => void
     onSetRabbi?: (rabbi: string) => void
+    onPrint?: () => void
 
     // State
-    isPublic: boolean
     isBandLeader: boolean
     canEdit: boolean
     setlistId?: string
@@ -47,12 +49,12 @@ interface OverflowMenuProps {
 export function OverflowMenu({
     onPerform,
     onPublish,
-    onTogglePublic,
     onOpenAI,
     onDelete,
     onEditDetails,
+    onSaveAsTemplate,
     onSetRabbi,
-    isPublic,
+    onPrint,
     isBandLeader,
     canEdit,
     setlistId,
@@ -90,54 +92,43 @@ export function OverflowMenu({
                     </>
                 )}
 
+                {/* Leader actions — Publish / Edit Details / Save as Template */}
                 {onPublish && isBandLeader && setlistId && (
                     <DropdownMenuItem onClick={onPublish}>
                         <Bell className="h-4 w-4 mr-2" />
-                        {isPublic ? "Update & Notify" : "Publish & Notify"}
+                        Publish & Notify
                     </DropdownMenuItem>
                 )}
 
                 {canEdit && onEditDetails && (
                     <DropdownMenuItem onClick={onEditDetails}>
-                        <MoreVertical className="h-4 w-4 mr-2" />
+                        <Pencil className="h-4 w-4 mr-2" />
                         Edit Details
+                    </DropdownMenuItem>
+                )}
+
+                {canEdit && onSaveAsTemplate && (
+                    <DropdownMenuItem onClick={onSaveAsTemplate}>
+                        <BookmarkPlus className="h-4 w-4 mr-2" />
+                        Save as Template
                     </DropdownMenuItem>
                 )}
 
                 <DropdownMenuSeparator />
 
                 {/* Settings */}
-                {canEdit && onSetRabbi && (
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                            <User className="h-4 w-4 mr-2" />
-                            {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                            {["Daniel", "Karen", "Randy"].map((r) => (
-                                <DropdownMenuItem key={r} onClick={() => onSetRabbi(r)}>
-                                    {rabbi === r && <Check className="h-3 w-3 mr-2" />}
-                                    <span className={rabbi === r ? "font-medium" : ""}>Rabbi {r}</span>
-                                </DropdownMenuItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => onSetRabbi("")}>
-                                Clear
-                            </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                )}
-
-                {canEdit && setlistId && (
-                    <DropdownMenuItem onClick={onTogglePublic} disabled={!isPublic && !isBandLeader}>
-                        {isPublic ? <Lock className="h-4 w-4 mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
-                        {isPublic ? "Make Private" : "Make Public"}
-                    </DropdownMenuItem>
-                )}
+                <RabbiSubmenu canEdit={canEdit} rabbi={rabbi} onSetRabbi={onSetRabbi} />
 
                 <DropdownMenuSeparator />
 
                 {/* Tools */}
+                {onPrint && (
+                    <DropdownMenuItem onClick={onPrint} className="sm:hidden">
+                        <Printer className="h-4 w-4 mr-2" />
+                        Gig Packet
+                    </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem onClick={onOpenAI}>
                     <Sparkles className="h-4 w-4 mr-2" />
                     AI Assistant
@@ -155,5 +146,41 @@ export function OverflowMenu({
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+    )
+}
+
+function RabbiSubmenu({
+    canEdit,
+    rabbi,
+    onSetRabbi,
+}: {
+    canEdit: boolean
+    rabbi?: string
+    onSetRabbi?: (rabbi: string) => void
+}) {
+    const congregation = useCongregation()
+    const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
+
+    if (!canEdit || !onSetRabbi) return null
+
+    return (
+        <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+                <User className="h-4 w-4 mr-2" />
+                {rabbi ? `Rabbi: ${rabbi}` : "Assign Rabbi"}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+                {rabbiProfiles.map((rp) => (
+                    <DropdownMenuItem key={rp.name} onClick={() => onSetRabbi(rp.name)}>
+                        {rabbi === rp.name && <Check className="h-3 w-3 mr-2" />}
+                        <span className={rabbi === rp.name ? "font-medium" : ""}>Rabbi {rp.name}</span>
+                    </DropdownMenuItem>
+                ))}
+                {rabbiProfiles.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => onSetRabbi("")}>
+                    Clear
+                </DropdownMenuItem>
+            </DropdownMenuSubContent>
+        </DropdownMenuSub>
     )
 }
