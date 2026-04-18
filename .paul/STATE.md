@@ -131,10 +131,17 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-15 — v4.4 milestone CLOSED. Band-onboarding UX gate is CLEAR.
-Stopped at: 5 phases shipped (1, 2, 3, 5, 6), 3 deferred to v4.5 (4, 7, 8). Git tag v4.4 created. 1324/1324 tests green. All P0/P1 audit findings + all R2B "must fix before release" items closed.
-Next action: `/paul:discuss-milestone` (or `/paul:milestone`) to define v4.5 scope. Likely carry-over: Phase 4 file-size refactor, Phase 7 type-safety tail, Phase 8 perf tail, plus band-onboarding feedback.
-Resume file: `.paul/MILESTONES.md`
+Last session: 2026-04-18 — hotfix session for two production bugs (auto-save undefined crash + globalAlert permissions)
+Stopped at: All 3 fixes committed and pushed (23725597). Firestore rules deployment pending — user installing Firebase CLI.
+Next action: Deploy Firestore rules (`firebase deploy --only firestore:rules`), verify production, then `/paul:discuss-milestone` to define v4.5 scope.
+Resume file: `.paul/HANDOFF-2026-04-18.md`
+Resume context:
+- Fixed `updateSetlist` using `stripUndefinedDeep` instead of `stripUndefined` (was crashing on nested track undefined values)
+- Added `system/globalAlert` Firestore rule (was hitting deny-all fallback)
+- Added `tune` + `pageNumber` to `flush-schema.ts` strict write-boundary
+- 1324/1324 tests green; tsc clean
+- This local machine missing `.env.local` (full build fails on env vars — not a code issue)
+- Firebase CLI not yet installed on this machine
 
 Tonight's auth-incident commit chain (for context on resume):
 - c7dff08 fix(setlists): gate subscription on authUser.uid — kept (clean fix; eliminates pre-auth false-alarm)
