@@ -5,39 +5,33 @@
 See: .paul/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v4.3 complete; v4.4 pending scope
+**Current focus:** v4.5 Unloseable Live-Ops — local-first setlist editor + stage-UX priority system + library cache truthfulness.
 
 ## Current Position
 
-Milestone: ✅ v4.4 complete — Awaiting next milestone scope
-Phase: None active
-Plan: None
-Status: v4.4 milestone closed; band-onboarding UX gate cleared. Ready for `/paul:discuss-milestone` to define v4.5.
-Previous: v4.4 shipped 5 of 8 phases (1, 2, 3, 5, 6); Phases 4, 7, 8 deferred to v4.5 as P2.
-Last activity: 2026-04-15 — v4.4 milestone closed. MILESTONES.md updated, PROJECT.md evolved, ROADMAP collapsed to Previous, archive at `.paul/milestones/v4.4-ROADMAP.md`. Git tag v4.4 created.
+Milestone: 🚧 v4.5 Unloseable Live-Ops — 1 of 8 phases complete
+Phase: v45-01 ✅ complete — next: v45-07 (library cache invalidation, live-safe)
+Plan: v45-01 SUMMARY written
+Status: v45-01 closed. 9 tagged logger.error sites instrumenting every save-path silent-return. 1332/1332 tests green (+8). tsc clean. next build passes. Zero behavior change. Ready to commit + push + proceed to v45-07.
+Last activity: 2026-04-20 — UNIFY complete for v45-01; SUMMARY.md written.
 
 Progress:
-- v4.2: [██████████] 100% (8 of 8 phases complete)
-- Phase 5: [██████████] 100% ✓
-
-## Planned Phase 3 split (4 plans)
-
-1. **03-01 SwapPicker polish** — empty initial query, keyboard bindings (Esc/Enter/arrows), iOS autofocus hardening. *(PLAN ready)*
-2. **03-02 PDFOverlay hardening** — ErrorBoundary around PDFOverlay/PDFViewer, Esc-to-close, unify the two `/perform` route wrappers.
-3. **03-03 Setlist-updated notification** — fix Firestore-rules-blocked `users` query in `notifySetlistUpdated`; musician-side "Setlist updated" toast on swap.
-4. **03-04 Performance view polish** — per-chart transposition override on SetlistTrack, amber cue-note contrast, liturgical header hit area, mobile offline indicator (IDB ground truth).
+- v4.5: [█░░░░░░░░░] 12% (1 of 8 phases complete)
+- Phase v45-01: [██████████] 100% ✓
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone v4.4 complete — awaiting next milestone]
+  ✓        ✓        ✓     [v45-01 loop complete]
 ```
 
 ## How to resume
 
-Review `.paul/phases/03-stage-ux/03-01-PLAN.md`, load `/ui-ux-pro-max`, then run `/paul:apply .paul/phases/03-stage-ux/03-01-PLAN.md`.
+Commit v45-01 + push to origin master (auto-deploys to Vercel — safe, pure observability). Then `/paul:plan` for v45-07 (library cache invalidation — next gig-safe phase).
+
+Phases held until gig wraps: v45-02..06, v45-08 (touch live editor / toolbar).
 
 ## Phase order (for context)
 
@@ -131,9 +125,13 @@ Vercel auto-deploys `master` to production.
 
 ## Session Continuity
 
-Last session: 2026-04-18 — hotfix session for two production bugs (auto-save undefined crash + globalAlert permissions)
-Stopped at: All 3 fixes committed and pushed (23725597). Firestore rules deployment pending — user installing Firebase CLI.
-Next action: Deploy Firestore rules (`firebase deploy --only firestore:rules`), verify production, then `/paul:discuss-milestone` to define v4.5 scope.
+Last session: 2026-04-20 — live-gig pressure test + v4.5 milestone creation. User reported 3 issues during the gig (toolbar overlap, library upload lag, setlist data loss on SEUI). Root-cause investigation identified 4 compounding architectural failure modes in the save path (silent remote-merge wipe, subscription-churn precondition drift, invisible StaleWriteError, zero local draft). Milestone v4.5 "Unloseable Live-Ops" created with 8 phases addressing each root cause systemically.
+Stopped at: Milestone structure created; ready to /paul:plan Phase v45-01.
+Next action: Run `/paul:plan` for Phase v45-01 (Save-path observability).
+
+Outstanding from prior session (2026-04-18): Firestore rules deployment — verify `firebase deploy --only firestore:rules` has landed before Phase v45-01 ships.
+
+Setlist SEUI audit: after gig wraps, pull `setlists/SEUI/history` subcollection + Sentry breadcrumbs to determine which of Bugs A–D fired (silent-merge / stale-loop / flush-fail / never-hit-server). Informs Phase v45-01 test scenarios.
 Resume file: `.paul/HANDOFF-2026-04-18.md`
 Resume context:
 - Fixed `updateSetlist` using `stripUndefinedDeep` instead of `stripUndefined` (was crashing on nested track undefined values)
