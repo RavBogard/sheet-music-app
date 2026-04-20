@@ -14,6 +14,7 @@ import { notifySetlistUpdated } from "@/lib/notification-store"
 import { apiFetch } from "@/lib/api-client"
 import { saveLastUsedKey, loadLibraryMeta } from "@/lib/chord-cache"
 import { sendKeepaliveFlush } from "@/lib/setlist-flush"
+import { saveDraft, loadDraft, clearDraft } from "@/lib/setlist-draft"
 
 interface UseSetlistLogicProps {
     initialSetlistId?: string
@@ -332,6 +333,16 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 onSave?.(newId)
             }
             setLastSaved(new Date())
+            // v45-emergency AC-4: re-baseline on next subscription echo. The
+            // server now has a newer updatedAt than what we used as precondition;
+            // leaving the ref at the old value would lock every subsequent save
+            // into a silent StaleWriteError loop. Reset to null; first-snapshot
+            // branch in the subscription effect will adopt the fresh value.
+            lastSeenUpdatedAtRef.current = null
+            // v45-emergency AC-7: draft is now persisted on server, so the local
+            // draft is no longer needed. Clear it so the next mount doesn't offer
+            // a stale "restore" prompt.
+            clearDraft(id ?? latestRef.current.setlistId ?? null)
 
             // Significant change detection: notify musicians when tracks are added/removed
             const prevCount = prevTrackCountRef.current
@@ -357,8 +368,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             }
         } catch (e) {
             if (e instanceof StaleWriteError) {
-                // Another device wrote first. Don't toast — surface a banner
-                // so the user can choose "Take remote" or "Keep my changes".
+                // Another device wrote first. The banner at the top of the
+                // editor is the source of truth, but it can be scrolled off-
+                // screen on long setlists — surface a persistent toast too so
+                // the user never misses the conflict. v45-emergency AC-6.
                 logger.warn("Auto-save rejected: setlist changed on another device")
                 logger.error("[save]", {
                     event: "stale_write_rejected",
@@ -366,6 +379,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                     lastSeenUpdatedAtMs: lastSeenUpdatedAtRef.current?.toMillis() ?? null,
                     remoteUpdatedAtMs: e.remoteUpdatedAt?.toMillis() ?? null,
                     uid,
+                })
+                toast.error("Save conflict — setlist changed elsewhere", {
+                    description: "Scroll to the top of the editor to pick 'Keep my changes' or 'Take remote'.",
+                    duration: 10000,
                 })
                 setStaleDetected(true)
                 setSaving(false)
@@ -396,6 +413,73 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     // Keep a ref to performSave so the auto-save effect doesn't depend on its identity
     const performSaveRef = useRef(performSave)
     useEffect(() => { performSaveRef.current = performSave }, [performSave])
+
+    // v45-emergency AC-7: debounced localStorage draft persistence. Runs on the
+    // same deps as auto-save but at a shorter delay (250ms) so the tab-crash
+    // window is smaller. Separate from the 1s Firestore-debounce so we never
+    // lose an edit to a failed server write.
+    const draftTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    useEffect(() => {
+        if (!canEdit) return
+        if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
+        draftTimeoutRef.current = setTimeout(() => {
+            saveDraft({
+                setlistId: setlistId ?? null,
+                savedAt: Date.now(),
+                data: {
+                    name,
+                    tracks,
+                    eventDate: eventDate ? eventDate.toISOString() : null,
+                    rabbi,
+                    serviceNotes,
+                    musicians,
+                },
+            })
+        }, 250)
+        return () => {
+            if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
+        }
+    }, [setlistId, name, tracks, eventDate, rabbi, serviceNotes, musicians, canEdit])
+
+    // v45-emergency AC-7: on mount, if an unsaved draft exists for this setlist
+    // (or "new" for create path), offer the user the option to restore. Runs
+    // exactly once per setlistId via a ref guard so re-renders don't re-prompt.
+    const draftCheckedRef = useRef<string | "new" | null>(null)
+    useEffect(() => {
+        const slotKey = setlistId ?? "new"
+        if (draftCheckedRef.current === slotKey) return
+        draftCheckedRef.current = slotKey
+
+        const draft = loadDraft(setlistId ?? null)
+        if (!draft) return
+
+        // Compare coarse signals; if they match the initial server-loaded state,
+        // the draft is a no-op echo from the last session that already saved.
+        const sameLength = draft.data.tracks.length === initialTracks.length
+        const sameName = draft.data.name === (initialName || suggestedName || "")
+        if (sameLength && sameName) {
+            clearDraft(setlistId ?? null)
+            return
+        }
+
+        const ageMin = Math.max(1, Math.round((Date.now() - draft.savedAt) / 60000))
+        toast("Unsaved draft found", {
+            description: `Changes from ~${ageMin} min ago weren't saved to the server.`,
+            duration: 20000,
+            action: {
+                label: "Restore",
+                onClick: () => {
+                    setName(draft.data.name)
+                    setTracks(draft.data.tracks)
+                    setEventDate(draft.data.eventDate ? new Date(draft.data.eventDate) : null)
+                    setRabbi(draft.data.rabbi)
+                    setServiceNotes(draft.data.serviceNotes)
+                    setMusicians(draft.data.musicians)
+                    toast.success("Draft restored — auto-save will push to server")
+                },
+            },
+        })
+    }, [setlistId, initialTracks.length, initialName, suggestedName])
 
     // Trigger auto-save on changes — reads performSave from ref to avoid circular dep
     useEffect(() => {
@@ -705,8 +789,18 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     }
 
     // Subscribe to the setlist doc so we (a) know the remote updatedAt for
-    // concurrency preconditions and (b) can surface a "setlist changed"
-    // banner when another device writes while we have unsaved edits.
+    // concurrency preconditions and (b) surface a "setlist changed" banner
+    // when another device writes.
+    //
+    // v45-emergency changes:
+    //   AC-3: killed the silent-merge branch — local edits could be silently
+    //   clobbered if a remote snapshot happened to arrive while hasPendingSave
+    //   was false (between keystrokes or just after save completed). Now we
+    //   ALWAYS bank the remote snapshot + show banner when remote advances.
+    //   The first-snapshot path (prev === null) still adopts silently so our
+    //   OWN successful-save echo re-baselines without spamming the banner.
+    //   AC-5: removed `saving` from deps — subscription no longer unmounts/
+    //   remounts on every save cycle, eliminating snapshot-delivery races.
     useEffect(() => {
         if (!setlistId || !setlistService) return
         const unsub = setlistService.subscribeToSetlist(setlistId, (remote) => {
@@ -715,7 +809,10 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 ? remote.updatedAt
                 : null
             const prev = lastSeenUpdatedAtRef.current
-            // First snapshot — adopt it as baseline silently.
+            // First snapshot after (re)baseline — adopt silently. Happens on
+            // initial mount AND after a successful save (performSave resets
+            // the ref to null so the server's new updatedAt is re-adopted
+            // without firing the banner on our own echo).
             if (prev === null) {
                 lastSeenUpdatedAtRef.current = remoteUpdatedAt
                 return
@@ -726,24 +823,12 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 && remoteUpdatedAt.nanoseconds === prev.nanoseconds) {
                 return
             }
-            // Remote advanced. If we have pending local edits, store the
-            // remote snapshot and surface the banner; otherwise silently
-            // merge (user is just reading).
-            if (hasPendingSave.current || saving) {
-                pendingRemoteSnapshotRef.current = remote
-                setStaleDetected(true)
-            } else {
-                // Silent merge — remote is the new truth.
-                lastSeenUpdatedAtRef.current = remoteUpdatedAt
-                if (Array.isArray(remote.tracks)) setTracks(remote.tracks as SetlistTrack[])
-                if (typeof remote.name === 'string') setName(remote.name)
-                if (remote.rabbi !== undefined) setRabbi(remote.rabbi || '')
-                if (remote.serviceNotes !== undefined) setServiceNotes(remote.serviceNotes || '')
-                if (Array.isArray(remote.musicians)) setMusicians(remote.musicians as SetlistMusician[])
-            }
+            // Remote advanced. Bank + banner. No more silent merges.
+            pendingRemoteSnapshotRef.current = remote
+            setStaleDetected(true)
         })
         return () => unsub?.()
-    }, [setlistId, setlistService, saving])
+    }, [setlistId, setlistService])
 
     // Banner actions: user picks "Take remote" (discard local, use remote)
     // or "Keep my changes" (force-overwrite remote).

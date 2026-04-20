@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockHydrate = vi.fn()
 const mockInvalidateQueries = vi.fn()
-const mockListenForCacheInvalidation = vi.fn(() => () => {})
+const mockListenForCacheInvalidation = vi.fn((_cb: () => void): (() => void) => () => {})
 
 vi.mock('@/lib/firebase', () => ({
   auth: { currentUser: null },
