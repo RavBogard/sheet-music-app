@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 const mockHydrate = vi.fn()
+const mockInvalidateQueries = vi.fn()
+const mockListenForCacheInvalidation = vi.fn(() => () => {})
 
 vi.mock('@/lib/firebase', () => ({
   auth: { currentUser: null },
@@ -18,8 +20,13 @@ vi.mock('@/lib/library-store', () => ({
   ),
 }))
 
+vi.mock('@/lib/library-cache', () => ({
+  listenForCacheInvalidation: (cb: () => void) => mockListenForCacheInvalidation(cb),
+}))
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useQueryClient: vi.fn(() => ({ invalidateQueries: mockInvalidateQueries })),
 }))
 
 // ── Imports ────────────────────────────────────────────────────────────────────
@@ -94,5 +101,45 @@ describe('useLibrary', () => {
     renderHook(() => useLibrary())
 
     expect(mockHydrate).not.toHaveBeenCalled()
+  })
+
+  describe('invalidation on broadcast (v45-07)', () => {
+    beforeEach(() => {
+      mockInvalidateQueries.mockClear()
+      mockListenForCacheInvalidation.mockClear()
+    })
+
+    it('subscribes to library-cache invalidation on mount', () => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'u1' } } as unknown as ReturnType<typeof useAuth>)
+
+      renderHook(() => useLibrary())
+
+      expect(mockListenForCacheInvalidation).toHaveBeenCalledTimes(1)
+      expect(typeof mockListenForCacheInvalidation.mock.calls[0][0]).toBe('function')
+    })
+
+    it('invalidates ["library"] queryKey when broadcast callback fires', () => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'u1' } } as unknown as ReturnType<typeof useAuth>)
+
+      renderHook(() => useLibrary())
+
+      // Grab the callback the hook registered with listenForCacheInvalidation
+      // and invoke it to simulate a cross-tab invalidation message.
+      const callback = mockListenForCacheInvalidation.mock.calls[0][0]
+      callback()
+
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['library'] })
+    })
+
+    it('cleans up the listener on unmount', () => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'u1' } } as unknown as ReturnType<typeof useAuth>)
+      const cleanup = vi.fn()
+      mockListenForCacheInvalidation.mockReturnValueOnce(cleanup)
+
+      const { unmount } = renderHook(() => useLibrary())
+      unmount()
+
+      expect(cleanup).toHaveBeenCalledTimes(1)
+    })
   })
 })

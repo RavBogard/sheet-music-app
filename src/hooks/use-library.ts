@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { auth } from "@/lib/firebase"
 import { DriveFile } from "@/types/models"
 import { useEffect } from "react"
 import { useLibraryStore } from "@/lib/library-store"
 import { useAuth } from "@/lib/auth-context"
+import { listenForCacheInvalidation } from "@/lib/library-cache"
 
 /**
  * Fetches the library files from the API.
@@ -50,6 +51,7 @@ export function useLibrary(force = false, collection = 'all') {
 
     const { data } = queryInfo
     const hydrate = useLibraryStore(s => s.hydrate)
+    const queryClient = useQueryClient()
 
     // Keep the ephemeral Zustand store in sync for quick synchronous filtering
     useEffect(() => {
@@ -57,6 +59,15 @@ export function useLibrary(force = false, collection = 'all') {
             hydrate(data.files)
         }
     }, [data?.files, hydrate])
+
+    // v45-07: subscribe to cross-tab library invalidation. When another tab
+    // uploads a file, it broadcasts on the `library-cache` channel; we invalidate
+    // our react-query cache so the next render refetches.
+    useEffect(() => {
+        return listenForCacheInvalidation(() => {
+            queryClient.invalidateQueries({ queryKey: ['library'] })
+        })
+    }, [queryClient])
 
     return queryInfo
 }

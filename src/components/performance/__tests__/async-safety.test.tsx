@@ -117,6 +117,9 @@ describe("UploadDialog async-safety", () => {
         vi.doMock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
         const { UploadDialog } = await import("../../library/UploadDialog")
+        // v45-07 added useQueryClient() to UploadDialog — wrap in provider.
+        const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query")
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
         // We only need the instance to mount + unmount. We can't easily click
         // through the Dialog trigger, so we assert the AbortController wiring
@@ -131,7 +134,11 @@ describe("UploadDialog async-safety", () => {
         // structural proof that the component mounts and unmounts cleanly
         // without crashing. Combined with the grep-verifiable AbortController
         // wiring in the source, that's enough regression protection.
-        const { unmount } = render(<UploadDialog />)
+        const { unmount } = render(
+            <QueryClientProvider client={queryClient}>
+                <UploadDialog />
+            </QueryClientProvider>,
+        )
         expect(() => unmount()).not.toThrow()
         // If a request WAS in flight, unmount should have aborted it.
         if (capturedSignal) {

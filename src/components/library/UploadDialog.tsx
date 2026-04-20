@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Upload, FileUp, X, Loader2, CheckCircle, Music } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
+import { useQueryClient } from "@tanstack/react-query"
+import { broadcastCacheInvalidation } from "@/lib/library-cache"
 import { toast } from "sonner"
 
 const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx"
@@ -28,6 +30,7 @@ import { DialogDescription } from '@radix-ui/react-dialog'
 
 export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const { user } = useAuth()
+    const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
     const [title, setTitle] = useState("")
@@ -129,6 +132,12 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             if (controller.signal.aborted) return
             setSuccess(true)
             toast.success(data.message || 'File uploaded successfully')
+
+            // v45-07: invalidate the react-query library cache locally so the new
+            // file appears in search / setlist picker / chat without cold reload,
+            // then broadcast to any other open tabs via BroadcastChannel.
+            queryClient.invalidateQueries({ queryKey: ['library'] })
+            broadcastCacheInvalidation()
 
             // Notify parent
             onUploadComplete?.(data.fileId, data.title)
