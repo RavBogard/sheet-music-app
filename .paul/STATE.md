@@ -9,29 +9,28 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v4.5 Unloseable Live-Ops — 1 of 8 phases complete
-Phase: v45-01 ✅ complete — next: v45-07 (library cache invalidation, live-safe)
-Plan: v45-01 SUMMARY written
-Status: v45-01 closed. 9 tagged logger.error sites instrumenting every save-path silent-return. 1332/1332 tests green (+8). tsc clean. next build passes. Zero behavior change. Ready to commit + push + proceed to v45-07.
-Last activity: 2026-04-20 — UNIFY complete for v45-01; SUMMARY.md written.
+Milestone: 🚧 v4.5 Unloseable Live-Ops — 2 of 8 phases complete
+Phase: v45-01 ✅ + v45-07 ✅ complete — held: v45-02..06 + v45-08 (await gig wrap)
+Plan: v45-07 SUMMARY written
+Status: v45-07 closed. UploadDialog now invalidates local react-query library cache + broadcasts cross-tab; useLibrary subscribes. 1335/1335 tests green (+3). tsc clean. next build passes. Ready to commit + push.
+Last activity: 2026-04-20 — UNIFY complete for v45-07; SUMMARY.md written.
 
 Progress:
-- v4.5: [█░░░░░░░░░] 12% (1 of 8 phases complete)
+- v4.5: [██░░░░░░░░] 25% (2 of 8 phases complete)
 - Phase v45-01: [██████████] 100% ✓
+- Phase v45-07: [██████████] 100% ✓
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v45-01 loop complete]
+  ✓        ✓        ✓     [v45-07 loop complete]
 ```
 
 ## How to resume
 
-Commit v45-01 + push to origin master (auto-deploys to Vercel — safe, pure observability). Then `/paul:plan` for v45-07 (library cache invalidation — next gig-safe phase).
-
-Phases held until gig wraps: v45-02..06, v45-08 (touch live editor / toolbar).
+Commit v45-07 + push to origin master. All gig-safe phases shipped. Remaining work (v45-02..06, v45-08) held until Rabbi Daniel confirms gig wrapped — they touch the live editor surface and can't ship mid-service.
 
 ## Phase order (for context)
 

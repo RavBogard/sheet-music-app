@@ -3,7 +3,7 @@
 ## Current Milestone
 **v4.5 Unloseable Live-Ops**
 Status: 🚧 In Progress
-Phases: 1 of 8 complete
+Phases: 2 of 8 complete
 Theme: Local-first editor, predictable toolbar, cache that keeps up. Derived from live-gig pressure test 2026-04-20 (3 reports, 1 critical data loss on setlist SEUI).
 
 | Phase | Name | Plans | Status | Completed |
@@ -14,7 +14,7 @@ Theme: Local-first editor, predictable toolbar, cache that keeps up. Derived fro
 | v45-04 | Conflict surface redesign | TBD | Not started | - |
 | v45-05 | Save observability UI | TBD | Not started | - |
 | v45-06 | Performance toolbar priority system | TBD | Not started | - |
-| v45-07 | Library cache invalidation on upload | TBD | Not started | - |
+| v45-07 | Library cache invalidation on upload | 1/1 | ✅ Complete | 2026-04-20 |
 | v45-08 | Deferred v4.4 polish (reconciled) | TBD | Not started | - |
 
 ### Phase v45-01: Save-path observability
