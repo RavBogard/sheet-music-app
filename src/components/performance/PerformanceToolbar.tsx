@@ -202,8 +202,12 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     {monitorPopover('tools', true)}
                 </div>
 
-                {/* Row 2 (bottom): Home | Song Navigation (centered) | Monitor & Setlist */}
-                <div className="relative w-full h-14 flex items-center justify-between px-2">
+                {/* Row 2 (bottom): Home | Song Navigation (flex-center, never covered) | Setlist */}
+                {/* v45-emergency: swapped absolute-center for flex-based layout. Absolute
+                    positioning meant LEFT/RIGHT blocks could visually overlap the centered
+                    SongNavigation when content exceeded expected widths, covering the
+                    chart prev/next arrows. flex + min-w-0 + shrink-0 prevents overlap. */}
+                <div className="w-full h-14 flex items-center gap-2 px-2">
                     {/* Far Left: Exit X */}
                     <div className="shrink-0">
                         <Button variant="ghost" onClick={onHome} className="h-12 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2">
@@ -212,25 +216,28 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                         </Button>
                     </div>
 
-                    {/* Center: Song Navigation (absolute so it perfectly centers) */}
-                    <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
-                        <div className="pointer-events-auto">
-                            <SongNavigation />
-                        </div>
+                    {/* Center: Song Navigation — flex-1 + min-w-0 so it shrinks rather than overlaps */}
+                    <div className="flex-1 flex justify-center min-w-0">
+                        <SongNavigation />
                     </div>
 
                     {/* Far Right: Setlist Drawer */}
-                    <div className="shrink-0 flex items-center gap-1 z-10">
+                    <div className="shrink-0 flex items-center gap-1">
                         <SetlistDrawer />
                     </div>
                 </div>
             </div>
 
             {/* ── DESKTOP: Single row (≥ lg) ── */}
-            <div className="hidden lg:flex w-full h-16 items-center justify-between px-6 relative">
+            {/* v45-emergency: LEFT/RIGHT were pinned to w-1/4 (~341px on 1366, ~256px on
+                1024) but actual content (~380-400px each) overflowed into the absolute-
+                centered SongNavigation, visually covering chart prev/next. Switched to
+                flex-based: LEFT/RIGHT shrink-0 (content width), CENTER flex-1 min-w-0
+                (takes remaining, shrinks SongNavigation title before chevrons). */}
+            <div className="hidden lg:flex w-full h-16 items-center gap-4 px-6">
 
                 {/* LEFT: System & Navigation */}
-                <div className="flex items-center gap-3 z-10 w-1/4">
+                <div className="flex items-center gap-3 shrink-0">
                     <Button variant="ghost" onClick={onHome} className="h-11 px-4 glass-card text-foreground/80 hover:text-foreground fluid-interaction rounded-xl flex items-center gap-2" title="Exit Gig Mode">
                         <X className="h-5 w-5" />
                         <span className="text-xs font-bold uppercase tracking-wider">Exit</span>
@@ -242,22 +249,20 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     <SetlistDrawer />
                 </div>
 
-                {/* CENTER: Song Navigation */}
-                <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
-                    <div className="pointer-events-auto">
-                        <SongNavigation />
-                    </div>
+                {/* CENTER: Song Navigation — flex-1 + min-w-0 so it shrinks, never overlaps */}
+                <div className="flex-1 flex justify-center min-w-0">
+                    <SongNavigation />
                 </div>
 
                 {/* RIGHT: Tools + Transposer */}
-                <div className="flex items-center justify-end gap-3 z-10 w-1/4">
+                <div className="flex items-center justify-end gap-3 shrink-0">
 
                     {/* Monitor Mix popover */}
                     {monitorPopover('tools-desktop', false)}
 
                     <div className="w-px h-8 bg-border/50" />
 
-                    {/* Metronome */}
+                    {/* Metronome — BPM input collapses first per v45-emergency AC-2 */}
                     <div className="flex items-center">
                         <MetronomeControl />
                     </div>

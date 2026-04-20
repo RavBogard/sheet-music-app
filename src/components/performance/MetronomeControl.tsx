@@ -22,7 +22,12 @@ export function MetronomeControl() {
 
     return (
         <div className="flex items-center gap-2 lg:gap-3 px-1">
-            <div className="hidden lg:flex items-center gap-1 bg-background/40 rounded-lg pl-2 pr-1 h-11 border border-border">
+            {/* v45-emergency: BPM is the first control to collapse when toolbar is tight.
+                Changed from `hidden lg:flex` (1024+) to `hidden min-[1280px]:flex` so the
+                BPM number input disappears on iPad-portrait-lg and narrower desktop widths
+                where LEFT+RIGHT toolbar content would otherwise overlap chart navigation.
+                The blink/tap button below stays visible at all sizes. */}
+            <div className="hidden min-[1280px]:flex items-center gap-1 bg-background/40 rounded-lg pl-2 pr-1 h-11 border border-border">
                 <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">BPM</span>
                 <Input
                     type="number"
@@ -54,8 +59,10 @@ export function MetronomeControl() {
                             ? "h-2.5 w-2.5 bg-red-800"
                             : "h-2 w-2 bg-muted-foreground/40"
                 )} />
+                {/* v45-emergency: show this compact BPM label until the wide BPM input
+                    kicks in at 1280px+. Matches the visibility breakpoint above. */}
                 <span className={cn(
-                    "text-xs font-semibold lg:hidden",
+                    "text-xs font-semibold min-[1280px]:hidden",
                     isPlaying ? "text-red-400" : "text-muted-foreground"
                 )}>
                     {isPlaying ? currentBpm : "BPM"}
