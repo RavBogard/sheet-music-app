@@ -10,6 +10,7 @@
  */
 
 import type { SetlistTrack, SetlistMusician } from "@/types/models"
+import { logger } from "@/lib/logger"
 
 export interface FlushSavePayload {
     setlistId: string
@@ -33,6 +34,9 @@ export function sendKeepaliveFlush(payload: FlushSavePayload, bearerToken: strin
     if (!bearerToken) return
     try {
         // Deliberately not awaited — keepalive means the browser owns the request.
+        // We still attach a response observer for best-effort telemetry; when the
+        // browser discards the response post-navigation, the handlers simply never
+        // fire (no behavior impact).
         fetch('/api/setlist/flush', {
             method: 'POST',
             keepalive: true,
@@ -41,9 +45,29 @@ export function sendKeepaliveFlush(payload: FlushSavePayload, bearerToken: strin
                 'Authorization': `Bearer ${bearerToken}`,
             },
             body: JSON.stringify(payload),
-        }).catch(() => { /* fire-and-forget */ })
-    } catch {
+        }).then(res => {
+            if (!res.ok) {
+                logger.error("[save]", {
+                    event: "flush_http_error",
+                    status: res.status,
+                    setlistId: payload.setlistId,
+                })
+            }
+        }).catch(err => {
+            logger.error("[save]", {
+                event: "flush_network_error",
+                setlistId: payload.setlistId,
+                error: err instanceof Error ? err.message : String(err),
+            })
+        })
+    } catch (e) {
         // Some browsers throw synchronously on oversized keepalive bodies —
-        // accept the loss rather than blocking unload.
+        // accept the loss rather than blocking unload, but emit telemetry so
+        // we can detect it post-mortem.
+        logger.error("[save]", {
+            event: "flush_sync_throw",
+            setlistId: payload.setlistId,
+            error: e instanceof Error ? e.message : String(e),
+        })
     }
 }

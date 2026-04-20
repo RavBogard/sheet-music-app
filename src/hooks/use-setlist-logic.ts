@@ -278,7 +278,15 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
     // Stable save function that reads from refs (never stale)
     const performSave = useCallback(async () => {
         const { setlistId: id, name: n, tracks: t, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
-        if (!n || n.length === 0 || !canEdit || !setlistService) return
+        if (!n || n.length === 0 || !canEdit || !setlistService) {
+            logger.error("[save]", {
+                event: "save_blocked",
+                setlistId: id,
+                uid,
+                reason: !n || n.length === 0 ? "no_name" : !canEdit ? "canEdit" : "no_service",
+            })
+            return
+        }
 
         setSaving(true)
         try {
@@ -352,13 +360,26 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
                 // Another device wrote first. Don't toast — surface a banner
                 // so the user can choose "Take remote" or "Keep my changes".
                 logger.warn("Auto-save rejected: setlist changed on another device")
+                logger.error("[save]", {
+                    event: "stale_write_rejected",
+                    setlistId: latestRef.current.setlistId,
+                    lastSeenUpdatedAtMs: lastSeenUpdatedAtRef.current?.toMillis() ?? null,
+                    remoteUpdatedAtMs: e.remoteUpdatedAt?.toMillis() ?? null,
+                    uid,
+                })
                 setStaleDetected(true)
                 setSaving(false)
                 return
             }
-            logger.error("Auto-save failed:", e)
             const msg = e instanceof Error ? e.message : String(e)
             const isPermissionError = msg.includes("permission") || msg.includes("PERMISSION_DENIED")
+            logger.error("[save]", {
+                event: "save_failed",
+                setlistId: latestRef.current.setlistId,
+                uid,
+                isPermissionError,
+                message: msg,
+            })
             const description = isPermissionError
                 ? "You may not have permission to edit this setlist."
                 : msg.includes("not-found")
@@ -410,7 +431,14 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
             try {
                 const t = await user.getIdToken()
                 if (!cancelled) idTokenRef.current = t
-            } catch { /* keep previous token */ }
+            } catch (err) {
+                logger.error("[save]", {
+                    event: "token_refresh_failed",
+                    uid,
+                    error: err instanceof Error ? err.message : String(err),
+                })
+                /* keep previous token */
+            }
         }
         refresh()
         return () => { cancelled = true }
@@ -435,11 +463,29 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         }
 
         const flushViaKeepalive = () => {
+            // NOTE: !hasPendingSave is the nothing-to-flush no-op — not a silent
+            // failure. Skip logging it to avoid Sentry noise on every tab close.
             if (!hasPendingSave.current) return
             const { setlistId: id, name: n, tracks: t, eventDate: ed, rabbi: rab, serviceNotes: sn, musicians: mus } = latestRef.current
-            if (!id || !n || !canEdit) return
+            if (!id || !n || !canEdit) {
+                logger.error("[save]", {
+                    event: "flush_skipped",
+                    reason: "missing_fields",
+                    setlistId: id ?? null,
+                    hasName: !!n,
+                    canEdit,
+                })
+                return
+            }
             const token = idTokenRef.current
-            if (!token) return
+            if (!token) {
+                logger.error("[save]", {
+                    event: "flush_skipped",
+                    reason: "no_token",
+                    setlistId: id,
+                })
+                return
+            }
 
             const remoteUpdatedAt = lastSeenUpdatedAtRef.current
             sendKeepaliveFlush({

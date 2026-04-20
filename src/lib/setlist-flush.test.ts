@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { sendKeepaliveFlush, type FlushSavePayload } from './setlist-flush'
+import { logger } from './logger'
 
 describe('sendKeepaliveFlush', () => {
     let fetchSpy: ReturnType<typeof vi.fn>
@@ -72,5 +73,65 @@ describe('sendKeepaliveFlush', () => {
         const returnValue = sendKeepaliveFlush(makePayload(), 'tok')
         expect(returnValue).toBeUndefined()
         expect(resolved).toBe(false)
+    })
+
+    describe('observability (v45-01 AC-5)', () => {
+        let errorSpy: ReturnType<typeof vi.spyOn>
+
+        beforeEach(() => {
+            errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
+        })
+
+        afterEach(() => {
+            errorSpy.mockRestore()
+        })
+
+        it('emits flush_http_error when server responds non-2xx (409 stale)', async () => {
+            fetchSpy.mockImplementation(() => Promise.resolve(new Response('{}', { status: 409 })))
+            sendKeepaliveFlush(makePayload({ setlistId: 'seui' }), 'tok')
+            await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled())
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[save]',
+                expect.objectContaining({
+                    event: 'flush_http_error',
+                    status: 409,
+                    setlistId: 'seui',
+                }),
+            )
+        })
+
+        it('does not emit flush_http_error on 2xx responses', async () => {
+            fetchSpy.mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })))
+            sendKeepaliveFlush(makePayload(), 'tok')
+            await new Promise(resolve => setTimeout(resolve, 0))
+            expect(errorSpy).not.toHaveBeenCalled()
+        })
+
+        it('emits flush_network_error when fetch rejects', async () => {
+            fetchSpy.mockImplementation(() => Promise.reject(new Error('network down')))
+            sendKeepaliveFlush(makePayload({ setlistId: 'seui' }), 'tok')
+            await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled())
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[save]',
+                expect.objectContaining({
+                    event: 'flush_network_error',
+                    setlistId: 'seui',
+                    error: 'network down',
+                }),
+            )
+        })
+
+        it('emits flush_sync_throw when fetch throws synchronously (oversized body)', () => {
+            fetchSpy.mockImplementation(() => { throw new Error('body too large') })
+            sendKeepaliveFlush(makePayload({ setlistId: 'seui' }), 'tok')
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[save]',
+                expect.objectContaining({
+                    event: 'flush_sync_throw',
+                    setlistId: 'seui',
+                    error: 'body too large',
+                }),
+            )
+        })
     })
 })
