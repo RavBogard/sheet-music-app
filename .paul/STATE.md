@@ -9,39 +9,48 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 1 of 3 plans closed)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-02 PLAN created, awaiting approval)
-Plan: v50-05-02 — created, awaiting approval (`.paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`)
-Status: PLAN created for v50-05-02 (cutover). 3 auto tasks + 1 decision checkpoint (hydration architecture A vs B) + 1 human-verify checkpoint (post-deploy prod smoke). /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md. Ready for APPLY after decision + skill load.
-Last activity: 2026-04-26 — PLAN v50-05-02 created (cutover: route swap + Dexie hydration + ChartBindPopover + ~−8,400 LOC legacy deletion).
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 2 of 3 plans closed)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-02 closed; v50-05-03 next)
+Plan: v50-05-02 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-02-SUMMARY.md`)
+Status: UNIFY complete for v50-05-02. Cutover landed on prod: SetlistGrid mounted via SetlistGridHydrator at /setlists/[id]; ChartBindPopover wires ChartCell click → applyEdit; ~−6,300 LOC legacy editor deleted. 4 commits pushed (b8d8314..d8c0442). 1315/1316 tests; tsc + next build clean. Prod smoke verification deferred to user (item #4 in deferred smokes list).
+Last activity: 2026-04-26 — UNIFY complete for v50-05-02 (SUMMARY.md written).
 
 Progress:
-- v5.0: [██████░░░░] ~62% (4 of 7 phases complete; v50-05 ⅓ done)
+- v5.0: [███████░░░] ~71% (4 of 7 phases complete; v50-05 ⅔ plans done)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
-- Phase v50-05: [███░░░░░░░] 33% (v50-05-01 closed: build SetlistGrid + engine boot, no cutover)
+- Phase v50-05: [███████░░░] 67% (v50-05-01 + v50-05-02 closed; v50-05-03 polish remaining)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v50-05-02 PLAN created, awaiting approval]
+  ○        ○        ○     [Loop reset — ready for v50-05-03 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
-v50-05-02:     ✓ ──▶ ○ ──▶ ○     [Cutover plan written; APPLY pending /ui-ux-pro-max + Option A/B decision]
-v50-05-03:     ○ ──▶ ○ ──▶ ○     [Polish plan — touch/iPad + mobile + a11y + multi-select]
+v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
+v50-05-03:     ○ ──▶ ○ ──▶ ○     [Polish plan — touch/iPad + mobile + a11y + multi-select + AlertDialog + ContextMenu + undo]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for v50-05-02 (cutover). The legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + `/api/setlist/flush` route + broadcast-channel merge code, ~−8,400 LOC) gets deleted and the route mount in `setlists/[id]/page.tsx` swaps from `SetlistEditorV2` → `SetlistGrid` (already exported from `@/components/setlist/grid`). ProductionFirestoreAdapter is wired and engine is booted; v50-05-02 is mostly subtraction + a one-line route change + ChartCell click→match-modal binding. Reference ARCHITECTURE.md §6 wireframes; `/ui-ux-pro-max` BLOCKING per SPECIAL-FLOWS.md.
+Run `/paul:plan` for v50-05-03 (polish — the last plan in v50-05). Scope per ARCHITECTURE.md §6.6/6.7/6.11/6.13 + the v50-05-01 + v50-05-02 deferral list:
+- **§6.6 Multi-select / batch edit** — Shift-click row range; bulk Backspace delete; bulk key/lead/bpm change via a sticky batch toolbar.
+- **§6.7 iPad/touch variant** — Bottom-sheet dropdowns instead of Popover (cmdk inside Radix Sheet); larger padding (44px touch targets); hover replacements (long-press for context menu).
+- **§6.11 Mobile-only stacked-card flow** — Drop the table at <768px; show stacked cards with a full-screen "edit pane" sheet for cell-level edits.
+- **§6.13 WCAG AA binding accessibility verification** — Run axe / Lighthouse against the live editor; fix focus-trap gaps in popovers; verify keyboard-only navigation across all cells; aria-live regions for SyncIndicator state changes (already in place — verify announce timing).
+- **AlertDialog** swap-in for window.confirm (the `confirmDeleteWithTitle` injection point is already wired per v50-05-01).
+- **Right-click ContextMenu** on rows + drag handle (Radix ContextMenu).
+- **Undo** via zustand temporal middleware on the local Dexie writes (intercept before applyEdit).
+
+`/ui-ux-pro-max` BLOCKING for APPLY per SPECIAL-FLOWS.md.
 
 **Required skill:** `/ui-ux-pro-max` per SPECIAL-FLOWS.md — must be invoked before APPLY.
 
@@ -109,6 +118,7 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 1. **v4.1**: create setlists via wizard / chat / import / transfer on prod; confirm second user sees them.
 2. **Phase 1.1**: open same setlist in 2 tabs, make conflicting edits, confirm banner or silent-merge behavior.
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
+4. **v50-05-02 (cutover)**: open a real setlist on prod; confirm SetlistGrid renders existing tracks in order + SyncIndicator "Saved"; edit a Title cell + Tab → Saving → Saved; hard-refresh → edit persisted; click ChartCell on unbound row → ChartBindPopover opens → pick a song → ChartCell switches to bound (indigo). Mobile viewport functional-but-rough OK (touch polish → v50-05-03).
 
 ### Git state
 Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
@@ -177,10 +187,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 — `/paul:resume` consumed handoff `HANDOFF-2026-04-26-v50-05-02-pickup.md` (archived to `.paul/handoffs/archive/`); `git pull origin master` clean (already up to date); `/paul:plan` produced `v50-05-02-PLAN.md` (cutover). Plan has 3 auto tasks (route swap + Dexie hydration; ChartCell binding flow via new ChartBindPopover; legacy deletion + setlist-firebase narrow + verification) + 1 decision checkpoint (hydration architecture: Option A — SetlistGridHydrator wrapper with initialServerData props; Option B — useEffect inside SetlistGrid, recommended Option A) + 1 human-verify checkpoint (post-deploy prod smoke). Boundaries lock v50-03/04/05-01 surfaces; scope-limits defer reconciliation modal/expectedUpdatedAt to v50-06, multi-select/iPad/mobile/a11y/AlertDialog to v50-05-03, migration apply to v50-07.
-Stopped at: PLAN created. APPLY blocked on (a) `/ui-ux-pro-max` invocation and (b) decision-checkpoint resolution (Option A vs B for Dexie hydration).
-Next action: review/approve plan, then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`. APPLY will start with the BLOCKING /ui-ux-pro-max load and the hydration decision before Task 1 runs.
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`
+Last session: 2026-04-26 (v50-05-02 close) — Resume → archive consumed handoff → /paul:plan (3 tasks + 1 decision + 1 human-verify) → /ui-ux-pro-max loaded → decision Option A → /paul:apply Task 1 (route swap + Hydrator, 5 tests) → Task 2 (ChartBindPopover, 4 tests) → Task 3 (legacy purge ~−6,300 LOC + SearchOverlay relocate + matrix view drop + Hydrator test cleanup) → push origin master → human-verify deferred to user → /paul:unify (this SUMMARY). Four task commits on origin/master: `b8d8314` (chore: PLAN + handoff archive + state sync), `0584744` (Task 1: Hydrator + route swap), `ba7e214` (Task 2: ChartBindPopover + ChartCell forwardRef + binding wiring), `d8c0442` (Task 3: 27 deletions + SearchOverlay rename + matrix view removal). Full suite 1315/1316; tsc + next build clean; /api/setlist/flush gone. Production now serves SetlistGrid for all setlist editing.
+Stopped at: v50-05-02 fully closed; UNIFY commit (this SUMMARY + STATE + ROADMAP) lands next then push.
+Next action: commit UNIFY artefacts (`.paul/phases/v50-05-spreadsheet-editor/v50-05-02-SUMMARY.md` + STATE + ROADMAP) and push, then `/paul:plan` for v50-05-03 (polish). Before APPLY of v50-05-03, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md.
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-02-SUMMARY.md`
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
