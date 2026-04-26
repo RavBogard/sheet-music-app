@@ -52,16 +52,17 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 2 of 7 phases complete (2026-04-26).
-Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); AI chat + live-swap UI amputated. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact. Next: v50-03 (Local-first sync engine).
+**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 3 of 7 phases complete (2026-04-26).
+Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); AI chat + live-swap UI amputated. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact. Next: v50-04 (Song catalog & sticky memory).
 
 **v4.5 — Superseded by v5.0** (2026-04-26): 2 of 8 phases shipped (v45-01 save-path observability, v45-07 library cache invalidation). 6 phases cancelled — they targeted save-path machinery v5.0 deletes wholesale.
 
 ### Validated (Shipped this cycle)
 
-**v5.0 Bulletproof Editor — 2 of 7 phases complete, 2026-04-26**
+**v5.0 Bulletproof Editor — 3 of 7 phases complete, 2026-04-26**
 - [x] v50-01 Architecture & design — ARCHITECTURE.md sign-off; locked stack (Dexie + outbox / TanStack Table v8 headless + @dnd-kit + Radix + cmdk), normalized rows + LWW per-document doc model, 6-state sync FSM, per-song global sticky memory, one-shot in-place migration with rollback snapshots, spreadsheet-shaped editor wireframes (desktop + iPad + phone + WCAG AA), amputation scope for AI chat + live-swap UI (2026-04-26)
 - [x] v50-02 Dead-code amputation — Deleted AI chat (ChatPanel + chat-store + chat-prompt + /api/chat + integration points), live-swap UI (SwapPicker, SwapChangeToast, /live receiver, proxy carve-out), and song-groups + canLiveSwap permission system (swapTrack(), liturgicalSlot field). Three atomic commits; 32 files changed; **net −2,363 LOC**; 1281/1281 tests passing; tsc clean; next build success. Most of the v3.0/v4.0 swap infrastructure was already absent from prior teardowns (LeaderConsole, SwapBottomSheet, song-groups module, canLiveSwap field, isNotTooFrequent rule all already gone). Production data left in place for v50-07 migration to scrub. (2026-04-26)
+- [x] v50-03 Local-first sync engine — Dexie 4.4 LocalDb (5 stores: setlists, tracks, songs, outbox, meta) + atomic `applyEdit()` (entity row + outbox row in one Dexie tx) + 6-state sync FSM + backoff retry [500,1000,2000,4000,8000]ms × 5 attempts + dead-letter + cross-tab BroadcastChannel single-leader lock (5s lease) + fast-check property harness proving no committed write is silently lost. Per-doc drain ordering invariant (LWW correctness) added after the property test surfaced the bug. Built fully standalone — zero imports from `src/components`/`src/hooks`/`src/app`; v50-05 editor cutover plugs in cleanly. Three atomic commits (`cb73dcc` + `6cf34d7` + `0a94a9c`); 39 new tests (1320/1320 total); tsc clean; next build success. (2026-04-26)
 
 **v4.4 Deferred Audit Sweep — Architectural Polish — 5 of 8 phases complete (3 deferred), 2026-04-15**
 - [x] v4.4 Phase 1: Data-layer atomicity — DL-001/002/003/012/013/014 (scheduling assign/decline transactions) (2026-04-15)
@@ -265,7 +266,12 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Modal state-reset effect deps = [isOpen] only (NOT initial* props) | v4.4 P6 | Adding initial* deps would clobber in-progress edits on parent re-render |
 | ref-stabilise prop callbacks in long-lived effect handlers | v4.4 P3 | TempoFlash/PDFOverlay Escape handler invokes latest callback, not the one captured at mount |
 | PDFViewer retry cap at 3 attempts → terminal error UI | v4.4 P3 | Prevents infinite thrash on consistently-broken charts |
+| applyEdit() = one Dexie transaction over (entity store + outbox) | v50-03 | Atomic write contract — entity row + outbox enqueue land together or roll back together; foundation of "bulletproof" |
+| Per-doc drain ordering — block later same-doc rows when earlier row is sending/failed/not-yet-due | v50-03 | LWW per-document correctness; transient failure on row N can't let row N+1 same-doc leapfrog. Fix discovered by property test counterexample |
+| Auth refresh + retry happens in-loop (single drain pass), not via re-queue | v50-03 | Second-attempt result resolves directly to Idle/Failed; cleaner than encoding "refresh used" via attempts field |
+| Orphaned 'sending' rows reset on engine.start() (post force-quit recovery) | v50-03 | Prevents permanent doc-blocking under per-doc ordering rule |
+| FakeClock injection > vi.useFakeTimers for Dexie-touching tests | v50-03 | vi races with fake-indexeddb microtask scheduling; manual FakeClock + macrotask flush is deterministic. Pattern reusable for v50-04..v50-06 |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-26 after v50-02 phase close (Dead-code amputation: AI chat + live-swap UI + canLiveSwap system removed; net −2,363 LOC)*
+*Last updated: 2026-04-26 after v50-03 phase close (Local-first sync engine: Dexie + outbox + FSM + cross-tab lock + property harness; standalone, +1537 LOC engine + 488 LOC harness)*

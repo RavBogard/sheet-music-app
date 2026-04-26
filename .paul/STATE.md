@@ -9,31 +9,35 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 2 of 7 phases complete
-Phase: v50-03 of 7 (Local-first sync engine) — Ready to plan
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 3 of 7 phases complete
+Phase: v50-04 of 7 (Song catalog & sticky memory) — Ready to plan
 Plan: Not started
-Status: v50-02 closed. SUMMARY.md written. Three deletion commits on master (4737214 chat, 9059d91 live-swap UI, baf8109 swapTrack+liturgicalSlot); 32 files changed; net −2,363 LOC; 1281/1281 tests passing. Phase commit (.paul/ files) pending user approval before moving to v50-03.
-Last activity: 2026-04-26 — UNIFY complete for v50-02 (v50-02-SUMMARY.md written).
+Status: v50-03 closed. SUMMARY written. Three task commits on master (cb73dcc IDB foundation, 6cf34d7 sync engine, 0a94a9c property harness); 1320/1320 tests passing; tsc clean; next build success. Engine standalone (zero consumer wiring). Phase commit pending push.
+Last activity: 2026-04-26 — UNIFY complete for v50-03-01 (SUMMARY.md written).
 
 Progress:
-- v5.0: [███░░░░░░░] 29% (2 of 7 phases complete)
+- v5.0: [████░░░░░░] 43% (3 of 7 phases complete)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
+- Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-03 PLAN]
+  ○        ○        ○     [Loop reset — ready for v50-04 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
+v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 ```
 
 ## How to resume
 
-After phase commit (pending approval), run `/paul:plan` for Phase v50-03 (Local-first sync engine). Reference ARCHITECTURE.md §§1-3 for stack, doc-in-IDB model, and sync engine state machine bindings.
+Run `/paul:plan` for Phase v50-04 (Song catalog & sticky memory). Reference ARCHITECTURE.md §4 for the per-song global `defaults: { key, lead, bpm }` schema + propagation rules. The `songs` store from v50-03 is already in place — v50-04 extends it with `defaults` and `recent[]` fields (Dexie schema version bump).
+
+Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
 
 Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
 
@@ -146,14 +150,23 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: Live-swap UI deleted (replaced by real-time setlist sync from existing/new sync engine) | v50-02 | Over-engineered v3.0/v4.0 surface; replacement is implicit from leader-edits-propagate-via-Firestore; ~−515 LOC |
 | 2026-04-26: swapTrack() function + liturgicalSlot field deleted | v50-02 | Backed retired live-swap feature; zero callers after Task 2; firestore.rules already had no swap-specific carve-outs (prior teardown) |
 | 2026-04-26: openai npm dep + template-parser.ts left as orphans | v50-02 | Out of strict amputation scope; deletion is safe but should be its own dependency-cleanup task |
+| 2026-04-26: Per-doc drain ordering — block later rows when an earlier (collection,docId) row is sending/failed/not-yet-due | v50-03 | LWW per-document correctness: a transient failure on row N cannot let row N+1 same-doc leapfrog. Fix discovered by property test counterexample; throughput tradeoff acceptable |
+| 2026-04-26: Auth refresh + retry happens IN-LOOP (single drain pass) | v50-03 | Cleaner than re-queuing with attempts=1; second-attempt result resolves directly to Idle/Failed |
+| 2026-04-26: FakeClock injection > vi.useFakeTimers for Dexie-touching tests | v50-03 | vi races with fake-indexeddb microtask scheduling; manual FakeClock + macrotask flush is deterministic. Pattern documented in test files for v50-04..v50-06 reuse |
+| 2026-04-26: Property test numRuns = 20 (not 100) | v50-03 | Per-scenario cost ~600ms; harness deadlocks above ~30 in current shape. 20 sufficient for class-of-bug coverage; soak runs can crank higher |
 
 ## Session Continuity
 
-Last session: 2026-04-26 — Two phases shipped in one session:
-- v50-01 (Architecture & design): ARCHITECTURE.md sign-off; commit `4fb05c6`. v44 orphan cleanup commit `57fe892`.
-- v50-02 (Dead-code amputation): three task commits `4737214` (chat, −1786) + `9059d91` (live-swap UI, −515) + `baf8109` (swapTrack+liturgicalSlot, −62); cumulative net −2,363 LOC; 1281/1281 tests passing. SUMMARY written.
-Stopped at: v50-02 fully closed; phase commit (`.paul/phases/v50-02-amputation/PLAN+SUMMARY` + STATE/PROJECT/ROADMAP) pending user approval.
-Next action: Approve phase commit (`feat(v50-02): close phase — chat + live-swap UI + canLiveSwap removed`), then `/paul:plan` for v50-03 (Local-first sync engine).
+Last session: 2026-04-26 — v50-03 sync engine shipped end-to-end in one session (PLAN → APPLY → UNIFY). Three task commits + property harness on master. 1320/1320 tests, tsc clean, next build success. Per-doc ordering bug found and fixed by the property harness itself.
+Stopped at: v50-03 fully closed; phase commit pending (SUMMARY + STATE/ROADMAP/PROJECT updates) and origin push.
+Next action: Phase commit + push, then `/paul:plan` for v50-04 (Song catalog & sticky memory).
+
+Prior session (2026-04-26): Two phases shipped — v50-01 Architecture (commit `4fb05c6`); v50-02 Dead-code amputation (`4737214` + `9059d91` + `baf8109`, net −2,363 LOC, 1281/1281 green); phase close commit `65231a6`; state-sync `e5a36dd`.
+
+v50-03 task commits (this session):
+- `cb73dcc` — feat(v50-03): IDB schema + atomic applyEdit (Dexie foundation)
+- `6cf34d7` — feat(v50-03): sync engine — FSM, retry, cross-tab lock, status store
+- `0a94a9c` — test(v50-03): property-based no-data-loss harness (fast-check)
 
 Outstanding from prior session (2026-04-18): Firestore rules deployment — verify `firebase deploy --only firestore:rules` has landed before Phase v45-01 ships.
 

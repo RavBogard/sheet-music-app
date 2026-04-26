@@ -3,7 +3,7 @@
 ## Current Milestone
 **v5.0 — Bulletproof Editor (Local-First Rewrite)**
 Status: 🚧 In Progress
-Phases: 2 of 7 complete
+Phases: 3 of 7 complete
 Theme: Rebuild the setlist editor on a local-first foundation, with sticky song memory and a spreadsheet-shaped UX, so saves are bulletproof by construction. Includes amputation of dead surfaces (AI chat, live-swap UI) up front.
 
 Origin: Three compounding pain points surfaced post-gig — Rube Goldberg fragility, edits that don't save, and Sheets envy. Research (codebase blast radius + data-model split + Sheets-API feasibility + comparable-app survey) reframed the problem: the in-app editor concept is right; the *implementation* (optimistic-write + silent-fail save path, no song-level memory, dense non-spreadsheet-like UX) is what makes Sheets feel easier. Fix the editor at the foundation and the Sheets envy dissolves. Scope expanded post-discussion: amputate the unused AI chat assistant and the over-engineered live-swap UI surface (v3.0 + v4.0 redesigns) before rebuilding — replacement for "live swap" is just real-time setlist sync via the new sync engine.
@@ -14,7 +14,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 |-------|------|-------|--------|-----------|
 | v50-01 | Architecture & design | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-02 | Dead-code amputation (chat + live-swap UI) | 1/1 | ✅ Complete | 2026-04-26 |
-| v50-03 | Local-first sync engine | TBD | Not started | - |
+| v50-03 | Local-first sync engine | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-04 | Song catalog & sticky memory | TBD | Not started | - |
 | v50-05 | Spreadsheet editor UI (cutover) | TBD | Not started | - |
 | v50-06 | Concurrent-edit safety + offline + cross-tab | TBD | Not started | - |
@@ -31,10 +31,13 @@ Output: `.paul/phases/v50-01-architecture/ARCHITECTURE.md`
 Focus: Delete the AI chat assistant entirely (`ChatPanel.tsx` ~571 LOC + `chat-store.ts` + `/api/chat/*` + chat-prompt sanitization + chat tests + chat Firestore rules/data). Delete the live-swap UI surface entirely (`SwapPicker`, `SwapBottomSheet`, `SwapToast`, `SwapButton`, `/live/[id]` receiver, song-groups system + `liturgicalSlot` field, `canLiveSwap` permission + custom claim, related Firestore rules, swap-related Firestore-rule carve-outs, `swapTrack()` function callers). Verify zero `grep` hits for amputated symbols; full test suite green; `next build` passes. Performance view stays untouched (user: "good for now"); replacement for live swap is real-time setlist sync (lands in v50-03/v50-06, not built here). Estimated net deletion: ~3,000 LOC.
 Plans: TBD
 
-### Phase v50-03: Local-first sync engine
+### Phase v50-03: Local-first sync engine ✓
 
 Focus: IDB store + outbox queue + retry/dead-letter + truthful sync indicator (`Saving / Saved / Failed-with-retry / Queued`). Property-based tests for save reliability under random failure injection (network, auth, version-mismatch, force-quit). Built standalone — old editor unchanged, still on old write path until v50-05.
-Plans: TBD
+
+Outcome (2026-04-26): Dexie 4.4 + hand-rolled outbox + 6-state FSM + BroadcastChannel single-leader lock + fast-check no-data-loss harness. 39 new tests (1320/1320 total). Per-doc drain ordering invariant added (bug surfaced by the property harness itself: transient failure on row N could let row N+1 same-doc leapfrog on the server, violating LWW). Engine is fully standalone — zero imports from `src/components`, `src/hooks`, or `src/app`. Consumed by v50-05 (editor cutover) and v50-06 (concurrent-edit safety).
+Plans:
+- v50-03-01 ✓ (2026-04-26) — Dexie schema + atomic `applyEdit` + sync FSM + retry + cross-tab lock + property-based failure-injection harness. 3 tasks, 9 ACs, autonomous. Commits: `cb73dcc` (foundation) + `6cf34d7` (engine) + `0a94a9c` (property harness).
 
 ### Phase v50-04: Song catalog & sticky memory
 
