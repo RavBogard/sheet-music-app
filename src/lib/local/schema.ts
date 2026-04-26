@@ -24,6 +24,19 @@ export class LocalDb extends Dexie {
             outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
             meta: 'key',
         })
+        // v2 (v50-04): additive `defaults` + `recent` fields on songs.
+        // Stores re-declared verbatim — Dexie carries over indexes across
+        // version() calls only when they are explicitly listed. Additive
+        // non-indexed fields don't strictly require a version bump, but the
+        // explicit version() gives us a hook for future indexed-field
+        // additions in v50-05/06.
+        this.version(2).stores({
+            setlists: 'id, updatedAt, ownerId, eventDate',
+            tracks: 'id, setlistId, [setlistId+order], songId',
+            songs: 'id, normalizedTitle',
+            outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
+            meta: 'key',
+        })
     }
 }
 

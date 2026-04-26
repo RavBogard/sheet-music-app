@@ -23,10 +23,26 @@ export interface LocalTrack {
     [key: string]: unknown
 }
 
+export interface SongDefaults {
+    key?: string
+    lead?: string
+    bpm?: number
+}
+
+export interface SongRecentEntry {
+    key?: string
+    lead?: string
+    bpm?: number
+    setlistId: string
+    performedAt: number
+}
+
 export interface LocalSong {
     id: string
     title: string
     normalizedTitle: string
+    defaults?: SongDefaults
+    recent?: SongRecentEntry[]
     [key: string]: unknown
 }
 
