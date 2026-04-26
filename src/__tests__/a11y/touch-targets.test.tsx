@@ -2,9 +2,12 @@
  * U01 regression guard — WCAG 2.5.5 44px touch-target floor.
  *
  * Guards the specific surfaces called out by v4.3 audit finding U01:
- *   - SetlistRow (play/swap/header tap targets on /perform)
+ *   - SetlistRow (header tap target on /perform — leader can tap to set position)
  *   - Perform-view page header (back Link, print/edit buttons)
  *   - MetronomeControl (on-stage BPM toggle)
+ *
+ * The swap-button assertions were retired in v50-02 along with the
+ * live-swap UI surface.
  *
  * Strategy: a mix of rendered DOM assertions (SetlistRow — easy to render)
  * and source-level className checks (page.tsx + MetronomeControl — render
@@ -42,14 +45,6 @@ function assertCompliant(className: string | null, label: string) {
     ).toBe(true)
 }
 
-const song: SetlistTrack = {
-    id: "song-1",
-    title: "Amazing Grace",
-    key: "C",
-    bpm: 120,
-    type: "song",
-    fileId: "file-abc",
-}
 const header: SetlistTrack = { id: "h-1", title: "SET 1", type: "header" }
 
 const baseProps = {
@@ -59,32 +54,15 @@ const baseProps = {
     isPublicView: false,
     onSongTap: vi.fn(),
     onLeaderSetPosition: vi.fn(),
-    onSwapTap: vi.fn(),
 }
 
 describe("U01: touch-target floor (44px) — SetlistRow", () => {
-    it("leader song row: swap icon button is ≥44px", () => {
-        const { container } = render(
-            <SetlistRow track={song} isLeader={true} {...baseProps} />
-        )
-        const swap = container.querySelector("button[aria-label^='Swap']")
-        assertCompliant(swap?.getAttribute("class") ?? null, "SetlistRow swap button")
-    })
-
     it("leader header row: full-width button hit box is ≥44px", () => {
         const { container } = render(
             <SetlistRow track={header} isLeader={true} {...baseProps} />
         )
         const btn = container.querySelector("button")
         assertCompliant(btn?.getAttribute("class") ?? null, "SetlistRow header (leader) button")
-    })
-
-    it("musician song row with file: swap button is ≥44px", () => {
-        const { container } = render(
-            <SetlistRow track={song} isLeader={false} {...baseProps} />
-        )
-        const swap = container.querySelector("button[aria-label^='Swap']")
-        assertCompliant(swap?.getAttribute("class") ?? null, "SetlistRow musician swap button")
     })
 })
 

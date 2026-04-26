@@ -3,7 +3,6 @@
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { cn } from "@/lib/utils"
-import { ArrowLeftRight } from "lucide-react"
 
 export interface SetlistRowProps {
     track: SetlistTrack
@@ -14,7 +13,6 @@ export interface SetlistRowProps {
     onSongTap: () => void
     isLeader: boolean
     onLeaderSetPosition: () => void
-    onSwapTap?: () => void
 }
 
 export function SetlistRow({
@@ -26,7 +24,6 @@ export function SetlistRow({
     onSongTap,
     isLeader,
     onLeaderSetPosition,
-    onSwapTap,
 }: SetlistRowProps) {
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
@@ -165,18 +162,6 @@ export function SetlistRow({
             )}
         >
             {songContent}
-            {onSwapTap && isSong && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onSwapTap()
-                    }}
-                    className="h-11 w-11 flex items-center justify-center rounded-lg shrink-0"
-                    aria-label={`Swap ${track.title}`}
-                >
-                    <ArrowLeftRight className="h-4 w-4 text-muted-foreground/50 hover:text-brand transition-colors" />
-                </button>
-            )}
         </div>
     )
 }
