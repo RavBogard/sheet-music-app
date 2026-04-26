@@ -1,29 +1,48 @@
 'use client'
 
 import {
+    DndContext,
+    type DragEndEvent,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core'
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
     type CellContext,
     type ColumnDef,
+    type Row,
     flexRender,
     getCoreRowModel,
     type Table as TanstackTable,
     useReactTable,
 } from '@tanstack/react-table'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { GripVertical } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { getDb } from '@/lib/local/schema'
 import type { LocalTrack } from '@/lib/local/types'
 import { applyEdit } from '@/lib/local/write'
 import {
     propagateTrackEditToSong,
+    seedTrackFromSong,
     type TrackDefaults,
 } from '@/lib/songs/defaults'
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
 import { cn } from '@/lib/utils'
 
+import { AddRowPlaceholder } from './AddRowPlaceholder'
 import { ChartCell } from './cells/ChartCell'
+import { DragHandleCell } from './cells/DragHandleCell'
 import { KeyCell } from './cells/KeyCell'
 import { LeadCell } from './cells/LeadCell'
 import { TextCell } from './cells/TextCell'
@@ -53,6 +72,12 @@ interface GridMeta {
         colId: string,
     ) => boolean
     setlistLeads: string[]
+    onDeleteRow: (track: LocalTrack) => void
+    onCommitTrackPatch: (
+        docId: string,
+        patch: Record<string, unknown>,
+    ) => Promise<void>
+    setlistIdForPropagation: string
 }
 
 declare module '@tanstack/react-table' {
@@ -62,23 +87,6 @@ declare module '@tanstack/react-table' {
 
 function getMeta(table: TanstackTable<LocalTrack>): GridMeta {
     return table.options.meta as GridMeta
-}
-
-async function commitTrackPatch(
-    docId: string,
-    patch: Record<string, unknown>,
-): Promise<void> {
-    // expectedUpdatedAt is left undefined here: enforcing the LWW precondition
-    // requires the editor to track the last server-confirmed updatedAt per row,
-    // which is a v50-06 concern (concurrent-edit safety phase). Without it the
-    // engine still drains writes; conflict surfacing arrives in v50-06 along
-    // with the reconciliation modal (§6.9 of ARCHITECTURE.md).
-    await applyEdit({
-        op: 'update',
-        collection: 'tracks',
-        docId,
-        patch,
-    })
 }
 
 function maybePropagate(
@@ -96,14 +104,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'drag',
         header: () => <span className="sr-only">Drag handle</span>,
         size: 44,
-        cell: () => (
-            <div
-                aria-hidden
-                className="flex h-11 w-11 items-center justify-center text-muted-foreground/40"
-            >
-                <GripVertical className="h-4 w-4" />
-            </div>
-        ),
+        cell: () => null, // Rendered by SortableRow with sortable attrs
     },
     {
         id: 'type',
@@ -125,7 +126,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     }
                     onCommit={(next) => {
                         if (!next || next === (row.type as string)) return
-                        void commitTrackPatch(row.id, { type: next })
+                        void meta.onCommitTrackPatch(row.id, { type: next })
                     }}
                 />
             )
@@ -151,7 +152,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     placeholder="Title"
                     ariaLabel="Track title"
                     onCommit={(next) => {
-                        void commitTrackPatch(row.id, { title: next })
+                        void meta.onCommitTrackPatch(row.id, { title: next })
                     }}
                 />
             )
@@ -176,8 +177,12 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
                     onCommit={(next) => {
-                        void commitTrackPatch(row.id, { key: next })
-                        maybePropagate(row, { key: next }, meta.setlistId)
+                        void meta.onCommitTrackPatch(row.id, { key: next })
+                        maybePropagate(
+                            row,
+                            { key: next },
+                            meta.setlistIdForPropagation,
+                        )
                     }}
                 />
             )
@@ -211,13 +216,19 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     onCommit={(raw) => {
                         const trimmed = raw.trim()
                         if (trimmed === '') {
-                            void commitTrackPatch(row.id, { bpm: undefined })
+                            void meta.onCommitTrackPatch(row.id, {
+                                bpm: undefined,
+                            })
                             return
                         }
                         const next = Number(trimmed)
                         if (!Number.isFinite(next)) return
-                        void commitTrackPatch(row.id, { bpm: next })
-                        maybePropagate(row, { bpm: next }, meta.setlistId)
+                        void meta.onCommitTrackPatch(row.id, { bpm: next })
+                        maybePropagate(
+                            row,
+                            { bpm: next },
+                            meta.setlistIdForPropagation,
+                        )
                     }}
                 />
             )
@@ -242,9 +253,14 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
                     onCommit={(next) => {
-                        void commitTrackPatch(row.id, { leadMusician: next })
-                        // Helper expects `lead` field-name; track field is `leadMusician`.
-                        maybePropagate(row, { lead: next }, meta.setlistId)
+                        void meta.onCommitTrackPatch(row.id, {
+                            leadMusician: next,
+                        })
+                        maybePropagate(
+                            row,
+                            { lead: next },
+                            meta.setlistIdForPropagation,
+                        )
                     }}
                 />
             )
@@ -270,7 +286,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     placeholder="Notes"
                     ariaLabel="Track notes"
                     onCommit={(next) => {
-                        void commitTrackPatch(row.id, { notes: next })
+                        void meta.onCommitTrackPatch(row.id, { notes: next })
                     }}
                 />
             )
@@ -286,6 +302,75 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     },
 ]
 
+interface SortableRowProps {
+    row: Row<LocalTrack>
+    onDeleteRow: (track: LocalTrack) => void
+}
+
+function SortableRow({ row, onDeleteRow }: SortableRowProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: row.original.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+    } as React.CSSProperties
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            role="row"
+            data-row-id={row.original.id}
+            data-dragging={isDragging || undefined}
+            className={cn(
+                'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
+                isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
+            )}
+        >
+            {row.getVisibleCells().map((cell, idx) => {
+                if (idx === 0) {
+                    return (
+                        <td
+                            key={cell.id}
+                            role="gridcell"
+                            style={{ width: cell.column.getSize() }}
+                            className="px-1 py-1 align-middle"
+                        >
+                            <DragHandleCell
+                                attributes={attributes}
+                                listeners={listeners}
+                                title={String(row.original.title ?? '')}
+                                onDelete={() => onDeleteRow(row.original)}
+                            />
+                        </td>
+                    )
+                }
+                return (
+                    <td
+                        key={cell.id}
+                        role="gridcell"
+                        style={{ width: cell.column.getSize() }}
+                        className="px-2 py-1 align-middle"
+                    >
+                        {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                        )}
+                    </td>
+                )
+            })}
+        </tr>
+    )
+}
+
 export interface SetlistGridProps {
     setlistId: string
     name?: string
@@ -295,9 +380,56 @@ export interface SetlistGridProps {
     onMakeNextWeeks?: () => void | Promise<void>
     /** Called by EmptyState's "Use a template" CTA. */
     onUseTemplate?: () => void
-    /** Called by EmptyState's "Add a song" CTA — wired in Task 3 to focus
-     * the AddRowPlaceholder. */
-    onAddSong?: () => void
+    /** Caller hook: confirm a delete that has user-visible content. Defaults
+     * to window.confirm. Allows tests to bypass the prompt. */
+    confirmDeleteWithTitle?: (title: string) => boolean | Promise<boolean>
+}
+
+async function commitTrackPatchImpl(
+    docId: string,
+    patch: Record<string, unknown>,
+): Promise<void> {
+    // expectedUpdatedAt deferred to v50-06 (concurrent-edit safety phase).
+    await applyEdit({
+        op: 'update',
+        collection: 'tracks',
+        docId,
+        patch,
+    })
+}
+
+function makeId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return `tr-${Math.random().toString(36).slice(2)}-${Date.now()}`
+}
+
+/**
+ * Pure: given the current row list and a drag (active → over), compute
+ * the set of `{ id, order }` updates that need to be applied. Extracted so
+ * unit tests can verify reorder logic without simulating pointer/keyboard
+ * drag in jsdom (which is genuinely fragile).
+ */
+export function computeReorderUpdates(
+    currentRows: Pick<LocalTrack, 'id' | 'order'>[],
+    activeId: string,
+    overId: string,
+): Array<{ id: string; order: number }> {
+    if (activeId === overId) return []
+    const oldIndex = currentRows.findIndex((r) => r.id === activeId)
+    const newIndex = currentRows.findIndex((r) => r.id === overId)
+    if (oldIndex < 0 || newIndex < 0) return []
+    const reordered = currentRows.slice()
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+    const updates: Array<{ id: string; order: number }> = []
+    for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].order !== i) {
+            updates.push({ id: reordered[i].id, order: i })
+        }
+    }
+    return updates
 }
 
 export function SetlistGrid({
@@ -307,7 +439,7 @@ export function SetlistGrid({
     onBack,
     onMakeNextWeeks,
     onUseTemplate,
-    onAddSong,
+    confirmDeleteWithTitle,
 }: SetlistGridProps) {
     const router = useRouter()
 
@@ -335,6 +467,13 @@ export function SetlistGrid({
         [rows],
     )
 
+    // Imperative handle: when user clicks EmptyState's "Add a song", we
+    // open the AddRowPlaceholder popover by toggling a key.
+    const [addOpenSignal, setAddOpenSignal] = useState(0)
+    const triggerAddOpen = useCallback(() => {
+        setAddOpenSignal((s) => s + 1)
+    }, [])
+
     const {
         isCellFocused,
         handleCellFocus,
@@ -343,7 +482,31 @@ export function SetlistGrid({
     } = useGridKeyboard({
         rowCount: rows.length,
         editableColIds: EDITABLE_COL_IDS as unknown as string[],
+        onTabPastLastCell: () => {
+            triggerAddOpen()
+        },
     })
+
+    const handleDeleteRow = useCallback(
+        async (track: LocalTrack) => {
+            const title = track.title ?? ''
+            if (title) {
+                const confirmFn =
+                    confirmDeleteWithTitle ??
+                    ((t: string) =>
+                        typeof window !== 'undefined' &&
+                        window.confirm(`Delete row “${t}”?`))
+                const ok = await confirmFn(title)
+                if (!ok) return
+            }
+            await applyEdit({
+                op: 'delete',
+                collection: 'tracks',
+                docId: track.id,
+            })
+        },
+        [confirmDeleteWithTitle],
+    )
 
     const meta = useMemo<GridMeta>(
         () => ({
@@ -353,6 +516,9 @@ export function SetlistGrid({
             moveFocus,
             handleCellKeyDown,
             setlistLeads,
+            onDeleteRow: (track) => void handleDeleteRow(track),
+            onCommitTrackPatch: commitTrackPatchImpl,
+            setlistIdForPropagation: setlistId,
         }),
         [
             setlistId,
@@ -361,6 +527,7 @@ export function SetlistGrid({
             moveFocus,
             handleCellKeyDown,
             setlistLeads,
+            handleDeleteRow,
         ],
     )
 
@@ -371,6 +538,91 @@ export function SetlistGrid({
         getRowId: (row) => row.id,
         meta,
     })
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { delay: 150, tolerance: 5 },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    )
+
+    const handleDragEnd = useCallback(
+        async (e: DragEndEvent) => {
+            const { active, over } = e
+            if (!over) return
+            const updates = computeReorderUpdates(
+                rows,
+                String(active.id),
+                String(over.id),
+            )
+            await Promise.all(
+                updates.map(({ id, order }) =>
+                    applyEdit({
+                        op: 'update',
+                        collection: 'tracks',
+                        docId: id,
+                        patch: { order },
+                    }),
+                ),
+            )
+        },
+        [rows],
+    )
+
+    const handlePickSong = useCallback(
+        async (song: { id: string; title: string }) => {
+            const newId = makeId()
+            const order = rows.length
+            const defaults = await seedTrackFromSong(song.id)
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: {
+                    id: newId,
+                    setlistId,
+                    songId: song.id,
+                    order,
+                    title: song.title,
+                    type: 'song',
+                },
+            })
+            if (Object.keys(defaults).length > 0) {
+                const patch: Record<string, unknown> = {}
+                if (defaults.key !== undefined) patch.key = defaults.key
+                if (defaults.lead !== undefined)
+                    patch.leadMusician = defaults.lead
+                if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
+                await applyEdit({
+                    op: 'update',
+                    collection: 'tracks',
+                    docId: newId,
+                    patch,
+                })
+            }
+        },
+        [rows.length, setlistId],
+    )
+
+    const handleCreateFreeText = useCallback(
+        async (title: string) => {
+            const newId = makeId()
+            const order = rows.length
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: {
+                    id: newId,
+                    setlistId,
+                    order,
+                    title,
+                    type: 'song',
+                },
+            })
+        },
+        [rows.length, setlistId],
+    )
 
     const [cloneBusy, setCloneBusy] = useState(false)
     const handleClone = useCallback(async () => {
@@ -384,6 +636,16 @@ export function SetlistGrid({
     }, [onMakeNextWeeks])
 
     const showEmpty = !isLoading && rows.length === 0
+
+    const sortableIds = useMemo(() => rows.map((r) => r.id), [rows])
+
+    // Track signal increments to remount the placeholder so its `autoOpen`
+    // effect re-fires.
+    const lastSignalRef = useRef(addOpenSignal)
+    const placeholderKey =
+        addOpenSignal !== lastSignalRef.current
+            ? (lastSignalRef.current = addOpenSignal)
+            : addOpenSignal
 
     return (
         <div
@@ -400,77 +662,77 @@ export function SetlistGrid({
             {showEmpty ? (
                 <EmptyState
                     onMakeNextWeeks={handleClone}
-                    onAddSong={onAddSong ?? (() => {})}
+                    onAddSong={triggerAddOpen}
                     onUseTemplate={onUseTemplate ?? (() => {})}
                     busy={cloneBusy}
                 />
             ) : (
-                <div className="overflow-x-auto">
-                    <table
-                        role="grid"
-                        aria-rowcount={rows.length + 1}
-                        className="w-full border-collapse text-left"
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) => void handleDragEnd(e)}
+                >
+                    <SortableContext
+                        items={sortableIds}
+                        strategy={verticalListSortingStrategy}
                     >
-                        <thead className="sticky top-[3.25rem] z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr
-                                    key={headerGroup.id}
-                                    role="row"
-                                    className="border-b border-white/10"
-                                >
-                                    {headerGroup.headers.map((header) => (
-                                        <th
-                                            key={header.id}
-                                            role="columnheader"
-                                            scope="col"
-                                            style={{
-                                                width: header.column.getSize(),
-                                            }}
-                                            className={cn(
-                                                'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
-                                            )}
+                        <div className="overflow-x-auto">
+                            <table
+                                role="grid"
+                                aria-rowcount={rows.length + 1}
+                                className="w-full border-collapse text-left"
+                            >
+                                <thead className="sticky top-[3.25rem] z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                    {table.getHeaderGroups().map((headerGroup) => (
+                                        <tr
+                                            key={headerGroup.id}
+                                            role="row"
+                                            className="border-b border-white/10"
                                         >
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
-                                        </th>
+                                            {headerGroup.headers.map((header) => (
+                                                <th
+                                                    key={header.id}
+                                                    role="columnheader"
+                                                    scope="col"
+                                                    style={{
+                                                        width: header.column.getSize(),
+                                                    }}
+                                                    className={cn(
+                                                        'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
+                                                    )}
+                                                >
+                                                    {header.isPlaceholder
+                                                        ? null
+                                                        : flexRender(
+                                                              header.column.columnDef.header,
+                                                              header.getContext(),
+                                                          )}
+                                                </th>
+                                            ))}
+                                        </tr>
                                     ))}
-                                </tr>
-                            ))}
-                        </thead>
-                        <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr
-                                    key={row.id}
-                                    role="row"
-                                    data-row-id={row.original.id}
-                                    className="border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]"
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td
-                                            key={cell.id}
-                                            role="gridcell"
-                                            style={{
-                                                width: cell.column.getSize(),
-                                            }}
-                                            className="px-2 py-1 align-middle"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext(),
-                                            )}
-                                        </td>
+                                </thead>
+                                <tbody>
+                                    {table.getRowModel().rows.map((row) => (
+                                        <SortableRow
+                                            key={row.id}
+                                            row={row}
+                                            onDeleteRow={meta.onDeleteRow}
+                                        />
                                     ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                </tbody>
+                            </table>
+                        </div>
+                    </SortableContext>
+                </DndContext>
             )}
+
+            <AddRowPlaceholder
+                key={placeholderKey}
+                autoOpen={addOpenSignal > 0}
+                onPickSong={(song) => void handlePickSong(song)}
+                onCreateFreeText={(title) => void handleCreateFreeText(title)}
+            />
         </div>
     )
 }
