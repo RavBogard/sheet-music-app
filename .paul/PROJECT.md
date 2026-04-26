@@ -31,7 +31,7 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 - [x] Print gig packets with per-musician transpositions
 - [x] Light/dark theme with auto dark mode for performance
 - [x] ~~PWA offline support with 30-day Workbox caching~~ — Removed: SW caused production issues, venue has wifi
-- [x] AI chat assistant for natural language setlist management
+- [x] ~~AI chat assistant for natural language setlist management~~ — Removed in v50-02 (2026-04-26): user did not use the feature; deleted as dead weight before v5.0 editor rewrite
 - [x] v1.3 Bugsweep: codebase audit, security fixes, backend hardening, frontend robustness — Phase 1-4
 - [x] v1.3.1 Regression fixes: cache-busted PDF worker, iPad monitor connection stability
 - [x] v1.4 Phase 1: Library management — rename songs, unlink charts, archive restore
@@ -52,15 +52,16 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 1 of 7 phases complete (2026-04-26).
-Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); amputation of AI chat assistant + live-swap UI surface up front. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact.
+**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 2 of 7 phases complete (2026-04-26).
+Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); AI chat + live-swap UI amputated. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact. Next: v50-03 (Local-first sync engine).
 
 **v4.5 — Superseded by v5.0** (2026-04-26): 2 of 8 phases shipped (v45-01 save-path observability, v45-07 library cache invalidation). 6 phases cancelled — they targeted save-path machinery v5.0 deletes wholesale.
 
 ### Validated (Shipped this cycle)
 
-**v5.0 Bulletproof Editor — 1 of 7 phases complete, 2026-04-26**
+**v5.0 Bulletproof Editor — 2 of 7 phases complete, 2026-04-26**
 - [x] v50-01 Architecture & design — ARCHITECTURE.md sign-off; locked stack (Dexie + outbox / TanStack Table v8 headless + @dnd-kit + Radix + cmdk), normalized rows + LWW per-document doc model, 6-state sync FSM, per-song global sticky memory, one-shot in-place migration with rollback snapshots, spreadsheet-shaped editor wireframes (desktop + iPad + phone + WCAG AA), amputation scope for AI chat + live-swap UI (2026-04-26)
+- [x] v50-02 Dead-code amputation — Deleted AI chat (ChatPanel + chat-store + chat-prompt + /api/chat + integration points), live-swap UI (SwapPicker, SwapChangeToast, /live receiver, proxy carve-out), and song-groups + canLiveSwap permission system (swapTrack(), liturgicalSlot field). Three atomic commits; 32 files changed; **net −2,363 LOC**; 1281/1281 tests passing; tsc clean; next build success. Most of the v3.0/v4.0 swap infrastructure was already absent from prior teardowns (LeaderConsole, SwapBottomSheet, song-groups module, canLiveSwap field, isNotTooFrequent rule all already gone). Production data left in place for v50-07 migration to scrub. (2026-04-26)
 
 **v4.4 Deferred Audit Sweep — Architectural Polish — 5 of 8 phases complete (3 deferred), 2026-04-15**
 - [x] v4.4 Phase 1: Data-layer atomicity — DL-001/002/003/012/013/014 (scheduling assign/decline transactions) (2026-04-15)
@@ -267,4 +268,4 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-26 after v50-01 phase close (v5.0 Bulletproof Editor architecture locked; v4.5 marked superseded)*
+*Last updated: 2026-04-26 after v50-02 phase close (Dead-code amputation: AI chat + live-swap UI + canLiveSwap system removed; net −2,363 LOC)*

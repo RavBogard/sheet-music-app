@@ -3,7 +3,7 @@
 ## Current Milestone
 **v5.0 — Bulletproof Editor (Local-First Rewrite)**
 Status: 🚧 In Progress
-Phases: 1 of 7 complete
+Phases: 2 of 7 complete
 Theme: Rebuild the setlist editor on a local-first foundation, with sticky song memory and a spreadsheet-shaped UX, so saves are bulletproof by construction. Includes amputation of dead surfaces (AI chat, live-swap UI) up front.
 
 Origin: Three compounding pain points surfaced post-gig — Rube Goldberg fragility, edits that don't save, and Sheets envy. Research (codebase blast radius + data-model split + Sheets-API feasibility + comparable-app survey) reframed the problem: the in-app editor concept is right; the *implementation* (optimistic-write + silent-fail save path, no song-level memory, dense non-spreadsheet-like UX) is what makes Sheets feel easier. Fix the editor at the foundation and the Sheets envy dissolves. Scope expanded post-discussion: amputate the unused AI chat assistant and the over-engineered live-swap UI surface (v3.0 + v4.0 redesigns) before rebuilding — replacement for "live swap" is just real-time setlist sync via the new sync engine.
@@ -13,7 +13,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v50-01 | Architecture & design | 1/1 | ✅ Complete | 2026-04-26 |
-| v50-02 | Dead-code amputation (chat + live-swap UI) | TBD | Not started | - |
+| v50-02 | Dead-code amputation (chat + live-swap UI) | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-03 | Local-first sync engine | TBD | Not started | - |
 | v50-04 | Song catalog & sticky memory | TBD | Not started | - |
 | v50-05 | Spreadsheet editor UI (cutover) | TBD | Not started | - |
@@ -501,4 +501,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-26 (v4.5 superseded; v5.0 Bulletproof Editor created — 7 phases, local-first rewrite + amputation of dead surfaces)*
+*Last updated: 2026-04-26 (v50-02 amputation complete — net −2,363 LOC; v50-03 sync engine next)*

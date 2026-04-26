@@ -9,29 +9,31 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 1 of 7 phases complete
-Phase: v50-02 of 7 (Dead-code amputation) — Ready to plan
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 2 of 7 phases complete
+Phase: v50-03 of 7 (Local-first sync engine) — Ready to plan
 Plan: Not started
-Status: v50-01 closed. SUMMARY.md written. ARCHITECTURE.md is binding for v50-02..v50-07. Phase commit pending user approval before moving to v50-02 plan.
-Last activity: 2026-04-26 — UNIFY complete for v50-01 (v50-01-SUMMARY.md written).
+Status: v50-02 closed. SUMMARY.md written. Three deletion commits on master (4737214 chat, 9059d91 live-swap UI, baf8109 swapTrack+liturgicalSlot); 32 files changed; net −2,363 LOC; 1281/1281 tests passing. Phase commit (.paul/ files) pending user approval before moving to v50-03.
+Last activity: 2026-04-26 — UNIFY complete for v50-02 (v50-02-SUMMARY.md written).
 
 Progress:
-- v5.0: [█░░░░░░░░░] 14% (1 of 7 phases complete)
+- v5.0: [███░░░░░░░] 29% (2 of 7 phases complete)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
+- Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-02 PLAN]
+  ○        ○        ○     [Loop reset — ready for v50-03 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
+v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 ```
 
 ## How to resume
 
-After phase commit (pending approval), run `/paul:plan` for Phase v50-02 (Dead-code amputation). Reference ARCHITECTURE.md §7 for the full deletion inventory and ordering.
+After phase commit (pending approval), run `/paul:plan` for Phase v50-03 (Local-first sync engine). Reference ARCHITECTURE.md §§1-3 for stack, doc-in-IDB model, and sync engine state machine bindings.
 
 Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
 
@@ -99,9 +101,15 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
 
 ### Git state
-Last commit: `a33af57` (Phase 1.2 summary + state)
-Branch: `master` — clean working tree, pushed to `origin/master`.
-Vercel auto-deploys `master` to production.
+Recent commits (master, ahead of origin/master):
+- `baf8109` — feat(v50-02): delete swapTrack() + liturgicalSlot field — final amputation
+- `9059d91` — feat(v50-02): delete live-swap UI surface + /live receiver
+- `4737214` — feat(v50-02): delete AI chat assistant
+- `57fe892` — docs(v4.4): commit orphaned phase plans + summaries (v44-03, v44-05, v44-06)
+- `4fb05c6` — docs(v50-01): architecture & design — local-first editor rewrite locked
+Branch: `master` — 5 local commits ahead of `origin/master`, not yet pushed. Phase v50-02 closing commit (`.paul/` files for v50-02) pending user approval.
+Remaining uncommitted: `package.json` (version bump 2.11.12 → 2.13.1, separate decision pending) and `src/build-info.json` (auto-regenerated build artifact, leave uncommitted).
+Vercel auto-deploys `master` to production once pushed.
 
 ### Key repo locations
 - Planning root: `sheet-music-app/.paul/`
@@ -129,12 +137,18 @@ Vercel auto-deploys `master` to production.
 | 2026-04-26: Sticky song memory granularity = per-song global (not per-leadMusician, not per-rabbi) | v50-01 | Simplest model; matches user statement that key/lead/BPM should "move with the track everywhere"; per-track override preserved at add-time so prior setlists don't change retroactively |
 | 2026-04-26: Doc-in-IDB = normalized rows + LWW per-document (not JSON-blob, not CRDT) | v50-01 | Single-leader workflow; CRDT overkill at +50KB and migration complexity; normalized rows enable indexed queries (library picker fuzzy-search etc.) |
 | 2026-04-26: Migration approach = one-shot in-place + idempotent + dry-run + rollback snapshots | v50-01 | Band not in production; downtime allowed; cheaper than parallel-collection or lazy-migration strategies designed for live users |
+| 2026-04-26: AI chat assistant deleted entirely (no replacement) | v50-02 | User did not use feature; removed before editor rewrite to shrink surface area; ~−1,786 LOC |
+| 2026-04-26: Live-swap UI deleted (replaced by real-time setlist sync from existing/new sync engine) | v50-02 | Over-engineered v3.0/v4.0 surface; replacement is implicit from leader-edits-propagate-via-Firestore; ~−515 LOC |
+| 2026-04-26: swapTrack() function + liturgicalSlot field deleted | v50-02 | Backed retired live-swap feature; zero callers after Task 2; firestore.rules already had no swap-specific carve-outs (prior teardown) |
+| 2026-04-26: openai npm dep + template-parser.ts left as orphans | v50-02 | Out of strict amputation scope; deletion is safe but should be its own dependency-cleanup task |
 
 ## Session Continuity
 
-Last session: 2026-04-26 — Full v50-01 cycle in one session: `/paul:discuss-milestone` → `/paul:milestone` → `/paul:plan` → `/paul:apply` → mid-checkpoint scope expansion (added v50-02 amputation; renumbered v50-02..v50-06 → v50-03..v50-07) → sign-off → `/paul:unify`. ARCHITECTURE.md (~21 KB, 7 sections) is the binding artifact. /ui-ux-pro-max loaded for Task 3 wireframes.
-Stopped at: v50-01 fully closed; phase commit pending user approval.
-Next action: Approve phase commit (`feat(v50-01): architecture & design — stack, sync FSM, sticky memory, migration, UX wireframes, amputation scope`), then `/paul:plan` for v50-02 (Dead-code amputation).
+Last session: 2026-04-26 — Two phases shipped in one session:
+- v50-01 (Architecture & design): ARCHITECTURE.md sign-off; commit `4fb05c6`. v44 orphan cleanup commit `57fe892`.
+- v50-02 (Dead-code amputation): three task commits `4737214` (chat, −1786) + `9059d91` (live-swap UI, −515) + `baf8109` (swapTrack+liturgicalSlot, −62); cumulative net −2,363 LOC; 1281/1281 tests passing. SUMMARY written.
+Stopped at: v50-02 fully closed; phase commit (`.paul/phases/v50-02-amputation/PLAN+SUMMARY` + STATE/PROJECT/ROADMAP) pending user approval.
+Next action: Approve phase commit (`feat(v50-02): close phase — chat + live-swap UI + canLiveSwap removed`), then `/paul:plan` for v50-03 (Local-first sync engine).
 
 Outstanding from prior session (2026-04-18): Firestore rules deployment — verify `firebase deploy --only firestore:rules` has landed before Phase v45-01 ships.
 
