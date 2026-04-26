@@ -14,6 +14,10 @@ export interface DragHandleCellProps {
     listeners?: DraggableSyntheticListeners
     title: string
     onDelete?: () => void
+    /** v50-05-03 multi-select: row is in the selection set. */
+    isSelected?: boolean
+    /** v50-05-03 multi-select: invoked when Shift / Cmd / Ctrl + click. */
+    onSelectionClick?: (modifiers: { shift: boolean; meta: boolean }) => void
 }
 
 export function DragHandleCell({
@@ -21,6 +25,8 @@ export function DragHandleCell({
     listeners,
     title,
     onDelete,
+    isSelected = false,
+    onSelectionClick,
 }: DragHandleCellProps) {
     // @dnd-kit's keyboard sensor handler arrives via `listeners.onKeyDown`.
     // We compose it with our own Backspace/Delete handler so the row can be
@@ -44,19 +50,45 @@ export function DragHandleCell({
         dndKeyDown?.(e)
     }
 
+    // v50-05-03 multi-select: Shift / Cmd / Ctrl + click routes to selection.
+    // Plain clicks fall through to dnd-kit (which uses pointerdown for drag
+    // activation, gated by activationConstraint delay:150 + tolerance:5 — a
+    // quick click without movement does NOT activate drag).
+    const onClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+        if (!onSelectionClick) return
+        if (e.shiftKey || e.metaKey || e.ctrlKey) {
+            e.preventDefault()
+            e.stopPropagation()
+            onSelectionClick({
+                shift: e.shiftKey,
+                meta: e.metaKey || e.ctrlKey,
+            })
+        }
+    }
+
     return (
         <button
             type="button"
             tabIndex={0}
-            aria-label={`Drag to reorder${title ? ` ${title}` : ''}, or press Backspace to delete`}
             data-testid="drag-handle"
             data-row-title={title}
+            data-selected={isSelected || undefined}
             {...attributes}
             {...listeners}
+            // dnd-kit's `attributes` injects its own aria-pressed (for drag
+            // state). Override AFTER the spread so multi-select selection
+            // wins as the user-visible aria-pressed signal. Same reasoning
+            // for aria-label and onClick/onKeyDown — keep our composed
+            // versions, not dnd-kit's defaults.
+            aria-label={`${isSelected ? 'Selected — ' : ''}Drag to reorder${title ? ` ${title}` : ''}, or press Backspace to delete`}
+            aria-pressed={isSelected ? true : undefined}
             onKeyDown={onKeyDown}
+            onClick={onClick}
             className={cn(
-                'flex h-11 w-11 items-center justify-center rounded-sm',
-                'text-muted-foreground/60 hover:text-muted-foreground',
+                'flex h-11 w-11 items-center justify-center rounded-sm cursor-pointer',
+                isSelected
+                    ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-400/40'
+                    : 'text-muted-foreground/60 hover:text-muted-foreground',
                 'cursor-grab active:cursor-grabbing touch-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
                 'transition-colors duration-150 motion-reduce:transition-none',

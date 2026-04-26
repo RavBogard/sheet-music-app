@@ -27,7 +27,7 @@ import {
 } from '@tanstack/react-table'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { getDb } from '@/lib/local/schema'
 import type { LocalTrack } from '@/lib/local/types'
@@ -38,6 +38,7 @@ import {
     type TrackDefaults,
 } from '@/lib/songs/defaults'
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
+import { useGridSelection } from '@/hooks/use-grid-selection'
 import { cn } from '@/lib/utils'
 
 import { AddRowPlaceholder } from './AddRowPlaceholder'
@@ -80,6 +81,13 @@ interface GridMeta {
     ) => Promise<void>
     onBindChart: (track: LocalTrack, selection: ChartBindSelection) => void
     setlistIdForPropagation: string
+    /** v50-05-03: row id ∈ multi-select set. */
+    selectedIds: ReadonlySet<string>
+    /** v50-05-03: drag-handle modifier-aware click → selection action. */
+    onDragHandleClick: (
+        rowId: string,
+        modifiers: { shift: boolean; meta: boolean },
+    ) => void
 }
 
 declare module '@tanstack/react-table' {
@@ -317,9 +325,16 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
 interface SortableRowProps {
     row: Row<LocalTrack>
     onDeleteRow: (track: LocalTrack) => void
+    isSelected: boolean
+    onSelectionClick: (modifiers: { shift: boolean; meta: boolean }) => void
 }
 
-function SortableRow({ row, onDeleteRow }: SortableRowProps) {
+function SortableRow({
+    row,
+    onDeleteRow,
+    isSelected,
+    onSelectionClick,
+}: SortableRowProps) {
     const {
         attributes,
         listeners,
@@ -342,8 +357,10 @@ function SortableRow({ row, onDeleteRow }: SortableRowProps) {
             role="row"
             data-row-id={row.original.id}
             data-dragging={isDragging || undefined}
+            data-selected={isSelected || undefined}
             className={cn(
                 'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
+                isSelected && 'bg-indigo-500/5',
                 isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
             )}
         >
@@ -361,6 +378,8 @@ function SortableRow({ row, onDeleteRow }: SortableRowProps) {
                                 listeners={listeners}
                                 title={String(row.original.title ?? '')}
                                 onDelete={() => onDeleteRow(row.original)}
+                                isSelected={isSelected}
+                                onSelectionClick={onSelectionClick}
                             />
                         </td>
                     )
@@ -467,6 +486,38 @@ export function SetlistGrid({
     const isLoading = tracks === undefined
     const rows = tracks ?? []
 
+    const selection = useGridSelection()
+    const allRowIds = useMemo(() => rows.map((r) => r.id), [rows])
+
+    // Stale-row prune: when a selected row disappears (remote delete or
+    // hydration overwrite removes it from the live query), drop it from the
+    // selection set. Survivors stay selected; anchor nulled if anchor itself
+    // is stale.
+    useEffect(() => {
+        if (selection.selectedIds.size === 0) return
+        selection.pruneTo(allRowIds)
+    }, [allRowIds, selection])
+
+    const handleDragHandleClick = useCallback(
+        (rowId: string, modifiers: { shift: boolean; meta: boolean }) => {
+            if (modifiers.shift) selection.extendRange(rowId, allRowIds)
+            else if (modifiers.meta) selection.toggle(rowId)
+        },
+        [selection, allRowIds],
+    )
+
+    const handleRootKeyDown = useCallback<
+        React.KeyboardEventHandler<HTMLDivElement>
+    >(
+        (e) => {
+            if (e.key === 'Escape' && selection.selectedIds.size > 0) {
+                e.preventDefault()
+                selection.clear()
+            }
+        },
+        [selection],
+    )
+
     const setlistLeads = useMemo(
         () =>
             Array.from(
@@ -552,6 +603,8 @@ export function SetlistGrid({
             onCommitTrackPatch: commitTrackPatchImpl,
             onBindChart: (track, sel) => void handleBindChart(track, sel),
             setlistIdForPropagation: setlistId,
+            selectedIds: selection.selectedIds,
+            onDragHandleClick: handleDragHandleClick,
         }),
         [
             setlistId,
@@ -562,6 +615,8 @@ export function SetlistGrid({
             setlistLeads,
             handleDeleteRow,
             handleBindChart,
+            selection.selectedIds,
+            handleDragHandleClick,
         ],
     )
 
@@ -686,6 +741,7 @@ export function SetlistGrid({
             data-testid="setlist-grid"
             data-setlist-id={setlistId}
             className="flex w-full flex-col"
+            onKeyDown={handleRootKeyDown}
         >
             <SetlistGridTopBar
                 name={name ?? 'New Setlist'}
@@ -752,6 +808,15 @@ export function SetlistGrid({
                                             key={row.id}
                                             row={row}
                                             onDeleteRow={meta.onDeleteRow}
+                                            isSelected={meta.selectedIds.has(
+                                                row.original.id,
+                                            )}
+                                            onSelectionClick={(mods) =>
+                                                meta.onDragHandleClick(
+                                                    row.original.id,
+                                                    mods,
+                                                )
+                                            }
                                         />
                                     ))}
                                 </tbody>
