@@ -176,10 +176,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-01 close) — Plan, APPLY, UNIFY all closed in one chat. Five commits on origin/master: `d72b6b5` (chore: handoff archive), `96428b9` (Task 1: grid scaffold + ProductionFirestoreAdapter + SyncEngineBoot), `ef5c99d` (Task 2: cell-edit interactions + use-grid-keyboard), `f29c46c` (Task 3: drag/add/delete + computeReorderUpdates pure helper). UNIFY commit (SUMMARY + STATE/ROADMAP) lands next, then push. Full suite 1374/1374; tsc + next build clean. SetlistGrid is intentionally unmounted in prod — legacy editor still serves the route until v50-05-02 cutover.
-Stopped at: v50-05-01 fully closed end-to-end; ready for v50-05-02 PLAN.
-Next action: invoke `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:plan` for v50-05-02 (cutover). v50-05-02 is mostly subtraction: swap `setlists/[id]/page.tsx` mount from SetlistEditorV2 → SetlistGrid; delete `use-setlist-logic.ts` + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + sub-components + `/api/setlist/flush` route + broadcast-channel merge code; narrow `setlist-firebase.ts` to non-editor exports; wire ChartCell click → existing match-modal binding flow; full vitest + tsc + next build verification.
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-SUMMARY.md`
+Last session: 2026-04-26 (v50-05-01 close) — Plan, APPLY, UNIFY all closed in one chat. Five commits on origin/master: `d72b6b5` (chore: handoff archive), `96428b9` (Task 1: grid scaffold + ProductionFirestoreAdapter + SyncEngineBoot), `ef5c99d` (Task 2: cell-edit interactions + use-grid-keyboard), `f29c46c` (Task 3: drag/add/delete + computeReorderUpdates pure helper), `1b4ebac` (UNIFY: SUMMARY + STATE + ROADMAP). All pushed. Full suite 1374/1374; tsc + next build clean. SetlistGrid is intentionally unmounted in prod — legacy editor still serves the route until v50-05-02 cutover. Session paused for context budget before tackling v50-05-02 (cutover plan deserves a fresh session).
+Stopped at: v50-05-01 fully closed and pushed; handoff written. Ready for fresh session to plan v50-05-02.
+Next action: in a fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-05-02. Before APPLY of v50-05-02, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md.
+Resume file: `.paul/HANDOFF-2026-04-26-v50-05-02-pickup.md`
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
