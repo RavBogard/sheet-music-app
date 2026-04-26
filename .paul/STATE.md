@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 1 of 3 plans closed)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-01 closed; v50-05-02 next)
-Plan: v50-05-01 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-01-SUMMARY.md`)
-Status: UNIFY complete for v50-05-01. SetlistGrid component tree built end-to-end + ProductionFirestoreAdapter + SyncEngineBoot wired into LazyClientComponents. Legacy editor still serves prod (cutover in v50-05-02). 1374/1374 tests; tsc + next build clean; 3 task commits + 1 unify commit pending.
-Last activity: 2026-04-26 — UNIFY complete for v50-05-01 (SUMMARY.md written).
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-02 PLAN created, awaiting approval)
+Plan: v50-05-02 — created, awaiting approval (`.paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`)
+Status: PLAN created for v50-05-02 (cutover). 3 auto tasks + 1 decision checkpoint (hydration architecture A vs B) + 1 human-verify checkpoint (post-deploy prod smoke). /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md. Ready for APPLY after decision + skill load.
+Last activity: 2026-04-26 — PLAN v50-05-02 created (cutover: route swap + Dexie hydration + ChartBindPopover + ~−8,400 LOC legacy deletion).
 
 Progress:
 - v5.0: [██████░░░░] ~62% (4 of 7 phases complete; v50-05 ⅓ done)
@@ -28,14 +28,14 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-05-02 PLAN]
+  ✓        ○        ○     [v50-05-02 PLAN created, awaiting approval]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
-v50-05-02:     ○ ──▶ ○ ──▶ ○     [Cutover plan — route swap + delete legacy]
+v50-05-02:     ✓ ──▶ ○ ──▶ ○     [Cutover plan written; APPLY pending /ui-ux-pro-max + Option A/B decision]
 v50-05-03:     ○ ──▶ ○ ──▶ ○     [Polish plan — touch/iPad + mobile + a11y + multi-select]
 ```
 
@@ -173,13 +173,14 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: vitest.config.ts testTimeout 5s → 10s | v50-05-01 | engine.test.ts AC-4 ran ~622ms standalone but tipped over the 5s default once v50-05 grid tests joined the parallel queue. 10s leaves headroom without masking real perf regressions |
 | 2026-04-26: ProductionFirestoreAdapter writes track docs as top-level Firestore `tracks/{id}` collection | v50-05-01 | Architecturally aligned with `LocalCollection = 'setlists' | 'tracks' | 'songs'`. v50-05-01 SetlistGrid is unmounted in prod so no orphan tracks docs accumulate; v50-07 migration reshapes existing setlist.tracks[] arrays to match |
 | 2026-04-26: @dnd-kit/modifiers (restrictToVerticalAxis) NOT added | v50-05-01 | verticalListSortingStrategy already constrains the actual ordering; the modifier only constrains the visual preview transform. Avoid new dep; visual-drift polish → v50-05-03 if needed |
+| 2026-04-26: Dexie hydration architecture = Option A (SetlistGridHydrator wrapper with initialServerData props) | v50-05-02 | Server-fetch happens in the Server Component; client Hydrator primes Dexie idempotently before SetlistGrid mounts. Direct db.put (NOT applyEdit) — server data is authoritative, not dirty. No extra round trip; clean separation of read/write |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-01 close) — Plan, APPLY, UNIFY all closed in one chat. Five commits on origin/master: `d72b6b5` (chore: handoff archive), `96428b9` (Task 1: grid scaffold + ProductionFirestoreAdapter + SyncEngineBoot), `ef5c99d` (Task 2: cell-edit interactions + use-grid-keyboard), `f29c46c` (Task 3: drag/add/delete + computeReorderUpdates pure helper), `1b4ebac` (UNIFY: SUMMARY + STATE + ROADMAP). All pushed. Full suite 1374/1374; tsc + next build clean. SetlistGrid is intentionally unmounted in prod — legacy editor still serves the route until v50-05-02 cutover. Session paused for context budget before tackling v50-05-02 (cutover plan deserves a fresh session).
-Stopped at: v50-05-01 fully closed and pushed; handoff written. Ready for fresh session to plan v50-05-02.
-Next action: in a fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-05-02. Before APPLY of v50-05-02, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md.
-Resume file: `.paul/HANDOFF-2026-04-26-v50-05-02-pickup.md`
+Last session: 2026-04-26 — `/paul:resume` consumed handoff `HANDOFF-2026-04-26-v50-05-02-pickup.md` (archived to `.paul/handoffs/archive/`); `git pull origin master` clean (already up to date); `/paul:plan` produced `v50-05-02-PLAN.md` (cutover). Plan has 3 auto tasks (route swap + Dexie hydration; ChartCell binding flow via new ChartBindPopover; legacy deletion + setlist-firebase narrow + verification) + 1 decision checkpoint (hydration architecture: Option A — SetlistGridHydrator wrapper with initialServerData props; Option B — useEffect inside SetlistGrid, recommended Option A) + 1 human-verify checkpoint (post-deploy prod smoke). Boundaries lock v50-03/04/05-01 surfaces; scope-limits defer reconciliation modal/expectedUpdatedAt to v50-06, multi-select/iPad/mobile/a11y/AlertDialog to v50-05-03, migration apply to v50-07.
+Stopped at: PLAN created. APPLY blocked on (a) `/ui-ux-pro-max` invocation and (b) decision-checkpoint resolution (Option A vs B for Dexie hydration).
+Next action: review/approve plan, then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`. APPLY will start with the BLOCKING /ui-ux-pro-max load and the hydration decision before Task 1 runs.
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-02-PLAN.md`
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
