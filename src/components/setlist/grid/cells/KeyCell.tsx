@@ -5,7 +5,10 @@ import { DropdownCell, type DropdownCellProps } from './DropdownCell'
 // 24-entry chromatic key set (12 majors, 12 minors). Display order roughly
 // follows worship-band frequency; exact ranking by recency is a Task 3
 // enhancement. cmdk's fuzzy filter handles "type to find" against this list.
-const KEY_OPTIONS_DATA: Array<{ value: string; label: string }> = [
+//
+// Exported for v50-05-03 BatchActionBar reuse — single source of truth for
+// the key list across the cell editor and the bulk-edit toolbar.
+export const KEY_OPTIONS_DATA: Array<{ value: string; label: string }> = [
     { value: 'Dm', label: 'Dm' },
     { value: 'D', label: 'D' },
     { value: 'F', label: 'F' },

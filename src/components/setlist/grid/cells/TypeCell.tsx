@@ -15,7 +15,9 @@ import {
     type DropdownOption,
 } from './DropdownCell'
 
-const TYPE_OPTIONS: DropdownOption[] = [
+// Exported for v50-05-03 BatchActionBar reuse — single source of truth for
+// the type list across the cell editor and the bulk-edit toolbar.
+export const TYPE_OPTIONS: DropdownOption[] = [
     {
         value: 'song',
         label: 'Song',
