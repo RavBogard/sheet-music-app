@@ -5,7 +5,6 @@
  *   - AC-1: components cancel in-flight async on unmount
  *   - AC-2: Escape/timeout handlers invoke the LATEST callback prop
  *   - AC-3: PDFViewer retries cap at 3 attempts
- *   - AC-4: ChatPanel SSE aborts on unmount
  *
  * These are focused unit tests — they mock the minimum surface needed to
  * drive each cleanup path, not full integration harnesses.
@@ -144,60 +143,6 @@ describe("UploadDialog async-safety", () => {
         if (capturedSignal) {
             expect(capturedSignal.aborted).toBe(true)
         }
-    })
-})
-
-// ──────────────────────────────────────────────────────────────────────────
-// 3. ChatPanel — SSE stream aborts on unmount.
-// ──────────────────────────────────────────────────────────────────────────
-describe("ChatPanel async-safety", () => {
-    beforeEach(() => { vi.resetModules() })
-
-    it("mounts and unmounts without leaking SSE reads", async () => {
-        vi.doMock("@/lib/chat-store", () => ({
-            useChatStore: Object.assign(
-                () => ({
-                    isOpen: true,
-                    close: vi.fn(),
-                    messages: [],
-                    addMessage: vi.fn(),
-                    replaceLastAssistant: vi.fn(),
-                    contextData: {},
-                    onApplyEdits: vi.fn(),
-                    pendingPrompt: null,
-                    clearPendingPrompt: vi.fn(),
-                }),
-                { getState: () => ({}) }
-            ),
-            ChatEditAction: {},
-        }))
-        vi.doMock("@/lib/auth-context", () => ({
-            useAuth: () => ({ user: null }),
-        }))
-        vi.doMock("@/lib/library-store", () => ({
-            useLibraryStore: Object.assign(
-                () => ({ allFiles: [] }),
-                { getState: () => ({ setFilter: vi.fn() }) }
-            ),
-        }))
-        vi.doMock("@/lib/store", () => ({
-            useMusicStore: Object.assign(
-                () => ({}),
-                { getState: () => ({ setTransposition: vi.fn() }) }
-            ),
-        }))
-        vi.doMock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }))
-        vi.doMock("@/lib/setlist-firebase", () => ({
-            createSetlistService: () => ({ createSetlist: vi.fn(), updateSetlist: vi.fn() }),
-        }))
-        vi.doMock("@/lib/api-client", () => ({ apiFetch: vi.fn() }))
-
-        // jsdom doesn't implement scrollIntoView on HTMLElement.
-        Element.prototype.scrollIntoView = vi.fn()
-
-        const { ChatPanel } = await import("../../setlist/ChatPanel")
-        const { unmount } = render(<ChatPanel />)
-        expect(() => unmount()).not.toThrow()
     })
 })
 

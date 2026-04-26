@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
-// import { useChatStore } from "@/lib/chat-store"
 // import { useMusicStore } from "@/lib/store"
 // import { buildPerformQueue } from "@/lib/queue-utils"
 // import { useUpcomingPrep } from "@/hooks/use-upcoming-prep"

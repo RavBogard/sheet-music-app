@@ -33,13 +33,6 @@ vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }))
 
-// Mock chat store
-vi.mock("@/lib/chat-store", () => ({
-    useChatStore: Object.assign(() => ({}), {
-        getState: () => ({ open: vi.fn(), toggle: vi.fn() }),
-    }),
-}))
-
 // Mock setlist logic hook
 const mockSetlistLogic = {
     canEdit: true,

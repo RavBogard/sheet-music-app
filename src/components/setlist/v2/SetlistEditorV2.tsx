@@ -24,7 +24,6 @@ import { SetlistTrack, TrackType, SetlistMusician, DriveFile } from "@/types/mod
 import { useSetlistLogic } from "@/hooks/use-setlist-logic"
 import { logger } from "@/lib/logger"
 import { useAuth } from "@/lib/auth-context"
-import { useChatStore } from "@/lib/chat-store"
 import { SERVICE_FLOW_TYPES } from "@/lib/validations"
 
 // V2 Components
@@ -199,16 +198,6 @@ export function SetlistEditorV2({
         initialMusicians,
         onSave: handleSave,
     })
-
-    // Chat - auto-open only on new empty setlists
-    useEffect(() => {
-        if (!initialSetlistId && tracks.length === 0) {
-            if (window.matchMedia("(min-width: 768px)").matches) {
-                useChatStore.getState().open()
-            }
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
 
     // Global Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z + Ctrl+Y redo.
     // Skips when focus is inside an input/textarea/contenteditable so native
@@ -562,7 +551,6 @@ export function SetlistEditorV2({
                         onPerform={setlistId ? () => router.push(`/perform/setlist/${setlistId}`) : undefined}
                         onPublish={undefined}
                         onSetRabbi={canEdit ? setRabbi : undefined}
-                        onOpenAI={() => useChatStore.getState().toggle()}
                         onDelete={canEdit && setlistId ? () => setShowDeleteConfirm(true) : undefined}
                         onEditDetails={canEdit ? () => setShowEditDetails(true) : undefined}
                         onSaveAsTemplate={canEdit && setlistId ? handleSaveAsTemplate : undefined}
@@ -635,7 +623,7 @@ export function SetlistEditorV2({
                             {showEmpty && tracks.length === 0 && (
                                 <div className="text-center py-16 text-muted-foreground">
                                     <p className="text-lg font-medium mb-1">Empty setlist</p>
-                                    <p className="text-sm">Add songs from the library or use the AI assistant to build a service.</p>
+                                    <p className="text-sm">Add songs from the library to build a service.</p>
                                 </div>
                             )}
                             {tracks.map(renderTrack)}

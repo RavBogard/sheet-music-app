@@ -134,7 +134,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             toast.success(data.message || 'File uploaded successfully')
 
             // v45-07: invalidate the react-query library cache locally so the new
-            // file appears in search / setlist picker / chat without cold reload,
+            // file appears in search / setlist picker without cold reload,
             // then broadcast to any other open tabs via BroadcastChannel.
             queryClient.invalidateQueries({ queryKey: ['library'] })
             broadcastCacheInvalidation()

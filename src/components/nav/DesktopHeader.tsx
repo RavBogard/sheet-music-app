@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, UserCircle, LogOut, Settings, CloudOff, Sparkles, ShieldAlert } from "lucide-react"
+import { Search, UserCircle, LogOut, Settings, CloudOff, ShieldAlert } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,6 @@ import { useCongregation } from "@/lib/congregation-store"
 import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useLibrary } from "@/hooks/use-library"
-import { useChatStore } from "@/lib/chat-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -38,7 +37,6 @@ export function DesktopHeader(props: AppNavigationProps) {
     // Start background sync if logged in
     useLibrary()
     const { setQueue } = useMusicStore()
-    const { toggle: toggleChat, isOpen: isChatOpen } = useChatStore()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess({
         serverIsAdmin: props.serverIsAdmin,
         serverIsSoundEngineer: props.serverIsSoundEngineer
@@ -126,20 +124,6 @@ export function DesktopHeader(props: AppNavigationProps) {
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
                                 <CloudOff className="h-3 w-3" /> Offline
                             </div>
-                        )}
-
-                        {/* AI Chat */}
-                        {congregation.features.ai && (
-                            <Button
-                                variant={isChatOpen ? "default" : "ghost"} size="sm" onClick={toggleChat}
-                                className={cn(
-                                    "gap-2 rounded-full transition-colors",
-                                    isChatOpen ? "bg-brand text-brand-foreground hover:bg-brand/90 shadow-md" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
-                                )}
-                            >
-                                <Sparkles className="h-4 w-4" />
-                                <span className="hidden lg:inline">AI Assistant</span>
-                            </Button>
                         )}
 
                         {/* Search */}

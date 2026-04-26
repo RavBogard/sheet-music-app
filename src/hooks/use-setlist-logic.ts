@@ -4,7 +4,6 @@ import { createSetlistService, StaleWriteError } from "@/lib/setlist-firebase"
 import { auth as firebaseAuth } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useOffline } from "@/hooks/use-offline"
-import { useChatStore, ChatEditAction } from "@/lib/chat-store"
 import { arrayMove } from "@dnd-kit/sortable"
 import { SetlistTrack, DriveFile, Setlist, SetlistMusician } from "@/types/models"
 import { toast } from "sonner"
@@ -177,88 +176,6 @@ export function useSetlistLogic(props: UseSetlistLogicProps) {
         setFuture(newFuture)
         setTracks(next)
     }, [canRedo, future, tracks])
-
-    // Chat State (Global)
-    const { setContextData, registerOnApplyEdits } = useChatStore()
-
-    const handleApplyEdits = useCallback((edits: ChatEditAction[]) => {
-        if (!canEdit) {
-            toast.error("You must be in edit mode (or own this setlist) to apply changes.")
-            return
-        }
-
-        // Process edits sequentially on a mutable copy
-        setTracks(prev => {
-            addToHistory(prev)
-            const newTracks = [...prev]
-
-            edits.forEach(edit => {
-                if (edit.action === 'add') {
-                    const newTrack: SetlistTrack = {
-                        id: `track-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
-                        title: edit.title || "New Song",
-                        fileId: edit.fileId || undefined,
-                        type: (edit.type as SetlistTrack['type']) || 'song',
-                        performer: edit.performer,
-                        estimatedMinutes: edit.estimatedMinutes,
-                        key: edit.key || '',
-                        bpm: edit.bpm,
-                        notes: ''
-                    }
-
-                    if (edit.afterTitle) {
-                        // Positional insertion: find the track with the matching title and insert after it
-                        const afterIndex = newTracks.findIndex(t =>
-                            t.title.toLowerCase().includes(edit.afterTitle!.toLowerCase())
-                        )
-                        if (afterIndex >= 0) {
-                            newTracks.splice(afterIndex + 1, 0, newTrack)
-                        } else {
-                            // Title not found — append to end
-                            newTracks.push(newTrack)
-                        }
-                    } else if (typeof edit.index === 'number' && edit.index >= 0 && edit.index <= newTracks.length) {
-                        newTracks.splice(edit.index, 0, newTrack)
-                    } else {
-                        newTracks.push(newTrack)
-                    }
-                }
-                else if (edit.action === 'remove') {
-                    if (typeof edit.index === 'number' && newTracks[edit.index]) {
-                        newTracks.splice(edit.index, 1)
-                    }
-                }
-                else if (edit.action === 'reorder') {
-                    if (
-                        typeof edit.fromIndex === 'number' &&
-                        typeof edit.toIndex === 'number' &&
-                        newTracks[edit.fromIndex] &&
-                        edit.toIndex >= 0 &&
-                        edit.toIndex < newTracks.length + 1
-                    ) {
-                        const [moved] = newTracks.splice(edit.fromIndex, 1)
-                        newTracks.splice(edit.toIndex, 0, moved)
-                    }
-                }
-            })
-
-            return newTracks
-        })
-    }, [canEdit, addToHistory])
-
-    useEffect(() => {
-        setContextData({
-            currentSetlist: tracks,
-            setlistName: name,
-            setlistId,
-            rabbi,
-        })
-    }, [tracks, name, setlistId, rabbi, setContextData])
-
-    useEffect(() => {
-        registerOnApplyEdits(handleApplyEdits)
-        return () => registerOnApplyEdits(undefined)
-    }, [handleApplyEdits, registerOnApplyEdits])
 
     // Track count for significant change detection (notifications)
     const prevTrackCountRef = useRef<number>(initialTracks.length)

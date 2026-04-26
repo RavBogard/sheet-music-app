@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Sparkles, AlertTriangle } from "lucide-react"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { useChatStore } from "@/lib/chat-store"
 import { cn } from "@/lib/utils"
 
 interface MatrixData {
@@ -26,7 +24,6 @@ export function SetlistMatrixView() {
     const [data, setData] = useState<MatrixData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const chatStore = useChatStore()
 
     useEffect(() => {
         async function fetchMatrix() {
@@ -43,23 +40,6 @@ export function SetlistMatrixView() {
         }
         fetchMatrix()
     }, [])
-
-    const handleCellClick = (rowLabel: string, colContext: any) => {
-        // Open the AI drawer to suggest a song tailored to this parasha/holiday
-        let contextDesc = "an upcoming regular service"
-        if (colContext.holiday) contextDesc = `the holiday of ${colContext.holiday}`
-        else if (colContext.parasha) contextDesc = `Parashat ${colContext.parasha}`
-
-        const prompt = `Suggest historically appropriate or fresh repertoire choices for the "${rowLabel}" slot for ${contextDesc}. Give me 3 distinct options to choose from, avoiding ones we've overplayed recently in the matrix.`
-
-        chatStore.setContextData({
-            ...chatStore.contextData,
-            matrixContext: data || undefined
-        })
-
-        chatStore.setPendingPrompt(prompt)
-        chatStore.open()
-    }
 
     if (loading) {
         return (
@@ -135,10 +115,8 @@ export function SetlistMatrixView() {
                                         <div
                                             key={`${row.id}-${col.id}`}
                                             className={cn(
-                                                "w-48 shrink-0 flex items-center px-3 py-3 border-r relative group/cell hover:bg-muted/40 transition-colors",
-                                                isPast ? "" : "cursor-pointer"
+                                                "w-48 shrink-0 flex items-center px-3 py-3 border-r relative group/cell hover:bg-muted/40 transition-colors"
                                             )}
-                                            onClick={() => !isPast && !track ? handleCellClick(row.label, col.context) : null}
                                         >
                                             {track ? (
                                                 <div className="w-full flex flex-col">
@@ -154,19 +132,7 @@ export function SetlistMatrixView() {
                                                         </span>
                                                     )}
                                                 </div>
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                                                    {!isPast && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 text-[10px] text-blue-500 hover:text-blue-600 font-bold"
-                                                        >
-                                                            <Sparkles className="w-3 h-3 mr-1" /> Suggest
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            )}
+                                            ) : null}
                                         </div>
                                     )
                                 })}

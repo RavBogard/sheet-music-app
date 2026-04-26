@@ -147,10 +147,10 @@ export async function withAuth(
 }
 
 /**
- * Request-ID wrapper for routes that don't use `createApiHandler` (e.g., the
- * chat SSE route). Additive — preserves any existing handler wiring. Runs the
- * handler inside the AsyncLocalStorage request-id scope and stamps the
- * returned response with the `x-request-id` header.
+ * Request-ID wrapper for routes that don't use `createApiHandler` (e.g.,
+ * streaming SSE routes). Additive — preserves any existing handler wiring.
+ * Runs the handler inside the AsyncLocalStorage request-id scope and stamps
+ * the returned response with the `x-request-id` header.
  *
  * Usage:
  *   export const POST = (req: NextRequest) => wrapWithRequestId(req, async (rid) => {

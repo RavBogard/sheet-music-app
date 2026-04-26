@@ -18,7 +18,6 @@
  *   - src/lib/api-wrapper.ts   — createApiHandler wraps every call in runWithRequestId
  *   - src/lib/api-auth.ts      — wrapWithRequestId helper for routes not using createApiHandler
  *   - src/lib/logger.ts        — reads globalThis.__requestIdGetter__() on every emission
- *   - src/app/api/chat/route.ts — emits { requestId } in SSE meta/done frames
  */
 import { AsyncLocalStorage } from "node:async_hooks"
 

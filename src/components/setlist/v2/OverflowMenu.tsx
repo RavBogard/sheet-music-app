@@ -16,7 +16,6 @@ import {
     Play,
     Bell,
     Check,
-    Sparkles,
     Trash2,
     Clock,
     User,
@@ -30,7 +29,6 @@ interface OverflowMenuProps {
     // Actions
     onPerform?: () => void
     onPublish?: () => void
-    onOpenAI: () => void
     onDelete?: () => void
     onEditDetails?: () => void
     onSaveAsTemplate?: () => void
@@ -49,7 +47,6 @@ interface OverflowMenuProps {
 export function OverflowMenu({
     onPerform,
     onPublish,
-    onOpenAI,
     onDelete,
     onEditDetails,
     onSaveAsTemplate,
@@ -128,11 +125,6 @@ export function OverflowMenu({
                         Gig Packet
                     </DropdownMenuItem>
                 )}
-
-                <DropdownMenuItem onClick={onOpenAI}>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    AI Assistant
-                </DropdownMenuItem>
 
                 {/* Danger zone */}
                 {canEdit && onDelete && (

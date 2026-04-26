@@ -1,21 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { FileMusic, ListMusic, Plus, Sparkles } from "lucide-react"
+import { FileMusic, ListMusic, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /**
  * Compact horizontal command row — always above the fold.
  * Uses <Link> for navigation actions (enables automatic prefetching)
- * and <button> for non-navigation actions (AI chat).
+ * and <button> for non-navigation actions.
  */
 export function CommandRow({
     isMember,
     isBandLeader,
     isLoggedIn,
-    onAI,
-    hasAI,
     className,
 }: {
     isMember: boolean
@@ -24,8 +22,6 @@ export function CommandRow({
     onLibrary?: () => void
     onSetlists?: () => void
     onNewSetlist?: () => void
-    onAI: () => void
-    hasAI: boolean
     className?: string
 }) {
     if (!isLoggedIn && !isMember) return null
@@ -34,10 +30,6 @@ export function CommandRow({
 
     actions.push({ icon: FileMusic, label: 'Library', href: '/library', color: 'text-blue-500 bg-blue-500/10' })
     actions.push({ icon: ListMusic, label: 'Setlists', href: '/setlists', color: 'text-emerald-500 bg-emerald-500/10' })
-
-    if (hasAI && isMember) {
-        actions.push({ icon: Sparkles, label: 'Ask AI', onClick: onAI, color: 'text-violet-500 bg-violet-500/10' })
-    }
 
     if (isBandLeader) {
         actions.push({ icon: Plus, label: 'New', href: '/setlists/new', color: 'text-amber-500 bg-amber-500/10' })

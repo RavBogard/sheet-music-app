@@ -74,13 +74,6 @@ vi.mock('@/hooks/use-offline', () => ({
     }),
 }))
 
-vi.mock('@/lib/chat-store', () => ({
-    useChatStore: Object.assign(
-        () => ({ setContextData: vi.fn(), registerOnApplyEdits: vi.fn() }),
-        { getState: () => ({ toggle: vi.fn() }) },
-    ),
-}))
-
 vi.mock('@/lib/library-store', () => ({
     useLibraryStore: () => ({ allFiles: [] }),
 }))

@@ -1,15 +1,8 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 // Lazy-load components that don't affect initial page render.
-// ChatPanel (383 lines + AI/setlist imports) is the biggest win —
-// most users never open it, but it was previously loaded on every page.
-const ChatPanel = dynamic(
-    () => import("@/components/setlist/ChatPanel").then(m => m.ChatPanel),
-    { ssr: false }
-)
 
 const OfflineIndicator = dynamic(
     () => import("@/components/offline/OfflineIndicator").then(m => m.OfflineIndicator),
@@ -24,9 +17,6 @@ const SwCleanup = dynamic(
 export function LazyClientComponents() {
     return (
         <>
-            <SectionErrorBoundary label="ChatPanel">
-                <ChatPanel />
-            </SectionErrorBoundary>
             <OfflineIndicator />
             <SwCleanup />
         </>
