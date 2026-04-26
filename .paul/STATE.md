@@ -157,9 +157,18 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 — v50-03 sync engine shipped end-to-end in one session (PLAN → APPLY → UNIFY). Three task commits + property harness on master. 1320/1320 tests, tsc clean, next build success. Per-doc ordering bug found and fixed by the property harness itself.
-Stopped at: v50-03 fully closed; phase commit pending (SUMMARY + STATE/ROADMAP/PROJECT updates) and origin push.
-Next action: Phase commit + push, then `/paul:plan` for v50-04 (Song catalog & sticky memory).
+Last session: 2026-04-26 — v50-03 sync engine shipped end-to-end in one session (PLAN → APPLY → UNIFY). Four commits on origin/master (cb73dcc + 6cf34d7 + 0a94a9c + 9df0a1a phase-close). 1320/1320 tests, tsc clean, next build success. Per-doc ordering bug found and fixed by the property harness itself. Working tree clean. Session paused at clean checkpoint between phases.
+Stopped at: v50-03 fully closed and pushed; ready for v50-04 PLAN.
+Next action: `git pull` (multi-computer), then `/paul:plan` for v50-04 (Song catalog & sticky memory) — extend `songs` Dexie store per ARCHITECTURE.md §4.
+Resume file: `.paul/HANDOFF-2026-04-26.md`
+Resume context:
+- v50-04 spec is locked in ARCHITECTURE.md §4 (per-song global `defaults: { key, lead, bpm }` + `recent[]` cap 5)
+- Dexie schema needs version bump to v2 (additive: index `defaults` is not needed, but adding fields)
+- Backfill script `scripts/migrate-v50.ts` (dry-run + idempotent + rollback snapshots in `migrations/v50/snapshot/{songId}`)
+- All `songs/*` writes route through `applyEdit('update', ...)` — engine + outbox already handle the rest
+- No UI work in v50-04; that's v50-05 (which will need /ui-ux-pro-max)
+- Test pattern: FakeClock injection, NOT vi.useFakeTimers (per v50-03 lesson — fake-indexeddb microtask race)
+- Per-doc ordering invariant is now engine contract — preserve it
 
 Prior session (2026-04-26): Two phases shipped — v50-01 Architecture (commit `4fb05c6`); v50-02 Dead-code amputation (`4737214` + `9059d91` + `baf8109`, net −2,363 LOC, 1281/1281 green); phase close commit `65231a6`; state-sync `e5a36dd`.
 
