@@ -5,7 +5,12 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'bridge/src/**/*.test.ts'],
+        include: [
+            'src/**/*.test.ts',
+            'src/**/*.test.tsx',
+            'bridge/src/**/*.test.ts',
+            'scripts/**/*.test.ts',
+        ],
         env: {
             // Skip @t3-oss/env-nextjs validation — tests don't need real Firebase creds
             SKIP_ENV_VALIDATION: '1',
