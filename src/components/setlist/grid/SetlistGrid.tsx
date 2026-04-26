@@ -41,6 +41,7 @@ import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
 import { cn } from '@/lib/utils'
 
 import { AddRowPlaceholder } from './AddRowPlaceholder'
+import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
 import { DragHandleCell } from './cells/DragHandleCell'
 import { KeyCell } from './cells/KeyCell'
@@ -77,6 +78,7 @@ interface GridMeta {
         docId: string,
         patch: Record<string, unknown>,
     ) => Promise<void>
+    onBindChart: (track: LocalTrack, selection: ChartBindSelection) => void
     setlistIdForPropagation: string
 }
 
@@ -296,9 +298,19 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'chart',
         header: () => <span className="sr-only">Chart</span>,
         size: 44,
-        cell: (ctx: CellContext<LocalTrack, unknown>) => (
-            <ChartCell hasChart={Boolean(ctx.row.original.songId)} />
-        ),
+        cell: (ctx: CellContext<LocalTrack, unknown>) => {
+            const meta = getMeta(ctx.table)
+            const row = ctx.row.original
+            return (
+                <ChartBindPopover
+                    currentSongId={row.songId}
+                    inputAriaLabel={`Bind a chart to ${row.title || 'track'}`}
+                    onBind={(sel) => meta.onBindChart(row, sel)}
+                >
+                    <ChartCell hasChart={Boolean(row.songId)} />
+                </ChartBindPopover>
+            )
+        },
     },
 ]
 
@@ -508,6 +520,26 @@ export function SetlistGrid({
         [confirmDeleteWithTitle],
     )
 
+    const handleBindChart = useCallback(
+        async (track: LocalTrack, sel: ChartBindSelection) => {
+            const defaults = await seedTrackFromSong(sel.songId)
+            const patch: Record<string, unknown> = {
+                songId: sel.songId,
+                title: sel.title,
+            }
+            if (defaults.key !== undefined) patch.key = defaults.key
+            if (defaults.lead !== undefined) patch.leadMusician = defaults.lead
+            if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
+            await applyEdit({
+                op: 'update',
+                collection: 'tracks',
+                docId: track.id,
+                patch,
+            })
+        },
+        [],
+    )
+
     const meta = useMemo<GridMeta>(
         () => ({
             setlistId,
@@ -518,6 +550,7 @@ export function SetlistGrid({
             setlistLeads,
             onDeleteRow: (track) => void handleDeleteRow(track),
             onCommitTrackPatch: commitTrackPatchImpl,
+            onBindChart: (track, sel) => void handleBindChart(track, sel),
             setlistIdForPropagation: setlistId,
         }),
         [
@@ -528,6 +561,7 @@ export function SetlistGrid({
             handleCellKeyDown,
             setlistLeads,
             handleDeleteRow,
+            handleBindChart,
         ],
     )
 

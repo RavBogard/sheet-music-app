@@ -4,6 +4,11 @@ export {
     type SetlistGridHydratorProps,
 } from './SetlistGridHydrator'
 export {
+    ChartBindPopover,
+    type ChartBindPopoverProps,
+    type ChartBindSelection,
+} from './ChartBindPopover'
+export {
     SetlistGridTopBar,
     type SetlistGridTopBarProps,
 } from './SetlistGridTopBar'
