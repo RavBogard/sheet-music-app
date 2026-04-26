@@ -9,26 +9,26 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 2 of 3 plans closed)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-02 closed; v50-05-03 next)
-Plan: v50-05-02 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-02-SUMMARY.md`)
-Status: UNIFY complete for v50-05-02. Cutover landed on prod: SetlistGrid mounted via SetlistGridHydrator at /setlists/[id]; ChartBindPopover wires ChartCell click → applyEdit; ~−6,300 LOC legacy editor deleted. 4 commits pushed (b8d8314..d8c0442). 1315/1316 tests; tsc + next build clean. Prod smoke verification deferred to user (item #4 in deferred smokes list).
-Last activity: 2026-04-26 — UNIFY complete for v50-05-02 (SUMMARY.md written).
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 2 of 5 plans closed; polish split into 03/04/05)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-02 closed; v50-05-03 PLAN created, awaiting APPLY)
+Plan: v50-05-03 — PLAN written (`.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`)
+Status: PLAN created for v50-05-03 (multi-select / batch-edit toolbar + AlertDialog swap-in). 3 tasks: (1) selection hook + drag-handle modifier-click wiring; (2) BatchActionBar sticky toolbar with bulk Type/Key/Lead/Delete; (3) DeleteConfirmProvider context + page.tsx wrap + SetlistGrid context fallback. ≥ 12 new vitest cases targeted. /ui-ux-pro-max BLOCKING for APPLY. Polish scope split: v50-05-03 = multi-select + AlertDialog; v50-05-04 = iPad/touch + ContextMenu (deferred); v50-05-05 = mobile stacked-card + WCAG AA + Undo (deferred). Both 04 and 05 are now formally on the ROADMAP (not informal carryover).
+Last activity: 2026-04-26 — v50-05-03-PLAN.md created; ROADMAP expanded to 03/04/05.
 
 Progress:
-- v5.0: [███████░░░] ~71% (4 of 7 phases complete; v50-05 ⅔ plans done)
+- v5.0: [███████░░░] ~72% (4 of 7 phases complete; v50-05 = 2/5 plans done; 03 planned, 04+05 scoped)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
-- Phase v50-05: [███████░░░] 67% (v50-05-01 + v50-05-02 closed; v50-05-03 polish remaining)
+- Phase v50-05: [████░░░░░░] 40% (v50-05-01 + v50-05-02 closed; 03 planned; 04 + 05 scoped on ROADMAP)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-05-03 PLAN]
+  ✓        ○        ○     [v50-05-03 PLAN created, awaiting APPLY approval]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
@@ -36,23 +36,27 @@ v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
 v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
-v50-05-03:     ○ ──▶ ○ ──▶ ○     [Polish plan — touch/iPad + mobile + a11y + multi-select + AlertDialog + ContextMenu + undo]
+v50-05-03:     ✓ ──▶ ○ ──▶ ○     [Plan: multi-select / batch-edit toolbar + AlertDialog swap-in]
+v50-05-04:     ○ ──▶ ○ ──▶ ○     [Plan: iPad/pointer-coarse Sheet swap + right-click ContextMenu]
+v50-05-05:     ○ ──▶ ○ ──▶ ○     [Plan: mobile stacked-card flow + WCAG AA audit + Undo via zustand temporal middleware]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for v50-05-03 (polish — the last plan in v50-05). Scope per ARCHITECTURE.md §6.6/6.7/6.11/6.13 + the v50-05-01 + v50-05-02 deferral list:
-- **§6.6 Multi-select / batch edit** — Shift-click row range; bulk Backspace delete; bulk key/lead/bpm change via a sticky batch toolbar.
-- **§6.7 iPad/touch variant** — Bottom-sheet dropdowns instead of Popover (cmdk inside Radix Sheet); larger padding (44px touch targets); hover replacements (long-press for context menu).
-- **§6.11 Mobile-only stacked-card flow** — Drop the table at <768px; show stacked cards with a full-screen "edit pane" sheet for cell-level edits.
-- **§6.13 WCAG AA binding accessibility verification** — Run axe / Lighthouse against the live editor; fix focus-trap gaps in popovers; verify keyboard-only navigation across all cells; aria-live regions for SyncIndicator state changes (already in place — verify announce timing).
-- **AlertDialog** swap-in for window.confirm (the `confirmDeleteWithTitle` injection point is already wired per v50-05-01).
-- **Right-click ContextMenu** on rows + drag handle (Radix ContextMenu).
-- **Undo** via zustand temporal middleware on the local Dexie writes (intercept before applyEdit).
+Run `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md` to execute v50-05-03. Three tasks (autonomous, no checkpoints), ~12+ new vitest cases.
 
-`/ui-ux-pro-max` BLOCKING for APPLY per SPECIAL-FLOWS.md.
+**Before APPLY:** invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
 
-**Required skill:** `/ui-ux-pro-max` per SPECIAL-FLOWS.md — must be invoked before APPLY.
+**v50-05 polish split (locked on ROADMAP — formal phase plans, not informal carryover):**
+- **v50-05-03** (this plan, awaiting APPLY): Multi-select / batch edit (§6.6) + AlertDialog swap-in for window.confirm.
+- **v50-05-04** (next after 03): iPad / pointer-coarse touch variant (§6.7) + right-click ContextMenu (Radix ContextMenu on rows + drag handle).
+- **v50-05-05** (after 04): Mobile stacked-card flow (§6.11) + WCAG AA audit (§6.13) + Undo via zustand temporal middleware.
+
+**Out-of-v50-05 deferrals (sent to v50-06+):**
+- §6.9 reconciliation modal + expectedUpdatedAt tracking + cross-tab-lock flake fix → v50-06
+- Cross-leader live-edit visibility → v50-06
+- Production migrate-v50.ts apply → v50-07
+- Production smoke verification of v50-05-02 cutover → user backlog (deferred-smokes #4)
 
 Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed. v50-05 is the phase the user signed up for: app intentionally broken-for-band during cutover.
 
@@ -187,10 +191,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-02 full cycle) — Resume → archive consumed handoff → /paul:plan (3 tasks + 1 decision + 1 human-verify) → /ui-ux-pro-max loaded → decision Option A → /paul:apply Task 1 (route swap + Hydrator, 5 tests) → Task 2 (ChartBindPopover, 4 tests) → Task 3 (legacy purge ~−6,300 LOC + SearchOverlay relocate + matrix view drop + Hydrator test cleanup) → push origin master → human-verify deferred to user → /paul:unify (SUMMARY + STATE + ROADMAP) → push UNIFY commit. Five commits on origin/master: `b8d8314` (chore: PLAN + handoff archive + state sync), `0584744` (Task 1: Hydrator + route swap), `ba7e214` (Task 2: ChartBindPopover + ChartCell forwardRef + binding wiring), `d8c0442` (Task 3: 27 deletions + SearchOverlay rename + matrix view removal), `e79c160` (UNIFY: SUMMARY + state sync). All pushed. Full suite 1315/1316; tsc + next build clean; /api/setlist/flush gone. Production now serves SetlistGrid for all setlist editing. Session paused for context budget before tackling v50-05-03 (polish work involves substantial new UI machinery — multi-select state, mobile sheet UI, AlertDialog, ContextMenu, undo middleware, WCAG AA audit — and deserves a fresh session).
-Stopped at: v50-05-02 fully closed and pushed; handoff written. Ready for fresh session to plan v50-05-03 (last plan in v50-05).
-Next action: in a fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-05-03. Decide plan split at /paul:plan time — scope exceeds "3 tasks per plan" guidance; either v50-05-03-A/B/C split OR scope-down to one plan + defer rest to v50-05-04. Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md.
-Resume file: `.paul/HANDOFF-2026-04-26-v50-05-03-pickup.md`
+Last session: 2026-04-26 (current) — `/paul:resume` after `git pull origin master` → handoff `.paul/HANDOFF-2026-04-26-v50-05-03-pickup.md` archived to `.paul/handoffs/archive/` → `/paul:plan` for v50-05-03 → user picked Option A (multi-plan split: 03 = multi-select + AlertDialog; 04 = iPad + ContextMenu; 05 = mobile + WCAG + undo) → user clarified that 04 + 05 must be formally locked into ROADMAP within v50-05 (not informal carryover) → ROADMAP expanded v50-05 from "2/3" to "2/5" with explicit 03/04/05 detail entries → STATE.md sync. PLAN.md written at `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md` (3 auto tasks, ≥ 12 new vitest cases targeted, autonomous=true, /ui-ux-pro-max BLOCKING for APPLY).
+Stopped at: PLAN created and STATE/ROADMAP synced; awaiting user approval to proceed to APPLY.
+Next action: invoke `/ui-ux-pro-max`, then run `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`. APPLY is autonomous (no decision/human-verify checkpoints). After UNIFY of 03, plan v50-05-04 (iPad + ContextMenu); after that, plan v50-05-05 (mobile + WCAG + undo).
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`
 Resume context:
 - v50-05-02 cutover landed end-to-end on prod (SetlistGrid mounted via Hydrator at /setlists/[id]; ChartBindPopover wires ChartCell click → applyEdit; ~−6,300 LOC legacy editor surface deleted). 5 commits b8d8314..e79c160 on origin/master.
 - `confirmDeleteWithTitle` SetlistGrid prop is the AlertDialog injection point (per v50-05-01). Default still window.confirm. Swap at page.tsx mount level.
