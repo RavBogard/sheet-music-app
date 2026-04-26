@@ -9,37 +9,39 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 3 of 7 phases complete
-Phase: v50-04 of 7 (Song catalog & sticky memory) — Ready to plan
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Ready to plan
 Plan: Not started
-Status: v50-03 closed. SUMMARY written. Three task commits on master (cb73dcc IDB foundation, 6cf34d7 sync engine, 0a94a9c property harness); 1320/1320 tests passing; tsc clean; next build success. Engine standalone (zero consumer wiring). Phase commit pending push.
-Last activity: 2026-04-26 — UNIFY complete for v50-03-01 (SUMMARY.md written).
+Status: v50-04 closed. SUMMARY written. Four task commits on master (58d2725 schema, d73e891 helpers, d13da61 migration script, 12bb330 inngest CVE bump). 1344/1345 tests passing (1 pre-existing flake in cross-tab-lock unrelated, deferred to v50-06). tsc clean; next build clean. Phase commit + push pending.
+Last activity: 2026-04-26 — UNIFY complete for v50-04-01 (SUMMARY.md written, PROJECT/ROADMAP updated).
 
 Progress:
-- v5.0: [████░░░░░░] 43% (3 of 7 phases complete)
+- v5.0: [██████░░░░] 57% (4 of 7 phases complete)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
+- Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-04 PLAN]
+  ○        ○        ○     [Loop reset — ready for v50-05 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
+v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for Phase v50-04 (Song catalog & sticky memory). Reference ARCHITECTURE.md §4 for the per-song global `defaults: { key, lead, bpm }` schema + propagation rules. The `songs` store from v50-03 is already in place — v50-04 extends it with `defaults` and `recent[]` fields (Dexie schema version bump).
+Run `/paul:plan` for Phase v50-05 (Spreadsheet editor UI cutover). This is the BIG one — net −8,400 LOC of legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + mutation API routes + broadcast-channel merge code) replaced by an app-native spreadsheet-shaped editor on TanStack Table v8 + @dnd-kit + Radix Popover + cmdk. Wired to v50-03 sync engine + v50-04 song catalog (`@/lib/songs/defaults` exposes `seedTrackFromSong` + `propagateTrackEditToSong`). Reference ARCHITECTURE.md §6 (Spreadsheet Editor UX) for binding wireframes.
 
-Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
+**Required skill:** `/ui-ux-pro-max` per SPECIAL-FLOWS.md — must be invoked before APPLY.
 
-Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
+Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed. v50-05 is the phase the user signed up for: app intentionally broken-for-band during cutover.
 
 ## Phase order (for context)
 
@@ -105,16 +107,16 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
 
 ### Git state
-Recent commits on `master` (also on `origin/master` — pushed 2026-04-26):
-- `ddf3358` — docs(state): record git state post-v50-02 phase close + push (this section was last updated here; subsequent state-sync commits are no-ops)
-- `65231a6` — docs(v50-02): close phase — amputation summary + state updates
-- `baf8109` — feat(v50-02): delete swapTrack() + liturgicalSlot field — final amputation
-- `9059d91` — feat(v50-02): delete live-swap UI surface + /live receiver
-- `4737214` — feat(v50-02): delete AI chat assistant
-- `57fe892` — docs(v4.4): commit orphaned phase plans + summaries (v44-03, v44-05, v44-06)
-- `4fb05c6` — docs(v50-01): architecture & design — local-first editor rewrite locked
+Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
+- `12bb330` — chore(deps): bump inngest 3.52.3 → 3.54.0 (CVE)
+- `d13da61` — feat(v50-04): migrate-v50.ts — Firestore song-defaults backfill
+- `d73e891` — feat(v50-04): sticky-memory helpers — seed + debounced propagate
+- `58d2725` — feat(v50-04): Dexie v→2 — additive defaults + recent on songs
+- `695bd1f` — chore(paul): archive handoff 2026-04-26 (consumed on resume)
+- (v50-03 commits pushed 2026-04-26: 9df0a1a + 0a94a9c + 6cf34d7 + cb73dcc)
+- (v50-02 commits pushed 2026-04-26: 65231a6 + baf8109 + 9059d91 + 4737214)
 
-Branch: `master` — **up to date with `origin/master`** (pushed; Vercel will auto-deploy; deletion commits are no-op for end users).
+Branch: `master` — **5 commits ahead of `origin/master`** as of UNIFY mid-execution. Phase close commit (covers .paul/ artefacts) lands next, then `git push origin master`.
 
 Pre-existing local drift (`package.json` 2.11.12 → 2.13.1, `src/build-info.json`) was discarded with `git checkout -- package.json src/build-info.json` since it was not from this session and no decision was made to keep the version bump.
 
@@ -154,13 +156,26 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: Auth refresh + retry happens IN-LOOP (single drain pass) | v50-03 | Cleaner than re-queuing with attempts=1; second-attempt result resolves directly to Idle/Failed |
 | 2026-04-26: FakeClock injection > vi.useFakeTimers for Dexie-touching tests | v50-03 | vi races with fake-indexeddb microtask scheduling; manual FakeClock + macrotask flush is deterministic. Pattern documented in test files for v50-04..v50-06 reuse |
 | 2026-04-26: Property test numRuns = 20 (not 100) | v50-03 | Per-scenario cost ~600ms; harness deadlocks above ~30 in current shape. 20 sufficient for class-of-bug coverage; soak runs can crank higher |
+| 2026-04-26: Sticky-memory debounce default = 1000ms (overridable via opts) | v50-04 | Matches ARCHITECTURE.md §4.3 explicitly; v50-05 editor inherits this default; tests use shorter values via clock injection |
+| 2026-04-26: Migration core abstracted behind MigrationFirestore interface | v50-04 | Tests run without firebase-admin SDK; CLI adapter wires the real one; FIELD_DELETE_SENTINEL Symbol maps to FieldValue.delete(). Pattern reusable for future migration scripts |
+| 2026-04-26: Orphan-track filter applied to BOTH dry-run AND apply paths | v50-04 | Honest dry-run counts; caught by failing test where dry-run reported 4 candidates while apply only wrote 3 (the silent skipped orphan). Hoisted existence check above mode branch |
+| 2026-04-26: Schema bumps to v(2) are additive non-indexed only; new indexed fields require v(3) | v50-04 | Lookups happen by id; over-indexing wastes IDB. Pattern carries to v50-05/06 |
+| 2026-04-26: inngest CVE bump (3.52.3 → 3.54.0) shipped as standalone chore commit, not bundled with v50-04 features | v50-04 close | Clean blame; matches v50-02 dep-cleanup-deferral precedent |
 
 ## Session Continuity
 
-Last session: 2026-04-26 — v50-03 sync engine shipped end-to-end in one session (PLAN → APPLY → UNIFY). Four commits on origin/master (cb73dcc + 6cf34d7 + 0a94a9c + 9df0a1a phase-close). 1320/1320 tests, tsc clean, next build success. Per-doc ordering bug found and fixed by the property harness itself. Working tree clean. Session paused at clean checkpoint between phases.
-Stopped at: v50-03 fully closed and pushed; ready for v50-04 PLAN.
-Next action: `git pull` (multi-computer), then `/paul:plan` for v50-04 (Song catalog & sticky memory) — extend `songs` Dexie store per ARCHITECTURE.md §4.
-Resume file: `.paul/HANDOFF-2026-04-26.md`
+Last session: 2026-04-26 — v50-04 closed end-to-end (PLAN → APPLY → UNIFY). Five commits on master (4 task + 1 chore CVE): `58d2725` Dexie v→2 schema, `d73e891` sticky-memory helpers (seedTrackFromSong + debounced propagateTrackEditToSong), `d13da61` migrate-v50.ts Firestore backfill, `12bb330` inngest 3.52.3→3.54.0 CVE bump. Phase close commit pending. 1344/1345 tests; 1 pre-existing cross-tab-lock flake outside boundary. tsc + next build both clean.
+Stopped at: v50-04 phase close + push pending; ready for v50-05 PLAN.
+Next action: `git push origin master` after phase commit lands; then `/paul:plan` for v50-05 (Spreadsheet editor UI cutover, /ui-ux-pro-max required).
+Resume file: `.paul/phases/v50-04-song-catalog/v50-04-01-SUMMARY.md`
+Resume context:
+- v50-05 spec is locked in ARCHITECTURE.md §6 (spreadsheet editor UX with TanStack Table v8 + @dnd-kit + Radix Popover + cmdk; design tokens from §6.1; desktop/iPad/phone variants; WCAG AA)
+- Helper module `@/lib/songs/defaults` is ready: import seedTrackFromSong/propagateTrackEditToSong directly into the new editor's add-song and cell-commit paths
+- Sync engine (v50-03) is the write path; new editor calls `applyEdit('update', 'tracks', ...)` etc. The legacy `setlist-firebase.ts` + `use-setlist-logic.ts` + `SetlistEditorV2.tsx` etc. are the surface to delete (~−8,400 LOC)
+- /ui-ux-pro-max is REQUIRED per SPECIAL-FLOWS.md — APPLY will be blocked otherwise
+- App will be intentionally broken-for-band during this phase (acceptable per milestone constraint)
+- Pre-existing cross-tab-lock flake → fold into v50-06 fix
+- migrate-v50.ts production apply still pending (deferred to v50-07 cutover)
 Resume context:
 - v50-04 spec is locked in ARCHITECTURE.md §4 (per-song global `defaults: { key, lead, bpm }` + `recent[]` cap 5)
 - Dexie schema needs version bump to v2 (additive: index `defaults` is not needed, but adding fields)

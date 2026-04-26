@@ -3,7 +3,7 @@
 ## Current Milestone
 **v5.0 — Bulletproof Editor (Local-First Rewrite)**
 Status: 🚧 In Progress
-Phases: 3 of 7 complete
+Phases: 4 of 7 complete
 Theme: Rebuild the setlist editor on a local-first foundation, with sticky song memory and a spreadsheet-shaped UX, so saves are bulletproof by construction. Includes amputation of dead surfaces (AI chat, live-swap UI) up front.
 
 Origin: Three compounding pain points surfaced post-gig — Rube Goldberg fragility, edits that don't save, and Sheets envy. Research (codebase blast radius + data-model split + Sheets-API feasibility + comparable-app survey) reframed the problem: the in-app editor concept is right; the *implementation* (optimistic-write + silent-fail save path, no song-level memory, dense non-spreadsheet-like UX) is what makes Sheets feel easier. Fix the editor at the foundation and the Sheets envy dissolves. Scope expanded post-discussion: amputate the unused AI chat assistant and the over-engineered live-swap UI surface (v3.0 + v4.0 redesigns) before rebuilding — replacement for "live swap" is just real-time setlist sync via the new sync engine.
@@ -15,7 +15,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 | v50-01 | Architecture & design | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-02 | Dead-code amputation (chat + live-swap UI) | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-03 | Local-first sync engine | 1/1 | ✅ Complete | 2026-04-26 |
-| v50-04 | Song catalog & sticky memory | TBD | Not started | - |
+| v50-04 | Song catalog & sticky memory | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-05 | Spreadsheet editor UI (cutover) | TBD | Not started | - |
 | v50-06 | Concurrent-edit safety + offline + cross-tab | TBD | Not started | - |
 | v50-07 | Migration, kitchen-sink, cutover | TBD | Not started | - |
@@ -39,10 +39,14 @@ Outcome (2026-04-26): Dexie 4.4 + hand-rolled outbox + 6-state FSM + BroadcastCh
 Plans:
 - v50-03-01 ✓ (2026-04-26) — Dexie schema + atomic `applyEdit` + sync FSM + retry + cross-tab lock + property-based failure-injection harness. 3 tasks, 9 ACs, autonomous. Commits: `cb73dcc` (foundation) + `6cf34d7` (engine) + `0a94a9c` (property harness).
 
-### Phase v50-04: Song catalog & sticky memory
+### Phase v50-04: Song catalog & sticky memory ✓
 
 Focus: Promote `songs/{id}` to first-class with `defaults: { key, lead, bpm }` + rolling history. One-shot backfill script populates defaults from existing setlist data (most-recent occurrence wins). Add-song flow reads defaults; save-track flow writes back so edits travel with the song everywhere going forward. Persists until explicitly changed.
-Plans: TBD
+
+Outcome (2026-04-26): Dexie v→2 schema (additive `defaults` + `recent[]` cap 5 on songs; non-destructive v1→v2). Helper module `src/lib/songs/defaults.ts` exports `seedTrackFromSong` (read-through) + `propagateTrackEditToSong` (1s debounced, per-song independent timers, FIFO-cap-5, routes through `applyEdit('update','songs',...)` so the v50-03 sync engine carries it to Firestore). Migration script `scripts/migrate-v50.ts` with dry-run / apply / `--force` / `--rollback` / `--help`; abstract `MigrationFirestore` interface keeps tests admin-SDK-free; setlist-invariance sha256 hash check is the regression guard; per-song snapshots in `migrations/v50/snapshot/{songId}` enable rollback; `system/migrations/v50` marker enforces idempotency. Three atomic commits (`58d2725` + `d73e891` + `d13da61`); 25 new tests (3 schema + 9 helper + 13 migration); 1344/1345 total (1 pre-existing flake in cross-tab-lock unrelated, deferred to v50-06). Production migration apply itself deferred to v50-07 cutover. Zero changes to legacy editor surface; v50-05 imports the helpers from `@/lib/songs/defaults` and consumes directly.
+
+Plans:
+- v50-04-01 ✓ (2026-04-26) — Schema bump + helper module + migration script. 3 tasks, 7 ACs, autonomous. Commits: `58d2725` (Dexie v2) + `d73e891` (helpers) + `d13da61` (migration script).
 
 ### Phase v50-05: Spreadsheet editor UI (cutover)
 
@@ -504,4 +508,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-26 (v50-02 amputation complete — net −2,363 LOC; v50-03 sync engine next)*
+*Last updated: 2026-04-26 (v50-04 song catalog & sticky memory complete — Dexie v2 + helpers + migration script; 4/7 phases; v50-05 spreadsheet editor cutover next, /ui-ux-pro-max required)*
