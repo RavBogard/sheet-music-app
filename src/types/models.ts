@@ -27,7 +27,6 @@ export interface DriveFile {
         topics?: string[]
         enrichedAt?: string
         omrCorrections?: OMRCorrection[]
-        liturgicalSlot?: string // e.g. "L'cha Dodi", "Shema", "Mi Chamocha"
     }
 }
 

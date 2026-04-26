@@ -232,30 +232,6 @@ describe('createSetlistService', () => {
         })
     })
 
-    describe('swapTrack', () => {
-        it('reads remote tracks, mutates only the target index, writes back', async () => {
-            hoisted.txRemoteDoc = {
-                exists: true,
-                data: {
-                    tracks: [
-                        { id: 't0', title: 'A', fileId: 'f0', type: 'song' },
-                        { id: 't1', title: 'B', fileId: 'f1', type: 'song' },
-                    ],
-                },
-            }
-
-            await service.swapTrack('s1', 1, { fileId: 'f-new', title: 'B-new', key: 'G' })
-
-            expect(hoisted.txUpdatePayloads).toHaveLength(1)
-            const payload = hoisted.txUpdatePayloads[0]
-            expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
-            const newTracks = payload.tracks as Array<{ title: string }>
-            expect(newTracks).toHaveLength(2)
-            expect(newTracks[0].title).toBe('A')
-            expect(newTracks[1].title).toBe('B-new')
-        })
-    })
-
     describe('with null userId', () => {
         it('creates service with null user (guest mode)', () => {
             const guestService = createSetlistService(null)

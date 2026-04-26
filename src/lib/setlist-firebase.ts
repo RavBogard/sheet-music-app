@@ -278,42 +278,5 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Swap a single track in a setlist (inline song replacement). Reads the
-        // current tracks inside a transaction so a concurrent write can't be
-        // silently clobbered.
-        async swapTrack(setlistId: string, trackIndex: number, replacement: { fileId: string; title: string; key?: string }) {
-            const docRef = doc(db, 'setlists', setlistId)
-            let committedTrackCount = 0
-            let committedTracks: SetlistTrack[] = []
-            await runTransaction(db, async (tx) => {
-                const snap = await tx.get(docRef)
-                if (!snap.exists()) throw new Error('NOT_FOUND')
-                const remote = snap.data() as { tracks?: SetlistTrack[] }
-                // v4.3 P6-B06: defensive — corrupted docs may store `tracks` as
-                // something non-array (empty object from a bad migration, etc.).
-                // Treat any non-array as "empty" rather than crashing on `.length`.
-                const currentTracks: SetlistTrack[] = Array.isArray(remote.tracks)
-                    ? remote.tracks
-                    : []
-                if (trackIndex < 0 || trackIndex >= currentTracks.length) {
-                    throw new Error('TRACK_INDEX_OUT_OF_RANGE')
-                }
-                const newTracks = [...currentTracks]
-                newTracks[trackIndex] = {
-                    ...newTracks[trackIndex],
-                    fileId: replacement.fileId,
-                    title: replacement.title,
-                    key: replacement.key || newTracks[trackIndex].key,
-                }
-                tx.update(docRef, {
-                    tracks: stripUndefinedDeep(newTracks),
-                    trackCount: newTracks.length,
-                    updatedAt: serverTimestamp(),
-                })
-                committedTrackCount = newTracks.length
-                committedTracks = newTracks
-            })
-            logSetlistChange(setlistId, 'tracks_updated', userId || '', userName || 'Anonymous', { trackCount: committedTrackCount }, committedTracks)
-        }
     };
 }
