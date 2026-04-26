@@ -10,10 +10,10 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Ready to plan
-Plan: Not started
-Status: v50-04 closed. SUMMARY written. Four task commits on master (58d2725 schema, d73e891 helpers, d13da61 migration script, 12bb330 inngest CVE bump). 1344/1345 tests passing (1 pre-existing flake in cross-tab-lock unrelated, deferred to v50-06). tsc clean; next build clean. Phase commit + push pending.
-Last activity: 2026-04-26 — UNIFY complete for v50-04-01 (SUMMARY.md written, PROJECT/ROADMAP updated).
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning
+Plan: v50-05-01 created, awaiting approval — `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`
+Status: PLAN created (build SetlistGrid end-to-end without route cutover; cutover is v50-05-02; touch/mobile/a11y polish is v50-05-03). 3 tasks, 7 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md.
+Last activity: 2026-04-26 — Created `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`.
 
 Progress:
 - v5.0: [██████░░░░] 57% (4 of 7 phases complete)
@@ -27,17 +27,18 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-05 PLAN]
+  ✓        ○        ○     [v50-05-01 plan written — awaiting approval]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
+v50-05-01:     ✓ ──▶ ○ ──▶ ○     [Plan created — load /ui-ux-pro-max before APPLY]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for Phase v50-05 (Spreadsheet editor UI cutover). This is the BIG one — net −8,400 LOC of legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + mutation API routes + broadcast-channel merge code) replaced by an app-native spreadsheet-shaped editor on TanStack Table v8 + @dnd-kit + Radix Popover + cmdk. Wired to v50-03 sync engine + v50-04 song catalog (`@/lib/songs/defaults` exposes `seedTrackFromSong` + `propagateTrackEditToSong`). Reference ARCHITECTURE.md §6 (Spreadsheet Editor UX) for binding wireframes.
+Run `/ui-ux-pro-max` (required by SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md` to execute Plan v50-05-01 (build SetlistGrid end-to-end without route cutover; cutover is v50-05-02; touch/mobile/a11y polish is v50-05-03). This is the BIG one — net −8,400 LOC of legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + mutation API routes + broadcast-channel merge code) replaced by an app-native spreadsheet-shaped editor on TanStack Table v8 + @dnd-kit + Radix Popover + cmdk. Wired to v50-03 sync engine + v50-04 song catalog (`@/lib/songs/defaults` exposes `seedTrackFromSong` + `propagateTrackEditToSong`). Reference ARCHITECTURE.md §6 (Spreadsheet Editor UX) for binding wireframes.
 
 **Required skill:** `/ui-ux-pro-max` per SPECIAL-FLOWS.md — must be invoked before APPLY.
 
@@ -164,10 +165,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 — v50-04 closed end-to-end (PLAN → APPLY → UNIFY) and pushed to origin/master. Six commits this session: `695bd1f` (handoff archive) + `58d2725` (Dexie v→2 schema) + `d73e891` (sticky-memory helpers) + `d13da61` (migrate-v50.ts) + `12bb330` (inngest 3.52.3→3.54.0 CVE) + `a58bdb8` (phase close — SUMMARY + PROJECT/ROADMAP/STATE). 1344/1345 tests; tsc + next build clean. Working tree clean. Session paused at clean checkpoint between phases — context-budget pause before tackling v50-05 (the largest phase of the milestone).
-Stopped at: v50-04 fully closed and pushed; ready for v50-05 PLAN. Paused for context budget — v50-05 deserves a fresh session.
-Next action: `git pull` (multi-computer), `/paul:resume` to load handoff and route to PLAN; before APPLY (not before PLAN), invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md; read ARCHITECTURE.md §6 in full before drafting plan; inventory legacy editor surface (use-setlist-logic, setlist-flush, setlist-draft, SetlistEditorV2, setlist-firebase callers) before declaring delete scope.
-Resume file: (consumed — archived to `.paul/handoffs/archive/HANDOFF-2026-04-26-v50-05-pickup.md`)
+Last session: 2026-04-26 (v50-05 planning) — `git pull origin master` (already up to date) + handoff archive commit `d72b6b5` (chore(paul)) pushed to origin/master + Plan v50-05-01 written to `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`. The plan splits v50-05 into three plans (build, cutover, polish): Plan 01 builds SetlistGrid + boots sync engine into app shell + 5 vitest files, but does NOT swap the route mount; legacy editor still serves prod after Plan 01. Plan 02 = cutover + delete legacy. Plan 03 = touch/iPad + mobile + binding-AA + multi-select. ARCHITECTURE.md §6.2/6.3/6.4/6.5/6.8/6.10 are in scope here; §6.6/6.7/6.9/6.11/6.13 deferred.
+Stopped at: Plan v50-05-01 created and committed-ready; awaiting approval to start APPLY.
+Next action: invoke `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`. APPLY will execute as 3 atomic commits (Task 1 grid scaffold + engine boot, Task 2 cell-edit interactions, Task 3 drag/add/delete).
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)

@@ -14,11 +14,17 @@ const SwCleanup = dynamic(
     { ssr: false }
 )
 
+const SyncEngineBoot = dynamic(
+    () => import("@/lib/sync/init").then(m => ({ default: m.SyncEngineBoot })),
+    { ssr: false }
+)
+
 export function LazyClientComponents() {
     return (
         <>
             <OfflineIndicator />
             <SwCleanup />
+            <SyncEngineBoot />
         </>
     )
 }
