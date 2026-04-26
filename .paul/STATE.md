@@ -9,26 +9,26 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 2 of 5 plans closed; polish split into 03/04/05)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-02 closed; v50-05-03 PLAN created, awaiting APPLY)
-Plan: v50-05-03 — PLAN written (`.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`)
-Status: PLAN created for v50-05-03 (multi-select / batch-edit toolbar + AlertDialog swap-in). 3 tasks: (1) selection hook + drag-handle modifier-click wiring; (2) BatchActionBar sticky toolbar with bulk Type/Key/Lead/Delete; (3) DeleteConfirmProvider context + page.tsx wrap + SetlistGrid context fallback. ≥ 12 new vitest cases targeted. /ui-ux-pro-max BLOCKING for APPLY. Polish scope split: v50-05-03 = multi-select + AlertDialog; v50-05-04 = iPad/touch + ContextMenu (deferred); v50-05-05 = mobile stacked-card + WCAG AA + Undo (deferred). Both 04 and 05 are now formally on the ROADMAP (not informal carryover).
-Last activity: 2026-04-26 — v50-05-03-PLAN.md created; ROADMAP expanded to 03/04/05.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 3 of 5 plans closed — 03 polish A landed)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-03 closed; v50-05-04 next)
+Plan: v50-05-03 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-03-SUMMARY.md`)
+Status: UNIFY complete for v50-05-03. Multi-select + BatchActionBar + AlertDialog swap-in landed on prod. 4 commits pushed to origin/master: `25b57ad` (chore(paul) PLAN), `e26626c` (Task 1 selection hook), `ae0a8c3` (Task 2 BatchActionBar), `8acf7aa` (Task 3 DeleteConfirmProvider). +44 new vitest cases (1359/1360 — pre-existing cross-tab-lock flake remains, deferred to v50-06). tsc + next build clean. Production /setlists/[id] now: Cmd-click drag handle to multi-select, sticky toolbar at size ≥ 2 (Type / Key / Lead / Delete), shadcn AlertDialog replaces window.confirm for both single-row and bulk delete.
+Last activity: 2026-04-26 — UNIFY complete for v50-05-03 (SUMMARY.md written).
 
 Progress:
-- v5.0: [███████░░░] ~72% (4 of 7 phases complete; v50-05 = 2/5 plans done; 03 planned, 04+05 scoped)
+- v5.0: [███████░░░] ~74% (4 of 7 phases complete; v50-05 = 3/5 plans done; 04 + 05 scoped)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
-- Phase v50-05: [████░░░░░░] 40% (v50-05-01 + v50-05-02 closed; 03 planned; 04 + 05 scoped on ROADMAP)
+- Phase v50-05: [██████░░░░] 60% (01 build ✓ + 02 cutover ✓ + 03 multi-select+AlertDialog ✓; 04 + 05 scoped on ROADMAP)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v50-05-03 PLAN created, awaiting APPLY approval]
+  ○        ○        ○     [Loop reset — ready for v50-05-04 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
@@ -36,16 +36,21 @@ v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
 v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
-v50-05-03:     ✓ ──▶ ○ ──▶ ○     [Plan: multi-select / batch-edit toolbar + AlertDialog swap-in]
+v50-05-03:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — multi-select + BatchActionBar + AlertDialog swap-in on prod]
 v50-05-04:     ○ ──▶ ○ ──▶ ○     [Plan: iPad/pointer-coarse Sheet swap + right-click ContextMenu]
 v50-05-05:     ○ ──▶ ○ ──▶ ○     [Plan: mobile stacked-card flow + WCAG AA audit + Undo via zustand temporal middleware]
 ```
 
 ## How to resume
 
-Run `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md` to execute v50-05-03. Three tasks (autonomous, no checkpoints), ~12+ new vitest cases.
+Run `/paul:plan` for v50-05-04 (iPad / pointer-coarse touch variant + right-click ContextMenu — second polish plan in v50-05). Scope per ARCHITECTURE.md §6.7:
+- **Cell dropdowns swap from Radix Popover → Radix Sheet** when `useMediaQuery('(pointer: coarse)')` matches (iPad detection — NOT viewport width; iPad Pro at 1024px is still touch). Affects KeyCell, LeadCell, TypeCell, AddRowPlaceholder, ChartBindPopover, AND the new v50-05-03 BatchActionBar `BulkPopover`.
+- **44px minimum touch targets** — bump cell padding from 8px → 12px on touch breakpoints.
+- **Drag-handle column wider** (44px → 52px) for tap accuracy.
+- **Hover-only affordances** become always-visible OR get long-press equivalents.
+- **Right-click ContextMenu** (Radix ContextMenu) on rows + drag handle: "Edit row" (focuses Title cell), "Bind chart" (programmatic ChartBindPopover open), "Duplicate row", "Delete row" (routes through DeleteConfirmProvider).
 
-**Before APPLY:** invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
+`/ui-ux-pro-max` BLOCKING for APPLY per SPECIAL-FLOWS.md.
 
 **v50-05 polish split (locked on ROADMAP — formal phase plans, not informal carryover):**
 - **v50-05-03** (this plan, awaiting APPLY): Multi-select / batch edit (§6.6) + AlertDialog swap-in for window.confirm.
@@ -122,7 +127,8 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 1. **v4.1**: create setlists via wizard / chat / import / transfer on prod; confirm second user sees them.
 2. **Phase 1.1**: open same setlist in 2 tabs, make conflicting edits, confirm banner or silent-merge behavior.
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
-4. **v50-05-02 (cutover)**: open a real setlist on prod; confirm SetlistGrid renders existing tracks in order + SyncIndicator "Saved"; edit a Title cell + Tab → Saving → Saved; hard-refresh → edit persisted; click ChartCell on unbound row → ChartBindPopover opens → pick a song → ChartCell switches to bound (indigo). Mobile viewport functional-but-rough OK (touch polish → v50-05-03).
+4. **v50-05-02 (cutover)**: open a real setlist on prod; confirm SetlistGrid renders existing tracks in order + SyncIndicator "Saved"; edit a Title cell + Tab → Saving → Saved; hard-refresh → edit persisted; click ChartCell on unbound row → ChartBindPopover opens → pick a song → ChartCell switches to bound (indigo). Mobile viewport functional-but-rough OK (touch polish → v50-05-04).
+5. **v50-05-03 (multi-select + AlertDialog)**: open a real setlist on prod with ≥3 tracks; Cmd/Ctrl-click drag handle on row 0 → indigo accent + aria-pressed; Shift-click drag handle on row 2 → rows 0/1/2 all selected; sticky BatchActionBar appears with "3 rows selected"; click Key dropdown → pick Dm → all 3 rows update + SyncIndicator transitions Saved; click Delete → "Delete 3 rows?" AlertDialog opens → click Cancel → rows intact; re-trigger + Delete → 3 rows gone + selection clears; press Backspace on a focused drag handle → "Delete row?" AlertDialog with quoted track title in description; Esc closes any selection.
 
 ### Git state
 Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
@@ -188,22 +194,32 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: ProductionFirestoreAdapter writes track docs as top-level Firestore `tracks/{id}` collection | v50-05-01 | Architecturally aligned with `LocalCollection = 'setlists' | 'tracks' | 'songs'`. v50-05-01 SetlistGrid is unmounted in prod so no orphan tracks docs accumulate; v50-07 migration reshapes existing setlist.tracks[] arrays to match |
 | 2026-04-26: @dnd-kit/modifiers (restrictToVerticalAxis) NOT added | v50-05-01 | verticalListSortingStrategy already constrains the actual ordering; the modifier only constrains the visual preview transform. Avoid new dep; visual-drift polish → v50-05-03 if needed |
 | 2026-04-26: Dexie hydration architecture = Option A (SetlistGridHydrator wrapper with initialServerData props) | v50-05-02 | Server-fetch happens in the Server Component; client Hydrator primes Dexie idempotently before SetlistGrid mounts. Direct db.put (NOT applyEdit) — server data is authoritative, not dirty. No extra round trip; clean separation of read/write |
+| 2026-04-26: Multi-select wired to drag handle (NOT row body); plain click stays for drag, Shift/Cmd/Ctrl + click routes to selection | v50-05-03 | Per ARCHITECTURE.md §6.6; cell click → focus/edit semantics untouched. Drag activation already gated by PointerSensor delay:150 + tolerance:5 so quick clicks don't activate drag |
+| 2026-04-26: useGridSelection.extendRange REPLACES selection (Sheets convention); anchor moves with each toggle | v50-05-03 | Inclusive range from anchor to clicked id; subsequent Shift-clicks extend from most recent toggle. Matches Sheets/Excel/VS Code; users build additive selection via Cmd-clicks instead |
+| 2026-04-26: Selection PRESERVED across bulk-set; CLEARED on bulk-delete | v50-05-03 | Bulk-set is iterative ("change Key, then Lead"); bulk-delete is terminal. User can change multiple fields on the same selection without re-selecting |
+| 2026-04-26: BatchActionBar V1 columns = Type / Key / Lead / Delete (BPM bulk-set deferred) | v50-05-03 | Mockup shows Type+Lead+Delete; spec text says key/lead/bpm. Chose practical superset minus BPM (rare bulk action). Toolbar fits in one row at standard widths; future polish can add BPM if user demands |
+| 2026-04-26: KEY_OPTIONS_DATA + TYPE_OPTIONS exported from cell files (not extracted to shared module) | v50-05-03 | Cells own the canonical list; toolbar reuses via import. Lighter than a separate cell-options module; future bulk affordances follow same pattern; extraction can happen later if a third caller appears |
+| 2026-04-26: DeleteConfirmProvider via React context + Radix AlertDialog + Promise-based confirm() | v50-05-03 | Page.tsx is a Server Component; render-prop children would hit serialization boundary. Context wraps cleanly: server renders `<Provider><Hydrator/></Provider>` → client provider mounts dialog → consumers read via hook |
+| 2026-04-26: DeleteConfirmProvider uses cancel-and-replace (not queue) for double-confirm | v50-05-03 | Predictable for the rare case; queueing reserved for future if double-confirm flows surface in real usage. Tested explicitly: opening confirm B while A is open resolves A as false |
+| 2026-04-26: ConfirmInfo discriminated union (`{kind:'row',title}` \| `{kind:'bulk',count}`) — new prop `confirmDelete` co-exists with legacy `confirmDeleteWithTitle` | v50-05-03 | Avoids string-parsing "N rows" back out of synthesized title. Precedence: prop confirmDelete → prop confirmDeleteWithTitle → context → window.confirm. Tests bypass provider via prop injection; production gets themed dialog |
+| 2026-04-26: aria-pressed + aria-label override placement AFTER `{...attributes}` spread on dnd-kit-wrapped buttons | v50-05-03 | useSortable.attributes injects its own aria-pressed for drag state, silently overriding app-level aria-pressed. Discovered via failing test (aria-pressed=null despite correct selection state). Pattern: any future drag-kit-wrapped element with custom aria semantics MUST place overrides after the spread |
+| 2026-04-26: useGridSelection.pruneTo added beyond original PLAN (surgical stale-row removal) | v50-05-03 | PLAN said "clear-and-rebuild"; pruneTo is cleaner — removes stale ids while preserving survivors and a still-valid anchor. Pattern carries to v50-05-05 mobile + v50-06 reconciliation modal |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (current) — `/paul:resume` after `git pull origin master` → handoff `.paul/HANDOFF-2026-04-26-v50-05-03-pickup.md` archived to `.paul/handoffs/archive/` → `/paul:plan` for v50-05-03 → user picked Option A (multi-plan split: 03 = multi-select + AlertDialog; 04 = iPad + ContextMenu; 05 = mobile + WCAG + undo) → user clarified that 04 + 05 must be formally locked into ROADMAP within v50-05 (not informal carryover) → ROADMAP expanded v50-05 from "2/3" to "2/5" with explicit 03/04/05 detail entries → STATE.md sync. PLAN.md written at `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md` (3 auto tasks, ≥ 12 new vitest cases targeted, autonomous=true, /ui-ux-pro-max BLOCKING for APPLY).
-Stopped at: PLAN created and STATE/ROADMAP synced; awaiting user approval to proceed to APPLY.
-Next action: invoke `/ui-ux-pro-max`, then run `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`. APPLY is autonomous (no decision/human-verify checkpoints). After UNIFY of 03, plan v50-05-04 (iPad + ContextMenu); after that, plan v50-05-05 (mobile + WCAG + undo).
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-PLAN.md`
-Resume context:
-- v50-05-02 cutover landed end-to-end on prod (SetlistGrid mounted via Hydrator at /setlists/[id]; ChartBindPopover wires ChartCell click → applyEdit; ~−6,300 LOC legacy editor surface deleted). 5 commits b8d8314..e79c160 on origin/master.
-- `confirmDeleteWithTitle` SetlistGrid prop is the AlertDialog injection point (per v50-05-01). Default still window.confirm. Swap at page.tsx mount level.
-- Hydrator runs once on mount; cross-leader live-edit visibility is v50-06 concern (real-time setlist sync replacement for deleted live-swap UI).
-- applyEdit always enqueues outbox row → undo middleware should intercept BEFORE applyEdit and call applyEdit with the inverse (NOT direct db.put — inverse should round-trip to Firestore).
-- iPad swap (Popover→Sheet) keys on `useMediaQuery('(pointer: coarse)')`, NOT viewport width (iPad Pro at 1024px is still touch).
-- Mobile flow at <768px is a parallel render path (cards + full-screen edit sheet), NOT a Tailwind responsive trick — table layout breaks below ~640px.
-- Test patterns locked: ResizeObserver + scrollIntoView stubs at module-eval for cmdk tests; cleanup() + final findByTestId await for Dexie+React tests to drain live queries before resetDbForTests.
-- Production smoke verification of v50-05-02 still pending (item #4 in deferred-smokes list); user said "I'll look at it later". Not blocking v50-05-03.
+Last session: 2026-04-26 (v50-05-03 full cycle) — `/paul:resume` → archive consumed handoff → `/paul:plan` (3 tasks, autonomous, polish split locked into ROADMAP as 03/04/05 per user direction) → `/ui-ux-pro-max` loaded → `/paul:apply` → Task 1 (selection hook + drag-handle wiring; 14 hook tests + 6 grid integration; root-caused dnd-kit aria-pressed override via failing-test-driven discovery) → Task 2 (BatchActionBar + bulk handlers; 7 toolbar tests + 5 grid integration) → Task 3 (DeleteConfirmProvider + page.tsx wrap + new confirmDelete prop; 10 provider tests + 2 grid integration) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 commits on origin/master: `25b57ad` (chore(paul) PLAN), `e26626c` (Task 1), `ae0a8c3` (Task 2), `8acf7aa` (Task 3). UNIFY commit lands next. Full suite 1359/1360; tsc + next build clean. Production /setlists/[id] now serves multi-select + bulk-edit toolbar + shadcn AlertDialog.
+Stopped at: v50-05-03 fully closed and pushed; SUMMARY.md written. Ready for v50-05-04 PLAN.
+Next action: `/paul:plan` for v50-05-04 (iPad / pointer-coarse Sheet swap + right-click ContextMenu — second polish plan in v50-05). Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-SUMMARY.md`
+Resume context (v50-05-04):
+- `useMediaQuery('(pointer: coarse)')` is the iPad/touch detection (NOT viewport width — iPad Pro at 1024px is still touch). Hook may need to be added/promoted; check src/hooks for an existing one or add as part of plan 04.
+- Cell dropdowns to swap from Radix Popover → Radix Sheet on touch breakpoints: KeyCell, LeadCell, TypeCell (via DropdownCell), AddRowPlaceholder, ChartBindPopover, AND BatchActionBar's inline `BulkPopover`. Pattern: extract a shared `<TouchOrPopover>` wrapper that picks Popover or Sheet based on the media query.
+- 44px minimum touch targets — bump cell padding from 8px → 12px on touch breakpoints; drag-handle column width 44px → 52px.
+- Right-click ContextMenu (Radix `@radix-ui/react-context-menu`; check if shadcn `context-menu.tsx` is already installed — yes, ls showed it) on rows + drag handle: "Edit row" / "Bind chart" / "Duplicate row" / "Delete row".
+- Selection state already exists (useGridSelection); ContextMenu just reads `selection.selectedIds.has(rowId)` to decide whether the action targets the selected set OR just the right-clicked row.
+- Delete from ContextMenu routes through the existing DeleteConfirmProvider (single-row OR bulk depending on selection state).
+- Test patterns locked: ResizeObserver + scrollIntoView stubs at module-eval for cmdk tests; cleanup() + findByTestId await for Dexie+React; act() wrapper for Dexie deletes that trigger live-query re-renders; dnd-kit aria override placement AFTER `{...attributes}` spread.
+- Production smoke verification of v50-05-02 + v50-05-03 still pending from user. Not blocking 04.
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
