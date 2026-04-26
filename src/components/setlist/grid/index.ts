@@ -1,5 +1,9 @@
 export { SetlistGrid, type SetlistGridProps } from './SetlistGrid'
 export {
+    SetlistGridHydrator,
+    type SetlistGridHydratorProps,
+} from './SetlistGridHydrator'
+export {
     SetlistGridTopBar,
     type SetlistGridTopBarProps,
 } from './SetlistGridTopBar'
