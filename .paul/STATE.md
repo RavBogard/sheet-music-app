@@ -167,7 +167,7 @@ Working tree: **clean.** Ready for context clear.
 Last session: 2026-04-26 — v50-04 closed end-to-end (PLAN → APPLY → UNIFY) and pushed to origin/master. Six commits this session: `695bd1f` (handoff archive) + `58d2725` (Dexie v→2 schema) + `d73e891` (sticky-memory helpers) + `d13da61` (migrate-v50.ts) + `12bb330` (inngest 3.52.3→3.54.0 CVE) + `a58bdb8` (phase close — SUMMARY + PROJECT/ROADMAP/STATE). 1344/1345 tests; tsc + next build clean. Working tree clean. Session paused at clean checkpoint between phases — context-budget pause before tackling v50-05 (the largest phase of the milestone).
 Stopped at: v50-04 fully closed and pushed; ready for v50-05 PLAN. Paused for context budget — v50-05 deserves a fresh session.
 Next action: `git pull` (multi-computer), `/paul:resume` to load handoff and route to PLAN; before APPLY (not before PLAN), invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md; read ARCHITECTURE.md §6 in full before drafting plan; inventory legacy editor surface (use-setlist-logic, setlist-flush, setlist-draft, SetlistEditorV2, setlist-firebase callers) before declaring delete scope.
-Resume file: `.paul/HANDOFF-2026-04-26.md`
+Resume file: (consumed — archived to `.paul/handoffs/archive/HANDOFF-2026-04-26-v50-05-pickup.md`)
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
