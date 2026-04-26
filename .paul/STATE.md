@@ -101,7 +101,8 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
 
 ### Git state
-Recent commits on `master` (ahead of `origin/master`):
+Recent commits on `master` (also on `origin/master` — pushed 2026-04-26):
+- `ddf3358` — docs(state): record git state post-v50-02 phase close + push (this section was last updated here; subsequent state-sync commits are no-ops)
 - `65231a6` — docs(v50-02): close phase — amputation summary + state updates
 - `baf8109` — feat(v50-02): delete swapTrack() + liturgicalSlot field — final amputation
 - `9059d91` — feat(v50-02): delete live-swap UI surface + /live receiver
@@ -109,13 +110,11 @@ Recent commits on `master` (ahead of `origin/master`):
 - `57fe892` — docs(v4.4): commit orphaned phase plans + summaries (v44-03, v44-05, v44-06)
 - `4fb05c6` — docs(v50-01): architecture & design — local-first editor rewrite locked
 
-Branch: `master` — **6 local commits ahead of `origin/master`, not yet pushed**.
-Push command (when ready): `git push origin master` (NOT `master:main` — master is the production branch per memory).
-Vercel auto-deploys `master` to production once pushed; deletion commits are no-op for end users (band not currently on the app; chat + live-swap UI weren't being used).
+Branch: `master` — **up to date with `origin/master`** (pushed; Vercel will auto-deploy; deletion commits are no-op for end users).
 
-Remaining uncommitted (intentional, separate decisions):
-- `package.json` — local version bump 2.11.12 → 2.13.1 (was on disk before this session began; not from any commit in this session)
-- `src/build-info.json` — auto-generated build artifact; leave uncommitted
+Pre-existing local drift (`package.json` 2.11.12 → 2.13.1, `src/build-info.json`) was discarded with `git checkout -- package.json src/build-info.json` since it was not from this session and no decision was made to keep the version bump.
+
+Working tree: **clean.** Ready for context clear.
 
 ### Key repo locations
 - Planning root: `sheet-music-app/.paul/`
