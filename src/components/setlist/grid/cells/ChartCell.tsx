@@ -28,10 +28,20 @@ export const ChartCell = forwardRef<HTMLButtonElement, ChartCellProps>(
                 data-testid="chart-cell"
                 {...rest}
                 className={cn(
+                    // Baseline 40px square; bumped to 44px on touch
+                    // breakpoints to satisfy ARCHITECTURE §6.7 minimum
+                    // touch-target.
                     'flex h-10 w-10 items-center justify-center rounded-sm',
+                    '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
                     'cursor-pointer',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
-                    hasChart ? 'text-indigo-400' : 'text-muted-foreground/40',
+                    // Unbound state ghost is muted on desktop (hover
+                    // affordance via cell row hover), but bumped to a
+                    // higher contrast on touch since there's no hover
+                    // state to communicate "click me".
+                    hasChart
+                        ? 'text-indigo-400'
+                        : 'text-muted-foreground/40 [@media(pointer:coarse)]:text-muted-foreground/70',
                     className,
                 )}
             >

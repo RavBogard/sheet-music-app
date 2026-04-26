@@ -1,6 +1,5 @@
 'use client'
 
-import * as Popover from '@radix-ui/react-popover'
 import {
     Command,
     CommandEmpty,
@@ -16,6 +15,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { cn } from '@/lib/utils'
+
+import { TouchOrPopover } from './TouchOrPopover'
 
 export interface AddRowPlaceholderProps {
     /** Insert a new row populated from a known library song. */
@@ -78,20 +79,32 @@ export function AddRowPlaceholder({
                 'hover:bg-white/[0.03]',
             )}
         >
-            <Popover.Root
+            <TouchOrPopover
                 open={open}
                 onOpenChange={(next) => {
                     if (!next) close()
                     else setOpen(true)
                 }}
-            >
-                <Popover.Trigger asChild>
+                sheetTitle="Add a song"
+                sheetDescription="Pick from your library or type a new title."
+                align="start"
+                sideOffset={2}
+                onCloseAutoFocus={(e) => {
+                    e.preventDefault()
+                    triggerRef.current?.focus()
+                }}
+                contentClassName="w-[24rem]"
+                trigger={
                     <button
                         ref={triggerRef}
                         type="button"
                         data-testid="add-row-trigger"
                         className={cn(
+                            // Baseline 44px (h-11) — already satisfies touch
+                            // target requirement; bumped to h-12 on coarse
+                            // for extra breathing room.
                             'flex h-11 w-full items-center gap-2 px-3 text-left text-sm',
+                            '[@media(pointer:coarse)]:h-12',
                             'text-muted-foreground hover:text-foreground',
                             'cursor-pointer',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
@@ -100,82 +113,71 @@ export function AddRowPlaceholder({
                         <Plus aria-hidden className="h-4 w-4" />
                         <span>Add a song or section…</span>
                     </button>
-                </Popover.Trigger>
-                <Popover.Portal>
-                    <Popover.Content
-                        align="start"
-                        sideOffset={2}
-                        onCloseAutoFocus={(e) => {
-                            e.preventDefault()
-                            triggerRef.current?.focus()
+                }
+            >
+                <Command shouldFilter loop>
+                    <CommandInput
+                        value={filter}
+                        onValueChange={setFilter}
+                        placeholder="Type a song title…"
+                        className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                e.preventDefault()
+                                close()
+                            }
                         }}
-                        className="z-50 w-[24rem] overflow-hidden rounded-md border border-white/10 bg-background shadow-lg"
-                    >
-                        <Command shouldFilter loop>
-                            <CommandInput
-                                value={filter}
-                                onValueChange={setFilter}
-                                placeholder="Type a song title…"
-                                className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Escape') {
-                                        e.preventDefault()
-                                        close()
-                                    }
-                                }}
-                            />
-                            <CommandList className="max-h-72 overflow-y-auto py-1">
-                                <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                                    No matches.
-                                </CommandEmpty>
-                                {options.length > 0 && (
-                                    <CommandGroup heading="Library">
-                                        {options.map((song) => (
-                                            <CommandItem
-                                                key={song.id}
-                                                value={`${song.title} ${song.id}`}
-                                                onSelect={() =>
-                                                    handlePick({
-                                                        id: song.id,
-                                                        title: song.title,
-                                                    })
-                                                }
-                                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                            >
-                                                <FileText
-                                                    aria-hidden
-                                                    className="h-3.5 w-3.5 text-muted-foreground/70"
-                                                />
-                                                <span className="truncate">
-                                                    {song.title}
-                                                </span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                )}
-                                {filter.trim().length > 0 && (
-                                    <CommandGroup heading="Custom">
-                                        <CommandItem
-                                            value={`__create__${filter}`}
-                                            onSelect={handleFreeText}
-                                            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                        >
-                                            <Plus
-                                                aria-hidden
-                                                className="h-3.5 w-3.5 text-muted-foreground/70"
-                                            />
-                                            <span>
-                                                Create new track called “
-                                                {filter.trim()}”
-                                            </span>
-                                        </CommandItem>
-                                    </CommandGroup>
-                                )}
-                            </CommandList>
-                        </Command>
-                    </Popover.Content>
-                </Popover.Portal>
-            </Popover.Root>
+                    />
+                    <CommandList className="max-h-72 overflow-y-auto py-1">
+                        <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
+                            No matches.
+                        </CommandEmpty>
+                        {options.length > 0 && (
+                            <CommandGroup heading="Library">
+                                {options.map((song) => (
+                                    <CommandItem
+                                        key={song.id}
+                                        value={`${song.title} ${song.id}`}
+                                        onSelect={() =>
+                                            handlePick({
+                                                id: song.id,
+                                                title: song.title,
+                                            })
+                                        }
+                                        className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                                    >
+                                        <FileText
+                                            aria-hidden
+                                            className="h-3.5 w-3.5 text-muted-foreground/70"
+                                        />
+                                        <span className="truncate">
+                                            {song.title}
+                                        </span>
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        )}
+                        {filter.trim().length > 0 && (
+                            <CommandGroup heading="Custom">
+                                <CommandItem
+                                    value={`__create__${filter}`}
+                                    onSelect={handleFreeText}
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                                >
+                                    <Plus
+                                        aria-hidden
+                                        className="h-3.5 w-3.5 text-muted-foreground/70"
+                                    />
+                                    <span>
+                                        Create new track called “
+                                        {filter.trim()}”
+                                    </span>
+                                </CommandItem>
+                            </CommandGroup>
+                        )}
+                    </CommandList>
+                </Command>
+            </TouchOrPopover>
         </div>
     )
 }

@@ -93,6 +93,10 @@ interface GridMeta {
         rowId: string,
         modifiers: { shift: boolean; meta: boolean },
     ) => void
+    /** v50-05-04: ChartBindPopover is open for this row (or null). */
+    chartBindOpenRowId: string | null
+    /** v50-05-04: open / close ChartBindPopover for a specific row. */
+    onChartBindOpenChange: (rowId: string, next: boolean) => void
 }
 
 declare module '@tanstack/react-table' {
@@ -319,6 +323,10 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     currentSongId={row.songId}
                     inputAriaLabel={`Bind a chart to ${row.title || 'track'}`}
                     onBind={(sel) => meta.onBindChart(row, sel)}
+                    open={meta.chartBindOpenRowId === row.id}
+                    onOpenChange={(next) =>
+                        meta.onChartBindOpenChange(row.id, next)
+                    }
                 >
                     <ChartCell hasChart={Boolean(row.songId)} />
                 </ChartBindPopover>
@@ -371,12 +379,15 @@ function SortableRow({
         >
             {row.getVisibleCells().map((cell, idx) => {
                 if (idx === 0) {
+                    // Drag column: 44px desktop, 52px on touch breakpoints
+                    // for tap accuracy (ARCHITECTURE.md §6.7). Width handled
+                    // via class so the @media query can override the
+                    // baseline; getSize()'s 44 still drives the <th>.
                     return (
                         <td
                             key={cell.id}
                             role="gridcell"
-                            style={{ width: cell.column.getSize() }}
-                            className="px-1 py-1 align-middle"
+                            className="w-[44px] [@media(pointer:coarse)]:w-[52px] px-1 py-1 [@media(pointer:coarse)]:py-2 align-middle"
                         >
                             <DragHandleCell
                                 attributes={attributes}
@@ -394,7 +405,9 @@ function SortableRow({
                         key={cell.id}
                         role="gridcell"
                         style={{ width: cell.column.getSize() }}
-                        className="px-2 py-1 align-middle"
+                        // Cell padding: 8px desktop, 12px on touch (12px =
+                        // py-3) for the 44px-min touch-target requirement.
+                        className="px-2 py-1 [@media(pointer:coarse)]:py-3 align-middle"
                     >
                         {flexRender(
                             cell.column.columnDef.cell,
@@ -578,6 +591,21 @@ export function SetlistGrid({
         setAddOpenSignal((s) => s + 1)
     }, [])
 
+    // v50-05-04: ChartBindPopover open state hoisted to grid level so it
+    // can be opened EITHER by ChartCell click (via the controllable open
+    // prop) OR programmatically by the row ContextMenu's "Bind chart"
+    // action (Task 2). At most one popover is open at a time, so a single
+    // rowId-or-null is sufficient.
+    const [chartBindOpenRowId, setChartBindOpenRowId] = useState<
+        string | null
+    >(null)
+    const handleChartBindOpenChange = useCallback(
+        (rowId: string, next: boolean) => {
+            setChartBindOpenRowId(next ? rowId : null)
+        },
+        [],
+    )
+
     const {
         isCellFocused,
         handleCellFocus,
@@ -711,6 +739,8 @@ export function SetlistGrid({
             setlistIdForPropagation: setlistId,
             selectedIds: selection.selectedIds,
             onDragHandleClick: handleDragHandleClick,
+            chartBindOpenRowId,
+            onChartBindOpenChange: handleChartBindOpenChange,
         }),
         [
             setlistId,
@@ -723,6 +753,8 @@ export function SetlistGrid({
             handleBindChart,
             selection.selectedIds,
             handleDragHandleClick,
+            chartBindOpenRowId,
+            handleChartBindOpenChange,
         ],
     )
 
@@ -894,26 +926,36 @@ export function SetlistGrid({
                                             role="row"
                                             className="border-b border-white/10"
                                         >
-                                            {headerGroup.headers.map((header) => (
-                                                <th
-                                                    key={header.id}
-                                                    role="columnheader"
-                                                    scope="col"
-                                                    style={{
-                                                        width: header.column.getSize(),
-                                                    }}
-                                                    className={cn(
-                                                        'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
-                                                    )}
-                                                >
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                              header.column.columnDef.header,
-                                                              header.getContext(),
-                                                          )}
-                                                </th>
-                                            ))}
+                                            {headerGroup.headers.map((header) => {
+                                                const isDragCol =
+                                                    header.id === 'drag'
+                                                return (
+                                                    <th
+                                                        key={header.id}
+                                                        role="columnheader"
+                                                        scope="col"
+                                                        style={
+                                                            isDragCol
+                                                                ? undefined
+                                                                : {
+                                                                      width: header.column.getSize(),
+                                                                  }
+                                                        }
+                                                        className={cn(
+                                                            'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
+                                                            isDragCol &&
+                                                                'w-[44px] [@media(pointer:coarse)]:w-[52px]',
+                                                        )}
+                                                    >
+                                                        {header.isPlaceholder
+                                                            ? null
+                                                            : flexRender(
+                                                                  header.column.columnDef.header,
+                                                                  header.getContext(),
+                                                              )}
+                                                    </th>
+                                                )
+                                            })}
                                         </tr>
                                     ))}
                                 </thead>

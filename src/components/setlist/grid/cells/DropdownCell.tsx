@@ -1,11 +1,12 @@
 'use client'
 
-import * as Popover from '@radix-ui/react-popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { cn } from '@/lib/utils'
+
+import { TouchOrPopover } from '../TouchOrPopover'
 
 export interface DropdownOption {
     value: string
@@ -121,14 +122,23 @@ export function DropdownCell({
               )
 
     return (
-        <Popover.Root
+        <TouchOrPopover
             open={open}
             onOpenChange={(next) => {
                 if (!next) close()
                 else setOpen(true)
             }}
-        >
-            <Popover.Trigger asChild>
+            sheetTitle={ariaLabel}
+            srOnlyTitle
+            align="start"
+            sideOffset={2}
+            onCloseAutoFocus={(e) => {
+                // Returning focus to the button is what we want.
+                e.preventDefault()
+                buttonRef.current?.focus()
+            }}
+            contentClassName="w-[16rem]"
+            trigger={
                 <button
                     ref={buttonRef}
                     type="button"
@@ -140,7 +150,11 @@ export function DropdownCell({
                     aria-expanded={open}
                     data-testid="dropdown-cell-button"
                     className={cn(
+                        // Baseline 40px (h-10); bumped to 44px (h-11) on
+                        // touch breakpoints to satisfy ARCHITECTURE §6.7
+                        // 44px minimum touch target.
                         'inline-flex h-10 w-full items-center justify-between gap-1 px-1 text-left',
+                        '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:px-2',
                         'truncate text-sm',
                         'cursor-pointer rounded-sm border border-transparent',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
@@ -156,100 +170,86 @@ export function DropdownCell({
                         />
                     )}
                 </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-                <Popover.Content
-                    align="start"
-                    sideOffset={2}
-                    onCloseAutoFocus={(e) => {
-                        // Returning focus to the button is what we want.
-                        e.preventDefault()
-                        buttonRef.current?.focus()
+            }
+        >
+            <Command
+                loop
+                shouldFilter
+                data-testid="dropdown-cell-command"
+            >
+                <CommandInput
+                    value={filter}
+                    onValueChange={setFilter}
+                    placeholder={placeholder ?? 'Type to filter…'}
+                    className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Tab') {
+                            e.preventDefault()
+                            if (allowFreeText && filter.trim().length > 0) {
+                                commit(
+                                    filter.trim(),
+                                    e.shiftKey ? 'left' : 'right',
+                                )
+                            } else {
+                                commit(value ?? '', e.shiftKey ? 'left' : 'right')
+                            }
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault()
+                            setOpen(false)
+                        }
                     }}
-                    className={cn(
-                        'z-50 w-[16rem] overflow-hidden rounded-md border border-white/10 bg-background shadow-lg',
-                    )}
-                >
-                    <Command
-                        loop
-                        shouldFilter
-                        data-testid="dropdown-cell-command"
-                    >
-                        <CommandInput
-                            value={filter}
-                            onValueChange={setFilter}
-                            placeholder={placeholder ?? 'Type to filter…'}
-                            className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Tab') {
-                                    e.preventDefault()
-                                    if (allowFreeText && filter.trim().length > 0) {
-                                        commit(
-                                            filter.trim(),
-                                            e.shiftKey ? 'left' : 'right',
-                                        )
-                                    } else {
-                                        commit(value ?? '', e.shiftKey ? 'left' : 'right')
-                                    }
-                                }
-                                if (e.key === 'Escape') {
-                                    e.preventDefault()
-                                    setOpen(false)
-                                }
-                            }}
-                        />
-                        <CommandList className="max-h-64 overflow-y-auto py-1">
-                            <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                                No matches.
-                            </CommandEmpty>
-                            {grouped.map(([groupName, items]) => (
-                                <CommandGroup
-                                    key={groupName || '_'}
-                                    heading={groupName || undefined}
-                                    className={cn(
-                                        groupName &&
-                                            'px-2 py-1 text-xs uppercase tracking-wide text-muted-foreground/80',
-                                    )}
-                                >
-                                    {items.map((opt) => (
-                                        <CommandItem
-                                            key={opt.value}
-                                            value={`${opt.label} ${opt.value}`}
-                                            onSelect={() => commit(opt.value, 'down')}
-                                            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                        >
-                                            {opt.icon ? (
-                                                <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
-                                                    {opt.icon}
-                                                </span>
-                                            ) : null}
-                                            <span className="truncate">
-                                                {opt.label}
-                                            </span>
-                                            {opt.hint ? (
-                                                <span className="ml-auto truncate text-xs text-muted-foreground">
-                                                    {opt.hint}
-                                                </span>
-                                            ) : null}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            ))}
-                            {allowFreeText && filter.trim().length > 0 && (
-                                <CommandGroup heading="Custom">
-                                    <CommandItem
-                                        value={`__addfree__${filter}`}
-                                        onSelect={() => commit(filter.trim(), 'down')}
-                                        className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                    >
-                                        <span>+ Add “{filter.trim()}”</span>
-                                    </CommandItem>
-                                </CommandGroup>
+                />
+                <CommandList className="max-h-64 overflow-y-auto py-1">
+                    <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
+                        No matches.
+                    </CommandEmpty>
+                    {grouped.map(([groupName, items]) => (
+                        <CommandGroup
+                            key={groupName || '_'}
+                            heading={groupName || undefined}
+                            className={cn(
+                                groupName &&
+                                    'px-2 py-1 text-xs uppercase tracking-wide text-muted-foreground/80',
                             )}
-                        </CommandList>
-                    </Command>
-                </Popover.Content>
-            </Popover.Portal>
-        </Popover.Root>
+                        >
+                            {items.map((opt) => (
+                                <CommandItem
+                                    key={opt.value}
+                                    value={`${opt.label} ${opt.value}`}
+                                    onSelect={() => commit(opt.value, 'down')}
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                                >
+                                    {opt.icon ? (
+                                        <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+                                            {opt.icon}
+                                        </span>
+                                    ) : null}
+                                    <span className="truncate">
+                                        {opt.label}
+                                    </span>
+                                    {opt.hint ? (
+                                        <span className="ml-auto truncate text-xs text-muted-foreground">
+                                            {opt.hint}
+                                        </span>
+                                    ) : null}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    ))}
+                    {allowFreeText && filter.trim().length > 0 && (
+                        <CommandGroup heading="Custom">
+                            <CommandItem
+                                value={`__addfree__${filter}`}
+                                onSelect={() => commit(filter.trim(), 'down')}
+                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                            >
+                                <span>+ Add “{filter.trim()}”</span>
+                            </CommandItem>
+                        </CommandGroup>
+                    )}
+                </CommandList>
+            </Command>
+        </TouchOrPopover>
     )
 }

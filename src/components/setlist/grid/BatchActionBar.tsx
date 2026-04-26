@@ -1,6 +1,5 @@
 'use client'
 
-import * as Popover from '@radix-ui/react-popover'
 import {
     Command,
     CommandEmpty,
@@ -17,6 +16,7 @@ import { cn } from '@/lib/utils'
 
 import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 import { TYPE_OPTIONS } from './cells/TypeCell'
+import { TouchOrPopover } from './TouchOrPopover'
 
 export interface BulkSetPatch {
     type?: string
@@ -189,14 +189,18 @@ function BulkPopover({
     }
 
     return (
-        <Popover.Root
+        <TouchOrPopover
             open={open}
             onOpenChange={(next) => {
                 if (!next) close()
                 else setOpen(true)
             }}
-        >
-            <Popover.Trigger asChild>
+            sheetTitle={ariaLabel}
+            align="start"
+            sideOffset={4}
+            contentClassName="w-[16rem]"
+            contentTestId={`batch-action-${String(label).toLowerCase()}-popover`}
+            trigger={
                 <button
                     type="button"
                     aria-label={ariaLabel}
@@ -204,7 +208,10 @@ function BulkPopover({
                     aria-expanded={open}
                     data-testid={`batch-action-${String(label).toLowerCase()}-trigger`}
                     className={cn(
+                        // Baseline tight density on desktop; bumped to
+                        // 44px (h-11) on touch breakpoints.
                         'inline-flex items-center gap-1 rounded-sm px-2 py-1 text-sm',
+                        '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:px-3',
                         'cursor-pointer text-muted-foreground hover:bg-white/5 hover:text-foreground',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
                         'transition-colors duration-150 motion-reduce:transition-none',
@@ -213,15 +220,9 @@ function BulkPopover({
                     {label}
                     <ChevronDown aria-hidden className="h-3 w-3" />
                 </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-                <Popover.Content
-                    align="start"
-                    sideOffset={4}
-                    className="z-50 w-[16rem] overflow-hidden rounded-md border border-white/10 bg-background shadow-lg"
-                    data-testid={`batch-action-${String(label).toLowerCase()}-popover`}
-                >
-                    <Command shouldFilter loop>
+            }
+        >
+            <Command shouldFilter loop>
                         <CommandInput
                             value={filter}
                             onValueChange={setFilter}
@@ -279,21 +280,19 @@ function BulkPopover({
                                     ))}
                                 </CommandGroup>
                             )}
-                            {allowFreeText && filter.trim().length > 0 && (
-                                <CommandGroup heading="Custom">
-                                    <CommandItem
-                                        value={`__addfree__${filter}`}
-                                        onSelect={() => commit(filter.trim())}
-                                        className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                    >
-                                        <span>+ Add “{filter.trim()}”</span>
-                                    </CommandItem>
-                                </CommandGroup>
-                            )}
-                        </CommandList>
-                    </Command>
-                </Popover.Content>
-            </Popover.Portal>
-        </Popover.Root>
+                {allowFreeText && filter.trim().length > 0 && (
+                    <CommandGroup heading="Custom">
+                        <CommandItem
+                            value={`__addfree__${filter}`}
+                            onSelect={() => commit(filter.trim())}
+                            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                        >
+                            <span>+ Add “{filter.trim()}”</span>
+                        </CommandItem>
+                    </CommandGroup>
+                )}
+                </CommandList>
+            </Command>
+        </TouchOrPopover>
     )
 }

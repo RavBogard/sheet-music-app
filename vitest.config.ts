@@ -5,6 +5,10 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        // Global jsdom shims (window.matchMedia for useMediaQuery
+        // consumers — defaults to matches:false so tests render the
+        // desktop branch unless they explicitly mock useMediaQuery).
+        setupFiles: ['./src/test-setup.ts'],
         // 10s default timeout. The 5s default tipped over under parallel
         // pressure once v50-05 grid tests were added (transform queue grew),
         // surfacing a fake-clock race in engine.test.ts AC-4 that passes

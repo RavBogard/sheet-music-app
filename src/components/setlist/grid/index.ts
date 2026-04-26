@@ -26,6 +26,10 @@ export {
 } from './SetlistGridTopBar'
 export { SyncIndicator, type SyncIndicatorProps } from './SyncIndicator'
 export { EmptyState, type EmptyStateProps } from './EmptyState'
+export {
+    TouchOrPopover,
+    type TouchOrPopoverProps,
+} from './TouchOrPopover'
 
 export { TextCell, type TextCellProps } from './cells/TextCell'
 export {
