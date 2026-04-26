@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 3 of 5 plans closed — 03 polish A landed)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-03 closed; v50-05-04 next)
-Plan: v50-05-03 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-03-SUMMARY.md`)
-Status: UNIFY complete for v50-05-03. Multi-select + BatchActionBar + AlertDialog swap-in landed on prod. 4 commits pushed to origin/master: `25b57ad` (chore(paul) PLAN), `e26626c` (Task 1 selection hook), `ae0a8c3` (Task 2 BatchActionBar), `8acf7aa` (Task 3 DeleteConfirmProvider). +44 new vitest cases (1359/1360 — pre-existing cross-tab-lock flake remains, deferred to v50-06). tsc + next build clean. Production /setlists/[id] now: Cmd-click drag handle to multi-select, sticky toolbar at size ≥ 2 (Type / Key / Lead / Delete), shadcn AlertDialog replaces window.confirm for both single-row and bulk delete.
-Last activity: 2026-04-26 — UNIFY complete for v50-05-03 (SUMMARY.md written).
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 3 of 5 plans closed — v50-05-04 PLAN ✓ awaiting APPLY)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-04 PLAN.md created)
+Plan: v50-05-04 — created, awaiting APPLY (`.paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`)
+Status: PLAN created for v50-05-04 (iPad/pointer-coarse Sheet swap across 6 sites + 44px touch targets + always-visible touch affordances + right-click ContextMenu with selection-aware action targeting + 500ms long-press for touch). 3 tasks, 8 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md. Depends on v50-05-03 (useGridSelection + DeleteConfirmProvider + ChartBindPopover patterns).
+Last activity: 2026-04-26 — PLAN.md written for v50-05-04; resume handoff archived.
 
 Progress:
 - v5.0: [███████░░░] ~74% (4 of 7 phases complete; v50-05 = 3/5 plans done; 04 + 05 scoped)
@@ -28,7 +28,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-05-04 PLAN]
+  ✓        ○        ○     [v50-05-04 PLAN written, awaiting APPLY]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
@@ -37,7 +37,7 @@ v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
 v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
 v50-05-03:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — multi-select + BatchActionBar + AlertDialog swap-in on prod]
-v50-05-04:     ○ ──▶ ○ ──▶ ○     [Plan: iPad/pointer-coarse Sheet swap + right-click ContextMenu]
+v50-05-04:     ✓ ──▶ ○ ──▶ ○     [PLAN written: TouchOrPopover wrapper + 44px targets + ContextMenu + long-press; awaiting APPLY (/ui-ux-pro-max BLOCKING)]
 v50-05-05:     ○ ──▶ ○ ──▶ ○     [Plan: mobile stacked-card flow + WCAG AA audit + Undo via zustand temporal middleware]
 ```
 
@@ -207,10 +207,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-03 full cycle) — `/paul:resume` → archive consumed handoff → `/paul:plan` (3 tasks, autonomous, polish split locked into ROADMAP as 03/04/05 per user direction) → `/ui-ux-pro-max` loaded → `/paul:apply` → Task 1 (selection hook + drag-handle wiring; 14 hook tests + 6 grid integration; root-caused dnd-kit aria-pressed override via failing-test-driven discovery) → Task 2 (BatchActionBar + bulk handlers; 7 toolbar tests + 5 grid integration) → Task 3 (DeleteConfirmProvider + page.tsx wrap + new confirmDelete prop; 10 provider tests + 2 grid integration) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 commits on origin/master: `25b57ad` (chore(paul) PLAN), `e26626c` (Task 1), `ae0a8c3` (Task 2), `8acf7aa` (Task 3). UNIFY commit lands next. Full suite 1359/1360; tsc + next build clean. Production /setlists/[id] now serves multi-select + bulk-edit toolbar + shadcn AlertDialog.
-Stopped at: v50-05-03 fully closed and pushed; SUMMARY.md written; session paused for context budget before v50-05-04. Handoff written for fresh session pickup.
-Next action: in a fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-05-04 (iPad / pointer-coarse Sheet swap across 6 Popover sites + right-click ContextMenu with selection-aware action targeting + long-press for touch). Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
-Resume file: `.paul/HANDOFF-2026-04-26-v50-05-04-pickup.md`
+Last session: 2026-04-26 (v50-05-04 PLAN cycle) — `/paul:resume` → git pull (already up to date) → archive consumed handoff (HANDOFF-2026-04-26-v50-05-04-pickup.md → handoffs/archive/) → `/paul:plan` for v50-05-04 (3 tasks, 8 ACs, autonomous=true). Tasks: (1) TouchOrPopover wrapper + 44px target bumps + iPad swap across 6 Popover sites (DropdownCell covering Key/Lead/Type, AddRowPlaceholder, ChartBindPopover, BatchActionBar's BulkPopover) + always-visible touch affordances + ChartBindPopover controllable open state; (2) Right-click ContextMenu with 4 items (Edit/Bind chart/Duplicate/Delete) + selection-aware action targeting + 500ms long-press for touch with 10px movement cancel; (3) Integration tests covering Sheet swap, ContextMenu action routing single-vs-bulk, long-press timing. Awaiting APPLY.
+Stopped at: PLAN.md written for v50-05-04, awaiting user approval to /paul:apply.
+Next action: load `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`. Or pause here.
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`
 Git strategy: master (continuing v50-05 hard-cutover convention; band still not in production)
 Resume context (v50-05-04):
 - `useMediaQuery('(pointer: coarse)')` is the iPad/touch detection (NOT viewport width — iPad Pro at 1024px is still touch). Hook may need to be added/promoted; check src/hooks for an existing one or add as part of plan 04.
