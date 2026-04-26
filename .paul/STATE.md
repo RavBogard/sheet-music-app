@@ -208,9 +208,10 @@ Working tree: **clean.** Ready for context clear.
 ## Session Continuity
 
 Last session: 2026-04-26 (v50-05-03 full cycle) — `/paul:resume` → archive consumed handoff → `/paul:plan` (3 tasks, autonomous, polish split locked into ROADMAP as 03/04/05 per user direction) → `/ui-ux-pro-max` loaded → `/paul:apply` → Task 1 (selection hook + drag-handle wiring; 14 hook tests + 6 grid integration; root-caused dnd-kit aria-pressed override via failing-test-driven discovery) → Task 2 (BatchActionBar + bulk handlers; 7 toolbar tests + 5 grid integration) → Task 3 (DeleteConfirmProvider + page.tsx wrap + new confirmDelete prop; 10 provider tests + 2 grid integration) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 commits on origin/master: `25b57ad` (chore(paul) PLAN), `e26626c` (Task 1), `ae0a8c3` (Task 2), `8acf7aa` (Task 3). UNIFY commit lands next. Full suite 1359/1360; tsc + next build clean. Production /setlists/[id] now serves multi-select + bulk-edit toolbar + shadcn AlertDialog.
-Stopped at: v50-05-03 fully closed and pushed; SUMMARY.md written. Ready for v50-05-04 PLAN.
-Next action: `/paul:plan` for v50-05-04 (iPad / pointer-coarse Sheet swap + right-click ContextMenu — second polish plan in v50-05). Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-03-SUMMARY.md`
+Stopped at: v50-05-03 fully closed and pushed; SUMMARY.md written; session paused for context budget before v50-05-04. Handoff written for fresh session pickup.
+Next action: in a fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-05-04 (iPad / pointer-coarse Sheet swap across 6 Popover sites + right-click ContextMenu with selection-aware action targeting + long-press for touch). Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
+Resume file: `.paul/HANDOFF-2026-04-26-v50-05-04-pickup.md`
+Git strategy: master (continuing v50-05 hard-cutover convention; band still not in production)
 Resume context (v50-05-04):
 - `useMediaQuery('(pointer: coarse)')` is the iPad/touch detection (NOT viewport width — iPad Pro at 1024px is still touch). Hook may need to be added/promoted; check src/hooks for an existing one or add as part of plan 04.
 - Cell dropdowns to swap from Radix Popover → Radix Sheet on touch breakpoints: KeyCell, LeadCell, TypeCell (via DropdownCell), AddRowPlaceholder, ChartBindPopover, AND BatchActionBar's inline `BulkPopover`. Pattern: extract a shared `<TouchOrPopover>` wrapper that picks Popover or Sheet based on the media query.
