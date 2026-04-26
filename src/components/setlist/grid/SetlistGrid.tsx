@@ -45,6 +45,10 @@ import { AddRowPlaceholder } from './AddRowPlaceholder'
 import { BatchActionBar, type BulkSetPatch } from './BatchActionBar'
 import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
+import {
+    useDeleteConfirmOptional,
+    type ConfirmInfo,
+} from './DeleteConfirmProvider'
 import { DragHandleCell } from './cells/DragHandleCell'
 import { KeyCell } from './cells/KeyCell'
 import { LeadCell } from './cells/LeadCell'
@@ -413,8 +417,14 @@ export interface SetlistGridProps {
     /** Called by EmptyState's "Use a template" CTA. */
     onUseTemplate?: () => void
     /** Caller hook: confirm a delete that has user-visible content. Defaults
-     * to window.confirm. Allows tests to bypass the prompt. */
+     * to window.confirm. Allows tests to bypass the prompt. Legacy alias
+     * — new callers should use `confirmDelete` (carries kind/count for
+     * bulk vs single-row copy). */
     confirmDeleteWithTitle?: (title: string) => boolean | Promise<boolean>
+    /** v50-05-03 destructive-action confirmation. Wins over the
+     * back-compat `confirmDeleteWithTitle` and over the
+     * `<DeleteConfirmProvider>` context fallback. */
+    confirmDelete?: (info: ConfirmInfo) => Promise<boolean>
 }
 
 async function commitTrackPatchImpl(
@@ -472,8 +482,38 @@ export function SetlistGrid({
     onMakeNextWeeks,
     onUseTemplate,
     confirmDeleteWithTitle,
+    confirmDelete,
 }: SetlistGridProps) {
     const router = useRouter()
+    const dialogCtx = useDeleteConfirmOptional()
+
+    // Resolves a confirmation request via the precedence:
+    //   1. explicit `confirmDelete` prop (rich info shape; tests + power callers)
+    //   2. legacy `confirmDeleteWithTitle` prop (back-compat for v50-05-01/02 tests)
+    //   3. `<DeleteConfirmProvider>` context (production /setlists/[id] mount)
+    //   4. window.confirm (final fallback when nothing else is wired)
+    const confirmFn = useCallback(
+        async (info: ConfirmInfo): Promise<boolean> => {
+            if (confirmDelete) return confirmDelete(info)
+            if (confirmDeleteWithTitle) {
+                const title =
+                    info.kind === 'row'
+                        ? info.title
+                        : `${info.count} rows`
+                return confirmDeleteWithTitle(title)
+            }
+            if (dialogCtx) return dialogCtx.confirm(info)
+            if (typeof window !== 'undefined') {
+                const msg =
+                    info.kind === 'row'
+                        ? `Delete row "${info.title}"?`
+                        : `Delete ${info.count} rows?`
+                return window.confirm(msg)
+            }
+            return false
+        },
+        [confirmDelete, confirmDeleteWithTitle, dialogCtx],
+    )
 
     const tracks = useLiveQuery(
         () =>
@@ -555,12 +595,7 @@ export function SetlistGrid({
         async (track: LocalTrack) => {
             const title = track.title ?? ''
             if (title) {
-                const confirmFn =
-                    confirmDeleteWithTitle ??
-                    ((t: string) =>
-                        typeof window !== 'undefined' &&
-                        window.confirm(`Delete row “${t}”?`))
-                const ok = await confirmFn(title)
+                const ok = await confirmFn({ kind: 'row', title })
                 if (!ok) return
             }
             await applyEdit({
@@ -569,7 +604,7 @@ export function SetlistGrid({
                 docId: track.id,
             })
         },
-        [confirmDeleteWithTitle],
+        [confirmFn],
     )
 
     const handleBindChart = useCallback(
@@ -648,12 +683,7 @@ export function SetlistGrid({
     const handleBulkDelete = useCallback(async () => {
         if (selectedTracks.length === 0) return
         const count = selectedTracks.length
-        const confirmFn =
-            confirmDeleteWithTitle ??
-            ((t: string) =>
-                typeof window !== 'undefined' &&
-                window.confirm(`Delete ${t}?`))
-        const ok = await confirmFn(`${count} rows`)
+        const ok = await confirmFn({ kind: 'bulk', count })
         if (!ok) return
         await Promise.all(
             selectedTracks.map((t) =>
@@ -665,7 +695,7 @@ export function SetlistGrid({
             ),
         )
         selection.clear()
-    }, [selectedTracks, selection, confirmDeleteWithTitle])
+    }, [selectedTracks, selection, confirmFn])
 
     const meta = useMemo<GridMeta>(
         () => ({

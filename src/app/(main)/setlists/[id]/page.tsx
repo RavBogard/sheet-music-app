@@ -2,7 +2,11 @@ import { getServerUser, serializeSetlist } from "@/lib/server-auth"
 import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { Setlist } from "@/lib/setlist-firebase"
 import { notFound, redirect } from "next/navigation"
-import { SetlistGrid, SetlistGridHydrator } from "@/components/setlist/grid"
+import {
+    DeleteConfirmProvider,
+    SetlistGrid,
+    SetlistGridHydrator,
+} from "@/components/setlist/grid"
 import { canEditSetlist } from "@/lib/setlist-permissions"
 import type { LocalSetlist, LocalTrack } from "@/lib/local/types"
 import { randomUUID } from "node:crypto"
@@ -68,7 +72,11 @@ export default async function SetlistEditorPage({
 
     if (isNew) {
         const newId = randomUUID()
-        return <SetlistGrid setlistId={newId} />
+        return (
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId={newId} />
+            </DeleteConfirmProvider>
+        )
     }
 
     initAdmin()
@@ -105,12 +113,14 @@ export default async function SetlistEditorPage({
         typeof serialized.name === "string" ? serialized.name : undefined
 
     return (
-        <SetlistGridHydrator
-            key={id}
-            setlistId={id}
-            initialSetlist={initialSetlist}
-            initialTracks={initialTracks}
-            gridProps={{ name: setlistName }}
-        />
+        <DeleteConfirmProvider>
+            <SetlistGridHydrator
+                key={id}
+                setlistId={id}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                gridProps={{ name: setlistName }}
+            />
+        </DeleteConfirmProvider>
     )
 }

@@ -14,6 +14,13 @@ export {
     type ChartBindSelection,
 } from './ChartBindPopover'
 export {
+    DeleteConfirmProvider,
+    useDeleteConfirm,
+    useDeleteConfirmOptional,
+    type ConfirmInfo,
+    type DeleteConfirmContextValue,
+} from './DeleteConfirmProvider'
+export {
     SetlistGridTopBar,
     type SetlistGridTopBarProps,
 } from './SetlistGridTopBar'

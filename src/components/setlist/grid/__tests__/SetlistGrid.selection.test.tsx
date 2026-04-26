@@ -34,6 +34,7 @@ vi.mock('@/lib/songs/defaults', () => ({
     __resetForTests: vi.fn(),
 }))
 
+import { DeleteConfirmProvider } from '../DeleteConfirmProvider'
 import { SetlistGrid } from '../SetlistGrid'
 
 async function seedTracks(setlistId: string, rows: Partial<LocalTrack>[]) {
@@ -341,6 +342,98 @@ describe('SetlistGrid — multi-select via drag-handle modifier-clicks', () => {
         )
         expect(handles[0]).not.toHaveAttribute('aria-pressed')
         expect(handles[1]).not.toHaveAttribute('aria-pressed')
+    })
+
+    it('AC-6: bulk-delete under <DeleteConfirmProvider> opens AlertDialog and deletes on confirm', async () => {
+        await seedTracks('set-a', [
+            { id: 't-0', order: 0, title: 'Row 0' },
+            { id: 't-1', order: 1, title: 'Row 1' },
+            { id: 't-2', order: 2, title: 'Row 2' },
+        ])
+        render(
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId="set-a" name="Test" />
+            </DeleteConfirmProvider>,
+        )
+
+        const handles = await rowDragHandles()
+        fireEvent.click(handles[0], { metaKey: true })
+        fireEvent.click(handles[1], { metaKey: true })
+        await screen.findByTestId('batch-action-bar')
+
+        fireEvent.click(screen.getByTestId('batch-action-delete'))
+
+        // AlertDialog opens with "Delete 2 rows?" title.
+        await screen.findByTestId('delete-confirm-dialog')
+        expect(
+            screen.getByTestId('delete-confirm-title'),
+        ).toHaveTextContent('Delete 2 rows?')
+
+        // Click destructive Delete; rows go away; selection clears.
+        fireEvent.click(screen.getByTestId('delete-confirm-action'))
+
+        await waitFor(async () => {
+            const tracks = await getDb()
+                .tracks.where('setlistId')
+                .equals('set-a')
+                .toArray()
+            expect(tracks.map((t) => t.id).sort()).toEqual(['t-2'])
+        })
+        await waitFor(() =>
+            expect(
+                screen.queryByTestId('batch-action-bar'),
+            ).not.toBeInTheDocument(),
+        )
+    })
+
+    it('AC-7: single-row delete under <DeleteConfirmProvider> opens AlertDialog with row title', async () => {
+        await seedTracks('set-a', [
+            { id: 't-0', order: 0, title: 'Adon Olam' },
+            { id: 't-1', order: 1, title: 'Row 1' },
+        ])
+        render(
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId="set-a" name="Test" />
+            </DeleteConfirmProvider>,
+        )
+
+        const handles = await rowDragHandles()
+        // Backspace on a focused drag handle triggers the per-row delete path.
+        fireEvent.keyDown(handles[0], { key: 'Backspace' })
+
+        await screen.findByTestId('delete-confirm-dialog')
+        expect(
+            screen.getByTestId('delete-confirm-title'),
+        ).toHaveTextContent('Delete row?')
+        expect(
+            screen.getByTestId('delete-confirm-description'),
+        ).toHaveTextContent('Adon Olam')
+
+        // Cancel — row should still be there.
+        fireEvent.click(screen.getByTestId('delete-confirm-cancel'))
+        await waitFor(() =>
+            expect(
+                screen.queryByTestId('delete-confirm-dialog'),
+            ).not.toBeInTheDocument(),
+        )
+        const tracksAfterCancel = await getDb()
+            .tracks.where('setlistId')
+            .equals('set-a')
+            .toArray()
+        expect(tracksAfterCancel).toHaveLength(2)
+
+        // Re-trigger and accept this time.
+        fireEvent.keyDown(handles[0], { key: 'Backspace' })
+        await screen.findByTestId('delete-confirm-dialog')
+        fireEvent.click(screen.getByTestId('delete-confirm-action'))
+
+        await waitFor(async () => {
+            const tracks = await getDb()
+                .tracks.where('setlistId')
+                .equals('set-a')
+                .toArray()
+            expect(tracks.map((t) => t.id)).toEqual(['t-1'])
+        })
     })
 
     it('stale-row prune: deleting a selected row drops it from the selection', async () => {
