@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom'
-import { render, waitFor } from '@testing-library/react'
+import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getDb, resetDbForTests } from '@/lib/local/schema'
@@ -50,6 +50,10 @@ describe('SetlistGridHydrator', () => {
     })
 
     afterEach(async () => {
+        // Unmount React tree first so the SetlistGrid live query stops
+        // observing Dexie before we close the DB (avoids DatabaseClosedError
+        // teardown race).
+        cleanup()
         await resetDbForTests()
     })
 
@@ -178,5 +182,9 @@ describe('SetlistGridHydrator', () => {
 
         const host = await findByTestId('setlist-grid-hydrator')
         expect(host).toBeInTheDocument()
+
+        // Drain pending live queries (SetlistGrid's tracks query) before
+        // teardown so they don't throw DatabaseClosedError after Dexie closes.
+        await findByTestId('setlist-grid-empty-state')
     })
 })

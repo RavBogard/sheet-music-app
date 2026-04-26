@@ -57,7 +57,7 @@ export function useSetlistDashboard({
     const [loading, setLoading] = useState(mergedInitial.length === 0)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
-    const [view, setView] = useState<'list' | 'calendar' | 'matrix'>('list')
+    const [view, setView] = useState<'list' | 'calendar'>('list')
     const [searchQuery, setSearchQuery] = useState("")
     const [rabbiFilter, setRabbiFilter] = useState("")
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null)

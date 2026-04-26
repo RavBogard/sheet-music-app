@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth-context"
 import { saveCustomTemplate, deleteCustomTemplate } from "@/lib/template-firebase"
 import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
 import type { TrackType, DriveFile } from "@/types/models"
-import { SearchOverlay } from "@/components/setlist/v2/SearchOverlay"
+import { SearchOverlay } from "@/components/library/SearchOverlay"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 

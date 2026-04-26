@@ -17,7 +17,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCongregation } from "@/lib/congregation-store"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { canEditSetlist } from "@/lib/setlist-permissions"
-import { SetlistMatrixView } from "./v2/SetlistMatrixView"
 import { CreationWizard } from "./wizard/CreationWizard"
 
 // Lazy-load UnifiedCalendar — most users stay on list view
@@ -151,10 +150,6 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         onSelectSetlist={handleSelect}
                         onCreateSetlist={handleCreateFromCalendar}
                     />
-                </div>
-            ) : view === 'matrix' ? (
-                <div className="flex-1 p-3 md:p-6 overflow-hidden">
-                    <SetlistMatrixView />
                 </div>
             ) : (
                 <div className="p-3 md:p-6">

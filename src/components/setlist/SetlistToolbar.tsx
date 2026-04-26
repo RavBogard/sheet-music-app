@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Calendar, Search, X, Grid3X3 } from "lucide-react"
+import { List, Calendar, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
@@ -10,8 +10,8 @@ interface SetlistToolbarProps {
     activeTab?: 'personal' | 'public'
     /** @deprecated No longer used — kept for backward compat */
     onTabChange?: (tab: 'personal' | 'public') => void
-    view: 'list' | 'calendar' | 'matrix'
-    onViewChange: (view: 'list' | 'calendar' | 'matrix') => void
+    view: 'list' | 'calendar'
+    onViewChange: (view: 'list' | 'calendar') => void
     /** @deprecated No longer used */
     showPersonalTab?: boolean
     searchQuery: string
@@ -64,15 +64,6 @@ export function SetlistToolbar({
                             title="Calendar View"
                         >
                             <Calendar className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={view === 'matrix' ? 'secondary' : 'ghost'}
-                            size="icon"
-                            onClick={() => onViewChange('matrix')}
-                            className={`h-9 w-9 transition-all ${view === 'matrix' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
-                            title="Matrix View"
-                        >
-                            <Grid3X3 className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
