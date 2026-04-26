@@ -5,32 +5,35 @@
 See: .paul/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v4.5 Unloseable Live-Ops — local-first setlist editor + stage-UX priority system + library cache truthfulness.
+**Current focus:** v5.0 Bulletproof Editor — local-first rewrite of the setlist editor + sticky song memory + spreadsheet-shaped UX.
 
 ## Current Position
 
-Milestone: 🚧 v4.5 Unloseable Live-Ops — 2 of 8 phases complete
-Phase: v45-01 ✅ + v45-07 ✅ complete — held: v45-02..06 + v45-08 (await gig wrap)
-Plan: v45-07 SUMMARY written
-Status: v45-07 closed. UploadDialog now invalidates local react-query library cache + broadcasts cross-tab; useLibrary subscribes. 1335/1335 tests green (+3). tsc clean. next build passes. Ready to commit + push.
-Last activity: 2026-04-20 — UNIFY complete for v45-07; SUMMARY.md written.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 1 of 7 phases complete
+Phase: v50-02 of 7 (Dead-code amputation) — Ready to plan
+Plan: Not started
+Status: v50-01 closed. SUMMARY.md written. ARCHITECTURE.md is binding for v50-02..v50-07. Phase commit pending user approval before moving to v50-02 plan.
+Last activity: 2026-04-26 — UNIFY complete for v50-01 (v50-01-SUMMARY.md written).
 
 Progress:
-- v4.5: [██░░░░░░░░] 25% (2 of 8 phases complete)
-- Phase v45-01: [██████████] 100% ✓
-- Phase v45-07: [██████████] 100% ✓
+- v5.0: [█░░░░░░░░░] 14% (1 of 7 phases complete)
+- Phase v50-01: [██████████] 100% ✓ (architecture locked)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v45-07 loop complete]
+  ○        ○        ○     [Loop reset — ready for v50-02 PLAN]
+
+v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 ```
 
 ## How to resume
 
-Commit v45-07 + push to origin master. All gig-safe phases shipped. Remaining work (v45-02..06, v45-08) held until Rabbi Daniel confirms gig wrapped — they touch the live editor surface and can't ship mid-service.
+After phase commit (pending approval), run `/paul:plan` for Phase v50-02 (Dead-code amputation). Reference ARCHITECTURE.md §7 for the full deletion inventory and ordering.
+
+Constraint reminder: band is **not** in production right now (waiting on dependability), so broken-for-band periods during the rewrite are acceptable. No parallel-editor scaffolding needed.
 
 ## Phase order (for context)
 
@@ -121,12 +124,17 @@ Vercel auto-deploys `master` to production.
 | 2026-04-13: Auth path for /api/setlist/flush — keepalive fetch (Bearer) over sendBeacon (no headers) | Phase 2 P01 | sendBeacon dropped; keepalive fetch sole transport for unload-flush |
 | 2026-04-13: /api/setlist/flush rate-limit tier — shared `api` (60/min) | Phase 2 P01 | No new tier; flush shares user's general-api budget |
 | 2026-04-14: S02 bridge-cred approach = Option A (audit-log + admin email on redemption) | v4.3 P3-01 | Fast detection over credential wrapping; accepts bridge-machine compromise as out-of-scope; Option C (IAM per-install) deferred until multi-congregation |
+| 2026-04-26: v5.0 milestone scope expanded mid-checkpoint to amputate AI chat + live-swap UI | v50-01 | New v50-02 (Dead-code amputation) phase inserted before sync engine; 6 → 7 phases total; phase dirs renumbered; net deletion ~3,000 LOC scheduled before any new code lands |
+| 2026-04-26: Stack locked — Dexie + hand-rolled outbox; TanStack Table v8 (headless) + @dnd-kit + Radix Popover + cmdk | v50-01 | v50-03 sync engine implementer builds on Dexie; v50-05 editor implementer builds on TanStack Table v8 + custom cells; LiveStore/RxDB/AG-Grid Community/hand-rolled all explicitly rejected with rationale |
+| 2026-04-26: Sticky song memory granularity = per-song global (not per-leadMusician, not per-rabbi) | v50-01 | Simplest model; matches user statement that key/lead/BPM should "move with the track everywhere"; per-track override preserved at add-time so prior setlists don't change retroactively |
+| 2026-04-26: Doc-in-IDB = normalized rows + LWW per-document (not JSON-blob, not CRDT) | v50-01 | Single-leader workflow; CRDT overkill at +50KB and migration complexity; normalized rows enable indexed queries (library picker fuzzy-search etc.) |
+| 2026-04-26: Migration approach = one-shot in-place + idempotent + dry-run + rollback snapshots | v50-01 | Band not in production; downtime allowed; cheaper than parallel-collection or lazy-migration strategies designed for live users |
 
 ## Session Continuity
 
-Last session: 2026-04-20 — live-gig pressure test + v4.5 milestone creation. User reported 3 issues during the gig (toolbar overlap, library upload lag, setlist data loss on SEUI). Root-cause investigation identified 4 compounding architectural failure modes in the save path (silent remote-merge wipe, subscription-churn precondition drift, invisible StaleWriteError, zero local draft). Milestone v4.5 "Unloseable Live-Ops" created with 8 phases addressing each root cause systemically.
-Stopped at: Milestone structure created; ready to /paul:plan Phase v45-01.
-Next action: Run `/paul:plan` for Phase v45-01 (Save-path observability).
+Last session: 2026-04-26 — Full v50-01 cycle in one session: `/paul:discuss-milestone` → `/paul:milestone` → `/paul:plan` → `/paul:apply` → mid-checkpoint scope expansion (added v50-02 amputation; renumbered v50-02..v50-06 → v50-03..v50-07) → sign-off → `/paul:unify`. ARCHITECTURE.md (~21 KB, 7 sections) is the binding artifact. /ui-ux-pro-max loaded for Task 3 wireframes.
+Stopped at: v50-01 fully closed; phase commit pending user approval.
+Next action: Approve phase commit (`feat(v50-01): architecture & design — stack, sync FSM, sticky memory, migration, UX wireframes, amputation scope`), then `/paul:plan` for v50-02 (Dead-code amputation).
 
 Outstanding from prior session (2026-04-18): Firestore rules deployment — verify `firebase deploy --only firestore:rules` has landed before Phase v45-01 ships.
 

@@ -1,64 +1,87 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v4.5 Unloseable Live-Ops**
+**v5.0 — Bulletproof Editor (Local-First Rewrite)**
 Status: 🚧 In Progress
-Phases: 2 of 8 complete
-Theme: Local-first editor, predictable toolbar, cache that keeps up. Derived from live-gig pressure test 2026-04-20 (3 reports, 1 critical data loss on setlist SEUI).
+Phases: 1 of 7 complete
+Theme: Rebuild the setlist editor on a local-first foundation, with sticky song memory and a spreadsheet-shaped UX, so saves are bulletproof by construction. Includes amputation of dead surfaces (AI chat, live-swap UI) up front.
+
+Origin: Three compounding pain points surfaced post-gig — Rube Goldberg fragility, edits that don't save, and Sheets envy. Research (codebase blast radius + data-model split + Sheets-API feasibility + comparable-app survey) reframed the problem: the in-app editor concept is right; the *implementation* (optimistic-write + silent-fail save path, no song-level memory, dense non-spreadsheet-like UX) is what makes Sheets feel easier. Fix the editor at the foundation and the Sheets envy dissolves. Scope expanded post-discussion: amputate the unused AI chat assistant and the over-engineered live-swap UI surface (v3.0 + v4.0 redesigns) before rebuilding — replacement for "live swap" is just real-time setlist sync via the new sync engine.
+
+Constraint: Band is **not** in production on this app right now (waiting for dependability), so a "broken-for-band" period during the rewrite is acceptable. No parallel-editor scaffolding, no feature flags, no always-green master required. Hard cutover is the strategy.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v50-01 | Architecture & design | 1/1 | ✅ Complete | 2026-04-26 |
+| v50-02 | Dead-code amputation (chat + live-swap UI) | TBD | Not started | - |
+| v50-03 | Local-first sync engine | TBD | Not started | - |
+| v50-04 | Song catalog & sticky memory | TBD | Not started | - |
+| v50-05 | Spreadsheet editor UI (cutover) | TBD | Not started | - |
+| v50-06 | Concurrent-edit safety + offline + cross-tab | TBD | Not started | - |
+| v50-07 | Migration, kitchen-sink, cutover | TBD | Not started | - |
+
+### Phase v50-01: Architecture & design
+
+Focus: Sign-off doc — no code lands. Decisions to lock: local-first stack (Dexie + hand-rolled outbox vs. LiveStore vs. RxDB vs. TanStack Query Persister), spreadsheet editor stack (TanStack Table + custom cells vs. AG Grid community vs. hand-rolled), sync-engine state machine, song catalog schema with `defaults: { key, lead, bpm }` + rolling history, sticky-memory propagation rules, doc model in IDB (JSON blob vs. normalized rows; CRDT vs. last-writer-wins), migration script approach, UX mocks for spreadsheet editor, **amputation scope for v50-02**.
+Plans: TBD (defined during /paul:plan)
+Output: `.paul/phases/v50-01-architecture/ARCHITECTURE.md`
+
+### Phase v50-02: Dead-code amputation (chat + live-swap UI)
+
+Focus: Delete the AI chat assistant entirely (`ChatPanel.tsx` ~571 LOC + `chat-store.ts` + `/api/chat/*` + chat-prompt sanitization + chat tests + chat Firestore rules/data). Delete the live-swap UI surface entirely (`SwapPicker`, `SwapBottomSheet`, `SwapToast`, `SwapButton`, `/live/[id]` receiver, song-groups system + `liturgicalSlot` field, `canLiveSwap` permission + custom claim, related Firestore rules, swap-related Firestore-rule carve-outs, `swapTrack()` function callers). Verify zero `grep` hits for amputated symbols; full test suite green; `next build` passes. Performance view stays untouched (user: "good for now"); replacement for live swap is real-time setlist sync (lands in v50-03/v50-06, not built here). Estimated net deletion: ~3,000 LOC.
+Plans: TBD
+
+### Phase v50-03: Local-first sync engine
+
+Focus: IDB store + outbox queue + retry/dead-letter + truthful sync indicator (`Saving / Saved / Failed-with-retry / Queued`). Property-based tests for save reliability under random failure injection (network, auth, version-mismatch, force-quit). Built standalone — old editor unchanged, still on old write path until v50-05.
+Plans: TBD
+
+### Phase v50-04: Song catalog & sticky memory
+
+Focus: Promote `songs/{id}` to first-class with `defaults: { key, lead, bpm }` + rolling history. One-shot backfill script populates defaults from existing setlist data (most-recent occurrence wins). Add-song flow reads defaults; save-track flow writes back so edits travel with the song everywhere going forward. Persists until explicitly changed.
+Plans: TBD
+
+### Phase v50-05: Spreadsheet editor UI (cutover)
+
+Focus: Delete `use-setlist-logic.ts` (901 LOC), `setlist-flush.ts`, `setlist-draft.ts`, `SetlistEditorV2.tsx` + all editor modals, mutation API routes, broadcast-channel merge code (~8,400 LOC of editor surface). Build new app-native spreadsheet-shaped editor — tabular rows, click-cell inline editing, type-to-filter dropdowns on Key/Lead/Type, tab/enter navigation, drag-handle reorder, add-row at bottom auto-focuses. Wired to v50-03 sync engine + v50-04 song catalog. App is intentionally broken-for-band during this phase.
+Plans: TBD
+Skills required: /ui-ux-pro-max
+
+### Phase v50-06: Concurrent-edit safety + offline + cross-tab
+
+Focus: "Remote changed — keep mine / take theirs" reconciliation banner via local-first IDB diff. Two-tab edit scenarios pass. Airplane-mode tests pass. Performance view audit: read-only on the new doc shape; verify that real-time setlist sync (= the v3.0 "live swap" replacement) works correctly when the leader edits during a service.
+Plans: TBD
+
+### Phase v50-07: Migration, kitchen-sink, cutover
+
+Focus: One-shot migration script transforms existing Firestore setlists into new shape AND cleans up any orphaned chat / song-groups / liveState data left behind by v50-02 amputation (must be flawless on cutover day — no dual-format support window). Playwright kitchen-sink suite — random edits + airplane-mode toggles + force-quits + cross-tab edits = zero data loss across 100 runs. Sentry alarms on any save-path failure in prod. Manual UAT with Rabbi Daniel + one band member. Ship to band.
+Plans: TBD
+
+## Previous Milestone
+**v4.5 Unloseable Live-Ops**
+Status: 🟡 Superseded by v5.0 (2 of 8 phases shipped; 6 cancelled)
+Completed: Partial — 2026-04-20
+
+Rationale: v4.5's pending phases (IDB draft journal, sync engine, conflict surface redesign, save observability UI, toolbar priority, deferred v4.4 polish) all targeted the save-path machinery that v5.0 deletes. Finishing them is wasted work. Two shipped phases (observability + library cache) remain on master and provide standalone value regardless of the editor rewrite.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v45-01 | Save-path observability | 1/1 | ✅ Complete | 2026-04-20 |
-| v45-02 | IndexedDB draft journal | TBD | Not started | - |
-| v45-03 | Sync engine | TBD | Not started | - |
-| v45-04 | Conflict surface redesign | TBD | Not started | - |
-| v45-05 | Save observability UI | TBD | Not started | - |
-| v45-06 | Performance toolbar priority system | TBD | Not started | - |
+| v45-02 | IndexedDB draft journal | - | ❌ Cancelled — superseded by v50-02 | - |
+| v45-03 | Sync engine | - | ❌ Cancelled — superseded by v50-02 | - |
+| v45-04 | Conflict surface redesign | - | ❌ Cancelled — superseded by v50-05 | - |
+| v45-05 | Save observability UI | - | ❌ Cancelled — superseded by v50-02 | - |
+| v45-06 | Performance toolbar priority system | - | ❌ Cancelled — out of scope for v5.0 | - |
 | v45-07 | Library cache invalidation on upload | 1/1 | ✅ Complete | 2026-04-20 |
-| v45-08 | Deferred v4.4 polish (reconciled) | TBD | Not started | - |
+| v45-08 | Deferred v4.4 polish (reconciled) | - | ❌ Cancelled — orphaned | - |
 
-### Phase v45-01: Save-path observability
+### Phase v45-01: Save-path observability ✓
 
-Focus: Log every silent-return path in the save pipeline via v4.4 request-ID telemetry — `StaleWriteError`, keepalive flush non-2xx, `canEdit=false` early-return, token refresh failure. Stops losing data blindly; each incident leaves a server-side trace.
-Plans: TBD (defined during /paul:plan)
+Focus: Logged every silent-return path in the save pipeline via v4.4 request-ID telemetry — `StaleWriteError`, keepalive flush non-2xx, `canEdit=false` early-return, token refresh failure. Each incident now leaves a server-side trace.
 
-### Phase v45-02: IndexedDB draft journal
+### Phase v45-07: Library cache invalidation on upload ✓
 
-Focus: Every setlist edit writes synchronously to IDB `draft/{setlistId}/{clientRev}`. React state becomes a view over IDB. Survives tab crash, power cycle, auth drop. Reopen editor offers "Unsaved draft — restore?"
-Plans: TBD
-
-### Phase v45-03: Sync engine
-
-Focus: Background worker drains IDB journal → Firestore via existing transaction path. Exponential backoff on network/auth/stale. Replaces fragile `setTimeout(1000)` debounce + keepalive pair.
-Plans: TBD
-
-### Phase v45-04: Conflict surface redesign
-
-Focus: Remove `saving` dep from subscription effect (`use-setlist-logic.ts:700`). Kill the silent-merge branch entirely. Replace easy-to-miss banner with blocking modal on stale-detect: three-way diff (local / remote / merged preview), per-field pick. No silent merges, ever.
-Plans: TBD
-Skills required: /ui-ux-pro-max
-
-### Phase v45-05: Save observability UI
-
-Focus: Top-bar sync state — `Saved` / `Saving…` / `N unsaved (last synced Ns ago)` / `Sync paused — offline` / `Conflict — resolve`. Each sync carries a request ID from v4.4 AsyncLocalStorage instrumentation.
-Plans: TBD
-Skills required: /ui-ux-pro-max
-
-### Phase v45-06: Performance toolbar priority system
-
-Focus: Declarative priority map — chart-nav (prev/next) is protected, always visible; BPM is first to collapse. Overflow menu absorbs collapsed items. Regression tests at phone / iPad portrait / iPad landscape / laptop. Derived from live-gig report #1 (nav arrows covered by BPM/Monitor toolbar items).
-Plans: TBD
-Skills required: /ui-ux-pro-max
-
-### Phase v45-07: Library cache invalidation on upload
-
-Focus: Upload completion broadcasts `library:invalidate` on BroadcastChannel (same pattern v1.3 uses for cross-tab cache sync). Library store, setlist picker, chat file search all subscribe and refetch on signal. Derived from live-gig report #2 (new uploads don't show in library/setlist/search).
-Plans: TBD
-
-### Phase v45-08: Deferred v4.4 polish (reconciled)
-
-Focus: Absorb v4.4 Phase 4 (file-size refactor of 5 files >600 LOC), Phase 7 (type-safety tail — remaining `any`s + UserRole dedup + zod coverage), Phase 8 (perf tail — useCallback + SearchResults memo). Shipped here so they don't orphan.
-Plans: TBD
+Focus: Upload completion broadcasts `library:invalidate` on BroadcastChannel. Library store, setlist picker, chat file search all subscribe and refetch on signal.
 
 ## Previous Milestone
 **v4.4 Deferred Audit Sweep — Architectural Polish**
@@ -478,4 +501,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-13 (v4.1 complete; v4.2 created)*
+*Last updated: 2026-04-26 (v4.5 superseded; v5.0 Bulletproof Editor created — 7 phases, local-first rewrite + amputation of dead surfaces)*
