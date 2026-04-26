@@ -16,7 +16,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 | v50-02 | Dead-code amputation (chat + live-swap UI) | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-03 | Local-first sync engine | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-04 | Song catalog & sticky memory | 1/1 | ✅ Complete | 2026-04-26 |
-| v50-05 | Spreadsheet editor UI (cutover) | 0/3 (multi-plan: 01 build → 02 cutover → 03 polish) | 🚧 Planning (v50-05-01 written) | - |
+| v50-05 | Spreadsheet editor UI (cutover) | 1/3 (01 build ✓ • 02 cutover • 03 polish) | 🚧 In Progress | - |
 | v50-06 | Concurrent-edit safety + offline + cross-tab | TBD | Not started | - |
 | v50-07 | Migration, kitchen-sink, cutover | TBD | Not started | - |
 
@@ -53,11 +53,11 @@ Plans:
 Focus: Delete `use-setlist-logic.ts` (901 LOC), `setlist-flush.ts`, `setlist-draft.ts`, `SetlistEditorV2.tsx` + all editor modals, mutation API routes, broadcast-channel merge code (~8,400 LOC of editor surface). Build new app-native spreadsheet-shaped editor — tabular rows, click-cell inline editing, type-to-filter dropdowns on Key/Lead/Type, tab/enter navigation, drag-handle reorder, add-row at bottom auto-focuses. Wired to v50-03 sync engine + v50-04 song catalog. App is intentionally broken-for-band during this phase.
 
 Multi-plan split (handoff guidance: "split into multiple plans if scope exceeds 3 tasks; vertical slices preferred"):
-- **v50-05-01 — Build SetlistGrid (no cutover yet).** Boot sync engine into app shell + build SetlistGrid component end-to-end (read, cell-edit, dropdown cells, drag-reorder, add-row, delete-row, sync indicator, empty state) — desktop-first. Legacy editor stays at the route. Implements §6.2/6.3/6.4/6.5/6.8/6.10. 3 tasks, 7 ACs.
+- **v50-05-01 ✓ (2026-04-26) — Build SetlistGrid (no cutover yet).** Booted SyncEngine + ProductionFirestoreAdapter into app shell via LazyClientComponents → next/dynamic ssr:false. Built SetlistGrid component tree end-to-end on TanStack Table v8 + dexie-react-hooks: read path (live query), 8 columns (drag/type/title/key/bpm/lead/notes/chart), cell editing (text + Radix Popover/cmdk dropdowns), drag-reorder via @dnd-kit, add-row from library with seedTrackFromSong + defaults, delete-row (Backspace + injectable confirm), continuous-add (Tab past last cell), sync indicator (6 FSM states + aria-live), empty state. 3 atomic commits (`96428b9` + `ef5c99d` + `f29c46c`); 29 new vitest cases; 1374/1374 total; tsc + next build clean. Legacy editor still serves the route. Implements §6.2/6.3/6.4/6.5/6.8/6.10. 3 tasks, 7 ACs.
 - **v50-05-02 — Cutover.** Swap `setlists/[id]/page.tsx` mount from `SetlistEditorV2` → `SetlistGrid`; delete legacy editor surface (`use-setlist-logic.ts`, `setlist-flush.ts`, `setlist-draft.ts`, `SetlistEditorV2.tsx` + modals + tests, `/api/setlist/flush` route); narrow `setlist-firebase.ts` to non-editor exports; ChartCell click→match-modal flow. Plan size TBD.
-- **v50-05-03 — Touch/iPad + mobile + a11y + multi-select.** §6.6 multi-select/batch edit, §6.7 iPad/touch variant (bottom-sheet dropdowns, padding, hover replacement), §6.11 mobile-only stacked-card flow + full-screen edit pane, §6.13 binding accessibility checklist verification, undo via zustand temporal middleware. Plan size TBD.
+- **v50-05-03 — Touch/iPad + mobile + a11y + multi-select.** §6.6 multi-select/batch edit, §6.7 iPad/touch variant (bottom-sheet dropdowns, padding, hover replacement), §6.11 mobile-only stacked-card flow + full-screen edit pane, §6.13 binding accessibility checklist verification, AlertDialog confirmation, right-click ContextMenu, undo via zustand temporal middleware. Plan size TBD.
 
-Deferred: §6.9 reconciliation modal → v50-06 (concurrent-edit safety phase).
+Deferred: §6.9 reconciliation modal + expectedUpdatedAt tracking + cross-tab-lock flake fix → v50-06 (concurrent-edit safety phase).
 Skills required: /ui-ux-pro-max (BLOCKING for APPLY of every v50-05 plan)
 
 ### Phase v50-06: Concurrent-edit safety + offline + cross-tab
@@ -514,4 +514,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-26 (v50-05 split into 3 plans — v50-05-01 PLAN written for build-without-cutover; v50-05-02 cutover and v50-05-03 polish to follow)*
+*Last updated: 2026-04-26 (v50-05-01 closed: SetlistGrid built end-to-end + ProductionFirestoreAdapter + SyncEngineBoot wired into LazyClientComponents; legacy editor still at the route; v50-05-02 cutover next)*

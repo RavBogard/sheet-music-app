@@ -9,36 +9,39 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning
-Plan: v50-05-01 created, awaiting approval — `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`
-Status: PLAN created (build SetlistGrid end-to-end without route cutover; cutover is v50-05-02; touch/mobile/a11y polish is v50-05-03). 3 tasks, 7 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md.
-Last activity: 2026-04-26 — Created `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress, 1 of 3 plans closed)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-01 closed; v50-05-02 next)
+Plan: v50-05-01 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-01-SUMMARY.md`)
+Status: UNIFY complete for v50-05-01. SetlistGrid component tree built end-to-end + ProductionFirestoreAdapter + SyncEngineBoot wired into LazyClientComponents. Legacy editor still serves prod (cutover in v50-05-02). 1374/1374 tests; tsc + next build clean; 3 task commits + 1 unify commit pending.
+Last activity: 2026-04-26 — UNIFY complete for v50-05-01 (SUMMARY.md written).
 
 Progress:
-- v5.0: [██████░░░░] 57% (4 of 7 phases complete)
+- v5.0: [██████░░░░] ~62% (4 of 7 phases complete; v50-05 ⅓ done)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
+- Phase v50-05: [███░░░░░░░] 33% (v50-05-01 closed: build SetlistGrid + engine boot, no cutover)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v50-05-01 plan written — awaiting approval]
+  ○        ○        ○     [Loop reset — ready for v50-05-02 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
-v50-05-01:     ✓ ──▶ ○ ──▶ ○     [Plan created — load /ui-ux-pro-max before APPLY]
+v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
+v50-05-02:     ○ ──▶ ○ ──▶ ○     [Cutover plan — route swap + delete legacy]
+v50-05-03:     ○ ──▶ ○ ──▶ ○     [Polish plan — touch/iPad + mobile + a11y + multi-select]
 ```
 
 ## How to resume
 
-Run `/ui-ux-pro-max` (required by SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md` to execute Plan v50-05-01 (build SetlistGrid end-to-end without route cutover; cutover is v50-05-02; touch/mobile/a11y polish is v50-05-03). This is the BIG one — net −8,400 LOC of legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + mutation API routes + broadcast-channel merge code) replaced by an app-native spreadsheet-shaped editor on TanStack Table v8 + @dnd-kit + Radix Popover + cmdk. Wired to v50-03 sync engine + v50-04 song catalog (`@/lib/songs/defaults` exposes `seedTrackFromSong` + `propagateTrackEditToSong`). Reference ARCHITECTURE.md §6 (Spreadsheet Editor UX) for binding wireframes.
+Run `/paul:plan` for v50-05-02 (cutover). The legacy editor surface (`use-setlist-logic.ts` 901 LOC + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + all editor modals + `/api/setlist/flush` route + broadcast-channel merge code, ~−8,400 LOC) gets deleted and the route mount in `setlists/[id]/page.tsx` swaps from `SetlistEditorV2` → `SetlistGrid` (already exported from `@/components/setlist/grid`). ProductionFirestoreAdapter is wired and engine is booted; v50-05-02 is mostly subtraction + a one-line route change + ChartCell click→match-modal binding. Reference ARCHITECTURE.md §6 wireframes; `/ui-ux-pro-max` BLOCKING per SPECIAL-FLOWS.md.
 
 **Required skill:** `/ui-ux-pro-max` per SPECIAL-FLOWS.md — must be invoked before APPLY.
 
@@ -162,13 +165,21 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: Orphan-track filter applied to BOTH dry-run AND apply paths | v50-04 | Honest dry-run counts; caught by failing test where dry-run reported 4 candidates while apply only wrote 3 (the silent skipped orphan). Hoisted existence check above mode branch |
 | 2026-04-26: Schema bumps to v(2) are additive non-indexed only; new indexed fields require v(3) | v50-04 | Lookups happen by id; over-indexing wastes IDB. Pattern carries to v50-05/06 |
 | 2026-04-26: inngest CVE bump (3.52.3 → 3.54.0) shipped as standalone chore commit, not bundled with v50-04 features | v50-04 close | Clean blame; matches v50-02 dep-cleanup-deferral precedent |
+| 2026-04-26: expectedUpdatedAt left undefined on v50-05 track updates | v50-05-01 | Honest LWW precondition tracking requires editor to maintain last-server-confirmed updatedAt per row; deferred to v50-06 where the reconciliation modal also lands. Engine still drains writes; conflicts surface there |
+| 2026-04-26: Delete confirmation uses window.confirm; AlertDialog deferred | v50-05-01 | Inject point (`confirmDeleteWithTitle` prop) preserved so v50-05-03 can swap to Radix AlertDialog without re-plumbing call sites |
+| 2026-04-26: Drag-end test path = pure-function `computeReorderUpdates` not pointer/keyboard simulation | v50-05-01 | jsdom KeyboardSensor activation is layout-fragile; pointer-event simulation needs `@dnd-kit/test-utils` setup. Pure function unit-tested at function level; Playwright drag verification is a v50-05-03 candidate |
+| 2026-04-26: Track field `leadMusician` ↔ helper field `lead` aliased at the cell layer (not in helpers) | v50-05-01 | Helpers stay generic; editor cells handle the boundary. Pattern documented; future cells follow same alias rule |
+| 2026-04-26: Engine boot lives in `init.ts` mounted via LazyClientComponents (next/dynamic ssr:false) | v50-05-01 | Engine is app-scoped, not editor-scoped. v50-05-02 route swap doesn't touch engine wiring; cross-tab lock leases work correctly with single instance per session |
+| 2026-04-26: vitest.config.ts testTimeout 5s → 10s | v50-05-01 | engine.test.ts AC-4 ran ~622ms standalone but tipped over the 5s default once v50-05 grid tests joined the parallel queue. 10s leaves headroom without masking real perf regressions |
+| 2026-04-26: ProductionFirestoreAdapter writes track docs as top-level Firestore `tracks/{id}` collection | v50-05-01 | Architecturally aligned with `LocalCollection = 'setlists' | 'tracks' | 'songs'`. v50-05-01 SetlistGrid is unmounted in prod so no orphan tracks docs accumulate; v50-07 migration reshapes existing setlist.tracks[] arrays to match |
+| 2026-04-26: @dnd-kit/modifiers (restrictToVerticalAxis) NOT added | v50-05-01 | verticalListSortingStrategy already constrains the actual ordering; the modifier only constrains the visual preview transform. Avoid new dep; visual-drift polish → v50-05-03 if needed |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05 planning) — `git pull origin master` (already up to date) + handoff archive commit `d72b6b5` (chore(paul)) pushed to origin/master + Plan v50-05-01 written to `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`. The plan splits v50-05 into three plans (build, cutover, polish): Plan 01 builds SetlistGrid + boots sync engine into app shell + 5 vitest files, but does NOT swap the route mount; legacy editor still serves prod after Plan 01. Plan 02 = cutover + delete legacy. Plan 03 = touch/iPad + mobile + binding-AA + multi-select. ARCHITECTURE.md §6.2/6.3/6.4/6.5/6.8/6.10 are in scope here; §6.6/6.7/6.9/6.11/6.13 deferred.
-Stopped at: Plan v50-05-01 created and committed-ready; awaiting approval to start APPLY.
-Next action: invoke `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`. APPLY will execute as 3 atomic commits (Task 1 grid scaffold + engine boot, Task 2 cell-edit interactions, Task 3 drag/add/delete).
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-PLAN.md`
+Last session: 2026-04-26 (v50-05-01 close) — Plan, APPLY, UNIFY all closed in one chat. Five commits on origin/master: `d72b6b5` (chore: handoff archive), `96428b9` (Task 1: grid scaffold + ProductionFirestoreAdapter + SyncEngineBoot), `ef5c99d` (Task 2: cell-edit interactions + use-grid-keyboard), `f29c46c` (Task 3: drag/add/delete + computeReorderUpdates pure helper). UNIFY commit (SUMMARY + STATE/ROADMAP) lands next, then push. Full suite 1374/1374; tsc + next build clean. SetlistGrid is intentionally unmounted in prod — legacy editor still serves the route until v50-05-02 cutover.
+Stopped at: v50-05-01 fully closed end-to-end; ready for v50-05-02 PLAN.
+Next action: invoke `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:plan` for v50-05-02 (cutover). v50-05-02 is mostly subtraction: swap `setlists/[id]/page.tsx` mount from SetlistEditorV2 → SetlistGrid; delete `use-setlist-logic.ts` + `setlist-flush.ts` + `setlist-draft.ts` + `SetlistEditorV2.tsx` + sub-components + `/api/setlist/flush` route + broadcast-channel merge code; narrow `setlist-firebase.ts` to non-editor exports; wire ChartCell click → existing match-modal binding flow; full vitest + tsc + next build verification.
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-01-SUMMARY.md`
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
