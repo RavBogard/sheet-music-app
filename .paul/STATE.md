@@ -9,10 +9,10 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 2 of 3 plans shipped)
-Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress
-Plan: v50-06-02 CLOSED (reconciliation modal §6.9). Loop complete. SUMMARY at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-SUMMARY.md`.
-Status: UNIFY complete for v50-06-02. Reconciliation modal end-to-end on prod /setlists/[id]: ReconciliationProvider mounted inside DeleteConfirmProvider; subscribes to engine 'conflict' state via `useSyncStatus`; reads `failed`-status outbox rows via `useLiveQuery`; renders per-row card with per-field DIFF (informational) + per-row "Keep mine / Take theirs" radio (default 'theirs'); "Resolve all and save" iterates `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })` sequentially with newExpectedUpdatedAt sourced from the cached RemoteDocSnapshot. FirestoreAdapter interface gained `readDoc(collection, docId) → RemoteDocSnapshot|null`; ProductionFirestoreAdapter implements via getDoc + Timestamp.toMillis; init.ts tracks adapterSingleton + exports getSyncAdapter. SyncIndicator's conflict action button re-opens dismissed modal via useReconciliationModalOptional. Property-failures harness extended with `setupTwoWriterRace` helper + 'mine' (drains successfully, remote holds loser's payload, updatedAt > winner's) + 'theirs' (remote unchanged, loser local row preserved at baseline) branch tests — 5/5 deterministic. ReconciliationProvider component test (~420 LOC, 11 cases) covers all 7 ACs incl. 3 jest-axe scans (ZERO violations on first run). 4 commits: `0278e0f` (chore PLAN), `6c9662b` (Task 1), `51a4298` (Task 2), `43fefaf` (Task 3); close commit lands next. Suite 1431/1431 (+13 from 1418); tsc clean; next build clean. Pushed to origin master; Vercel deployment Ready (`dpl_CfYCNcHuAaD4kUCoHoY2KdWwZN5V`).
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 2 of 3 plans shipped + v50-06-03 PLAN created)
+Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — Planning v50-06-03
+Plan: v50-06-03 PLAN created (cross-leader live-edit + airplane-mode + perf-view audit). Loop position: PLAN ✓ APPLY ○ UNIFY ○. PLAN at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-03-PLAN.md`.
+Status: PLAN created for v50-06-03. Ready for APPLY. Reconciliation modal end-to-end on prod /setlists/[id]: ReconciliationProvider mounted inside DeleteConfirmProvider; subscribes to engine 'conflict' state via `useSyncStatus`; reads `failed`-status outbox rows via `useLiveQuery`; renders per-row card with per-field DIFF (informational) + per-row "Keep mine / Take theirs" radio (default 'theirs'); "Resolve all and save" iterates `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })` sequentially with newExpectedUpdatedAt sourced from the cached RemoteDocSnapshot. FirestoreAdapter interface gained `readDoc(collection, docId) → RemoteDocSnapshot|null`; ProductionFirestoreAdapter implements via getDoc + Timestamp.toMillis; init.ts tracks adapterSingleton + exports getSyncAdapter. SyncIndicator's conflict action button re-opens dismissed modal via useReconciliationModalOptional. Property-failures harness extended with `setupTwoWriterRace` helper + 'mine' (drains successfully, remote holds loser's payload, updatedAt > winner's) + 'theirs' (remote unchanged, loser local row preserved at baseline) branch tests — 5/5 deterministic. ReconciliationProvider component test (~420 LOC, 11 cases) covers all 7 ACs incl. 3 jest-axe scans (ZERO violations on first run). 4 commits: `0278e0f` (chore PLAN), `6c9662b` (Task 1), `51a4298` (Task 2), `43fefaf` (Task 3); close commit lands next. Suite 1431/1431 (+13 from 1418); tsc clean; next build clean. Pushed to origin master; Vercel deployment Ready (`dpl_CfYCNcHuAaD4kUCoHoY2KdWwZN5V`).
 Last activity: 2026-04-26 — UNIFY complete for v50-06-02; v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit) ready to plan.
 
 Progress:
@@ -28,7 +28,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v50-06-02 LOOP COMPLETE — reconciliation modal shipped]
+  ✓        ○        ○     [v50-06-03 PLAN created — APPLY next]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
