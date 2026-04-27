@@ -82,6 +82,12 @@ export interface Setlist {
     transferredAt?: string
     previousOwnerId?: string
     assignedUids?: string[]
+    /** v50-07-03 lazy-hydration marker. `true` means the legacy embedded
+     *  `tracks[]` array has been fanned out to top-level `tracks/{id}`
+     *  docs; consumers (perf-view, kitchen-sink) should treat top-level
+     *  as authoritative and ignore the embedded array. Mirrors
+     *  `LocalSetlist.hydrated`. */
+    hydrated?: boolean
 }
 
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'
