@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
@@ -6,9 +6,11 @@ import { assignMusicians } from "@/lib/scheduling-firebase"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
-import { getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
+import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
+
+export type CreationMode = 'idle' | 'clone' | 'template' | 'scratch'
 
 export interface UseCreationWizardReturn {
     // Form state
@@ -23,6 +25,15 @@ export interface UseCreationWizardReturn {
     selectedTemplate: string | null
     setSelectedTemplate: (key: string | null) => void
     templateKeys: string[]
+
+    // Date-aware three-offer flow (v51-03):
+    // mode tracks which offer the user has selected; clone* fields surface
+    // the most recent matching prior setlist to power the Clone CTA.
+    mode: CreationMode
+    setMode: (m: CreationMode) => void
+    inferredServiceType: ServiceType | null
+    cloneSource: Setlist | null
+    cloneSourceLoading: boolean
 
     // Songs (auto-populated from template or editable)
     tracks: SetlistTrack[]
@@ -56,14 +67,29 @@ export function useCreationWizard(): UseCreationWizardReturn {
     const [tracks, setTracks] = useState<SetlistTrack[]>([])
     const [musicians, setMusicians] = useState<SetlistMusician[]>([])
 
+    const [mode, setMode] = useState<CreationMode>('idle')
+    const [cloneSource, setCloneSource] = useState<Setlist | null>(null)
+    const [cloneSourceLoading, setCloneSourceLoading] = useState(false)
+
+    const inferredServiceType = useMemo<ServiceType | null>(
+        () => (eventDate ? getServiceContext(eventDate).type : null),
+        [eventDate],
+    )
+
     const templateKeys = getAllTemplateKeys()
-    const canCreate = useMemo(() => name.trim().length > 0, [name])
+    const canCreate = useMemo(
+        () => mode === 'clone' ? !!cloneSource : name.trim().length > 0,
+        [mode, cloneSource, name],
+    )
 
     // Selecting a template auto-fills name + date. Keeps the "shortcut" UX the
     // two-step wizard had, without the extra click-through.
     const handleTemplateSelect = useCallback(async (key: string | null) => {
         setSelectedTemplate(key)
         if (!key) return
+        // Lock in template mode BEFORE the eventDate effect runs so its
+        // auto-flip-to-'clone' branch sees the user's stated intent and skips.
+        setMode('template')
 
         try {
             const baseDate = new Date()
@@ -76,6 +102,45 @@ export function useCreationWizard(): UseCreationWizardReturn {
             setName(label)
         }
     }, [])
+
+    // When eventDate changes, query for the most recent prior setlist of the
+    // inferred service type so the wizard can surface a Clone CTA. The lookup
+    // is best-effort: failures degrade silently to "no clone offer".
+    const modeRef = useRef(mode)
+    useEffect(() => { modeRef.current = mode }, [mode])
+    const userIdRef = useRef(user?.uid ?? null)
+    useEffect(() => { userIdRef.current = user?.uid ?? null }, [user?.uid])
+
+    useEffect(() => {
+        if (!eventDate) {
+            setCloneSource(null)
+            setCloneSourceLoading(false)
+            return
+        }
+        const inferred = getServiceContext(eventDate).type
+        // 'regular' has no meaningful Clone match (non-Shabbat, non-holiday).
+        if (inferred === 'regular' || !userIdRef.current) {
+            setCloneSource(null)
+            setCloneSourceLoading(false)
+            return
+        }
+
+        let cancelled = false
+        setCloneSourceLoading(true)
+        const service = createSetlistService(userIdRef.current)
+        service.findLastMatchingService(inferred, eventDate)
+            .then((source) => {
+                if (cancelled) return
+                setCloneSource(source)
+                // Only auto-default to clone when the user hasn't expressed a
+                // preference yet. Respect explicit 'template' / 'scratch' picks.
+                if (source && modeRef.current === 'idle') setMode('clone')
+            })
+            .catch(() => { if (!cancelled) setCloneSource(null) })
+            .finally(() => { if (!cancelled) setCloneSourceLoading(false) })
+
+        return () => { cancelled = true }
+    }, [eventDate])
 
     const addSongsFromFiles = useCallback((files: DriveFile[]) => {
         const newTracks: SetlistTrack[] = files.map(f => ({
@@ -97,17 +162,37 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setRabbi("")
         setTracks([])
         setMusicians([])
+        setMode('idle')
+        setCloneSource(null)
+        setCloneSourceLoading(false)
     }, [])
 
     const create = useCallback(async () => {
         if (!user || creating) return
-        if (!name.trim()) return
+        // Clone path requires a source + date; other paths require a name.
+        if (mode === 'clone') {
+            if (!cloneSource || !eventDate) return
+        } else if (!name.trim()) return
         setCreating(true)
 
         let loadingId: string | number | undefined
         try {
             const service = createSetlistService(user.uid, user.displayName)
 
+            // ── Clone branch ──────────────────────────────────────────────
+            if (mode === 'clone' && cloneSource && eventDate) {
+                loadingId = toast.loading(`Cloning from ${cloneSource.name}…`)
+                const setlistId = await service.cloneSetlist(cloneSource, eventDate)
+                const trackCount = cloneSource.tracks?.length ?? 0
+                toast.success(
+                    `Cloned from ${cloneSource.name} — ${trackCount} ${trackCount === 1 ? 'track' : 'tracks'}`,
+                    loadingId ? { id: loadingId } : undefined,
+                )
+                router.push(`/setlists/${setlistId}`)
+                return
+            }
+
+            // ── Template / Scratch branch ────────────────────────────────
             let finalTracks = tracks
             if (selectedTemplate && finalTracks.length === 0) {
                 const template = getTemplate(selectedTemplate, customTemplates)
@@ -156,7 +241,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             if (selectedTemplate) {
                 const matched = finalTracks.filter(t => t.fileId).length
                 const total = finalTracks.filter(t => t.type === 'song').length
-                toast.success(`Created "${name}" — ${matched}/${total} songs matched`, successOpts)
+                toast.success(`Created "${name}" from ${TEMPLATE_LABELS[selectedTemplate]?.label || selectedTemplate} — ${matched}/${total} songs matched`, successOpts)
             } else {
                 toast.success(`"${name}" created!`, successOpts)
             }
@@ -167,7 +252,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } finally {
             setCreating(false)
         }
-    }, [user, creating, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
+    }, [user, creating, mode, cloneSource, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
 
     return {
         selectedTemplate,
@@ -184,6 +269,11 @@ export function useCreationWizard(): UseCreationWizardReturn {
         addSongsFromFiles,
         musicians,
         setMusicians,
+        mode,
+        setMode,
+        inferredServiceType,
+        cloneSource,
+        cloneSourceLoading,
         canCreate,
         creating,
         create,

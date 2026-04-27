@@ -11,8 +11,14 @@ vi.mock('@/lib/auth-context', () => ({
 }))
 
 const mockCreateSetlist = vi.fn().mockResolvedValue('new-setlist-id')
+const mockFindLastMatchingService = vi.fn().mockResolvedValue(null)
+const mockCloneSetlist = vi.fn().mockResolvedValue('cloned-setlist-id')
 vi.mock('@/lib/setlist-firebase', () => ({
-  createSetlistService: vi.fn(() => ({ createSetlist: mockCreateSetlist })),
+  createSetlistService: vi.fn(() => ({
+    createSetlist: mockCreateSetlist,
+    findLastMatchingService: mockFindLastMatchingService,
+    cloneSetlist: mockCloneSetlist,
+  })),
 }))
 
 const mockAssignMusicians = vi.fn().mockResolvedValue(undefined)
@@ -21,8 +27,10 @@ vi.mock('@/lib/scheduling-firebase', () => ({
 }))
 
 const mockGetFullServiceContext = vi.fn().mockResolvedValue({ type: 'shabbat_morning', parasha: 'Bereshit' })
+const mockGetServiceContext = vi.fn((_d?: unknown) => ({ type: 'friday_night', date: new Date(), hebrewDate: { day: 1, month: 'Nisan', year: '5786', display: '1 Nisan 5786' }, parasha: null, holiday: null, isShabbat: true }))
 vi.mock('@/lib/liturgical-calendar', () => ({
   getFullServiceContext: vi.fn((_opts?: unknown) => mockGetFullServiceContext(_opts)),
+  getServiceContext: (d: unknown) => mockGetServiceContext(d),
   ServiceType: {},
 }))
 
@@ -66,6 +74,9 @@ describe('useCreationWizard (single-step)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateSetlist.mockResolvedValue('new-setlist-id')
+    mockFindLastMatchingService.mockResolvedValue(null)
+    mockCloneSetlist.mockResolvedValue('cloned-setlist-id')
+    mockGetServiceContext.mockReturnValue({ type: 'friday_night', date: new Date(), hebrewDate: { day: 1, month: 'Nisan', year: '5786', display: '1 Nisan 5786' }, parasha: null, holiday: null, isShabbat: true })
   })
 
   it('starts empty and cannot create until a name is entered', () => {
@@ -214,5 +225,145 @@ describe('useCreationWizard (single-step)', () => {
 
     expect(result.current.creating).toBe(false)
     expect(mockCreateSetlist).toHaveBeenCalledTimes(1)
+  })
+
+  // ── v51-03: date-aware three-offer flow ────────────────────────────────────
+
+  describe('v51-03 clone path', () => {
+    const SOURCE_FRIDAY = new Date(2026, 3, 17)
+    const TARGET_FRIDAY = new Date(2026, 3, 24)
+
+    function buildSourceSetlist(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'src-1',
+        name: 'Erev Shabbat — Apr 17',
+        eventDate: SOURCE_FRIDAY,
+        date: SOURCE_FRIDAY,
+        templateType: 'friday_night',
+        tracks: [
+          { id: 't1', title: 'Lecha Dodi', songId: 's1', key: 'D', bpm: 96, type: 'song' },
+          { id: 't2', title: 'Mi Chamocha', songId: 's2', key: 'A', bpm: 110, type: 'song' },
+        ],
+        trackCount: 2,
+        ...overrides,
+      }
+    }
+
+    it('auto-defaults to clone mode when a date is picked and a match is found', async () => {
+      mockGetServiceContext.mockReturnValue({
+        type: 'friday_night', date: TARGET_FRIDAY,
+        hebrewDate: { day: 1, month: 'Iyar', year: '5786', display: '1 Iyar 5786' },
+        parasha: null, holiday: null, isShabbat: true,
+      })
+      const source = buildSourceSetlist()
+      mockFindLastMatchingService.mockResolvedValue(source)
+
+      const { result } = renderHook(() => useCreationWizard())
+      await act(async () => { result.current.setEventDate(TARGET_FRIDAY) })
+      // Allow the lookup promise to settle.
+      await act(async () => { await Promise.resolve() })
+
+      expect(mockFindLastMatchingService).toHaveBeenCalledWith('friday_night', TARGET_FRIDAY)
+      expect(result.current.mode).toBe('clone')
+      expect(result.current.cloneSource?.id).toBe('src-1')
+      expect(result.current.canCreate).toBe(true) // clone mode doesn't need a name
+    })
+
+    it('clone create() invokes cloneSetlist with the chosen date and routes to the new setlist', async () => {
+      mockGetServiceContext.mockReturnValue({
+        type: 'friday_night', date: TARGET_FRIDAY,
+        hebrewDate: { day: 1, month: 'Iyar', year: '5786', display: '1 Iyar 5786' },
+        parasha: null, holiday: null, isShabbat: true,
+      })
+      const source = buildSourceSetlist()
+      mockFindLastMatchingService.mockResolvedValue(source)
+
+      const { result } = renderHook(() => useCreationWizard())
+      await act(async () => { result.current.setEventDate(TARGET_FRIDAY) })
+      await act(async () => { await Promise.resolve() })
+
+      await act(async () => { await result.current.create() })
+
+      expect(mockCloneSetlist).toHaveBeenCalledWith(source, TARGET_FRIDAY)
+      // The clone branch must NOT also call createSetlist (which would create a duplicate).
+      expect(mockCreateSetlist).not.toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/setlists/cloned-setlist-id')
+      const successCall = (toast.success as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]
+      expect(successCall[0]).toMatch(/Cloned from Erev Shabbat — Apr 17.*2 tracks/)
+    })
+
+    it('falls back to scratch when no match found for the picked date', async () => {
+      mockGetServiceContext.mockReturnValue({
+        type: 'friday_night', date: TARGET_FRIDAY,
+        hebrewDate: { day: 1, month: 'Iyar', year: '5786', display: '1 Iyar 5786' },
+        parasha: null, holiday: null, isShabbat: true,
+      })
+      mockFindLastMatchingService.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useCreationWizard())
+      await act(async () => { result.current.setEventDate(TARGET_FRIDAY) })
+      await act(async () => { await Promise.resolve() })
+
+      // No match → mode stays 'idle'; user can fill name and proceed via scratch.
+      expect(result.current.cloneSource).toBeNull()
+      expect(result.current.mode).toBe('idle')
+
+      act(() => { result.current.setName('Manual Friday') })
+      await act(async () => { await result.current.create() })
+
+      expect(mockCloneSetlist).not.toHaveBeenCalled()
+      expect(mockCreateSetlist).toHaveBeenCalledWith(
+        'Manual Friday',
+        expect.any(Array),
+        expect.any(Object),
+      )
+    })
+
+    it('explicit template pick overrides clone auto-default and uses template path', async () => {
+      // First the date triggers a clone match.
+      mockGetServiceContext.mockReturnValue({
+        type: 'friday_night', date: TARGET_FRIDAY,
+        hebrewDate: { day: 1, month: 'Iyar', year: '5786', display: '1 Iyar 5786' },
+        parasha: null, holiday: null, isShabbat: true,
+      })
+      mockFindLastMatchingService.mockResolvedValue(buildSourceSetlist())
+
+      const { result } = renderHook(() => useCreationWizard())
+      await act(async () => { await result.current.setSelectedTemplate('friday_night') })
+      await act(async () => { await Promise.resolve() })
+
+      // Even with a clone match available, explicit template intent wins.
+      expect(result.current.mode).toBe('template')
+
+      await act(async () => { await result.current.create() })
+      // Template path goes through createSetlist, not cloneSetlist.
+      expect(mockCloneSetlist).not.toHaveBeenCalled()
+      expect(mockCreateSetlist).toHaveBeenCalled()
+    })
+
+    it('cloneSetlist receives source whose tracks are byte-identical to the source setlist (verbatim copy)', async () => {
+      mockGetServiceContext.mockReturnValue({
+        type: 'friday_night', date: TARGET_FRIDAY,
+        hebrewDate: { day: 1, month: 'Iyar', year: '5786', display: '1 Iyar 5786' },
+        parasha: null, holiday: null, isShabbat: true,
+      })
+      const source = buildSourceSetlist()
+      const sourceTracksSnapshot = JSON.parse(JSON.stringify(source.tracks))
+      mockFindLastMatchingService.mockResolvedValue(source)
+
+      const { result } = renderHook(() => useCreationWizard())
+      await act(async () => { result.current.setEventDate(TARGET_FRIDAY) })
+      await act(async () => { await Promise.resolve() })
+      await act(async () => { await result.current.create() })
+
+      // Verbatim-copy guarantee: cloneSetlist was passed the exact source object,
+      // and the source's tracks were not mutated by the wizard.
+      const [passedSource] = mockCloneSetlist.mock.calls[0]
+      expect(passedSource.tracks).toEqual(sourceTracksSnapshot)
+      // Per-song values (key, bpm) preserved — sticky-memory propagates at READ time
+      // via seedTrackFromSong, NOT at write time. v50-04 contract intact.
+      expect(passedSource.tracks[0].key).toBe('D')
+      expect(passedSource.tracks[0].bpm).toBe(96)
+    })
   })
 })

@@ -69,9 +69,48 @@ import { Setlist } from "@/types/api"
 import { logger } from "@/lib/logger"
 import { apiFetch } from "@/lib/api-client"
 import { toDate } from "@/lib/firestore-helpers"
-import { getFullServiceContext } from "@/lib/liturgical-calendar"
+import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
 export type { Setlist }
+
+/**
+ * ServiceType values that the legacy `templateType: 'festival'` field
+ * collapses across. When a candidate setlist has `templateType: 'festival'`,
+ * it matches a request for any of these specific holiday types (per v51-03
+ * plan: festival templateType is a multi-match bucket because the field was
+ * added before the per-holiday types existed).
+ */
+const FESTIVAL_SERVICE_TYPES: readonly ServiceType[] = [
+    'sukkot',
+    'simchat_torah',
+    'passover',
+    'shavuot',
+] as const
+
+/**
+ * Returns true if the given setlist matches the requested ServiceType.
+ *
+ * Resolution order:
+ *  1. If `templateType` is set and not 'other', use it (user's stated intent).
+ *     - Direct types map 1:1.
+ *     - 'festival' matches any of FESTIVAL_SERVICE_TYPES.
+ *  2. Else infer from the setlist's eventDate (or date) via getServiceContext.
+ *
+ * Pure function — exported for unit testing.
+ */
+export function setlistMatchesServiceType(
+    setlist: Pick<Setlist, 'eventDate' | 'date' | 'templateType'>,
+    requestedType: ServiceType,
+): boolean {
+    const tt = setlist.templateType
+    if (tt && tt !== 'other') {
+        if (tt === 'festival') return FESTIVAL_SERVICE_TYPES.includes(requestedType)
+        return tt === requestedType
+    }
+    const effDate = toDate(setlist.eventDate ?? setlist.date)
+    if (!effDate) return false
+    return getServiceContext(effDate).type === requestedType
+}
 
 function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
     return Object.fromEntries(
@@ -220,15 +259,44 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Clone a setlist for next week: same tracks, musicians, rabbi; date +7 days; auto-name
-        async cloneForNextWeek(source: Setlist): Promise<string> {
+        // Find the most recent setlist matching `serviceType` whose effective
+        // event date is strictly before `beforeDate` (or before "now" if not
+        // given). Returns null on no-match or query failure (graceful — wizard
+        // simply hides the Clone CTA).
+        async findLastMatchingService(
+            serviceType: ServiceType,
+            beforeDate?: Date,
+        ): Promise<Setlist | null> {
             try {
-                // Compute target date: same weekday, +7 days
-                const sourceDate = toDate(source.eventDate || source.date) || new Date()
-                const targetDate = new Date(sourceDate)
-                targetDate.setDate(targetDate.getDate() + 7)
+                const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
+                const q = query(collectionRef, orderBy('date', 'desc'), limit(20))
+                const snap = await getDocs(q)
+                for (const docSnap of snap.docs) {
+                    const candidate = docSnap.data() as Setlist | null
+                    if (!candidate) continue
+                    if (candidate.isTemplate) continue
+                    const effDate = toDate(candidate.eventDate ?? candidate.date)
+                    if (!effDate) continue
+                    if (beforeDate && effDate >= beforeDate) continue
+                    if (setlistMatchesServiceType(candidate, serviceType)) {
+                        return candidate
+                    }
+                }
+                return null
+            } catch (e) {
+                logger.error("Error finding last matching service:", e)
+                return null
+            }
+        },
 
-                // Generate name from liturgical context (async — parasha lookup)
+        // Generic clone: copy source's tracks/musicians/rabbi onto a new
+        // setlist scheduled for `targetDate`. Tracks are copied verbatim —
+        // sticky-memory propagation (v50-04) happens at READ time via
+        // seedTrackFromSong on next ChartBindPopover use, NOT at write time.
+        // Cloned tracks preserve the user's intentful per-song values
+        // (key, bpm, vocal lead) from the source setlist.
+        async cloneSetlist(source: Setlist, targetDate: Date): Promise<string> {
+            try {
                 const context = await getFullServiceContext(targetDate)
                 const name = generateSetlistName(context)
 
@@ -250,9 +318,21 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
                 return docRef.id
             } catch (e) {
-                logger.error("Error cloning setlist for next week:", e)
+                logger.error("Error cloning setlist:", e)
                 throw e
             }
+        },
+
+        // Clone a setlist for next week: same tracks, musicians, rabbi; date +7 days; auto-name.
+        // Public surface preserved (called by EmptyState's "Make next week's" CTA);
+        // implementation is now a thin wrapper around cloneSetlist().
+        async cloneForNextWeek(source: Setlist): Promise<string> {
+            const sourceDate = toDate(source.eventDate || source.date) || new Date()
+            const targetDate = new Date(sourceDate)
+            targetDate.setDate(targetDate.getDate() + 7)
+            // Delegate via `this` so the call participates in the same service
+            // closure (logging, userId/userName binding stay consistent).
+            return this.cloneSetlist(source, targetDate)
         },
 
         // Save a setlist as a reusable template (strips date, musicians, rabbi)
