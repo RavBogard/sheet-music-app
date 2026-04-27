@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 1 of 3 plans shipped + 1 plan awaiting approval)
-Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress (Planning v50-06-02)
-Plan: v50-06-02 created, awaiting approval. PLAN at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`.
-Status: PLAN created for v50-06-02 reconciliation modal (§6.9). 3 auto tasks + 1 decision checkpoint (per-row vs per-field granularity) + 1 human-verify checkpoint (two-tab smoke on prod). 7 ACs. Scope narrowed to per-row "Keep mine / Take theirs" — substrate API is per-row; per-field merge granularity deferred. Mounts `<ReconciliationProvider>` inside DeleteConfirmProvider; subscribes to engine 'conflict' state via `useSyncStatus`; reads failed outbox rows via `useLiveQuery`; renders per-row card with per-field DIFF (informational) + per-row radio (decision); "Resolve all and save" iterates `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })` sequentially. FirestoreAdapter interface gains `readDoc(collection, docId)`. Property-failures harness extended with `'mine'` + `'theirs'` resolution branch tests. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md.
-Last activity: 2026-04-26 — Created v50-06-02-PLAN.md.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 2 of 3 plans shipped)
+Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress
+Plan: v50-06-02 CLOSED (reconciliation modal §6.9). Loop complete. SUMMARY at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-SUMMARY.md`.
+Status: UNIFY complete for v50-06-02. Reconciliation modal end-to-end on prod /setlists/[id]: ReconciliationProvider mounted inside DeleteConfirmProvider; subscribes to engine 'conflict' state via `useSyncStatus`; reads `failed`-status outbox rows via `useLiveQuery`; renders per-row card with per-field DIFF (informational) + per-row "Keep mine / Take theirs" radio (default 'theirs'); "Resolve all and save" iterates `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })` sequentially with newExpectedUpdatedAt sourced from the cached RemoteDocSnapshot. FirestoreAdapter interface gained `readDoc(collection, docId) → RemoteDocSnapshot|null`; ProductionFirestoreAdapter implements via getDoc + Timestamp.toMillis; init.ts tracks adapterSingleton + exports getSyncAdapter. SyncIndicator's conflict action button re-opens dismissed modal via useReconciliationModalOptional. Property-failures harness extended with `setupTwoWriterRace` helper + 'mine' (drains successfully, remote holds loser's payload, updatedAt > winner's) + 'theirs' (remote unchanged, loser local row preserved at baseline) branch tests — 5/5 deterministic. ReconciliationProvider component test (~420 LOC, 11 cases) covers all 7 ACs incl. 3 jest-axe scans (ZERO violations on first run). 4 commits: `0278e0f` (chore PLAN), `6c9662b` (Task 1), `51a4298` (Task 2), `43fefaf` (Task 3); close commit lands next. Suite 1431/1431 (+13 from 1418); tsc clean; next build clean. Pushed to origin master; Vercel deployment Ready (`dpl_CfYCNcHuAaD4kUCoHoY2KdWwZN5V`).
+Last activity: 2026-04-26 — UNIFY complete for v50-06-02; v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit) ready to plan.
 
 Progress:
 - v5.0: [██████████] ~85% (5 of 7 phases complete; v50-06 + v50-07 remain)
@@ -27,21 +27,27 @@ Progress:
 
 Current loop state:
 ```
-v50-06-02:  PLAN ──▶ APPLY ──▶ UNIFY
-              ✓        ○        ○     [Plan created, awaiting approval]
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v50-06-02 LOOP COMPLETE — reconciliation modal shipped]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans]
-v50-06:        ◐ ──▶ ◐ ──▶ ◐     [v50-06-01 LOOP COMPLETE; v50-06-02 PLAN created (reconciliation modal); v50-06-03 cross-leader live-edit TBD]
+v50-06:        ◐ ──▶ ◐ ──▶ ◐     [v50-06-01 + v50-06-02 LOOPS COMPLETE (2/3 plans); v50-06-03 cross-leader live-edit + airplane-mode + perf-view audit TBD]
 v50-07:        ○ ──▶ ○ ──▶ ○     [Phase: migration + kitchen-sink Playwright + cutover]
 ```
 
 ## How to resume
 
-Run `/paul:apply .paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md` to execute v50-06-02 (reconciliation modal §6.9). /ui-ux-pro-max BLOCKING before APPLY proceeds.
+Run `/paul:plan` for v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit — final plan in v50-06). Scope per ARCHITECTURE.md + v50-06-02 deferrals:
+- **Cross-leader live-edit visibility** — Firestore `onSnapshot` listeners on `tracks/*` + `setlists/*` so when leader-tab edits land server-side, follower tabs/devices update via local Dexie writes (replaces deleted v50-02 live-swap UI). Closes the v50-06-02 'theirs' gap (local row no longer goes stale on remote-wins resolution).
+- **Airplane-mode integration scenarios** beyond v50-06-01's two-writer race (offline → reconnect → drain; sequential offline edits queueing in outbox).
+- **Performance-view audit** — confirm `/perform/setlist/[id]` is read-only on the new doc shape (top-level `tracks/{id}` collection from v50-05-01) and renders correctly when leader edits propagate live.
+- Optional Playwright two-tab smoke for the kitchen-sink cases.
+
+`/ui-ux-pro-max` BLOCKING for APPLY if any UI changes (likely yes — perf-view audit may surface polish work). v50-07 (migration + cutover) is the final phase after v50-06-03 closes.
 
 ## Earlier resume notes (kept for context)
 
@@ -133,6 +139,7 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 5. **v50-05-03 (multi-select + AlertDialog)**: open a real setlist on prod with ≥3 tracks; Cmd/Ctrl-click drag handle on row 0 → indigo accent + aria-pressed; Shift-click drag handle on row 2 → rows 0/1/2 all selected; sticky BatchActionBar appears with "3 rows selected"; click Key dropdown → pick Dm → all 3 rows update + SyncIndicator transitions Saved; click Delete → "Delete 3 rows?" AlertDialog opens → click Cancel → rows intact; re-trigger + Delete → 3 rows gone + selection clears; press Backspace on a focused drag handle → "Delete row?" AlertDialog with quoted track title in description; Esc closes any selection.
 6. **v50-05-04 (iPad/touch + ContextMenu)**: open prod /setlists/[id] on iPad (or Chrome devtools Device Toolbar → iPad); tap Key cell → bottom Sheet appears (NOT floating Popover); tap LeadCell, TypeCell, AddRow, ChartBind, BatchActionBar bulk Type/Key/Lead — all swap to Sheet on touch. Drag-handle column visibly wider (52px vs 44px desktop); cells visibly taller (44px+ touch targets). Right-click any row on desktop → ContextMenu with 4 items (Edit row / Bind chart / Duplicate row / Delete row); click Edit → Title cell focuses; click Bind chart → ChartBindPopover opens; click Duplicate → row clones below source with all fields; click Delete on a NON-selected row → "Delete row?" AlertDialog with quoted title; multi-select 2+ rows + right-click selected → "N rows selected" header + Edit/Bind/Duplicate disabled + Delete → "Delete N rows?" AlertDialog. iPad: long-press a row 500ms without moving → ContextMenu opens; quick tap → no menu; tap-and-drag → no menu (drag activates).
 7. **v50-05-05 (mobile + Undo + WCAG AA)**: open prod /setlists/[id] in a phone viewport (≤767px or Chrome devtools iPhone) → cards instead of table; tap card → full-screen edit Sheet with title/key/bpm/lead/notes/type form fields + Move up / Move down / Bind chart / Delete row buttons; long-press card 500ms → action menu (Edit/Bind/Duplicate/Delete with selection-aware semantics if multi-selected). On desktop: edit a Title cell → blur → Cmd-Z (Mac) or Ctrl-Z (Windows) → title reverts; Cmd-Shift-Z redoes. Bulk-set Key on 3 selected rows → Cmd-Z reverts all 3 in one step. Delete a row → Cmd-Z re-inserts the row with all its fields. Cmd-Z while focused inside a TextCell input runs native field undo (NOT editor undo). Manual Lighthouse audit on /setlists/[id] (target Accessibility ≥ 95).
+8. **v50-06-02 (reconciliation modal)**: open prod /setlists/[id] in two browser windows (same setlist, signed in as same user). In window A: edit Key on row 0 from F → G + Tab → SyncIndicator Saving → Saved. In window B (still showing F): edit Key on row 0 from F → A + Tab → SyncIndicator transitions to "Conflict — review" + reconciliation modal opens with card showing row 0's title + diff "Key: Your version A / Their version G" + radio default 'theirs'. Click "Keep mine" + "Resolve all and save" → modal closes + SyncIndicator Saving → Saved + window A's live-query updates row 0's key to A. Repeat to produce another conflict, then click "Cancel" → modal closes + SyncIndicator stays "Conflict — review" + clicking the indicator action button re-opens modal with same conflict. With modal open, press Esc → modal closes + indicator stays + outbox row preserved. (Optional) Edit a different row in window B while in conflict → that edit also queues + modal still shows only row 0 conflict.
 
 ### Git state
 Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
@@ -237,10 +244,19 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Current session: 2026-04-26 — `/paul:resume` (consumed HANDOFF-2026-04-26-v50-06-02-pickup.md, archived to `.paul/handoffs/archive/`) → `/paul:plan` v50-06-02 (PLAN.md created at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`).
-Stopped at: PLAN v50-06-02 created, awaiting user approval before APPLY.
-Next action: `/paul:apply .paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md` after user approves. /ui-ux-pro-max BLOCKING — load before APPLY.
-Resume file: `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`
+Current session: 2026-04-26 (v50-06-02 full cycle — reconciliation modal §6.9) — `/paul:resume` (consumed HANDOFF-2026-04-26-v50-06-02-pickup.md, archived) → `/paul:plan` v50-06-02 → `/paul:apply` (decision checkpoint resolved per-row-now → Task 1 substrate+provider → Task 2 property-failures branches → Task 3 component+jest-axe) → push origin master (Vercel deployed `dpl_CfYCNcHuAaD4kUCoHoY2KdWwZN5V`) → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 task commits + close commit. Suite 1431/1431 (+13 from 1418); tsc + next build clean. Reconciliation modal end-to-end: ReconciliationProvider mounted at /setlists/[id], engine 'conflict' → blocking AlertDialog → per-row "Keep mine / Take theirs" → engine.resolveConflict → drain. FirestoreAdapter.readDoc shipped; property-failures harness extended with both resolution branches; jest-axe ZERO violations.
+Stopped at: UNIFY complete for v50-06-02 (clean plan boundary). v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit) ready to plan in fresh session.
+Next action: `/paul:plan` for v50-06-03. /ui-ux-pro-max likely BLOCKING for APPLY (perf-view audit may surface polish work; cross-leader live-edit visibility is mostly backend onSnapshot listeners but read-side UI may need tweaks).
+Resume file: `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-SUMMARY.md`
+Git strategy: master (continuing v50 hard-cutover convention; band still not in production).
+Resume context (v50-06-03):
+- Scope: cross-leader live-edit visibility via Firestore `onSnapshot` listeners on `tracks/*` + `setlists/*` (replaces deleted v50-02 live-swap UI; closes the v50-06-02 'theirs' gap where loser local row goes stale until reload). Airplane-mode integration scenarios beyond v50-06-01's two-writer race. Performance-view audit confirming `/perform/setlist/[id]` is read-only on the v50-05-01 top-level `tracks/{id}` collection shape and renders correctly when leader edits propagate live. Optional Playwright two-tab smoke for kitchen-sink cases.
+- Substrate ready (v50-06-01+02): VersionMismatchError end-to-end; reconciliation modal absorbs every conflict; engine.resolveConflict('mine'|'theirs') verified deterministic in property-failures harness; FirestoreAdapter.readDoc available for one-shot remote views.
+- Reusable patterns: setupTwoWriterRace helper (extend for 3+ writer / live-listener scenarios); useReconciliationModalOptional fail-soft hook (pattern for any future engine-state-driven UI); test-seam props (adapter + handler overrides) for component tests; useSyncStatus selector mock at module scope.
+- Production smoke verifications #4-#8 still pending (deferred backlog); not blocking v50-06-03.
+- v50-07 (migration + kitchen-sink Playwright + cutover) is the final phase.
+
+Last session: 2026-04-26 (v50-06-01 full cycle — substrate stabilization)
 
 Last session: 2026-04-26 (v50-06-01 full cycle — substrate stabilization) — `/paul:resume` → `/paul:plan` v50-06-01 → `/paul:apply` (Task 1 cross-tab-lock flake fix → Task 2 adapter+engine writeback+cell threading → Task 3 two-writer race test) → `/paul:unify` → push origin master → `/paul:pause` (this handoff). 5 commits: `9ca4943` (chore PLAN), `5736599` (Task 1 deflake), `0ce9bd2` (Task 2 substrate), `edfc339` (Task 3 race test), `fc368ef` (chore close loop). Full suite 1418/1418 (+8 from 1410); tsc + next build clean. v50-06-01 substrate stabilization COMPLETE: cross-tab-lock test deterministic (30/30); adapter returns updatedAt; engine writeback atomic with `if(existing)` guard; expectedUpdatedAt threaded through every track-update applyEdit call site (16 sites); two-writer race produces VersionMismatchError end-to-end with addressable failed outbox row.
 Stopped at: PAUSED at v50-06-01 close (clean plan boundary). v50-06-02 (reconciliation modal §6.9) ready to plan in fresh session.

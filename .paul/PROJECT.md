@@ -52,8 +52,8 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 ### Active (In Progress)
 
-**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 5 of 7 phases complete (2026-04-26).
-Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); AI chat + live-swap UI amputated. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact. Next: v50-06 (Concurrent-edit safety + offline + cross-tab).
+**v5.0 — Bulletproof Editor (Local-First Rewrite)** — 5 of 7 phases complete; v50-06 in progress (2/3 plans shipped, 2026-04-26).
+Local-first rewrite of the setlist editor on Dexie + a hand-rolled outbox; spreadsheet-shaped UX on TanStack Table v8 + @dnd-kit + Radix + cmdk; sticky song memory (per-song global `defaults: { key, lead, bpm }` + rolling history); AI chat + live-swap UI amputated. Replacement for live swap = real-time setlist sync (free with the new sync engine). Hard cutover; band not in production during rewrite. ARCHITECTURE.md at `.paul/phases/v50-01-architecture/ARCHITECTURE.md` is the binding artifact. v50-06: substrate stabilization (01) + reconciliation modal §6.9 (02) shipped; cross-leader live-edit + airplane-mode + perf-view audit (03) next.
 
 **v4.5 — Superseded by v5.0** (2026-04-26): 2 of 8 phases shipped (v45-01 save-path observability, v45-07 library cache invalidation). 6 phases cancelled — they targeted save-path machinery v5.0 deletes wholesale.
 
@@ -288,7 +288,10 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 | Per-cell-blur burst key default `${collection}:${docId}:${field-set}` | v50-05-05 | Multi-field patches get one coalescing window; single-field patches get per-field windows. UNDO_BURST_MS=500ms matches v50-04 sticky-memory debounce |
 | INPUT/TEXTAREA/SELECT/contenteditable skip for global Cmd-Z at SetlistGrid root | v50-05-05 | Native field undo wins when typing into a form field. Same skip set as v4.2 P2-04 + v50-05-03 Esc handler |
 | WCAG AA via jest-axe at component-test level — ZERO violations on first run | v50-05-05 | 7 axe scan cases + 1 keyboard Tab case; axeOpts disables 5 harness-context false positives. Design system internalized correctly across v50-05; no in-place fixes needed |
+| Reconciliation modal granularity = per-row "Keep mine / Take theirs" (NOT per-field) | v50-06-02 | Substrate API engine.resolveConflict is per-row; per-field would need new engine surface OR UI-side merge plumbing. Diff display still per-field (informational). Matches GitHub/Figma merge UX. Per-field deferred to v50-06-03+ if conflict patterns demand granular merge |
+| FirestoreAdapter.readDoc added to interface (vs new engine API) for reconciliation modal diff | v50-06-02 | Keeps engine class lean; mirrors v50-06-01 CommitResult{updatedAt?} interface-extension precedent. Adapter singleton tracked in init.ts alongside engine; getSyncAdapter() exposes it to UI without engine API expansion |
+| Engine-state-driven modal: subscribe via useSyncStatus selector + useLiveQuery on outbox status (NOT engine event listener) | v50-06-02 | Provider auto-opens on conflict transition; user-dismissable; SyncIndicator action button re-opens via useReconciliationModalOptional fail-soft hook. Reusable pattern for future engine-state-driven UI |
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-04-26 after Phase v50-05 close (Spreadsheet editor UI cutover: build + cutover + multi-select+AlertDialog + iPad+ContextMenu + mobile+Undo+WCAG. ~+13k/−6.3k LOC, +159 vitest, jest-axe ZERO a11y violations)*
+*Last updated: 2026-04-26 after Plan v50-06-02 close (reconciliation modal §6.9: ReconciliationProvider with per-row "Keep mine / Take theirs" + FirestoreAdapter.readDoc + property-failures branch coverage + jest-axe ZERO violations. Suite 1431/1431; 2/3 plans in v50-06).*
