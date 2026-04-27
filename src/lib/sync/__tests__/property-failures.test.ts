@@ -11,7 +11,8 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as fc from 'fast-check'
 
-import { getDb, resetDbForTests } from '../../local/schema'
+import { LocalDb, getDb, resetDbForTests } from '../../local/schema'
+import Dexie from 'dexie'
 import type { LocalCollection, OutboxRow } from '../../local/types'
 import { applyEdit } from '../../local/write'
 import { CrossTabLock } from '../cross-tab-lock'
@@ -102,11 +103,16 @@ class HarnessAdapter implements FirestoreAdapter {
     nextFailure: Failure = 'ok'
     refreshes = 0
 
-    async commitOutboxRow(row: OutboxRow): Promise<void> {
+    async commitOutboxRow(
+        row: OutboxRow,
+    ): Promise<{ updatedAt?: number }> {
         const f = this.nextFailure
         if (f === 'ok') {
             this.applySuccess(row)
-            return
+            // v50-06-01: existing harness ignores server-updatedAt; the
+            // shared-backing two-writer test in this file extends the
+            // adapter to surface real timestamps.
+            return {}
         }
         // Don't reset failure mode here — the harness explicitly toggles it
         // via { kind: 'failure-mode', mode } actions.
@@ -485,4 +491,270 @@ describe('property: no-data-loss under random failure injection', () => {
             { kind: 'tick', ms: 4000 },
         ])
     })
+})
+
+// ─── v50-06-01 substrate readiness for v50-06-02 reconciliation modal ──────
+//
+// Scope: prove that the engine + adapter contract surfaces concurrent-edit
+// races as VersionMismatchError end-to-end.
+//
+// What this test PROVES:
+//   - Two SyncEngine instances pointing at a shared in-memory remote produce
+//     EXACTLY ONE successful commit when both queue an update on the same
+//     docId with the same `expectedUpdatedAt`.
+//   - The losing engine transitions to FSM state 'conflict'.
+//   - The losing engine's outbox row stays in 'failed' status with
+//     `lastError` populated and a localId addressable by
+//     `engine.resolveConflict(localId, choice, opts)` — the API surface
+//     v50-06-02's reconciliation modal will call.
+//   - No committed write is silently lost (per v50-03 no-data-loss invariant).
+//
+// What this test does NOT prove:
+//   - That the production Firestore runTransaction precondition fires. That
+//     requires a real-Firestore smoke test or emulator integration — both
+//     deferred to v50-06-02 / v50-06-03.
+//   - The reconciliation modal UI itself — v50-06-02.
+//
+// Real timers / no vi fake timers (per v50-03 lesson — fake timers conflict
+// with fake-indexeddb microtask scheduling and Dexie live-query teardown).
+// Drains are deterministic when isOnline=true and the adapter is sync.
+
+interface SharedDoc {
+    payload: Record<string, unknown>
+    updatedAt: number
+}
+
+class SharedRemote {
+    docs = new Map<string, SharedDoc>()
+    private clock = 2000
+    nextTimestamp(): number {
+        return ++this.clock
+    }
+    seed(collection: LocalCollection, docId: string, doc: SharedDoc): void {
+        this.docs.set(`${collection}/${docId}`, { ...doc })
+    }
+    snapshot(): Map<string, SharedDoc> {
+        const out = new Map<string, SharedDoc>()
+        for (const [k, v] of this.docs) out.set(k, { ...v, payload: { ...v.payload } })
+        return out
+    }
+}
+
+class TwoWriterAdapter implements FirestoreAdapter {
+    constructor(private readonly remote: SharedRemote) {}
+
+    async commitOutboxRow(
+        row: OutboxRow,
+    ): Promise<{ updatedAt?: number }> {
+        const key = `${row.collection}/${row.docId}`
+        const existing = this.remote.docs.get(key)
+
+        if (row.op === 'set') {
+            const ts = this.remote.nextTimestamp()
+            this.remote.docs.set(key, {
+                payload: { ...row.payload, id: row.docId },
+                updatedAt: ts,
+            })
+            return { updatedAt: ts }
+        }
+        if (row.op === 'update') {
+            if (!existing) {
+                throw new TransientError(`Remote missing: ${key}`)
+            }
+            if (
+                row.expectedUpdatedAt !== undefined &&
+                existing.updatedAt !== row.expectedUpdatedAt
+            ) {
+                throw new VersionMismatchError(
+                    `expected updatedAt=${row.expectedUpdatedAt}, remote=${existing.updatedAt}`,
+                )
+            }
+            const ts = this.remote.nextTimestamp()
+            this.remote.docs.set(key, {
+                payload: { ...existing.payload, ...row.payload },
+                updatedAt: ts,
+            })
+            return { updatedAt: ts }
+        }
+        if (row.op === 'delete') {
+            this.remote.docs.delete(key)
+            return {}
+        }
+        return {}
+    }
+
+    async refreshAuthToken(): Promise<void> {
+        // No-op for this harness.
+    }
+}
+
+async function flushTwoWriter(rounds = 8): Promise<void> {
+    for (let i = 0; i < rounds; i++) {
+        await new Promise<void>((r) => setTimeout(r, 0))
+        for (let j = 0; j < 50; j++) await Promise.resolve()
+    }
+}
+
+describe('v50-06-01: substrate readiness — two-writer race', () => {
+    const dbAName = 'crc-twowriter-a'
+    const dbBName = 'crc-twowriter-b'
+
+    afterEach(async () => {
+        // Clean up the per-engine Dexie instances so each test starts fresh.
+        try {
+            await Dexie.delete(dbAName)
+        } catch {
+            // ignore
+        }
+        try {
+            await Dexie.delete(dbBName)
+        } catch {
+            // ignore
+        }
+    })
+
+    it('two engines racing one docId: exactly one wins, other surfaces VersionMismatch', async () => {
+        const remote = new SharedRemote()
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', title: 'orig' },
+            updatedAt: 1000,
+        })
+
+        const dbA = new LocalDb(dbAName)
+        const dbB = new LocalDb(dbBName)
+        // Force schema open so subsequent `.outbox.add` / `.tracks.put` calls succeed.
+        await dbA.outbox.count()
+        await dbB.outbox.count()
+
+        // Seed each local DB with the same baseline view of the doc.
+        await dbA.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        })
+        await dbB.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        })
+
+        // Queue conflicting updates: both expect updatedAt=1000.
+        const now = Date.now()
+        await dbA.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'A-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+        await dbB.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'B-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+
+        const adapterA = new TwoWriterAdapter(remote)
+        const adapterB = new TwoWriterAdapter(remote)
+
+        // Distinct lock channel names so the engines DON'T cross-tab-defer
+        // to each other — we want both to drain.
+        const hub = new FakeChannelHub()
+        const lockA = new CrossTabLock('crc-twowriter-A', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const lockB = new CrossTabLock('crc-twowriter-B', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+
+        const engineA = new SyncEngine({
+            db: dbA,
+            adapter: adapterA,
+            lock: lockA,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        const engineB = new SyncEngine({
+            db: dbB,
+            adapter: adapterB,
+            lock: lockB,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+
+        // Start both. Sequential start models "tab A's drain runs to
+        // completion, then tab B starts" — first wins, second sees the
+        // moved server `updatedAt` and surfaces VersionMismatch.
+        await engineA.start()
+        await flushTwoWriter()
+        await engineB.start()
+        await flushTwoWriter()
+
+        // Verify exactly one remote write succeeded.
+        const remoteSnap = remote.snapshot()
+        const finalDoc = remoteSnap.get('tracks/t1')
+        expect(finalDoc).toBeDefined()
+        // The successful write moved updatedAt past 1000.
+        expect(finalDoc!.updatedAt).toBeGreaterThan(1000)
+        // The successful write is from EXACTLY one of A or B.
+        expect([
+            'A-edit',
+            'B-edit',
+        ]).toContain(finalDoc!.payload.title)
+
+        const aRows = await dbA.outbox.toArray()
+        const bRows = await dbB.outbox.toArray()
+        const winnerOutboxLen = aRows.length === 0 ? 0 : bRows.length
+        const loserOutboxLen = aRows.length === 0 ? bRows.length : aRows.length
+
+        // Exactly one engine cleared its outbox (the winner).
+        expect(winnerOutboxLen).toBe(0)
+        // The loser has exactly one row, in 'failed' status, with the
+        // VersionMismatch error message.
+        expect(loserOutboxLen).toBe(1)
+        const loserEngine = aRows.length === 0 ? engineB : engineA
+        const loserRows = aRows.length === 0 ? bRows : aRows
+        expect(loserRows[0].status).toBe('failed')
+        expect(loserRows[0].lastError).toMatch(/expected updatedAt=1000/i)
+        expect(loserEngine.getState()).toBe('conflict')
+
+        // The loser's row is addressable for v50-06-02's resolveConflict —
+        // verify the API surface accepts the localId.
+        expect(loserRows[0].localId).toBeDefined()
+        // 'theirs' branch deletes the failed row and the loser quiesces.
+        await loserEngine.resolveConflict(loserRows[0].localId!, 'theirs')
+        await flushTwoWriter()
+        const loserOutboxAfter =
+            aRows.length === 0 ? await dbB.outbox.count() : await dbA.outbox.count()
+        expect(loserOutboxAfter).toBe(0)
+
+        // No-data-loss substrate check: the LOCAL row of the loser is
+        // unchanged from its baseline — the user's local edit is preserved
+        // until v50-06-02 surfaces it for "keep mine / take theirs". (The
+        // loser's local update never landed because we queued the outbox
+        // row directly without mutating tracks.)
+        const loserDb = aRows.length === 0 ? dbB : dbA
+        const loserLocalDoc = await loserDb.tracks.get('t1')
+        expect(loserLocalDoc?.updatedAt).toBe(1000)
+
+        engineA.shutdown()
+        engineB.shutdown()
+        dbA.close()
+        dbB.close()
+    }, 30_000)
 })
