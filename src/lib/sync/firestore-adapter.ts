@@ -1,7 +1,7 @@
 // Engine ↔ Firestore boundary. Discriminated error classes let the engine
 // branch to the right state-machine event without inspecting raw error codes.
 
-import type { OutboxRow } from '../local/types'
+import type { LocalCollection, OutboxRow } from '../local/types'
 
 export class VersionMismatchError extends Error {
     constructor(message = 'Version mismatch') {
@@ -45,9 +45,29 @@ export interface CommitResult {
     updatedAt?: number
 }
 
+/** Snapshot of a Firestore doc as observed at the time of the read.
+ *  Used by v50-06-02 reconciliation modal to render the "their version"
+ *  side of the diff without coupling the UI to Firebase SDK types. */
+export interface RemoteDocSnapshot {
+    /** Raw doc data. Includes whatever fields the doc carries — the modal
+     *  filters down to fields present in the failed outbox row's payload. */
+    data: Record<string, unknown>
+    /** Server-stamped `updatedAt` in ms since epoch. The modal passes this
+     *  as `newExpectedUpdatedAt` when re-queuing a "Keep mine" choice so
+     *  the next drain attempt's precondition matches. */
+    updatedAt: number
+}
+
 export interface FirestoreAdapter {
     commitOutboxRow(row: OutboxRow): Promise<CommitResult>
     refreshAuthToken(): Promise<void>
+    /** v50-06-02: one-shot read of a remote doc to populate the
+     *  reconciliation modal's diff. Returns null when the doc does not
+     *  exist on the server (e.g. winner was a delete). */
+    readDoc(
+        collection: LocalCollection,
+        docId: string,
+    ): Promise<RemoteDocSnapshot | null>
 }
 
 // Real adapter (production) is wired in v50-05 when the editor cuts over —

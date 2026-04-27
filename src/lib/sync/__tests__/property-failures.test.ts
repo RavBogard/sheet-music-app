@@ -132,6 +132,10 @@ class HarnessAdapter implements FirestoreAdapter {
         this.refreshes += 1
     }
 
+    async readDoc(): Promise<null> {
+        return null
+    }
+
     private applySuccess(row: OutboxRow): void {
         const key = `${row.collection}/${row.docId}`
         if (row.op === 'set') {
@@ -585,6 +589,16 @@ class TwoWriterAdapter implements FirestoreAdapter {
 
     async refreshAuthToken(): Promise<void> {
         // No-op for this harness.
+    }
+
+    async readDoc(
+        collection: LocalCollection,
+        docId: string,
+    ): Promise<{ data: Record<string, unknown>; updatedAt: number } | null> {
+        const key = `${collection}/${docId}`
+        const doc = this.remote.docs.get(key)
+        if (!doc) return null
+        return { data: { ...doc.payload }, updatedAt: doc.updatedAt }
     }
 }
 

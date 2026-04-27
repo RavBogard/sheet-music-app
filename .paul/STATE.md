@@ -233,6 +233,7 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: handlePickSong defaults patch passes expectedUpdatedAt: undefined (justified inline) | v50-06-01 | Row was just created locally via set; first server commit hasn't echoed updatedAt yet; engine treats undefined as "no precondition". First server commit installs updatedAt; subsequent edits pick it up via live-query row |
 | 2026-04-26: LocalTrack + LocalSong gained explicit updatedAt?: number (was hidden behind index sig) | v50-06-01 | TS inferred unknown for track.updatedAt, blocking direct passthrough. Explicit field keeps type narrow without breaking open-ended schema. Forward-friendly — updatedAt is now first-class across all three local doc types |
 | 2026-04-26: Two-tab race-detection harness — SharedRemote + per-engine LocalDb + distinct lock channels | v50-06-01 | Reusable pattern for v50-06-02 modal integration tests + v50-06-03 cross-leader live-edit scenarios. Distinct channels prevent cross-tab single-leader deferral, allowing both engines to drain |
+| 2026-04-26: Reconciliation modal granularity = per-row "Keep mine / Take theirs" (NOT per-field) | v50-06-02 | Substrate API engine.resolveConflict(localId, 'mine'\|'theirs', opts) is per-row; per-field would require new engine surface OR UI-side merge plumbing — neither warranted in v1. Diff display still per-field (informational); only the choice is per-row. Matches GitHub/Figma merge UX conventions; per-field deferred to v50-06-03+ as additive feature if conflict patterns prove granular merge needed |
 
 ## Session Continuity
 

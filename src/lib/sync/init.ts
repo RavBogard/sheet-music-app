@@ -13,7 +13,7 @@ import {
 
 import { auth, db as firestoreDb } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
-import type { OutboxRow } from '@/lib/local/types'
+import type { LocalCollection, OutboxRow } from '@/lib/local/types'
 
 import { CrossTabLock } from './cross-tab-lock'
 import { SyncEngine } from './engine'
@@ -22,6 +22,7 @@ import {
     type CommitResult,
     type FirestoreAdapter,
     NetworkError,
+    type RemoteDocSnapshot,
     TransientError,
     VersionMismatchError,
 } from './firestore-adapter'
@@ -118,10 +119,27 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
         if (!u) throw new AuthError('No authenticated user — cannot refresh token')
         await u.getIdToken(true)
     }
+
+    async readDoc(
+        collection: LocalCollection,
+        docId: string,
+    ): Promise<RemoteDocSnapshot | null> {
+        const ref = doc(firestoreDb, collection, docId)
+        const snap = await getDoc(ref)
+        if (!snap.exists()) return null
+        const raw = snap.data() as Record<string, unknown> & {
+            updatedAt?: Timestamp | number
+        }
+        const ts = raw.updatedAt
+        const updatedAt =
+            ts instanceof Timestamp ? ts.toMillis() : typeof ts === 'number' ? ts : 0
+        return { data: raw, updatedAt }
+    }
 }
 
 let booted = false
 let engineSingleton: SyncEngine | null = null
+let adapterSingleton: FirestoreAdapter | null = null
 let unsubscribeStore: (() => void) | null = null
 
 function bootEngineOnce(): SyncEngine | null {
@@ -136,6 +154,7 @@ function bootEngineOnce(): SyncEngine | null {
         unsubscribeStore = wireSyncEngineToStore(engine)
         void engine.start()
         engineSingleton = engine
+        adapterSingleton = adapter
         return engine
     } catch (err) {
         logger.error('[SyncEngineBoot] Failed to boot sync engine', err)
@@ -148,6 +167,15 @@ export function getSyncEngine(): SyncEngine | null {
     return engineSingleton
 }
 
+/** v50-06-02: the reconciliation modal needs a one-shot remote-doc read to
+ *  render the "their version" side of the diff. Exposing the adapter here
+ *  (instead of reaching into engine internals) keeps the engine class
+ *  surface lean. The provider treats this as best-effort — null return
+ *  means no modal mount or a degraded diff. */
+export function getSyncAdapter(): FirestoreAdapter | null {
+    return adapterSingleton
+}
+
 export function shutdownSyncEngine(): void {
     if (engineSingleton) {
         engineSingleton.shutdown()
@@ -157,6 +185,7 @@ export function shutdownSyncEngine(): void {
         unsubscribeStore()
         unsubscribeStore = null
     }
+    adapterSingleton = null
     booted = false
 }
 

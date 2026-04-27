@@ -133,6 +133,13 @@ class FakeAdapter implements FirestoreAdapter {
         this.refreshes += 1
         if (this.nextRefreshFails) throw new Error('refresh failed')
     }
+
+    async readDoc(): Promise<null> {
+        // v50-06-02 substrate: engine never calls readDoc internally; only
+        // the reconciliation modal does. Tests using FakeAdapter aren't
+        // exercising the modal — null is safe.
+        return null
+    }
 }
 
 function makeOnlineListener() {

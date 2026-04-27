@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
 import { useSyncStatus } from '@/lib/sync/store'
 import type { SyncState } from '@/lib/sync/state-machine'
 
+import { useReconciliationModalOptional } from './ReconciliationProvider'
+
 interface VisualSpec {
     icon: typeof Check
     label: (queued: number) => string
@@ -123,9 +125,19 @@ export function SyncIndicator({
         return label
     }, [state, lastSyncAt, lastError, queued, label, nowFn])
 
+    // v50-06-02: when no explicit `onResolveConflict` prop is passed (the
+    // production path), fall back to the ReconciliationProvider context. The
+    // optional hook returns null in non-editor contexts (perform view, tests
+    // without a provider), in which case the conflict action button stays
+    // disabled — same UX as 'failed' without an `onRetryFailed` handler.
+    const reconciliation = useReconciliationModalOptional()
+    const resolveConflictHandler =
+        onResolveConflict ?? reconciliation?.openModal
+
     const Icon = visual.icon
     const isAction = state === 'failed' || state === 'conflict'
-    const onClick = state === 'conflict' ? onResolveConflict : onRetryFailed
+    const onClick =
+        state === 'conflict' ? resolveConflictHandler : onRetryFailed
 
     const Element = isAction ? 'button' : 'span'
 
