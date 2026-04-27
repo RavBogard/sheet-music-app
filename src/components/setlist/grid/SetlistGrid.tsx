@@ -39,7 +39,14 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { getDb } from '@/lib/local/schema'
-import type { LocalTrack } from '@/lib/local/types'
+import type { EditDescriptor, LocalTrack } from '@/lib/local/types'
+import {
+    flushAllBursts,
+    useUndoStore,
+    type SimpleUndoEntry,
+    type UndoEntry,
+    type UndoableDoc,
+} from '@/lib/local/undo-store'
 import { applyEdit } from '@/lib/local/write'
 import {
     propagateTrackEditToSong,
@@ -603,12 +610,103 @@ async function commitTrackPatchImpl(
     patch: Record<string, unknown>,
 ): Promise<void> {
     // expectedUpdatedAt deferred to v50-06 (concurrent-edit safety phase).
-    await applyEdit({
-        op: 'update',
-        collection: 'tracks',
-        docId,
-        patch,
-    })
+    // v50-05-05: undoKey scopes burst coalescing per-(docId, field-set)
+    // so different fields on the same row each get their own undo unit.
+    // Multi-field patches (e.g. ChartCell binding setting songId+title+
+    // defaults) coalesce as a single key — that's the right granularity.
+    const fields = Object.keys(patch).sort().join(',')
+    await applyEdit(
+        { op: 'update', collection: 'tracks', docId, patch },
+        { undoKey: `tracks:${docId}:${fields}` },
+    )
+}
+
+/**
+ * v50-05-05 undo helpers — produce the EditDescriptor that reverses a
+ * SimpleUndoEntry (for Cmd-Z) or replays it (for Cmd-Shift-Z). Composite
+ * entries fan out to N parallel descriptors.
+ */
+function buildInverse(entry: SimpleUndoEntry): EditDescriptor | null {
+    if (entry.op === 'set') {
+        return {
+            op: 'delete',
+            collection: entry.collection,
+            docId: entry.docId,
+        }
+    }
+    if (entry.op === 'update') {
+        if (!entry.prevDoc) return null
+        return {
+            op: 'update',
+            collection: entry.collection,
+            docId: entry.docId,
+            patch: { ...entry.prevDoc },
+        }
+    }
+    if (entry.op === 'delete') {
+        if (!entry.prevDoc) return null
+        return {
+            op: 'set',
+            collection: entry.collection,
+            doc: { ...entry.prevDoc, id: entry.docId },
+        }
+    }
+    return null
+}
+
+function buildRedo(entry: SimpleUndoEntry): EditDescriptor | null {
+    if (entry.op === 'set') {
+        if (!entry.newDoc) return null
+        return {
+            op: 'set',
+            collection: entry.collection,
+            doc: { ...entry.newDoc, id: entry.docId },
+        }
+    }
+    if (entry.op === 'update') {
+        if (!entry.newDoc) return null
+        return {
+            op: 'update',
+            collection: entry.collection,
+            docId: entry.docId,
+            patch: { ...entry.newDoc },
+        }
+    }
+    if (entry.op === 'delete') {
+        return {
+            op: 'delete',
+            collection: entry.collection,
+            docId: entry.docId,
+        }
+    }
+    return null
+}
+
+async function executeEntry(
+    entry: UndoEntry,
+    mode: 'undo' | 'redo',
+): Promise<void> {
+    const builder = mode === 'undo' ? buildInverse : buildRedo
+    if (entry.kind === 'simple') {
+        const desc = builder(entry)
+        if (desc) await applyEdit(desc, { withoutUndo: true })
+        return
+    }
+    // composite: fan out N inverses in parallel. Each leg's inverse is
+    // independent at the docId level (per-doc drain ordering invariant
+    // from v50-03 keeps each doc's outbox serialized).
+    const descriptors = entry.entries
+        .map((e) =>
+            builder({
+                kind: 'simple',
+                ts: entry.ts,
+                ...e,
+            } as SimpleUndoEntry),
+        )
+        .filter((d): d is EditDescriptor => d !== null)
+    await Promise.all(
+        descriptors.map((d) => applyEdit(d, { withoutUndo: true })),
+    )
 }
 
 function makeId(): string {
@@ -733,6 +831,46 @@ export function SetlistGrid({
             if (e.key === 'Escape' && selection.selectedIds.size > 0) {
                 e.preventDefault()
                 selection.clear()
+                return
+            }
+
+            // v50-05-05 Undo / Redo. Skip on input-like targets so native
+            // field undo wins (per v4.2 P2-04 precedent — same skip set
+            // we use for global Cmd/Ctrl-Z elsewhere).
+            const target = e.target as HTMLElement | null
+            if (target) {
+                const tag = target.tagName
+                if (
+                    tag === 'INPUT' ||
+                    tag === 'TEXTAREA' ||
+                    tag === 'SELECT' ||
+                    target.isContentEditable
+                ) {
+                    return
+                }
+            }
+
+            const cmdOrCtrl = e.metaKey || e.ctrlKey
+            if (!cmdOrCtrl) return
+            const key = e.key.toLowerCase()
+            const isUndo = !e.shiftKey && key === 'z'
+            const isRedo =
+                (e.shiftKey && key === 'z') || (!e.shiftKey && key === 'y')
+
+            if (isUndo) {
+                e.preventDefault()
+                // Settle in-flight cell-blur bursts first so the most
+                // recent edit is captured before we pop.
+                flushAllBursts()
+                const entry = useUndoStore.getState().popUndo()
+                if (entry) void executeEntry(entry, 'undo')
+                return
+            }
+            if (isRedo) {
+                e.preventDefault()
+                const entry = useUndoStore.getState().popRedo()
+                if (entry) void executeEntry(entry, 'redo')
+                return
             }
         },
         [selection],
@@ -840,14 +978,22 @@ export function SetlistGrid({
                 writePatch.leadMusician = patch.leadMusician
             if (Object.keys(writePatch).length === 0) return
 
+            // Snapshot prevDocs BEFORE the writes so we can push a
+            // composite undo entry post-write. selectedTracks holds the
+            // current state from the live query at this point.
+            const prevDocs = selectedTracks.map((t) => ({ ...t }))
+
             await Promise.all(
                 selectedTracks.map((t) =>
-                    applyEdit({
-                        op: 'update',
-                        collection: 'tracks',
-                        docId: t.id,
-                        patch: writePatch,
-                    }),
+                    applyEdit(
+                        {
+                            op: 'update',
+                            collection: 'tracks',
+                            docId: t.id,
+                            patch: writePatch,
+                        },
+                        { withoutUndo: true },
+                    ),
                 ),
             )
 
@@ -870,6 +1016,31 @@ export function SetlistGrid({
             }
             // Selection preserved across bulk-set per spec — user can keep
             // editing other fields on the same set.
+
+            // Push ONE composite undo entry (not N — bulk-set is one
+            // user-perceived action). Read the post-write state for newDoc
+            // snapshots.
+            const db = getDb()
+            const newDocs = await Promise.all(
+                selectedTracks.map(
+                    async (t) =>
+                        (await db.tracks.get(t.id)) as
+                            | UndoableDoc
+                            | undefined,
+                ),
+            )
+            useUndoStore.getState().pushEntry({
+                kind: 'composite',
+                label: `Bulk-set ${Object.keys(writePatch).join(', ')} on ${selectedTracks.length} rows`,
+                entries: selectedTracks.map((t, i) => ({
+                    op: 'update' as const,
+                    collection: 'tracks' as const,
+                    docId: t.id,
+                    prevDoc: prevDocs[i] as UndoableDoc,
+                    newDoc: newDocs[i],
+                })),
+                ts: Date.now(),
+            })
         },
         [selectedTracks, setlistId],
     )
@@ -879,16 +1050,34 @@ export function SetlistGrid({
         const count = selectedTracks.length
         const ok = await confirmFn({ kind: 'bulk', count })
         if (!ok) return
+        // Snapshot prevDocs before deletes — needed for the composite
+        // undo entry's inverse (which re-inserts each row).
+        const prevDocs = selectedTracks.map((t) => ({ ...t }))
         await Promise.all(
             selectedTracks.map((t) =>
-                applyEdit({
-                    op: 'delete',
-                    collection: 'tracks',
-                    docId: t.id,
-                }),
+                applyEdit(
+                    {
+                        op: 'delete',
+                        collection: 'tracks',
+                        docId: t.id,
+                    },
+                    { withoutUndo: true },
+                ),
             ),
         )
         selection.clear()
+        useUndoStore.getState().pushEntry({
+            kind: 'composite',
+            label: `Bulk-delete ${selectedTracks.length} rows`,
+            entries: selectedTracks.map((t, i) => ({
+                op: 'delete' as const,
+                collection: 'tracks' as const,
+                docId: t.id,
+                prevDoc: prevDocs[i] as UndoableDoc,
+                newDoc: undefined,
+            })),
+            ts: Date.now(),
+        })
     }, [selectedTracks, selection, confirmFn])
 
     // v50-05-04 ContextMenu actions.
@@ -920,23 +1109,65 @@ export function SetlistGrid({
             const newId = makeId()
             const newOrder = source.order + 1
 
+            // Cascade prevDocs (rows whose order will bump by 1).
+            const cascadeRows = rows.filter((r) => r.order >= newOrder)
+            const cascadePrev = cascadeRows.map((r) => ({ ...r }))
+
             await Promise.all(
-                rows
-                    .filter((r) => r.order >= newOrder)
-                    .map((r) =>
-                        applyEdit({
+                cascadeRows.map((r) =>
+                    applyEdit(
+                        {
                             op: 'update',
                             collection: 'tracks',
                             docId: r.id,
                             patch: { order: r.order + 1 },
-                        }),
+                        },
+                        { withoutUndo: true },
                     ),
+                ),
             )
 
-            await applyEdit({
-                op: 'set',
-                collection: 'tracks',
-                doc: { ...source, id: newId, order: newOrder },
+            const cloneDoc = { ...source, id: newId, order: newOrder }
+            await applyEdit(
+                {
+                    op: 'set',
+                    collection: 'tracks',
+                    doc: cloneDoc,
+                },
+                { withoutUndo: true },
+            )
+
+            // Composite undo: cascade-bump rows revert to their old order
+            // + the clone is deleted.
+            const db = getDb()
+            const cascadeNew = await Promise.all(
+                cascadeRows.map(
+                    async (r) =>
+                        (await db.tracks.get(r.id)) as
+                            | UndoableDoc
+                            | undefined,
+                ),
+            )
+            useUndoStore.getState().pushEntry({
+                kind: 'composite',
+                label: `Duplicate row ${source.title || source.id}`,
+                entries: [
+                    ...cascadeRows.map((r, i) => ({
+                        op: 'update' as const,
+                        collection: 'tracks' as const,
+                        docId: r.id,
+                        prevDoc: cascadePrev[i] as UndoableDoc,
+                        newDoc: cascadeNew[i],
+                    })),
+                    {
+                        op: 'set' as const,
+                        collection: 'tracks' as const,
+                        docId: newId,
+                        prevDoc: undefined,
+                        newDoc: cloneDoc as UndoableDoc,
+                    },
+                ],
+                ts: Date.now(),
             })
         },
         [rows],
@@ -1019,16 +1250,51 @@ export function SetlistGrid({
                 String(active.id),
                 String(over.id),
             )
+            if (updates.length === 0) return
+
+            // Snapshot prevDocs for the composite undo entry. Drag-end
+            // fires N parallel order updates that should revert as ONE
+            // user-perceived action.
+            const prevDocs = updates
+                .map(({ id }) => rows.find((r) => r.id === id))
+                .filter((r): r is LocalTrack => Boolean(r))
+                .map((r) => ({ ...r }))
+
             await Promise.all(
                 updates.map(({ id, order }) =>
-                    applyEdit({
-                        op: 'update',
-                        collection: 'tracks',
-                        docId: id,
-                        patch: { order },
-                    }),
+                    applyEdit(
+                        {
+                            op: 'update',
+                            collection: 'tracks',
+                            docId: id,
+                            patch: { order },
+                        },
+                        { withoutUndo: true },
+                    ),
                 ),
             )
+
+            const db = getDb()
+            const newDocs = await Promise.all(
+                updates.map(
+                    async ({ id }) =>
+                        (await db.tracks.get(id)) as
+                            | UndoableDoc
+                            | undefined,
+                ),
+            )
+            useUndoStore.getState().pushEntry({
+                kind: 'composite',
+                label: `Reorder ${updates.length} rows`,
+                entries: updates.map((u, i) => ({
+                    op: 'update' as const,
+                    collection: 'tracks' as const,
+                    docId: u.id,
+                    prevDoc: prevDocs[i] as UndoableDoc,
+                    newDoc: newDocs[i],
+                })),
+                ts: Date.now(),
+            })
         },
         [rows],
     )
