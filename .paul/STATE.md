@@ -9,36 +9,34 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 4 of 5 plans closed — v50-05-05 PLAN ✓ awaiting APPLY; phase complete after this plan)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-05 PLAN.md created — last plan in phase)
-Plan: v50-05-05 — created, awaiting APPLY (`.paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`)
-Status: PLAN created for v50-05-05 (mobile stacked-card flow §6.11 + Undo via zustand temporal middleware + WCAG AA audit §6.13). 3 tasks, 8 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md. New deps: zundo + jest-axe + axe-core + @types/jest-axe. Phase v50-05 transitions to complete after this plan closes.
-Last activity: 2026-04-26 — PLAN.md written for v50-05-05.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 next)
+Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — Ready to plan
+Plan: v50-05-05 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-05-SUMMARY.md`); phase v50-05 COMPLETE
+Status: UNIFY complete for v50-05-05. Phase v50-05 (Spreadsheet editor UI cutover) closed end-to-end across 5 plans. Mobile stacked-card flow + Undo via zustand + WCAG AA audit (jest-axe ZERO violations) all on prod. 4 commits on origin/master: `b23fae1` (chore PLAN), `3e19bf0` (Task 1 mobile), `2260a21` (Task 2 Undo + Cmd-Z), `e2f1daa` (Task 3 a11y). +33 new vitest cases (1410/1410). Phase close commit (this UNIFY + transition) lands next.
+Last activity: 2026-04-26 — UNIFY complete for v50-05-05; phase v50-05 transitioning to complete; v50-06 ready to plan.
 
 Progress:
-- v5.0: [████████░░] ~80% (4 of 7 phases complete; v50-05 = 4/5 plans done; 05 scoped)
+- v5.0: [██████████] ~85% (5 of 7 phases complete; v50-06 + v50-07 remain)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
-- Phase v50-05: [████████░░] 80% (01 build ✓ + 02 cutover ✓ + 03 multi-select+AlertDialog ✓ + 04 iPad+ContextMenu ✓; 05 scoped on ROADMAP)
+- Phase v50-05: [██████████] 100% ✓ (spreadsheet editor UI cutover — 5 plans: build + cutover + multi-select+AlertDialog + iPad+ContextMenu + mobile+Undo+WCAG)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v50-05-05 PLAN written, awaiting APPLY]
+  ○        ○        ○     [Phase v50-05 closed; ready to plan v50-06]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
-v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
-v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
-v50-05-03:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — multi-select + BatchActionBar + AlertDialog swap-in on prod]
-v50-05-04:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — TouchOrPopover + iPad/Sheet swap + ContextMenu + long-press on prod]
-v50-05-05:     ✓ ──▶ ○ ──▶ ○     [PLAN written: mobile stacked-card + Undo via zundo + WCAG AA audit; awaiting APPLY (/ui-ux-pro-max BLOCKING). Phase v50-05 closes when this plan closes.]
+v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans: build/cutover/multi-select+AlertDialog/iPad+ContextMenu/mobile+Undo+WCAG]
+v50-06:        ○ ──▶ ○ ──▶ ○     [Phase: concurrent-edit safety + offline + cross-tab — next]
+v50-07:        ○ ──▶ ○ ──▶ ○     [Phase: migration + kitchen-sink Playwright + cutover]
 ```
 
 ## How to resume
@@ -130,6 +128,7 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 4. **v50-05-02 (cutover)**: open a real setlist on prod; confirm SetlistGrid renders existing tracks in order + SyncIndicator "Saved"; edit a Title cell + Tab → Saving → Saved; hard-refresh → edit persisted; click ChartCell on unbound row → ChartBindPopover opens → pick a song → ChartCell switches to bound (indigo). Mobile viewport functional-but-rough OK (touch polish → v50-05-04).
 5. **v50-05-03 (multi-select + AlertDialog)**: open a real setlist on prod with ≥3 tracks; Cmd/Ctrl-click drag handle on row 0 → indigo accent + aria-pressed; Shift-click drag handle on row 2 → rows 0/1/2 all selected; sticky BatchActionBar appears with "3 rows selected"; click Key dropdown → pick Dm → all 3 rows update + SyncIndicator transitions Saved; click Delete → "Delete 3 rows?" AlertDialog opens → click Cancel → rows intact; re-trigger + Delete → 3 rows gone + selection clears; press Backspace on a focused drag handle → "Delete row?" AlertDialog with quoted track title in description; Esc closes any selection.
 6. **v50-05-04 (iPad/touch + ContextMenu)**: open prod /setlists/[id] on iPad (or Chrome devtools Device Toolbar → iPad); tap Key cell → bottom Sheet appears (NOT floating Popover); tap LeadCell, TypeCell, AddRow, ChartBind, BatchActionBar bulk Type/Key/Lead — all swap to Sheet on touch. Drag-handle column visibly wider (52px vs 44px desktop); cells visibly taller (44px+ touch targets). Right-click any row on desktop → ContextMenu with 4 items (Edit row / Bind chart / Duplicate row / Delete row); click Edit → Title cell focuses; click Bind chart → ChartBindPopover opens; click Duplicate → row clones below source with all fields; click Delete on a NON-selected row → "Delete row?" AlertDialog with quoted title; multi-select 2+ rows + right-click selected → "N rows selected" header + Edit/Bind/Duplicate disabled + Delete → "Delete N rows?" AlertDialog. iPad: long-press a row 500ms without moving → ContextMenu opens; quick tap → no menu; tap-and-drag → no menu (drag activates).
+7. **v50-05-05 (mobile + Undo + WCAG AA)**: open prod /setlists/[id] in a phone viewport (≤767px or Chrome devtools iPhone) → cards instead of table; tap card → full-screen edit Sheet with title/key/bpm/lead/notes/type form fields + Move up / Move down / Bind chart / Delete row buttons; long-press card 500ms → action menu (Edit/Bind/Duplicate/Delete with selection-aware semantics if multi-selected). On desktop: edit a Title cell → blur → Cmd-Z (Mac) or Ctrl-Z (Windows) → title reverts; Cmd-Shift-Z redoes. Bulk-set Key on 3 selected rows → Cmd-Z reverts all 3 in one step. Delete a row → Cmd-Z re-inserts the row with all its fields. Cmd-Z while focused inside a TextCell input runs native field undo (NOT editor undo). Manual Lighthouse audit on /setlists/[id] (target Accessibility ≥ 95).
 
 ### Git state
 Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
@@ -215,13 +214,27 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: Long-press timing 500ms hold + 10px-squared movement threshold; touch-only branch | v50-05-04 | 500ms is standard mobile-OS long-press duration. 10px² (=100, hypot avoidance) tolerance lets steady touch fire even with slight drift; movement past it indicates drag intent. pointerType='mouse' skip prevents slow desktop clicks from triggering — ContextMenu has natural right-click path on desktop |
 | 2026-04-26: Real timers (NOT vi.useFakeTimers) for long-press component tests | v50-05-04 | Reinforces v50-03 lesson — fake timers conflict with fake-indexeddb microtask scheduling and Dexie live-query teardown. 500ms × N test cases adds ~Ns to suite — cheap. Pattern: REAL timers > FakeClock when waiting for setTimeout-based handlers in component tests |
 | 2026-04-26: Global window.matchMedia stub via vitest setupFiles | v50-05-04 | jsdom missing matchMedia broke 44 existing grid tests once TouchOrPopover landed. src/test-setup.ts defaults matches:false (= desktop branch); tests wanting coarse-pointer behavior mock useMediaQuery directly. Pattern reusable for any future jsdom-missing API |
+| 2026-04-26: Parallel mobile render path keyed on `(max-width: 767px)` (NOT Tailwind responsive) | v50-05-05 | Existing TanStack Table breaks ~640px; touch semantics differ enough (long-press menu, full-screen Sheet, no inline cell editing) that separate component tree is right. iPad ≥ 768px keeps the table + Sheet-on-coarse from v50-05-04 |
+| 2026-04-26: Plain zustand store with manual pushEntry over zundo's temporal middleware | v50-05-05 | Per-cell-blur burst coalescing needs explicit per-action snapshots, NOT state-snapshot-on-every-setter. zundo's wrong granularity. One less dep |
+| 2026-04-26: applyEdit reads prevDoc BEFORE transaction, pushes snapshot AFTER commit (gated by withoutUndo) | v50-05-05 | Failed writes leave no phantom undo entries. withoutUndo escape hatch for engine-internal cascades + the undo handler replaying inverses. Reusable opt-in/opt-out pattern for v50-06 reconciliation |
+| 2026-04-26: Composite undo entries for bulk-set / bulk-delete / drag-end / Duplicate row | v50-05-05 | One user gesture = one undo step. Snapshot prevDocs first, fire applyEdit({withoutUndo:true}) fanout, push ONE composite entry. Per-doc drain ordering from v50-03 keeps each doc's outbox serialized |
+| 2026-04-26: INPUT/TEXTAREA/SELECT/contenteditable skip for global Cmd-Z at SetlistGrid root | v50-05-05 | Native field undo wins when typing into a form field. Same skip set as v4.2 P2-04 + v50-05-03 Esc handler. Documented as reusable pattern for any future global shortcut |
+| 2026-04-26: WCAG AA via jest-axe at component-test level — ZERO violations on first run | v50-05-05 | 7 axe scan cases + 1 keyboard Tab case; axeOpts disables 5 harness-context false positives (region/landmark-one-main/page-has-heading-one + aria-required-children/parent for grid role). Design system internalized correctly across v50-05-01..05; no in-place fixes needed |
+| 2026-04-26: zundo dep NOT added (planned inline, confirmed at apply-time) | v50-05-05 | Plain zustand was the right shape. Matches v50-02 / v50-04 / v50-05-04 dep-cleanup-deferral precedent |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-05 PLAN cycle) — `/paul:plan` for v50-05-05 (3 tasks, 8 ACs, autonomous=true). Tasks: (1) Mobile stacked-card flow + per-card edit Sheet — `<MobileCardList>` parallel render path keyed on `useMediaQuery('(max-width: 767px)')` with `<MobileRowCard>` (long-press 500ms action menu + tap → edit Sheet) and `<MobileEditSheet>` (full-screen Radix Sheet with form fields for type/title/key/bpm/lead/notes + Move up/down/Delete + Bind chart). (2) Undo via zundo zustand temporal middleware — new `src/lib/local/undo-store.ts` with manual pushEntry / popUndo / popRedo + per-cell-blur burst coalescing (debounced 500ms per `${docId}:${field}` key); `applyEdit` augmented to read prevDoc before write and push snapshot on success (gated by new `withoutUndo` option for engine-internal cascades); Cmd/Ctrl-Z + Cmd/Ctrl-Shift-Z handler at SetlistGrid root with INPUT/TEXTAREA/contenteditable skip per v4.2 P2-04 precedent; cap 50 entries; ephemeral. (3) WCAG AA audit — jest-axe + axe-core deps; 7 axe scan cases covering rest state + AddRowPlaceholder open + AlertDialog open (single + bulk) + ChartBindPopover open + multi-select + BatchActionBar + ContextMenu open; 1 keyboard-Tab-order case; in-place fixes for any violations; manual Lighthouse deferred to user smoke verification. Awaiting APPLY.
-Stopped at: PLAN.md written for v50-05-05, awaiting user approval to /paul:apply.
-Next action: load `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`. After UNIFY closes, phase v50-05 transitions to complete; transition-phase prompt expected.
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`
+Last session: 2026-04-26 (v50-05-05 full cycle + phase v50-05 close) — `/paul:plan` → `/paul:apply` (Task 1 mobile stacked-card flow + Task 2 Undo via plain zustand store [zundo deferred] + Task 3 WCAG AA audit via jest-axe with ZERO violations) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP + PROJECT sync) → phase v50-05 transition. 4 commits: `b23fae1` (chore PLAN), `3e19bf0` (Task 1), `2260a21` (Task 2), `e2f1daa` (Task 3). Phase close commit lands next. Full suite 1410/1410; tsc + next build clean. Phase v50-05 (Spreadsheet editor UI cutover) COMPLETE across 5 plans: v50-05-01 build → v50-05-02 cutover → v50-05-03 multi-select+AlertDialog → v50-05-04 iPad+ContextMenu → v50-05-05 mobile+Undo+WCAG. Production /setlists/[id] now serves desktop + iPad + phone audiences with full feature parity, accessibility-clean by jest-axe, with Cmd-Z undo end-to-end.
+Stopped at: phase v50-05 closed; ready to plan phase v50-06 (concurrent-edit safety + offline + cross-tab).
+Next action: `/paul:plan` for v50-06. /ui-ux-pro-max BLOCKING for APPLY (frontend changes expected — §6.9 reconciliation modal).
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-05-SUMMARY.md`
+Git strategy: master (continuing v50 hard-cutover convention; band still not in production).
+Resume context (v50-06):
+- Scope per ARCHITECTURE.md §6.9 + v50-05 deferrals: "Remote changed — keep mine / take theirs" reconciliation banner via local-first IDB diff; expectedUpdatedAt tracking on track updates (deferred from v50-05-01); cross-tab-lock test flake fix (substrate for concurrent-edit safety); cross-leader live-edit visibility (real-time setlist sync — replacement for deleted v50-02 live-swap UI); two-tab + airplane-mode test scenarios.
+- Reusable from v50-05: undo-store pushEntry pattern (each conflict resolution = own undo unit); applyEdit's withoutUndo flag for any reconciliation-internal writes; composite-undo fan-out pattern; flushAllBursts for synchronous flush before state read; jest-axe + axe-core test infrastructure for any new modal a11y scans; TouchOrPopover wrapper / useGridSelection / DeleteConfirmProvider / ChartBindPopover all carry forward.
+- Cross-tab-lock test flake (1410/1410 latest run, but historically intermittent) MUST be root-caused before shipping concurrent-edit safety — same lock primitive is the substrate.
+- Production smoke verification of v50-05-02 + v50-05-03 + v50-05-04 + v50-05-05 still pending (deferred-smokes #4-#7); not blocking v50-06.
+- Production migrate-v50.ts apply still deferred to v50-07.
 Git strategy: master (continuing v50-05 hard-cutover convention; band still not in production)
 Resume context (v50-05-05 — last plan in v50-05):
 - v50-05-05 scope per ARCHITECTURE.md §6.11 + §6.13 + Undo:
