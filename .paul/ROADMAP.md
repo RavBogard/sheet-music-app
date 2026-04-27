@@ -1,16 +1,72 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
-**v5.0-hotfix — Track-Edit Save-Loss Fix** ✅ COMPLETE 2026-04-27
-Archived at: `.paul/milestones/v5.0-hotfix-ROADMAP.md`
-Postmortem: `.paul/postmortems/v5h-01-save-loss.md`
+**v5.1 — Editor UX Polish (Band-Onboarding Gate)**
+Status: 🚧 In Progress
+Phases: 0 of 3 complete
+Theme: Make the iPad-side editor experience clean enough that Rabbi Daniel is comfortable handing the band tablets. Tablet-first; performance-view good as-is.
 
-## Next Milestone
-Run `/paul:discuss-milestone` or `/paul:milestone` to define. Strong candidate per project state: **v5.1 — UX Overhaul** (Issue 2 iPad key-picker UI surfaced in v5h-01-02 UAT; reconciliation modal copy improvement; general editor + perf-view UX polish). After v5.1 ships + Daniel re-confirms UAT smoke: `/paul:audit-milestone v5.0` (or equivalent) closes the v5.0 milestone (currently 🟡 Pending UAT, blocked on v5.1 → audit chain).
+Origin: synthesized from /paul:discuss-milestone session 2026-04-27. Issue 2 (iPad key-picker UI) was deferred from v5h-01-02 UAT pending Daniel's symptom description; surfaced as Sheet+system-keyboard combo on touch + non-sensical key ordering. Same Sheet-on-touch yuck affects all 6 dropdown sites (Key/Lead/Type/AddRow/ChartBind/Bulk) per `TouchOrPopover` from v50-05-04. Plus new scope: smart date-aware create-setlist wizard (Erev Shabbat / Shabbat morning / holidays via Hebcal), "Vocal Lead" label rename, and gig-packet print smoke check.
+
+Constraint: `/ui-ux-pro-max` BLOCKING for every phase per SPECIAL-FLOWS.md (every phase touches UI). DB field `lead` stays as-is — label-only rename. Band still not in production — broken-for-band still acceptable, but THIS milestone is the gate before onboarding.
+
+Done definition: clean iPad flow for next Erev Shabbat setlist (open → smart-clone → tweak → save) + gig-packet print verified + "Vocal Lead" reads everywhere visible + Daniel UAT pass on real production. Then: invite the band.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v5h-01 | Track-edit save-loss diagnosis + fix | 4 (01-01 reproduce+diagnose ✓ • 01-02 fix ✓ • 01-03 perf-view architectural refactor ✓ • 01-04 postmortem ✓) | ✅ Complete | 2026-04-27 |
+| v51-01 | Picker rework (all 6 dropdown sites) | TBD (defined during /paul:plan) | 🚧 Not started | - |
+| v51-02 | Smart create-setlist wizard | TBD | Not started | - |
+| v51-03 | Vocal Lead rename + Daniel-loop UAT codification + print smoke | TBD | Not started | - |
+
+### Phase v51-01: Picker rework — all 6 dropdown sites
+
+Focus: Replace `TouchOrPopover` Sheet+system-keyboard pattern across **Key cell, Lead cell, Type cell, AddRowPlaceholder, ChartBindPopover, BatchActionBar BulkPopover**. Same fix shape applied uniformly:
+- Surface: popover anchored to cell OR inline expansion under cell (decided during APPLY with /ui-ux-pro-max)
+- No system keyboard on touch ever; keyboard input only on desktop with hardware keyboard
+- Key picker specifics: chromatic order (C, C♯/D♭, D, D♯/E♭, E, F, F♯/G♭, G, G♯/A♭, A, A♯/B♭, B); Major | Minor tabs inside the picker
+- All 6 sites get the same fix in one phase (one `TouchOrPopover` rewrite, shared)
+
+`/ui-ux-pro-max` BLOCKING. Likely 1 plan, ~3-5h.
+
+### Phase v51-02: Smart create-setlist wizard
+
+Focus: Extend the v4.2 P2-02 single-step wizard to be date-aware:
+- Pick a date → detect service type via Hebcal (already wired in codebase)
+- Three offers: **Clone last matching service** (default; 90% click), **Choose a template**, **Start from scratch**
+- "Last matching" = most-recent setlist of the same service-type (Erev Shabbat clones from prev Erev Shabbat, not from a Shabbat morning in between)
+- Edge case (no matching prior): hide or grey-out clone option with tooltip
+- Verify v50-04 sticky song memory works through clone path: per-song defaults (bpm, key, vocal lead) follow into the new setlist
+
+Service types to handle: Erev Shabbat (Friday evening) + Shabbat morning (Saturday) + holidays (Hebcal). NOT Sunday — CRC is a Reform Jewish synagogue.
+
+`/ui-ux-pro-max` BLOCKING. Likely 1 plan (possibly 2 if date-detection logic needs research first), ~4-6h.
+
+### Phase v51-03: Vocal Lead rename + UAT codification + print smoke
+
+Focus: Three small bundled items:
+- **"Vocal Lead" label rename** — UI labels only (column header, picker label, batch action button, ContextMenu items, anywhere visible). DB field `lead` stays put. "Led by: {rabbi}" on print and `band_leader` role identifier untouched.
+- **Daniel-loop UAT cadence codification** (postmortem action item #4) — add a sentence to PROJECT.md or a PAUL milestone-close note: every fix touching data flow gets a Daniel UAT against real production before milestone close.
+- **Gig-packet print smoke check** — verify printing still works end-to-end on real production setlist: cover page renders all items (songs + readings + prayers + transitions), per-musician transposition functional, "Led by: {rabbi}" intact, eventDate / setlist title correct.
+
+`/ui-ux-pro-max` BLOCKING (label rename + UAT touches UI surfaces). Likely 1 plan, ~1-2h.
+
+Skills required (per SPECIAL-FLOWS.md): `/ui-ux-pro-max` for all 3 phases.
+
+Sequencing: v51-01 → v51-02 → v51-03 → Daniel UAT against real production over 1 weekly cycle (build next Erev Shabbat setlist start-to-finish on iPad) → if pass, invite band → after band reports first-week smoke pass: `/paul:audit-milestone v5.0` closes the v5.0 milestone.
+
+## Completed Milestones
+
+<details>
+<summary>v5.0-hotfix Track-Edit Save-Loss Fix — 2026-04-27 (1 phase, 4 plans)</summary>
+
+Archived at: `.paul/milestones/v5.0-hotfix-ROADMAP.md`
+Postmortem: `.paul/postmortems/v5h-01-save-loss.md`
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| v5h-01 | Track-edit save-loss diagnosis + fix | 4 (01-01 reproduce+diagnose ✓ • 01-02 fix ✓ • 01-03 perf-view architectural refactor ✓ • 01-04 postmortem ✓) | 2026-04-27 |
+
+</details>
 
 ### Phase v5h-01: Track-edit save-loss diagnosis + fix
 
@@ -583,4 +639,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-27 (Phase v5h-01 ✅ Complete — 4 plans shipped: 01-01 root-cause research (rules + downstream effects, NOT engine-side); 01-02 E+F+B fix at commit `0c2921d` (rules deploy + Hydrator outbox guard + listener strict-equality LWW); 01-03 perf-view architectural refactor at commit `92b1902` (Dexie via useLiveQuery + listener mount); 01-04 postmortem at `.paul/postmortems/v5h-01-save-loss.md` with 5 lessons + 5 action items. Daniel UAT 2026-04-27: editor save + perf-view freshness both passing end-to-end. v5.0-hotfix milestone status: 🟡 phase complete, pending `/paul:audit-milestone v5.0-hotfix` to close, then v5.1 UX overhaul, then `/paul:audit-milestone v5.0` to close v5.0.)*
+*Last updated: 2026-04-27 (Milestone v5.1 Editor UX Polish created. 3 phases: v51-01 picker rework / v51-02 smart create-setlist wizard / v51-03 Vocal Lead rename + Daniel-loop UAT codification + gig-packet print smoke. Tablet-first; band-onboarding gate. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md for every phase. Synthesized from /paul:discuss-milestone session — Issue 2 iPad key-picker (Sheet+keyboard yuck across all 6 dropdown sites) + smart wizard for Erev Shabbat / Shabbat morning / holidays via Hebcal + sticky-memory verified through clone path + label-only rename of Lead → Vocal Lead. v5.0-hotfix archived at `.paul/milestones/v5.0-hotfix-ROADMAP.md` 2026-04-27. v5.0 milestone still 🟡 PENDING-UAT — close path is now: v5.1 ships → Daniel UAT → invite band → first-week smoke → `/paul:audit-milestone v5.0`.)*
