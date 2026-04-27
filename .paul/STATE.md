@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 1 of 3 plans done)
-Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress
-Plan: v50-06-01 CLOSED (substrate stabilization). Loop complete. SUMMARY at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-01-SUMMARY.md`.
-Status: UNIFY complete for v50-06-01. Cross-tab-lock test deflaked (30/30 consecutive runs green; root cause = brittle "lower tabId wins" assertion fired on sequential tryAcquire where second caller bails on fresh peerHolder; fix split into two tests + deferred-delivery hub for actual tie-break race + 50-iter stress loops). FirestoreAdapter contract extended (commitOutboxRow → CommitResult{updatedAt?}); ProductionFirestoreAdapter re-reads doc post-commit to surface server timestamp; engine writes updatedAt back to local row inside same Dexie tx that deletes outbox row (atomic, with `if(existing)` guard for mid-flight deletes). expectedUpdatedAt threaded through every track-update applyEdit call site (7 cell commits + handleDeleteRow + handleBindChart + handleBulkSet + handleBulkDelete + handleContextDuplicate cascade + handleDragEnd + 4 MobileCardList move ops + executeEntry undo/redo reads LIVE updatedAt). Two-writer integration test in property-failures harness proves substrate is conflict-detection-ready. Suite 1418/1418 (+8 from 1410); tsc clean; next build clean. 4 commits: `9ca4943` (chore PLAN), `5736599` (Task 1), `0ce9bd2` (Task 2), `edfc339` (Task 3); close commit lands next.
-Last activity: 2026-04-26 — UNIFY complete for v50-06-01; v50-06-02 (reconciliation modal) ready to plan.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 1 of 3 plans shipped + 1 plan awaiting approval)
+Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress (Planning v50-06-02)
+Plan: v50-06-02 created, awaiting approval. PLAN at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`.
+Status: PLAN created for v50-06-02 reconciliation modal (§6.9). 3 auto tasks + 1 decision checkpoint (per-row vs per-field granularity) + 1 human-verify checkpoint (two-tab smoke on prod). 7 ACs. Scope narrowed to per-row "Keep mine / Take theirs" — substrate API is per-row; per-field merge granularity deferred. Mounts `<ReconciliationProvider>` inside DeleteConfirmProvider; subscribes to engine 'conflict' state via `useSyncStatus`; reads failed outbox rows via `useLiveQuery`; renders per-row card with per-field DIFF (informational) + per-row radio (decision); "Resolve all and save" iterates `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })` sequentially. FirestoreAdapter interface gains `readDoc(collection, docId)`. Property-failures harness extended with `'mine'` + `'theirs'` resolution branch tests. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md.
+Last activity: 2026-04-26 — Created v50-06-02-PLAN.md.
 
 Progress:
 - v5.0: [██████████] ~85% (5 of 7 phases complete; v50-06 + v50-07 remain)
@@ -27,21 +27,25 @@ Progress:
 
 Current loop state:
 ```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v50-06-01 LOOP COMPLETE — substrate stabilization shipped]
+v50-06-02:  PLAN ──▶ APPLY ──▶ UNIFY
+              ✓        ○        ○     [Plan created, awaiting approval]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans]
-v50-06:        ◐ ──▶ ◐ ──▶ ◐     [v50-06-01 LOOP COMPLETE (substrate stabilization, 1/3 plans); 02 reconciliation modal + 03 cross-leader live-edit TBD]
+v50-06:        ◐ ──▶ ◐ ──▶ ◐     [v50-06-01 LOOP COMPLETE; v50-06-02 PLAN created (reconciliation modal); v50-06-03 cross-leader live-edit TBD]
 v50-07:        ○ ──▶ ○ ──▶ ○     [Phase: migration + kitchen-sink Playwright + cutover]
 ```
 
 ## How to resume
 
-Run `/paul:plan` for v50-05-04 (iPad / pointer-coarse touch variant + right-click ContextMenu — second polish plan in v50-05). Scope per ARCHITECTURE.md §6.7:
+Run `/paul:apply .paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md` to execute v50-06-02 (reconciliation modal §6.9). /ui-ux-pro-max BLOCKING before APPLY proceeds.
+
+## Earlier resume notes (kept for context)
+
+Previously: Run `/paul:plan` for v50-05-04 (iPad / pointer-coarse touch variant + right-click ContextMenu — second polish plan in v50-05). Scope per ARCHITECTURE.md §6.7:
 - **Cell dropdowns swap from Radix Popover → Radix Sheet** when `useMediaQuery('(pointer: coarse)')` matches (iPad detection — NOT viewport width; iPad Pro at 1024px is still touch). Affects KeyCell, LeadCell, TypeCell, AddRowPlaceholder, ChartBindPopover, AND the new v50-05-03 BatchActionBar `BulkPopover`.
 - **44px minimum touch targets** — bump cell padding from 8px → 12px on touch breakpoints.
 - **Drag-handle column wider** (44px → 52px) for tap accuracy.
@@ -231,6 +235,11 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: Two-tab race-detection harness — SharedRemote + per-engine LocalDb + distinct lock channels | v50-06-01 | Reusable pattern for v50-06-02 modal integration tests + v50-06-03 cross-leader live-edit scenarios. Distinct channels prevent cross-tab single-leader deferral, allowing both engines to drain |
 
 ## Session Continuity
+
+Current session: 2026-04-26 — `/paul:resume` (consumed HANDOFF-2026-04-26-v50-06-02-pickup.md, archived to `.paul/handoffs/archive/`) → `/paul:plan` v50-06-02 (PLAN.md created at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`).
+Stopped at: PLAN v50-06-02 created, awaiting user approval before APPLY.
+Next action: `/paul:apply .paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md` after user approves. /ui-ux-pro-max BLOCKING — load before APPLY.
+Resume file: `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-PLAN.md`
 
 Last session: 2026-04-26 (v50-06-01 full cycle — substrate stabilization) — `/paul:resume` → `/paul:plan` v50-06-01 → `/paul:apply` (Task 1 cross-tab-lock flake fix → Task 2 adapter+engine writeback+cell threading → Task 3 two-writer race test) → `/paul:unify` → push origin master → `/paul:pause` (this handoff). 5 commits: `9ca4943` (chore PLAN), `5736599` (Task 1 deflake), `0ce9bd2` (Task 2 substrate), `edfc339` (Task 3 race test), `fc368ef` (chore close loop). Full suite 1418/1418 (+8 from 1410); tsc + next build clean. v50-06-01 substrate stabilization COMPLETE: cross-tab-lock test deterministic (30/30); adapter returns updatedAt; engine writeback atomic with `if(existing)` guard; expectedUpdatedAt threaded through every track-update applyEdit call site (16 sites); two-writer race produces VersionMismatchError end-to-end with addressable failed outbox row.
 Stopped at: PAUSED at v50-06-01 close (clean plan boundary). v50-06-02 (reconciliation modal §6.9) ready to plan in fresh session.
