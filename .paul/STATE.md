@@ -40,7 +40,8 @@ v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans]
 v50-06:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 3 plans: substrate + modal + cross-leader]
 v50-07-01:     ✓ ──▶ ✓ ──▶ ✓     [Audit shipped; user selected Option C Hybrid Lazy Hydration]
 v50-07-02:     ✓ ──▶ ✓ ──▶ ✓     [MARKER_PATH patched; liveState scrubbed from 10 setlists with rollback snapshots]
-v50-07-03..05: ○ ──▶ ○ ──▶ ○     [v50-07-03 next: lazy hydration in SetlistGridHydrator + perf-view dual-read; /ui-ux-pro-max BLOCKING]
+v50-07-03:     ✓ ──▶ ○ ──▶ ○     [PLAN committed as resume checkpoint (3ff74bc); APPLY pending — lazy hydration in SetlistGridHydrator + perf-view dual-read; /ui-ux-pro-max BLOCKING for APPLY]
+v50-07-04..05: ○ ──▶ ○ ──▶ ○     [v50-07-04 Playwright kitchen-sink; v50-07-05 Sentry alarms + UAT prep]
 ```
 
 ## How to resume
