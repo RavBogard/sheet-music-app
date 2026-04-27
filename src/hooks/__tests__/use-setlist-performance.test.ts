@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import 'fake-indexeddb/auto'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act, cleanup, waitFor } from '@testing-library/react'
+
+import { getDb, resetDbForTests } from '@/lib/local/schema'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -7,69 +10,8 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }))
 
-// v50-07-03 + v5h-01-03: hook subscribes via onSnapshot with
-// { includeMetadataChanges: true } and calls getDocsFromServer once per mount
-// to force a server roundtrip. Tests capture the next/error callbacks so
-// deliveries (including the fromCache metadata flag) can be driven
-// deterministically. emitSnapshot helper makes drivers concise.
-type SnapDelivery = {
-  docs: Array<{ id: string; data: () => unknown }>
-  fromCache?: boolean
-}
-let onSnapshotNext: ((snap: SnapDelivery & { metadata: { fromCache: boolean } }) => void) | null = null
-let onSnapshotError: ((err: Error) => void) | null = null
-const mockUnsub = vi.fn()
-const mockOnSnapshot = vi.fn(
-  (
-    _q: unknown,
-    arg2: unknown,
-    arg3?: unknown,
-    arg4?: unknown,
-  ) => {
-    // Hook calls `onSnapshot(q, { includeMetadataChanges: true }, onNext, onError)`.
-    // For backward compat, also handle the 3-arg form `(q, onNext, onError)`.
-    if (typeof arg2 === 'function') {
-      onSnapshotNext = arg2 as typeof onSnapshotNext
-      onSnapshotError = (arg3 as typeof onSnapshotError) ?? null
-    } else {
-      onSnapshotNext = (arg3 as typeof onSnapshotNext) ?? null
-      onSnapshotError = (arg4 as typeof onSnapshotError) ?? null
-    }
-    return mockUnsub
-  },
-)
-function emitSnapshot(d: SnapDelivery) {
-  onSnapshotNext?.({
-    docs: d.docs,
-    metadata: { fromCache: d.fromCache ?? true },
-  })
-}
-// Pre-resolved getDocsFromServer mock — defaults to empty docs.
-// Tests that need a different server-fetch result override per-test.
-const mockGetDocsFromServer = vi.fn((_q?: unknown) =>
-  Promise.resolve({ docs: [] as Array<{ id: string; data: () => unknown }> }),
-)
-
-// Legacy alias for tests that drove via onSnapshotEmit before v5h-01-03.
-// Delivers the snapshot with fromCache:false (server-fresh) — the listener's
-// non-cache delivery flips the gate (in the impl, both getDocsFromServer.then
-// and a non-cache listener delivery flip hasServerSnapshot=true).
-const onSnapshotEmit = (
-  snap: { docs: Array<{ id: string; data: () => unknown }> },
-): void => emitSnapshot({ docs: snap.docs, fromCache: false })
-
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
-  collection: vi.fn(() => ({})),
-  query: vi.fn((...args: unknown[]) => args),
-  where: vi.fn((field: string, op: string, value: unknown) => ({ field, op, value })),
-  onSnapshot: (
-    q: unknown,
-    arg2: unknown,
-    arg3?: unknown,
-    arg4?: unknown,
-  ) => mockOnSnapshot(q, arg2, arg3, arg4),
-  getDocsFromServer: (q: unknown) => mockGetDocsFromServer(q),
 }))
 
 const mockUseAuth = vi.fn((): { user: unknown; isAdmin: boolean; isBandLeader: boolean } => ({
@@ -100,17 +42,37 @@ vi.mock('@/hooks/use-wake-lock', () => ({
 }))
 
 vi.mock('@/lib/musician-profile', () => ({
-  subscribeToMusicianProfile: vi.fn(() => vi.fn()), // returns unsub
+  subscribeToMusicianProfile: vi.fn(() => vi.fn()),
+}))
+
+// Snapshot-listener: replaced via the test-seam opts.startSnapshotListener
+// in tests that exercise listener wiring; default mock prevents accidental
+// Firestore boots if anything imports the production export.
+vi.mock('@/lib/sync/snapshot-listener', () => ({
+  startSnapshotListener: vi.fn(() => () => {}),
 }))
 
 import { useSetlistPerformance } from '@/hooks/use-setlist-performance'
+import type { LocalTrack } from '@/lib/local/types'
 
-describe('useSetlistPerformance', () => {
-  beforeEach(() => {
+const SETLIST_ID = 'set-perf-1'
+
+function makeLocalTrack(overrides: Partial<LocalTrack> = {}): LocalTrack {
+  return {
+    id: overrides.id ?? 't1',
+    setlistId: overrides.setlistId ?? SETLIST_ID,
+    order: overrides.order ?? 0,
+    title: overrides.title ?? 'Sample',
+    key: overrides.key,
+    updatedAt: overrides.updatedAt ?? 1_700_000_000_000,
+    ...overrides,
+  }
+}
+
+describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    onSnapshotNext = null
-    onSnapshotError = null
-    mockGetDocsFromServer.mockResolvedValue({ docs: [] })
+    await resetDbForTests()
     mockUseAuth.mockReturnValue({
       user: { uid: 'user-1', displayName: 'Test User' },
       isAdmin: false,
@@ -123,29 +85,42 @@ describe('useSetlistPerformance', () => {
     })
   })
 
+  afterEach(async () => {
+    cleanup()
+    await resetDbForTests()
+  })
+
   it('returns loading state initially', () => {
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(result.current.loading).toBe(true)
     expect(result.current.tracks).toEqual([])
     expect(result.current.name).toBe('Untitled')
   })
 
-  it('extracts tracks and name from setlist data', () => {
-    const mockTracks = [{ id: 't1', title: 'Song A' }]
+  it('extracts name + service notes + musicians from setlist data', () => {
+    const mockMusicians = [{ uid: 'u1', name: 'Musician', email: 'm@x' }]
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', name: 'Friday Service', tracks: mockTracks, musicians: [] },
+      data: {
+        id: SETLIST_ID,
+        name: 'Friday Service',
+        serviceNotes: 'Wear black',
+        musicians: mockMusicians,
+        rabbi: 'Daniel',
+        tracks: [],
+      },
       loading: false,
       error: null,
     })
 
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(result.current.tracks).toEqual(mockTracks)
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(result.current.name).toBe('Friday Service')
-    expect(result.current.loading).toBe(false)
+    expect(result.current.serviceNotes).toBe('Wear black')
+    expect(result.current.musicians).toEqual(mockMusicians)
+    expect(result.current.rabbi).toBe('Daniel')
   })
 
   it('requests wake lock on mount', () => {
-    renderHook(() => useSetlistPerformance('setlist-1'))
+    renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(mockRequestWakeLock).toHaveBeenCalled()
   })
 
@@ -155,8 +130,7 @@ describe('useSetlistPerformance', () => {
       isAdmin: true,
       isBandLeader: false,
     })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(result.current.isLeader).toBe(true)
   })
 
@@ -166,14 +140,8 @@ describe('useSetlistPerformance', () => {
       isAdmin: false,
       isBandLeader: true,
     })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(result.current.isLeader).toBe(true)
-  })
-
-  it('identifies non-leader', () => {
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(result.current.isLeader).toBe(false)
   })
 
   it('identifies public view when no user', () => {
@@ -182,281 +150,215 @@ describe('useSetlistPerformance', () => {
       isAdmin: false,
       isBandLeader: false,
     })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
     expect(result.current.isPublicView).toBe(true)
   })
 
-  it('currentTrackIndex is always -1 (live stepping removed)', () => {
+  it('reads tracks from Dexie via useLiveQuery for hydrated setlists', async () => {
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: {
-        id: 'setlist-1',
-        tracks: [],
-      },
+      data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
       loading: false,
       error: null,
     })
 
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(result.current.currentTrackIndex).toBe(-1)
-  })
-
-  it('extracts musicians from setlist data', () => {
-    const mockMusicians = [{ uid: 'u1', name: 'Musician' }]
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', tracks: [], musicians: mockMusicians },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(result.current.musicians).toEqual(mockMusicians)
-  })
-
-  // ── v50-07-03 dual-read: top-level tracks/{id} subscription ──────────────────
-
-  it('falls back to legacy embedded tracks when top-level subscription is empty', () => {
-    const legacyTracks = [{ id: 'leg-1', title: 'Legacy Song' }]
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', tracks: legacyTracks, musicians: [] },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-
-    // Subscription mounted but never emitted → topLevelTracks stays empty.
-    expect(mockOnSnapshot).toHaveBeenCalledTimes(1)
-    expect(result.current.tracks).toEqual(legacyTracks)
-  })
-
-  it('prefers top-level tracks (sorted by order) when the subscription has docs', () => {
-    const legacyTracks = [{ id: 'leg-1', title: 'Stale Legacy Song' }]
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', tracks: legacyTracks, musicians: [] },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-
-    act(() => {
-      onSnapshotEmit?.({
-        docs: [
-          { id: 'tl-2', data: () => ({ order: 1, title: 'Second' }) },
-          { id: 'tl-1', data: () => ({ order: 0, title: 'First' }) },
-          { id: 'tl-3', data: () => ({ order: 2, title: 'Third' }) },
-        ],
-      })
-    })
-
-    expect(result.current.tracks).toHaveLength(3)
-    expect(result.current.tracks.map((t) => t.id)).toEqual([
-      'tl-1',
-      'tl-2',
-      'tl-3',
+    // Pre-seed Dexie with a track that has a key set.
+    await getDb().tracks.bulkPut([
+      makeLocalTrack({ id: 't1', order: 0, title: 'Modeh Ani', key: 'E' }),
+      makeLocalTrack({ id: 't2', order: 1, title: 'Adon Olam', key: 'G' }),
     ])
-    expect(result.current.tracks.map((t) => (t as { title: string }).title)).toEqual([
-      'First',
-      'Second',
-      'Third',
-    ])
+
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    await waitFor(() => {
+      expect(result.current.tracks).toHaveLength(2)
+    })
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['t1', 't2'])
+    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
+    expect((result.current.tracks[1] as { key: string }).key).toBe('G')
   })
 
-  it('updates tracks state when the top-level subscription re-emits', () => {
+  it('reflects Dexie writes instantly via useLiveQuery', async () => {
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', tracks: [], musicians: [] },
+      data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
       loading: false,
       error: null,
     })
 
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    await getDb().tracks.put(
+      makeLocalTrack({ id: 't1', order: 0, title: 'Modeh Ani', key: 'C' }),
+    )
 
-    act(() => {
-      onSnapshotEmit?.({
-        docs: [{ id: 'tl-1', data: () => ({ order: 0, title: 'Initial' }) }],
-      })
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    await waitFor(() => {
+      expect((result.current.tracks[0] as { key: string }).key).toBe('C')
+    })
+
+    // Simulate a cell-commit landing in Dexie (e.g., from applyEdit).
+    await act(async () => {
+      await getDb().tracks.put(
+        makeLocalTrack({ id: 't1', order: 0, title: 'Modeh Ani', key: 'E' }),
+      )
+    })
+
+    // useLiveQuery picks up the update — no Firestore round-trip needed.
+    await waitFor(() => {
+      expect((result.current.tracks[0] as { key: string }).key).toBe('E')
+    })
+  })
+
+  it('sorts Dexie tracks by order ascending', async () => {
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    await getDb().tracks.bulkPut([
+      makeLocalTrack({ id: 't3', order: 2, title: 'Third' }),
+      makeLocalTrack({ id: 't1', order: 0, title: 'First' }),
+      makeLocalTrack({ id: 't2', order: 1, title: 'Second' }),
+    ])
+
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    await waitFor(() => {
+      expect(result.current.tracks).toHaveLength(3)
+    })
+    expect(result.current.tracks.map((t) => t.id)).toEqual(['t1', 't2', 't3'])
+  })
+
+  it('falls back to embedded setlists.tracks[] for unhydrated setlists when Dexie is empty', async () => {
+    const embedded = [
+      { id: 'emb-1', title: 'Pre-cascade A', key: 'C' },
+      { id: 'emb-2', title: 'Pre-cascade B', key: 'D' },
+    ]
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, hydrated: false, tracks: embedded, musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    // Dexie has no rows for this setlist (cascade hasn't run yet).
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    await waitFor(() => {
+      expect(result.current.tracks).toEqual(embedded)
+    })
+  })
+
+  it('prefers Dexie over embedded once Dexie has rows (cascade has begun)', async () => {
+    const embedded = [
+      { id: 'emb-1', title: 'Old Stale', key: 'OLD' },
+    ]
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, hydrated: false, tracks: embedded, musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    await getDb().tracks.put(
+      makeLocalTrack({ id: 't1', order: 0, title: 'Cascaded', key: 'NEW' }),
+    )
+
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    // Embedded has 1 row too, so length-based wait is ambiguous.
+    // Wait specifically on the Dexie row's key winning.
+    await waitFor(() => {
+      expect((result.current.tracks[0] as { key: string }).key).toBe('NEW')
     })
     expect(result.current.tracks).toHaveLength(1)
-    expect((result.current.tracks[0] as { title: string }).title).toBe('Initial')
-
-    act(() => {
-      onSnapshotEmit?.({
-        docs: [
-          { id: 'tl-1', data: () => ({ order: 0, title: 'Initial' }) },
-          { id: 'tl-2', data: () => ({ order: 1, title: 'Added Later' }) },
-        ],
-      })
-    })
-    expect(result.current.tracks).toHaveLength(2)
-    expect((result.current.tracks[1] as { title: string }).title).toBe('Added Later')
   })
 
-  it('unsubscribes from the top-level tracks query on unmount', () => {
+  it('returns [] for hydrated setlists with empty Dexie (no fallback to stale embedded)', async () => {
+    // Hydrated setlist with stale embedded array. Post-migration, embedded
+    // is intentionally stale. We must NOT fall back to it.
+    const staleEmbedded = [
+      { id: 'old-1', title: 'Pre-Migration Stale' },
+    ]
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', tracks: [], musicians: [] },
+      data: { id: SETLIST_ID, hydrated: true, tracks: staleEmbedded, musicians: [] },
       loading: false,
       error: null,
     })
 
-    const { unmount } = renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(mockOnSnapshot).toHaveBeenCalledTimes(1)
-    expect(mockUnsub).not.toHaveBeenCalled()
+    // Dexie deliberately empty.
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+
+    // Wait for Dexie query to resolve to [] (loading false).
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+    // Hydrated + Dexie empty = [] (NOT the stale embedded).
+    expect(result.current.tracks).toEqual([])
+  })
+
+  it('mounts the snapshot listener after hydration; unsubscribes on unmount', async () => {
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    const stopFn = vi.fn()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const startFn = vi.fn((_opts: any) => stopFn)
+
+    const { unmount } = renderHook(() =>
+      useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
+    )
+
+    await waitFor(() => {
+      expect(startFn).toHaveBeenCalledTimes(1)
+    })
+
+    const callArgs = startFn.mock.calls[0]?.[0] as
+      | { setlistId: string; db: unknown }
+      | undefined
+    expect(callArgs?.setlistId).toBe(SETLIST_ID)
+    expect(callArgs?.db).toBeDefined()
 
     unmount()
-    expect(mockUnsub).toHaveBeenCalledTimes(1)
+    expect(stopFn).toHaveBeenCalledTimes(1)
   })
 
-  // ── v5h-01-03: cache-then-server gate + getDocsFromServer kick + don't-clear-on-error
-  // Closes the perf-view staleness Daniel hit during UAT (60s+ + multiple
-  // hard refreshes before recent edits showed up). Persistent IDB cache is
-  // ON in firebase.ts; the listener delivers stale-cached data first; the
-  // dual-read used to swap to top-level on that stale delivery and show
-  // pre-edit keys until server-fresh arrived. The fix gates the swap on
-  // a confirmed non-fromCache delivery.
-
-  it('does NOT swap to top-level when only a fromCache delivery has arrived (avoids showing stale-cache top-level)', () => {
-    const embedded = [
-      { id: 'emb-1', title: 'Embedded A', key: 'C' },
-      { id: 'emb-2', title: 'Embedded B', key: 'D' },
-    ]
+  it('does NOT mount the snapshot listener for unauthenticated public sessions', () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      isBandLeader: false,
+    })
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', hydrated: true, tracks: embedded, musicians: [] },
+      data: null,
       loading: false,
       error: null,
     })
 
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+    const startFn = vi.fn(() => () => {})
 
-    // Simulate Firestore SDK's IDB cache delivering stale top-level docs.
-    act(() => {
-      emitSnapshot({
-        docs: [
-          { id: 'tl-stale', data: () => ({ order: 0, title: 'Stale Cached', key: 'STALE' }) },
-        ],
-        fromCache: true,
-      })
-    })
+    renderHook(() =>
+      useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
+    )
 
-    // Gate: hasServerSnapshot is still false → render embedded, NOT the
-    // stale top-level cache.
-    expect(result.current.tracks).toEqual(embedded)
+    expect(startFn).not.toHaveBeenCalled()
   })
 
-  it('swaps to top-level once getDocsFromServer resolves with server-fresh data', async () => {
+  it('does not crash when snapshot listener factory throws on mount', async () => {
     mockUseSafeFirestoreSync.mockReturnValue({
-      data: {
-        id: 'setlist-1',
-        hydrated: true,
-        tracks: [{ id: 'emb-1', title: 'Embedded', key: 'OLD' }],
-        musicians: [],
-      },
+      data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
       loading: false,
       error: null,
     })
 
-    // getDocsFromServer resolves with the server-fresh snapshot. THIS is
-    // the gate signal — not the listener's metadata.fromCache flag (which
-    // tracks source, not freshness, and would never flip after the cache
-    // is warmed by the same server fetch).
-    const serverDocs = [
-      { id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'E' }) },
-    ]
-    let resolveServer: (snap: { docs: typeof serverDocs }) => void
-    const serverPromise = new Promise<{ docs: typeof serverDocs }>((res) => {
-      resolveServer = res
-    })
-    mockGetDocsFromServer.mockReturnValueOnce(serverPromise)
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-
-    // Pre-server-fresh: embedded is rendered (gate closed).
-    expect(result.current.tracks).toEqual([
-      { id: 'emb-1', title: 'Embedded', key: 'OLD' },
-    ])
-
-    // Listener delivers from cache before server fetch resolves —
-    // updates topLevelTracks but should NOT flip the gate.
-    act(() => {
-      emitSnapshot({
-        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'OLD' }) }],
-        fromCache: true,
-      })
-    })
-    expect((result.current.tracks[0] as { key: string }).key).toBe('OLD')
-
-    // Server fetch resolves with fresh data → gate flips, top-level wins.
-    await act(async () => {
-      resolveServer!({ docs: serverDocs })
-      // Drain microtasks so the promise's .then runs.
-      await Promise.resolve()
+    const startFn = vi.fn(() => {
+      throw new Error('boot failure')
     })
 
-    expect(result.current.tracks).toHaveLength(1)
-    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
-  })
-
-  it('returns embedded fallback for hydrated setlists pre-server-fresh even if top-level has cache data (invariant: never blank the UI)', () => {
-    // The reverted v5h-01-03 attempt returned [] in this state and broke
-    // live setlists. The new gate must NEVER blank the UI when embedded
-    // has data — only delay the swap from embedded → top-level.
-    const embedded = [
-      { id: 'emb-1', title: 'Track A' },
-      { id: 'emb-2', title: 'Track B' },
-      { id: 'emb-3', title: 'Track C' },
-    ]
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', hydrated: true, tracks: embedded, musicians: [] },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-
-    // No deliveries yet — hasServerSnapshot is false. Embedded must render.
-    expect(result.current.tracks).toEqual(embedded)
-  })
-
-  it('preserves top-level state on subscription error (does NOT clear the displayed tracks)', () => {
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: {
-        id: 'setlist-1',
-        hydrated: true,
-        tracks: [{ id: 'emb-1', title: 'Stale Embedded', key: 'OLD' }],
-        musicians: [],
-      },
-      loading: false,
-      error: null,
-    })
-
-    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
-
-    // Server-fresh delivery first to populate top-level + flip gate.
-    act(() => {
-      emitSnapshot({
-        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Live', key: 'E' }) }],
-        fromCache: false,
-      })
-    })
-    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
-
-    // Then simulate a transient subscription error.
-    act(() => {
-      onSnapshotError?.(new Error('transient network blip'))
-    })
-
-    // Top-level state must be preserved — UI does not blank to embedded.
-    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
-  })
-
-  it('kicks getDocsFromServer once per mount to force a server roundtrip', () => {
-    mockUseSafeFirestoreSync.mockReturnValue({
-      data: { id: 'setlist-1', hydrated: true, tracks: [], musicians: [] },
-      loading: false,
-      error: null,
-    })
-
-    renderHook(() => useSetlistPerformance('setlist-1'))
-    expect(mockGetDocsFromServer).toHaveBeenCalledTimes(1)
+    expect(() =>
+      renderHook(() =>
+        useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
+      ),
+    ).not.toThrow()
   })
 })

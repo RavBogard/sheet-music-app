@@ -1,22 +1,21 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import {
-    collection,
-    doc,
-    getDocsFromServer,
-    onSnapshot,
-    query,
-    where,
-    type QueryDocumentSnapshot,
-    type DocumentData,
-} from "firebase/firestore"
+import { doc } from "firebase/firestore"
+import { useLiveQuery } from "dexie-react-hooks"
+
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
 import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
+import { getDb } from "@/lib/local/schema"
+import type { LocalTrack } from "@/lib/local/types"
+import {
+    type SnapshotListenerOpts,
+    startSnapshotListener as defaultStartSnapshotListener,
+} from "@/lib/sync/snapshot-listener"
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
 
@@ -37,158 +36,112 @@ interface UseSetlistPerformanceReturn {
     rabbi: string | undefined
 }
 
-export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceReturn {
+interface UseSetlistPerformanceOpts {
+    /** Test-seam: lets unit tests assert listener wiring without booting
+     *  Firestore. Defaults to the production startSnapshotListener. */
+    startSnapshotListener?: (opts: SnapshotListenerOpts) => () => void
+}
+
+/**
+ * v5h-01-04: perf-view tracks are sourced from Dexie via useLiveQuery —
+ * the same data path the editor uses. The previous implementation read
+ * directly from Firestore via onSnapshot which was bound to the SDK's
+ * persistent IDB cache + multi-tab manager and produced 60s+ staleness
+ * on recent edits (Daniel UAT 2026-04-27). Reading from Dexie eliminates
+ * that class of bugs:
+ *  - Same-device same/cross-tab: Dexie writes propagate via dexie-react-
+ *    hooks' BroadcastChannel-aware live query, instant.
+ *  - Cross-device: snapshot-listener (mounted here for perf-view-only
+ *    sessions) writes Firestore deliveries directly into Dexie via
+ *    db.put with outbox-pending + LWW guards.
+ *
+ * Setlist metadata (name, rabbi, musicians, hydrated flag) still come
+ * from Firestore via useSafeFirestoreSync — slow-changing, single-doc.
+ *
+ * Embedded fallback for unhydrated legacy setlists: when the cascade
+ * hasn't run (setlistData.hydrated !== true), Dexie has no track rows
+ * for the setlist. Fall back to setlistData.tracks[] — that's the
+ * pre-v5.0 source. The lazy-cascade is intentionally NOT run here:
+ *  (a) it would write to Firestore from a read-surface, semantically wrong;
+ *  (b) the editor's SetlistGridHydrator already runs it on the next edit
+ *     session, marking hydrated:true; subsequent perf-view mounts read
+ *     from Dexie naturally.
+ */
+export function useSetlistPerformance(
+    setlistId: string,
+    opts: UseSetlistPerformanceOpts = {},
+): UseSetlistPerformanceReturn {
     const { user, isAdmin, isBandLeader } = useAuth()
     const isPublicView = !user
     const isLeader = isAdmin || isBandLeader
 
-    // Subscribe to setlist document
+    const startSnapshotListener =
+        opts.startSnapshotListener ?? defaultStartSnapshotListener
+
     const setlistRef = useMemo(
         () => (setlistId ? doc(db, "setlists", setlistId) : null),
         [setlistId]
     )
-    const { data: setlistData, loading, error } = useSafeFirestoreSync<Setlist>(setlistRef)
+    const { data: setlistData, loading: setlistLoading, error } =
+        useSafeFirestoreSync<Setlist>(setlistRef)
 
-    // v50-07-03 + v5h-01-03: dual-read for the v5.0 lazy-hydration cutover.
-    // Editor writes go to top-level `tracks/{id}`; legacy `setlists/{id}.tracks[]`
-    // is post-migration STALE-by-design (kept for unhydrated setlists' first paint).
-    //
-    // Firestore SDK has persistentLocalCache enabled (firebase.ts), so on every
-    // mount the listener delivers from IDB cache first (often stale) and then
-    // from server. Without forcing a roundtrip, the dual-read used to swap to
-    // top-level on a stale-cache delivery and show pre-edit keys for 60s+
-    // until passive server reconciliation eventually fired — Daniel observed
-    // this end-to-end and it required multiple hard refreshes to recover.
-    //
-    // Fix:
-    //  1. `getDocsFromServer(q)` on mount forces a server roundtrip; its
-    //     `.then(snap)` callback IS our authoritative server-fresh signal.
-    //     We seed topLevelTracks from that snapshot and flip the gate.
-    //     (Originally tried `{ includeMetadataChanges: true }` + `metadata.fromCache`
-    //     to detect server-fresh, but that flag indicates SOURCE not freshness:
-    //     after the server roundtrip, listener deliveries from the now-fresh
-    //     cache still report fromCache=true, so the gate would never flip.)
-    //  2. Dual-read prefers the embedded fallback until `hasServerSnapshot`
-    //     becomes true. After, top-level wins (hydrated-aware so unhydrated
-    //     setlists with genuinely-empty top-level still fall back).
-    //  3. The onSnapshot listener handles ongoing updates after the initial
-    //     server fetch. Its deliveries also seed topLevelTracks (so cell-
-    //     commit live updates land), but the gate is owned by getDocsFromServer.
-    //  4. On listener error, DO NOT clear topLevelTracks — preserve last known
-    //     good state so a transient error (token refresh race, brief network
-    //     flap) doesn't blank the perf-view.
-    //
-    // Invariant (avoid the v5h-01-03 reverted-attempt regression): never return
-    // [] while embedded has data. The gate only delays SWAPPING from embedded
-    // to top-level, never delays rendering.
-    const [topLevelTracks, setTopLevelTracks] = useState<SetlistTrack[]>([])
-    const [hasServerSnapshot, setHasServerSnapshot] = useState(false)
-
+    // Mount the snapshot-listener for cross-device delivery into Dexie.
+    // Skip for unauthenticated public sessions — they'd hit permission-denied
+    // on the underlying onSnapshot calls (see firestore.rules: read requires
+    // isMember()). The page itself renders an error for public users.
     useEffect(() => {
-        if (!setlistId) return
-        let cancelled = false
-
-        const q = query(
-            collection(db, "tracks"),
-            where("setlistId", "==", setlistId),
-        )
-
-        const sortDocs = (
-            docs: Array<QueryDocumentSnapshot<DocumentData>>,
-        ): SetlistTrack[] =>
-            docs
-                .map((d) => ({
-                    id: d.id,
-                    ...(d.data() as Omit<SetlistTrack, "id"> & {
-                        order?: number
-                    }),
-                }))
-                .sort(
-                    (a, b) =>
-                        ((a as { order?: number }).order ?? 0) -
-                        ((b as { order?: number }).order ?? 0),
-                ) as SetlistTrack[]
-
-        // Force a server roundtrip on mount. The .then resolves with
-        // authoritative server-fresh data — that's our signal to flip the
-        // dual-read gate (NOT the listener's metadata.fromCache flag, which
-        // tracks source not freshness).
-        getDocsFromServer(q)
-            .then((snap) => {
-                if (cancelled) return
-                setTopLevelTracks(sortDocs(snap.docs))
-                setHasServerSnapshot(true)
+        if (!setlistId || !user) return
+        try {
+            const stop = startSnapshotListener({
+                setlistId,
+                db: getDb(),
             })
-            .catch((err) => {
-                if (cancelled) return
-                logger.warn(
-                    `[useSetlistPerformance] initial server fetch failed for ${setlistId} (listener still active)`,
-                    err,
-                )
-                // Stay with embedded fallback until the listener delivers
-                // something. If the server is genuinely unreachable, this is
-                // the safest state.
-            })
+            return stop
+        } catch (err) {
+            logger.warn(
+                `[useSetlistPerformance] failed to mount snapshot listener for ${setlistId}`,
+                err,
+            )
+        }
+    }, [setlistId, user, startSnapshotListener])
 
-        const unsub = onSnapshot(
-            q,
-            { includeMetadataChanges: true },
-            (snap) => {
-                if (cancelled) return
-                setTopLevelTracks(sortDocs(snap.docs))
-                // Backup gate signal: if the listener delivers a confirmed
-                // non-cache snapshot, that's also server-fresh evidence.
-                // (In production, after getDocsFromServer warms the cache,
-                // listener deliveries from cache will report fromCache=true
-                // even with fresh data — getDocsFromServer.then is the
-                // primary gate. This branch handles the case where the
-                // listener fires server-fresh on its own first.)
-                if (snap.metadata?.fromCache === false) {
-                    setHasServerSnapshot(true)
-                }
-            },
-            (err) => {
-                if (cancelled) return
-                logger.warn(
-                    `[useSetlistPerformance] top-level tracks subscription error for ${setlistId}`,
-                    err,
-                )
-                // Preserve topLevelTracks at last known state.
-            },
-        )
-        return () => {
-            cancelled = true
-            unsub()
-        }
-    }, [setlistId])
+    // Tracks: live-query Dexie, sorted by order. dexie-react-hooks returns
+    // undefined while the query is in flight, [] when it resolves with no
+    // rows. We distinguish the two for accurate loading semantics.
+    const dexieTracks = useLiveQuery<LocalTrack[] | undefined>(
+        () =>
+            setlistId
+                ? getDb()
+                      .tracks.where("setlistId")
+                      .equals(setlistId)
+                      .sortBy("order")
+                : Promise.resolve([]),
+        [setlistId],
+    )
 
-    // Dual-read: prefer the embedded fallback until we've confirmed a server-
-    // fresh delivery. After that, trust top-level (hydrated-aware).
-    const tracks: SetlistTrack[] = (() => {
-        if (!hasServerSnapshot) {
-            // Pre-server-fresh: top-level may be a stale cache delivery.
-            // Showing embedded is safer — for hydrated setlists it's stale-by-
-            // design but equal-or-better than stale cache; for unhydrated it's
-            // the truth. Either way, this avoids flashing pre-edit keys.
-            return setlistData?.tracks || []
-        }
-        if (setlistData?.hydrated === true) {
-            // Server confirmed for a migrated setlist: top-level is the truth,
-            // even if briefly empty (real "no tracks" state).
-            return topLevelTracks
-        }
-        // Unhydrated setlist post-server-confirm: top-level if it has data
-        // (cascade ran), else fall back to embedded (cascade hasn't fired).
-        return topLevelTracks.length > 0
-            ? topLevelTracks
-            : setlistData?.tracks || []
-    })()
+    // Dual-read fallback for unhydrated legacy setlists. After lazy-cascade
+    // has run (hydrated:true), Dexie is the authoritative source and we
+    // ignore the embedded array entirely (post-migration stale-by-design).
+    const tracks: SetlistTrack[] = useMemo(() => {
+        const fromDexie = (dexieTracks ?? []) as unknown as SetlistTrack[]
+        if (setlistData?.hydrated === true) return fromDexie
+        if (fromDexie.length > 0) return fromDexie
+        return (setlistData?.tracks as SetlistTrack[] | undefined) ?? []
+    }, [dexieTracks, setlistData?.hydrated, setlistData?.tracks])
+
     const name: string = setlistData?.name || "Untitled"
     const serviceNotes: string | null = setlistData?.serviceNotes || null
     const musicians: SetlistMusician[] = setlistData?.musicians || []
     const rabbi: string | undefined = setlistData?.rabbi
 
     const currentTrackIndex = -1
+
+    // Loading: setlist still loading OR (hydrated setlist where Dexie is in
+    // flight). For unhydrated setlists, loading=false once setlist resolves
+    // because the embedded fallback is immediately available.
+    const loading =
+        setlistLoading ||
+        (setlistData?.hydrated === true && dexieTracks === undefined)
 
     // Musician profile for default transposition
     const [musicianProfile, setMusicianProfile] = useState<MusicianProfile | null>(null)
