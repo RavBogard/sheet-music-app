@@ -144,15 +144,18 @@ describe('SetlistGrid (cell-edit interactions)', () => {
 
         const keyButton = screen.getByLabelText('Track key')
         const user = userEvent.setup()
-        // Click on the dropdown cell (Popover.Trigger) opens the combobox.
-        // §6.3: dropdown cells open on click — they do NOT have a separate
-        // "selected" state like text cells.
+        // Click on the dropdown cell (Popover.Trigger) opens the picker.
+        // v51-01-01: Key picker is discrete with Major | Minor tabs;
+        // user clicks a key option directly (no type-to-filter input).
         await user.click(keyButton)
 
-        // Popover open: cmdk input visible. Filter to "G" then Enter to select.
-        const filterInput = await screen.findByPlaceholderText(/pick key/i)
-        await user.type(filterInput, 'G')
-        await user.keyboard('{Enter}')
+        // Picker tabs render; default tab is Major (current value 'Dm'
+        // is minor → minor tab actually); click the G option directly.
+        // Default value 'Dm' makes Minor the active tab; switch to Major
+        // first to access G.
+        await screen.findByTestId('key-picker-tabs')
+        await user.click(screen.getByTestId('key-picker-tab-major'))
+        await user.click(screen.getByTestId('key-picker-option-G'))
 
         await waitFor(async () => {
             const rows = await getOutboxRows()
@@ -182,9 +185,9 @@ describe('SetlistGrid (cell-edit interactions)', () => {
         const keyButton = screen.getByLabelText('Track key')
         const user = userEvent.setup()
         await user.click(keyButton)
-        const filterInput = await screen.findByPlaceholderText(/pick key/i)
-        await user.type(filterInput, 'F')
-        await user.keyboard('{Enter}')
+        await screen.findByTestId('key-picker-tabs')
+        await user.click(screen.getByTestId('key-picker-tab-major'))
+        await user.click(screen.getByTestId('key-picker-option-F'))
 
         await waitFor(async () => {
             const rows = await getOutboxRows()
