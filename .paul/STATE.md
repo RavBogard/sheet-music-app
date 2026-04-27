@@ -9,26 +9,26 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 3 of 5 plans closed — v50-05-04 PLAN ✓ awaiting APPLY)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-04 PLAN.md created)
-Plan: v50-05-04 — created, awaiting APPLY (`.paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`)
-Status: PLAN created for v50-05-04 (iPad/pointer-coarse Sheet swap across 6 sites + 44px touch targets + always-visible touch affordances + right-click ContextMenu with selection-aware action targeting + 500ms long-press for touch). 3 tasks, 8 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md. Depends on v50-05-03 (useGridSelection + DeleteConfirmProvider + ChartBindPopover patterns).
-Last activity: 2026-04-26 — PLAN.md written for v50-05-04; resume handoff archived.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 4 of 5 plans closed; v50-05-05 next)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-04 closed; v50-05-05 next)
+Plan: v50-05-04 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-04-SUMMARY.md`)
+Status: UNIFY complete for v50-05-04. iPad/pointer-coarse Sheet swap + 44px touch targets + right-click ContextMenu + long-press all landed on prod. 4 commits pushed to origin/master: `a18736b` (chore(paul) PLAN), `d4a9d96` (Task 1 TouchOrPopover + iPad swap + 44px), `ded27dd` (Task 2 ContextMenu + long-press), `35a055a` (Task 3 integration tests). +17 new vitest cases (1377/1377 — cross-tab-lock flake passed this run too). tsc + next build clean. Production /setlists/[id] now serves: cell dropdowns swap to bottom-Sheet on touch, drag-handle col 44→52px on coarse, cell padding 8→12px on coarse, ChartCell unbound contrast bumped on coarse, right-click row → ContextMenu (Edit / Bind chart / Duplicate / Delete) with selection-aware Delete routing through DeleteConfirmProvider, 500ms long-press for touch.
+Last activity: 2026-04-26 — UNIFY complete for v50-05-04 (SUMMARY.md written).
 
 Progress:
-- v5.0: [███████░░░] ~74% (4 of 7 phases complete; v50-05 = 3/5 plans done; 04 + 05 scoped)
+- v5.0: [████████░░] ~80% (4 of 7 phases complete; v50-05 = 4/5 plans done; 05 scoped)
 - Phase v50-01: [██████████] 100% ✓ (architecture locked)
 - Phase v50-02: [██████████] 100% ✓ (~2,363 LOC deleted)
 - Phase v50-03: [██████████] 100% ✓ (sync engine — Dexie + outbox + FSM + property harness)
 - Phase v50-04: [██████████] 100% ✓ (song catalog & sticky memory — Dexie v2 + helpers + migration script)
-- Phase v50-05: [██████░░░░] 60% (01 build ✓ + 02 cutover ✓ + 03 multi-select+AlertDialog ✓; 04 + 05 scoped on ROADMAP)
+- Phase v50-05: [████████░░] 80% (01 build ✓ + 02 cutover ✓ + 03 multi-select+AlertDialog ✓ + 04 iPad+ContextMenu ✓; 05 scoped on ROADMAP)
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v50-05-04 PLAN written, awaiting APPLY]
+  ○        ○        ○     [Loop reset — ready for v50-05-05 PLAN]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
@@ -37,7 +37,7 @@ v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build SetlistGrid + engine boot, no cutover]
 v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
 v50-05-03:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — multi-select + BatchActionBar + AlertDialog swap-in on prod]
-v50-05-04:     ✓ ──▶ ○ ──▶ ○     [PLAN written: TouchOrPopover wrapper + 44px targets + ContextMenu + long-press; awaiting APPLY (/ui-ux-pro-max BLOCKING)]
+v50-05-04:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — TouchOrPopover + iPad/Sheet swap + ContextMenu + long-press on prod]
 v50-05-05:     ○ ──▶ ○ ──▶ ○     [Plan: mobile stacked-card flow + WCAG AA audit + Undo via zustand temporal middleware]
 ```
 
@@ -129,6 +129,7 @@ Weekly-workflow friction + stage UX + noise cleanup before the band is onboarded
 3. **Phase 1.2**: fresh incognito; no "offline ready" pills; pre-load a setlist; confirm blobs in IDB; DevTools Offline; charts render.
 4. **v50-05-02 (cutover)**: open a real setlist on prod; confirm SetlistGrid renders existing tracks in order + SyncIndicator "Saved"; edit a Title cell + Tab → Saving → Saved; hard-refresh → edit persisted; click ChartCell on unbound row → ChartBindPopover opens → pick a song → ChartCell switches to bound (indigo). Mobile viewport functional-but-rough OK (touch polish → v50-05-04).
 5. **v50-05-03 (multi-select + AlertDialog)**: open a real setlist on prod with ≥3 tracks; Cmd/Ctrl-click drag handle on row 0 → indigo accent + aria-pressed; Shift-click drag handle on row 2 → rows 0/1/2 all selected; sticky BatchActionBar appears with "3 rows selected"; click Key dropdown → pick Dm → all 3 rows update + SyncIndicator transitions Saved; click Delete → "Delete 3 rows?" AlertDialog opens → click Cancel → rows intact; re-trigger + Delete → 3 rows gone + selection clears; press Backspace on a focused drag handle → "Delete row?" AlertDialog with quoted track title in description; Esc closes any selection.
+6. **v50-05-04 (iPad/touch + ContextMenu)**: open prod /setlists/[id] on iPad (or Chrome devtools Device Toolbar → iPad); tap Key cell → bottom Sheet appears (NOT floating Popover); tap LeadCell, TypeCell, AddRow, ChartBind, BatchActionBar bulk Type/Key/Lead — all swap to Sheet on touch. Drag-handle column visibly wider (52px vs 44px desktop); cells visibly taller (44px+ touch targets). Right-click any row on desktop → ContextMenu with 4 items (Edit row / Bind chart / Duplicate row / Delete row); click Edit → Title cell focuses; click Bind chart → ChartBindPopover opens; click Duplicate → row clones below source with all fields; click Delete on a NON-selected row → "Delete row?" AlertDialog with quoted title; multi-select 2+ rows + right-click selected → "N rows selected" header + Edit/Bind/Duplicate disabled + Delete → "Delete N rows?" AlertDialog. iPad: long-press a row 500ms without moving → ContextMenu opens; quick tap → no menu; tap-and-drag → no menu (drag activates).
 
 ### Git state
 Recent commits on `master` (v50-04 commits not yet pushed at time of writing — phase close + push pending):
@@ -204,23 +205,46 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: ConfirmInfo discriminated union (`{kind:'row',title}` \| `{kind:'bulk',count}`) — new prop `confirmDelete` co-exists with legacy `confirmDeleteWithTitle` | v50-05-03 | Avoids string-parsing "N rows" back out of synthesized title. Precedence: prop confirmDelete → prop confirmDeleteWithTitle → context → window.confirm. Tests bypass provider via prop injection; production gets themed dialog |
 | 2026-04-26: aria-pressed + aria-label override placement AFTER `{...attributes}` spread on dnd-kit-wrapped buttons | v50-05-03 | useSortable.attributes injects its own aria-pressed for drag state, silently overriding app-level aria-pressed. Discovered via failing test (aria-pressed=null despite correct selection state). Pattern: any future drag-kit-wrapped element with custom aria semantics MUST place overrides after the spread |
 | 2026-04-26: useGridSelection.pruneTo added beyond original PLAN (surgical stale-row removal) | v50-05-03 | PLAN said "clear-and-rebuild"; pruneTo is cleaner — removes stale ids while preserving survivors and a still-valid anchor. Pattern carries to v50-05-05 mobile + v50-06 reconciliation modal |
+| 2026-04-26: Touch detection via `useMediaQuery('(pointer: coarse)')` (NOT viewport width) | v50-05-04 | iPad Pro at 1024px is still touch; viewport-based detection misses it AND over-triggers on resized desktop browsers. Reusable detection pattern for any future touch-aware affordance |
+| 2026-04-26: Single TouchOrPopover wrapper for all 6 dropdown swap sites | v50-05-04 | Symmetry — same wrapper, same pattern, six consumers (DropdownCell covering Key/Lead/Type, AddRowPlaceholder, ChartBindPopover, BatchActionBar's BulkPopover). asChild flows through to both Popover.Trigger and SheetTrigger preserving trigger-button refs unchanged |
+| 2026-04-26: ChartBindPopover hybrid open state (controllable+uncontrolled) | v50-05-04 | External `open` prop wins when defined; internal useState fallback when undefined. Single component serves v50-05-02 ChartCell-click flow AND v50-05-04 ContextMenu programmatic-open flow without prop pollution. Reusable for any future shared popover |
+| 2026-04-26: Drag column width via class override (not inline style from getSize) | v50-05-04 | TanStack Table's getSize → inline style overrides classes. Omit inline style for drag column specifically and use Tailwind arbitrary-class overrides on both `<th>` and `<td>`. Pattern reusable for any column needing responsive width |
+| 2026-04-26: ContextMenu actions live in SetlistGrid (not SortableRow) | v50-05-04 | Selection state is at grid level (useGridSelection); single-vs-bulk routing decisions need access. SortableRow stays selection-state-naive — receives 4 callback props per row + isInBulkSelection boolean. Clean separation; routing centralized |
+| 2026-04-26: Disabled-on-multi-selection for Edit / Bind chart / Duplicate row ContextMenu items | v50-05-04 | These don't make semantic sense on multi-selection (focus single Title cell, bind one chart for many rows, duplicate single row). Bulk Duplicate deferred to future BatchActionBar feature. Delete stays enabled because bulk-delete IS the natural action |
+| 2026-04-26: Long-press for touch via synthetic contextmenu MouseEvent dispatch | v50-05-04 | @radix-ui/react-context-menu 2.2.16 has NO controlled `open` prop on Root. Re-emit `new MouseEvent('contextmenu', {...})` on the trigger element — Radix's internal listener catches and opens at the dispatched position. Pattern reusable for any uncontrolled Radix primitive that listens for a specific event |
+| 2026-04-26: Long-press timing 500ms hold + 10px-squared movement threshold; touch-only branch | v50-05-04 | 500ms is standard mobile-OS long-press duration. 10px² (=100, hypot avoidance) tolerance lets steady touch fire even with slight drift; movement past it indicates drag intent. pointerType='mouse' skip prevents slow desktop clicks from triggering — ContextMenu has natural right-click path on desktop |
+| 2026-04-26: Real timers (NOT vi.useFakeTimers) for long-press component tests | v50-05-04 | Reinforces v50-03 lesson — fake timers conflict with fake-indexeddb microtask scheduling and Dexie live-query teardown. 500ms × N test cases adds ~Ns to suite — cheap. Pattern: REAL timers > FakeClock when waiting for setTimeout-based handlers in component tests |
+| 2026-04-26: Global window.matchMedia stub via vitest setupFiles | v50-05-04 | jsdom missing matchMedia broke 44 existing grid tests once TouchOrPopover landed. src/test-setup.ts defaults matches:false (= desktop branch); tests wanting coarse-pointer behavior mock useMediaQuery directly. Pattern reusable for any future jsdom-missing API |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-04 PLAN cycle) — `/paul:resume` → git pull (already up to date) → archive consumed handoff (HANDOFF-2026-04-26-v50-05-04-pickup.md → handoffs/archive/) → `/paul:plan` for v50-05-04 (3 tasks, 8 ACs, autonomous=true). Tasks: (1) TouchOrPopover wrapper + 44px target bumps + iPad swap across 6 Popover sites (DropdownCell covering Key/Lead/Type, AddRowPlaceholder, ChartBindPopover, BatchActionBar's BulkPopover) + always-visible touch affordances + ChartBindPopover controllable open state; (2) Right-click ContextMenu with 4 items (Edit/Bind chart/Duplicate/Delete) + selection-aware action targeting + 500ms long-press for touch with 10px movement cancel; (3) Integration tests covering Sheet swap, ContextMenu action routing single-vs-bulk, long-press timing. Awaiting APPLY.
-Stopped at: PLAN.md written for v50-05-04, awaiting user approval to /paul:apply.
-Next action: load `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`. Or pause here.
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-04-PLAN.md`
+Last session: 2026-04-26 (v50-05-04 full cycle) — `/paul:resume` → git pull (already up to date) → archive consumed handoff → `/paul:plan` (3 tasks, 8 ACs, autonomous) → `/ui-ux-pro-max` loaded → `/paul:apply` → Task 1 (TouchOrPopover wrapper + iPad swap across 6 Popover sites + 44px touch targets + ChartBindPopover controllable open + global window.matchMedia stub via vitest setupFiles + 6 TouchOrPopover unit tests; root-caused initial asChild break in ChartBindPopover refactor via re-read-before-test) → Task 2 (Radix ContextMenu wired into every SortableRow with 4 items, selection-aware targeting + "N rows selected" header + Edit/Bind/Duplicate disabled-on-multi; 500ms long-press for touch via synthetic contextmenu MouseEvent dispatch with 10px movement cancel; chartBindOpenRowId state hoist + 4 SetlistGrid handlers including order-cascade Duplicate) → Task 3 (11 integration tests in SetlistGrid.contextmenu.test.tsx — right-click 4 items, in-vs-out-of-selection Delete routing, Edit row focus, Bind chart popover, Duplicate cascade, 4 long-press timing cases via REAL timers (not fake — Dexie + fake-indexeddb conflict), Sheet-on-coarse sanity) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 commits on origin/master: `a18736b` (chore(paul) PLAN), `d4a9d96` (Task 1), `ded27dd` (Task 2), `35a055a` (Task 3). UNIFY commit lands next. Full suite 1377/1377 (cross-tab-lock flake passed too); tsc + next build clean. Production /setlists/[id] now serves iPad/touch UX + right-click + long-press ContextMenu.
+Stopped at: v50-05-04 fully closed and pushed; SUMMARY.md written; ready for v50-05-05 (last plan in v50-05).
+Next action: `/paul:plan` for v50-05-05 (mobile stacked-card flow §6.11 + WCAG AA audit §6.13 + Undo via zustand temporal middleware) — last polish plan in v50-05. Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-04-SUMMARY.md`
 Git strategy: master (continuing v50-05 hard-cutover convention; band still not in production)
-Resume context (v50-05-04):
-- `useMediaQuery('(pointer: coarse)')` is the iPad/touch detection (NOT viewport width — iPad Pro at 1024px is still touch). Hook may need to be added/promoted; check src/hooks for an existing one or add as part of plan 04.
-- Cell dropdowns to swap from Radix Popover → Radix Sheet on touch breakpoints: KeyCell, LeadCell, TypeCell (via DropdownCell), AddRowPlaceholder, ChartBindPopover, AND BatchActionBar's inline `BulkPopover`. Pattern: extract a shared `<TouchOrPopover>` wrapper that picks Popover or Sheet based on the media query.
-- 44px minimum touch targets — bump cell padding from 8px → 12px on touch breakpoints; drag-handle column width 44px → 52px.
-- Right-click ContextMenu (Radix `@radix-ui/react-context-menu`; check if shadcn `context-menu.tsx` is already installed — yes, ls showed it) on rows + drag handle: "Edit row" / "Bind chart" / "Duplicate row" / "Delete row".
-- Selection state already exists (useGridSelection); ContextMenu just reads `selection.selectedIds.has(rowId)` to decide whether the action targets the selected set OR just the right-clicked row.
-- Delete from ContextMenu routes through the existing DeleteConfirmProvider (single-row OR bulk depending on selection state).
-- Test patterns locked: ResizeObserver + scrollIntoView stubs at module-eval for cmdk tests; cleanup() + findByTestId await for Dexie+React; act() wrapper for Dexie deletes that trigger live-query re-renders; dnd-kit aria override placement AFTER `{...attributes}` spread.
-- Production smoke verification of v50-05-02 + v50-05-03 still pending from user. Not blocking 04.
+Resume context (v50-05-05 — last plan in v50-05):
+- v50-05-05 scope per ARCHITECTURE.md §6.11 + §6.13 + Undo:
+  - **§6.11 Mobile stacked-card flow** (below 768px): drop the table entirely and render rows as stacked cards (title + key + lead visible at rest); tap card → full-screen Sheet with all-fields edit pane; reorder via long-press + drag OR up/down buttons in the sheet. Parallel render path (NOT a Tailwind responsive trick) since the existing table breaks ~640px.
+  - **§6.13 WCAG AA audit**: run axe-core / Lighthouse against /setlists/[id] on prod; verify focus-trap on all popovers (cmdk inside Popover.Content); keyboard-only navigation across cells + add-row + chart-bind + delete; aria-live announcement timing for SyncIndicator state changes; color contrast ratio ≥ 4.5:1 for all SyncIndicator states.
+  - **Undo via zustand temporal middleware**: wrap a small zustand store around local Dexie writes; intercept BEFORE applyEdit; record (op, collection, docId, prevDoc, newDoc) snapshot per undo unit; Cmd/Ctrl-Z replays the inverse via applyEdit (NOT direct db.put — inverse should round-trip to Firestore); coalesce burst edits per cell-blur; cap 50 undo entries; not persisted across reloads (Dexie is the persistence layer).
+- Reusable from v50-05-04:
+  - `<TouchOrPopover>` wrapper for any per-card sheet on mobile flow.
+  - `useGridSelection` hook (selection state survives the parallel mobile render path; pruneTo + extendRange still apply).
+  - `<DeleteConfirmProvider>` already mounted at /setlists/[id]; ContextMenu Delete + bulk Delete + single-row Delete all flow through.
+  - `<ChartBindPopover>` controllable open state for any future programmatic-open consumer (e.g. mobile flow's "Bind chart" button).
+  - Synthetic-contextmenu-dispatch programmatic-open pattern documented inline in SortableRow's long-press handler.
+  - Global window.matchMedia stub in src/test-setup.ts for any future test that touches useMediaQuery.
+  - 44px-min touch target Tailwind class pattern (`[@media(pointer:coarse)]:<utility>`) reusable across mobile cards.
+- Real timers (NOT vi.useFakeTimers) for any timer-driven Undo middleware tests — fake timers conflict with fake-indexeddb microtask scheduling and Dexie live-query teardown (v50-05-04 lesson, building on v50-03 lesson).
+- `/ui-ux-pro-max` BLOCKING for APPLY per SPECIAL-FLOWS.md.
+- Plan size: 2-3 tasks, vertical slices preferred. Suggested split (revisable at /paul:plan time):
+  - Task 1 — Mobile stacked-card flow + per-card Sheet edit pane.
+  - Task 2 — Undo via zustand temporal middleware + Cmd/Ctrl-Z handler + applyEdit-inverse round-trip.
+  - Task 3 — WCAG AA audit (axe-core / Lighthouse) + any focus-trap / keyboard-nav fixes surfaced.
+- Production smoke verification of v50-05-02 + v50-05-03 + v50-05-04 still pending from user (deferred-smokes list #4, #5, #6). Not blocking v50-05-05.
+- Cross-tab-lock test flake still pending — fold into v50-06.
+- Production migrate-v50.ts apply still deferred to v50-07.
 Resume context:
 - v50-05 spec is locked in ARCHITECTURE.md §6 (TanStack Table v8 headless + @dnd-kit + Radix Popover + cmdk; design tokens §6.1; desktop/iPad/phone variants; WCAG AA §6.13)
 - §6.9 "Remote changed" reconciliation banner → defer to v50-06 (concurrent-edit safety phase)
