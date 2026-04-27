@@ -375,6 +375,165 @@ describe('SetlistGridHydrator', () => {
         expect(applyEditSpy).toHaveBeenCalledTimes(3)
     })
 
+    // v5h-01-02 fix (F): outbox-pending guard. Server priming must NOT
+    // overwrite local rows that have an in-flight edit in the outbox
+    // (status pending|sending|failed). Mirrors snapshot-listener.ts:197.
+    // These tests reproduce Daniel's UAT save-loss path against the
+    // Hydrator: a stuck-pending outbox row was being silently clobbered
+    // by re-priming on every re-mount.
+    it('skips setlist priming when outbox has a pending row for the same setlistId', async () => {
+        const localUpdatedAt = 1_700_000_000_000
+        const newerServerUpdatedAt = localUpdatedAt + 60_000
+
+        // Pre-seed a stale local setlist + a pending outbox row for it.
+        await getDb().setlists.put({
+            id: SETLIST_ID,
+            ownerId: 'user-1',
+            name: 'Local Edit In Flight',
+            updatedAt: localUpdatedAt,
+        })
+        await getDb().outbox.add({
+            status: 'pending',
+            scheduledFor: localUpdatedAt,
+            op: 'update',
+            collection: 'setlists',
+            docId: SETLIST_ID,
+            payload: { name: 'Local Edit In Flight' },
+            attempts: 0,
+            createdAt: localUpdatedAt,
+        })
+
+        const { findByTestId } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={{
+                    id: SETLIST_ID,
+                    ownerId: 'user-1',
+                    name: 'Server Wants To Win',
+                    updatedAt: newerServerUpdatedAt,
+                    hydrated: true,
+                }}
+                initialTracks={[]}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        // Wait for hydrate() to settle (snapshot listener mount happens
+        // after hydration === 'done', so its mock firing is our signal).
+        await waitFor(async () => {
+            const local = await getDb().setlists.get(SETLIST_ID)
+            // Local row preserved despite newer server payload.
+            expect(local?.name).toBe('Local Edit In Flight')
+            expect(local?.updatedAt).toBe(localUpdatedAt)
+        })
+    })
+
+    it('skips track priming for tracks with pending outbox rows; primes the rest', async () => {
+        const updatedAt = 1_700_000_000_000
+
+        // Pre-seed a stale local t-1 + pending outbox row for it.
+        await getDb().tracks.put({
+            id: 't-1',
+            setlistId: SETLIST_ID,
+            order: 0,
+            title: 'Adon Olam (LOCAL EDIT IN FLIGHT)',
+            key: 'E',
+            updatedAt,
+        })
+        await getDb().outbox.add({
+            status: 'pending',
+            scheduledFor: updatedAt,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't-1',
+            payload: { key: 'E' },
+            expectedUpdatedAt: updatedAt,
+            attempts: 0,
+            createdAt: updatedAt,
+        })
+
+        render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={{
+                    ...makeSetlist(updatedAt),
+                    hydrated: true,
+                }}
+                initialTracks={makeTracks(updatedAt)}
+            />,
+        )
+
+        // t-2 lands from server priming.
+        await waitFor(async () => {
+            const t2 = await getDb().tracks.get('t-2')
+            expect(t2).toBeDefined()
+            expect(t2?.title).toBe('Lecha Dodi')
+        })
+
+        // t-1 still carries the local in-flight edit; server priming was skipped.
+        const t1 = await getDb().tracks.get('t-1')
+        expect(t1?.title).toBe('Adon Olam (LOCAL EDIT IN FLIGHT)')
+        expect(t1?.key).toBe('E')
+    })
+
+    it('primes only the track without a pending outbox row when one of two locals is in flight', async () => {
+        const updatedAt = 1_700_000_000_000
+
+        // Both t-1 and t-2 are stale locally; only t-1 has a pending outbox row.
+        await getDb().tracks.bulkPut([
+            {
+                id: 't-1',
+                setlistId: SETLIST_ID,
+                order: 0,
+                title: 'Adon Olam (STALE WITH OUTBOX)',
+                key: 'E',
+                updatedAt: updatedAt - 10_000,
+            },
+            {
+                id: 't-2',
+                setlistId: SETLIST_ID,
+                order: 1,
+                title: 'Lecha Dodi (STALE NO OUTBOX)',
+                key: 'F',
+                updatedAt: updatedAt - 10_000,
+            },
+        ])
+        await getDb().outbox.add({
+            status: 'failed',
+            scheduledFor: updatedAt,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't-1',
+            payload: { key: 'E' },
+            expectedUpdatedAt: updatedAt - 10_000,
+            attempts: 3,
+            lastError: 'permission-denied',
+            createdAt: updatedAt - 10_000,
+        })
+
+        render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={{
+                    ...makeSetlist(updatedAt),
+                    hydrated: true,
+                }}
+                initialTracks={makeTracks(updatedAt)}
+            />,
+        )
+
+        // t-2 (no outbox row) updated to server payload; t-1 preserved.
+        await waitFor(async () => {
+            const t2 = await getDb().tracks.get('t-2')
+            expect(t2?.title).toBe('Lecha Dodi')
+            expect(t2?.updatedAt).toBe(updatedAt)
+        })
+        const t1 = await getDb().tracks.get('t-1')
+        expect(t1?.title).toBe('Adon Olam (STALE WITH OUTBOX)')
+        expect(t1?.key).toBe('E')
+    })
+
     // v50-06-03: hydrator mounts the snapshot listener after hydration
     // completes, and unmounts it on cleanup. Wiring-only — listener
     // behavior is covered by snapshot-listener.test.ts.

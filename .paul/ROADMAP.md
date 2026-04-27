@@ -1,8 +1,35 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
 ## Current Milestone
+**v5.0-hotfix — Track-Edit Save-Loss Fix**
+Status: 🚧 In Progress
+Phases: 0 of 1 complete
+Theme: Diagnose + fix the P0 save-loss surfaced by Daniel's UAT (path "P": new setlist + edit key + navigate-away → key gone despite "Saved" indicator). Blocks v5.0 milestone close. Postmortem documents why "harness-only" (v50-07-04 Task 0 decision) was insufficient for catching cache-vs-fresh listener delivery races.
+
+Origin: v50-07 shipped end-to-end (5/5 plans) on 2026-04-27. Daniel started UAT immediately and surfaced two issues — Issue 1 P0 save-loss (this milestone) + Issue 2 P1 editor UX overhaul (→ v5.1). Code-scan diagnostics ruled out the obvious paths (cell-commit → applyEdit → db.tracks.put is wired correctly; production adapter uses runTransaction + expectedUpdatedAt + serverTimestamp; lazy-hydration cascade ruled out — Daniel's flow was a fresh setlist with no legacy embedded tracks). Three ranked hypotheses, all converging on engine-writeback + LWW-guard tightening.
+
+Constraint: Daniel must NOT clear browser data on the affected setlist before v5h-01-01 production state capture (HUMAN-ACTION checkpoint), or the bug evidence is lost. Band still not in production — broken-for-band acceptable, but ship before v5.0 milestone close.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v5h-01 | Track-edit save-loss diagnosis + fix | 3 (planned: 01-01 reproduce+diagnose • 01-02 fix • 01-03 postmortem) | 🚧 Not started | - |
+
+### Phase v5h-01: Track-edit save-loss diagnosis + fix
+
+Focus: Reproduce Daniel's flow in a kitchen-sink scenario (fresh setlist, no legacy tracks, edit key, simulate page-nav with cached pre-edit Firestore delivery via snapshot listener), capture production state with DevTools open (HUMAN-ACTION), pick fix shape from three candidates (A: writeback never fired → unconditional + verified; B: listener LWW underflow → guard against undefined local.updatedAt; C: serverTimestamp didn't resolve → switch to client-side Date.now()), ship fix with the regression test from 01-01 locking it, then postmortem the harness-fidelity gap.
+
+Plans (planned per archived handoff `.paul/handoffs/archive/HANDOFF-2026-04-27-post-uat-v5h-and-v51.md`):
+- **v5h-01-01 — Reproduce + diagnose** (research; autonomous=false; 1 HUMAN-ACTION checkpoint for production DevTools capture; 1 decision-checkpoint at end picking fix shape A/B/C). 3 tasks: (1) kitchen-sink reproduction harness in property-failures.test.ts; (2) HUMAN-ACTION production state capture in `.paul/postmortems/v50-07-save-loss-investigation.md`; (3) root-cause confirmation + fix-shape decision.
+- **v5h-01-02 — Fix** (execute; ~2h; decision-checkpoint at start to confirm fix shape; regression test from 01-01 ships in this plan to lock the fix). After ship: push to prod, Daniel re-runs UAT scenario 1.
+- **v5h-01-03 — Postmortem** (execute; ~30min) — `.paul/postmortems/v50-07-save-loss.md`: what kitchen-sink missed (in-memory adapters with zero latency missed the snapshot-listener cache-vs-fresh delivery race); lesson for future cutover phases (kitchen-sink needs "real-Firestore lite" mode via Firebase emulator OR higher-fidelity in-memory adapter modeling initial-cache-then-fresh delivery semantics).
+
+Skills required: TBD — likely none (engine + harness work; same precedent as v50-06-01 + v50-07-04).
+
+Sequencing post-close: Daniel re-runs UAT scenario 1 → if pass, advance to v5.1 (editor UX overhaul) → after v5.1 ships + Daniel re-confirms UAT smoke, run `/paul:audit-milestone` (or `/paul:plan-milestone-gaps`) to close v5.0.
+
+## Active Milestone (Pending Close — Blocked on v5.0-hotfix)
 **v5.0 — Bulletproof Editor (Local-First Rewrite)**
-Status: 🟡 Pending UAT (all 7 phases shipped; awaiting Rabbi Daniel + one band member to execute UAT-PLAN.md over 1–2 weekly cycles before milestone close via `/paul:audit-milestone`)
+Status: 🟡 Pending UAT (all 7 phases shipped; close BLOCKED on v5.0-hotfix completing first, then v5.1 UX overhaul, then `/paul:audit-milestone`)
 Phases: 7 of 7 complete
 Theme: Rebuild the setlist editor on a local-first foundation, with sticky song memory and a spreadsheet-shaped UX, so saves are bulletproof by construction. Includes amputation of dead surfaces (AI chat, live-swap UI) up front.
 
@@ -557,4 +584,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-26 (Phase v50-06 COMPLETE 3/3 plans — v50-06-03 cross-leader live-edit + airplane-mode + perf-view audit shipped: startSnapshotListener with outbox-pending + LWW guards mounted in SetlistGridHydrator post-hydration; property-failures harness validates 'theirs' staleness gap auto-closure + sequential offline drain in F→G→A→B→C order; perf-view audit Outcome 2 routes legacy `setlists/{id}.tracks[]` migration + bridge to v50-07. Net: ~+750 LOC, +11 vitest cases [1442/1442]. 6/7 phases complete; v50-07 final phase remains: migration script execution + perf-view bridge + Playwright kitchen-sink + Sentry alarms + manual UAT + ship to band.)*
+*Last updated: 2026-04-27 (Milestone v5.0-hotfix created — P0 save-loss fix surfaced by Daniel's UAT path "P" confirmed [new setlist + edit key + navigate-away → key gone despite "Saved" indicator]. Phase v5h-01 with 3 planned plans [01-01 reproduce+diagnose with HUMAN-ACTION DevTools capture + decision-checkpoint A/B/C; 01-02 fix; 01-03 postmortem]. v5.0 milestone close BLOCKED on v5.0-hotfix → v5.1 UX overhaul → `/paul:audit-milestone`. Per archived handoff `.paul/handoffs/archive/HANDOFF-2026-04-27-post-uat-v5h-and-v51.md`.)*

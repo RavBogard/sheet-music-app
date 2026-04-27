@@ -59,38 +59,71 @@ export function SetlistGridHydrator({
             // updatedAt is newer (or local is missing). Server data is
             // authoritative — write directly to Dexie, NOT via applyEdit
             // (which would enqueue an outbox row and re-send back to Firestore).
-            await db.transaction('rw', db.setlists, db.tracks, async () => {
-                const localSetlist = await db.setlists.get(setlistId)
-                if (
-                    !localSetlist ||
-                    (localSetlist.updatedAt ?? 0) <
-                        (initialSetlist.updatedAt ?? 0)
-                ) {
-                    await db.setlists.put(initialSetlist)
-                }
-
-                if (initialTracks.length === 0) return
-
-                const localById = new Map<string, LocalTrack>()
-                const localTracks = await db.tracks
-                    .where('setlistId')
-                    .equals(setlistId)
-                    .toArray()
-                for (const t of localTracks) localById.set(t.id, t)
-
-                const toPut: LocalTrack[] = []
-                for (const t of initialTracks) {
-                    const local = localById.get(t.id)
-                    if (
-                        !local ||
-                        ((local.updatedAt as number | undefined) ?? 0) <
-                            ((t.updatedAt as number | undefined) ?? 0)
-                    ) {
-                        toPut.push(t)
+            //
+            // v5h-01-02 fix (F): outbox-pending guard. Server data is
+            // authoritative ONLY when local has no in-flight edit. If an
+            // outbox row exists for a docId (status ∈ {pending, sending,
+            // failed}), the engine has yet to resolve a local edit — server
+            // priming would silently clobber user intent. Mirrors the
+            // snapshot-listener.ts:197 outbox-pending guard pattern.
+            await db.transaction(
+                'rw',
+                db.setlists,
+                db.tracks,
+                db.outbox,
+                async () => {
+                    const setlistOutboxRow = await db.outbox
+                        .filter(
+                            (r) =>
+                                r.collection === 'setlists' &&
+                                r.docId === setlistId,
+                        )
+                        .first()
+                    if (setlistOutboxRow === undefined) {
+                        const localSetlist = await db.setlists.get(setlistId)
+                        if (
+                            !localSetlist ||
+                            (localSetlist.updatedAt ?? 0) <
+                                (initialSetlist.updatedAt ?? 0)
+                        ) {
+                            await db.setlists.put(initialSetlist)
+                        }
                     }
-                }
-                if (toPut.length > 0) await db.tracks.bulkPut(toPut)
-            })
+
+                    if (initialTracks.length === 0) return
+
+                    // Pre-fetch all pending track outbox rows in one scan to
+                    // avoid N round-trips inside the loop. Outbox is small
+                    // (<~50 rows in practice) so the unindexed scan is cheap.
+                    const trackOutboxIds = new Set<string>()
+                    const trackOutboxRows = await db.outbox
+                        .filter((r) => r.collection === 'tracks')
+                        .toArray()
+                    for (const r of trackOutboxRows)
+                        trackOutboxIds.add(r.docId)
+
+                    const localById = new Map<string, LocalTrack>()
+                    const localTracks = await db.tracks
+                        .where('setlistId')
+                        .equals(setlistId)
+                        .toArray()
+                    for (const t of localTracks) localById.set(t.id, t)
+
+                    const toPut: LocalTrack[] = []
+                    for (const t of initialTracks) {
+                        if (trackOutboxIds.has(t.id)) continue
+                        const local = localById.get(t.id)
+                        if (
+                            !local ||
+                            ((local.updatedAt as number | undefined) ?? 0) <
+                                ((t.updatedAt as number | undefined) ?? 0)
+                        ) {
+                            toPut.push(t)
+                        }
+                    }
+                    if (toPut.length > 0) await db.tracks.bulkPut(toPut)
+                },
+            )
 
             if (!cancelled) setHydration('done')
         }

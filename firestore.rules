@@ -102,7 +102,36 @@ service cloud.firestore {
       allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
 
     }
-    
+
+    // TRACKS Collection (v5.0 top-level normalized track docs)
+    // v50-05-02 cutover writes here from SetlistGrid edits + lazy-hydration
+    // cascade. Tracks belong logically to a setlist (setlistId field);
+    // permissions are band-leader/admin-managed catalog rather than per-track
+    // ownership. ownerId is intentionally NOT carried on track docs, so the
+    // setlists ownerId pattern does not apply.
+    // v5h-01-02 fix (E): added to close the v5.0 save-loss bug — without
+    // this block, the default-deny fallback at the bottom rejected every
+    // tracks write with permission-denied.
+    match /tracks/{trackId} {
+      allow read: if isMember();
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+    }
+
+    // SONGS Collection (v5.0 first-class song catalog with sticky memory)
+    // v50-04 promoted songs/{id} to first-class with defaults: { key, lead,
+    // bpm } + recent[] history (cap 5). v50-05 propagates track edits back
+    // via propagateTrackEditToSong → applyEdit('update', 'songs', ...).
+    // v5h-01-02 fix (E): added alongside tracks for the same default-deny
+    // reason — sticky-memory writes were also being rejected silently.
+    match /songs/{songId} {
+      allow read: if isMember();
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+    }
+
     // TASKS Collection
     // Read: Any signed-in user can read tasks (to see them on setlists)
     // Write: All writes go through the secure API routes using the Admin SDK

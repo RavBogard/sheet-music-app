@@ -10,7 +10,13 @@
 //      write before the engine drains it.
 //   2. LWW guard — only put if remote.updatedAt > local.updatedAt. Stale
 //      deliveries (queued before a more recent local commit's writeback)
-//      are dropped silently.
+//      are dropped silently. NOTE: when local.updatedAt is undefined (e.g.,
+//      engine writeback skipped because adapter returned `{}` with no
+//      committedAt), we PREFER the local row — the alternative
+//      ((undefined ?? 0) >= remote) → false → put would silently overwrite
+//      a user edit the engine has yet to resolve. v5h-01-02 fix (B): the
+//      guard skips delivery under uncertainty rather than clobbering. See
+//      the v5h-01-01 reproduction harness in property-failures.test.ts.
 //
 // The listener never throws out of its callbacks. Firestore errors are
 // swallowed + logged; engine writes remain authoritative.
@@ -171,7 +177,16 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
             await db.transaction('rw', db.setlists, db.outbox, async () => {
                 if (await hasPendingOutboxRow(db, 'setlists', setlistId)) return
                 const local = await db.setlists.get(setlistId)
-                if ((local?.updatedAt ?? 0) >= delivery.updatedAt) return
+                // v5h-01-02 fix (B): strict-equality guard against undefined
+                // local.updatedAt — falling open under uncertainty would let
+                // a cached delivery clobber a user edit the engine hasn't
+                // resolved yet. Prefer the local row in two cases:
+                //   - local exists but has no resolved updatedAt yet
+                //   - local.updatedAt is at least as new as delivery
+                if (local) {
+                    if (local.updatedAt === undefined) return
+                    if (local.updatedAt >= delivery.updatedAt) return
+                }
                 const next: LocalSetlist = {
                     ...(delivery.data as LocalSetlist),
                     id: setlistId,
@@ -211,11 +226,13 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
 
                     // added / modified
                     const local = await db.tracks.get(change.docId)
-                    if (
-                        local &&
-                        (local.updatedAt ?? 0) >= change.updatedAt
-                    ) {
-                        continue // LWW skip
+                    // v5h-01-02 fix (B): strict-equality guard mirroring
+                    // the setlists branch — preserve local row when its
+                    // updatedAt is undefined (engine writeback unresolved)
+                    // OR when it's at least as new as the delivery.
+                    if (local) {
+                        if (local.updatedAt === undefined) continue
+                        if (local.updatedAt >= change.updatedAt) continue
                     }
                     const next: LocalTrack = {
                         ...(change.data as LocalTrack),
