@@ -9,9 +9,9 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.1 — Editor UX Polish (band-onboarding gate) — 2 of 4 phases complete (v51-02 ✅ COMPLETE 2026-04-27). Tablet-first. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md for every phase.
-Phase: v51-02 ✅ COMPLETE 2026-04-27 (1/1 plans). Editor readability + visual hierarchy shipped at commit `c40d880`; pushed to origin master; Vercel deploying. Suite 1495/1495 (was 1492 + 3 new a11y cases). UAT approved by Daniel on desktop + iPad. Decision Option B Comfortable Dense recorded. DESIGN-CONTRACT.md preserved at `.paul/phases/v51-02-editor-readability/v51-02-01-DESIGN-CONTRACT.md` as design ground-truth for v51-04 + future tweaks.
-Plan: None active — v51-03 is next phase (Smart create-setlist wizard, date-aware via Hebcal).
+Milestone: 🚧 v5.1 — Editor UX Polish (band-onboarding gate) — 2 of 4 phases complete (v51-03 now in PLAN). Tablet-first. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md for every phase.
+Phase: 🚧 v51-03 — Smart create-setlist wizard (date-aware via Hebcal). PLAN created 2026-04-27, awaiting approval.
+Plan: v51-03-01 PLAN at `.paul/phases/v51-03-create-setlist-wizard/v51-03-01-PLAN.md`. autonomous=false (1 HUMAN-VERIFY at end). 5 tasks: (1) findLastMatchingService helper in setlist-firebase.ts (Firestore query + getServiceContext fallback for legacy setlists without templateType + ServiceType→templateType mapping incl. festival multi-match) + tests; (2) three-offer UI in CreationWizard.tsx (with /ui-ux-pro-max consult — Clone last matching / Use template / Start scratch; pre-form offer strip appears once date set; Clone CTA disabled with tooltip when no match e.g. Sunday); (3) wire clone path through useCreationWizard.create() + refactor cloneForNextWeek as wrapper around new cloneSetlist(source, targetDate) + sticky-memory verbatim-copy verification (NO code change to v50-04; just test) + telemetry tag in toast; (4) suite + build + boundary verify; (5) HUMAN-VERIFY Daniel UAT on desktop + iPad. 9 ACs (helper match/fallback/null + UI surface/disable + clone uses chosen date + sticky preserved + telemetry mode tag + UAT). Boundaries lock SetlistGrid (v51-02) + sticky-memory (v50-04) + sync engine + perf-view + firestore.rules + cloneForNextWeek public surface (refactored to wrapper) + liturgical-calendar/templates (reused as-is).
 
 Earlier: v51-01-01 LOOP COMPLETE 2026-04-27. TouchOrPopover always-Popover + DropdownCell mode='discrete'|'searchable' + KeyCell chromatic Major|Minor Tabs across all 6 dropdown sites (Key/Lead/Type/AddRow/ChartBind/Bulk). SUMMARY at `.paul/phases/v51-01-picker-rework/v51-01-01-SUMMARY.md`.
 
@@ -33,7 +33,23 @@ Earlier: v50-07-05 LOOP COMPLETE — FINAL plan in v50-07 phase + v5.0 milestone
 Earlier: v50-07-04 LOOP COMPLETE — kitchen-sink fast-check property shipped. Decision (Task 0): user selected `harness-only` (Playwright spec skipped; Claude recommended this path — the v50-06 harness already proves every bulletproof claim a Playwright spec would prove, and v50-07-05 manual UAT is the actual end-to-end gate; AC-4 marked N/A). New `v50-07-04: kitchen-sink under random failure mix` describe in `src/lib/sync/__tests__/property-failures.test.ts`: KitchenSinkAdapter (SharedRemote + online toggle + expectedUpdatedAt precondition), KSAction grammar (edit-set/update/delete + toggle-online + force-quit + cross-tab via direct SharedRemote mutation + lazy-hydrate mirroring SetlistGridHydrator's Promise.all fan-out + tick), runKitchenSink with 4 invariants asserted (AC-9 no-data-loss + per-doc drain ordering + no orphaned 'sending' + lazy-hydration idempotency). fast-check property: 50 iterations on CI / 10 local; 8s per-iteration safety timeout so runaway shapes shrink to counterexample instead of timing out. 2 deterministic regressions (lazy-hydration idempotency across re-mounts; cross-tab edit + local update surfaces VersionMismatch as observable failed row). Lifted OfflineToggleAdapter from inside v50-06-03 describe to module scope (the only sensible reuse target; setupTwoWriterRace + SharedRemoteSubscriber too scenario-specific to lift). v50-06-03 still 10/10 against the lifted adapter. New `npm run test:kitchensink` script. Quiesce uses repeated pump() instead of clock.advance — driving the FakeClock through backoff retry timers ran away in tight loops when VersionMismatch kept firing (counterexample shrunk by fast-check during APPLY: lazy-hydrate + edit-delete tracks + edit-update setlists + edit-delete setlists). Failed/pending rows still observable in outbox = AC-9 satisfied. Suite 1468/1468 (+3); tsc + next build clean; CI=true kitchen-sink 50 iterations in 22.5s test / 25.6s wall (under 60s budget). Commit 47ae779 pushed; SUMMARY pending UNIFY. autonomous=false (was — 1 decision checkpoint at top: Playwright scope = harness-only / minimal-e2e / full-e2e; resolved to harness-only). 3 tasks, 7 ACs (AC-4 is decision-dependent). Reuses setupTwoWriterRace + SharedRemoteSubscriber + OfflineToggleAdapter + FakeClock from v50-06 property-failures harness; adds new describe block running fast-check ≥100 iterations on CI (25 local) covering random edits + airplane toggles + force-quits + cross-tab + lazy-hydration injection; asserts AC-9 no-data-loss + per-doc drain ordering + lazy-hydration idempotency. Optional minimal Playwright spec (~200 LOC) drives lazy-hydration end-to-end via page.addInitScript Dexie pre-seed (no real Firebase). Boundaries lock engine.ts / init.ts / write.ts / schema.ts / SetlistGridHydrator / use-setlist-performance — substrate is frozen for this plan; the hydrator's test-seam props ARE the integration point. /ui-ux-pro-max NOT required (SPECIAL-FLOWS gates on UI changes; this is test infra only — same precedent as v50-06-01 + v50-07-02). PLAN at `.paul/phases/v50-07-migration-cutover/v50-07-04-PLAN.md`. Awaiting approval.
 
 Earlier: v50-07-03 LOOP COMPLETE — Option C Hybrid lazy hydration shipped at the application layer. `LocalSetlist.hydrated?: boolean` added (additive non-indexed schema bump per v50-04 rule). SetlistGridHydrator extended with a fire-once-per-mount lazy-hydration effect gated on `hydration === 'done' && initialSetlist.hydrated !== true && initialTracks.length > 0`: fans out `applyEdit({op:'set', collection:'tracks', doc:t}, {withoutUndo:true})` for every legacy embedded track via Promise.all, then `applyEdit({op:'update', collection:'setlists', docId, patch:{hydrated:true}, expectedUpdatedAt:initialSetlist.updatedAt}, {withoutUndo:true})` after fan-out succeeds. Errors are warn-logged via @/lib/logger; setlist stays unhydrated and retries on next mount. `applyEdit` exposed as a test-seam prop. useSetlistPerformance dual-reads via new `onSnapshot(query(collection(db,'tracks'), where('setlistId','==',setlistId)))` subscription with order-asc sort; prefers top-level when length > 0, falls back to `setlistData?.tracks` so 24 not-yet-hydrated legacy setlists still render in perf-view. No external API or index changes (single-field setlistId; ≤650 docs). Test coverage: SetlistGridHydrator +5 cases (lazy-fan-out + skip-already-hydrated + skip-empty + fan-out-failure + fire-once); useSetlistPerformance +4 cases (fallback-empty + prefer-top-level-sorted + live-update + cleanup-unsubscribe); 2 pre-existing priming-only tests updated to mark `hydrated:true` (semantically post-migration). 1 commit (`60de2ff`) covering all 3 tasks (cohesive vertical slice) + close commit lands next. Suite 1465/1465 (+9 from 1456); tsc + next build clean. Pushed to origin master (Vercel auto-deploys). `/ui-ux-pro-max` invoked at APPLY entry per SPECIAL-FLOWS.md mandate (brief load — data-correctness, no new pixels). SUMMARY at `.paul/phases/v50-07-migration-cutover/v50-07-03-SUMMARY.md`.
-Last activity: 2026-04-27 — v51-02-01 LOOP COMPLETE (PLAN ✓ APPLY ✓ UNIFY ✓). Phase v51-02 ✅ COMPLETE (1/1 plans). UAT approved by Daniel post-deploy. Suite 1495/1495; next build clean. SUMMARY at `.paul/phases/v51-02-editor-readability/v51-02-01-SUMMARY.md`. Phase transition required → v51-03 (Smart create-setlist wizard) is the next phase to plan.
+Last activity: 2026-04-27 — Session paused after v51-03-01 PLAN created (user invoked /paul:pause). v51-02 fully closed + pushed earlier in session (commits c40d880 + 05ddafb at push range c40d880..05ddafb). v51-03-01 PLAN at `.paul/phases/v51-03-create-setlist-wizard/v51-03-01-PLAN.md` ready for APPLY. Handoff at `.paul/HANDOFF-2026-04-27-v51-03-01-pickup.md` for fresh-session resume.
+
+## Session Continuity
+
+Last session: 2026-04-27 (paused via /paul:pause)
+Stopped at: v51-03-01 PLAN created, awaiting APPLY approval
+Next action: `/paul:apply .paul/phases/v51-03-create-setlist-wizard/v51-03-01-PLAN.md` (or `/paul:resume` to detect handoff and route)
+Resume file: `.paul/HANDOFF-2026-04-27-v51-03-01-pickup.md`
+Resume context:
+- v5.1 milestone is 2/4 phases done (v51-01 ✅ + v51-02 ✅); v51-03 + v51-04 remain
+- v51-03 = smart create-setlist wizard (date-aware via Hebcal); 5 tasks; /ui-ux-pro-max BLOCKING at APPLY entry; HUMAN-VERIFY at end
+- Existing infra reused as-is: liturgical-calendar.ts (getServiceContext + getFullServiceContext) + liturgical-templates.ts (TEMPLATE_LABELS) + cloneForNextWeek (refactored to wrapper, surface preserved)
+- Plan touches setlist-firebase.ts + use-creation-wizard.ts + CreationWizard.tsx (NOT editor surface — v51-02 just shipped, pixel-frozen)
+- v51-04 = Vocal Lead label rename + Daniel-loop UAT codification + gig-packet print smoke (after v51-03 closes)
+- Standing prefs reminder: push to origin master; tablet-first; Reform Jewish (Friday night + Shabbat morning, NOT Sunday); "Vocal Lead" terminology; explicitly stage `.paul/phases/{phase}/` on PAUL commits; run `next build` not just `tsc`
+- Pre-existing dirty state on package.json + src/build-info.json — predates this session, auto-touched by dev script; do NOT stage these on the v51-03 task feature commit
+- Git strategy: master (no feature branches per project preference)
 
 Resume context:
 - v5.1 milestone is 1/4 phases done; phases v51-02 / v51-03 / v51-04 remain
@@ -60,10 +76,11 @@ Progress:
 Current loop state (v5.1 milestone):
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v51-02-01 LOOP COMPLETE 2026-04-27. Phase v51-02 ✅ COMPLETE. v51-03 (smart create-setlist wizard) next.]
+  ✓        ○        ○     [v51-03-01 PLAN CREATED 2026-04-27, awaiting approval. /ui-ux-pro-max BLOCKING at APPLY entry.]
 
 v51-01-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE 2026-04-27. Picker rework shipped at 304e940; suite 1492/1492.]
 v51-02-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE 2026-04-27. Editor readability + visual hierarchy shipped at c40d880; Option B Comfortable Dense locked; suite 1495/1495 (+3 a11y); UAT approved. SUMMARY at .paul/phases/v51-02-editor-readability/v51-02-01-SUMMARY.md.]
+v51-03-01:     ✓ ──▶ ○ ──▶ ○     [PLAN CREATED. 5 tasks (helper → 3-offer UI → clone wiring + sticky-memory verify → suite/build verify → HUMAN-VERIFY). 9 ACs. autonomous=false. PLAN at .paul/phases/v51-03-create-setlist-wizard/v51-03-01-PLAN.md.]
 ```
 
 Earlier loop state (v5.0-hotfix milestone — closed):
@@ -99,7 +116,7 @@ PHASE v50-07 ✅ COMPLETE (5/5 plans). v5.0 milestone PENDING UAT — see resume
 
 ## How to resume
 
-**Phase v51-02 ✅ COMPLETE.** Run `/paul:plan` to create v51-03-01 (Smart create-setlist wizard — date-aware via Hebcal). /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md.
+**v51-03-01 PLAN CREATED.** Run `/paul:apply .paul/phases/v51-03-create-setlist-wizard/v51-03-01-PLAN.md` to execute. autonomous=false; /ui-ux-pro-max BLOCKING at APPLY entry (must load BEFORE Task 2 designs the offer strip per SPECIAL-FLOWS.md). Expect 1 HUMAN-VERIFY at end (Daniel UAT on desktop + iPad against deployed Vercel).
 
 Phase v51-03 scope (per ROADMAP):
 - Extend the v4.2 P2-02 single-step wizard to be date-aware via Hebcal (already wired)
