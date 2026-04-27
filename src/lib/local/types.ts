@@ -8,6 +8,11 @@ export interface LocalSetlist {
     updatedAt: number
     ownerId: string
     eventDate?: number
+    /** v50-07-03 (Option C Hybrid Lazy Hydration): set to true after the
+     *  hydrator fans out the legacy embedded `tracks[]` into the top-level
+     *  `tracks/{id}` collection on first edit-open. Optional + non-indexed
+     *  per the v50-04 additive-schema rule. */
+    hydrated?: boolean
     [key: string]: unknown
 }
 

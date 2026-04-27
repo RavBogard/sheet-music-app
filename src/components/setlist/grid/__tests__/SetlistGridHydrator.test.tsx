@@ -4,7 +4,23 @@ import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getDb, resetDbForTests } from '@/lib/local/schema'
-import type { LocalSetlist, LocalTrack } from '@/lib/local/types'
+import type {
+    EditDescriptor,
+    LocalSetlist,
+    LocalTrack,
+} from '@/lib/local/types'
+
+type ApplyEditSpyArgs = [
+    edit: EditDescriptor,
+    options?: { withoutUndo?: boolean },
+]
+function makeApplyEditSpy(impl?: (edit: EditDescriptor) => Promise<void>) {
+    return vi.fn<(...args: ApplyEditSpyArgs) => Promise<void>>(
+        async (edit) => {
+            if (impl) await impl(edit)
+        },
+    )
+}
 
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
@@ -99,7 +115,10 @@ describe('SetlistGridHydrator', () => {
         render(
             <SetlistGridHydrator
                 setlistId={SETLIST_ID}
-                initialSetlist={makeSetlist(updatedAt)}
+                // v50-07-03: lazy-hydration would enqueue outbox rows for a
+                // legacy setlist; this test verifies the steady-state priming
+                // path emits zero, so explicitly mark already-hydrated.
+                initialSetlist={{ ...makeSetlist(updatedAt), hydrated: true }}
                 initialTracks={makeTracks(updatedAt)}
             />,
         )
@@ -130,7 +149,10 @@ describe('SetlistGridHydrator', () => {
         render(
             <SetlistGridHydrator
                 setlistId={SETLIST_ID}
-                initialSetlist={makeSetlist(serverUpdatedAt)}
+                // v50-07-03: post-migration setlist; this test exercises the
+                // LWW-priming idempotency, not the lazy-hydration cascade
+                // (which would call applyEdit('set') and clobber the local edit).
+                initialSetlist={{ ...makeSetlist(serverUpdatedAt), hydrated: true }}
                 initialTracks={makeTracks(serverUpdatedAt)}
             />,
         )
@@ -194,6 +216,163 @@ describe('SetlistGridHydrator', () => {
         // Drain pending live queries (SetlistGrid's tracks query) before
         // teardown so they don't throw DatabaseClosedError after Dexie closes.
         await findByTestId('setlist-grid-empty-state')
+    })
+
+    // v50-07-03: lazy-hydration fan-out — verifies the conditional gate
+    // (legacy + not-yet-hydrated + has tracks) and the migration cascade
+    // (N applyEdit('set','tracks',...) + 1 applyEdit('update','setlists',
+    // {hydrated:true})). Tests the test-seam applyEdit prop, NOT the real
+    // outbox path (covered separately by write.test.ts + drain tests).
+    it('lazy-hydrates legacy tracks then marks the setlist hydrated', async () => {
+        const updatedAt = 1_700_000_000_000
+        const applyEditSpy = makeApplyEditSpy()
+
+        const { findByTestId } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(updatedAt)}
+                initialTracks={makeTracks(updatedAt)}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        await waitFor(() => {
+            expect(applyEditSpy).toHaveBeenCalledTimes(3)
+        })
+
+        const setCalls = applyEditSpy.mock.calls.filter(
+            ([edit]) => edit.op === 'set' && edit.collection === 'tracks',
+        )
+        expect(setCalls).toHaveLength(2)
+        for (const [, options] of setCalls) {
+            expect(options).toEqual({ withoutUndo: true })
+        }
+
+        const updateCalls = applyEditSpy.mock.calls.filter(
+            ([edit]) =>
+                edit.op === 'update' && edit.collection === 'setlists',
+        )
+        expect(updateCalls).toHaveLength(1)
+        const [updateEdit, updateOptions] = updateCalls[0]!
+        if (updateEdit.op !== 'update') throw new Error('unreachable')
+        expect(updateEdit.docId).toBe(SETLIST_ID)
+        expect(updateEdit.patch).toEqual({ hydrated: true })
+        expect(updateEdit.expectedUpdatedAt).toBe(updatedAt)
+        expect(updateOptions).toEqual({ withoutUndo: true })
+    })
+
+    it('skips lazy-hydration when the setlist is already hydrated', async () => {
+        const updatedAt = 1_700_000_000_000
+        const applyEditSpy = makeApplyEditSpy()
+
+        const { findByTestId } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={{ ...makeSetlist(updatedAt), hydrated: true }}
+                initialTracks={makeTracks(updatedAt)}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        // Settle: even after hydration completes, no fan-out should fire.
+        await waitFor(async () => {
+            const local = await getDb().setlists.get(SETLIST_ID)
+            expect(local).toBeDefined()
+        })
+        expect(applyEditSpy).not.toHaveBeenCalled()
+    })
+
+    it('skips lazy-hydration when initialTracks is empty', async () => {
+        const updatedAt = 1_700_000_000_000
+        const applyEditSpy = makeApplyEditSpy()
+
+        const { findByTestId } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(updatedAt)}
+                initialTracks={[]}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        await waitFor(async () => {
+            const local = await getDb().setlists.get(SETLIST_ID)
+            expect(local).toBeDefined()
+        })
+        expect(applyEditSpy).not.toHaveBeenCalled()
+    })
+
+    it('does NOT mark the setlist hydrated when fan-out fails', async () => {
+        const updatedAt = 1_700_000_000_000
+        const applyEditSpy = makeApplyEditSpy(async (edit) => {
+            // Fail the very first fan-out call (a 'set tracks').
+            if (edit.op === 'set' && edit.collection === 'tracks') {
+                throw new Error('fan-out boom')
+            }
+        })
+
+        const { findByTestId } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(updatedAt)}
+                initialTracks={makeTracks(updatedAt)}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        await waitFor(() => {
+            expect(applyEditSpy).toHaveBeenCalled()
+        })
+
+        // No update('setlists', {hydrated:true}) was made.
+        const updateCalls = applyEditSpy.mock.calls.filter(
+            ([edit]) =>
+                edit.op === 'update' && edit.collection === 'setlists',
+        )
+        expect(updateCalls).toHaveLength(0)
+    })
+
+    it('fires lazy-hydration only once per mount (re-render does not retrigger)', async () => {
+        const updatedAt = 1_700_000_000_000
+        const applyEditSpy = makeApplyEditSpy()
+
+        const { findByTestId, rerender } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(updatedAt)}
+                initialTracks={makeTracks(updatedAt)}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        await findByTestId('setlist-grid-empty-state')
+
+        await waitFor(() => {
+            expect(applyEditSpy).toHaveBeenCalledTimes(3)
+        })
+
+        // Force a re-render with a NEW initialSetlist reference but same
+        // logical content — the guard ref must keep us from re-firing.
+        rerender(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(updatedAt)}
+                initialTracks={makeTracks(updatedAt)}
+                applyEdit={applyEditSpy}
+            />,
+        )
+
+        // Drain microtasks; ensure no additional calls landed.
+        await new Promise((r) => setTimeout(r, 20))
+        expect(applyEditSpy).toHaveBeenCalledTimes(3)
     })
 
     // v50-06-03: hydrator mounts the snapshot listener after hydration

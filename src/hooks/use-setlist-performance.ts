@@ -1,11 +1,20 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { doc } from "firebase/firestore"
+import {
+    collection,
+    doc,
+    onSnapshot,
+    query,
+    where,
+    type QueryDocumentSnapshot,
+    type DocumentData,
+} from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
+import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
@@ -39,8 +48,51 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     )
     const { data: setlistData, loading, error } = useSafeFirestoreSync<Setlist>(setlistRef)
 
+    // v50-07-03: dual-read for the v5.0 lazy-hydration cutover. Once a
+    // legacy setlist is opened in the editor, SetlistGridHydrator fans its
+    // embedded `tracks[]` into the top-level `tracks/{id}` collection. The
+    // perf-view subscribes to that collection here and prefers it whenever
+    // it has any docs; otherwise it falls back to the legacy embedded array
+    // so historical (not-yet-hydrated) setlists still render.
+    const [topLevelTracks, setTopLevelTracks] = useState<SetlistTrack[]>([])
+
+    useEffect(() => {
+        if (!setlistId) return
+        const q = query(
+            collection(db, "tracks"),
+            where("setlistId", "==", setlistId),
+        )
+        const unsub = onSnapshot(
+            q,
+            (snap) => {
+                const next = snap.docs
+                    .map((d: QueryDocumentSnapshot<DocumentData>) => ({
+                        id: d.id,
+                        ...(d.data() as Omit<SetlistTrack, "id"> & {
+                            order?: number
+                        }),
+                    }))
+                    .sort(
+                        (a, b) =>
+                            ((a as { order?: number }).order ?? 0) -
+                            ((b as { order?: number }).order ?? 0),
+                    ) as SetlistTrack[]
+                setTopLevelTracks(next)
+            },
+            (err) => {
+                logger.warn(
+                    `[useSetlistPerformance] top-level tracks subscription error for ${setlistId}`,
+                    err,
+                )
+                setTopLevelTracks([])
+            },
+        )
+        return unsub
+    }, [setlistId])
+
     // Extract fields from setlist data
-    const tracks: SetlistTrack[] = setlistData?.tracks || []
+    const tracks: SetlistTrack[] =
+        topLevelTracks.length > 0 ? topLevelTracks : setlistData?.tracks || []
     const name: string = setlistData?.name || "Untitled"
     const serviceNotes: string | null = setlistData?.serviceNotes || null
     const musicians: SetlistMusician[] = setlistData?.musicians || []
