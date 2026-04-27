@@ -17,6 +17,14 @@ import type { LocalCollection, OutboxRow } from '@/lib/local/types'
 
 import { CrossTabLock } from './cross-tab-lock'
 import { SyncEngine } from './engine'
+export { startSnapshotListener } from './snapshot-listener'
+export type {
+    SnapshotListenerOpts,
+    SnapshotSubscriber,
+    SetlistDelivery,
+    TrackChange,
+    TrackChangeType,
+} from './snapshot-listener'
 import {
     AuthError,
     type CommitResult,
