@@ -1,11 +1,27 @@
 ---
 phase: v5h-01-track-edit-save-loss
 plan: 02
-status: COMPLETE
-loop: PLAN ✓ → APPLY ✓ → UNIFY ○
+status: COMPLETE (AC-4 ultimately passed via v5h-01-03 chain)
+loop: PLAN ✓ → APPLY ✓ → UNIFY ✓
+unified: 2026-04-27
 ---
 
 # v5h-01-02 SUMMARY — Track-Edit Save-Loss Fix (E + F + B)
+
+## UNIFY postscript (2026-04-27)
+
+E + F + B shipped at commit `0c2921d` and Firestore rules deployed cleanly. AC-4 (Daniel UAT scenario 1) initially **partial-pass**: editor save worked, but Daniel reported "saved in the setlist but didn't show in the perform view" + "save indicator stuck red".
+
+Diagnostic chain that closed AC-4:
+1. Outbox audit revealed 142 stuck rows (46 failed `permission-denied` + 96 pending blocked behind them by per-doc drain ordering). All from BEFORE the rules deploy; engine couldn't auto-recover failed rows.
+2. Daniel auth-token was stale (old session pre-rules-deploy). Sign-out/in restored `role: "admin"` claim.
+3. Reset-and-drain snippet flipped 46 `failed` rows back to `pending` so the engine retried with the fresh token. Drains succeeded; reconciliation modal resolved the precondition-mismatched updates with "Keep mine".
+4. Editor save indicator went green; cell-edits started persisting cleanly.
+5. Perf-view continued showing stale data — that was a separate architectural bug (data-path divergence between editor and perf-view), routed to v5h-01-03.
+
+Core E+F+B fix is correct and stable. Bug surfaced by UAT was a secondary issue (perf-view) not caused by E+F+B.
+
+---
 
 ## What Shipped
 
