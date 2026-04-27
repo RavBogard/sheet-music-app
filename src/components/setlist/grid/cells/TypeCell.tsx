@@ -63,6 +63,7 @@ export function TypeCell(props: TypeCellProps) {
             {...props}
             options={TYPE_OPTIONS}
             placeholder="Pick type"
+            mode="discrete"
             ariaLabel={props.ariaLabel ?? 'Track type'}
             renderDisplay={(value) => {
                 const v = (value ?? 'song') as string

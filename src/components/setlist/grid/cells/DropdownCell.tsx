@@ -32,6 +32,28 @@ export interface DropdownCellProps {
     className?: string
     /** Render override for the resting (non-edit) cell display. */
     renderDisplay?: (value: string | undefined) => ReactNode
+    /**
+     * v51-01-01: picker mode.
+     * - `searchable` (default): renders cmdk CommandInput; on touch, the
+     *   input is visible but TouchOrPopover suppresses auto-focus so the
+     *   keyboard doesn't pop until the user deliberately taps the input.
+     *   On desktop, hardware-keyboard type-to-filter works as before.
+     * - `discrete`: no CommandInput rendered. List items are tappable
+     *   directly. Use for short discrete option sets (Key, Type) where
+     *   typing-to-filter has no value.
+     */
+    mode?: 'searchable' | 'discrete'
+    /**
+     * v51-01-01: optional override for the picker content surface, used
+     * by KeyCell to render Major | Minor tabs in place of the default
+     * grouped option list. When provided, the default Command/CommandList
+     * is replaced by this content. Discrete-mode tap-target rules still
+     * apply at the consumer level.
+     */
+    renderPickerContent?: (helpers: {
+        commit: (value: string) => void
+        close: () => void
+    }) => ReactNode
 }
 
 const PRINTABLE_KEY_RE = /^[ -~]$/
@@ -49,6 +71,8 @@ export function DropdownCell({
     ariaLabel,
     className,
     renderDisplay,
+    mode = 'searchable',
+    renderPickerContent,
 }: DropdownCellProps) {
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
@@ -170,84 +194,101 @@ export function DropdownCell({
                 </button>
             }
         >
-            <Command
-                loop
-                shouldFilter
-                data-testid="dropdown-cell-command"
-            >
-                <CommandInput
-                    value={filter}
-                    onValueChange={setFilter}
-                    placeholder={placeholder ?? 'Type to filter…'}
-                    className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Tab') {
-                            e.preventDefault()
-                            if (allowFreeText && filter.trim().length > 0) {
-                                commit(
-                                    filter.trim(),
-                                    e.shiftKey ? 'left' : 'right',
-                                )
-                            } else {
-                                commit(value ?? '', e.shiftKey ? 'left' : 'right')
-                            }
-                        }
-                        if (e.key === 'Escape') {
-                            e.preventDefault()
-                            setOpen(false)
-                        }
-                    }}
-                />
-                <CommandList className="max-h-64 overflow-y-auto py-1">
-                    <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                        No matches.
-                    </CommandEmpty>
-                    {grouped.map(([groupName, items]) => (
-                        <CommandGroup
-                            key={groupName || '_'}
-                            heading={groupName || undefined}
-                            className={cn(
-                                groupName &&
-                                    'px-2 py-1 text-xs uppercase tracking-wide text-muted-foreground/80',
-                            )}
-                        >
-                            {items.map((opt) => (
-                                <CommandItem
-                                    key={opt.value}
-                                    value={`${opt.label} ${opt.value}`}
-                                    onSelect={() => commit(opt.value, 'down')}
-                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                >
-                                    {opt.icon ? (
-                                        <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
-                                            {opt.icon}
-                                        </span>
-                                    ) : null}
-                                    <span className="truncate">
-                                        {opt.label}
-                                    </span>
-                                    {opt.hint ? (
-                                        <span className="ml-auto truncate text-xs text-muted-foreground">
-                                            {opt.hint}
-                                        </span>
-                                    ) : null}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    ))}
-                    {allowFreeText && filter.trim().length > 0 && (
-                        <CommandGroup heading="Custom">
-                            <CommandItem
-                                value={`__addfree__${filter}`}
-                                onSelect={() => commit(filter.trim(), 'down')}
-                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                            >
-                                <span>+ Add “{filter.trim()}”</span>
-                            </CommandItem>
-                        </CommandGroup>
+            {renderPickerContent
+                ? renderPickerContent({
+                      commit: (v) => commit(v, 'down'),
+                      close: () => setOpen(false),
+                  })
+                : (
+                <Command
+                    loop
+                    shouldFilter
+                    data-testid="dropdown-cell-command"
+                >
+                    {mode === 'searchable' && (
+                        <CommandInput
+                            value={filter}
+                            onValueChange={setFilter}
+                            placeholder={placeholder ?? 'Type to filter…'}
+                            className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Tab') {
+                                    e.preventDefault()
+                                    if (allowFreeText && filter.trim().length > 0) {
+                                        commit(
+                                            filter.trim(),
+                                            e.shiftKey ? 'left' : 'right',
+                                        )
+                                    } else {
+                                        commit(value ?? '', e.shiftKey ? 'left' : 'right')
+                                    }
+                                }
+                                if (e.key === 'Escape') {
+                                    e.preventDefault()
+                                    setOpen(false)
+                                }
+                            }}
+                        />
                     )}
-                </CommandList>
-            </Command>
+                    <CommandList className="max-h-64 overflow-y-auto py-1">
+                        <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
+                            No matches.
+                        </CommandEmpty>
+                        {grouped.map(([groupName, items]) => (
+                            <CommandGroup
+                                key={groupName || '_'}
+                                heading={groupName || undefined}
+                                className={cn(
+                                    groupName &&
+                                        'px-2 py-1 text-xs uppercase tracking-wide text-muted-foreground/80',
+                                )}
+                            >
+                                {items.map((opt) => (
+                                    <CommandItem
+                                        key={opt.value}
+                                        value={`${opt.label} ${opt.value}`}
+                                        onSelect={() => commit(opt.value, 'down')}
+                                        className={cn(
+                                            'flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15',
+                                            // v51-01-01: ≥44px tap targets
+                                            // on touch + breathing room to
+                                            // avoid fat-finger mispicks.
+                                            '[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2',
+                                            value === opt.value &&
+                                                'font-semibold text-indigo-200 bg-indigo-500/10',
+                                        )}
+                                    >
+                                        {opt.icon ? (
+                                            <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+                                                {opt.icon}
+                                            </span>
+                                        ) : null}
+                                        <span className="truncate">
+                                            {opt.label}
+                                        </span>
+                                        {opt.hint ? (
+                                            <span className="ml-auto truncate text-xs text-muted-foreground">
+                                                {opt.hint}
+                                            </span>
+                                        ) : null}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        ))}
+                        {allowFreeText && mode === 'searchable' && filter.trim().length > 0 && (
+                            <CommandGroup heading="Custom">
+                                <CommandItem
+                                    value={`__addfree__${filter}`}
+                                    onSelect={() => commit(filter.trim(), 'down')}
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
+                                >
+                                    <span>+ Add “{filter.trim()}”</span>
+                                </CommandItem>
+                            </CommandGroup>
+                        )}
+                    </CommandList>
+                </Command>
+            )}
         </TouchOrPopover>
     )
 }

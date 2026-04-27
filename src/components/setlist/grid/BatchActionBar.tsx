@@ -97,12 +97,14 @@ export function BatchActionBar({
                     value: o.value,
                     label: o.label,
                 }))}
+                discrete
             />
             <BulkPopover
                 label="Key"
                 aria-label="Set key for selected rows"
                 onCommit={(value) => onBulkSet({ key: value })}
                 options={KEY_OPTIONS_DATA}
+                discrete
             />
             <BulkPopover
                 label="Lead"
@@ -164,6 +166,13 @@ interface BulkPopoverProps {
     allowFreeText?: boolean
     placeholder?: string
     emptyHint?: string
+    /**
+     * v51-01-01: discrete-mode picker — no CommandInput rendered.
+     * Used for Type and Key bulk-edit popovers (short fixed option
+     * sets); Lead bulk-edit stays searchable for free-text musician
+     * names.
+     */
+    discrete?: boolean
 }
 
 function BulkPopover({
@@ -174,6 +183,7 @@ function BulkPopover({
     allowFreeText = false,
     placeholder,
     emptyHint,
+    discrete = false,
 }: BulkPopoverProps) {
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
@@ -222,74 +232,76 @@ function BulkPopover({
             }
         >
             <Command shouldFilter loop>
-                        <CommandInput
-                            value={filter}
-                            onValueChange={setFilter}
-                            placeholder={placeholder ?? 'Type to filter…'}
-                            aria-label={ariaLabel}
-                            className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
+                {!discrete && (
+                    <CommandInput
+                        value={filter}
+                        onValueChange={setFilter}
+                        placeholder={placeholder ?? 'Type to filter…'}
+                        aria-label={ariaLabel}
+                        className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                e.preventDefault()
+                                close()
+                                return
+                            }
+                            if (
+                                e.key === 'Enter' &&
+                                allowFreeText &&
+                                filter.trim().length > 0
+                            ) {
+                                // Allow custom value entry on Enter when
+                                // no cmdk match is active. cmdk's
+                                // built-in Enter handling already commits
+                                // the highlighted match; this branch
+                                // covers the no-match case.
+                                const trimmed = filter.trim()
+                                const matched = options.find(
+                                    (o) =>
+                                        o.value.toLowerCase() ===
+                                            trimmed.toLowerCase() ||
+                                        o.label.toLowerCase() ===
+                                            trimmed.toLowerCase(),
+                                )
+                                if (!matched) {
                                     e.preventDefault()
-                                    close()
-                                    return
+                                    commit(trimmed)
                                 }
-                                if (
-                                    e.key === 'Enter' &&
-                                    allowFreeText &&
-                                    filter.trim().length > 0
-                                ) {
-                                    // Allow custom value entry on Enter when
-                                    // no cmdk match is active. cmdk's
-                                    // built-in Enter handling already commits
-                                    // the highlighted match; this branch
-                                    // covers the no-match case.
-                                    const trimmed = filter.trim()
-                                    const matched = options.find(
-                                        (o) =>
-                                            o.value.toLowerCase() ===
-                                                trimmed.toLowerCase() ||
-                                            o.label.toLowerCase() ===
-                                                trimmed.toLowerCase(),
-                                    )
-                                    if (!matched) {
-                                        e.preventDefault()
-                                        commit(trimmed)
-                                    }
-                                }
-                            }}
-                        />
-                        <CommandList className="max-h-64 overflow-y-auto py-1">
-                            <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                                {emptyHint ?? 'No matches.'}
-                            </CommandEmpty>
-                            {options.length > 0 && (
-                                <CommandGroup>
-                                    {options.map((opt) => (
-                                        <CommandItem
-                                            key={opt.value}
-                                            value={`${opt.label} ${opt.value}`}
-                                            onSelect={() => commit(opt.value)}
-                                            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                        >
-                                            <span className="truncate">
-                                                {opt.label}
-                                            </span>
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            )}
-                {allowFreeText && filter.trim().length > 0 && (
-                    <CommandGroup heading="Custom">
-                        <CommandItem
-                            value={`__addfree__${filter}`}
-                            onSelect={() => commit(filter.trim())}
-                            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                        >
-                            <span>+ Add “{filter.trim()}”</span>
-                        </CommandItem>
-                    </CommandGroup>
+                            }
+                        }}
+                    />
                 )}
+                <CommandList className="max-h-64 overflow-y-auto py-1">
+                    <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
+                        {emptyHint ?? 'No matches.'}
+                    </CommandEmpty>
+                    {options.length > 0 && (
+                        <CommandGroup>
+                            {options.map((opt) => (
+                                <CommandItem
+                                    key={opt.value}
+                                    value={`${opt.label} ${opt.value}`}
+                                    onSelect={() => commit(opt.value)}
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
+                                >
+                                    <span className="truncate">
+                                        {opt.label}
+                                    </span>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+                    {allowFreeText && !discrete && filter.trim().length > 0 && (
+                        <CommandGroup heading="Custom">
+                            <CommandItem
+                                value={`__addfree__${filter}`}
+                                onSelect={() => commit(filter.trim())}
+                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2"
+                            >
+                                <span>+ Add “{filter.trim()}”</span>
+                            </CommandItem>
+                        </CommandGroup>
+                    )}
                 </CommandList>
             </Command>
         </TouchOrPopover>
