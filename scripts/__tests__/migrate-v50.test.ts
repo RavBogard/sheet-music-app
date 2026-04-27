@@ -147,9 +147,9 @@ describe('runMigration — apply', () => {
         expect(recent[2].setlistId).toBe('sl1')
     })
 
-    it('writes the system/migrations/v50 marker', async () => {
+    it('writes the system/v50Migration marker', async () => {
         await runMigration(fs, { mode: 'apply', log: () => {}, now: () => 999 })
-        const marker = await fs.getDoc('system/migrations/v50')
+        const marker = await fs.getDoc('system/v50Migration')
         expect(marker.exists).toBe(true)
         expect(marker.data?.appliedAt).toBe(999)
         expect(marker.data?.affectedSongCount).toBe(3)
@@ -235,7 +235,7 @@ describe('runMigration — dry-run', () => {
         expect(result.affectedSongCount).toBe(3)
         expect(fs.writes).toEqual({ set: 0, update: 0, delete: 0 })
         expect(lines.some((l) => l.includes('[DRY] songs/'))).toBe(true)
-        const marker = await fs.getDoc('system/migrations/v50')
+        const marker = await fs.getDoc('system/v50Migration')
         expect(marker.exists).toBe(false)
     })
 
@@ -277,7 +277,7 @@ describe('runMigration — rollback', () => {
         expect(aPostRollback.defaults).toEqual({ key: 'PRIOR' })
         expect(aPostRollback.recent).toHaveLength(1)
 
-        const marker = await fs.getDoc('system/migrations/v50')
+        const marker = await fs.getDoc('system/v50Migration')
         expect(marker.exists).toBe(false)
     })
 

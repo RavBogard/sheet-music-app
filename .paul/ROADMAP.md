@@ -18,7 +18,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 | v50-04 | Song catalog & sticky memory | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-05 | Spreadsheet editor UI (cutover) | 5/5 (01 build ✓ • 02 cutover ✓ • 03 multi-select+AlertDialog ✓ • 04 iPad+ContextMenu ✓ • 05 mobile+Undo+WCAG ✓) | ✅ Complete | 2026-04-26 |
 | v50-06 | Concurrent-edit safety + offline + cross-tab | 3/3 (01 substrate ✓ • 02 modal ✓ • 03 cross-leader ✓) | ✅ Complete | 2026-04-26 |
-| v50-07 | Migration, kitchen-sink, cutover | TBD | Not started | - |
+| v50-07 | Migration, kitchen-sink, cutover | 2/TBD (01 audit ✓ • 02 MARKER_PATH patch + liveState scrub ✓) | 🚧 In progress | - |
 
 ### Phase v50-01: Architecture & design
 
@@ -92,8 +92,16 @@ Skills required: /ui-ux-pro-max (BLOCKING for APPLY of v50-06-02 only; optional 
 
 ### Phase v50-07: Migration, kitchen-sink, cutover
 
-Focus: One-shot migration script transforms existing Firestore setlists into new shape AND cleans up any orphaned chat / song-groups / liveState data left behind by v50-02 amputation (must be flawless on cutover day — no dual-format support window). Playwright kitchen-sink suite — random edits + airplane-mode toggles + force-quits + cross-tab edits = zero data loss across 100 runs. Sentry alarms on any save-path failure in prod. Manual UAT with Rabbi Daniel + one band member. Ship to band.
-Plans: TBD
+Focus: Bring the v5.0 editor into contact with historical production data (24 legacy setlists, 650 embedded tracks). After v50-07-01 audit revealed the legacy shape diverges substantially from v5.0 expectations (no songId references; songs/* empty; liveState orphans on 10 setlists; pre-existing MARKER_PATH bug in migrate-v50.ts), user selected **Option C: Hybrid Lazy Hydration** — old setlists migrate on first edit-open via SetlistGridHydrator; perf-view dual-reads legacy + top-level. Then Playwright kitchen-sink (random edits + airplane-mode + force-quits + cross-tab; zero data loss across ≥100 runs), Sentry alarms on save-path failures, and manual UAT with Rabbi Daniel + band member. Ship to band.
+
+Plans (running scope; revisable):
+- **v50-07-01 ✓ (2026-04-27) — Production audit + dry-run report.** New `scripts/audit-v50.ts` (~340 LOC, read-only; no writes). Findings: 29 setlists, 24 with embedded tracks (650 total), 0 distinct songIds (legacy uses `id`/`fileId` not `songId`), `songs/*` empty (0), top-level `tracks/*` empty (0; v5.0 editor unused in prod), 10 setlists carry `liveState` orphan, chats/songGroups/config already clean. 🐛 Pre-existing bug: `migrate-v50.ts MARKER_PATH = 'system/migrations/v50'` is 3-segment collection (not doc); never surfaced because tests use a fake adapter. Recommendation block presented three scope shapes; user selected Option C. 2 commits + close commit. 3 tasks, 7 ACs, autonomous=false (1 HUMAN-VERIFY gate). Suite 1442/1442; tsc + next build clean.
+- **v50-07-02 ✓ (2026-04-27) — MARKER_PATH patch + liveState scrub.** Patched migrate-v50.ts MARKER_PATH from `system/migrations/v50` → `system/v50Migration` (2-seg doc); 13 existing migrate-v50 tests still pass after fixture updates. New `scripts/scrub-livestate.ts` (~250 LOC, dry-run by default) reuses MigrationFirestore + FIELD_DELETE_SENTINEL; modes dry-run / apply / rollback / force / help; per-setlist snapshots to `migrations/livestate-scrub/snapshot/{setlistId}` (4-seg doc) before each FieldValue.delete; marker at `system/livestateScrub` for idempotency. 14 unit tests on in-memory FakeFirestore (mirrors migrate-v50.test.ts). Production scrub applied: 10 setlists' `liveState` removed; re-audit confirms liveState count = 0; setlist count unchanged at 29; embedded tracks unchanged at 650. 3 tasks, 7 ACs, autonomous=true. /ui-ux-pro-max NOT required (no UI surface). Suite 1456/1456 (+14); tsc + next build clean.
+- **v50-07-03 (next)** — Lazy hydration in `SetlistGridHydrator` + perf-view dual-read. `/ui-ux-pro-max` BLOCKING. Detect legacy shape on hydrator mount; convert per-track via `applyEdit('set', 'tracks', ...)` to top-level; write `hydrated:true` on setlist for idempotency. `useSetlistPerformance` dual-reads: legacy `tracks[]` if non-empty, else top-level `tracks/{id}`. Rabbi must be able to view + edit any of the 24 historical setlists.
+- **v50-07-04 (planned)** — Playwright kitchen-sink (≥100 runs random edits + airplane-mode + force-quits + cross-tab).
+- **v50-07-05 (planned)** — Sentry alarms on save-path failures + manual UAT prep + ship-to-band checklist.
+
+Skills required: /ui-ux-pro-max (BLOCKING for APPLY of v50-07-03 only; v50-07-01 + v50-07-02 are backend/script work)
 
 ## Previous Milestone
 **v4.5 Unloseable Live-Ops**

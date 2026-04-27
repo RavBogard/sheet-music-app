@@ -56,7 +56,11 @@ interface PerSongRecord {
     performedAt: number
 }
 
-const MARKER_PATH = 'system/migrations/v50'
+// 2-segment Firestore doc path. Previous value 'system/migrations/v50' was a
+// 3-segment collection path and threw on db.doc() against real Firestore
+// (caught in v50-07-01 audit; tests use a fake adapter that does not validate
+// path structure, so the bug never surfaced before).
+const MARKER_PATH = 'system/v50Migration'
 const SNAPSHOT_COLLECTION = 'migrations/v50/snapshot'
 const RECENT_CAP = 5
 
