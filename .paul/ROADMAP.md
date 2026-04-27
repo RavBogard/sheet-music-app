@@ -17,7 +17,7 @@ Constraint: Band is **not** in production on this app right now (waiting for dep
 | v50-03 | Local-first sync engine | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-04 | Song catalog & sticky memory | 1/1 | ✅ Complete | 2026-04-26 |
 | v50-05 | Spreadsheet editor UI (cutover) | 5/5 (01 build ✓ • 02 cutover ✓ • 03 multi-select+AlertDialog ✓ • 04 iPad+ContextMenu ✓ • 05 mobile+Undo+WCAG ✓) | ✅ Complete | 2026-04-26 |
-| v50-06 | Concurrent-edit safety + offline + cross-tab | TBD | Not started | - |
+| v50-06 | Concurrent-edit safety + offline + cross-tab | 1/3 (01 substrate ✓ • 02 modal • 03 cross-leader) | 🟡 In progress | - |
 | v50-07 | Migration, kitchen-sink, cutover | TBD | Not started | - |
 
 ### Phase v50-01: Architecture & design
@@ -72,7 +72,11 @@ Skills required: /ui-ux-pro-max (BLOCKING for APPLY of every v50-05 plan)
 ### Phase v50-06: Concurrent-edit safety + offline + cross-tab
 
 Focus: "Remote changed — keep mine / take theirs" reconciliation banner via local-first IDB diff. Two-tab edit scenarios pass. Airplane-mode tests pass. Performance view audit: read-only on the new doc shape; verify that real-time setlist sync (= the v3.0 "live swap" replacement) works correctly when the leader edits during a service.
-Plans: TBD
+
+Plans (3-plan vertical-slice split per handoff guidance; revisable at PLAN time):
+- **v50-06-01 ✓ (2026-04-26) — Substrate stabilization.** Cross-tab-lock test deflaked (30/30 deterministic; root cause = brittle "lower tabId wins" assertion fired on sequential tryAcquire — fix added deferred-delivery FakeChannelHub variant so the actual tie-break race is testable; 50-iter stress loops for both invariants; production cross-tab-lock.ts UNTOUCHED). FirestoreAdapter contract extended: `commitOutboxRow → Promise<CommitResult{updatedAt?}>`; ProductionFirestoreAdapter re-reads doc post-commit (one extra getDoc per write) to surface server timestamp; engine writes new updatedAt back to local row inside the SAME Dexie rw tx that deletes the outbox row (atomic, with `if(existing)` guard for mid-flight deletes; delete ops skip writeback). LocalTrack + LocalSong gained explicit `updatedAt?: number` (was hidden behind index sig). expectedUpdatedAt threaded through every track-update applyEdit call site: 7 cell-commit sites + handleDeleteRow + handleBindChart + handleBulkSet + handleBulkDelete + handleContextDuplicate cascade + handleDragEnd + 4 MobileCardList move ops + executeEntry undo/redo (reads LIVE updatedAt at undo-time, NOT snapshot-time, so undo races a remote write surface as VersionMismatch in v50-06-02). New 'two-writer race' describe block in property-failures harness: SharedRemote + TwoWriterAdapter + per-engine LocalDb + distinct lock channels → exactly one write succeeds, loser's outbox row in 'failed' status with localId addressable for resolveConflict('mine'|'theirs'), engine state 'conflict', loser's local row preserved. 4 commits: `9ca4943` (chore PLAN), `5736599` (Task 1 deflake), `0ce9bd2` (Task 2 substrate), `edfc339` (Task 3 race test) + close commit. Suite 1418/1418 (+8 from 1410); tsc + next build clean. 3 tasks, 6 ACs, autonomous, backend/test only — `/ui-ux-pro-max` NOT required for this plan.
+- **v50-06-02 — Reconciliation modal (planned).** §6.9 "Remote changed — keep mine / take theirs" banner / modal subscribed to engine's DRAIN_VERSION_MISMATCH event; reads `failed`-status outbox row + remote doc to render the diff; routes user choice through `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })`. May add a state-machine event payload extension. `/ui-ux-pro-max` BLOCKING for APPLY.
+- **v50-06-03 — Cross-leader live-edit + airplane-mode + performance view audit (planned).** Real-time setlist sync via Firestore onSnapshot listeners on tracks/setlists (replacement for deleted v50-02 live-swap UI); airplane-mode integration scenarios beyond what v50-06-01 covers; performance-view audit confirming read-only on the new doc shape. May add Playwright two-tab smoke.
 
 ### Phase v50-07: Migration, kitchen-sink, cutover
 

@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 next)
-Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — Ready to plan
-Plan: v50-05-05 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-05-SUMMARY.md`); phase v50-05 COMPLETE
-Status: UNIFY complete for v50-05-05. Phase v50-05 (Spreadsheet editor UI cutover) closed end-to-end across 5 plans. Mobile stacked-card flow + Undo via zustand + WCAG AA audit (jest-axe ZERO violations) all on prod. 4 commits on origin/master: `b23fae1` (chore PLAN), `3e19bf0` (Task 1 mobile), `2260a21` (Task 2 Undo + Cmd-Z), `e2f1daa` (Task 3 a11y). +33 new vitest cases (1410/1410). Phase close commit (this UNIFY + transition) lands next.
-Last activity: 2026-04-26 — UNIFY complete for v50-05-05; phase v50-05 transitioning to complete; v50-06 ready to plan.
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — **5 of 7 phases complete** (v50-05 closed; v50-06 in progress: 1 of 3 plans done)
+Phase: v50-06 of 7 (Concurrent-edit safety + offline + cross-tab) — In progress
+Plan: v50-06-01 CLOSED (substrate stabilization). Loop complete. SUMMARY at `.paul/phases/v50-06-concurrent-edit-safety/v50-06-01-SUMMARY.md`.
+Status: UNIFY complete for v50-06-01. Cross-tab-lock test deflaked (30/30 consecutive runs green; root cause = brittle "lower tabId wins" assertion fired on sequential tryAcquire where second caller bails on fresh peerHolder; fix split into two tests + deferred-delivery hub for actual tie-break race + 50-iter stress loops). FirestoreAdapter contract extended (commitOutboxRow → CommitResult{updatedAt?}); ProductionFirestoreAdapter re-reads doc post-commit to surface server timestamp; engine writes updatedAt back to local row inside same Dexie tx that deletes outbox row (atomic, with `if(existing)` guard for mid-flight deletes). expectedUpdatedAt threaded through every track-update applyEdit call site (7 cell commits + handleDeleteRow + handleBindChart + handleBulkSet + handleBulkDelete + handleContextDuplicate cascade + handleDragEnd + 4 MobileCardList move ops + executeEntry undo/redo reads LIVE updatedAt). Two-writer integration test in property-failures harness proves substrate is conflict-detection-ready. Suite 1418/1418 (+8 from 1410); tsc clean; next build clean. 4 commits: `9ca4943` (chore PLAN), `5736599` (Task 1), `0ce9bd2` (Task 2), `edfc339` (Task 3); close commit lands next.
+Last activity: 2026-04-26 — UNIFY complete for v50-06-01; v50-06-02 (reconciliation modal) ready to plan.
 
 Progress:
 - v5.0: [██████████] ~85% (5 of 7 phases complete; v50-06 + v50-07 remain)
@@ -28,14 +28,14 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase v50-05 closed; ready to plan v50-06]
+  ✓        ✓        ✓     [v50-06-01 LOOP COMPLETE — substrate stabilization shipped]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-03:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-04:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
-v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans: build/cutover/multi-select+AlertDialog/iPad+ContextMenu/mobile+Undo+WCAG]
-v50-06:        ○ ──▶ ○ ──▶ ○     [Phase: concurrent-edit safety + offline + cross-tab — next]
+v50-05:        ✓ ──▶ ✓ ──▶ ✓     [Phase COMPLETE — 5 plans]
+v50-06:        ◐ ──▶ ◐ ──▶ ◐     [v50-06-01 LOOP COMPLETE (substrate stabilization, 1/3 plans); 02 reconciliation modal + 03 cross-leader live-edit TBD]
 v50-07:        ○ ──▶ ○ ──▶ ○     [Phase: migration + kitchen-sink Playwright + cutover]
 ```
 
@@ -221,10 +221,32 @@ Working tree: **clean.** Ready for context clear.
 | 2026-04-26: INPUT/TEXTAREA/SELECT/contenteditable skip for global Cmd-Z at SetlistGrid root | v50-05-05 | Native field undo wins when typing into a form field. Same skip set as v4.2 P2-04 + v50-05-03 Esc handler. Documented as reusable pattern for any future global shortcut |
 | 2026-04-26: WCAG AA via jest-axe at component-test level — ZERO violations on first run | v50-05-05 | 7 axe scan cases + 1 keyboard Tab case; axeOpts disables 5 harness-context false positives (region/landmark-one-main/page-has-heading-one + aria-required-children/parent for grid role). Design system internalized correctly across v50-05-01..05; no in-place fixes needed |
 | 2026-04-26: zundo dep NOT added (planned inline, confirmed at apply-time) | v50-05-05 | Plain zustand was the right shape. Matches v50-02 / v50-04 / v50-05-04 dep-cleanup-deferral precedent |
+| 2026-04-26: Cross-tab-lock flake fixed in TEST only; production primitive untouched | v50-06-01 | Root cause was a brittle "lower tabId wins" assertion firing on sequential tryAcquire — only valid in true async race. Fix added deferred-delivery hub variant + split tests + 50-iter stress loops. Production cross-tab-lock.ts unchanged across v50-06; reconciliation modal (v50-06-02) coordinates through the same well-tested primitive |
+| 2026-04-26: FirestoreAdapter contract — commitOutboxRow → Promise<CommitResult{updatedAt?}> | v50-06-01 | Optional updatedAt: delete ops have no resulting doc; test fakes opt out; production opts in via post-commit getDoc re-read. Forward-compatible — new adapters add updatedAt as they learn server timestamps |
+| 2026-04-26: ProductionFirestoreAdapter re-reads doc post-commit (one extra getDoc per write) | v50-06-01 | serverTimestamp() is sentinel until commit; client-side Timestamp.now() would diverge from server-authoritative. v50-06-02 reconciliation depends on freshness; refactor (batching / client-side) is local if profiling later flags it |
+| 2026-04-26: Engine writeback inside SAME Dexie tx as outbox-row delete; if(existing) guard | v50-06-01 | Atomicity: outbox row must not vanish without local row reflecting new server state. if(existing) prevents resurrection if user pressed Backspace mid-flight. Per-doc drain ordering (v50-03) + 'sending' row reset on engine.start() cover crash-mid-writeback |
+| 2026-04-26: Inverse-replay (Cmd-Z) reads LIVE updatedAt at undo-time, not snapshot-time | v50-06-01 | Remote write since entry was pushed should make inverse fail with VersionMismatch (v50-06-02 surfaces it). Snapshot-time updatedAt would let undo silently overwrite newer remote state. Undo is a real edit for precondition purposes |
+| 2026-04-26: handlePickSong defaults patch passes expectedUpdatedAt: undefined (justified inline) | v50-06-01 | Row was just created locally via set; first server commit hasn't echoed updatedAt yet; engine treats undefined as "no precondition". First server commit installs updatedAt; subsequent edits pick it up via live-query row |
+| 2026-04-26: LocalTrack + LocalSong gained explicit updatedAt?: number (was hidden behind index sig) | v50-06-01 | TS inferred unknown for track.updatedAt, blocking direct passthrough. Explicit field keeps type narrow without breaking open-ended schema. Forward-friendly — updatedAt is now first-class across all three local doc types |
+| 2026-04-26: Two-tab race-detection harness — SharedRemote + per-engine LocalDb + distinct lock channels | v50-06-01 | Reusable pattern for v50-06-02 modal integration tests + v50-06-03 cross-leader live-edit scenarios. Distinct channels prevent cross-tab single-leader deferral, allowing both engines to drain |
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-05 full cycle + phase v50-05 close) — `/paul:plan` → `/paul:apply` (Task 1 mobile stacked-card flow + Task 2 Undo via plain zustand store [zundo deferred] + Task 3 WCAG AA audit via jest-axe with ZERO violations) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP + PROJECT sync) → phase v50-05 transition. 4 commits: `b23fae1` (chore PLAN), `3e19bf0` (Task 1), `2260a21` (Task 2), `e2f1daa` (Task 3). Phase close commit lands next. Full suite 1410/1410; tsc + next build clean. Phase v50-05 (Spreadsheet editor UI cutover) COMPLETE across 5 plans: v50-05-01 build → v50-05-02 cutover → v50-05-03 multi-select+AlertDialog → v50-05-04 iPad+ContextMenu → v50-05-05 mobile+Undo+WCAG. Production /setlists/[id] now serves desktop + iPad + phone audiences with full feature parity, accessibility-clean by jest-axe, with Cmd-Z undo end-to-end.
+Current session: 2026-04-26 — `/paul:resume` (handoff `HANDOFF-2026-04-26-v50-06-pickup.md`) → `/paul:plan` v50-06-01 → `/paul:apply` (Task 1 cross-tab-lock flake fix → Task 2 adapter+engine writeback+cell threading → Task 3 two-writer race test) → `/paul:unify` (this SUMMARY + STATE + ROADMAP). 4 commits: `9ca4943` (chore PLAN), `5736599` (Task 1 deflake), `0ce9bd2` (Task 2 substrate), `edfc339` (Task 3 race test). Close commit + push lands next. Full suite 1418/1418 (+8 from 1410); tsc + next build clean. v50-06-01 substrate stabilization COMPLETE: cross-tab-lock test deterministic (30/30); adapter returns updatedAt; engine writeback atomic; expectedUpdatedAt threaded through every track-update applyEdit call site; two-writer race produces VersionMismatchError end-to-end with addressable failed outbox row.
+Stopped at: v50-06-01 loop closed; v50-06-02 (reconciliation modal §6.9) ready to plan with /ui-ux-pro-max BLOCKING for APPLY.
+Next action: `/paul:plan` for v50-06-02 OR pause for fresh session.
+Resume context (v50-06-02):
+- Scope per ARCHITECTURE.md §6.9: "Remote changed — keep mine / take theirs" reconciliation banner/modal subscribed to engine's DRAIN_VERSION_MISMATCH event; reads `failed`-status outbox row + remote doc to render diff; routes user choice through `engine.resolveConflict(localId, choice, { newExpectedUpdatedAt })`.
+- Substrate ready (v50-06-01): engine.getState() reaches 'conflict' via two-writer race; failed-status outbox rows have localId + lastError + payload + expectedUpdatedAt populated; cross-tab-lock primitive verified deterministic; `wireSyncEngineToStore` channel exposes (state, queued, lastError) via `onStateChange`.
+- Reusable patterns: `<DeleteConfirmProvider>` provider/dialog template for `<ReconciliationProvider>`; jest-axe + axe-core a11y scan infra; undo-store pushEntry for "user's resolution choice = own undo unit"; flushAllBursts for synchronous flush before state read.
+- `/ui-ux-pro-max` BLOCKING for APPLY per SPECIAL-FLOWS.md.
+- Production smoke verification of v50-05-02..v50-05-05 still pending (deferred-smokes #4-#7); not blocking v50-06-02.
+- Cross-leader live-edit + airplane-mode + perf-view audit → v50-06-03.
+- Production migrate-v50.ts apply → v50-07.
+Resume file: `.paul/phases/v50-06-concurrent-edit-safety/v50-06-01-SUMMARY.md`
+Git strategy: master (continuing v50 hard-cutover convention; band still not in production).
+
+Prior session: 2026-04-26 (v50-05-05 full cycle + phase v50-05 close) — `/paul:plan` → `/paul:apply` (Task 1 mobile stacked-card flow + Task 2 Undo via plain zustand store [zundo deferred] + Task 3 WCAG AA audit via jest-axe with ZERO violations) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP + PROJECT sync) → phase v50-05 transition. 4 commits: `b23fae1` (chore PLAN), `3e19bf0` (Task 1), `2260a21` (Task 2), `e2f1daa` (Task 3). Phase close commit lands next. Full suite 1410/1410; tsc + next build clean. Phase v50-05 (Spreadsheet editor UI cutover) COMPLETE across 5 plans: v50-05-01 build → v50-05-02 cutover → v50-05-03 multi-select+AlertDialog → v50-05-04 iPad+ContextMenu → v50-05-05 mobile+Undo+WCAG. Production /setlists/[id] now serves desktop + iPad + phone audiences with full feature parity, accessibility-clean by jest-axe, with Cmd-Z undo end-to-end.
 Stopped at: PAUSED at phase v50-05 close (clean checkpoint). Context budget at 90% — v50-06 deserves fresh session.
 Next action: in fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-06. /ui-ux-pro-max BLOCKING for APPLY (frontend changes expected — §6.9 reconciliation modal).
 Resume file: `.paul/HANDOFF-2026-04-26-v50-06-pickup.md`
