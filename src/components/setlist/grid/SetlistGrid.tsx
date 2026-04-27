@@ -98,9 +98,15 @@ interface GridMeta {
     ) => boolean
     setlistLeads: string[]
     onDeleteRow: (track: LocalTrack) => void
+    /** v50-06-01: cells pass `expectedUpdatedAt` (the row's last-known
+     *  server `updatedAt`) so the production adapter's runTransaction
+     *  precondition can detect remote-edit races and surface them as
+     *  VersionMismatchError. Undefined is permitted for freshly-created
+     *  rows whose first server commit hasn't landed yet. */
     onCommitTrackPatch: (
         docId: string,
         patch: Record<string, unknown>,
+        expectedUpdatedAt?: number,
     ) => Promise<void>
     onBindChart: (track: LocalTrack, selection: ChartBindSelection) => void
     setlistIdForPropagation: string
@@ -163,7 +169,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     }
                     onCommit={(next) => {
                         if (!next || next === (row.type as string)) return
-                        void meta.onCommitTrackPatch(row.id, { type: next })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { type: next },
+                            row.updatedAt,
+                        )
                     }}
                 />
             )
@@ -189,7 +199,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     placeholder="Title"
                     ariaLabel="Track title"
                     onCommit={(next) => {
-                        void meta.onCommitTrackPatch(row.id, { title: next })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { title: next },
+                            row.updatedAt,
+                        )
                     }}
                 />
             )
@@ -214,7 +228,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
                     onCommit={(next) => {
-                        void meta.onCommitTrackPatch(row.id, { key: next })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { key: next },
+                            row.updatedAt,
+                        )
                         maybePropagate(
                             row,
                             { key: next },
@@ -253,14 +271,20 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     onCommit={(raw) => {
                         const trimmed = raw.trim()
                         if (trimmed === '') {
-                            void meta.onCommitTrackPatch(row.id, {
-                                bpm: undefined,
-                            })
+                            void meta.onCommitTrackPatch(
+                                row.id,
+                                { bpm: undefined },
+                                row.updatedAt,
+                            )
                             return
                         }
                         const next = Number(trimmed)
                         if (!Number.isFinite(next)) return
-                        void meta.onCommitTrackPatch(row.id, { bpm: next })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { bpm: next },
+                            row.updatedAt,
+                        )
                         maybePropagate(
                             row,
                             { bpm: next },
@@ -290,9 +314,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                         meta.handleCellKeyDown(e, ctx.row.index, colId)
                     }
                     onCommit={(next) => {
-                        void meta.onCommitTrackPatch(row.id, {
-                            leadMusician: next,
-                        })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { leadMusician: next },
+                            row.updatedAt,
+                        )
                         maybePropagate(
                             row,
                             { lead: next },
@@ -323,7 +349,11 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                     placeholder="Notes"
                     ariaLabel="Track notes"
                     onCommit={(next) => {
-                        void meta.onCommitTrackPatch(row.id, { notes: next })
+                        void meta.onCommitTrackPatch(
+                            row.id,
+                            { notes: next },
+                            row.updatedAt,
+                        )
                     }}
                 />
             )
@@ -608,15 +638,24 @@ export interface SetlistGridProps {
 async function commitTrackPatchImpl(
     docId: string,
     patch: Record<string, unknown>,
+    expectedUpdatedAt?: number,
 ): Promise<void> {
-    // expectedUpdatedAt deferred to v50-06 (concurrent-edit safety phase).
+    // v50-06-01: `expectedUpdatedAt` flows in from the cell's `row.original
+    // .updatedAt`, surfacing real two-writer races to the engine via
+    // VersionMismatchError (instead of silently last-write-winning).
     // v50-05-05: undoKey scopes burst coalescing per-(docId, field-set)
     // so different fields on the same row each get their own undo unit.
     // Multi-field patches (e.g. ChartCell binding setting songId+title+
     // defaults) coalesce as a single key — that's the right granularity.
     const fields = Object.keys(patch).sort().join(',')
     await applyEdit(
-        { op: 'update', collection: 'tracks', docId, patch },
+        {
+            op: 'update',
+            collection: 'tracks',
+            docId,
+            patch,
+            expectedUpdatedAt,
+        },
         { undoKey: `tracks:${docId}:${fields}` },
     )
 }
@@ -625,13 +664,21 @@ async function commitTrackPatchImpl(
  * v50-05-05 undo helpers — produce the EditDescriptor that reverses a
  * SimpleUndoEntry (for Cmd-Z) or replays it (for Cmd-Shift-Z). Composite
  * entries fan out to N parallel descriptors.
+ *
+ * v50-06-01: builders accept the live `expectedUpdatedAt` (read at
+ * undo/redo time, NOT snapshot-time) so an inverse that races a remote
+ * write surfaces as VersionMismatchError rather than silently overwriting.
  */
-function buildInverse(entry: SimpleUndoEntry): EditDescriptor | null {
+function buildInverse(
+    entry: SimpleUndoEntry,
+    expectedUpdatedAt: number | undefined,
+): EditDescriptor | null {
     if (entry.op === 'set') {
         return {
             op: 'delete',
             collection: entry.collection,
             docId: entry.docId,
+            expectedUpdatedAt,
         }
     }
     if (entry.op === 'update') {
@@ -641,6 +688,7 @@ function buildInverse(entry: SimpleUndoEntry): EditDescriptor | null {
             collection: entry.collection,
             docId: entry.docId,
             patch: { ...entry.prevDoc },
+            expectedUpdatedAt,
         }
     }
     if (entry.op === 'delete') {
@@ -654,7 +702,10 @@ function buildInverse(entry: SimpleUndoEntry): EditDescriptor | null {
     return null
 }
 
-function buildRedo(entry: SimpleUndoEntry): EditDescriptor | null {
+function buildRedo(
+    entry: SimpleUndoEntry,
+    expectedUpdatedAt: number | undefined,
+): EditDescriptor | null {
     if (entry.op === 'set') {
         if (!entry.newDoc) return null
         return {
@@ -670,6 +721,7 @@ function buildRedo(entry: SimpleUndoEntry): EditDescriptor | null {
             collection: entry.collection,
             docId: entry.docId,
             patch: { ...entry.newDoc },
+            expectedUpdatedAt,
         }
     }
     if (entry.op === 'delete') {
@@ -677,9 +729,24 @@ function buildRedo(entry: SimpleUndoEntry): EditDescriptor | null {
             op: 'delete',
             collection: entry.collection,
             docId: entry.docId,
+            expectedUpdatedAt,
         }
     }
     return null
+}
+
+async function readLiveUpdatedAt(
+    collection: SimpleUndoEntry['collection'],
+    docId: string,
+): Promise<number | undefined> {
+    try {
+        const live = (await getDb()[collection].get(docId)) as
+            | { updatedAt?: number }
+            | undefined
+        return live?.updatedAt
+    } catch {
+        return undefined
+    }
 }
 
 async function executeEntry(
@@ -688,24 +755,32 @@ async function executeEntry(
 ): Promise<void> {
     const builder = mode === 'undo' ? buildInverse : buildRedo
     if (entry.kind === 'simple') {
-        const desc = builder(entry)
+        const live = await readLiveUpdatedAt(entry.collection, entry.docId)
+        const desc = builder(entry, live)
         if (desc) await applyEdit(desc, { withoutUndo: true })
         return
     }
     // composite: fan out N inverses in parallel. Each leg's inverse is
     // independent at the docId level (per-doc drain ordering invariant
     // from v50-03 keeps each doc's outbox serialized).
-    const descriptors = entry.entries
-        .map((e) =>
-            builder({
-                kind: 'simple',
-                ts: entry.ts,
-                ...e,
-            } as SimpleUndoEntry),
-        )
-        .filter((d): d is EditDescriptor => d !== null)
+    const descriptors = await Promise.all(
+        entry.entries.map(async (e) => {
+            const live = await readLiveUpdatedAt(e.collection, e.docId)
+            return builder(
+                {
+                    kind: 'simple',
+                    ts: entry.ts,
+                    ...e,
+                } as SimpleUndoEntry,
+                live,
+            )
+        }),
+    )
+    const filtered = descriptors.filter(
+        (d): d is EditDescriptor => d !== null,
+    )
     await Promise.all(
-        descriptors.map((d) => applyEdit(d, { withoutUndo: true })),
+        filtered.map((d) => applyEdit(d, { withoutUndo: true })),
     )
 }
 
@@ -934,6 +1009,7 @@ export function SetlistGrid({
                 op: 'delete',
                 collection: 'tracks',
                 docId: track.id,
+                expectedUpdatedAt: track.updatedAt,
             })
         },
         [confirmFn],
@@ -954,6 +1030,7 @@ export function SetlistGrid({
                 collection: 'tracks',
                 docId: track.id,
                 patch,
+                expectedUpdatedAt: track.updatedAt,
             })
         },
         [],
@@ -991,6 +1068,7 @@ export function SetlistGrid({
                             collection: 'tracks',
                             docId: t.id,
                             patch: writePatch,
+                            expectedUpdatedAt: t.updatedAt,
                         },
                         { withoutUndo: true },
                     ),
@@ -1060,6 +1138,7 @@ export function SetlistGrid({
                         op: 'delete',
                         collection: 'tracks',
                         docId: t.id,
+                        expectedUpdatedAt: t.updatedAt,
                     },
                     { withoutUndo: true },
                 ),
@@ -1121,6 +1200,7 @@ export function SetlistGrid({
                             collection: 'tracks',
                             docId: r.id,
                             patch: { order: r.order + 1 },
+                            expectedUpdatedAt: r.updatedAt,
                         },
                         { withoutUndo: true },
                     ),
@@ -1261,17 +1341,19 @@ export function SetlistGrid({
                 .map((r) => ({ ...r }))
 
             await Promise.all(
-                updates.map(({ id, order }) =>
-                    applyEdit(
+                updates.map(({ id, order }) => {
+                    const r = rows.find((row) => row.id === id)
+                    return applyEdit(
                         {
                             op: 'update',
                             collection: 'tracks',
                             docId: id,
                             patch: { order },
+                            expectedUpdatedAt: r?.updatedAt,
                         },
                         { withoutUndo: true },
-                    ),
-                ),
+                    )
+                }),
             )
 
             const db = getDb()
@@ -1322,6 +1404,11 @@ export function SetlistGrid({
                 if (defaults.lead !== undefined)
                     patch.leadMusician = defaults.lead
                 if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
+                // expectedUpdatedAt: undefined OK — row was just created
+                // locally via the set above; first server commit hasn't
+                // landed yet so there's no server `updatedAt` to assert.
+                // The engine writeback (v50-06-01) will populate it after
+                // the set drains.
                 await applyEdit({
                     op: 'update',
                     collection: 'tracks',

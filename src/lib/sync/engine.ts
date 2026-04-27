@@ -245,8 +245,39 @@ export class SyncEngine {
             await this.db.outbox.update(row.localId!, { status: 'sending' })
 
             try {
-                await this.adapter.commitOutboxRow(row)
-                await this.db.outbox.delete(row.localId!)
+                const result = await this.adapter.commitOutboxRow(row)
+                // v50-06-01: write the new server `updatedAt` back into the
+                // local row inside the SAME Dexie tx that deletes the outbox
+                // row. This keeps the local doc's `updatedAt` in sync with
+                // the server so the editor's next edit can pass an honest
+                // `expectedUpdatedAt` precondition. Atomic: either both
+                // land or both roll back. Skipped for delete ops (no
+                // resulting doc) and when the adapter doesn't surface a
+                // server timestamp (test fakes; legacy adapters).
+                await this.db.transaction(
+                    'rw',
+                    this.db.outbox,
+                    this.db[row.collection],
+                    async () => {
+                        await this.db.outbox.delete(row.localId!)
+                        if (
+                            result.updatedAt !== undefined &&
+                            row.op !== 'delete'
+                        ) {
+                            const existing = await this.db[
+                                row.collection
+                            ].get(row.docId)
+                            if (existing) {
+                                await this.db[row.collection].put({
+                                    ...existing,
+                                    updatedAt: result.updatedAt,
+                                } as never)
+                            }
+                            // Guard: if the user deleted the row mid-flight,
+                            // skip the writeback rather than resurrecting it.
+                        }
+                    },
+                )
                 continue
             } catch (err) {
                 const handled = await this.handleAdapterError(row, err)

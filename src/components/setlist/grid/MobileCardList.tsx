@@ -24,10 +24,13 @@ export interface MobileCardListProps {
     onContextDuplicate: (rowId: string) => void
     /** Delete row (selection-aware) — same handler as desktop. */
     onContextDelete: (track: LocalTrack) => void
-    /** Per-field commit from the edit Sheet. */
+    /** Per-field commit from the edit Sheet.
+     *  v50-06-01: third arg is the row's last-known server `updatedAt`,
+     *  threaded into the EditDescriptor's `expectedUpdatedAt` precondition. */
     onCommitTrackPatch: (
         docId: string,
         patch: Record<string, unknown>,
+        expectedUpdatedAt?: number,
     ) => Promise<void>
     /** Single-row delete (called when Sheet's Delete button fires). */
     onDeleteRow: (track: LocalTrack) => void
@@ -74,18 +77,21 @@ export function MobileCardList({
         // invariant handles this correctly (each doc's outbox row
         // serializes its own writes). No cascade needed since we're
         // only swapping two adjacent rows.
+        // v50-06-01: thread expectedUpdatedAt per-row.
         await Promise.all([
             applyEdit({
                 op: 'update',
                 collection: 'tracks',
                 docId: editingTrack.id,
                 patch: { order: prev.order },
+                expectedUpdatedAt: editingTrack.updatedAt,
             }),
             applyEdit({
                 op: 'update',
                 collection: 'tracks',
                 docId: prev.id,
                 patch: { order: editingTrack.order },
+                expectedUpdatedAt: prev.updatedAt,
             }),
         ])
     }
@@ -100,12 +106,14 @@ export function MobileCardList({
                 collection: 'tracks',
                 docId: editingTrack.id,
                 patch: { order: next.order },
+                expectedUpdatedAt: editingTrack.updatedAt,
             }),
             applyEdit({
                 op: 'update',
                 collection: 'tracks',
                 docId: next.id,
                 patch: { order: editingTrack.order },
+                expectedUpdatedAt: next.updatedAt,
             }),
         ])
     }
@@ -159,6 +167,7 @@ export function MobileCardList({
                     await onCommitTrackPatch(
                         editingTrack.id,
                         patch as Record<string, unknown>,
+                        editingTrack.updatedAt,
                     )
                 }}
                 onMoveUp={handleMoveUp}

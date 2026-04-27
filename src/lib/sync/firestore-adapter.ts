@@ -31,8 +31,22 @@ export class TransientError extends Error {
     }
 }
 
+export interface CommitResult {
+    /** Server-stamped updatedAt for the doc post-commit, in ms since epoch.
+     *  - `set` / `update`: the new server `updatedAt` from `serverTimestamp()`.
+     *  - `delete`: undefined (no resulting doc).
+     *  - Any adapter that cannot surface a server timestamp may return
+     *    undefined — the engine treats it as "no write-back" and leaves the
+     *    local row's `updatedAt` field unchanged.
+     *  v50-06-01: enables the engine to keep local `updatedAt` in sync with
+     *  the server, so subsequent edits pass an honest `expectedUpdatedAt`
+     *  precondition (surfacing real two-writer races as VersionMismatchError
+     *  rather than silently last-write-winning). */
+    updatedAt?: number
+}
+
 export interface FirestoreAdapter {
-    commitOutboxRow(row: OutboxRow): Promise<void>
+    commitOutboxRow(row: OutboxRow): Promise<CommitResult>
     refreshAuthToken(): Promise<void>
 }
 

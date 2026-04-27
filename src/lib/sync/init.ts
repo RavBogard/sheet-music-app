@@ -5,6 +5,7 @@ import {
     Timestamp,
     deleteDoc,
     doc,
+    getDoc,
     runTransaction,
     serverTimestamp,
     setDoc,
@@ -18,6 +19,7 @@ import { CrossTabLock } from './cross-tab-lock'
 import { SyncEngine } from './engine'
 import {
     AuthError,
+    type CommitResult,
     type FirestoreAdapter,
     NetworkError,
     TransientError,
@@ -26,7 +28,7 @@ import {
 import { wireSyncEngineToStore } from './store'
 
 class ProductionFirestoreAdapter implements FirestoreAdapter {
-    async commitOutboxRow(row: OutboxRow): Promise<void> {
+    async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
             switch (row.op) {
                 case 'set': {
@@ -35,7 +37,15 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         ...row.payload,
                         updatedAt: serverTimestamp(),
                     })
-                    return
+                    // Re-read to capture the resolved server timestamp
+                    // (serverTimestamp() is a sentinel until commit). One
+                    // extra read per commit is acceptable — v50-06
+                    // reconciliation depends on this freshness.
+                    const after = await getDoc(ref)
+                    const ms = (
+                        after.data() as { updatedAt?: Timestamp } | undefined
+                    )?.updatedAt?.toMillis()
+                    return { updatedAt: ms }
                 }
                 case 'update': {
                     const ref = doc(firestoreDb, row.collection, row.docId)
@@ -65,11 +75,15 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                             updatedAt: serverTimestamp(),
                         })
                     })
-                    return
+                    const after = await getDoc(ref)
+                    const ms = (
+                        after.data() as { updatedAt?: Timestamp } | undefined
+                    )?.updatedAt?.toMillis()
+                    return { updatedAt: ms }
                 }
                 case 'delete': {
                     await deleteDoc(doc(firestoreDb, row.collection, row.docId))
-                    return
+                    return {}
                 }
             }
         } catch (err) {

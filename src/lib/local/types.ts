@@ -20,6 +20,13 @@ export interface LocalTrack {
     key?: string
     bpm?: number
     leadMusician?: string
+    /** Last server-confirmed `updatedAt` for this row (ms since epoch).
+     *  Written by SyncEngine on commit success (v50-06-01); read by
+     *  SetlistGrid + cells to thread `expectedUpdatedAt` precondition into
+     *  applyEdit. Undefined for rows that haven't been server-committed
+     *  yet (just-created locally) — engine treats undefined as "no
+     *  precondition" and the first commit echoes back a real timestamp. */
+    updatedAt?: number
     [key: string]: unknown
 }
 
@@ -43,6 +50,10 @@ export interface LocalSong {
     normalizedTitle: string
     defaults?: SongDefaults
     recent?: SongRecentEntry[]
+    /** v50-06-01: last server-confirmed `updatedAt` (ms). See LocalTrack
+     *  for semantics. Songs are written by sticky-memory propagation
+     *  (v50-04 helpers) which can also race remote writes. */
+    updatedAt?: number
     [key: string]: unknown
 }
 

@@ -102,23 +102,31 @@ async function flushAll(rounds = 6): Promise<void> {
     }
 }
 
+type AdapterResult = 'ok' | { ok: true; updatedAt: number } | Error
+
 class FakeAdapter implements FirestoreAdapter {
     received: OutboxRow[] = []
-    nextResults: Array<'ok' | Error> = []
+    nextResults: Array<AdapterResult> = []
     refreshes = 0
     nextRefreshFails = false
 
-    queue(...results: Array<'ok' | Error>) {
+    queue(...results: Array<AdapterResult>) {
         this.nextResults.push(...results)
     }
 
-    async commitOutboxRow(row: OutboxRow): Promise<void> {
+    async commitOutboxRow(
+        row: OutboxRow,
+    ): Promise<{ updatedAt?: number }> {
         const next = this.nextResults.shift() ?? 'ok'
         if (next === 'ok') {
             this.received.push({ ...row })
-            return
+            return {}
         }
-        throw next
+        if (typeof next === 'object' && 'ok' in next && next.ok) {
+            this.received.push({ ...row })
+            return { updatedAt: next.updatedAt }
+        }
+        throw next as Error
     }
 
     async refreshAuthToken(): Promise<void> {
@@ -392,6 +400,106 @@ describe('SyncEngine', () => {
         expect(survivor.adapter.received.length).toBeGreaterThanOrEqual(1)
         expect(await getDb().outbox.count()).toBe(0)
         survivor.engine.shutdown()
+    })
+
+    // ─── v50-06-01 server-updatedAt writeback (AC-2) ────────────────────────
+    it('v50-06-01: adapter updatedAt is written back to local row atomically with outbox delete', async () => {
+        const h = buildEngine()
+        await applyEdit({
+            op: 'set',
+            collection: 'tracks',
+            doc: { id: 't1', setlistId: 's1', order: 0 },
+        })
+        h.adapter.queue({ ok: true, updatedAt: 12345 })
+        await h.engine.start()
+        await flushAll()
+        const row = await getDb().tracks.get('t1')
+        expect(row?.updatedAt).toBe(12345)
+        expect(await getDb().outbox.count()).toBe(0)
+        h.engine.shutdown()
+    })
+
+    it('v50-06-01: adapter result with no updatedAt leaves local row unchanged', async () => {
+        const h = buildEngine()
+        await getDb().tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            updatedAt: 1000,
+        })
+        // Drop the outbox row pre-existing local writes left behind, so the
+        // engine doesn't try to commit the put above. This test just checks
+        // the no-writeback branch — the row gets a fresh outbox via applyEdit.
+        await getDb().outbox.clear()
+        await applyEdit({
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            patch: { key: 'G' },
+        })
+        h.adapter.queue('ok') // returns {} — no updatedAt
+        await h.engine.start()
+        await flushAll()
+        const row = await getDb().tracks.get('t1')
+        // Local updatedAt unchanged because adapter returned {}.
+        expect(row?.updatedAt).toBe(1000)
+        expect(await getDb().outbox.count()).toBe(0)
+        h.engine.shutdown()
+    })
+
+    it('v50-06-01: delete op skips writeback even if adapter returns updatedAt', async () => {
+        const h = buildEngine()
+        await getDb().tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            updatedAt: 1000,
+        })
+        await getDb().outbox.clear()
+        await applyEdit({
+            op: 'delete',
+            collection: 'tracks',
+            docId: 't1',
+        })
+        // Even if a misbehaving adapter returned updatedAt for a delete,
+        // engine must NOT resurrect the deleted row.
+        h.adapter.queue({ ok: true, updatedAt: 9999 })
+        await h.engine.start()
+        await flushAll()
+        const row = await getDb().tracks.get('t1')
+        expect(row).toBeUndefined()
+        expect(await getDb().outbox.count()).toBe(0)
+        h.engine.shutdown()
+    })
+
+    it('v50-06-01: writeback skipped when local row was deleted mid-flight', async () => {
+        const h = buildEngine()
+        await getDb().tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            updatedAt: 1000,
+        })
+        await getDb().outbox.clear()
+        await applyEdit({
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            patch: { key: 'G' },
+        })
+        // Simulate user deleting the local row between adapter resolve and
+        // engine writeback by deleting it BEFORE the pump. The adapter
+        // returns updatedAt as if the server commit succeeded on the
+        // remote-side doc; the engine's `if (existing)` guard must
+        // suppress resurrection.
+        await getDb().tracks.delete('t1')
+        h.adapter.queue({ ok: true, updatedAt: 5000 })
+        await h.engine.start()
+        await flushAll()
+        const row = await getDb().tracks.get('t1')
+        expect(row).toBeUndefined()
+        expect(await getDb().outbox.count()).toBe(0)
+        h.engine.shutdown()
     })
 
     it('NetworkError mid-drain → returns to Offline; rows stay pending', async () => {
