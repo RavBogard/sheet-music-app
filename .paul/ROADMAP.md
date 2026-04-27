@@ -2,8 +2,8 @@
 
 ## Current Milestone
 **v5.0-hotfix — Track-Edit Save-Loss Fix**
-Status: 🚧 In Progress
-Phases: 0 of 1 complete
+Status: 🟡 Phase complete; pending `/paul:audit-milestone v5.0-hotfix` to close
+Phases: 1 of 1 complete (v5h-01 ✅ 2026-04-27)
 Theme: Diagnose + fix the P0 save-loss surfaced by Daniel's UAT (path "P": new setlist + edit key + navigate-away → key gone despite "Saved" indicator). Blocks v5.0 milestone close. Postmortem documents why "harness-only" (v50-07-04 Task 0 decision) was insufficient for catching cache-vs-fresh listener delivery races.
 
 Origin: v50-07 shipped end-to-end (5/5 plans) on 2026-04-27. Daniel started UAT immediately and surfaced two issues — Issue 1 P0 save-loss (this milestone) + Issue 2 P1 editor UX overhaul (→ v5.1). Code-scan diagnostics ruled out the obvious paths (cell-commit → applyEdit → db.tracks.put is wired correctly; production adapter uses runTransaction + expectedUpdatedAt + serverTimestamp; lazy-hydration cascade ruled out — Daniel's flow was a fresh setlist with no legacy embedded tracks). Three ranked hypotheses, all converging on engine-writeback + LWW-guard tightening.
@@ -12,7 +12,7 @@ Constraint: Daniel must NOT clear browser data on the affected setlist before v5
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v5h-01 | Track-edit save-loss diagnosis + fix | 3 (planned: 01-01 reproduce+diagnose • 01-02 fix • 01-03 postmortem) | 🚧 Not started | - |
+| v5h-01 | Track-edit save-loss diagnosis + fix | 4 (01-01 reproduce+diagnose ✓ • 01-02 fix ✓ • 01-03 perf-view architectural refactor ✓ • 01-04 postmortem ✓) | ✅ Complete | 2026-04-27 |
 
 ### Phase v5h-01: Track-edit save-loss diagnosis + fix
 
@@ -21,7 +21,8 @@ Focus: Reproduce Daniel's flow in a kitchen-sink scenario (fresh setlist, no leg
 Plans (planned per archived handoff `.paul/handoffs/archive/HANDOFF-2026-04-27-post-uat-v5h-and-v51.md`):
 - **v5h-01-01 — Reproduce + diagnose** (research; autonomous=false; 1 HUMAN-ACTION checkpoint for production DevTools capture; 1 decision-checkpoint at end picking fix shape A/B/C). 3 tasks: (1) kitchen-sink reproduction harness in property-failures.test.ts; (2) HUMAN-ACTION production state capture in `.paul/postmortems/v50-07-save-loss-investigation.md`; (3) root-cause confirmation + fix-shape decision.
 - **v5h-01-02 — Fix** (execute; ~2h; decision-checkpoint at start to confirm fix shape; regression test from 01-01 ships in this plan to lock the fix). After ship: push to prod, Daniel re-runs UAT scenario 1.
-- **v5h-01-03 — Postmortem** (execute; ~30min) — `.paul/postmortems/v50-07-save-loss.md`: what kitchen-sink missed (in-memory adapters with zero latency missed the snapshot-listener cache-vs-fresh delivery race); lesson for future cutover phases (kitchen-sink needs "real-Firestore lite" mode via Firebase emulator OR higher-fidelity in-memory adapter modeling initial-cache-then-fresh delivery semantics).
+- **v5h-01-03 — Perf-view architectural refactor** (execute; ~6h with 3 failed iterations; final commit `92b1902`) — refactored `useSetlistPerformance` to read tracks from Dexie via `useLiveQuery` + mount snapshot-listener; embedded fallback retained ONLY for unhydrated legacy setlists; public-view short-circuit preserved. Daniel UAT 2026-04-27 confirmed instant editor→perf-view propagation. Replaced what was originally planned as the postmortem; 3 prior iterations (`f83d75d` reverted, `8971223` + `4aa6840` superseded) on Firestore subscription semantics all failed UAT before the architectural fix.
+- **v5h-01-04 — Postmortem** (execute; ~30min; autonomous=true; docs only) — `.paul/postmortems/v5h-01-save-loss.md`: cutover-plan rules-audit gap proposal (gate to add to PAUL/CARL planning); kitchen-sink harness fidelity gaps named with remediation options (Firebase emulator + thin RTL editor↔perf-view test recommended); perf-view 4-iteration architectural-rethink lesson (`metadata.fromCache` is source not freshness; 2-3-strikes architectural-rethink rule); auth-claim staleness incident; Daniel-loop UAT cadence as v5.x norm; Issue 2 (iPad key-picker UI) routing rule.
 
 Skills required: TBD — likely none (engine + harness work; same precedent as v50-06-01 + v50-07-04).
 
@@ -584,4 +585,4 @@ Archive: `.paul/milestones/v1.3-ROADMAP.md`
 
 ---
 *Roadmap created: 2026-03-10*
-*Last updated: 2026-04-27 (Milestone v5.0-hotfix created — P0 save-loss fix surfaced by Daniel's UAT path "P" confirmed [new setlist + edit key + navigate-away → key gone despite "Saved" indicator]. Phase v5h-01 with 3 planned plans [01-01 reproduce+diagnose with HUMAN-ACTION DevTools capture + decision-checkpoint A/B/C; 01-02 fix; 01-03 postmortem]. v5.0 milestone close BLOCKED on v5.0-hotfix → v5.1 UX overhaul → `/paul:audit-milestone`. Per archived handoff `.paul/handoffs/archive/HANDOFF-2026-04-27-post-uat-v5h-and-v51.md`.)*
+*Last updated: 2026-04-27 (Phase v5h-01 ✅ Complete — 4 plans shipped: 01-01 root-cause research (rules + downstream effects, NOT engine-side); 01-02 E+F+B fix at commit `0c2921d` (rules deploy + Hydrator outbox guard + listener strict-equality LWW); 01-03 perf-view architectural refactor at commit `92b1902` (Dexie via useLiveQuery + listener mount); 01-04 postmortem at `.paul/postmortems/v5h-01-save-loss.md` with 5 lessons + 5 action items. Daniel UAT 2026-04-27: editor save + perf-view freshness both passing end-to-end. v5.0-hotfix milestone status: 🟡 phase complete, pending `/paul:audit-milestone v5.0-hotfix` to close, then v5.1 UX overhaul, then `/paul:audit-milestone v5.0` to close v5.0.)*
