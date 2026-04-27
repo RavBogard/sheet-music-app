@@ -245,9 +245,9 @@ Working tree: **clean.** Ready for context clear.
 ## Session Continuity
 
 Current session: 2026-04-26 (v50-06-02 full cycle — reconciliation modal §6.9) — `/paul:resume` (consumed HANDOFF-2026-04-26-v50-06-02-pickup.md, archived) → `/paul:plan` v50-06-02 → `/paul:apply` (decision checkpoint resolved per-row-now → Task 1 substrate+provider → Task 2 property-failures branches → Task 3 component+jest-axe) → push origin master (Vercel deployed `dpl_CfYCNcHuAaD4kUCoHoY2KdWwZN5V`) → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 task commits + close commit. Suite 1431/1431 (+13 from 1418); tsc + next build clean. Reconciliation modal end-to-end: ReconciliationProvider mounted at /setlists/[id], engine 'conflict' → blocking AlertDialog → per-row "Keep mine / Take theirs" → engine.resolveConflict → drain. FirestoreAdapter.readDoc shipped; property-failures harness extended with both resolution branches; jest-axe ZERO violations.
-Stopped at: UNIFY complete for v50-06-02 (clean plan boundary). v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit) ready to plan in fresh session.
-Next action: `/paul:plan` for v50-06-03. /ui-ux-pro-max likely BLOCKING for APPLY (perf-view audit may surface polish work; cross-leader live-edit visibility is mostly backend onSnapshot listeners but read-side UI may need tweaks).
-Resume file: `.paul/phases/v50-06-concurrent-edit-safety/v50-06-02-SUMMARY.md`
+Stopped at: PAUSED at v50-06-02 close (clean plan boundary). v50-06-03 (cross-leader live-edit + airplane-mode + perf-view audit — final plan in v50-06) ready to plan in fresh session.
+Next action: in fresh session: `git pull origin master`, then `/paul:resume` to load handoff and route to `/paul:plan` for v50-06-03. /ui-ux-pro-max likely BLOCKING for APPLY if any UI changes.
+Resume file: `.paul/HANDOFF-2026-04-26-v50-06-03-pickup.md`
 Git strategy: master (continuing v50 hard-cutover convention; band still not in production).
 Resume context (v50-06-03):
 - Scope: cross-leader live-edit visibility via Firestore `onSnapshot` listeners on `tracks/*` + `setlists/*` (replaces deleted v50-02 live-swap UI; closes the v50-06-02 'theirs' gap where loser local row goes stale until reload). Airplane-mode integration scenarios beyond v50-06-01's two-writer race. Performance-view audit confirming `/perform/setlist/[id]` is read-only on the v50-05-01 top-level `tracks/{id}` collection shape and renders correctly when leader edits propagate live. Optional Playwright two-tab smoke for kitchen-sink cases.
