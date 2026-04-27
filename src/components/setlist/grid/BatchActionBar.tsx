@@ -195,7 +195,6 @@ function BulkPopover({
                 if (!next) close()
                 else setOpen(true)
             }}
-            sheetTitle={ariaLabel}
             align="start"
             sideOffset={4}
             contentClassName="w-[16rem]"

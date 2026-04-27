@@ -8,8 +8,8 @@ import {
 } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-// jsdom doesn't ship ResizeObserver or scrollIntoView (cmdk uses these
-// when wrapped). Stub before any component renders.
+// jsdom doesn't ship ResizeObserver or scrollIntoView. Stub before
+// any component renders.
 class ResizeObserverStub {
     observe(): void {}
     unobserve(): void {}
@@ -43,72 +43,60 @@ function Harness({ open = false }: { open?: boolean }) {
         <TouchOrPopover
             open={open}
             onOpenChange={() => {}}
-            sheetTitle="Pick something"
             contentTestId="dropdown-content"
             trigger={<button data-testid="trigger">Open</button>}
         >
-            <div data-testid="inner-content">inner content</div>
+            <div data-testid="inner-content">
+                {/* No autoFocus attribute — focus lands here only if
+                    Radix Popover's open-autofocus puts it there. */}
+                <input data-testid="inner-input" placeholder="Search…" />
+            </div>
         </TouchOrPopover>
     )
 }
 
-describe('TouchOrPopover', () => {
+describe('TouchOrPopover (v51-01-01: always-anchored Popover)', () => {
     it('renders Popover content on (pointer: fine) when open', async () => {
         mockedUseMediaQuery.mockReturnValue(false)
         render(<Harness open />)
 
-        // Popover.Content renders portaled — use the testId we passed in.
         const content = await screen.findByTestId('dropdown-content')
         expect(content).toBeInTheDocument()
-        // Sheet variant has its own dialog role + a SheetTitle "Pick
-        // something". Verify the Popover variant does NOT show that
-        // role-dialog wrapper structure (sheet uses h2 in SheetTitle).
-        expect(screen.queryByRole('heading', { name: 'Pick something' })).toBeNull()
     })
 
-    it('renders Sheet content on (pointer: coarse) when open', async () => {
+    it('renders Popover content on (pointer: coarse) when open — NO bottom Sheet', async () => {
         mockedUseMediaQuery.mockReturnValue(true)
         render(<Harness open />)
 
-        // Sheet (Radix Dialog) renders with role="dialog".
-        const dialog = await screen.findByRole('dialog')
-        expect(dialog).toBeInTheDocument()
-        // SheetTitle renders the sr-only-or-visible heading; with no
-        // srOnlyTitle prop, it's visible.
-        expect(
-            screen.getByRole('heading', { name: 'Pick something' }),
-        ).toBeInTheDocument()
-        // Inner cmdk-style content still passes through.
-        expect(screen.getByTestId('inner-content')).toBeInTheDocument()
+        // Same Popover content surface on touch — no Sheet branch.
+        // Radix Popover Content has data-state="open" + a popover-
+        // specific data attribute; pre-rewrite Sheet would have
+        // rendered with side="bottom" + sr-only SheetTitle heading.
+        const content = await screen.findByTestId('dropdown-content')
+        expect(content).toBeInTheDocument()
+        // Pre-rewrite Sheet variant rendered a SheetTitle heading
+        // ("Pick something" was the prior fixture). New Popover
+        // surface has no such heading — assert there is no heading
+        // descendant inside the content surface.
+        expect(content.querySelector('h1, h2, h3')).toBeNull()
     })
 
-    it('does not render content when open=false (Popover variant)', () => {
+    it('does not render content when open=false', () => {
         mockedUseMediaQuery.mockReturnValue(false)
         render(<Harness open={false} />)
 
         expect(screen.queryByTestId('dropdown-content')).toBeNull()
         expect(screen.queryByTestId('inner-content')).toBeNull()
-        // Trigger always rendered.
         expect(screen.getByTestId('trigger')).toBeInTheDocument()
     })
 
-    it('does not render content when open=false (Sheet variant)', () => {
-        mockedUseMediaQuery.mockReturnValue(true)
-        render(<Harness open={false} />)
-
-        expect(screen.queryByRole('dialog')).toBeNull()
-        expect(screen.queryByTestId('inner-content')).toBeNull()
-        expect(screen.getByTestId('trigger')).toBeInTheDocument()
-    })
-
-    it('calls onOpenChange when trigger is clicked (Popover variant)', async () => {
+    it('calls onOpenChange when trigger is clicked', async () => {
         mockedUseMediaQuery.mockReturnValue(false)
         const onOpenChange = vi.fn()
         render(
             <TouchOrPopover
                 open={false}
                 onOpenChange={onOpenChange}
-                sheetTitle="Pick"
                 trigger={<button data-testid="trigger">Open</button>}
             >
                 <div>content</div>
@@ -121,26 +109,30 @@ describe('TouchOrPopover', () => {
         })
     })
 
-    it('renders sr-only title when srOnlyTitle=true (Sheet variant)', async () => {
+    it('on (pointer: coarse), does NOT focus the inner search input on open', async () => {
         mockedUseMediaQuery.mockReturnValue(true)
-        render(
-            <TouchOrPopover
-                open={true}
-                onOpenChange={() => {}}
-                sheetTitle="Hidden but accessible"
-                srOnlyTitle
-                trigger={<button data-testid="trigger">Open</button>}
-            >
-                <div>content</div>
-            </TouchOrPopover>,
-        )
+        render(<Harness open />)
 
-        const heading = await screen.findByRole('heading', {
-            name: 'Hidden but accessible',
+        // Render must complete before we read activeElement.
+        await screen.findByTestId('inner-input')
+        // Wait a tick for Radix's open-autofocus to fire (and our
+        // preventDefault to suppress it).
+        await new Promise((r) => setTimeout(r, 50))
+
+        const input = screen.getByTestId('inner-input')
+        // The input received NO programmatic focus on open.
+        expect(document.activeElement).not.toBe(input)
+    })
+
+    it('on (pointer: fine), Radix open-autofocus lands on the first focusable (the input)', async () => {
+        mockedUseMediaQuery.mockReturnValue(false)
+        render(<Harness open />)
+
+        const input = await screen.findByTestId('inner-input')
+        // Desktop: Radix Popover's default open-autofocus puts focus
+        // on the first focusable inside the content (our input).
+        await waitFor(() => {
+            expect(document.activeElement).toBe(input)
         })
-        // Title is in the DOM (accessible to screen readers) but
-        // visually-hidden via sr-only.
-        expect(heading).toBeInTheDocument()
-        expect(heading).toHaveClass('sr-only')
     })
 })

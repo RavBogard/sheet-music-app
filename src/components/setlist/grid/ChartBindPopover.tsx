@@ -88,8 +88,6 @@ export function ChartBindPopover({
                 if (!next) close()
                 else setOpen(true)
             }}
-            sheetTitle="Bind chart"
-            sheetDescription="Pick a song from your library to bind a chart to this row."
             align="start"
             sideOffset={4}
             // Defer to Radix default onCloseAutoFocus — restores focus to

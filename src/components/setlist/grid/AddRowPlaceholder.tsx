@@ -85,8 +85,6 @@ export function AddRowPlaceholder({
                     if (!next) close()
                     else setOpen(true)
                 }}
-                sheetTitle="Add a song"
-                sheetDescription="Pick from your library or type a new title."
                 align="start"
                 sideOffset={2}
                 onCloseAutoFocus={(e) => {

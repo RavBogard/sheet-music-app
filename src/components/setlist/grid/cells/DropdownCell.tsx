@@ -128,8 +128,6 @@ export function DropdownCell({
                 if (!next) close()
                 else setOpen(true)
             }}
-            sheetTitle={ariaLabel}
-            srOnlyTitle
             align="start"
             sideOffset={2}
             onCloseAutoFocus={(e) => {
