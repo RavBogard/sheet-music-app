@@ -55,21 +55,28 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
     //
     // Firestore SDK has persistentLocalCache enabled (firebase.ts), so on every
     // mount the listener delivers from IDB cache first (often stale) and then
-    // from the server (fresh, can take seconds). Without distinguishing the two,
-    // the dual-read swaps to top-level on the cache delivery and shows stale
-    // keys until server-fresh arrives — Daniel observed 60s+ of staleness
-    // requiring multiple hard refreshes for recent edits to appear.
+    // from server. Without forcing a roundtrip, the dual-read used to swap to
+    // top-level on a stale-cache delivery and show pre-edit keys for 60s+
+    // until passive server reconciliation eventually fired — Daniel observed
+    // this end-to-end and it required multiple hard refreshes to recover.
     //
     // Fix:
-    //  1. `getDocsFromServer` on mount forces a server roundtrip that updates
-    //     the local cache; the listener then delivers fresh data on its next tick.
-    //  2. `{ includeMetadataChanges: true }` lets us see `snap.metadata.fromCache`
-    //     so we can gate the dual-read swap on a confirmed server-fresh delivery.
-    //  3. The dual-read prefers the embedded fallback until `hasServerSnapshot`
-    //     becomes true. After, top-level wins (hydrated-aware, so unhydrated
+    //  1. `getDocsFromServer(q)` on mount forces a server roundtrip; its
+    //     `.then(snap)` callback IS our authoritative server-fresh signal.
+    //     We seed topLevelTracks from that snapshot and flip the gate.
+    //     (Originally tried `{ includeMetadataChanges: true }` + `metadata.fromCache`
+    //     to detect server-fresh, but that flag indicates SOURCE not freshness:
+    //     after the server roundtrip, listener deliveries from the now-fresh
+    //     cache still report fromCache=true, so the gate would never flip.)
+    //  2. Dual-read prefers the embedded fallback until `hasServerSnapshot`
+    //     becomes true. After, top-level wins (hydrated-aware so unhydrated
     //     setlists with genuinely-empty top-level still fall back).
+    //  3. The onSnapshot listener handles ongoing updates after the initial
+    //     server fetch. Its deliveries also seed topLevelTracks (so cell-
+    //     commit live updates land), but the gate is owned by getDocsFromServer.
     //  4. On listener error, DO NOT clear topLevelTracks — preserve last known
-    //     good state so a transient error doesn't blank the UI.
+    //     good state so a transient error (token refresh race, brief network
+    //     flap) doesn't blank the perf-view.
     //
     // Invariant (avoid the v5h-01-03 reverted-attempt regression): never return
     // [] while embedded has data. The gate only delays SWAPPING from embedded
@@ -86,38 +93,57 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
             where("setlistId", "==", setlistId),
         )
 
-        // Force a server roundtrip on mount. This updates the persistent IDB
-        // cache so the listener's subsequent deliveries reflect fresh data
-        // within a few hundred ms instead of waiting on Firestore's cache-vs-
-        // server reconciliation (which can take 30-60s on slow networks).
-        // Errors here are non-fatal; the listener still recovers eventually.
-        getDocsFromServer(q).catch((err) => {
-            if (cancelled) return
-            logger.warn(
-                `[useSetlistPerformance] initial server fetch failed for ${setlistId} (listener will retry)`,
-                err,
-            )
-        })
+        const sortDocs = (
+            docs: Array<QueryDocumentSnapshot<DocumentData>>,
+        ): SetlistTrack[] =>
+            docs
+                .map((d) => ({
+                    id: d.id,
+                    ...(d.data() as Omit<SetlistTrack, "id"> & {
+                        order?: number
+                    }),
+                }))
+                .sort(
+                    (a, b) =>
+                        ((a as { order?: number }).order ?? 0) -
+                        ((b as { order?: number }).order ?? 0),
+                ) as SetlistTrack[]
+
+        // Force a server roundtrip on mount. The .then resolves with
+        // authoritative server-fresh data — that's our signal to flip the
+        // dual-read gate (NOT the listener's metadata.fromCache flag, which
+        // tracks source not freshness).
+        getDocsFromServer(q)
+            .then((snap) => {
+                if (cancelled) return
+                setTopLevelTracks(sortDocs(snap.docs))
+                setHasServerSnapshot(true)
+            })
+            .catch((err) => {
+                if (cancelled) return
+                logger.warn(
+                    `[useSetlistPerformance] initial server fetch failed for ${setlistId} (listener still active)`,
+                    err,
+                )
+                // Stay with embedded fallback until the listener delivers
+                // something. If the server is genuinely unreachable, this is
+                // the safest state.
+            })
 
         const unsub = onSnapshot(
             q,
             { includeMetadataChanges: true },
             (snap) => {
                 if (cancelled) return
-                const next = snap.docs
-                    .map((d: QueryDocumentSnapshot<DocumentData>) => ({
-                        id: d.id,
-                        ...(d.data() as Omit<SetlistTrack, "id"> & {
-                            order?: number
-                        }),
-                    }))
-                    .sort(
-                        (a, b) =>
-                            ((a as { order?: number }).order ?? 0) -
-                            ((b as { order?: number }).order ?? 0),
-                    ) as SetlistTrack[]
-                setTopLevelTracks(next)
-                if (snap.metadata.fromCache === false) {
+                setTopLevelTracks(sortDocs(snap.docs))
+                // Backup gate signal: if the listener delivers a confirmed
+                // non-cache snapshot, that's also server-fresh evidence.
+                // (In production, after getDocsFromServer warms the cache,
+                // listener deliveries from cache will report fromCache=true
+                // even with fresh data — getDocsFromServer.then is the
+                // primary gate. This branch handles the case where the
+                // listener fires server-fresh on its own first.)
+                if (snap.metadata?.fromCache === false) {
                     setHasServerSnapshot(true)
                 }
             },
@@ -127,9 +153,7 @@ export function useSetlistPerformance(setlistId: string): UseSetlistPerformanceR
                     `[useSetlistPerformance] top-level tracks subscription error for ${setlistId}`,
                     err,
                 )
-                // Preserve topLevelTracks at last known state — a transient
-                // error (token refresh race, brief network flap) shouldn't
-                // blank the perf-view. Listener will recover automatically.
+                // Preserve topLevelTracks at last known state.
             },
         )
         return () => {

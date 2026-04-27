@@ -44,15 +44,19 @@ function emitSnapshot(d: SnapDelivery) {
     metadata: { fromCache: d.fromCache ?? true },
   })
 }
+// Pre-resolved getDocsFromServer mock — defaults to empty docs.
+// Tests that need a different server-fetch result override per-test.
+const mockGetDocsFromServer = vi.fn((_q?: unknown) =>
+  Promise.resolve({ docs: [] as Array<{ id: string; data: () => unknown }> }),
+)
+
 // Legacy alias for tests that drove via onSnapshotEmit before v5h-01-03.
-// Delivers with fromCache: false (server-fresh) by default so the new
-// dual-read swaps to top-level — matching the assertions those tests made.
+// Delivers the snapshot with fromCache:false (server-fresh) — the listener's
+// non-cache delivery flips the gate (in the impl, both getDocsFromServer.then
+// and a non-cache listener delivery flip hasServerSnapshot=true).
 const onSnapshotEmit = (
   snap: { docs: Array<{ id: string; data: () => unknown }> },
 ): void => emitSnapshot({ docs: snap.docs, fromCache: false })
-const mockGetDocsFromServer = vi.fn(() =>
-  Promise.resolve({ docs: [] as Array<{ id: string; data: () => unknown }> }),
-)
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
@@ -339,7 +343,7 @@ describe('useSetlistPerformance', () => {
     expect(result.current.tracks).toEqual(embedded)
   })
 
-  it('swaps to top-level once a non-fromCache (server-fresh) delivery arrives', () => {
+  it('swaps to top-level once getDocsFromServer resolves with server-fresh data', async () => {
     mockUseSafeFirestoreSync.mockReturnValue({
       data: {
         id: 'setlist-1',
@@ -351,9 +355,28 @@ describe('useSetlistPerformance', () => {
       error: null,
     })
 
+    // getDocsFromServer resolves with the server-fresh snapshot. THIS is
+    // the gate signal — not the listener's metadata.fromCache flag (which
+    // tracks source, not freshness, and would never flip after the cache
+    // is warmed by the same server fetch).
+    const serverDocs = [
+      { id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'E' }) },
+    ]
+    let resolveServer: (snap: { docs: typeof serverDocs }) => void
+    const serverPromise = new Promise<{ docs: typeof serverDocs }>((res) => {
+      resolveServer = res
+    })
+    mockGetDocsFromServer.mockReturnValueOnce(serverPromise)
+
     const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
 
-    // Cache delivery first (still showing embedded due to gate).
+    // Pre-server-fresh: embedded is rendered (gate closed).
+    expect(result.current.tracks).toEqual([
+      { id: 'emb-1', title: 'Embedded', key: 'OLD' },
+    ])
+
+    // Listener delivers from cache before server fetch resolves —
+    // updates topLevelTracks but should NOT flip the gate.
     act(() => {
       emitSnapshot({
         docs: [{ id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'OLD' }) }],
@@ -362,14 +385,13 @@ describe('useSetlistPerformance', () => {
     })
     expect((result.current.tracks[0] as { key: string }).key).toBe('OLD')
 
-    // Server-fresh delivery arrives.
-    act(() => {
-      emitSnapshot({
-        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'E' }) }],
-        fromCache: false,
-      })
+    // Server fetch resolves with fresh data → gate flips, top-level wins.
+    await act(async () => {
+      resolveServer!({ docs: serverDocs })
+      // Drain microtasks so the promise's .then runs.
+      await Promise.resolve()
     })
-    // Gate flips → top-level wins → fresh key shown.
+
     expect(result.current.tracks).toHaveLength(1)
     expect((result.current.tracks[0] as { key: string }).key).toBe('E')
   })
