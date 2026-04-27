@@ -489,7 +489,14 @@ describe('SetlistGrid — right-click ContextMenu + long-press for touch', () =>
     })
 
     it('AC-1 sanity (cell dropdown): renders Sheet on (pointer: coarse)', async () => {
-        mockedUseMediaQuery.mockReturnValue(true)
+        // Query-string-aware: coarse=true (touch), mobile=false (desktop
+        // viewport). v50-05-05 introduces a mobile-narrow branch keyed on
+        // `(max-width: 767px)`; we need it false here so the desktop table
+        // (and its DropdownCell) renders.
+        mockedUseMediaQuery.mockImplementation((query: string) => {
+            if (query.includes('pointer: coarse')) return true
+            return false
+        })
 
         await seedTracks('set-a', [
             { id: 't-0', order: 0, title: 'Row 0', key: 'D' },

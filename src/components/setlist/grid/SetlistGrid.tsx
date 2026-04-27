@@ -48,6 +48,7 @@ import {
 } from '@/lib/songs/defaults'
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
 import { useGridSelection } from '@/hooks/use-grid-selection'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
 import { AddRowPlaceholder } from './AddRowPlaceholder'
@@ -64,6 +65,7 @@ import { LeadCell } from './cells/LeadCell'
 import { TextCell } from './cells/TextCell'
 import { TypeCell } from './cells/TypeCell'
 import { EmptyState } from './EmptyState'
+import { MobileCardList } from './MobileCardList'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
 
 const EDITABLE_COL_IDS = [
@@ -655,6 +657,14 @@ export function SetlistGrid({
 }: SetlistGridProps) {
     const router = useRouter()
     const dialogCtx = useDeleteConfirmOptional()
+    // v50-05-05: parallel mobile render path below 768px. The existing
+    // TanStack Table layout breaks ~640px — phones become unusable.
+    // Match max-width:767px so anything <768px (mobile) gets cards;
+    // anything ≥ 768px (tablet portrait + iPad + desktop) gets the
+    // table. Touch detection (pointer:coarse) is independent — iPad
+    // landscape gets the table + Sheet-on-coarse cell dropdowns from
+    // v50-05-04.
+    const isMobile = useMediaQuery('(max-width: 767px)')
 
     // Resolves a confirmation request via the precedence:
     //   1. explicit `confirmDelete` prop (rich info shape; tests + power callers)
@@ -1128,6 +1138,24 @@ export function SetlistGrid({
                     onUseTemplate={onUseTemplate ?? (() => {})}
                     busy={cloneBusy}
                 />
+            ) : isMobile ? (
+                // v50-05-05: parallel mobile render path. BatchActionBar
+                // mounts above (selection ≥ 2) for both render paths;
+                // AddRowPlaceholder mounts below for both.
+                <MobileCardList
+                    setlistId={setlistId}
+                    tracks={rows}
+                    selectedIds={selection.selectedIds}
+                    onSelectionClick={handleDragHandleClick}
+                    onContextEditRow={handleContextEditRow}
+                    onContextBindChart={handleContextBindChart}
+                    onContextDuplicate={(id) =>
+                        void handleContextDuplicate(id)
+                    }
+                    onContextDelete={handleContextDelete}
+                    onCommitTrackPatch={commitTrackPatchImpl}
+                    onDeleteRow={(track) => void handleDeleteRow(track)}
+                />
             ) : (
                 <DndContext
                     sensors={sensors}
@@ -1242,6 +1270,47 @@ export function SetlistGrid({
                 onPickSong={(song) => void handlePickSong(song)}
                 onCreateFreeText={(title) => void handleCreateFreeText(title)}
             />
+
+            {/* v50-05-05: mobile-flow ChartBindPopover. The desktop table
+                path renders one inside the chart column cell; the mobile
+                path needs one at SetlistGrid level since cards don't
+                expose a chart-icon trigger. The hidden span is asChild
+                fodder — the popover is opened programmatically via the
+                controllable open prop, so trigger visibility is moot. */}
+            {isMobile && chartBindOpenRowId
+                ? (() => {
+                      const targetRow = rows.find(
+                          (r) => r.id === chartBindOpenRowId,
+                      )
+                      if (!targetRow) return null
+                      return (
+                          <ChartBindPopover
+                              currentSongId={targetRow.songId}
+                              inputAriaLabel={`Bind a chart to ${
+                                  targetRow.title || 'track'
+                              }`}
+                              onBind={(sel) =>
+                                  void handleBindChart(targetRow, sel)
+                              }
+                              open={true}
+                              onOpenChange={(next) => {
+                                  if (!next) setChartBindOpenRowId(null)
+                              }}
+                          >
+                              {/* Visually-hidden but layout-present trigger
+                                  so Radix Popover can anchor (display:none
+                                  breaks anchoring). For Sheet variant on
+                                  touch this is irrelevant — Sheet positions
+                                  to viewport bottom regardless. */}
+                              <span
+                                  aria-hidden
+                                  data-testid="mobile-chart-bind-anchor"
+                                  className="sr-only"
+                              />
+                          </ChartBindPopover>
+                      )
+                  })()
+                : null}
         </div>
     )
 }
