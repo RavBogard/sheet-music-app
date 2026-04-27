@@ -26,6 +26,47 @@ Completed milestone log for this project.
 | v3.4 Fixes & Live Mode Activation | 2026-04-04 | 1 session | 3 phases, 2 plans |
 | v4.0 Live Swap Redesign | 2026-04-04 | 1 session | 3 phases, 3 plans |
 | v4.4 Deferred Audit Sweep — Architectural Polish | 2026-04-15 | 1 session | 5 phases shipped (3 deferred to v4.5), 5 plans |
+| v5.0-hotfix Track-Edit Save-Loss Fix | 2026-04-27 | 1 session (~6h) | 1 phase, 4 plans |
+
+---
+
+## ✅ v5.0-hotfix Track-Edit Save-Loss Fix
+
+**Completed:** 2026-04-27
+**Duration:** ~6h end-to-end on 2026-04-27
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 1 (v5h-01) |
+| Plans | 4 (3 PLAN files; v5h-01-03 was an architectural pivot from a planned execute fix) |
+| Files modified | ~10 (firestore.rules + 3 test files + 3 source files + models.ts + postmortem + state docs) |
+| Tests added | +7 across the hotfix (1474 → 1481) |
+| Production data loss | 0 confirmed |
+| Affected users | 1 (Rabbi Daniel; band not yet onboarded) |
+| Commits | `0c2921d` fix, `92b1902` perf-view final, `62298c0` postmortem + phase close |
+
+### Key Accomplishments
+
+- **Root cause identified despite 3 wrong handoff hypotheses.** Production capture (DevTools → IndexedDB → `crc-local`/`outbox`) revealed the bug was NOT engine-side (LWW underflow / writeback miss / serverTimestamp race all ruled out). Actual cause: missing `match /tracks/{trackId}` + `match /songs/{songId}` blocks in `firestore.rules` from v50-05 cutover; default-deny silently rejected every track write; per-doc drain ordering blocked subsequent edits behind failed `set` rows; SetlistGridHydrator re-primed legacy embedded `setlists/{id}.tracks[]` over stuck-pending local edits.
+- **E+F+B defense-in-depth fix shipped (commit `0c2921d`).** Rules deployed via `firebase deploy --only firestore:rules` to crcmusiccharts; SetlistGridHydrator outbox-pending guard around `db.{setlists,tracks}.put`; snapshot-listener strict-equality LWW guard preserving local row when `updatedAt` is undefined; `property-failures.test.ts` AC-1 regression-locked.
+- **Diagnostic chain closed AC-4 same day.** 142 stuck outbox rows (46 failed + 96 pending blocked behind them); auth token stale post-rules-deploy → sign-out/in restored `role: "admin"`; reset-and-drain snippet flipped 46 failed → pending → engine retried with fresh token → cell-edits started persisting.
+- **Perf-view architectural refactor (commit `92b1902`).** 4 iterations: `f83d75d` reverted (returned `[]` during initial mount), `8971223` superseded (`metadata.fromCache` is source not freshness), `4aa6840` superseded (correct gate signal but architectural divergence remained), then `92b1902` — `useSetlistPerformance` rewritten to read tracks from Dexie via `useLiveQuery` + mount snapshot-listener + retain embedded fallback ONLY for unhydrated legacy setlists. Editor and perf-view now share the same data path; cache-vs-server-fresh class of bugs eliminated by construction. 18 brittle onSnapshot mock tests replaced with 15 focused tests using `fake-indexeddb` + listener test seam.
+- **Daniel UAT 2026-04-27 confirmed editor + perf-view working end-to-end.** "worked!"
+- **Postmortem captured 5 lessons + 5 action items** at `.paul/postmortems/v5h-01-save-loss.md`: cutover-plan rules-audit gap proposal (gate to add to PAUL/CARL planning); kitchen-sink harness fidelity gaps named with remediation options (Firebase emulator + thin RTL editor↔perf-view test pair recommended); perf-view 4-iteration architectural-rethink lesson (`metadata.fromCache` is source not freshness; 2-3-strikes architectural-rethink rule); auth-claim staleness incident; Daniel-loop UAT cadence as v5.x norm; Issue 2 (iPad key-picker UI) routing rule (tap-target/sheet → v50-05-04 regression; "feels janky" → v5.1 UX overhaul).
+
+### Key Decisions
+
+| Decision | Phase | Impact |
+|----------|-------|--------|
+| Read perf-view tracks from Dexie via useLiveQuery (not Firestore directly) | v5h-01-03 | Eliminates cache-vs-server-fresh class of bugs by construction; unifies editor + perf-view data path |
+| Mount snapshot-listener inside perf-view (not just editor) | v5h-01-03 | Covers iPad-only perf-view sessions on stage; cross-device updates flow Firestore → Dexie → useLiveQuery |
+| Embedded fallback ONLY when `setlistData?.hydrated !== true` | v5h-01-03 | Hydrated setlists post-cascade have stale embedded by design; falling back would show pre-migration keys forever |
+| E+F+B defense-in-depth (rules + Hydrator outbox guard + listener LWW) over E-only | v5h-01-02 | Rules close the door; outbox guard + LWW prevent recurrence if a similar gap reappears in a future cutover |
+| Architectural fix over patches when 2-3 hook iterations don't close UAT | v5h-01-03 | "2-3-strikes architectural-rethink rule" codified in postmortem; saved retroactively from this iteration cycle |
+| Postmortems live at `.paul/postmortems/{phase-id}-{topic}.md` | v5h-01-04 | Naming convention preserved (mirrors `v50-07-save-loss-investigation.md`); cross-referenceable from SUMMARYs |
+| Auth-claim auto-refresh on rules-version change OUT of scope | v5h-01-04 | Firebase doesn't expose rules-version; complexity not worth rare scenario; documented for awareness |
 
 ---
 
