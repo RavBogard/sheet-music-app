@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 4 of 5 plans closed; v50-05-05 next)
-Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — In progress (v50-05-04 closed; v50-05-05 next)
-Plan: v50-05-04 — closed (`.paul/phases/v50-05-spreadsheet-editor/v50-05-04-SUMMARY.md`)
-Status: UNIFY complete for v50-05-04. iPad/pointer-coarse Sheet swap + 44px touch targets + right-click ContextMenu + long-press all landed on prod. 4 commits pushed to origin/master: `a18736b` (chore(paul) PLAN), `d4a9d96` (Task 1 TouchOrPopover + iPad swap + 44px), `ded27dd` (Task 2 ContextMenu + long-press), `35a055a` (Task 3 integration tests). +17 new vitest cases (1377/1377 — cross-tab-lock flake passed this run too). tsc + next build clean. Production /setlists/[id] now serves: cell dropdowns swap to bottom-Sheet on touch, drag-handle col 44→52px on coarse, cell padding 8→12px on coarse, ChartCell unbound contrast bumped on coarse, right-click row → ContextMenu (Edit / Bind chart / Duplicate / Delete) with selection-aware Delete routing through DeleteConfirmProvider, 500ms long-press for touch.
-Last activity: 2026-04-26 — UNIFY complete for v50-05-04 (SUMMARY.md written).
+Milestone: 🚧 v5.0 — Bulletproof Editor (Local-First Rewrite) — 4 of 7 phases complete (v50-05 in progress; 4 of 5 plans closed — v50-05-05 PLAN ✓ awaiting APPLY; phase complete after this plan)
+Phase: v50-05 of 7 (Spreadsheet editor UI cutover) — Planning (v50-05-05 PLAN.md created — last plan in phase)
+Plan: v50-05-05 — created, awaiting APPLY (`.paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`)
+Status: PLAN created for v50-05-05 (mobile stacked-card flow §6.11 + Undo via zustand temporal middleware + WCAG AA audit §6.13). 3 tasks, 8 ACs, autonomous=true. /ui-ux-pro-max BLOCKING for APPLY per SPECIAL-FLOWS.md. New deps: zundo + jest-axe + axe-core + @types/jest-axe. Phase v50-05 transitions to complete after this plan closes.
+Last activity: 2026-04-26 — PLAN.md written for v50-05-05.
 
 Progress:
 - v5.0: [████████░░] ~80% (4 of 7 phases complete; v50-05 = 4/5 plans done; 05 scoped)
@@ -28,7 +28,7 @@ Progress:
 Current loop state:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Loop reset — ready for v50-05-05 PLAN]
+  ✓        ○        ○     [v50-05-05 PLAN written, awaiting APPLY]
 
 v50-01:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
 v50-02:        ✓ ──▶ ✓ ──▶ ✓     [Phase complete]
@@ -38,7 +38,7 @@ v50-05-01:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — build Setl
 v50-05-02:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — cutover landed; legacy ~−6,300 LOC gone; SetlistGrid serves /setlists/[id]]
 v50-05-03:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — multi-select + BatchActionBar + AlertDialog swap-in on prod]
 v50-05-04:     ✓ ──▶ ✓ ──▶ ✓     [Plan complete — TouchOrPopover + iPad/Sheet swap + ContextMenu + long-press on prod]
-v50-05-05:     ○ ──▶ ○ ──▶ ○     [Plan: mobile stacked-card flow + WCAG AA audit + Undo via zustand temporal middleware]
+v50-05-05:     ✓ ──▶ ○ ──▶ ○     [PLAN written: mobile stacked-card + Undo via zundo + WCAG AA audit; awaiting APPLY (/ui-ux-pro-max BLOCKING). Phase v50-05 closes when this plan closes.]
 ```
 
 ## How to resume
@@ -218,10 +218,10 @@ Working tree: **clean.** Ready for context clear.
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v50-05-04 full cycle) — `/paul:resume` → git pull (already up to date) → archive consumed handoff → `/paul:plan` (3 tasks, 8 ACs, autonomous) → `/ui-ux-pro-max` loaded → `/paul:apply` → Task 1 (TouchOrPopover wrapper + iPad swap across 6 Popover sites + 44px touch targets + ChartBindPopover controllable open + global window.matchMedia stub via vitest setupFiles + 6 TouchOrPopover unit tests; root-caused initial asChild break in ChartBindPopover refactor via re-read-before-test) → Task 2 (Radix ContextMenu wired into every SortableRow with 4 items, selection-aware targeting + "N rows selected" header + Edit/Bind/Duplicate disabled-on-multi; 500ms long-press for touch via synthetic contextmenu MouseEvent dispatch with 10px movement cancel; chartBindOpenRowId state hoist + 4 SetlistGrid handlers including order-cascade Duplicate) → Task 3 (11 integration tests in SetlistGrid.contextmenu.test.tsx — right-click 4 items, in-vs-out-of-selection Delete routing, Edit row focus, Bind chart popover, Duplicate cascade, 4 long-press timing cases via REAL timers (not fake — Dexie + fake-indexeddb conflict), Sheet-on-coarse sanity) → push origin master → `/paul:unify` (this SUMMARY + STATE + ROADMAP sync). 4 commits on origin/master: `a18736b` (chore(paul) PLAN), `d4a9d96` (Task 1), `ded27dd` (Task 2), `35a055a` (Task 3). UNIFY commit lands next. Full suite 1377/1377 (cross-tab-lock flake passed too); tsc + next build clean. Production /setlists/[id] now serves iPad/touch UX + right-click + long-press ContextMenu.
-Stopped at: v50-05-04 fully closed and pushed; SUMMARY.md written; ready for v50-05-05 (last plan in v50-05).
-Next action: `/paul:plan` for v50-05-05 (mobile stacked-card flow §6.11 + WCAG AA audit §6.13 + Undo via zustand temporal middleware) — last polish plan in v50-05. Before APPLY, invoke `/ui-ux-pro-max` per SPECIAL-FLOWS.md (BLOCKING).
-Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-04-SUMMARY.md`
+Last session: 2026-04-26 (v50-05-05 PLAN cycle) — `/paul:plan` for v50-05-05 (3 tasks, 8 ACs, autonomous=true). Tasks: (1) Mobile stacked-card flow + per-card edit Sheet — `<MobileCardList>` parallel render path keyed on `useMediaQuery('(max-width: 767px)')` with `<MobileRowCard>` (long-press 500ms action menu + tap → edit Sheet) and `<MobileEditSheet>` (full-screen Radix Sheet with form fields for type/title/key/bpm/lead/notes + Move up/down/Delete + Bind chart). (2) Undo via zundo zustand temporal middleware — new `src/lib/local/undo-store.ts` with manual pushEntry / popUndo / popRedo + per-cell-blur burst coalescing (debounced 500ms per `${docId}:${field}` key); `applyEdit` augmented to read prevDoc before write and push snapshot on success (gated by new `withoutUndo` option for engine-internal cascades); Cmd/Ctrl-Z + Cmd/Ctrl-Shift-Z handler at SetlistGrid root with INPUT/TEXTAREA/contenteditable skip per v4.2 P2-04 precedent; cap 50 entries; ephemeral. (3) WCAG AA audit — jest-axe + axe-core deps; 7 axe scan cases covering rest state + AddRowPlaceholder open + AlertDialog open (single + bulk) + ChartBindPopover open + multi-select + BatchActionBar + ContextMenu open; 1 keyboard-Tab-order case; in-place fixes for any violations; manual Lighthouse deferred to user smoke verification. Awaiting APPLY.
+Stopped at: PLAN.md written for v50-05-05, awaiting user approval to /paul:apply.
+Next action: load `/ui-ux-pro-max` (BLOCKING per SPECIAL-FLOWS.md), then `/paul:apply .paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`. After UNIFY closes, phase v50-05 transitions to complete; transition-phase prompt expected.
+Resume file: `.paul/phases/v50-05-spreadsheet-editor/v50-05-05-PLAN.md`
 Git strategy: master (continuing v50-05 hard-cutover convention; band still not in production)
 Resume context (v50-05-05 — last plan in v50-05):
 - v50-05-05 scope per ARCHITECTURE.md §6.11 + §6.13 + Undo:
