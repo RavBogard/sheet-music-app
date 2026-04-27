@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:kitchensink": "vitest run --testNamePattern=\"v50-07-04: kitchen-sink\"",
     "test:ci": "vitest run && playwright test",
     "analyze": "cross-env ANALYZE=true next build --webpack",
     "check:types": "node scripts/check-types-sync.js",
