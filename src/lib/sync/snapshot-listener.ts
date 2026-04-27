@@ -31,6 +31,7 @@ import { db as defaultFirestoreDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import { logger as defaultLogger } from '@/lib/logger'
+import { captureSyncFailure } from './sentry-capture'
 
 interface ListenerLogger {
     warn: (msg: string, err?: unknown) => void
@@ -180,6 +181,11 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
             })
         } catch (err) {
             logger.warn('[SnapshotListener] setlist apply failed', err)
+            captureSyncFailure(err, {
+                feature: 'snapshot-listener',
+                site: 'setlist-apply',
+                setlistId,
+            })
         }
     }
 
@@ -221,6 +227,11 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
             })
         } catch (err) {
             logger.warn('[SnapshotListener] tracks apply failed', err)
+            captureSyncFailure(err, {
+                feature: 'snapshot-listener',
+                site: 'tracks-apply',
+                setlistId,
+            })
         }
     }
 
@@ -231,6 +242,11 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         },
         (err) => {
             logger.warn('[SnapshotListener] setlist subscription error', err)
+            captureSyncFailure(err, {
+                feature: 'snapshot-listener',
+                site: 'setlist-subscribe',
+                setlistId,
+            })
         },
     )
 
@@ -241,6 +257,11 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
         },
         (err) => {
             logger.warn('[SnapshotListener] tracks subscription error', err)
+            captureSyncFailure(err, {
+                feature: 'snapshot-listener',
+                site: 'tracks-subscribe',
+                setlistId,
+            })
         },
     )
 

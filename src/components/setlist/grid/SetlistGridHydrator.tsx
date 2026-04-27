@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { logger } from '@/lib/logger'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { getDb } from '@/lib/local/schema'
+import { captureSyncFailure } from '@/lib/sync/sentry-capture'
 import type {
     EditDescriptor,
     LocalSetlist,
@@ -169,6 +170,11 @@ export function SetlistGridHydrator({
                     `[SetlistGridHydrator] lazy-hydration fan-out failed for setlist ${setlistId}`,
                     err,
                 )
+                captureSyncFailure(err, {
+                    feature: 'lazy-hydration',
+                    setlistId,
+                    trackCount: initialTracks.length,
+                })
             }
         }
 

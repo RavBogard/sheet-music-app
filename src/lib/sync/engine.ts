@@ -16,6 +16,7 @@ import {
     TransientError,
     VersionMismatchError,
 } from './firestore-adapter'
+import { captureSyncFailure } from './sentry-capture'
 import {
     type SyncEvent,
     type SyncState,
@@ -368,6 +369,17 @@ export class SyncEngine {
                 status: 'failed',
                 attempts: nextAttempts,
                 lastError,
+            })
+            // v50-07-05: Sentry capture on dead-letter transition. The user's
+            // edit is observable in the outbox at 'failed' status but won't
+            // drain without intervention (manual reconciliation or row delete).
+            // High-severity alert.
+            captureSyncFailure(err, {
+                feature: 'dead-letter',
+                collection: row.collection,
+                docId: row.docId,
+                op: row.op,
+                attempts: nextAttempts,
             })
             this.dispatch({ type: 'DRAIN_BUDGET_EXHAUSTED' })
             return 'stop-drain'
