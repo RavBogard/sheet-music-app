@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 
 import { getDb } from '@/lib/local/schema'
 import type { LocalSetlist, LocalTrack } from '@/lib/local/types'
+import {
+    type SnapshotListenerOpts,
+    startSnapshotListener as defaultStartSnapshotListener,
+} from '@/lib/sync/snapshot-listener'
 
 import { SetlistGrid, type SetlistGridProps } from './SetlistGrid'
 
@@ -12,6 +16,10 @@ export interface SetlistGridHydratorProps {
     initialSetlist: LocalSetlist
     initialTracks: LocalTrack[]
     gridProps?: Omit<SetlistGridProps, 'setlistId'>
+    /** Test-seam: lets unit tests assert the listener is started/stopped
+     *  without booting Firestore. Defaults to the production
+     *  startSnapshotListener export. */
+    startSnapshotListener?: (opts: SnapshotListenerOpts) => () => void
 }
 
 export function SetlistGridHydrator({
@@ -19,6 +27,7 @@ export function SetlistGridHydrator({
     initialSetlist,
     initialTracks,
     gridProps,
+    startSnapshotListener = defaultStartSnapshotListener,
 }: SetlistGridHydratorProps) {
     const [hydration, setHydration] = useState<'pending' | 'done'>('pending')
 
@@ -72,6 +81,20 @@ export function SetlistGridHydrator({
             cancelled = true
         }
     }, [setlistId, initialSetlist, initialTracks])
+
+    // v50-06-03: cross-leader live-edit visibility. Once the hydrator
+    // primes Dexie from the server-fetched snapshot, mount a Firestore
+    // onSnapshot listener so any subsequent leader-tab edit propagates
+    // here via direct db.put (NOT applyEdit — server data is authoritative).
+    // Replaces the deleted v50-02 live-swap UI with the implicit real-time
+    // setlist sync v5.0 promised. Closes the v50-06-02 'theirs' staleness
+    // gap automatically: after a 'theirs' resolution the listener delivers
+    // the winner's payload + updatedAt, restoring local-row freshness.
+    useEffect(() => {
+        if (hydration !== 'done') return
+        const stop = startSnapshotListener({ setlistId, db: getDb() })
+        return stop
+    }, [hydration, setlistId, startSnapshotListener])
 
     return (
         <div data-testid="setlist-grid-hydrator" data-hydration={hydration}>

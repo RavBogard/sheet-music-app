@@ -10,6 +10,14 @@ vi.mock('next/navigation', () => ({
     useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
 }))
 
+// v50-06-03: hydrator mounts a Firestore-backed snapshot listener after
+// hydration. Mock the module so existing tests don't try to boot Firebase;
+// the listener-wiring behavior is covered by an explicit test below + the
+// dedicated snapshot-listener.test.ts.
+vi.mock('@/lib/sync/snapshot-listener', () => ({
+    startSnapshotListener: vi.fn(() => () => {}),
+}))
+
 import { SetlistGridHydrator } from '../SetlistGridHydrator'
 
 const SETLIST_ID = 'set-hyd-1'
@@ -186,5 +194,39 @@ describe('SetlistGridHydrator', () => {
         // Drain pending live queries (SetlistGrid's tracks query) before
         // teardown so they don't throw DatabaseClosedError after Dexie closes.
         await findByTestId('setlist-grid-empty-state')
+    })
+
+    // v50-06-03: hydrator mounts the snapshot listener after hydration
+    // completes, and unmounts it on cleanup. Wiring-only — listener
+    // behavior is covered by snapshot-listener.test.ts.
+    it('starts the snapshot listener after hydration; unsubscribes on unmount', async () => {
+        const stopFn = vi.fn()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const startFn = vi.fn((_opts: any) => stopFn)
+
+        const { findByTestId, unmount } = render(
+            <SetlistGridHydrator
+                setlistId={SETLIST_ID}
+                initialSetlist={makeSetlist(1_700_000_000_000)}
+                initialTracks={[]}
+                startSnapshotListener={startFn}
+            />,
+        )
+
+        // Drain SetlistGrid's live query so teardown is clean.
+        await findByTestId('setlist-grid-empty-state')
+
+        await waitFor(() => {
+            expect(startFn).toHaveBeenCalledTimes(1)
+        })
+
+        const callArgs = startFn.mock.calls[0]?.[0] as
+            | { setlistId: string; db: unknown }
+            | undefined
+        expect(callArgs?.setlistId).toBe(SETLIST_ID)
+        expect(callArgs?.db).toBeDefined()
+
+        unmount()
+        expect(stopFn).toHaveBeenCalledTimes(1)
     })
 })
