@@ -772,3 +772,218 @@ describe('v50-06-01: substrate readiness — two-writer race', () => {
         dbB.close()
     }, 30_000)
 })
+
+// v50-06-02: reconciliation modal contract — both resolveConflict branches.
+// The harness recreates a deterministic two-writer race, then exercises:
+//   (a) 'mine' with newExpectedUpdatedAt sourced from a remote re-read (the
+//       modal does this via adapter.readDoc) — re-queued row drains
+//       successfully on the next pump pass; remote ends up holding the
+//       loser's payload with a NEWER updatedAt than the winner.
+//   (b) 'theirs' — failed row deletes; remote unchanged; loser quiesces.
+//
+// 10x consecutive runs verified during APPLY (no flake).
+describe('v50-06-02: resolveConflict branches (mine / theirs)', () => {
+    const dbAName = 'crc-resolve-mine-a'
+    const dbBName = 'crc-resolve-mine-b'
+
+    afterEach(async () => {
+        try {
+            await Dexie.delete(dbAName)
+        } catch {
+            // ignore
+        }
+        try {
+            await Dexie.delete(dbBName)
+        } catch {
+            // ignore
+        }
+    })
+
+    async function setupTwoWriterRace(): Promise<{
+        remote: SharedRemote
+        loserEngine: SyncEngine
+        loserDb: LocalDb
+        loserLocalId: number
+        winnerEngine: SyncEngine
+        winnerDb: LocalDb
+        cleanup: () => Promise<void>
+    }> {
+        const remote = new SharedRemote()
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', title: 'orig' },
+            updatedAt: 1000,
+        })
+
+        const dbA = new LocalDb(dbAName)
+        const dbB = new LocalDb(dbBName)
+        await dbA.outbox.count()
+        await dbB.outbox.count()
+
+        const baseline = {
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        }
+        await dbA.tracks.put(baseline)
+        await dbB.tracks.put(baseline)
+
+        const now = Date.now()
+        await dbA.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'A-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+        await dbB.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'B-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+
+        const hub = new FakeChannelHub()
+        const lockA = new CrossTabLock('crc-resolve-A', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const lockB = new CrossTabLock('crc-resolve-B', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+
+        const engineA = new SyncEngine({
+            db: dbA,
+            adapter: new TwoWriterAdapter(remote),
+            lock: lockA,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        const engineB = new SyncEngine({
+            db: dbB,
+            adapter: new TwoWriterAdapter(remote),
+            lock: lockB,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+
+        await engineA.start()
+        await flushTwoWriter()
+        await engineB.start()
+        await flushTwoWriter()
+
+        const aRows = await dbA.outbox.toArray()
+        const bRows = await dbB.outbox.toArray()
+        const aLost = aRows.length > 0
+        const loserEngine = aLost ? engineA : engineB
+        const winnerEngine = aLost ? engineB : engineA
+        const loserDb = aLost ? dbA : dbB
+        const winnerDb = aLost ? dbB : dbA
+        const loserRow = (aLost ? aRows : bRows)[0]
+
+        // Sanity: the harness produced the conflict shape v50-06-02 builds on.
+        expect(loserRow.status).toBe('failed')
+        expect(loserEngine.getState()).toBe('conflict')
+
+        return {
+            remote,
+            loserEngine,
+            loserDb,
+            loserLocalId: loserRow.localId!,
+            winnerEngine,
+            winnerDb,
+            cleanup: async () => {
+                engineA.shutdown()
+                engineB.shutdown()
+                dbA.close()
+                dbB.close()
+            },
+        }
+    }
+
+    it("'mine' re-queues with fresh updatedAt sourced from readDoc and drains successfully", async () => {
+        const {
+            remote,
+            loserEngine,
+            loserDb,
+            loserLocalId,
+            cleanup,
+        } = await setupTwoWriterRace()
+
+        // Mirror the modal's flow: adapter.readDoc to capture the fresh
+        // server updatedAt (winner's commit moved it past 1000), then
+        // resolveConflict('mine', { newExpectedUpdatedAt }).
+        const adapter = new TwoWriterAdapter(remote)
+        const remoteSnap = await adapter.readDoc('tracks', 't1')
+        expect(remoteSnap).not.toBeNull()
+        const winnerUpdatedAt = remoteSnap!.updatedAt
+        const winnerTitle = remoteSnap!.data.title
+        expect(winnerUpdatedAt).toBeGreaterThan(1000)
+        expect(['A-edit', 'B-edit']).toContain(winnerTitle)
+
+        await loserEngine.resolveConflict(loserLocalId, 'mine', {
+            newExpectedUpdatedAt: winnerUpdatedAt,
+        })
+        await flushTwoWriter()
+
+        // Loser's outbox drained: zero rows, engine quiesced.
+        expect(await loserDb.outbox.count()).toBe(0)
+        expect(loserEngine.getState()).toBe('idle')
+
+        // Remote now holds the loser's payload with an even-newer
+        // updatedAt than the winner — i.e. mine wins.
+        const after = remote.snapshot().get('tracks/t1')
+        expect(after).toBeDefined()
+        expect(['A-edit', 'B-edit']).toContain(after!.payload.title)
+        expect(after!.payload.title).not.toBe(winnerTitle)
+        expect(after!.updatedAt).toBeGreaterThan(winnerUpdatedAt)
+
+        await cleanup()
+    }, 30_000)
+
+    it("'theirs' deletes failed outbox row, preserves remote, quiesces engine", async () => {
+        const {
+            remote,
+            loserEngine,
+            loserDb,
+            loserLocalId,
+            cleanup,
+        } = await setupTwoWriterRace()
+
+        const remoteBefore = remote.snapshot().get('tracks/t1')
+        expect(remoteBefore).toBeDefined()
+        const winnerTitle = remoteBefore!.payload.title
+        const winnerUpdatedAt = remoteBefore!.updatedAt
+
+        await loserEngine.resolveConflict(loserLocalId, 'theirs')
+        await flushTwoWriter()
+
+        // Loser quiesced.
+        expect(await loserDb.outbox.count()).toBe(0)
+        expect(loserEngine.getState()).toBe('idle')
+
+        // Remote untouched — winner's payload + updatedAt unchanged.
+        const remoteAfter = remote.snapshot().get('tracks/t1')
+        expect(remoteAfter).toBeDefined()
+        expect(remoteAfter!.payload.title).toBe(winnerTitle)
+        expect(remoteAfter!.updatedAt).toBe(winnerUpdatedAt)
+
+        // Loser's local row preserved (engine did not auto-rehydrate from
+        // remote — that's a v50-06-03 cross-leader concern).
+        const loserLocalDoc = await loserDb.tracks.get('t1')
+        expect(loserLocalDoc?.updatedAt).toBe(1000)
+
+        await cleanup()
+    }, 30_000)
+})
