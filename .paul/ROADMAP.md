@@ -3,7 +3,7 @@
 ## Current Milestone
 **v5.1 — Editor UX Polish (Band-Onboarding Gate)**
 Status: 🚧 In Progress
-Phases: 0 of 3 complete
+Phases: 0 of 4 complete
 Theme: Make the iPad-side editor experience clean enough that Rabbi Daniel is comfortable handing the band tablets. Tablet-first; performance-view good as-is.
 
 Origin: synthesized from /paul:discuss-milestone session 2026-04-27. Issue 2 (iPad key-picker UI) was deferred from v5h-01-02 UAT pending Daniel's symptom description; surfaced as Sheet+system-keyboard combo on touch + non-sensical key ordering. Same Sheet-on-touch yuck affects all 6 dropdown sites (Key/Lead/Type/AddRow/ChartBind/Bulk) per `TouchOrPopover` from v50-05-04. Plus new scope: smart date-aware create-setlist wizard (Erev Shabbat / Shabbat morning / holidays via Hebcal), "Vocal Lead" label rename, and gig-packet print smoke check.
@@ -15,8 +15,9 @@ Done definition: clean iPad flow for next Erev Shabbat setlist (open → smart-c
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v51-01 | Picker rework (all 6 dropdown sites) | TBD (defined during /paul:plan) | 🚧 Not started | - |
-| v51-02 | Smart create-setlist wizard | TBD | Not started | - |
-| v51-03 | Vocal Lead rename + Daniel-loop UAT codification + print smoke | TBD | Not started | - |
+| v51-02 | Editor readability + visual hierarchy (desktop + tablet) | TBD | Not started | - |
+| v51-03 | Smart create-setlist wizard | TBD | Not started | - |
+| v51-04 | Vocal Lead rename + Daniel-loop UAT codification + print smoke | TBD | Not started | - |
 
 ### Phase v51-01: Picker rework — all 6 dropdown sites
 
@@ -28,7 +29,27 @@ Focus: Replace `TouchOrPopover` Sheet+system-keyboard pattern across **Key cell,
 
 `/ui-ux-pro-max` BLOCKING. Likely 1 plan, ~3-5h.
 
-### Phase v51-02: Smart create-setlist wizard
+### Phase v51-02: Editor readability + visual hierarchy (desktop + tablet)
+
+Focus: The setlist editor on desktop and tablet currently reads as too spaced out and too uniform — rows blend together; visual hierarchy doesn't help the eye find the title vs key vs lead vs type vs notes. Tighten density and lift hierarchy on both surfaces (NOT mobile — that's the parallel render path from v50-05-05 and is a different problem).
+
+Likely scope (decided with /ui-ux-pro-max during APPLY):
+- Row density: current row height (likely ~56px) tightened toward ~40-44px on desktop, ~44-48px on tablet (preserving 44px-min touch targets per v50-05-04)
+- Cell padding: tighten horizontal + vertical spacing within cells
+- Visual hierarchy: title weight/size > key (still prominent, key-left layout from v1.6 P3 stays) > lead/type (secondary) > notes (tertiary). Pin down the typographic + color scale during /ui-ux-pro-max consultation
+- Section differentiation: setlist sections (welcome / opening / etc.) currently render as plain grouping rows — make them visually distinct (background tint? smaller header type? subtle separator?)
+- Column emphasis: title column wider; type/key narrower; lead column dimensions tuned for "Vocal Lead" rename in v51-04
+- Cross-check WCAG AA at end (jest-axe + axe-core, same pattern as v50-05-05)
+
+Constraints:
+- Mobile parallel render path (v50-05-05) NOT touched — out of scope, separate component tree
+- 44px min touch targets preserved on tablet per v50-05-04
+- Dark-first OKLCH indigo palette + Righteous/Poppins fonts unchanged
+- Public-share / read-only views inherit from same component tree, so verify they don't regress
+
+`/ui-ux-pro-max` BLOCKING (this phase IS UI). Likely 1 plan, ~4-6h.
+
+### Phase v51-03: Smart create-setlist wizard
 
 Focus: Extend the v4.2 P2-02 single-step wizard to be date-aware:
 - Pick a date → detect service type via Hebcal (already wired in codebase)
@@ -41,7 +62,7 @@ Service types to handle: Erev Shabbat (Friday evening) + Shabbat morning (Saturd
 
 `/ui-ux-pro-max` BLOCKING. Likely 1 plan (possibly 2 if date-detection logic needs research first), ~4-6h.
 
-### Phase v51-03: Vocal Lead rename + UAT codification + print smoke
+### Phase v51-04: Vocal Lead rename + UAT codification + print smoke
 
 Focus: Three small bundled items:
 - **"Vocal Lead" label rename** — UI labels only (column header, picker label, batch action button, ContextMenu items, anywhere visible). DB field `lead` stays put. "Led by: {rabbi}" on print and `band_leader` role identifier untouched.
@@ -52,7 +73,7 @@ Focus: Three small bundled items:
 
 Skills required (per SPECIAL-FLOWS.md): `/ui-ux-pro-max` for all 3 phases.
 
-Sequencing: v51-01 → v51-02 → v51-03 → Daniel UAT against real production over 1 weekly cycle (build next Erev Shabbat setlist start-to-finish on iPad) → if pass, invite band → after band reports first-week smoke pass: `/paul:audit-milestone v5.0` closes the v5.0 milestone.
+Sequencing: v51-01 → v51-02 → v51-03 → v51-04 → Daniel UAT against real production over 1 weekly cycle (build next Erev Shabbat setlist start-to-finish on iPad) → if pass, invite band → after band reports first-week smoke pass: `/paul:audit-milestone v5.0` closes the v5.0 milestone.
 
 ## Completed Milestones
 
