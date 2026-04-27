@@ -53,6 +53,31 @@ PHASE v50-07 ✅ COMPLETE (5/5 plans). v5.0 milestone PENDING UAT — see resume
 
 ## How to resume
 
+**v5.0 milestone close BLOCKED on v5.0-hotfix milestone first (UAT surfaced a P0 save-loss bug).**
+
+🔴 **READ THIS FIRST:** `.paul/handoffs/HANDOFF-2026-04-27-post-uat-v5h-and-v51.md`
+— full bridge from where v5.0 closed → through v5.0-hotfix + v5.1 → to v5.0 milestone
+close. Drafted at 2026-04-27 before context clear; contains:
+- Daniel's exact reproduction of the save-loss bug (path "P" confirmed)
+- Code-scan diagnostics already done (don't redo)
+- Top three root-cause hypotheses (LWW underflow / writeback miss / serverTimestamp race)
+- Refined v5h-01-01 research plan (3 tasks; 1 HUMAN-ACTION checkpoint to capture
+  Dexie state in production with DevTools open — IMPORTANT: Daniel must NOT clear
+  browser data on the affected setlist before that capture)
+- v5.1 UX overhaul phase plan (3 plans; /ui-ux-pro-max BLOCKING)
+- Sequencing for next session
+
+Sequencing summary:
+1. `/paul:resume` (you're doing this) → reads STATE.md + the handoff
+2. `/paul:milestone` → start v5.0-hotfix
+3. `/paul:plan` → v5h-01-01 research plan
+4. After v5.0-hotfix ships + Daniel re-confirms UAT scenario 1 passes:
+   `/paul:milestone` → start v5.1 UX overhaul
+5. After v5.1 ships + Daniel re-confirms UAT smoke passes:
+   `/paul:audit-milestone` (or `/paul:plan-milestone-gaps`) → close v5.0
+
+### Earlier (pre-UAT resume guidance, kept for context)
+
 **Phase v50-07 is COMPLETE; v5.0 milestone is PENDING UAT.**
 
 Two paths from here, in order:
