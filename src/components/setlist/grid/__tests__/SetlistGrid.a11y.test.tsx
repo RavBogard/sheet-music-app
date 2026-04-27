@@ -265,6 +265,131 @@ describe('SetlistGrid — WCAG AA audit (jest-axe / v50-05-05 §6.13)', () => {
         expect(results).toHaveNoViolations()
     })
 
+    // v51-02-01 AC-4 + AC-6: section rows (type='header'|'section') get a
+    // distinct visual treatment via Option B from DESIGN-CONTRACT.md, while
+    // staying WCAG AA clean. The tier classNames per column (T1 title, T2
+    // key, T3 lead/type/bpm, T4 notes) must compose without violations.
+    it('v51-02 AC-4 + AC-6: mixed header + content rows — no axe violations', async () => {
+        await seedTracks('set-a', [
+            { id: 't-0', order: 0, title: 'Kabbalat Shabbat', type: 'header' },
+            {
+                id: 't-1',
+                order: 1,
+                title: 'Hinei Mah Tov',
+                key: 'D',
+                bpm: 96,
+                leadMusician: 'Daniel',
+                notes: 'capo 2',
+            },
+            { id: 't-2', order: 2, title: 'Torah Service', type: 'section' },
+            {
+                id: 't-3',
+                order: 3,
+                title: 'Aleinu',
+                key: 'G',
+                leadMusician: 'Randy',
+            },
+        ])
+        const { container } = render(
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId="set-a" name="Erev Shabbat" />
+            </DeleteConfirmProvider>,
+        )
+        await screen.findAllByTestId('drag-handle')
+
+        const results = await axe(container, axeOpts)
+        expect(results).toHaveNoViolations()
+    })
+
+    it('v51-02 AC-3 + AC-4: section rows carry the framing className tokens', async () => {
+        await seedTracks('set-a', [
+            { id: 't-0', order: 0, title: 'Welcome', type: 'header' },
+            { id: 't-1', order: 1, title: 'Song one', key: 'D' },
+            { id: 't-2', order: 2, title: 'Section break', type: 'section' },
+        ])
+        render(
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId="set-a" name="Test" />
+            </DeleteConfirmProvider>,
+        )
+        await screen.findAllByTestId('drag-handle')
+
+        const headerRow = document.querySelector(
+            '[data-row-id="t-0"]',
+        ) as HTMLElement | null
+        const contentRow = document.querySelector(
+            '[data-row-id="t-1"]',
+        ) as HTMLElement | null
+        const sectionRow = document.querySelector(
+            '[data-row-id="t-2"]',
+        ) as HTMLElement | null
+        if (!headerRow || !contentRow || !sectionRow) {
+            throw new Error('rows not found')
+        }
+
+        // data-row-type discriminator — drives both visual styling and
+        // any future test assertions that need to filter by row class.
+        expect(headerRow.getAttribute('data-row-type')).toBe('section')
+        expect(sectionRow.getAttribute('data-row-type')).toBe('section')
+        expect(contentRow.getAttribute('data-row-type')).toBe('content')
+
+        // Section-row framing tokens from DESIGN-CONTRACT.md Option B.
+        // Tailwind classes are present on the <tr> className verbatim.
+        const headerCls = headerRow.className
+        expect(headerCls).toContain('bg-indigo-500/[0.08]')
+        expect(headerCls).toContain('border-l-2')
+        expect(headerCls).toContain('border-l-indigo-400/50')
+
+        // Content row should NOT carry the section-row tokens.
+        expect(contentRow.className).not.toContain('border-l-2')
+    })
+
+    it('v51-02 AC-3: title cell tier classes — smallcaps on header, semibold on content', async () => {
+        await seedTracks('set-a', [
+            { id: 't-0', order: 0, title: 'Section', type: 'header' },
+            { id: 't-1', order: 1, title: 'Song row', key: 'D' },
+        ])
+        render(
+            <DeleteConfirmProvider>
+                <SetlistGrid setlistId="set-a" name="Test" />
+            </DeleteConfirmProvider>,
+        )
+        await screen.findAllByTestId('drag-handle')
+
+        // Find the title cell button inside each row. TextCell renders a
+        // <button data-testid="text-cell-button"> with the tier className
+        // composed via cn() on the same element.
+        const headerRowEl = document.querySelector(
+            '[data-row-id="t-0"]',
+        ) as HTMLElement | null
+        const contentRowEl = document.querySelector(
+            '[data-row-id="t-1"]',
+        ) as HTMLElement | null
+        if (!headerRowEl || !contentRowEl) {
+            throw new Error('rows not found')
+        }
+
+        const headerTitleBtn = headerRowEl.querySelector(
+            '[data-testid="text-cell-button"]',
+        ) as HTMLElement | null
+        const contentTitleBtn = contentRowEl.querySelector(
+            '[data-testid="text-cell-button"]',
+        ) as HTMLElement | null
+        if (!headerTitleBtn || !contentTitleBtn) {
+            throw new Error('title cell buttons not found')
+        }
+
+        // HEADER_TITLE = text-xs font-bold uppercase tracking-[0.1em]
+        //                text-indigo-100
+        expect(headerTitleBtn.className).toContain('font-bold')
+        expect(headerTitleBtn.className).toContain('uppercase')
+        expect(headerTitleBtn.className).toContain('text-indigo-100')
+
+        // TIER1_TITLE = text-sm font-semibold text-foreground
+        expect(contentTitleBtn.className).toContain('font-semibold')
+        expect(contentTitleBtn.className).toContain('text-foreground')
+    })
+
     it('AC-7: Tab traverses cells in row 0 in visual order', async () => {
         await seedTracks('set-a', [
             { id: 't-0', order: 0, title: 'Row 0' },

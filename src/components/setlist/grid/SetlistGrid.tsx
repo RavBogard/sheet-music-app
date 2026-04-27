@@ -142,6 +142,26 @@ function maybePropagate(
     propagateTrackEditToSong(row.songId, helperPatch, setlistId)
 }
 
+// v51-02-01: visual hierarchy tier classes (Option B "Comfortable Dense"
+// locked at .paul/phases/v51-02-editor-readability/v51-02-01-DESIGN-CONTRACT.md).
+// Tier 1 = title (primary). Tier 2 = key (secondary-prominent, brand-tinted).
+// Tier 3 = lead / type / bpm (tertiary). Tier 4 = notes (quaternary).
+// HEADER_TITLE = smallcaps banner used inside type='header' / 'section' rows.
+const TIER1_TITLE = 'text-sm font-semibold text-foreground'
+const TIER2_KEY = 'text-sm font-medium tabular-nums text-indigo-200'
+const TIER3 = 'text-[13px] font-normal text-muted-foreground'
+const TIER3_NUM = 'text-[13px] font-normal tabular-nums text-muted-foreground'
+const TIER4_NOTES = 'text-xs font-normal text-muted-foreground/75'
+const HEADER_TITLE =
+    'text-xs font-bold uppercase tracking-[0.1em] text-indigo-100'
+
+// TrackType union (src/types/models.ts) defines 'header'; the TypeCell
+// picker writes 'section' for the user-facing "Section header" option.
+// Treat both as section rows for visual framing.
+function isSectionRow(t: unknown): boolean {
+    return t === 'header' || t === 'section'
+}
+
 const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'drag',
@@ -153,7 +173,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'type',
         accessorKey: 'type',
         header: 'Type',
-        size: 120,
+        size: 104,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -161,6 +181,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             return (
                 <TypeCell
                     value={String(ctx.getValue() ?? 'song')}
+                    className={TIER3}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
                     onMoveFocus={(d) => meta.moveFocus(d)}
@@ -187,9 +208,13 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
             const colId = 'title'
+            // Section rows render the title as a smallcaps banner; content
+            // rows use the primary tier (text-sm 600 foreground).
+            const titleCls = isSectionRow(row.type) ? HEADER_TITLE : TIER1_TITLE
             return (
                 <TextCell
                     value={(ctx.getValue() ?? '') as string}
+                    className={titleCls}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
                     onMoveFocus={(d) => meta.moveFocus(d)}
@@ -213,7 +238,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'key',
         accessorKey: 'key',
         header: 'Key',
-        size: 80,
+        size: 72,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -221,6 +246,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             return (
                 <KeyCell
                     value={(ctx.getValue() ?? undefined) as string | undefined}
+                    className={TIER2_KEY}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
                     onMoveFocus={(d) => meta.moveFocus(d)}
@@ -247,7 +273,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'bpm',
         accessorKey: 'bpm',
         header: 'BPM',
-        size: 72,
+        size: 64,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -260,6 +286,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
                             : String(ctx.getValue())
                     }
                     type="number"
+                    className={TIER3_NUM}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
                     onMoveFocus={(d) => meta.moveFocus(d)}
@@ -299,6 +326,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'leadMusician',
         accessorKey: 'leadMusician',
         header: 'Lead',
+        size: 156,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -306,6 +334,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             return (
                 <LeadCell
                     value={(ctx.getValue() ?? undefined) as string | undefined}
+                    className={TIER3}
                     setlistLeads={meta.setlistLeads}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
@@ -333,6 +362,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
         id: 'notes',
         accessorKey: 'notes',
         header: 'Notes',
+        size: 220,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
@@ -340,6 +370,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             return (
                 <TextCell
                     value={(ctx.getValue() ?? '') as string}
+                    className={TIER4_NOTES}
                     isFocused={meta.isCellFocused(ctx.row.index, colId)}
                     onFocus={() => meta.handleCellFocus(ctx.row.index, colId)}
                     onMoveFocus={(d) => meta.moveFocus(d)}
@@ -492,6 +523,10 @@ function SortableRow({
 
     useEffect(() => () => cancelLongPress(), [cancelLongPress])
 
+    // v51-02-01 Option B: section rows (type='header'|'section') get a
+    // background tint + left accent + top border so they visibly frame the
+    // content rows below them. Per DESIGN-CONTRACT.md.
+    const isHeaderRow = isSectionRow(row.original.type)
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
@@ -503,6 +538,7 @@ function SortableRow({
                     style={style}
                     role="row"
                     data-row-id={row.original.id}
+                    data-row-type={isHeaderRow ? 'section' : 'content'}
                     data-dragging={isDragging || undefined}
                     data-selected={isSelected || undefined}
                     onPointerDown={handlePointerDown}
@@ -512,7 +548,11 @@ function SortableRow({
                     onPointerCancel={handlePointerEnd}
                     className={cn(
                         'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
-                        isSelected && 'bg-indigo-500/5',
+                        isHeaderRow &&
+                            'bg-indigo-500/[0.08] border-l-2 border-l-indigo-400/50 border-t border-t-indigo-500/25',
+                        isSelected && 'bg-indigo-500/[0.08]',
+                        isSelected &&
+                            'hover:bg-indigo-500/[0.10]',
                         isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
                     )}
                 >
@@ -520,12 +560,15 @@ function SortableRow({
                         if (idx === 0) {
                             // Drag column: 44px desktop, 52px on touch
                             // breakpoints for tap accuracy
-                            // (ARCHITECTURE.md §6.7).
+                            // (ARCHITECTURE.md §6.7). v51-02-01: tightened
+                            // vertical padding so the outer row hits the
+                            // 44px (desktop) / 48px (tablet) target from
+                            // DESIGN-CONTRACT.md Option B.
                             return (
                                 <td
                                     key={cell.id}
                                     role="gridcell"
-                                    className="w-[44px] [@media(pointer:coarse)]:w-[52px] px-1 py-1 [@media(pointer:coarse)]:py-2 align-middle"
+                                    className="w-[44px] [@media(pointer:coarse)]:w-[52px] px-1 py-0.5 align-middle"
                                 >
                                     <DragHandleCell
                                         attributes={attributes}
@@ -547,9 +590,12 @@ function SortableRow({
                                 key={cell.id}
                                 role="gridcell"
                                 style={{ width: cell.column.getSize() }}
-                                // Cell padding: 8px desktop, 12px on touch
-                                // (py-3) for the 44px-min touch target.
-                                className="px-2 py-1 [@media(pointer:coarse)]:py-3 align-middle"
+                                // v51-02-01 Option B density: tightened
+                                // padding so outer row hits 44px desktop
+                                // / 48px tablet (44px tap floor preserved
+                                // by the inner h-10/h-11 cell triggers).
+                                // Per DESIGN-CONTRACT.md.
+                                className="px-2.5 py-0.5 [@media(pointer:coarse)]:py-0.5 align-middle"
                             >
                                 {flexRender(
                                     cell.column.columnDef.cell,

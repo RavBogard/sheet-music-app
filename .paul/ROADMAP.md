@@ -15,7 +15,7 @@ Done definition: clean iPad flow for next Erev Shabbat setlist (open → smart-c
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v51-01 | Picker rework (all 6 dropdown sites) | 1 (01-01 ✓) | ✅ Complete | 2026-04-27 |
-| v51-02 | Editor readability + visual hierarchy (desktop + tablet) | TBD | Not started | - |
+| v51-02 | Editor readability + visual hierarchy (desktop + tablet) | 1 (01 ⏳ PLAN created 2026-04-27) | 🚧 Planning | - |
 | v51-03 | Smart create-setlist wizard | TBD | Not started | - |
 | v51-04 | Vocal Lead rename + Daniel-loop UAT codification + print smoke | TBD | Not started | - |
 
