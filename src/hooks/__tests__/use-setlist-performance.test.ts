@@ -7,23 +7,65 @@ vi.mock('@/lib/firebase', () => ({
   db: {},
 }))
 
-// v50-07-03: hook now uses collection/query/where/onSnapshot for the
-// top-level tracks dual-read. The snapshot callback is captured via
-// `onSnapshotEmit` so individual tests can drive deliveries deterministically.
-let onSnapshotEmit: ((snap: { docs: Array<{ id: string; data: () => unknown }> }) => void) | null = null
+// v50-07-03 + v5h-01-03: hook subscribes via onSnapshot with
+// { includeMetadataChanges: true } and calls getDocsFromServer once per mount
+// to force a server roundtrip. Tests capture the next/error callbacks so
+// deliveries (including the fromCache metadata flag) can be driven
+// deterministically. emitSnapshot helper makes drivers concise.
+type SnapDelivery = {
+  docs: Array<{ id: string; data: () => unknown }>
+  fromCache?: boolean
+}
+let onSnapshotNext: ((snap: SnapDelivery & { metadata: { fromCache: boolean } }) => void) | null = null
+let onSnapshotError: ((err: Error) => void) | null = null
 const mockUnsub = vi.fn()
-const mockOnSnapshot = vi.fn((_q: unknown, onNext: (snap: { docs: Array<{ id: string; data: () => unknown }> }) => void) => {
-  onSnapshotEmit = onNext
-  return mockUnsub
-})
+const mockOnSnapshot = vi.fn(
+  (
+    _q: unknown,
+    arg2: unknown,
+    arg3?: unknown,
+    arg4?: unknown,
+  ) => {
+    // Hook calls `onSnapshot(q, { includeMetadataChanges: true }, onNext, onError)`.
+    // For backward compat, also handle the 3-arg form `(q, onNext, onError)`.
+    if (typeof arg2 === 'function') {
+      onSnapshotNext = arg2 as typeof onSnapshotNext
+      onSnapshotError = (arg3 as typeof onSnapshotError) ?? null
+    } else {
+      onSnapshotNext = (arg3 as typeof onSnapshotNext) ?? null
+      onSnapshotError = (arg4 as typeof onSnapshotError) ?? null
+    }
+    return mockUnsub
+  },
+)
+function emitSnapshot(d: SnapDelivery) {
+  onSnapshotNext?.({
+    docs: d.docs,
+    metadata: { fromCache: d.fromCache ?? true },
+  })
+}
+// Legacy alias for tests that drove via onSnapshotEmit before v5h-01-03.
+// Delivers with fromCache: false (server-fresh) by default so the new
+// dual-read swaps to top-level — matching the assertions those tests made.
+const onSnapshotEmit = (
+  snap: { docs: Array<{ id: string; data: () => unknown }> },
+): void => emitSnapshot({ docs: snap.docs, fromCache: false })
+const mockGetDocsFromServer = vi.fn(() =>
+  Promise.resolve({ docs: [] as Array<{ id: string; data: () => unknown }> }),
+)
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
   collection: vi.fn(() => ({})),
   query: vi.fn((...args: unknown[]) => args),
   where: vi.fn((field: string, op: string, value: unknown) => ({ field, op, value })),
-  onSnapshot: (q: unknown, onNext: (snap: { docs: Array<{ id: string; data: () => unknown }> }) => void) =>
-    mockOnSnapshot(q, onNext),
+  onSnapshot: (
+    q: unknown,
+    arg2: unknown,
+    arg3?: unknown,
+    arg4?: unknown,
+  ) => mockOnSnapshot(q, arg2, arg3, arg4),
+  getDocsFromServer: (q: unknown) => mockGetDocsFromServer(q),
 }))
 
 const mockUseAuth = vi.fn((): { user: unknown; isAdmin: boolean; isBandLeader: boolean } => ({
@@ -62,7 +104,9 @@ import { useSetlistPerformance } from '@/hooks/use-setlist-performance'
 describe('useSetlistPerformance', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    onSnapshotEmit = null
+    onSnapshotNext = null
+    onSnapshotError = null
+    mockGetDocsFromServer.mockResolvedValue({ docs: [] })
     mockUseAuth.mockReturnValue({
       user: { uid: 'user-1', displayName: 'Test User' },
       isAdmin: false,
@@ -257,5 +301,140 @@ describe('useSetlistPerformance', () => {
 
     unmount()
     expect(mockUnsub).toHaveBeenCalledTimes(1)
+  })
+
+  // ── v5h-01-03: cache-then-server gate + getDocsFromServer kick + don't-clear-on-error
+  // Closes the perf-view staleness Daniel hit during UAT (60s+ + multiple
+  // hard refreshes before recent edits showed up). Persistent IDB cache is
+  // ON in firebase.ts; the listener delivers stale-cached data first; the
+  // dual-read used to swap to top-level on that stale delivery and show
+  // pre-edit keys until server-fresh arrived. The fix gates the swap on
+  // a confirmed non-fromCache delivery.
+
+  it('does NOT swap to top-level when only a fromCache delivery has arrived (avoids showing stale-cache top-level)', () => {
+    const embedded = [
+      { id: 'emb-1', title: 'Embedded A', key: 'C' },
+      { id: 'emb-2', title: 'Embedded B', key: 'D' },
+    ]
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: 'setlist-1', hydrated: true, tracks: embedded, musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+
+    // Simulate Firestore SDK's IDB cache delivering stale top-level docs.
+    act(() => {
+      emitSnapshot({
+        docs: [
+          { id: 'tl-stale', data: () => ({ order: 0, title: 'Stale Cached', key: 'STALE' }) },
+        ],
+        fromCache: true,
+      })
+    })
+
+    // Gate: hasServerSnapshot is still false → render embedded, NOT the
+    // stale top-level cache.
+    expect(result.current.tracks).toEqual(embedded)
+  })
+
+  it('swaps to top-level once a non-fromCache (server-fresh) delivery arrives', () => {
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: {
+        id: 'setlist-1',
+        hydrated: true,
+        tracks: [{ id: 'emb-1', title: 'Embedded', key: 'OLD' }],
+        musicians: [],
+      },
+      loading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+
+    // Cache delivery first (still showing embedded due to gate).
+    act(() => {
+      emitSnapshot({
+        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'OLD' }) }],
+        fromCache: true,
+      })
+    })
+    expect((result.current.tracks[0] as { key: string }).key).toBe('OLD')
+
+    // Server-fresh delivery arrives.
+    act(() => {
+      emitSnapshot({
+        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Modeh Ani', key: 'E' }) }],
+        fromCache: false,
+      })
+    })
+    // Gate flips → top-level wins → fresh key shown.
+    expect(result.current.tracks).toHaveLength(1)
+    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
+  })
+
+  it('returns embedded fallback for hydrated setlists pre-server-fresh even if top-level has cache data (invariant: never blank the UI)', () => {
+    // The reverted v5h-01-03 attempt returned [] in this state and broke
+    // live setlists. The new gate must NEVER blank the UI when embedded
+    // has data — only delay the swap from embedded → top-level.
+    const embedded = [
+      { id: 'emb-1', title: 'Track A' },
+      { id: 'emb-2', title: 'Track B' },
+      { id: 'emb-3', title: 'Track C' },
+    ]
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: 'setlist-1', hydrated: true, tracks: embedded, musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+
+    // No deliveries yet — hasServerSnapshot is false. Embedded must render.
+    expect(result.current.tracks).toEqual(embedded)
+  })
+
+  it('preserves top-level state on subscription error (does NOT clear the displayed tracks)', () => {
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: {
+        id: 'setlist-1',
+        hydrated: true,
+        tracks: [{ id: 'emb-1', title: 'Stale Embedded', key: 'OLD' }],
+        musicians: [],
+      },
+      loading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useSetlistPerformance('setlist-1'))
+
+    // Server-fresh delivery first to populate top-level + flip gate.
+    act(() => {
+      emitSnapshot({
+        docs: [{ id: 't1', data: () => ({ order: 0, title: 'Live', key: 'E' }) }],
+        fromCache: false,
+      })
+    })
+    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
+
+    // Then simulate a transient subscription error.
+    act(() => {
+      onSnapshotError?.(new Error('transient network blip'))
+    })
+
+    // Top-level state must be preserved — UI does not blank to embedded.
+    expect((result.current.tracks[0] as { key: string }).key).toBe('E')
+  })
+
+  it('kicks getDocsFromServer once per mount to force a server roundtrip', () => {
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: { id: 'setlist-1', hydrated: true, tracks: [], musicians: [] },
+      loading: false,
+      error: null,
+    })
+
+    renderHook(() => useSetlistPerformance('setlist-1'))
+    expect(mockGetDocsFromServer).toHaveBeenCalledTimes(1)
   })
 })
