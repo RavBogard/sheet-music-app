@@ -26,9 +26,18 @@ import {
     useReactTable,
 } from '@tanstack/react-table'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Copy, Edit3, Music, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuLabel,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import { getDb } from '@/lib/local/schema'
 import type { LocalTrack } from '@/lib/local/types'
 import { applyEdit } from '@/lib/local/write'
@@ -340,6 +349,15 @@ interface SortableRowProps {
     onDeleteRow: (track: LocalTrack) => void
     isSelected: boolean
     onSelectionClick: (modifiers: { shift: boolean; meta: boolean }) => void
+    /** Right-clicked row is in the multi-selection ≥ 2 → ContextMenu
+     *  actions target the bulk set; Edit/Bind/Duplicate disable. */
+    isInBulkSelection: boolean
+    /** Total selection size — drives the "N rows selected" header. */
+    bulkSelectionCount: number
+    onContextEditRow: (rowIndex: number) => void
+    onContextBindChart: (rowId: string) => void
+    onContextDuplicate: (rowId: string) => void
+    onContextDelete: (track: LocalTrack) => void
 }
 
 function SortableRow({
@@ -347,6 +365,12 @@ function SortableRow({
     onDeleteRow,
     isSelected,
     onSelectionClick,
+    isInBulkSelection,
+    bulkSelectionCount,
+    onContextEditRow,
+    onContextBindChart,
+    onContextDuplicate,
+    onContextDelete,
 }: SortableRowProps) {
     const {
         attributes,
@@ -363,60 +387,192 @@ function SortableRow({
         opacity: isDragging ? 0.6 : 1,
     } as React.CSSProperties
 
+    // Long-press for touch: dispatch a synthetic contextmenu MouseEvent
+    // after 500ms hold so iPads can open the row ContextMenu without a
+    // mouse-button. Cancel on >10px movement (drag activation may be
+    // starting) or quick release. Mouse pointer events skip this branch
+    // entirely — desktop right-click is the natural path. Radix
+    // ContextMenu does not expose a controlled `open` prop (per
+    // @radix-ui/react-context-menu 2.2.16 typings), so we re-emit the
+    // contextmenu event the Trigger already listens for.
+    const longPressTimerRef = useRef<number | null>(null)
+    const longPressStartRef = useRef<{ x: number; y: number } | null>(null)
+    const trEl = useRef<HTMLTableRowElement | null>(null)
+
+    const cancelLongPress = useCallback(() => {
+        if (longPressTimerRef.current !== null) {
+            window.clearTimeout(longPressTimerRef.current)
+            longPressTimerRef.current = null
+        }
+    }, [])
+
+    const handlePointerDown: React.PointerEventHandler<HTMLTableRowElement> = (
+        e,
+    ) => {
+        if (e.pointerType !== 'touch') return
+        cancelLongPress()
+        const x = e.clientX
+        const y = e.clientY
+        longPressStartRef.current = { x, y }
+        longPressTimerRef.current = window.setTimeout(() => {
+            longPressTimerRef.current = null
+            trEl.current?.dispatchEvent(
+                new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: x,
+                    clientY: y,
+                }),
+            )
+        }, 500)
+    }
+
+    const handlePointerMove: React.PointerEventHandler<HTMLTableRowElement> = (
+        e,
+    ) => {
+        if (e.pointerType !== 'touch') return
+        if (
+            !longPressStartRef.current ||
+            longPressTimerRef.current === null
+        ) {
+            return
+        }
+        const dx = e.clientX - longPressStartRef.current.x
+        const dy = e.clientY - longPressStartRef.current.y
+        // 10px squared = 100. Movement past this aborts the long-press
+        // timer (the user is dragging, not holding).
+        if (dx * dx + dy * dy > 100) {
+            cancelLongPress()
+        }
+    }
+
+    const handlePointerEnd: React.PointerEventHandler<HTMLTableRowElement> =
+        () => {
+            cancelLongPress()
+        }
+
+    useEffect(() => () => cancelLongPress(), [cancelLongPress])
+
     return (
-        <tr
-            ref={setNodeRef}
-            style={style}
-            role="row"
-            data-row-id={row.original.id}
-            data-dragging={isDragging || undefined}
-            data-selected={isSelected || undefined}
-            className={cn(
-                'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
-                isSelected && 'bg-indigo-500/5',
-                isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
-            )}
-        >
-            {row.getVisibleCells().map((cell, idx) => {
-                if (idx === 0) {
-                    // Drag column: 44px desktop, 52px on touch breakpoints
-                    // for tap accuracy (ARCHITECTURE.md §6.7). Width handled
-                    // via class so the @media query can override the
-                    // baseline; getSize()'s 44 still drives the <th>.
-                    return (
-                        <td
-                            key={cell.id}
-                            role="gridcell"
-                            className="w-[44px] [@media(pointer:coarse)]:w-[52px] px-1 py-1 [@media(pointer:coarse)]:py-2 align-middle"
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <tr
+                    ref={(el) => {
+                        setNodeRef(el)
+                        trEl.current = el
+                    }}
+                    style={style}
+                    role="row"
+                    data-row-id={row.original.id}
+                    data-dragging={isDragging || undefined}
+                    data-selected={isSelected || undefined}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerEnd}
+                    onPointerLeave={handlePointerEnd}
+                    onPointerCancel={handlePointerEnd}
+                    className={cn(
+                        'border-b border-white/10 last:border-b-0 hover:bg-white/[0.02]',
+                        isSelected && 'bg-indigo-500/5',
+                        isDragging && 'shadow-lg ring-2 ring-indigo-400/40',
+                    )}
+                >
+                    {row.getVisibleCells().map((cell, idx) => {
+                        if (idx === 0) {
+                            // Drag column: 44px desktop, 52px on touch
+                            // breakpoints for tap accuracy
+                            // (ARCHITECTURE.md §6.7).
+                            return (
+                                <td
+                                    key={cell.id}
+                                    role="gridcell"
+                                    className="w-[44px] [@media(pointer:coarse)]:w-[52px] px-1 py-1 [@media(pointer:coarse)]:py-2 align-middle"
+                                >
+                                    <DragHandleCell
+                                        attributes={attributes}
+                                        listeners={listeners}
+                                        title={String(
+                                            row.original.title ?? '',
+                                        )}
+                                        onDelete={() =>
+                                            onDeleteRow(row.original)
+                                        }
+                                        isSelected={isSelected}
+                                        onSelectionClick={onSelectionClick}
+                                    />
+                                </td>
+                            )
+                        }
+                        return (
+                            <td
+                                key={cell.id}
+                                role="gridcell"
+                                style={{ width: cell.column.getSize() }}
+                                // Cell padding: 8px desktop, 12px on touch
+                                // (py-3) for the 44px-min touch target.
+                                className="px-2 py-1 [@media(pointer:coarse)]:py-3 align-middle"
+                            >
+                                {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext(),
+                                )}
+                            </td>
+                        )
+                    })}
+                </tr>
+            </ContextMenuTrigger>
+            <ContextMenuContent
+                data-testid={`row-context-menu-${row.original.id}`}
+            >
+                {isInBulkSelection ? (
+                    <>
+                        <ContextMenuLabel
+                            data-testid="row-context-menu-bulk-label"
+                            className="text-indigo-300"
                         >
-                            <DragHandleCell
-                                attributes={attributes}
-                                listeners={listeners}
-                                title={String(row.original.title ?? '')}
-                                onDelete={() => onDeleteRow(row.original)}
-                                isSelected={isSelected}
-                                onSelectionClick={onSelectionClick}
-                            />
-                        </td>
-                    )
-                }
-                return (
-                    <td
-                        key={cell.id}
-                        role="gridcell"
-                        style={{ width: cell.column.getSize() }}
-                        // Cell padding: 8px desktop, 12px on touch (12px =
-                        // py-3) for the 44px-min touch-target requirement.
-                        className="px-2 py-1 [@media(pointer:coarse)]:py-3 align-middle"
-                    >
-                        {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                        )}
-                    </td>
-                )
-            })}
-        </tr>
+                            {bulkSelectionCount} rows selected
+                        </ContextMenuLabel>
+                        <ContextMenuSeparator />
+                    </>
+                ) : null}
+                <ContextMenuItem
+                    onSelect={() => onContextEditRow(row.index)}
+                    disabled={isInBulkSelection}
+                    data-testid="row-context-menu-edit"
+                    className="cursor-pointer"
+                >
+                    <Edit3 aria-hidden className="mr-2 h-4 w-4" />
+                    Edit row
+                </ContextMenuItem>
+                <ContextMenuItem
+                    onSelect={() => onContextBindChart(row.original.id)}
+                    disabled={isInBulkSelection}
+                    data-testid="row-context-menu-bind-chart"
+                    className="cursor-pointer"
+                >
+                    <Music aria-hidden className="mr-2 h-4 w-4" />
+                    Bind chart
+                </ContextMenuItem>
+                <ContextMenuItem
+                    onSelect={() => onContextDuplicate(row.original.id)}
+                    disabled={isInBulkSelection}
+                    data-testid="row-context-menu-duplicate"
+                    className="cursor-pointer"
+                >
+                    <Copy aria-hidden className="mr-2 h-4 w-4" />
+                    Duplicate row
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                    onSelect={() => onContextDelete(row.original)}
+                    data-testid="row-context-menu-delete"
+                    className="cursor-pointer text-red-300 focus:text-red-200 focus:bg-red-500/15"
+                >
+                    <Trash2 aria-hidden className="mr-2 h-4 w-4" />
+                    Delete row
+                </ContextMenuItem>
+            </ContextMenuContent>
+        </ContextMenu>
     )
 }
 
@@ -725,6 +881,75 @@ export function SetlistGrid({
         selection.clear()
     }, [selectedTracks, selection, confirmFn])
 
+    // v50-05-04 ContextMenu actions.
+    const handleContextEditRow = useCallback(
+        (rowIndex: number) => {
+            handleCellFocus(rowIndex, 'title')
+        },
+        [handleCellFocus],
+    )
+
+    const handleContextBindChart = useCallback(
+        (rowId: string) => {
+            setChartBindOpenRowId(rowId)
+        },
+        [],
+    )
+
+    // Duplicate row: cascade-bump existing orders >= newOrder by 1, then
+    // insert a clone of the source row at newOrder. Source's id and order
+    // are replaced; all other fields (songId, title, key, bpm,
+    // leadMusician, notes, type, setlistId) carry through. Per
+    // ARCHITECTURE.md §4 the new row gets its own id; the songId stays
+    // bound so the duplicate inherits the same chart and sticky-memory
+    // defaults — that's what users want when duplicating a song row.
+    const handleContextDuplicate = useCallback(
+        async (rowId: string) => {
+            const source = rows.find((r) => r.id === rowId)
+            if (!source) return
+            const newId = makeId()
+            const newOrder = source.order + 1
+
+            await Promise.all(
+                rows
+                    .filter((r) => r.order >= newOrder)
+                    .map((r) =>
+                        applyEdit({
+                            op: 'update',
+                            collection: 'tracks',
+                            docId: r.id,
+                            patch: { order: r.order + 1 },
+                        }),
+                    ),
+            )
+
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: { ...source, id: newId, order: newOrder },
+            })
+        },
+        [rows],
+    )
+
+    // Selection-aware delete: route to bulk path when the right-clicked
+    // row is part of an active multi-selection (≥ 2). Otherwise target
+    // just the one row, preserving the existing single-row Delete UX
+    // (AlertDialog with quoted title).
+    const handleContextDelete = useCallback(
+        (track: LocalTrack) => {
+            if (
+                selection.selectedIds.has(track.id) &&
+                selection.selectedIds.size >= 2
+            ) {
+                void handleBulkDelete()
+                return
+            }
+            void handleDeleteRow(track)
+        },
+        [selection.selectedIds, handleBulkDelete, handleDeleteRow],
+    )
+
     const meta = useMemo<GridMeta>(
         () => ({
             setlistId,
@@ -960,22 +1185,50 @@ export function SetlistGrid({
                                     ))}
                                 </thead>
                                 <tbody>
-                                    {table.getRowModel().rows.map((row) => (
-                                        <SortableRow
-                                            key={row.id}
-                                            row={row}
-                                            onDeleteRow={meta.onDeleteRow}
-                                            isSelected={meta.selectedIds.has(
-                                                row.original.id,
-                                            )}
-                                            onSelectionClick={(mods) =>
-                                                meta.onDragHandleClick(
-                                                    row.original.id,
-                                                    mods,
-                                                )
-                                            }
-                                        />
-                                    ))}
+                                    {table.getRowModel().rows.map((row) => {
+                                        const rowId = row.original.id
+                                        const inSelection =
+                                            meta.selectedIds.has(rowId)
+                                        const isInBulkSelection =
+                                            inSelection &&
+                                            meta.selectedIds.size >= 2
+                                        return (
+                                            <SortableRow
+                                                key={row.id}
+                                                row={row}
+                                                onDeleteRow={
+                                                    meta.onDeleteRow
+                                                }
+                                                isSelected={inSelection}
+                                                onSelectionClick={(mods) =>
+                                                    meta.onDragHandleClick(
+                                                        rowId,
+                                                        mods,
+                                                    )
+                                                }
+                                                isInBulkSelection={
+                                                    isInBulkSelection
+                                                }
+                                                bulkSelectionCount={
+                                                    meta.selectedIds.size
+                                                }
+                                                onContextEditRow={
+                                                    handleContextEditRow
+                                                }
+                                                onContextBindChart={
+                                                    handleContextBindChart
+                                                }
+                                                onContextDuplicate={(id) =>
+                                                    void handleContextDuplicate(
+                                                        id,
+                                                    )
+                                                }
+                                                onContextDelete={
+                                                    handleContextDelete
+                                                }
+                                            />
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
