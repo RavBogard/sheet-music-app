@@ -987,3 +987,395 @@ describe('v50-06-02: resolveConflict branches (mine / theirs)', () => {
         await cleanup()
     }, 30_000)
 })
+
+// v50-06-03: passive listener closes the 'theirs' staleness gap.
+// After 'theirs' resolution the loser's local row is still at the
+// pre-conflict baseline. Mounting startSnapshotListener on the loser's
+// LocalDb (with a thin shim that re-emits SharedRemote state via
+// SnapshotSubscriber) brings the local row up to the remote's winner-state
+// — closing the gap v50-06-02 explicitly deferred.
+//
+// Block also proves that the listener does NOT trigger ReconciliationProvider
+// (no new outbox row created by listener writes) — engine drain remains the
+// sole path to 'conflict' state.
+describe('v50-06-03: passive listener closes the "theirs" staleness gap', () => {
+    const dbAName = 'crc-listener-a'
+    const dbBName = 'crc-listener-b'
+
+    afterEach(async () => {
+        try {
+            await Dexie.delete(dbAName)
+        } catch {
+            // ignore
+        }
+        try {
+            await Dexie.delete(dbBName)
+        } catch {
+            // ignore
+        }
+    })
+
+    /** SnapshotSubscriber backed by SharedRemote. emitTracksFor(setlistId)
+     *  re-emits the current state of every tracks/* doc whose payload
+     *  carries setlistId == setlistId. */
+    class SharedRemoteSubscriber {
+        private trackHandlers = new Map<
+            string,
+            (changes: import('../snapshot-listener').TrackChange[]) => void
+        >()
+        constructor(private readonly remote: SharedRemote) {}
+
+        toSubscriber(): import('../snapshot-listener').SnapshotSubscriber {
+            return {
+                subscribeSetlist: () => () => {},
+                subscribeTracks: (setlistId, onChanges) => {
+                    this.trackHandlers.set(setlistId, onChanges)
+                    return () => {
+                        this.trackHandlers.delete(setlistId)
+                    }
+                },
+            }
+        }
+
+        emitTracksFor(setlistId: string): void {
+            const handler = this.trackHandlers.get(setlistId)
+            if (!handler) return
+            const changes: import('../snapshot-listener').TrackChange[] = []
+            for (const [key, doc] of this.remote.docs) {
+                const [collection, docId] = key.split('/')
+                if (collection !== 'tracks') continue
+                if (doc.payload.setlistId !== setlistId) continue
+                changes.push({
+                    type: 'modified',
+                    docId,
+                    data: { ...doc.payload, id: docId },
+                    updatedAt: doc.updatedAt,
+                })
+            }
+            if (changes.length > 0) handler(changes)
+        }
+    }
+
+    it("AC-4: loser's local row matches remote after 'theirs' + listener delivery", async () => {
+        const {
+            startSnapshotListener,
+        } = await import('../snapshot-listener')
+
+        // Reuse the v50-06-02 setupTwoWriterRace helper — but inline because
+        // the helper above is scoped to that describe block. Recreate the
+        // race inline.
+        const remote = new SharedRemote()
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', setlistId: 's1', title: 'orig' },
+            updatedAt: 1000,
+        })
+
+        const dbA = new LocalDb(dbAName)
+        const dbB = new LocalDb(dbBName)
+        await dbA.outbox.count()
+        await dbB.outbox.count()
+
+        const baseline = {
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        }
+        await dbA.tracks.put(baseline)
+        await dbB.tracks.put(baseline)
+
+        const now = Date.now()
+        await dbA.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'A-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+        await dbB.outbox.add({
+            status: 'pending',
+            scheduledFor: now,
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { title: 'B-edit' },
+            expectedUpdatedAt: 1000,
+            attempts: 0,
+            createdAt: now,
+        })
+
+        const hub = new FakeChannelHub()
+        const lockA = new CrossTabLock('crc-listener-A', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const lockB = new CrossTabLock('crc-listener-B', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+
+        const engineA = new SyncEngine({
+            db: dbA,
+            adapter: new TwoWriterAdapter(remote),
+            lock: lockA,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        const engineB = new SyncEngine({
+            db: dbB,
+            adapter: new TwoWriterAdapter(remote),
+            lock: lockB,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+
+        await engineA.start()
+        await flushTwoWriter()
+        await engineB.start()
+        await flushTwoWriter()
+
+        const aRows = await dbA.outbox.toArray()
+        const bRows = await dbB.outbox.toArray()
+        const aLost = aRows.length > 0
+        const loserDb = aLost ? dbA : dbB
+        const loserEngine = aLost ? engineA : engineB
+        const loserLocalId = (aLost ? aRows : bRows)[0].localId!
+
+        expect(loserEngine.getState()).toBe('conflict')
+
+        // Mount listener on loser's db, hooked to SharedRemote.
+        const subscriberAdapter = new SharedRemoteSubscriber(remote)
+        const stopListener = startSnapshotListener({
+            setlistId: 's1',
+            db: loserDb,
+            subscriber: subscriberAdapter.toSubscriber(),
+            logger: { warn: () => {} },
+        })
+
+        // Resolve 'theirs' — engine deletes failed outbox row.
+        await loserEngine.resolveConflict(loserLocalId, 'theirs')
+        await flushTwoWriter()
+
+        // BEFORE listener delivery: loser's local row is still at baseline
+        // (the v50-06-02 staleness gap).
+        const beforeDelivery = await loserDb.tracks.get('t1')
+        expect(beforeDelivery?.updatedAt).toBe(1000)
+        expect(beforeDelivery?.title).toBe('orig')
+
+        // Trigger listener delivery from SharedRemote — winner's state
+        // re-emits to the loser.
+        subscriberAdapter.emitTracksFor('s1')
+        await flushTwoWriter()
+
+        // AFTER listener delivery: loser's local row reflects remote.
+        const afterDelivery = await loserDb.tracks.get('t1')
+        const remoteWinner = remote.snapshot().get('tracks/t1')
+        expect(afterDelivery?.updatedAt).toBe(remoteWinner!.updatedAt)
+        expect(afterDelivery?.title).toBe(remoteWinner!.payload.title)
+
+        // Critical invariant: listener did NOT create an outbox row.
+        // (The engine's drain path is still the only road to 'conflict'.)
+        expect(await loserDb.outbox.count()).toBe(0)
+
+        stopListener()
+        engineA.shutdown()
+        engineB.shutdown()
+        dbA.close()
+        dbB.close()
+    }, 30_000)
+})
+
+// v50-06-03: sequential offline edits queue and drain in order on reconnect.
+// Single-writer airplane-mode flow: 5 sequential applyEdit calls on the
+// same track land in the outbox while offline (NetworkError on every
+// commit). On reconnect, the per-doc drain ordering invariant (v50-03)
+// guarantees they replay in queue order — no leapfrog, no data loss.
+//
+// Note: this scenario does NOT thread `expectedUpdatedAt` on the queued
+// rows. While offline, the local row's `updatedAt` never advances (no
+// writeback), so threading it would put all 5 rows at the same baseline
+// — and only the first would drain successfully on reconnect (subsequent
+// rows would surface a self-conflict via VersionMismatchError). That's a
+// known v50-06 gap routed forward to a follow-up plan if real-world
+// patterns demand it; this scenario tests the per-doc ordering + offline
+// queueing invariant in isolation.
+describe('v50-06-03: sequential offline edits queue and drain in order', () => {
+    const dbName = 'crc-offline-seq'
+
+    afterEach(async () => {
+        try {
+            await Dexie.delete(dbName)
+        } catch {
+            // ignore
+        }
+    })
+
+    class OfflineToggleAdapter implements FirestoreAdapter {
+        online = false
+        writes: Array<{ docId: string; payload: Record<string, unknown> }> = []
+        constructor(private readonly remote: SharedRemote) {}
+
+        async commitOutboxRow(
+            row: OutboxRow,
+        ): Promise<{ updatedAt?: number }> {
+            if (!this.online) {
+                throw new NetworkError('offline')
+            }
+            const key = `${row.collection}/${row.docId}`
+            const existing = this.remote.docs.get(key)
+            const ts = this.remote.nextTimestamp()
+            if (row.op === 'set') {
+                this.remote.docs.set(key, {
+                    payload: { ...row.payload, id: row.docId },
+                    updatedAt: ts,
+                })
+            } else if (row.op === 'update') {
+                this.remote.docs.set(key, {
+                    payload: { ...(existing?.payload ?? {}), ...row.payload },
+                    updatedAt: ts,
+                })
+            } else {
+                this.remote.docs.delete(key)
+            }
+            this.writes.push({
+                docId: row.docId,
+                payload: { ...row.payload },
+            })
+            return { updatedAt: ts }
+        }
+
+        async refreshAuthToken(): Promise<void> {}
+        async readDoc(): Promise<null> {
+            return null
+        }
+    }
+
+    it('AC-5: 5 offline edits queue, drain in order F→G→A→B→C on reconnect', async () => {
+        const remote = new SharedRemote()
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', setlistId: 's1', title: 'orig', key: 'baseline' },
+            updatedAt: 1000,
+        })
+
+        const db = new LocalDb(dbName)
+        await db.outbox.count()
+        await db.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            key: 'baseline',
+            updatedAt: 1000,
+        })
+
+        const adapter = new OfflineToggleAdapter(remote)
+        let isOnline = false
+
+        const hub = new FakeChannelHub()
+        const lock = new CrossTabLock('crc-offline-seq', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+
+        // Manual online-event dispatcher — production wires this to
+        // window.addEventListener('online'). The test fires it after
+        // flipping `isOnline = true` to drive the FSM transition out of
+        // 'offline' into the drain-and-quiesce path.
+        const onlineCallbacks: Array<() => void> = []
+        const onlineListener = {
+            addListener(event: 'online' | 'offline', cb: () => void) {
+                if (event === 'online') onlineCallbacks.push(cb)
+            },
+            removeListener() {},
+        }
+
+        const engine = new SyncEngine({
+            db,
+            adapter,
+            lock,
+            isOnline: () => isOnline,
+            onlineListener,
+        })
+
+        await engine.start()
+        await flushTwoWriter()
+        // State should be 'offline' since isOnline() returns false.
+        expect(engine.getState()).toBe('offline')
+
+        // Queue 5 sequential offline edits directly into the outbox to
+        // mirror what applyEdit('update') does (sans expectedUpdatedAt —
+        // see describe-block comment for rationale). Update the local row
+        // each time to mirror applyEdit's entity-row + outbox-row atomicity.
+        const sequence = ['F', 'G', 'A', 'B', 'C']
+        for (const k of sequence) {
+            const now = Date.now()
+            await db.transaction('rw', db.tracks, db.outbox, async () => {
+                const existing = await db.tracks.get('t1')
+                await db.tracks.put({
+                    ...existing!,
+                    key: k,
+                })
+                await db.outbox.add({
+                    status: 'pending',
+                    scheduledFor: now,
+                    op: 'update',
+                    collection: 'tracks',
+                    docId: 't1',
+                    payload: { key: k },
+                    attempts: 0,
+                    createdAt: now,
+                })
+            })
+        }
+
+        // Drive the engine pump while offline — adapter throws NetworkError;
+        // engine restores rows to 'pending' and stops drain.
+        await engine.pump()
+        await flushTwoWriter()
+
+        // All 5 rows should still be in the outbox, none in 'failed' status.
+        const offlineRows = await db.outbox.toArray()
+        expect(offlineRows.length).toBe(5)
+        for (const r of offlineRows) {
+            expect(r.status).not.toBe('failed') // network error preserves 'pending'
+        }
+        expect(adapter.writes.length).toBe(0)
+
+        // Per-doc ordering: due rows must be a single oldest row at the
+        // head of the same-doc chain (verified indirectly by drain order
+        // below).
+
+        // Reconnect: flip online flag + fire the synthetic 'online' event
+        // to drive the FSM out of 'offline'. Then drive the pump until empty.
+        adapter.online = true
+        isOnline = true
+        for (const cb of onlineCallbacks) cb()
+        await flushTwoWriter()
+        for (let i = 0; i < 8 && (await db.outbox.count()) > 0; i++) {
+            await engine.pump()
+            await flushTwoWriter()
+        }
+
+        // Outbox drained.
+        expect(await db.outbox.count()).toBe(0)
+        // All 5 commits arrived in order.
+        expect(adapter.writes.map((w) => w.payload.key)).toEqual([
+            'F',
+            'G',
+            'A',
+            'B',
+            'C',
+        ])
+        // Final remote state matches the last commit.
+        const finalDoc = remote.snapshot().get('tracks/t1')
+        expect(finalDoc?.payload.key).toBe('C')
+        expect(engine.getState()).toBe('idle')
+
+        engine.shutdown()
+        db.close()
+    }, 30_000)
+})
