@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import buildInfo from "@/build-info.json"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,19 @@ const UnifiedCalendar = dynamic(
 export function SetlistDashboard(props: UseSetlistDashboardProps) {
     const congregation = useCongregation()
     const [showWizard, setShowWizard] = useState(false)
+    // v51-h01: route the calendar/placeholder "+" through the wizard so the
+    // v51-03 three-offer strip (Clone / Template / Scratch) actually fires.
+    // Previously these tapped the legacy handleCreateFromCalendar path which
+    // built from template directly without the wizard ever opening.
+    const [wizardPrefilledDate, setWizardPrefilledDate] = useState<Date | null>(null)
+    const openWizardForDate = useCallback((date: Date) => {
+        setWizardPrefilledDate(date)
+        setShowWizard(true)
+    }, [])
+    const handleWizardOpenChange = useCallback((open: boolean) => {
+        setShowWizard(open)
+        if (!open) setWizardPrefilledDate(null)
+    }, [])
 
     // Destructure all the state and handlers from our custom hook
     const {
@@ -124,7 +137,11 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
             </div>
 
             {/* Creation Wizard */}
-            <CreationWizard open={showWizard} onOpenChange={setShowWizard} />
+            <CreationWizard
+                open={showWizard}
+                onOpenChange={handleWizardOpenChange}
+                prefilledDate={wizardPrefilledDate}
+            />
 
             {/* Dialogs */}
             <ImporterModal open={showImporterModal} onOpenChange={setShowImporterModal} onComplete={(id: string) => router.push(`/setlists/${id}`)} />
@@ -148,7 +165,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         mode={isBandLeader ? 'planning' : 'viewer'}
                         setlists={displayedSetlists}
                         onSelectSetlist={handleSelect}
-                        onCreateSetlist={handleCreateFromCalendar}
+                        onCreateSetlist={openWizardForDate}
                     />
                 </div>
             ) : (
@@ -191,7 +208,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                             />
                                         ))}
                                         {placeholders.map((p, idx) => (
-                                            <PlaceholderCard key={idx} date={p.date} onCreate={handleCreateFromCalendar} />
+                                            <PlaceholderCard key={idx} date={p.date} onCreate={openWizardForDate} />
                                         ))}
                                     </div>
                                 </section>

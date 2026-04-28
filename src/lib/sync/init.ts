@@ -31,6 +31,7 @@ import {
     type FirestoreAdapter,
     NetworkError,
     type RemoteDocSnapshot,
+    RemoteDocMissingError,
     TransientError,
     VersionMismatchError,
 } from './firestore-adapter'
@@ -61,8 +62,13 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                     await runTransaction(firestoreDb, async (tx) => {
                         const snap = await tx.get(ref)
                         if (!snap.exists()) {
-                            throw new TransientError(
-                                `Remote doc missing: ${row.collection}/${row.docId}`,
+                            // v51-h01: terminal failure, not transient. The doc
+                            // either was deleted or never landed (e.g. phantom
+                            // row from a flaky-signal addDoc that resolved
+                            // client-side without server confirmation). Engine
+                            // latches to 'failed' immediately — no retry.
+                            throw new RemoteDocMissingError(
+                                `This setlist isn't on the server (was deleted or never synced). Refresh your library.`,
                             )
                         }
                         if (row.expectedUpdatedAt !== undefined) {
@@ -97,6 +103,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
             }
         } catch (err) {
             if (err instanceof VersionMismatchError) throw err
+            if (err instanceof RemoteDocMissingError) throw err
             if (err instanceof TransientError) throw err
             if (err instanceof Error && err.name === 'StaleWriteError') {
                 throw new VersionMismatchError(err.message)

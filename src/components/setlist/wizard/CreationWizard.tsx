@@ -19,6 +19,11 @@ import type { ServiceType } from "@/lib/liturgical-calendar"
 interface CreationWizardProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    /** v51-h01: pre-fill the wizard's eventDate when opened from a date-driven
+     *  entry point (calendar tap, "upcoming" placeholder card). The wizard's
+     *  eventDate effect then fires findLastMatchingService and surfaces the
+     *  v51-03 three-offer strip. */
+    prefilledDate?: Date | null
 }
 
 // Sentinel for the "no template" option — empty-string values are forbidden by shadcn Select.
@@ -41,14 +46,19 @@ const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
     regular: 'service',
 }
 
-export function CreationWizard({ open, onOpenChange }: CreationWizardProps) {
+export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWizardProps) {
     const wizard = useCreationWizard()
 
-    // Reset state each time the dialog opens
+    // Reset state each time the dialog opens. If opened with a prefilledDate
+    // (calendar/placeholder entry point), seed eventDate so the offer strip
+    // fires immediately on the v51-03 lookup effect.
     useEffect(() => {
-        if (open) wizard.reset()
+        if (open) {
+            wizard.reset()
+            if (prefilledDate) wizard.setEventDate(prefilledDate)
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open])
+    }, [open, prefilledDate])
 
     const congregation = useCongregation()
     const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []

@@ -13,6 +13,7 @@ import {
     AuthError,
     type FirestoreAdapter,
     NetworkError,
+    RemoteDocMissingError,
     TransientError,
     VersionMismatchError,
 } from './firestore-adapter'
@@ -311,6 +312,26 @@ export class SyncEngine {
                 lastError,
             })
             this.dispatch({ type: 'DRAIN_VERSION_MISMATCH' })
+            return 'stop-drain'
+        }
+
+        if (err instanceof RemoteDocMissingError) {
+            // v51-h01: terminal — no retry. Doc isn't on the server and
+            // backoff won't help. Capture to Sentry as write-atomicity so
+            // we can correlate phantom-doc patterns post-deploy.
+            await this.db.outbox.update(localId, {
+                status: 'failed',
+                lastError,
+            })
+            captureSyncFailure(err, {
+                feature: 'write-atomicity',
+                site: 'remote-doc-missing',
+                collection: row.collection,
+                docId: row.docId,
+                op: row.op,
+                attempts: row.attempts + 1,
+            })
+            this.dispatch({ type: 'DRAIN_BUDGET_EXHAUSTED' })
             return 'stop-drain'
         }
 

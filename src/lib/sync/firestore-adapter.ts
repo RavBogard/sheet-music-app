@@ -31,6 +31,19 @@ export class TransientError extends Error {
     }
 }
 
+/** v51-h01: thrown when a write targets a doc that no longer exists on the
+ *  server (or never made it there — e.g. a phantom local row from an addDoc
+ *  that resolved client-side without server confirmation under flaky signal).
+ *  Engine treats this as terminal: latch to 'failed' immediately, no retry,
+ *  surface a clear actionable message. Retrying TransientError-style would
+ *  burn 5 attempts of backoff for a doc that isn't coming back. */
+export class RemoteDocMissingError extends Error {
+    constructor(message = 'Remote doc missing') {
+        super(message)
+        this.name = 'RemoteDocMissingError'
+    }
+}
+
 export interface CommitResult {
     /** Server-stamped updatedAt for the doc post-commit, in ms since epoch.
      *  - `set` / `update`: the new server `updatedAt` from `serverTimestamp()`.
