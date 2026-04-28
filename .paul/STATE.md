@@ -39,10 +39,22 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-27 (v5.1 milestone closed via /paul:complete-milestone — archived to .paul/milestones/v5.1-ROADMAP.md, MILESTONES.md entry written, ROADMAP reorganized, git tag v5.1 created)
-Stopped at: v5.1 milestone formally closed; no active milestone; awaiting next-milestone definition or v5.0 audit kickoff
-Next action: `/paul:discuss-milestone` to scope the next milestone OR `/paul:audit-milestone v5.0` once Daniel completes a real-production weekly worship cycle + band first-week smoke (the v5.0 close path that v5.1 polish was the prerequisite for)
-Resume file: `.paul/MILESTONES.md` (v5.1 entry) or `.paul/milestones/v5.1-ROADMAP.md` (archived roadmap snapshot)
+Last session: 2026-04-27 → 2026-04-28 (v5.1 milestone closed + 2 emergency hotfixes shipped post-Daniel-UAT)
+Stopped at: PAUSED at clean state — v51-h02 (`2b35860`) just deployed; Daniel switching to a different computer to verify. Internet went out as deploy was rolling, so v51-h02 verification did not happen.
+Next action: on the new computer, `git pull origin master` + `git fetch --tags`, then `/paul:resume` to load handoff and route to v51-h02 verification (calendar "+" wizard routing AND phantom-setlist immediate-error display).
+Resume file: `.paul/HANDOFF-2026-04-28-v51-hotfix-pickup.md`
+Resume context:
+- v5.1 Editor UX Polish ✅ COMPLETE 2026-04-27 (4/4 phases shipped, tagged v5.1, archived to .paul/milestones/v5.1-ROADMAP.md, MILESTONES.md entry written)
+- v51-h01 (`d440192`) and v51-h02 (`2b35860`) hotfixes shipped post-milestone — both surfaced by the Daniel-loop UAT discipline codified in v51-04
+- v51-h01: `updatedAt: serverTimestamp()` on createSetlist+cloneSetlist + Sentry capture on direct-write paths + inline lastError display on SyncIndicator (mobile-visible)
+- v51-h02: PlaceholderCard + UnifiedCalendar entry points now route through wizard with prefilledDate (was bypassing v51-03 offer strip) + new RemoteDocMissingError terminal class (was retried 5× as TransientError, wasting ~15s before user-visible failure)
+- Open: phantom setlist `setlists/CTAi6kgkTUpGYMO1Ffx7` is in Daniel's IndexedDB but 404s remotely; needs one-shot manual cleanup (Settings → Safari → Website Data → centralreform.live → Remove on phone, OR DevTools IndexedDB delete on desktop)
+- Open: v51-h02 verification by Daniel hasn't happened yet — first task on resume
+- v5.0 milestone STILL pending UAT (close path: weekly worship cycle + band invite + first-week smoke → `/paul:audit-milestone v5.0`)
+- Three resume options laid out in handoff: (1) verify v51-h02 + continue UAT, (2) open v5.1-hotfix postmortem milestone, (3) pause longer + reconvene next session
+- Standing prefs reminder: push to origin master; tablet-first; Reform Jewish (Friday night + Shabbat morning, NOT Sunday); "Vocal Lead" terminology; multi-computer flow — always pull + fetch --tags before starting
+- Pre-existing package.json + src/build-info.json dirty state — auto-touched by dev script; NEVER stage on PAUL commits
+- Git strategy: master (no feature branches per project preference)
 Resume context:
 - v5.1 milestone is 3/4 phases done (v51-01 ✅ + v51-02 ✅ + v51-03 ✅); only v51-04 remains
 - v51-03 shipped: date-aware New Setlist wizard with Clone CTA / Use a template / Start from scratch; backed by findLastMatchingService + cloneSetlist; sticky-memory contract intact
