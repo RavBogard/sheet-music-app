@@ -39,10 +39,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-27 (v51-04-01 closed; v5.1 milestone COMPLETE)
-Stopped at: v51-04-01 LOOP COMPLETE; v5.1 milestone 4/4 phases shipped; awaiting transition (PROJECT.md milestone-roll + ROADMAP.md milestone-close + phase/milestone-close commit) and milestone-complete routing
-Next action: continue transition workflow → milestone-complete report → `/paul:audit-milestone v5.0` to close the parent v5.0 milestone (which has been pending UAT since 2026-04-27 — v5.1 polish phases were the prerequisite to make Daniel's full v5.0 UAT comfortable on iPad)
-Resume file: `.paul/phases/v51-04-vocal-lead-rename-and-print-smoke/v51-04-01-SUMMARY.md`
+Last session: 2026-04-27 (v5.1 milestone closed via /paul:complete-milestone — archived to .paul/milestones/v5.1-ROADMAP.md, MILESTONES.md entry written, ROADMAP reorganized, git tag v5.1 created)
+Stopped at: v5.1 milestone formally closed; no active milestone; awaiting next-milestone definition or v5.0 audit kickoff
+Next action: `/paul:discuss-milestone` to scope the next milestone OR `/paul:audit-milestone v5.0` once Daniel completes a real-production weekly worship cycle + band first-week smoke (the v5.0 close path that v5.1 polish was the prerequisite for)
+Resume file: `.paul/MILESTONES.md` (v5.1 entry) or `.paul/milestones/v5.1-ROADMAP.md` (archived roadmap snapshot)
 Resume context:
 - v5.1 milestone is 3/4 phases done (v51-01 ✅ + v51-02 ✅ + v51-03 ✅); only v51-04 remains
 - v51-03 shipped: date-aware New Setlist wizard with Clone CTA / Use a template / Start from scratch; backed by findLastMatchingService + cloneSetlist; sticky-memory contract intact

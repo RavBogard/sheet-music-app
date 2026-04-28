@@ -12,8 +12,8 @@ Musicians can instantly access setlists, transpose charts to their instrument, a
 
 | Attribute | Value |
 |-----------|-------|
-| Version | v5.0 (pending UAT) |
-| Status | Production — v5.0 substrate shipped; pending Rabbi Daniel + one band member UAT before milestone close |
+| Version | v5.1 (Editor UX Polish ✅ COMPLETE) |
+| Status | Production — v5.1 polish shipped on top of v5.0 substrate. Band-onboarding gate cleared. v5.0 milestone still pending UAT (close path: Daniel runs real-production weekly worship cycle → invite band → first-week smoke → `/paul:audit-milestone v5.0`) |
 | Last Updated | 2026-04-27 |
 
 **Production URLs:**
