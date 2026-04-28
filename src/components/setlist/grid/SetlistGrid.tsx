@@ -325,7 +325,7 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
     {
         id: 'leadMusician',
         accessorKey: 'leadMusician',
-        header: 'Lead',
+        header: 'Vocal Lead',
         size: 156,
         cell: (ctx: CellContext<LocalTrack, unknown>) => {
             const meta = getMeta(ctx.table)

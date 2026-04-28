@@ -168,6 +168,11 @@ Central Reform Congregation worship services and rehearsals. Also used for commu
 - Single congregation use case (CRC)
 - Musicians are not technical — UX must be frictionless
 
+### UAT Discipline (data-flow fixes)
+Every fix that touches data flow — sync engine, Dexie schema or writes, snapshot-listener, lazy-hydration, perf-view rendering, editor cell-commit, Firestore rules — gets a Daniel UAT pass against real production before milestone close. UAT failures route to a new plan in the same phase; only after UAT passes does `/paul:audit-milestone` run.
+
+Codified after the v5.0-hotfix track-edit save-loss incident (2026-04-27): the kitchen-sink fast-check harness (1468/1468 green) couldn't see the missing `tracks/{id}` + `songs/{id}` Firestore rules because it has no security-rules layer + no perf-view path coverage + zero-latency in-memory adapters that miss cache-vs-fresh races. Daniel's UAT against real production caught it as path "P" (cell-edit a key, navigate away, return — key reverts). Postmortem and full action items at `.paul/postmortems/v5h-01-save-loss.md` (action item #4).
+
 ## Tech Stack
 
 | Layer | Technology | Notes |

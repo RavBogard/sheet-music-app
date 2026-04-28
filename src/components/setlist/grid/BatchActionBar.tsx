@@ -107,15 +107,16 @@ export function BatchActionBar({
                 discrete
             />
             <BulkPopover
-                label="Lead"
-                aria-label="Set lead musician for selected rows"
+                label="Vocal Lead"
+                testId="lead"
+                aria-label="Set Vocal Lead for selected rows"
                 onCommit={(value) => onBulkSet({ leadMusician: value })}
                 options={knownLeads.map((m) => ({ value: m, label: m }))}
                 allowFreeText
-                placeholder="Pick or type a lead…"
+                placeholder="Pick or type a Vocal Lead…"
                 emptyHint={
                     knownLeads.length === 0
-                        ? 'No leads in selection — type a name and press Enter.'
+                        ? 'No Vocal Leads in selection — type a name and press Enter.'
                         : undefined
                 }
             />
@@ -173,6 +174,12 @@ interface BulkPopoverProps {
      * names.
      */
     discrete?: boolean
+    /**
+     * Explicit testid stem (e.g. "lead" produces batch-action-lead-trigger).
+     * Decouples testids from the user-facing label so v51-04's "Lead" →
+     * "Vocal Lead" rename can preserve existing test seams.
+     */
+    testId?: string
 }
 
 function BulkPopover({
@@ -184,7 +191,9 @@ function BulkPopover({
     placeholder,
     emptyHint,
     discrete = false,
+    testId,
 }: BulkPopoverProps) {
+    const idStem = testId ?? String(label).toLowerCase()
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
 
@@ -208,14 +217,14 @@ function BulkPopover({
             align="start"
             sideOffset={4}
             contentClassName="w-[16rem]"
-            contentTestId={`batch-action-${String(label).toLowerCase()}-popover`}
+            contentTestId={`batch-action-${idStem}-popover`}
             trigger={
                 <button
                     type="button"
                     aria-label={ariaLabel}
                     aria-haspopup="listbox"
                     aria-expanded={open}
-                    data-testid={`batch-action-${String(label).toLowerCase()}-trigger`}
+                    data-testid={`batch-action-${idStem}-trigger`}
                     className={cn(
                         // Baseline tight density on desktop; bumped to
                         // 44px (h-11) on touch breakpoints.

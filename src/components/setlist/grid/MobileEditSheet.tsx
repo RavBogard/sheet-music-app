@@ -213,7 +213,7 @@ export function MobileEditSheet({
 
                     <label className="block">
                         <span className="text-sm text-muted-foreground">
-                            Lead
+                            Vocal Lead
                         </span>
                         <input
                             type="text"
@@ -221,7 +221,7 @@ export function MobileEditSheet({
                             onChange={(e) => setLead(e.target.value)}
                             onBlur={commitLead}
                             data-testid="mobile-edit-lead"
-                            aria-label="Lead musician"
+                            aria-label="Vocal Lead"
                             className={inputBase}
                         />
                     </label>

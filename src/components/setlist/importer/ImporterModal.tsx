@@ -233,7 +233,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                             <tr>
                                                 <th className="px-4 py-3 font-semibold">Type</th>
                                                 <th className="px-4 py-3 font-semibold w-1/3">Title</th>
-                                                <th className="px-4 py-3 font-semibold">Key/Lead</th>
+                                                <th className="px-4 py-3 font-semibold">Key/Vocal Lead</th>
                                                 <th className="px-4 py-3 font-semibold">Library & File Status</th>
                                             </tr>
                                         </thead>
@@ -274,7 +274,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                                         className="h-7 w-16 text-xs bg-background"
                                                                     />
                                                                     <Input
-                                                                        placeholder="Lead"
+                                                                        placeholder="Vocal Lead"
                                                                         value={item.performer || ""}
                                                                         onChange={(e) => handleItemChange(idx, 'performer', e.target.value)}
                                                                         className="h-7 w-full text-xs bg-background"

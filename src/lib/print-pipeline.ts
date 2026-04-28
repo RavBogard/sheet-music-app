@@ -281,7 +281,10 @@ async function buildCoverPage(
     const colNum = 50
     const colTitle = 75
     const colKey = hasTranspositions ? 280 : 310
-    const colLead = hasTranspositions ? 380 : 430
+    // colLead shifted left 20pt in v51-04 so the "Vocal Lead" header
+    // (~52pt wide @ 10pt Helvetica-Bold) fits without overflowing colTransKey
+    // (with-trans variant) or colNotes (no-trans variant).
+    const colLead = hasTranspositions ? 360 : 410
     const colTransKey = 430
     const colNotes = hasTranspositions ? 490 : 475
 
@@ -289,7 +292,7 @@ async function buildCoverPage(
     coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    coverPage.drawText("Vocal Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     if (hasTranspositions) {
         coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     }
