@@ -195,7 +195,9 @@ describe('useCreationWizard (single-step)', () => {
 
     // 04-05: error path now passes loadingId via second arg when present;
     // when no template was selected (this test) loadingId is undefined.
-    expect(toast.error).toHaveBeenCalledWith('Failed to create setlist', undefined)
+    // v51-h01: error message now includes the underlying SDK message so Daniel
+    // can see WHY a save failed (was: bare 'Failed to create setlist').
+    expect(toast.error).toHaveBeenCalledWith('Failed to create setlist: Network error', undefined)
     expect(result.current.creating).toBe(false)
   })
 

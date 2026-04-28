@@ -247,8 +247,14 @@ export function useCreationWizard(): UseCreationWizardReturn {
             }
 
             router.push(`/setlists/${setlistId}`)
-        } catch {
-            toast.error('Failed to create setlist', loadingId ? { id: loadingId } : undefined)
+        } catch (err) {
+            // v51-h01: surface the underlying SDK error so Daniel-on-phone can
+            // see WHY a save failed (was: bare catch swallowed the message).
+            const detail = err instanceof Error ? err.message : String(err ?? '')
+            toast.error(
+                detail ? `Failed to create setlist: ${detail}` : 'Failed to create setlist',
+                loadingId ? { id: loadingId } : undefined,
+            )
         } finally {
             setCreating(false)
         }

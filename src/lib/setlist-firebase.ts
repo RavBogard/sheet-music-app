@@ -71,6 +71,7 @@ import { apiFetch } from "@/lib/api-client"
 import { toDate } from "@/lib/firestore-helpers"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
+import { captureSyncFailure } from "@/lib/sync/sentry-capture"
 export type { Setlist }
 
 /**
@@ -143,6 +144,13 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
+                    // v51-h01: stamp updatedAt so SetlistGridHydrator's lazy-hydration
+                    // can pass `expectedUpdatedAt: initialSetlist.updatedAt` and have
+                    // it match the remote on first edit. Without this, the precondition
+                    // check in updateSetlistWithVersion compares undefined vs the
+                    // server-stamped value the snapshot-listener may have just
+                    // delivered → StaleWriteError → engine state → 'failed'.
+                    updatedAt: serverTimestamp(),
                     tracks: cleanTracks,
                     trackCount: tracks.length,
                     ownerId: userId,
@@ -153,6 +161,14 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 return docRef.id;
             } catch (e) {
                 logger.error("Error creating setlist: ", e);
+                // v51-h01: instrument the direct-write path that v50-07-05 missed.
+                captureSyncFailure(e, {
+                    feature: 'write-atomicity',
+                    site: 'createSetlist',
+                    op: 'create',
+                    collection: COLLECTION_PATH,
+                    trackCount: tracks.length,
+                })
                 throw e;
             }
         },
@@ -304,6 +320,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     name,
                     date: Timestamp.fromDate(targetDate),
                     eventDate: Timestamp.fromDate(targetDate),
+                    // v51-h01: stamp updatedAt at clone time. See createSetlist
+                    // for the rationale — closes the lazy-hydration precondition
+                    // race that landed Daniel's editor in 'failed' state on phone.
+                    updatedAt: serverTimestamp(),
                     tracks: source.tracks,
                     trackCount: source.tracks.length,
                     ownerId: userId,
@@ -319,6 +339,13 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 return docRef.id
             } catch (e) {
                 logger.error("Error cloning setlist:", e)
+                captureSyncFailure(e, {
+                    feature: 'write-atomicity',
+                    site: 'cloneSetlist',
+                    op: 'create',
+                    collection: COLLECTION_PATH,
+                    trackCount: source.tracks?.length ?? 0,
+                })
                 throw e
             }
         },

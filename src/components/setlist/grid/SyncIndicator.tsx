@@ -141,8 +141,20 @@ export function SyncIndicator({
 
     const Element = isAction ? 'button' : 'span'
 
+    // v51-h01: surface lastError visibly below the indicator when 'failed'.
+    // Tooltips don't fire on touch (phone/tablet), so Daniel couldn't see the
+    // underlying SDK error from the editor's MobileEditSheet flow. Showing the
+    // truncated message inline gives him actionable signal without forcing
+    // him to open DevTools.
+    const showInlineError = state === 'failed' && !!lastError
+    const inlineError = showInlineError
+        ? lastError!.length > 120
+            ? lastError!.slice(0, 117) + '…'
+            : lastError!
+        : null
+
     return (
-        <>
+        <div className="inline-flex flex-col items-start gap-0.5">
             <Element
                 role="status"
                 aria-label={`Sync status: ${label}`}
@@ -178,6 +190,14 @@ export function SyncIndicator({
                 />
                 <span>{label}</span>
             </Element>
+            {inlineError && (
+                <span
+                    className="text-[11px] leading-tight text-red-400/90 max-w-[280px] break-words"
+                    data-testid="sync-indicator-error-detail"
+                >
+                    {inlineError}
+                </span>
+            )}
             <span
                 role="status"
                 aria-live="polite"
@@ -187,6 +207,6 @@ export function SyncIndicator({
             >
                 {announce}
             </span>
-        </>
+        </div>
     )
 }
