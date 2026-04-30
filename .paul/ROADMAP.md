@@ -2,13 +2,76 @@
 
 ## Current Milestone
 
-None active. Most recent milestone (v5.1 Editor UX Polish) closed 2026-04-27.
+**v5.2 — Band-Onboarding Hardening**
+Status: 🚧 In Progress
+Phases: 1 of 5 complete
+Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Systemic fixes — iPad input/focus, sync-error UX, touch-affordance discoverability, setlist lifecycle, plus template-management as a real feature. Daniel explicitly requested **systemic fixes, not bandaids** — recursive research front-loaded into Phase 1 so phases 2–5 execute against root-cause findings instead of guesses.
+
+Origin: 7 issues surfaced via Daniel-loop UAT post-v5.1 (codified discipline working as designed): (1) iPad red "Failed" SyncIndicator (desktop OK), (2) iPad text-input keyboard not popping, (3) iPad Chart picker search broken, (4) all-platforms kebab next to "Saved" red-lined / unclickable, (5) iPad setlists list kebab needs always-visible affordance, (6) save-as-default-template feature, (7) "Edit setlist" should be primary CTA over "Close setlist". Bugs 2+3 likely share root cause (v51-01 focus/keyboard rule leaking); 1+4 cluster around SyncIndicator failure-state UX; 5 is touch-affordance discoverability. Research-first phase v52-01 disambiguates before any code lands.
+
+Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that touches data flow gets Daniel UAT pass on real production before milestone close. /ui-ux-pro-max BLOCKING for every UI-touching phase per SPECIAL-FLOWS.md. Tablet-first (verify every fix on iPad in addition to desktop). v5.0 UAT close still pending — v5.2 is the gate-clearer for band onboarding.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v52-01 | Recursive research (4 parallel tracks) | 1/1 | ✅ Complete | 2026-04-30 |
+| v52-02 | iPad focus + cmdk system fix | TBD | Not started | - |
+| v52-03 | SyncIndicator failure UX overhaul | TBD | Not started | - |
+| v52-04 | Touch affordance + setlist lifecycle UX | TBD | Not started | - |
+| v52-05 | Default-template management | TBD | Not started | - |
+
+### Phase v52-01: Recursive research ✅ COMPLETE 2026-04-30
+
+Outcome (2026-04-30): 4 parallel research tracks (dan-researcher subagents) + 1 follow-up Issue 1 firming pass + RESEARCH-SYNTHESIS.md with 7-row root-cause confidence matrix. All 7 issues at HIGH confidence; 0 LOW; no round-2 research triggered. Daniel approved synthesis with 6 default OQ answers locked. Task 2 (HUMAN-ACTION iPad UAT capture) DEFERRED to per-phase post-deploy Daniel-loop UAT (codified discipline from v51-04). Wave 1 plans v52-02..v52-05 unblocked and parallel-eligible.
+
+Key findings:
+- **Issues 2+3 SHARE root cause** — TouchOrPopover unconditional `onOpenAutoFocus(preventDefault)` on `(pointer:coarse)` breaks Radix focus-trap on iOS Safari. Single ~30 LOC substrate fix in v52-02 via `suppressAutoFocus?: boolean` opt-in prop.
+- **Issues 1+4 INDEPENDENT** despite same surface — Issue 1 is missing recovery affordance for terminal `failed` FSM state + per-device outbox divergence + auth-claim staleness compounding (v52-03 ~75-120 LOC: "Clear failed rows" + "Sign out and back in"); Issue 4 is hard-coded `disabled={!onOverflow}` kebab in SetlistGridTopBar.tsx:65 that never receives the prop (v52-03 removes it, ~10-15 LOC).
+- **Issues 5+7 file-bundled** in SetlistCards.tsx — single v52-04 plan, ~10-15 LOC. 3 P0 hover-to-reveal findings (UpcomingSetlistCard kebab, SetlistCard kebab, CalendarDayCell Plan Service button) get `[@media(pointer:coarse)]:opacity-100`; "Edit Setlist" button promoted from variant=secondary to primary.
+- **Issue 6 architecture: Option C** (system/templates pointer doc) — admin-only write, phased scope (Shabbat morning + Erev Shabbat first), editor kebab entry point, silent fallback on deleted pointer. v52-05 ~125 LOC + new API route.
+
+Plans:
+- v52-01-01 ✅ COMPLETE 2026-04-30 — 4 parallel research subagents + Issue 1 follow-up firming + synthesis. SUMMARY at `.paul/phases/v52-01-recursive-research/v52-01-01-SUMMARY.md`.
+
+Sequencing: Wave 1 parallel-eligible — v52-02 / v52-03 / v52-04 / v52-05 can plan in parallel. If serial preferred: v52-02 first (highest user-impact, smallest scope).
+
+Tracks:
+- **Track A — iPad text-input focus regression** (Issues 2, 3). Hypotheses: v51-01 `onOpenAutoFocus(preventDefault)` leaking past auto-focus into manual-tap focus on text inputs; iOS WebKit pointer-event vs touch-event ordering with Radix Popover / cmdk; `(pointer:coarse)` media query bleed-through to non-picker inputs; cmdk CommandInput + iOS system-keyboard interaction quirks. Output: ONE shared substrate fix or N independent fixes — explicit decision, not assumed. Disambiguate Issue 3 sub-modes: (a) input doesn't focus, (b) focuses but typing doesn't filter, (c) filters but selection doesn't bind.
+- **Track B — SyncIndicator state UX** (Issues 1, 4). Output: state diagram (idle / syncing / saved / pending / failed / conflict) + per-state kebab availability rationale + diagnosis of why iPad fails where desktop succeeds (auth-claim staleness redux? rules version? per-device outbox?) + cause of the kebab "red line" (disabled attr / z-index overlap with v51-h01 lastError pill / CSS regression).
+- **Track C — Touch affordance discoverability sweep** (Issue 5 + audit). Every hover-to-reveal control in the app, not just setlists list. Output: audit table + always-show-on-`(pointer:coarse)` policy.
+- **Track D — Template-management data model** (Issue 6). Trade-offs: implicit `templateType` + `findLastMatchingService` vs. explicit `templates/{type}` collection vs. per-setlist `is_default_template` flag. Migration impact on 24 hydrated + 5 unhydrated setlists. Permission model (admin-only vs. anyone-with-edit). Scope (just Shabbat morning + Erev Shabbat or all 11 service types).
+
+Plans: TBD (defined during /paul:plan)
+/ui-ux-pro-max gate: optional (research, no UI changes)
+
+### Phase v52-02: iPad focus + cmdk system fix
+
+Focus: Execution informed by Track A. Fix Issues 2 + 3 at the systemic root rather than per-surface. /ui-ux-pro-max BLOCKING. Daniel-loop UAT on real iPad before close.
+
+Plans: TBD
+
+### Phase v52-03: SyncIndicator failure UX overhaul
+
+Focus: Root-cause + redesign for Issues 1 + 4. May surface a v52-h hotfix split if root cause is a Firestore-rules / auth-claim issue separable from the visual fix. /ui-ux-pro-max BLOCKING (state diagram + visual treatment). Daniel-loop UAT on iPad + desktop before close.
+
+Plans: TBD
+
+### Phase v52-04: Touch affordance + setlist lifecycle UX
+
+Focus: Issues 5 + 7 + audit findings from Track C. Always-show kebab on `(pointer:coarse)`; Edit-primary in setlists view, Close-secondary; sweep for other hover-only affordances. /ui-ux-pro-max BLOCKING.
+
+Plans: TBD
+
+### Phase v52-05: Default-template management
+
+Focus: Issue 6 — execution informed by Track D's storage decision (implicit vs. explicit collection vs. per-setlist flag). UX entry point in editor kebab vs. admin panel TBD by research. /ui-ux-pro-max BLOCKING.
+
+Plans: TBD
 
 ## Next Milestone
 
-Define via `/paul:discuss-milestone` or `/paul:milestone`.
+After v5.2 ships and Daniel completes a real-production weekly worship cycle UAT, `/paul:audit-milestone v5.0` closes the v5.0 parent milestone. Then v5.3 scope (or v6.0) is defined via `/paul:discuss-milestone`.
 
-**Open carry-over from v5.0 (still pending UAT):** v5.0 milestone has been pending UAT since 2026-04-27 — v5.1 polish was the prerequisite work to make Daniel's full v5.0 UAT comfortable on iPad. Once Daniel runs a real-production weekly worship cycle (build next Erev Shabbat setlist start-to-finish, invite band, first-week smoke), `/paul:audit-milestone v5.0` closes the parent milestone.
+**Open carry-over from v5.0 (still pending UAT):** v5.0 milestone has been pending UAT since 2026-04-27 — v5.1 + v5.2 are the prerequisite polish to make Daniel's full v5.0 UAT comfortable on iPad. v5.2 is the band-onboarding gate-clearer.
 
 ## Completed Milestones
 
