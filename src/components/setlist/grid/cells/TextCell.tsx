@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
 export interface TextCellProps {
@@ -40,6 +41,11 @@ export function TextCell({
     const [draft, setDraft] = useState<string>(asString(value))
     const buttonRef = useRef<HTMLButtonElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    // v52-02-02: on coarse pointer (iPad), single tap on the resting
+    // button enters edit mode immediately (see button.onClick below).
+    // Desktop preserves the focus-only path so keyboard nav still works
+    // (arrow-into-cell, Enter-to-edit, Escape-to-cancel).
+    const isCoarse = useMediaQuery('(pointer: coarse)')
 
     // Keep draft in sync when an external write replaces our value.
     useEffect(() => {
@@ -140,13 +146,24 @@ export function TextCell({
         )
     }
 
+    // v52-02-02: TextCell uses a button → input two-state pattern.
+    // Resting = button (renders text/placeholder); editing = input
+    // (autoFocus + commit-on-blur). Triggers to enter edit mode:
+    //   - desktop: double-click, Enter on focused button, or
+    //     printable keystroke (handleButtonKeyDown)
+    //   - iPad / coarse pointer: single tap (added v52-02-02 to fix
+    //     Issue 2 — onDoubleClick was unreliable on iOS Safari and
+    //     there's no hardware-keyboard equivalent on iPad)
     return (
         <button
             ref={buttonRef}
             type="button"
             tabIndex={isFocused ? 0 : -1}
             onFocus={onFocus}
-            onClick={onFocus}
+            onClick={() => {
+                onFocus()
+                if (isCoarse) enterEditMode()
+            }}
             onDoubleClick={() => enterEditMode()}
             onKeyDown={handleButtonKeyDown}
             aria-label={ariaLabel}
