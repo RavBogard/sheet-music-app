@@ -159,6 +159,14 @@ export function DropdownCell({
                 e.preventDefault()
                 buttonRef.current?.focus()
             }}
+            // v52-02-01: discrete pickers (Key/Type/AddRow/Bulk-Key/
+            // Bulk-Type) opt into auto-focus suppression so the iPad
+            // keyboard doesn't pop on open — there's no input to type
+            // into. Searchable pickers (Lead/ChartBind/Bulk-Lead/AddRow
+            // library lookup) leave it default false, so the cmdk
+            // CommandInput auto-focuses on open and the keyboard pops,
+            // enabling immediate typing-to-filter on iPad.
+            suppressAutoFocus={mode === 'discrete'}
             contentClassName="w-[16rem]"
             trigger={
                 <button

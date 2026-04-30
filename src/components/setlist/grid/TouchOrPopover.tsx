@@ -6,12 +6,17 @@ import { type ReactNode } from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
-// v51-01-01: was Popover ↔ Sheet swap on (pointer: coarse). The Sheet
-// path triggered the iPad system keyboard via cmdk's CommandInput auto-
-// focus and mismatched the tablet-first feel. Rewritten to always-
-// anchored Radix Popover. On (pointer: coarse), open-autofocus is
-// suppressed so consumers can render search inputs visibly without the
-// keyboard popping until the user deliberately taps the input.
+// v51-01-01 introduced blanket-suppression of open-autofocus on
+// (pointer: coarse) to keep the iPad system keyboard from popping when
+// discrete pickers (Key/Type) open. v52-02-01 made the suppression
+// opt-in via the `suppressAutoFocus` prop because the blanket rule
+// broke searchable cmdk pickers (ChartBind, Lead) and any text-input
+// surface inside the popover on iOS Safari — the search input never
+// auto-focused, so the keyboard didn't pop, and typing-to-filter was
+// dead. Discrete callers opt in (DropdownCell mode='discrete'); search-
+// able callers leave the prop default (false) so cmdk CommandInput
+// auto-focuses on open and the iPad keyboard pops, enabling immediate
+// typing-to-filter.
 
 export interface TouchOrPopoverProps {
     open: boolean
@@ -29,6 +34,17 @@ export interface TouchOrPopoverProps {
 
     /** data-testid on the popover content for testing. */
     contentTestId?: string
+
+    /**
+     * v52-02-01: opt-in. When true AND the pointer is coarse, the
+     * default Radix Popover open-autofocus is preventDefault'd. Use
+     * for discrete pickers that have NO input inside the popover and
+     * don't want the iPad keyboard popping on open. Default `false`:
+     * any cmdk CommandInput / text input inside the popover auto-
+     * focuses on open and the iPad system keyboard pops, which is the
+     * desired behavior for searchable pickers.
+     */
+    suppressAutoFocus?: boolean
 }
 
 export function TouchOrPopover({
@@ -41,6 +57,7 @@ export function TouchOrPopover({
     onCloseAutoFocus,
     contentClassName,
     contentTestId,
+    suppressAutoFocus = false,
 }: TouchOrPopoverProps) {
     const isCoarse = useMediaQuery('(pointer: coarse)')
 
@@ -52,12 +69,15 @@ export function TouchOrPopover({
                     align={align}
                     sideOffset={sideOffset}
                     onOpenAutoFocus={(event) => {
-                        // On touch, suppress the default first-focusable
-                        // auto-focus. cmdk's CommandInput would otherwise
-                        // grab focus on open and pop the system keyboard.
-                        // The user can still tap into a search input
-                        // deliberately to bring up the keyboard.
-                        if (isCoarse) event.preventDefault()
+                        // v52-02-01: opt-in suppression. Discrete
+                        // pickers (Key/Type) pass suppressAutoFocus
+                        // to keep the iPad keyboard from popping on
+                        // open. Searchable pickers don't pass it, so
+                        // cmdk CommandInput auto-focuses normally and
+                        // the keyboard pops — enabling immediate
+                        // typing-to-filter on iPad.
+                        if (suppressAutoFocus && isCoarse)
+                            event.preventDefault()
                     }}
                     onCloseAutoFocus={onCloseAutoFocus}
                     className={cn(
