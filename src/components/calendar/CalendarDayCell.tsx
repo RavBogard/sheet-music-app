@@ -101,7 +101,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
 
                 {/* Placeholder for empty Shabbat cells */}
                 {setlists.length === 0 && (isFriday || isSaturday) && onCreateSetlist && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity duration-300">
                         <Button
                             variant="ghost"
                             size="xs"

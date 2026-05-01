@@ -77,7 +77,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         </div>
 
                         {/* Overflow Menu — always visible on touch, hover-reveal on desktop */}
-                        <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        <div className="md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <div className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer -mr-2 text-muted-foreground hover:text-foreground">
@@ -134,9 +134,9 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
 
                 <div className="mt-4 flex flex-col sm:flex-row items-center gap-2 w-full">
                     <Button
-                        variant="secondary"
+                        variant="brand"
                         onClick={onEdit}
-                        className="flex-1 rounded-xl font-bold bg-muted hover:bg-muted/80 text-foreground"
+                        className="flex-1 rounded-xl font-bold"
                     >
                         <Pencil className="h-4 w-4 mr-2" />
                         Edit Setlist
@@ -205,7 +205,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                 </div>
 
                 {/* Action Menu (MoreVertical) */}
-                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     {(canDuplicate || canDelete) && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -253,9 +253,9 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
 
             <div className="mt-auto pt-2 flex flex-col sm:flex-row items-center gap-2 w-full">
                 <Button
-                    variant="secondary"
+                    variant="brand"
                     onClick={onEdit}
-                    className="flex-1 rounded-xl font-bold bg-muted hover:bg-muted/80 text-foreground"
+                    className="flex-1 rounded-xl font-bold"
                 >
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
