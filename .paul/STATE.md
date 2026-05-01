@@ -9,13 +9,28 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 3 of 5 phases complete. Created 2026-04-30 from MILESTONE-CONTEXT.md handoff (7 issues: 5 bugs + 1 feature + 1 UX hierarchy fix). Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
-Phase: v52-04 — Touch affordance + setlist lifecycle UX. Planning. Issues 5 (always-show kebab on coarse pointer for SetlistCards + CalendarDayCell) + 7 (Edit-primary CTA hierarchy on setlist cards). /ui-ux-pro-max BLOCKING. Wave 1 parallel-eligible with v52-05 (templates).
-Plan: v52-04-01 PLAN created 2026-04-30. type=execute. autonomous=false (1 HUMAN-VERIFY at end). Tiny surgical plan — 3 className edits (`[@media(pointer:coarse)]:opacity-100` appended to SetlistCards.tsx:80 + 208 + CalendarDayCell.tsx:104) + 2 button variant swaps (`variant="secondary"` + `bg-muted hover:bg-muted/80 text-foreground` overrides → `variant="brand"`) on SetlistCards Edit buttons. Total ~8-10 source LOC. No new tests (className-only changes; no pre-existing SetlistCards.test.tsx). Awaiting Daniel approval for /paul:apply. PLAN at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-PLAN.md`.
+Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 4 of 5 phases complete. Only v52-05 (default-template management — Issue 6) remains. Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
+Phase: v52-05 — Default-template management. Not started. Issue 6 — Option C `system/templates` pointer doc (admin-only write, phased Shabbat morning + Erev Shabbat first, editor kebab entry point, silent fallback on deleted pointer). Estimate ~125 LOC + new API route per Track D research. /ui-ux-pro-max BLOCKING.
+Plan: not started. Ready to plan via /paul:plan or /paul:discuss-phase.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v52-04-01 PLAN created, awaiting approval]
+  ✓        ✓        ✓     [v52-04 loop complete; v52-04 phase complete]
+
+### v52-04 close (2026-04-30)
+- v52-04-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `814a50d` (pushed origin master; Vercel auto-deployed). type=execute. **Issue 5 (3 P0 hover-reveals from Track C):** Append `[@media(pointer:coarse)]:opacity-100` to UpcomingSetlistCard kebab (SetlistCards.tsx:80), SetlistCard kebab (SetlistCards.tsx:208), CalendarDayCell empty-day "Plan Service" placeholder (CalendarDayCell.tsx:104). Desktop md+ hover-reveal preserved (md: prefix preserved on SetlistCards; transition-opacity duration-300 preserved on CalendarDayCell). **Issue 7 (CTA hierarchy):** Promote "Edit Setlist" (SetlistCards.tsx:137) and "Edit" (SetlistCards.tsx:256) from `variant="secondary"` + `bg-muted hover:bg-muted/80 text-foreground` overrides → `variant="brand"` (solid `bg-brand text-brand-foreground hover:bg-brand/85` from button.tsx). Redundant overrides removed; `flex-1 rounded-xl font-bold` layout preserved. Clone buttons untouched (UpcomingSetlistCard `bg-brand/10` tinted; SetlistCard `text-brand/80` subtle — both correct as secondary). Result: solid brand = primary = Edit; tinted brand = secondary = Clone. ~7 source LOC delta across 2 files. Suite 1528/1528 (pre-existing parallel-suite flake didn't surface this run). tsc + next build clean. Boundary diff confirms changes ONLY under SetlistCards.tsx + CalendarDayCell.tsx. Button component unchanged (consumes existing `variant="brand"`); no Tailwind theme changes. v52-02 + v52-03 contracts preserved. /ui-ux-pro-max gate satisfied (carryover; Track C audit + plan-time decisions covered design ground). Daniel approved sight-unseen at HUMAN-VERIFY checkpoint with "Go"; AC-7 real-iPad UAT deferred to standing Daniel-loop discipline (failures route to v52-04-02 follow-up plan in same phase per v51-04 rule). P1 Track C findings (C-04 SetlistCards watermark opacity-10/20; C-05 HeroCard arrow opacity-60/100) deferred per audit recommendation. SUMMARY at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md`.
+
+### Decisions (v52-04-01)
+
+| 2026-04-30 | Decision | Phase | Impact |
+|------------|----------|-------|--------|
+| 2026-04-30 | `variant="brand"` (not `variant="default"`) for Edit promotion | v52-04 | Codebase distinguishes `primary` (indigo OKLCH) from `brand` (worship-band accent); Edit lives on a brand-tinted card → use `brand` to keep accent family cohesive. Cohesive two-button hierarchy via weight rather than hue. |
+| 2026-04-30 | Drop `bg-muted hover:bg-muted/80 text-foreground` overrides at variant swap | v52-04 | Variant carries the styling; leaving overrides would conflict with bg-brand. Variant swap clean; future brand-style edits propagate automatically. |
+| 2026-04-30 | Clone buttons untouched | v52-04 | Tinted-brand styling (UpcomingSetlistCard `bg-brand/10`, SetlistCard `text-brand/80`) is already correct secondary visual weight. Hierarchy preserved cleanly. |
+| 2026-04-30 | No new tests (pure Tailwind/variant deltas, no behavior change) | v52-04 | No pre-existing SetlistCards.test.tsx; no snapshots affected; visual hierarchy verified by Daniel UAT not snapshot diffs. Suite delta = 0. |
+| 2026-04-30 | P1 audit findings (C-04 watermark, C-05 HeroCard arrow) deferred | v52-04 | Track C audit explicitly recommended P0 only for v52-04. Cosmetic; revisit in future polish milestone. |
+| 2026-04-30 | Single vertical-slice commit (Tasks 1+2 bundled) | v52-04 | v52-02 + v52-03 precedent: cohesive className-only change ships as one atomic commit. |
+| 2026-04-30 | Daniel approved sight-unseen at HUMAN-VERIFY ("Go"); AC-7 real-iPad UAT deferred to standing Daniel-loop discipline | v52-04 | UAT failures route to v52-04-02 follow-up plan in same phase per v51-04 rule; not blocking phase close. |
 
 ### v52-03 close (2026-04-30)
 - v52-03-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `e69e23a` (pushed origin master; Vercel auto-deployed). type=execute. **Issue 4 (kebab "red line"):** SetlistGridTopBar.tsx kebab `<button>` block + `onOverflow?` prop + `MoreVertical` import all removed; SyncIndicator becomes the only trailing action affordance in the topbar. SetlistGrid caller never passed `onOverflow` → prop removal non-breaking by construction; boundary diff confirms only SetlistGridTopBar.tsx changed. **Issue 1 (terminal `failed` FSM with no recovery):** new `src/lib/sync/cleanup.ts` exports `clearFailedOutboxRows({ db? })` — deletes only `status === 'failed'` rows from `db.outbox`; preserves `pending` / `sending`; returns `{ removed: number }`; does NOT call `engine.pump()` directly (engine's interval-based drain observes the now-clean outbox naturally; mirrors v50-06-03's "write to Dexie, let pump observe" pattern). SyncIndicator gained `defaultRetryFailed` async fallback (`retryFailedHandler = onRetryFailed ?? defaultRetryFailed`) so failed-state button is enabled by default in production (mirrors v50-06-02's useReconciliationModalOptional fallback for onResolveConflict). Auth-staleness pairing: when `lastError` matches `/permission|auth|denied|unauthenticated|unauthorized/i`, an inline `<button>` ("Sign out and back in") renders below the v51-h01 inline error pill and calls `useAuth().signOut()` on click; ≥44px tap target on coarse pointer via `[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2` per v50-05-04 floor; neutral `text-zinc-300 hover:text-white` styling reads as a distinct action vs the red error description (NOT red-300 from plan draft). New cleanup.test.ts (4 cases) + extended SyncIndicator.test.tsx (+6 v52-03-01 cases). Suite 1518 → 1528 (+10; exceeds plan estimate of +6-8). tsc clean; next build clean. Engine FSM, state-machine.ts, init.ts, snapshot-listener.ts, ReconciliationProvider, write.ts, firestore.rules all unchanged (boundaries respected). v51-01 + v52-02 cell/picker contracts preserved. /ui-ux-pro-max BLOCKING gate satisfied at APPLY entry; queried for destructive-action-confirmation + touch-target + error-recovery patterns; drove zinc-300 (vs red-300) and mt-1.5 (vs mt-0.5) refinements. Daniel approved sight-unseen at HUMAN-VERIFY checkpoint with "do it"; AC-6 real-iPad UAT deferred to standing Daniel-loop discipline (failures route to v52-03-02 follow-up plan in same phase per v51-04 rule). 1 pre-existing parallel-suite test-isolation flake (rotates between `route-auth.test.ts` and `SetlistGridHydrator.test.tsx`; both pass 23/23 in isolation) flagged in SUMMARY but not blocking — unrelated to v52-03 surface area. SUMMARY at `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-SUMMARY.md`.
@@ -85,10 +100,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-30 — v52-04-01 PLAN created
-Stopped at: v52-04-01 PLAN created; awaiting Daniel approval to /paul:apply. v5.2 milestone now 3 of 5 phases shipped + 1 in planning.
-Next action: Review PLAN at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-PLAN.md`, then `/paul:apply` to ship the 3 hover-reveal fixes + Edit-button variant promotion.
-Resume file: `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-PLAN.md`
+Last session: 2026-04-30 — v52-04 phase complete
+Stopped at: v52-04 phase complete; v5.2 milestone now 4 of 5 phases shipped. Only v52-05 (default-template management — Issue 6) remains.
+Next action: `/paul:plan` (or `/paul:discuss-phase`) for **v52-05 — Default-template management**. Track D research already locked Option C (`system/templates` pointer doc) with 6 OQ defaults (admin-only write; phased Shabbat morning + Erev Shabbat first; editor kebab entry point; silent fallback on deleted pointer). Estimate ~125 LOC + 1 new API route. Last v5.2 phase before milestone close.
+Resume file: `.paul/ROADMAP.md` (Phase v52-05 entry) or `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md` for v52-04 close context.
 
 ### Decisions (v52-02-01)
 
@@ -101,10 +116,10 @@ Resume file: `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-P
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: 756574b — feat(v52-03): SyncIndicator failure UX overhaul complete — close phase
+Last commit: 814a50d — feat(v52-04-01): touch-affordance + Edit CTA hierarchy on setlist cards
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ 756574b → origin master (2026-04-30) [phase-close commit]; e69e23a → origin master (2026-04-30) [v52-03-01 implementation]
+Pushed: ✓ 814a50d → origin master (2026-04-30) [v52-04-01 implementation]; phase-close commit lands next as part of /paul:unify transition
 Resume context (v5.2):
 - v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
 - Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis

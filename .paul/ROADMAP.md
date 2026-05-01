@@ -4,7 +4,7 @@
 
 **v5.2 — Band-Onboarding Hardening**
 Status: 🚧 In Progress
-Phases: 3 of 5 complete
+Phases: 4 of 5 complete
 Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Systemic fixes — iPad input/focus, sync-error UX, touch-affordance discoverability, setlist lifecycle, plus template-management as a real feature. Daniel explicitly requested **systemic fixes, not bandaids** — recursive research front-loaded into Phase 1 so phases 2–5 execute against root-cause findings instead of guesses.
 
 Origin: 7 issues surfaced via Daniel-loop UAT post-v5.1 (codified discipline working as designed): (1) iPad red "Failed" SyncIndicator (desktop OK), (2) iPad text-input keyboard not popping, (3) iPad Chart picker search broken, (4) all-platforms kebab next to "Saved" red-lined / unclickable, (5) iPad setlists list kebab needs always-visible affordance, (6) save-as-default-template feature, (7) "Edit setlist" should be primary CTA over "Close setlist". Bugs 2+3 likely share root cause (v51-01 focus/keyboard rule leaking); 1+4 cluster around SyncIndicator failure-state UX; 5 is touch-affordance discoverability. Research-first phase v52-01 disambiguates before any code lands.
@@ -16,7 +16,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 | v52-01 | Recursive research (4 parallel tracks) | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
 | v52-03 | SyncIndicator failure UX overhaul | 1/1 | ✅ Complete | 2026-04-30 |
-| v52-04 | Touch affordance + setlist lifecycle UX | 1 (planning) | Planning | - |
+| v52-04 | Touch affordance + setlist lifecycle UX | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-05 | Default-template management | TBD | Not started | - |
 
 ### Phase v52-01: Recursive research ✅ COMPLETE 2026-04-30
@@ -67,12 +67,16 @@ Patterns established:
 Plans:
 - v52-03-01 ✅ COMPLETE 2026-04-30 — SyncIndicator failure-state recovery + remove dead kebab. SUMMARY at `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-SUMMARY.md`.
 
-### Phase v52-04: Touch affordance + setlist lifecycle UX
+### Phase v52-04: Touch affordance + setlist lifecycle UX ✅ COMPLETE 2026-04-30
 
-Focus: Issues 5 (3 P0 hover-reveal controls — UpcomingSetlistCard kebab, SetlistCard kebab, CalendarDayCell empty-day "Plan Service" placeholder — get `[@media(pointer:coarse)]:opacity-100` per v50-05-04 floor) + 7 (Edit-primary CTA hierarchy: "Edit Setlist" / "Edit" promoted from `variant="secondary"` muted-gray to `variant="brand"` solid; Clone stays as tinted-brand secondary). Track C audit P1 findings (C-04 SetlistCards watermark, C-05 HeroCard arrow) deferred per audit recommendation. /ui-ux-pro-max BLOCKING.
+Outcome (2026-04-30): Issues 5 + 7 cluster fully closed in 1 plan (single vertical-slice commit `814a50d`). **Issue 5 (3 P0 hover-reveals from Track C audit):** UpcomingSetlistCard kebab (SetlistCards.tsx:80), SetlistCard kebab (SetlistCards.tsx:208), and CalendarDayCell empty-day "Plan Service" placeholder (CalendarDayCell.tsx:104) all gain `[@media(pointer:coarse)]:opacity-100` modifier. iPad always-visible; desktop hover-reveal preserved. **Issue 7 (CTA hierarchy):** "Edit Setlist" / "Edit" buttons promoted from `variant="secondary"` (muted gray) + bg-muted overrides → `variant="brand"` (solid bg-brand). Clone buttons untouched (stay as tinted-brand secondary). Result: solid brand = Edit (primary); tinted brand = Clone (secondary). Color family unified, weight differentiated. Track C audit P1 findings (C-04 watermark, C-05 HeroCard arrow) deferred per audit recommendation. ~7 source LOC delta across 2 files. Suite 1528/1528 (pre-existing parallel-suite flake didn't surface). tsc + next build clean. /ui-ux-pro-max gate satisfied (carryover). Daniel approved sight-unseen at HUMAN-VERIFY; real-iPad UAT deferred to standing Daniel-loop discipline.
+
+Patterns established:
+- Always-visible on `(pointer:coarse)` for hover-reveal controls that are the sole path to critical actions (apply via `[@media(pointer:coarse)]:opacity-100` append; preserve desktop hover-reveal)
+- Two-button CTA hierarchy in branded surfaces: primary uses solid `variant=brand`; secondary uses tinted `bg-brand/10` (or text-brand subtle) — color family unified, weight differentiated, no new hue for primary
 
 Plans:
-- v52-04-01 PLAN created 2026-04-30 — 3 className edits + 2 variant swaps in SetlistCards.tsx + CalendarDayCell.tsx. ~8-10 source LOC. autonomous=false (1 HUMAN-VERIFY). Awaiting approval to /paul:apply.
+- v52-04-01 ✅ COMPLETE 2026-04-30 — Touch affordance + Edit CTA hierarchy. SUMMARY at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md`.
 
 ### Phase v52-05: Default-template management
 
