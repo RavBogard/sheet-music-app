@@ -9,9 +9,33 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 0 of 5 phases complete. Created 2026-04-30 from MILESTONE-CONTEXT.md handoff (7 issues: 5 bugs + 1 feature + 1 UX hierarchy fix). Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
-Phase: v52-02 — iPad focus + cmdk system fix. PLAN created 2026-04-30. Substrate fix: TouchOrPopover gains `suppressAutoFocus?: boolean` opt-in prop (default false); DropdownCell discrete-mode opts in (preserves v51-01 no-keyboard-on-open for Key/Type/AddRow/Bulk); searchable mode (Lead/ChartBind) drops suppression so cmdk CommandInput auto-focuses and iPad keyboard pops on Chart search. Issues 2 + 3 cluster fix.
-Plan: v52-02-01 APPLY COMPLETE 2026-04-30. type=execute. Substrate fix shipped at commit `61eae6c` (pushed to origin master; Vercel auto-deployed). TouchOrPopover.tsx gained `suppressAutoFocus?: boolean` opt-in prop (default false); existing `event.preventDefault()` now gated by `(suppressAutoFocus && isCoarse)`. DropdownCell.tsx passes `suppressAutoFocus={mode === 'discrete'}` so discrete pickers (Key/Type/AddRow/Bulk-Key/Bulk-Type) preserve v51-01 no-keyboard-on-open intent and searchable mode (Lead/ChartBind/Bulk-Lead/AddRow library lookup) inherits Radix default → cmdk CommandInput auto-focuses → iPad keyboard pops → typing-to-filter works. TouchOrPopover.test.tsx updated: replaced 1 obsolete v51-01 test with 3 v52-02 contract tests (default-no-suppress on coarse / opt-in suppress on coarse / opt-in on fine isCoarse-gate-scopes-to-touch). Suite 1513 → 1515 (+2). tsc + next build clean. Boundary diff empty outside files_modified. /ui-ux-pro-max gate satisfied at APPLY entry. Daniel approved at HUMAN-VERIFY checkpoint post-deploy.
+Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 3 of 5 phases complete. Created 2026-04-30 from MILESTONE-CONTEXT.md handoff (7 issues: 5 bugs + 1 feature + 1 UX hierarchy fix). Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
+Phase: v52-04 — Touch affordance + setlist lifecycle UX. Not started. Issues 5 (always-show kebab on coarse pointer) + 7 (Edit-primary / Close-secondary CTA hierarchy) + Track C audit findings. /ui-ux-pro-max BLOCKING. Wave 1 parallel-eligible with v52-05 (templates).
+Plan: not started. Ready to plan via /paul:plan or /paul:discuss-phase.
+
+Loop position:
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v52-03 loop complete; v52-03 phase complete]
+
+### v52-03 close (2026-04-30)
+- v52-03-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `e69e23a` (pushed origin master; Vercel auto-deployed). type=execute. **Issue 4 (kebab "red line"):** SetlistGridTopBar.tsx kebab `<button>` block + `onOverflow?` prop + `MoreVertical` import all removed; SyncIndicator becomes the only trailing action affordance in the topbar. SetlistGrid caller never passed `onOverflow` → prop removal non-breaking by construction; boundary diff confirms only SetlistGridTopBar.tsx changed. **Issue 1 (terminal `failed` FSM with no recovery):** new `src/lib/sync/cleanup.ts` exports `clearFailedOutboxRows({ db? })` — deletes only `status === 'failed'` rows from `db.outbox`; preserves `pending` / `sending`; returns `{ removed: number }`; does NOT call `engine.pump()` directly (engine's interval-based drain observes the now-clean outbox naturally; mirrors v50-06-03's "write to Dexie, let pump observe" pattern). SyncIndicator gained `defaultRetryFailed` async fallback (`retryFailedHandler = onRetryFailed ?? defaultRetryFailed`) so failed-state button is enabled by default in production (mirrors v50-06-02's useReconciliationModalOptional fallback for onResolveConflict). Auth-staleness pairing: when `lastError` matches `/permission|auth|denied|unauthenticated|unauthorized/i`, an inline `<button>` ("Sign out and back in") renders below the v51-h01 inline error pill and calls `useAuth().signOut()` on click; ≥44px tap target on coarse pointer via `[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2` per v50-05-04 floor; neutral `text-zinc-300 hover:text-white` styling reads as a distinct action vs the red error description (NOT red-300 from plan draft). New cleanup.test.ts (4 cases) + extended SyncIndicator.test.tsx (+6 v52-03-01 cases). Suite 1518 → 1528 (+10; exceeds plan estimate of +6-8). tsc clean; next build clean. Engine FSM, state-machine.ts, init.ts, snapshot-listener.ts, ReconciliationProvider, write.ts, firestore.rules all unchanged (boundaries respected). v51-01 + v52-02 cell/picker contracts preserved. /ui-ux-pro-max BLOCKING gate satisfied at APPLY entry; queried for destructive-action-confirmation + touch-target + error-recovery patterns; drove zinc-300 (vs red-300) and mt-1.5 (vs mt-0.5) refinements. Daniel approved sight-unseen at HUMAN-VERIFY checkpoint with "do it"; AC-6 real-iPad UAT deferred to standing Daniel-loop discipline (failures route to v52-03-02 follow-up plan in same phase per v51-04 rule). 1 pre-existing parallel-suite test-isolation flake (rotates between `route-auth.test.ts` and `SetlistGridHydrator.test.tsx`; both pass 23/23 in isolation) flagged in SUMMARY but not blocking — unrelated to v52-03 surface area. SUMMARY at `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-SUMMARY.md`.
+
+### Decisions (v52-03-01)
+
+| 2026-04-30 | Decision | Phase | Impact |
+|------------|----------|-------|--------|
+| 2026-04-30 | No confirm dialog before clearFailedOutboxRows | v52-03 | Failed = dead-letter; deletion is loss-of-no-progress, not destructive of in-flight work; /ui-ux-pro-max "Confirm Destructive Actions" rule doesn't fit this semantic. Single-tap recovery on iPad. |
+| 2026-04-30 | Sign-out link in neutral text-zinc-300 (not red-300 from plan draft) | v52-03 | Red-on-red blends action into severity description, weakening hierarchy. Neutral zinc reads as a distinct action while preserving semantic red for the error pill. |
+| 2026-04-30 | mt-1.5 spacing between error pill and sign-out link (plan draft was mt-0.5) | v52-03 | /ui-ux-pro-max Touch Spacing rule (≥8px between adjacent visual/tappable elements). Coarse-pointer min-h-[44px] floor preserved. |
+| 2026-04-30 | Cleanup helper does NOT call engine.pump() | v52-03 | Engine's existing interval-based drain observes Dexie state changes naturally. Loose coupling per v50-06-03 pattern; engine boundaries preserved. |
+| 2026-04-30 | useAuth() called unconditionally in SyncIndicator (rules-of-hooks compliance) | v52-03 | AuthContext default value provides no-op signOut so existing 7 SyncIndicator tests without an AuthProvider keep working unchanged. |
+| 2026-04-30 | Import getDb from @/lib/local/schema (auto-fix from plan draft assumption of `db` const from `@/lib/local/db`) | v52-03 | Codebase pattern — `db` is not exported as a constant; matches existing conventions across SetlistGrid + Hydrator + ReconciliationProvider. |
+| 2026-04-30 | Single vertical-slice commit (Tasks 1+2+3 bundled) | v52-03 | v51-04 + v52-02-01 precedent: cohesive feature change ships as one atomic commit when source + tests are inseparable. |
+| 2026-04-30 | Daniel approved sight-unseen at HUMAN-VERIFY ("do it"); AC-6 real-iPad UAT deferred to standing Daniel-loop discipline | v52-03 | UAT failures route to v52-03-02 follow-up plan in same phase per v51-04 rule; not blocking phase close. |
+
+### Earlier (v52-02)
+
+Phase v52-02 — iPad focus + cmdk system fix. ✅ COMPLETE 2026-04-30 across 2 plans. v52-02-01 (`61eae6c`) shipped TouchOrPopover `suppressAutoFocus?: boolean` opt-in prop + DropdownCell mode-aware wiring (discrete preserves v51-01 no-keyboard-on-open; searchable lets cmdk auto-focus → iPad keyboard pops on Chart search). v52-02-02 (`f061c80`) shipped TextCell single-tap-to-edit on coarse pointer (track-name/Notes/setlist-name keyboard fix). Suite 1513 → 1518 (+5 across phase). /ui-ux-pro-max gate satisfied. Daniel UAT approved both plans post-deploy.
 
 **Critical Task 1 finding (AC-4):** TextCell.tsx uses inline button→input two-state pattern requiring onDoubleClick / Enter / printable keystroke to enter edit mode — NO path through TouchOrPopover. Issue 2 (track-name/Notes/setlist-name keyboard) is **NOT covered** by this substrate fix. Routes to follow-up plan in v52-02 phase per v51-04 UAT-failure rule. Vocal Lead cell IS covered (uses DropdownCell searchable mode).
 
@@ -61,10 +85,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-30 — v5.2 milestone created
-Stopped at: v52-03-01 PLAN created; awaiting Daniel approval to /paul:apply.
-Next action: Review PLAN at `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-PLAN.md`, then `/paul:apply` to ship the kebab removal + cleanup helper + sign-out pairing.
-Resume file: `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-PLAN.md`
+Last session: 2026-04-30 — v52-03 phase complete
+Stopped at: v52-03 phase complete; v5.2 milestone now 3 of 5 phases shipped. Wave 1 parallel-eligible: v52-04 (Issues 5+7 touch affordance + setlist lifecycle) and v52-05 (Issue 6 default-template management) both unblocked.
+Next action: `/paul:plan` (or `/paul:discuss-phase`) for **v52-04 — Touch affordance + setlist lifecycle UX**. Pre-existing Track C audit findings + Daniel's OQ Q6 default ("remove always-disabled kebab from SetlistGridTopBar") already shipped in v52-03; v52-04 owns the remaining touch-affordance work (always-show kebab on coarse pointer in setlists list; Edit-primary / Close-secondary CTA hierarchy).
+Resume file: `.paul/ROADMAP.md` (Phase v52-04 entry) or `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-SUMMARY.md` for v52-03 close context.
 
 ### Decisions (v52-02-01)
 
@@ -77,10 +101,10 @@ Resume file: `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-PLAN.md`
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: 0beb4f2 — docs(v52-01): recursive research synthesis for v5.2 issue list
+Last commit: e69e23a — feat(v52-03-01): SyncIndicator failure-state recovery + remove dead kebab
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ 0beb4f2 → origin master (2026-04-30)
+Pushed: ✓ e69e23a → origin master (2026-04-30); phase-close commit lands next as part of /paul:unify transition
 Resume context (v5.2):
 - v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
 - Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis
