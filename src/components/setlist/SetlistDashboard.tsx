@@ -55,7 +55,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleTransfer, transferring, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
@@ -202,9 +202,11 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onDuplicate={handleDuplicateClick}
                                                 onCloneNextWeek={handleCloneNextWeekClick}
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
+                                                onSaveAsDefault={handleSaveAsDefaultClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
                                                 canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
+                                                isAdmin={isAdmin}
                                             />
                                         ))}
                                         {placeholders.map((p, idx) => (
@@ -234,9 +236,11 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                 onDuplicate={handleDuplicateClick}
                                                 onCloneNextWeek={handleCloneNextWeekClick}
                                                 onSaveAsTemplate={handleSaveAsTemplateClick}
+                                                onSaveAsDefault={handleSaveAsDefaultClick}
                                                 onDelete={handleDeleteClick}
                                                 canDuplicate={!!user}
                                                 canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
+                                                isAdmin={isAdmin}
                                             />
                                         ))}
                                     </div>

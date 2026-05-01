@@ -20,6 +20,7 @@ const mockDeleteSetlist = vi.fn().mockResolvedValue(undefined)
 const mockDuplicateSetlist = vi.fn().mockResolvedValue(undefined)
 const mockCloneForNextWeek = vi.fn().mockResolvedValue('cloned-id')
 const mockSaveAsTemplate = vi.fn().mockResolvedValue(undefined)
+const mockSetDefaultForServiceType = vi.fn().mockResolvedValue(undefined)
 const mockCreateSetlist = vi.fn().mockResolvedValue('new-id')
 
 vi.mock('@/lib/setlist-firebase', () => ({
@@ -29,8 +30,19 @@ vi.mock('@/lib/setlist-firebase', () => ({
     duplicateSetlist: (...args: unknown[]) => mockDuplicateSetlist(...args),
     cloneForNextWeek: (...args: unknown[]) => mockCloneForNextWeek(...args),
     saveAsTemplate: (...args: unknown[]) => mockSaveAsTemplate(...args),
+    setDefaultForServiceType: (...args: unknown[]) => mockSetDefaultForServiceType(...args),
     createSetlist: (...args: unknown[]) => mockCreateSetlist(...args),
   })),
+}))
+
+// SetlistCards re-exports SERVICE_TYPE_LABELS; mock to avoid pulling in the
+// full component graph (lucide-react icons, dropdown-menu, etc.) for a
+// hook-only test.
+vi.mock('@/components/setlist/SetlistCards', () => ({
+  SERVICE_TYPE_LABELS: {
+    shabbat_morning: 'Shabbat Morning',
+    friday_night: 'Friday Night',
+  },
 }))
 
 const mockDownloadSetlist = vi.fn()
@@ -358,6 +370,48 @@ describe('useSetlistDashboard', () => {
 
       const ids = result.current.upcoming.map(s => s.id)
       expect(ids).toEqual(['soon', 'later', 'latest'])
+    })
+  })
+
+  describe('v52-05: handleSaveAsDefaultClick', () => {
+    it('calls setDefaultForServiceType with the supplied serviceType + setlist.id', async () => {
+      const { result } = renderHook(() => useSetlistDashboard({}))
+      const setlist = makeSetlist({ id: 'setlistA', name: 'Canonical Shabbat' })
+
+      await act(async () => {
+        await result.current.handleSaveAsDefaultClick(setlist, 'shabbat_morning', mockEvent())
+      })
+
+      expect(mockSetDefaultForServiceType).toHaveBeenCalledWith('shabbat_morning', 'setlistA')
+    })
+
+    it('shows a success toast with the friendly service-type label on resolve', async () => {
+      const { result } = renderHook(() => useSetlistDashboard({}))
+      const setlist = makeSetlist({ id: 'setlistB', name: 'Canonical Erev' })
+
+      await act(async () => {
+        await result.current.handleSaveAsDefaultClick(setlist, 'friday_night', mockEvent())
+      })
+
+      expect(toast.success).toHaveBeenCalledWith(
+        'Saved as default for Friday Night',
+        expect.objectContaining({ id: 'toast-id' }),
+      )
+    })
+
+    it('shows an error toast when setDefaultForServiceType rejects', async () => {
+      mockSetDefaultForServiceType.mockRejectedValueOnce(new Error('permission-denied'))
+      const { result } = renderHook(() => useSetlistDashboard({}))
+      const setlist = makeSetlist({ id: 'setlistC' })
+
+      await act(async () => {
+        await result.current.handleSaveAsDefaultClick(setlist, 'shabbat_morning', mockEvent())
+      })
+
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to save as default',
+        expect.objectContaining({ id: 'toast-id' }),
+      )
     })
   })
 })

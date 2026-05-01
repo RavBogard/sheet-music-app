@@ -3,6 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 const mockGetDocs = vi.fn()
+const mockGetDoc = vi.fn()
+const mockSetDoc = vi.fn()
+const mockDoc = vi.fn((...args: unknown[]) => ({
+    __ref: 'doc',
+    args,
+    withConverter: vi.fn(() => ({ __ref: 'doc-converted', args })),
+}))
 const mockCollection = vi.fn((...args: unknown[]) => ({
     __ref: 'collection',
     args,
@@ -14,6 +21,9 @@ const mockLimit = vi.fn((...args: unknown[]) => ({ __ref: 'limit', args }))
 
 vi.mock('firebase/firestore', () => ({
     getDocs: (...args: unknown[]) => mockGetDocs(...args),
+    getDoc: (...args: unknown[]) => mockGetDoc(...args),
+    setDoc: (...args: unknown[]) => mockSetDoc(...args),
+    doc: (...args: unknown[]) => mockDoc(...args),
     collection: (...args: unknown[]) => mockCollection(...args),
     query: (...args: unknown[]) => mockQuery(...args),
     orderBy: (...args: unknown[]) => mockOrderBy(...args),
@@ -22,9 +32,8 @@ vi.mock('firebase/firestore', () => ({
     addDoc: vi.fn(),
     updateDoc: vi.fn(),
     deleteDoc: vi.fn(),
-    doc: vi.fn(),
     onSnapshot: vi.fn(),
-    serverTimestamp: vi.fn(),
+    serverTimestamp: vi.fn(() => ({ __serverTimestamp: true })),
     where: vi.fn(),
     writeBatch: vi.fn(),
     runTransaction: vi.fn(),
@@ -124,6 +133,9 @@ describe('setlistMatchesServiceType (pure helper)', () => {
 describe('findLastMatchingService', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // v52-05: by default, no pointer doc exists — falls through to the
+        // legacy 20-most-recent query path so existing assertions hold.
+        mockGetDoc.mockResolvedValue({ exists: () => false })
     })
 
     function makeService() {
@@ -200,5 +212,109 @@ describe('findLastMatchingService', () => {
         mockGetDocs.mockRejectedValueOnce(new Error('offline'))
         const result = await makeService().findLastMatchingService('friday_night', THURSDAY_APR_30)
         expect(result).toBeNull()
+    })
+})
+
+describe('v52-05 default-template pointer (config/defaults)', () => {
+    beforeEach(() => {
+        // Reset (not just clear) to drop any queued mockResolvedValueOnce
+        // entries from prior tests — mockGetDoc / mockGetDocs are sequenced
+        // via .mockResolvedValueOnce(...) below and bleed across tests
+        // otherwise (vi.clearAllMocks clears call history, not impl queues).
+        vi.resetAllMocks()
+    })
+
+    function makeService() {
+        return createSetlistService('admin-uid', 'Rabbi Daniel')
+    }
+
+    it('setDefaultForServiceType writes config/defaults with merge: true', async () => {
+        mockSetDoc.mockResolvedValueOnce(undefined)
+
+        await makeService().setDefaultForServiceType('shabbat_morning', 'setlistAbc')
+
+        // The doc(...) call should target ['config', 'defaults'].
+        expect(mockDoc).toHaveBeenCalled()
+        const docCall = mockDoc.mock.calls.find((call) => call[1] === 'config' && call[2] === 'defaults')
+        expect(docCall).toBeDefined()
+
+        // setDoc(ref, data, { merge: true }).
+        expect(mockSetDoc).toHaveBeenCalledTimes(1)
+        const [, data, options] = mockSetDoc.mock.calls[0]!
+        expect(data).toMatchObject({
+            shabbat_morning: 'setlistAbc',
+            updatedBy: 'admin-uid',
+        })
+        expect(options).toEqual({ merge: true })
+    })
+
+    it('getDefaultForServiceType returns the pointer when doc exists', async () => {
+        mockGetDoc.mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ shabbat_morning: 'setlistAbc', friday_night: 'setlistDef' }),
+        })
+
+        const result = await makeService().getDefaultForServiceType('shabbat_morning')
+        expect(result).toBe('setlistAbc')
+    })
+
+    it('getDefaultForServiceType returns null when doc missing', async () => {
+        mockGetDoc.mockResolvedValueOnce({ exists: () => false })
+
+        const result = await makeService().getDefaultForServiceType('shabbat_morning')
+        expect(result).toBeNull()
+    })
+
+    it('findLastMatchingService prefers pointer over 20-most-recent when pointer exists and matches', async () => {
+        // Pointer doc returns: shabbat_morning -> 'pointed-id'.
+        // Pointed-to setlist doc exists and matches templateType.
+        mockGetDoc
+            .mockResolvedValueOnce({
+                exists: () => true,
+                data: () => ({ shabbat_morning: 'pointed-id' }),
+            })
+            .mockResolvedValueOnce({
+                exists: () => true,
+                data: () => ({
+                    id: 'pointed-id',
+                    name: 'Canonical Shabbat',
+                    eventDate: SATURDAY_APR_18,
+                    date: SATURDAY_APR_18,
+                    templateType: 'shabbat_morning',
+                    tracks: [],
+                    trackCount: 0,
+                }),
+            })
+
+        // Legacy query also has a candidate, but should NOT win.
+        mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
+            { id: 'most-recent', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
+        ]))
+
+        const result = await makeService().findLastMatchingService('shabbat_morning', THURSDAY_APR_30)
+
+        expect(result?.id).toBe('pointed-id')
+        // 20-most-recent query should NOT have been called when the pointer wins.
+        expect(mockGetDocs).not.toHaveBeenCalled()
+    })
+
+    it('findLastMatchingService falls back silently when pointer is dangling (pointed-to setlist missing)', async () => {
+        // Pointer says 'deleted-id'; getDoc(deleted-id) returns !exists().
+        mockGetDoc
+            .mockResolvedValueOnce({
+                exists: () => true,
+                data: () => ({ shabbat_morning: 'deleted-id' }),
+            })
+            .mockResolvedValueOnce({ exists: () => false })
+
+        // Legacy fallback returns the most-recent matching candidate.
+        mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
+            { id: 'fallback', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
+        ]))
+
+        const result = await makeService().findLastMatchingService('shabbat_morning', THURSDAY_APR_30)
+
+        expect(result?.id).toBe('fallback')
+        expect(mockGetDocs).toHaveBeenCalledTimes(1)
     })
 })

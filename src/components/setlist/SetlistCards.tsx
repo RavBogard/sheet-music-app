@@ -2,16 +2,41 @@
 import { useState, useEffect } from "react"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 
-import { Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
+import { Calendar, Download, Plus, CloudOff, CheckCircle2, Loader2, MoreVertical, Copy, PlusSquare, BookmarkPlus, Star, Trash2, CalendarPlus, PlayCircle, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
+import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+// v52-05: Phase 1 scope for the "Save as Default for {type}" affordance.
+// Daniel's 90% workflow is Shabbat morning + Erev Shabbat clones; future
+// expansion to other ServiceType values is additive (just add to the set
+// + label map, no schema migration).
+const PHASE_1_DEFAULT_TYPES: ReadonlyArray<ServiceType> = ['shabbat_morning', 'friday_night']
+
+export const SERVICE_TYPE_LABELS: Partial<Record<ServiceType, string>> = {
+    shabbat_morning: 'Shabbat Morning',
+    friday_night: 'Friday Night',
+}
+
+function inferServiceType(setlist: Setlist): ServiceType | null {
+    // Prefer explicit templateType when set to a real service type. 'other'
+    // and 'festival' are non-specific buckets — fall through to date-based
+    // inference for those.
+    const tt = setlist.templateType
+    if (tt && tt !== 'other' && tt !== 'festival') {
+        return tt as ServiceType
+    }
+    const date = toDateHelper(setlist.eventDate ?? setlist.date)
+    if (!date) return null
+    return getServiceContext(date).type
+}
 
 /* ─── Upcoming Service Card ─── */
 
@@ -25,12 +50,14 @@ export interface UpcomingCardProps {
     onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
     onCloneNextWeek: (setlist: Setlist, e: React.MouseEvent) => void
     onSaveAsTemplate: (setlist: Setlist, e: React.MouseEvent) => void
+    onSaveAsDefault?: (setlist: Setlist, serviceType: ServiceType, e: React.MouseEvent) => void
     onDelete: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
+    isAdmin: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
@@ -103,6 +130,25 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                                             Save as Template
                                         </DropdownMenuItem>
                                     )}
+                                    {(() => {
+                                        const inferred = inferServiceType(setlist)
+                                        const canSaveAsDefault =
+                                            isAdmin &&
+                                            !!onSaveAsDefault &&
+                                            !!inferred &&
+                                            PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                        const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
+                                        if (!canSaveAsDefault || !label || !inferred) return null
+                                        return (
+                                            <DropdownMenuItem
+                                                onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
+                                                data-testid="setlist-card-save-as-default"
+                                            >
+                                                <Star className="h-4 w-4 mr-2" />
+                                                Save as Default for {label}
+                                            </DropdownMenuItem>
+                                        )
+                                    })()}
                                     {canDelete && (
                                         <DropdownMenuItem onClick={(e) => onDelete(setlist, e)} className="text-red-500 focus:text-red-500">
                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -171,12 +217,14 @@ export interface PastCardProps {
     onDuplicate: (setlist: Setlist, e: React.MouseEvent) => void
     onCloneNextWeek?: (setlist: Setlist, e: React.MouseEvent) => void
     onSaveAsTemplate?: (setlist: Setlist, e: React.MouseEvent) => void
+    onSaveAsDefault?: (setlist: Setlist, serviceType: ServiceType, e: React.MouseEvent) => void
     onDelete?: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
+    isAdmin: boolean
 }
 
-export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onDelete, canDelete, canDuplicate }: PastCardProps) {
+export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
 
     return (
@@ -230,6 +278,25 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                                         </DropdownMenuItem>
                                     </>
                                 )}
+                                {(() => {
+                                    const inferred = inferServiceType(setlist)
+                                    const canSaveAsDefault =
+                                        isAdmin &&
+                                        !!onSaveAsDefault &&
+                                        !!inferred &&
+                                        PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                    const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
+                                    if (!canSaveAsDefault || !label || !inferred) return null
+                                    return (
+                                        <DropdownMenuItem
+                                            onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
+                                            data-testid="setlist-card-save-as-default"
+                                        >
+                                            <Star className="h-4 w-4 mr-2" />
+                                            Save as Default for {label}
+                                        </DropdownMenuItem>
+                                    )
+                                })()}
                                 {canDelete && (
                                     <DropdownMenuItem onClick={(e) => onDelete?.(setlist, e)} className="text-red-500 focus:text-red-500">
                                         <Trash2 className="h-4 w-4 mr-2" />

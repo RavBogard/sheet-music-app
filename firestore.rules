@@ -199,6 +199,21 @@ service cloud.firestore {
       allow write: if isBandLeader();
     }
 
+    // DEFAULT-TEMPLATE POINTERS (canonical setlists per service type)
+    // v52-05 (Track D Option C): admin-curated pointer doc.
+    // Shape: { shabbat_morning?: setlistId, friday_night?: setlistId, updatedAt, updatedBy }
+    // Read: any signed-in user (wizard's findLastMatchingService consults
+    //       the pointer when computing the Clone CTA — must work for everyone,
+    //       not just admins).
+    // Write: admins only — Daniel curates which setlist is the canonical
+    //        default for each service type. Phase 1 scope: shabbat_morning +
+    //        friday_night. Future expansion to all 11 ServiceType values
+    //        is additive (no schema migration; just new keys).
+    match /config/defaults {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // LIBRARY INDEX — server-only (admin SDK)
     // Sync engine, enrichment cron, and upload API all write via admin SDK.
     // No client should read/write directly.

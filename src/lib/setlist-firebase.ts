@@ -5,6 +5,8 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    getDoc,
+    setDoc,
     onSnapshot,
     query,
     orderBy,
@@ -275,6 +277,44 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
+        // v52-05: read the admin-curated default pointer for `serviceType`
+        // from `config/defaults`. Returns the setlistId stored at that key,
+        // or null when the doc is missing / the key is unset / the read
+        // fails. Silent fallback semantics — caller is expected to fall
+        // through to the legacy 20-most-recent query on null (Track D OQ Q5).
+        async getDefaultForServiceType(serviceType: ServiceType): Promise<string | null> {
+            try {
+                const ref = doc(db, 'config', 'defaults')
+                const snap = await getDoc(ref)
+                if (!snap.exists()) return null
+                const data = snap.data() as Record<string, unknown>
+                const id = data[serviceType]
+                return typeof id === 'string' && id.length > 0 ? id : null
+            } catch (e) {
+                logger.error('Error reading config/defaults:', e)
+                return null
+            }
+        },
+
+        // v52-05: admin-only write of the canonical default for `serviceType`.
+        // Uses setDoc with merge: true so each call only updates one key —
+        // other service-type pointers are preserved. Firestore rules enforce
+        // admin-only at the server (allow write: if isAdmin()); this method
+        // does not gate client-side beyond what rules already enforce.
+        async setDefaultForServiceType(serviceType: ServiceType, setlistId: string): Promise<void> {
+            const ref = doc(db, 'config', 'defaults')
+            await setDoc(
+                ref,
+                {
+                    [serviceType]: setlistId,
+                    updatedAt: serverTimestamp(),
+                    updatedBy: userId ?? 'unknown',
+                },
+                { merge: true },
+            )
+            logSetlistChange(setlistId, 'set_as_default', userId || '', userName || 'Anonymous')
+        },
+
         // Find the most recent setlist matching `serviceType` whose effective
         // event date is strictly before `beforeDate` (or before "now" if not
         // given). Returns null on no-match or query failure (graceful — wizard
@@ -283,6 +323,30 @@ export function createSetlistService(userId: string | null, userName?: string | 
             serviceType: ServiceType,
             beforeDate?: Date,
         ): Promise<Setlist | null> {
+            // v52-05: consult config/defaults pointer first. Silent fallback
+            // on missing / dangling / repurposed pointer — graceful degradation,
+            // no error surface (Track D OQ Q5 lock).
+            try {
+                const defaultId = await this.getDefaultForServiceType(serviceType)
+                if (defaultId) {
+                    const ref = doc(db, COLLECTION_PATH, defaultId).withConverter(setlistConverter)
+                    const snap = await getDoc(ref)
+                    if (snap.exists()) {
+                        const candidate = snap.data() as Setlist | null
+                        if (
+                            candidate &&
+                            !candidate.isTemplate &&
+                            setlistMatchesServiceType(candidate, serviceType)
+                        ) {
+                            return candidate
+                        }
+                    }
+                    // dangling or repurposed pointer — silent fallthrough
+                }
+            } catch {
+                // pointer read failed — silent fallthrough to legacy query
+            }
+
             try {
                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
                 const q = query(collectionRef, orderBy('date', 'desc'), limit(20))

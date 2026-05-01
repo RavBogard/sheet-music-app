@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
+import { SERVICE_TYPE_LABELS } from "@/components/setlist/SetlistCards"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useOffline } from "@/hooks/use-offline"
@@ -177,6 +178,27 @@ export function useSetlistDashboard({
             toast.success(`Template "${setlist.name}" saved!`, { id: toastId })
         } catch {
             toast.error("Failed to save template", { id: toastId })
+        }
+    }
+
+    // v52-05: admin-only "Save as Default for {service-type}" handler.
+    // Writes the setlistId to config/defaults.{serviceType} via setDoc(merge:true).
+    // Firestore rules enforce admin-at-server (allow write: if isAdmin()); UI
+    // gates by isAdmin && type ∈ Phase 1 set in SetlistCards.
+    const handleSaveAsDefaultClick = async (
+        setlist: Setlist,
+        serviceType: ServiceType,
+        e: React.MouseEvent,
+    ) => {
+        e.stopPropagation()
+        if (!setlistService || !user) return
+        const friendly = SERVICE_TYPE_LABELS[serviceType] ?? serviceType
+        const toastId = toast.loading("Saving default…")
+        try {
+            await setlistService.setDefaultForServiceType(serviceType, setlist.id)
+            toast.success(`Saved as default for ${friendly}`, { id: toastId })
+        } catch {
+            toast.error("Failed to save as default", { id: toastId })
         }
     }
 
@@ -388,7 +410,7 @@ export function useSetlistDashboard({
         transferEmail, setTransferEmail,
         handleSelect, handleDeleteClick, confirmDelete,
         handleDuplicateClick, confirmDuplicate, handleCloneNextWeekClick,
-        handleSaveAsTemplateClick, handleTransfer, transferring, handleCreateFromCalendar,
+        handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading

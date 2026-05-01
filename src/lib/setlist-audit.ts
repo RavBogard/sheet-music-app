@@ -26,6 +26,7 @@ export type AuditAction =
     | 'track_removed'
     | 'cloned'
     | 'saved_as_template'
+    | 'set_as_default'
 
 export interface AuditEntry {
     action: AuditAction

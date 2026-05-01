@@ -57,6 +57,7 @@ const actionLabels: Record<AuditAction, string> = {
     track_removed: 'Track removed',
     cloned: 'Cloned for next week',
     saved_as_template: 'Saved as template',
+    set_as_default: 'Set as default for service',
 }
 
 interface Props {
