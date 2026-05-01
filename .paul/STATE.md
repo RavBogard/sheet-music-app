@@ -10,8 +10,12 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 0 of 5 phases complete. Created 2026-04-30 from MILESTONE-CONTEXT.md handoff (7 issues: 5 bugs + 1 feature + 1 UX hierarchy fix). Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
-Phase: v52-01 — Recursive research. PLAN created 2026-04-30. 4 parallel research tracks to characterize root causes before any code lands: Track A iPad text-input focus regression (Issues 2, 3), Track B SyncIndicator state UX (Issues 1, 4), Track C touch affordance discoverability sweep (Issue 5 + audit), Track D template-management data model (Issue 6).
-Plan: v52-01-01 APPLY COMPLETE 2026-04-30. type=research; 3 of 4 tasks fully executed; Task 2 (HUMAN-ACTION iPad UAT capture) DEFERRED to post-deploy Daniel-loop UAT per v51-04-codified discipline (Daniel unavailable for real-iPad capture during research window; deviation recorded). Task 4 (DECISION) APPROVED by Daniel with all 6 default OQ answers locked. Outputs: track-a-ipad-focus-research.md (100 lines) + track-b-sync-indicator-research.md (242 lines incl. follow-up Issue 1 firming) + track-c-touch-affordance-audit.md (70 lines) + track-d-template-data-model.md (105 lines) + ipad-uat-capture.md (deferral doc with per-phase UAT acceptance criteria) + RESEARCH-SYNTHESIS.md (full 7-row confidence matrix; all 7 issues HIGH confidence; phase-by-phase recommendations for v52-02..05; 6 OQs answered with defaults). Zero source-code changes; boundary diff empty.
+Phase: v52-02 — iPad focus + cmdk system fix. PLAN created 2026-04-30. Substrate fix: TouchOrPopover gains `suppressAutoFocus?: boolean` opt-in prop (default false); DropdownCell discrete-mode opts in (preserves v51-01 no-keyboard-on-open for Key/Type/AddRow/Bulk); searchable mode (Lead/ChartBind) drops suppression so cmdk CommandInput auto-focuses and iPad keyboard pops on Chart search. Issues 2 + 3 cluster fix.
+Plan: v52-02-01 APPLY COMPLETE 2026-04-30. type=execute. Substrate fix shipped at commit `61eae6c` (pushed to origin master; Vercel auto-deployed). TouchOrPopover.tsx gained `suppressAutoFocus?: boolean` opt-in prop (default false); existing `event.preventDefault()` now gated by `(suppressAutoFocus && isCoarse)`. DropdownCell.tsx passes `suppressAutoFocus={mode === 'discrete'}` so discrete pickers (Key/Type/AddRow/Bulk-Key/Bulk-Type) preserve v51-01 no-keyboard-on-open intent and searchable mode (Lead/ChartBind/Bulk-Lead/AddRow library lookup) inherits Radix default → cmdk CommandInput auto-focuses → iPad keyboard pops → typing-to-filter works. TouchOrPopover.test.tsx updated: replaced 1 obsolete v51-01 test with 3 v52-02 contract tests (default-no-suppress on coarse / opt-in suppress on coarse / opt-in on fine isCoarse-gate-scopes-to-touch). Suite 1513 → 1515 (+2). tsc + next build clean. Boundary diff empty outside files_modified. /ui-ux-pro-max gate satisfied at APPLY entry. Daniel approved at HUMAN-VERIFY checkpoint post-deploy.
+
+**Critical Task 1 finding (AC-4):** TextCell.tsx uses inline button→input two-state pattern requiring onDoubleClick / Enter / printable keystroke to enter edit mode — NO path through TouchOrPopover. Issue 2 (track-name/Notes/setlist-name keyboard) is **NOT covered** by this substrate fix. Routes to follow-up plan in v52-02 phase per v51-04 UAT-failure rule. Vocal Lead cell IS covered (uses DropdownCell searchable mode).
+
+Earlier: v52-01-01 APPLY COMPLETE 2026-04-30. type=research; 3 of 4 tasks fully executed; Task 2 (HUMAN-ACTION iPad UAT capture) DEFERRED to post-deploy Daniel-loop UAT per v51-04-codified discipline (Daniel unavailable for real-iPad capture during research window; deviation recorded). Task 4 (DECISION) APPROVED by Daniel with all 6 default OQ answers locked. Outputs: track-a-ipad-focus-research.md (100 lines) + track-b-sync-indicator-research.md (242 lines incl. follow-up Issue 1 firming) + track-c-touch-affordance-audit.md (70 lines) + track-d-template-data-model.md (105 lines) + ipad-uat-capture.md (deferral doc with per-phase UAT acceptance criteria) + RESEARCH-SYNTHESIS.md (full 7-row confidence matrix; all 7 issues HIGH confidence; phase-by-phase recommendations for v52-02..05; 6 OQs answered with defaults). Zero source-code changes; boundary diff empty.
 
 Status: APPLY COMPLETE — Ready for /paul:unify to close v52-01 loop.
 
@@ -58,9 +62,25 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 ## Session Continuity
 
 Last session: 2026-04-30 — v5.2 milestone created
-Stopped at: v52-01-01 LOOP COMPLETE; phase v52-01 COMPLETE (1/1 plans). Transition required.
-Next action: Run phase transition (commit + ROADMAP update + clean handoffs), then `/paul:plan` for v52-02 (Wave 1 parallel-eligible with v52-03..v52-05).
-Resume file: `.paul/phases/v52-01-recursive-research/v52-01-01-SUMMARY.md`
+Stopped at: v52-02 phase ✅ COMPLETE; transition done (ROADMAP updated, PROJECT.md evolved, phase-close commit landed). Wave 1 next-phase candidates parallel-eligible.
+Next action: `/paul:plan` for v52-03 (recommended next: SyncIndicator UX overhaul — Issues 1+4) OR v52-04 (touch affordance + button hierarchy — small) OR v52-05 (default-template management — has decision-checkpoint).
+Resume file: `.paul/phases/v52-02-ipad-focus-cmdk-fix/v52-02-02-SUMMARY.md`
+
+### Decisions (v52-02-01)
+
+| 2026-04-30 | Decision | Phase | Impact |
+|------------|----------|-------|--------|
+| 2026-04-30 | suppressAutoFocus default = false (opt-in suppression) | v52-02 | Future TouchOrPopover consumers get platform-correct behavior automatically; only consumers explicitly wanting no-keyboard-on-open opt in |
+| 2026-04-30 | Issue 2 routes to v52-02-02 follow-up plan in same phase per v51-04 UAT-failure rule | v52-02 | Phase v52-02 will have 2 plans before close; Wave 1 parallel-eligibility unchanged for v52-03..05 |
+| 2026-04-30 | Tasks 1+2 bundled into single commit `61eae6c` (vertical-slice precedent from v51-04) | v52-02 | Atomic fix-with-tests-as-one-cohesive-change git history |
+| 2026-04-30 | Replaced 1 obsolete v51-01 test rather than skipping (it became FALSE under v52-02 default contract) | v52-02 | Test file aligned with current contract; no zombie skipped tests |
+| 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
+
+### Git State
+Last commit: 0beb4f2 — docs(v52-01): recursive research synthesis for v5.2 issue list
+Branch: master
+Feature branches merged: none (no feature branches per project preference)
+Pushed: ✓ 0beb4f2 → origin master (2026-04-30)
 Resume context (v5.2):
 - v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
 - Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis
@@ -125,9 +145,11 @@ Progress:
 Current loop state (v5.2 milestone — 🚧 IN PROGRESS):
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v52-01-01 LOOP COMPLETE 2026-04-30; phase v52-01 COMPLETE — TRANSITION REQUIRED]
+  ✓        ✓        ✓     [v52-02-02 LOOP COMPLETE 2026-04-30; phase v52-02 ✅ COMPLETE 2/2 plans — TRANSITION DONE]
 
-v52-01-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — synthesis approved; SUMMARY at .paul/phases/v52-01-recursive-research/v52-01-01-SUMMARY.md]
+v52-01-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — synthesis approved; commit 0beb4f2 pushed to origin master]
+v52-02-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — substrate fix shipped at 61eae6c; Issues 3 + Vocal Lead covered]
+v52-02-02:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — TextCell single-tap-to-edit shipped at f061c80; Issue 2 closed; MobileEditSheet + CreationWizard case (ii) confirmed]
 v52-02:        ○ ──▶ ○ ──▶ ○     [Not started — iPad focus + cmdk system fix; informed by Track A]
 v52-03:        ○ ──▶ ○ ──▶ ○     [Not started — SyncIndicator failure UX overhaul; informed by Track B]
 v52-04:        ○ ──▶ ○ ──▶ ○     [Not started — touch affordance + setlist lifecycle UX; informed by Track C]

@@ -4,7 +4,7 @@
 
 **v5.2 — Band-Onboarding Hardening**
 Status: 🚧 In Progress
-Phases: 1 of 5 complete
+Phases: 2 of 5 complete
 Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Systemic fixes — iPad input/focus, sync-error UX, touch-affordance discoverability, setlist lifecycle, plus template-management as a real feature. Daniel explicitly requested **systemic fixes, not bandaids** — recursive research front-loaded into Phase 1 so phases 2–5 execute against root-cause findings instead of guesses.
 
 Origin: 7 issues surfaced via Daniel-loop UAT post-v5.1 (codified discipline working as designed): (1) iPad red "Failed" SyncIndicator (desktop OK), (2) iPad text-input keyboard not popping, (3) iPad Chart picker search broken, (4) all-platforms kebab next to "Saved" red-lined / unclickable, (5) iPad setlists list kebab needs always-visible affordance, (6) save-as-default-template feature, (7) "Edit setlist" should be primary CTA over "Close setlist". Bugs 2+3 likely share root cause (v51-01 focus/keyboard rule leaking); 1+4 cluster around SyncIndicator failure-state UX; 5 is touch-affordance discoverability. Research-first phase v52-01 disambiguates before any code lands.
@@ -14,7 +14,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v52-01 | Recursive research (4 parallel tracks) | 1/1 | ✅ Complete | 2026-04-30 |
-| v52-02 | iPad focus + cmdk system fix | TBD | Not started | - |
+| v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
 | v52-03 | SyncIndicator failure UX overhaul | TBD | Not started | - |
 | v52-04 | Touch affordance + setlist lifecycle UX | TBD | Not started | - |
 | v52-05 | Default-template management | TBD | Not started | - |
@@ -43,11 +43,17 @@ Tracks:
 Plans: TBD (defined during /paul:plan)
 /ui-ux-pro-max gate: optional (research, no UI changes)
 
-### Phase v52-02: iPad focus + cmdk system fix
+### Phase v52-02: iPad focus + cmdk system fix ✅ COMPLETE 2026-04-30
 
-Focus: Execution informed by Track A. Fix Issues 2 + 3 at the systemic root rather than per-surface. /ui-ux-pro-max BLOCKING. Daniel-loop UAT on real iPad before close.
+Outcome (2026-04-30): Issues 2 + 3 cluster fully closed across 2 plans. **v52-02-01** (`61eae6c`) added `suppressAutoFocus?: boolean` opt-in prop to TouchOrPopover (default false); DropdownCell discrete-mode opts in to preserve v51-01 no-keyboard-on-open intent for Key/Type/AddRow/Bulk; searchable mode (Lead/ChartBind/Bulk-Lead/AddRow library lookup) drops suppression so cmdk CommandInput auto-focuses and iPad keyboard pops on Chart search open. **v52-02-02** (`f061c80`) added `useMediaQuery('(pointer:coarse)')` to TextCell with single-tap-to-edit gate inside button.onClick: coarse-pointer single tap calls `onFocus()` then `enterEditMode()` so input renders with autoFocus and iPad keyboard pops; desktop preserves keyboard-nav semantics (click-only-focuses, double-click + Enter + printable keystroke trigger edit mode). Read-only investigations confirmed MobileEditSheet (plain `<input>`/`<textarea>`) and CreationWizard (shadcn `<Input>` plain wrapper) are case (ii) — already work on iPad without TextCell pattern; no follow-up plan needed. Suite 1513 → 1518 (+5 across phase: 3 TouchOrPopover contract tests + 1 obsolete v51 test replaced + 3 new TextCell.test.tsx contract tests). /ui-ux-pro-max BLOCKING gate satisfied at v52-02-01 APPLY entry. Daniel UAT approved for both plans post-deploy.
 
-Plans: TBD
+Patterns established:
+- Opt-in suppression for Radix Popover open-autofocus on touch — default trusts platform; only suppress when surface has no input to type into
+- Cell-level coarse-tap-to-edit pattern: any future cell with button → input two-state pattern that needs touch single-tap-to-edit follows TextCell precedent
+
+Plans:
+- v52-02-01 ✅ COMPLETE 2026-04-30 — TouchOrPopover suppressAutoFocus opt-in. SUMMARY at `.paul/phases/v52-02-ipad-focus-cmdk-fix/v52-02-01-SUMMARY.md`.
+- v52-02-02 ✅ COMPLETE 2026-04-30 — TextCell single-tap-to-edit on coarse pointer. SUMMARY at `.paul/phases/v52-02-ipad-focus-cmdk-fix/v52-02-02-SUMMARY.md`.
 
 ### Phase v52-03: SyncIndicator failure UX overhaul
 
