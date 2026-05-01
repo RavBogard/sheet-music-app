@@ -15,7 +15,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 |-------|------|-------|--------|-----------|
 | v52-01 | Recursive research (4 parallel tracks) | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
-| v52-03 | SyncIndicator failure UX overhaul | TBD | Not started | - |
+| v52-03 | SyncIndicator failure UX overhaul | 1 (planning) | Planning | - |
 | v52-04 | Touch affordance + setlist lifecycle UX | TBD | Not started | - |
 | v52-05 | Default-template management | TBD | Not started | - |
 

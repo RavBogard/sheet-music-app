@@ -62,9 +62,9 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 ## Session Continuity
 
 Last session: 2026-04-30 — v5.2 milestone created
-Stopped at: v52-02 phase ✅ COMPLETE; transition done (ROADMAP updated, PROJECT.md evolved, phase-close commit landed). Wave 1 next-phase candidates parallel-eligible.
-Next action: `/paul:plan` for v52-03 (recommended next: SyncIndicator UX overhaul — Issues 1+4) OR v52-04 (touch affordance + button hierarchy — small) OR v52-05 (default-template management — has decision-checkpoint).
-Resume file: `.paul/phases/v52-02-ipad-focus-cmdk-fix/v52-02-02-SUMMARY.md`
+Stopped at: v52-03-01 PLAN created; awaiting Daniel approval to /paul:apply.
+Next action: Review PLAN at `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-PLAN.md`, then `/paul:apply` to ship the kebab removal + cleanup helper + sign-out pairing.
+Resume file: `.paul/phases/v52-03-sync-indicator-ux-overhaul/v52-03-01-PLAN.md`
 
 ### Decisions (v52-02-01)
 
@@ -145,11 +145,12 @@ Progress:
 Current loop state (v5.2 milestone — 🚧 IN PROGRESS):
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v52-02-02 LOOP COMPLETE 2026-04-30; phase v52-02 ✅ COMPLETE 2/2 plans — TRANSITION DONE]
+  ✓        ○        ○     [v52-03-01 PLAN created 2026-04-30; awaiting approval to apply]
 
 v52-01-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — synthesis approved; commit 0beb4f2 pushed to origin master]
 v52-02-01:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — substrate fix shipped at 61eae6c; Issues 3 + Vocal Lead covered]
 v52-02-02:     ✓ ──▶ ✓ ──▶ ✓     [LOOP COMPLETE — TextCell single-tap-to-edit shipped at f061c80; Issue 2 closed; MobileEditSheet + CreationWizard case (ii) confirmed]
+v52-03-01:     ✓ ──▶ ○ ──▶ ○     [PLAN created — kebab removal + clearFailedOutboxRows + sign-out pairing; Issues 1+4 fix]
 v52-02:        ○ ──▶ ○ ──▶ ○     [Not started — iPad focus + cmdk system fix; informed by Track A]
 v52-03:        ○ ──▶ ○ ──▶ ○     [Not started — SyncIndicator failure UX overhaul; informed by Track B]
 v52-04:        ○ ──▶ ○ ──▶ ○     [Not started — touch affordance + setlist lifecycle UX; informed by Track C]
