@@ -16,7 +16,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 | v52-01 | Recursive research (4 parallel tracks) | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
 | v52-03 | SyncIndicator failure UX overhaul | 1/1 | ✅ Complete | 2026-04-30 |
-| v52-04 | Touch affordance + setlist lifecycle UX | TBD | Not started | - |
+| v52-04 | Touch affordance + setlist lifecycle UX | 1 (planning) | Planning | - |
 | v52-05 | Default-template management | TBD | Not started | - |
 
 ### Phase v52-01: Recursive research ✅ COMPLETE 2026-04-30
@@ -69,9 +69,10 @@ Plans:
 
 ### Phase v52-04: Touch affordance + setlist lifecycle UX
 
-Focus: Issues 5 + 7 + audit findings from Track C. Always-show kebab on `(pointer:coarse)`; Edit-primary in setlists view, Close-secondary; sweep for other hover-only affordances. /ui-ux-pro-max BLOCKING.
+Focus: Issues 5 (3 P0 hover-reveal controls — UpcomingSetlistCard kebab, SetlistCard kebab, CalendarDayCell empty-day "Plan Service" placeholder — get `[@media(pointer:coarse)]:opacity-100` per v50-05-04 floor) + 7 (Edit-primary CTA hierarchy: "Edit Setlist" / "Edit" promoted from `variant="secondary"` muted-gray to `variant="brand"` solid; Clone stays as tinted-brand secondary). Track C audit P1 findings (C-04 SetlistCards watermark, C-05 HeroCard arrow) deferred per audit recommendation. /ui-ux-pro-max BLOCKING.
 
-Plans: TBD
+Plans:
+- v52-04-01 PLAN created 2026-04-30 — 3 className edits + 2 variant swaps in SetlistCards.tsx + CalendarDayCell.tsx. ~8-10 source LOC. autonomous=false (1 HUMAN-VERIFY). Awaiting approval to /paul:apply.
 
 ### Phase v52-05: Default-template management
 
