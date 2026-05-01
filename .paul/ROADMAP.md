@@ -3,8 +3,8 @@
 ## Current Milestone
 
 **v5.2 — Band-Onboarding Hardening**
-Status: 🚧 In Progress
-Phases: 4 of 5 complete
+Status: ✅ ALL 5 PHASES SHIPPED (milestone-close UAT pending)
+Phases: 5 of 5 complete
 Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Systemic fixes — iPad input/focus, sync-error UX, touch-affordance discoverability, setlist lifecycle, plus template-management as a real feature. Daniel explicitly requested **systemic fixes, not bandaids** — recursive research front-loaded into Phase 1 so phases 2–5 execute against root-cause findings instead of guesses.
 
 Origin: 7 issues surfaced via Daniel-loop UAT post-v5.1 (codified discipline working as designed): (1) iPad red "Failed" SyncIndicator (desktop OK), (2) iPad text-input keyboard not popping, (3) iPad Chart picker search broken, (4) all-platforms kebab next to "Saved" red-lined / unclickable, (5) iPad setlists list kebab needs always-visible affordance, (6) save-as-default-template feature, (7) "Edit setlist" should be primary CTA over "Close setlist". Bugs 2+3 likely share root cause (v51-01 focus/keyboard rule leaking); 1+4 cluster around SyncIndicator failure-state UX; 5 is touch-affordance discoverability. Research-first phase v52-01 disambiguates before any code lands.
@@ -17,7 +17,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 | v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
 | v52-03 | SyncIndicator failure UX overhaul | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-04 | Touch affordance + setlist lifecycle UX | 1/1 | ✅ Complete | 2026-04-30 |
-| v52-05 | Default-template management | 1 (planning) | Planning | - |
+| v52-05 | Default-template management | 1/1 | ✅ Complete | 2026-04-30 |
 
 ### Phase v52-01: Recursive research ✅ COMPLETE 2026-04-30
 
@@ -78,12 +78,19 @@ Patterns established:
 Plans:
 - v52-04-01 ✅ COMPLETE 2026-04-30 — Touch affordance + Edit CTA hierarchy. SUMMARY at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md`.
 
-### Phase v52-05: Default-template management
+### Phase v52-05: Default-template management ✅ COMPLETE 2026-04-30
 
-Focus: Issue 6 — Track D Option C admin-curated pointer doc at `config/defaults` (codebase `config/` convention; NOT Track D's hypothetical `system/templates`). Phase 1 scope: shabbat_morning + friday_night only. Admin-only write per `match /config/defaults` rule (signed-in read). Service helpers `getDefaultForServiceType` + `setDefaultForServiceType` added to `createSetlistService`; `findLastMatchingService` consults pointer first with silent fallback on missing/dangling/repurposed (OQ Q5). UI entry point: new "Save as Default for {type}" menu item in SetlistCards kebab (NOT editor kebab — v52-03 removed that; OQ Q4 superseded). Rules-then-code deploy ordering enforced via HUMAN-ACTION checkpoint per v50-05 cutover lesson. /ui-ux-pro-max BLOCKING.
+Outcome (2026-04-30): Issue 6 closed in 1 plan (single vertical-slice commit `cf30d62` + Firebase rules deploy). Track D Option C admin-curated pointer doc shipped at `config/defaults` (codebase convention; NOT Track D's hypothetical `system/templates`). New service helpers (`getDefaultForServiceType` / `setDefaultForServiceType`) integrate into `findLastMatchingService` with pointer-preferred lookup and silent fallback on missing/dangling/repurposed pointers (OQ Q5 lock). UI: "Save as Default for {Shabbat Morning | Friday Night}" menu item in SetlistCards kebab (OQ Q4 superseded — v52-03 removed editor kebab; SetlistCards kebab is the natural surface). Phase 1 scope: shabbat_morning + friday_night only (OQ Q3); future expansion is additive. Rules-then-code deploy ordering enforced via in-task auto sequence (firebase deploy → git commit → git push) per v50-05 cutover lesson. Suite 1528 → 1536 (+8). tsc + next build clean. Daniel approved with explicit "Approved" at HUMAN-VERIFY (NOT sight-unseen — milestone-close phase).
+
+Patterns established:
+- Admin-curated pointer doc at `config/{name}` for cross-cutting curation (mirrors `config/featured` / `config/congregation` precedent)
+- Service-helper pointer-first lookup with silent fallback to legacy query — graceful degradation, no telemetry on absence
+- Two-method service-layer pattern for admin-curated pointers: `getXForY(key)` + `setXForY(key, value)`
+- Phase-1 scope-gating in UI via const-set + `.includes()` — additive expansion to other enum values requires only set extension, no schema migration
+- `vi.resetAllMocks()` (not `vi.clearAllMocks`) when tests sequence `mockResolvedValueOnce` queues across describes
 
 Plans:
-- v52-05-01 PLAN created 2026-04-30 — Track D Option C pointer-doc + SetlistCards kebab item. 6 files modified (firestore.rules + setlist-firebase.ts + SetlistCards.tsx + use-setlist-dashboard.ts + SetlistDashboard.tsx + 2 test files). ~135 LOC source + tests. autonomous=false (1 HUMAN-ACTION rules-deploy + 1 HUMAN-VERIFY UAT). Awaiting approval to /paul:apply.
+- v52-05-01 ✅ COMPLETE 2026-04-30 — Track D Option C pointer-doc + SetlistCards kebab item. SUMMARY at `.paul/phases/v52-05-default-template-management/v52-05-01-SUMMARY.md`.
 
 ## Next Milestone
 

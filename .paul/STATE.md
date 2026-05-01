@@ -9,13 +9,32 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 ## Current Position
 
-Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 4 of 5 phases complete. Only v52-05 (default-template management — Issue 6) remains. Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
-Phase: v52-05 — Default-template management. Planning. Issue 6 — Option C admin-curated pointer doc at `config/defaults` (NOT `system/templates` from Track D's hypothetical naming; codebase convention is `config/` matching neighbors `config/featured`, `config/congregation`, `config/admins`). Phase 1 scope: shabbat_morning + friday_night only. Admin-only write; signed-in read. Silent fallback on missing/dangling/repurposed pointer. UI entry point: SetlistCards kebab dropdown (NOT editor kebab — v52-03 removed that; superseded). /ui-ux-pro-max BLOCKING.
-Plan: v52-05-01 PLAN created 2026-04-30 (revised same-day to fold rules-deploy into auto Task 4 — feedback: Claude has firebase CLI, not human-action). type=execute. autonomous=false (1 HUMAN-VERIFY at end only). 5 tasks (3 implementation auto + 1 deploy/commit/push auto + 1 human-verify). ~135 LOC source + tests across 6 files (firestore.rules, setlist-firebase.ts, SetlistCards.tsx, use-setlist-dashboard.ts, SetlistDashboard.tsx, 2 test files). Rules-then-code ordering enforced inside Task 4 (firebase deploy → git commit → git push) per v50-05 cutover lesson. Awaiting Daniel approval for /paul:apply. PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`.
+Milestone: ✅ v5.2 — Band-Onboarding Hardening — ALL 5 phases shipped 2026-04-30. All 7 v52-01 issues closed across 4 implementation phases (v52-02 + v52-03 + v52-04 + v52-05). Awaiting Daniel weekly worship cycle UAT before band onboarding + v5.0 audit. Tablet-first; iPad-bulletproof.
+Phase: (none active — milestone-close UAT pending)
+Plan: (none active)
+Status: v5.2 milestone-close UAT pending. Next: Daniel runs real-production weekly worship cycle (Erev Shabbat + Shabbat morning) → invite band → first-week smoke → `/paul:audit-milestone v5.0` to formally close the parent v5.0 milestone (which v5.1 + v5.2 were prerequisite hardening for).
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v52-05-01 PLAN created, awaiting approval]
+  ✓        ✓        ✓     [v52-05 loop complete; v52-05 phase complete; v5.2 milestone-shipped UAT pending]
+
+### v52-05 close (2026-04-30)
+- v52-05-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `cf30d62` (pushed origin master; Vercel auto-deployed) + Firebase rules deploy (compile + release confirmed via CLI). type=execute. **Track D Option C admin-curated pointer doc** at `config/defaults` (codebase convention — matches `config/featured` / `config/congregation` neighbors; NOT Track D's hypothetical `system/templates`). Doc shape: `{ shabbat_morning?, friday_night?, updatedAt, updatedBy }`. Phase 1 scope: shabbat_morning + friday_night (OQ Q3 lock); future ServiceType expansion is additive. New `match /config/defaults` Firestore rule (read: signed-in; write: admin per OQ Q2 lock). New service helpers: `getDefaultForServiceType` returns null on missing/invalid; `setDefaultForServiceType` uses `setDoc(merge: true)` so each call updates one key only. `findLastMatchingService` consults pointer first; on missing/dangling/repurposed silently falls through to legacy 20-most-recent query (OQ Q5 silent-fallback lock — no Sentry, no toast, alerting on absence is alert fatigue). UI: NEW "Save as Default for {Shabbat Morning | Friday Night}" menu item in BOTH UpcomingSetlistCard + SetlistCard kebabs (Star icon, between "Save as Template" and "Delete"; data-testid="setlist-card-save-as-default"). Gated `isAdmin && type ∈ PHASE_1_DEFAULT_TYPES`. handleSaveAsDefaultClick toast wrapper in use-setlist-dashboard.ts. SetlistDashboard.tsx wires `isAdmin` + handler through both card sites. 9 files modified (7 source + 2 test; 0 new files). 2 auto-fixes beyond plan files_modified: AuditAction union extension in setlist-audit.ts triggered exhaustive-map error → added matching label "Set as default for service" to SetlistHistoryPanel.tsx (essential type-system fix). New "v52-05 default-template pointer" describe with 5 cases in setlist-firebase.test.ts; new "v52-05: handleSaveAsDefaultClick" describe with 3 cases in use-setlist-dashboard.test.ts. Mock @/components/setlist/SetlistCards in hook tests to avoid pulling component graph. Suite 1528 → 1536 (+8 cases; exceeds plan estimate of +7). tsc clean; next build clean. Boundary diff confirms 9 source files (excluding auto-touched package.json + src/build-info.json). Engine FSM, state-machine, init.ts, snapshot-listener, ReconciliationProvider, write.ts, sticky-memory contract (v50-04), v52-02 + v52-03 + v52-04 contracts ALL preserved. /ui-ux-pro-max gate satisfied (carryover from v52-04). Daniel approved with explicit "Approved" at HUMAN-VERIFY checkpoint (milestone-close phase warranted careful surface review — NOT sight-unseen unlike v52-03/v52-04). AC-7 dangling-pointer fallback UAT optional, not exercised (covered by unit test). SUMMARY at `.paul/phases/v52-05-default-template-management/v52-05-01-SUMMARY.md`.
+
+### Decisions (v52-05-01)
+
+| 2026-04-30 | Decision | Phase | Impact |
+|------------|----------|-------|--------|
+| 2026-04-30 | `config/defaults` path (NOT `system/templates`) | v52-05 | Codebase convention `config/{name}` matches neighbors. No new top-level path. |
+| 2026-04-30 | SetlistCards kebab entry point (NOT editor kebab from Track D OQ Q4) | v52-05 | v52-03 explicitly removed editor kebab. SetlistCards kebab is always-visible on iPad post-v52-04. v52-03 design coherence preserved. |
+| 2026-04-30 | Service helpers do NOT call engine.pump() | v52-05 | config/defaults is a regular Firestore doc, not on outbox path. Engine boundary preserved (v50-06-03 pattern). |
+| 2026-04-30 | Silent fallback; no Sentry capture on pointer miss/dangling | v52-05 | OQ Q5 lock — pointer absence is normal; capturing is alert fatigue. |
+| 2026-04-30 | AuditAction union extension auto-fix (added 'set_as_default') | v52-05 | TypeScript exhaustive-map gap surfaced in SetlistHistoryPanel; added matching label "Set as default for service". Essential type-system fix. |
+| 2026-04-30 | `vi.resetAllMocks()` in v52-05 test describe (not vi.clearAllMocks) | v52-05 | clearAllMocks doesn't reset mockResolvedValueOnce queues; queued snapshots from prior describe bled into v52-05 cases. resetAllMocks drops everything. Pattern for future tests sequencing ResolvedValueOnce. |
+| 2026-04-30 | Mock @/components/setlist/SetlistCards in hook tests | v52-05 | Avoids pulling lucide-react + dropdown-menu component graph for hook-only tests. SetlistCards mock returns just SERVICE_TYPE_LABELS. |
+| 2026-04-30 | Single vertical-slice commit (Tasks 1+2+3 bundled) | v52-05 | v52-02/03/04 precedent. Atomic git history. |
+| 2026-04-30 | Daniel approved with explicit "Approved" (NOT sight-unseen) | v52-05 | Milestone-close phase warranted careful surface review. Higher confidence going into UAT period. |
+| 2026-04-30 | Plan revised mid-flight: Task 4 reclassified human-action → auto | v52-05 | Daniel feedback: "you have firebase cli so you don't need me." Saved feedback memory; plan re-committed (`15a1a6a`). Future plans don't repeat the misclassification. |
 
 ### v52-04 close (2026-04-30)
 - v52-04-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `814a50d` (pushed origin master; Vercel auto-deployed). type=execute. **Issue 5 (3 P0 hover-reveals from Track C):** Append `[@media(pointer:coarse)]:opacity-100` to UpcomingSetlistCard kebab (SetlistCards.tsx:80), SetlistCard kebab (SetlistCards.tsx:208), CalendarDayCell empty-day "Plan Service" placeholder (CalendarDayCell.tsx:104). Desktop md+ hover-reveal preserved (md: prefix preserved on SetlistCards; transition-opacity duration-300 preserved on CalendarDayCell). **Issue 7 (CTA hierarchy):** Promote "Edit Setlist" (SetlistCards.tsx:137) and "Edit" (SetlistCards.tsx:256) from `variant="secondary"` + `bg-muted hover:bg-muted/80 text-foreground` overrides → `variant="brand"` (solid `bg-brand text-brand-foreground hover:bg-brand/85` from button.tsx). Redundant overrides removed; `flex-1 rounded-xl font-bold` layout preserved. Clone buttons untouched (UpcomingSetlistCard `bg-brand/10` tinted; SetlistCard `text-brand/80` subtle — both correct as secondary). Result: solid brand = primary = Edit; tinted brand = secondary = Clone. ~7 source LOC delta across 2 files. Suite 1528/1528 (pre-existing parallel-suite flake didn't surface this run). tsc + next build clean. Boundary diff confirms changes ONLY under SetlistCards.tsx + CalendarDayCell.tsx. Button component unchanged (consumes existing `variant="brand"`); no Tailwind theme changes. v52-02 + v52-03 contracts preserved. /ui-ux-pro-max gate satisfied (carryover; Track C audit + plan-time decisions covered design ground). Daniel approved sight-unseen at HUMAN-VERIFY checkpoint with "Go"; AC-7 real-iPad UAT deferred to standing Daniel-loop discipline (failures route to v52-04-02 follow-up plan in same phase per v51-04 rule). P1 Track C findings (C-04 SetlistCards watermark opacity-10/20; C-05 HeroCard arrow opacity-60/100) deferred per audit recommendation. SUMMARY at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md`.
@@ -100,10 +119,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-30 — v52-05-01 PLAN created
-Stopped at: v52-05-01 PLAN created; awaiting Daniel approval to /paul:apply. v5.2 milestone now 4 of 5 phases shipped + 1 in planning (last phase).
-Next action: Review PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`, then `/paul:apply` to ship the default-template pointer-doc + SetlistCards kebab item. Note: Task 4 runs `firebase deploy --only firestore:rules --project crcmusiccharts` BEFORE the git push (auto, not human-action — Claude has firebase CLI access).
-Resume file: `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`
+Last session: 2026-04-30 — v5.2 milestone all 5 phases shipped
+Stopped at: v52-05 phase complete; v5.2 milestone reaches 5 of 5 phases shipped (all 7 v52-01 issues closed across v52-02 / v52-03 / v52-04 / v52-05). Awaiting Daniel weekly worship cycle UAT.
+Next action: **Pause for Daniel UAT.** Daniel runs real-production weekly worship cycle (Erev Shabbat + Shabbat morning) on iPad → invites band → first-week smoke. UAT failures route to follow-up plans in the affected phase per v51-04 rule. Once UAT passes + first-week smoke is clean, run `/paul:audit-milestone v5.0` to formally close the parent v5.0 milestone (v5.1 + v5.2 were prerequisite polish + hardening). Recommend a `/clear` or fresh session before the next major phase — context is at ~450k of 1M.
+Resume file: `.paul/ROADMAP.md` for milestone-close path, or `.paul/phases/v52-05-default-template-management/v52-05-01-SUMMARY.md` for v52-05 close context.
 
 ### Decisions (v52-02-01)
 
@@ -116,10 +135,11 @@ Resume file: `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: 829bf06 — feat(v52-04): touch affordance + Edit CTA hierarchy complete — close phase
+Last commit: cf30d62 — feat(v52-05-01): default-template pointer for shabbat_morning + friday_night (Track D Option C)
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ 814a50d → origin master (2026-04-30) [v52-04-01 implementation]; 829bf06 [phase-close commit] pushing next
+Pushed: ✓ cf30d62 → origin master (2026-04-30) [v52-05-01 implementation]; phase-close commit lands next as part of /paul:unify transition
+Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30, before cf30d62 push)
 Resume context (v5.2):
 - v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
 - Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis
