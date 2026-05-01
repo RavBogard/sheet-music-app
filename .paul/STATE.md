@@ -135,10 +135,10 @@ Resume file: `.paul/ROADMAP.md` for milestone-close path, or `.paul/phases/v52-0
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: cf30d62 — feat(v52-05-01): default-template pointer for shabbat_morning + friday_night (Track D Option C)
+Last commit: 74b9fc8 — feat(v52-05): default-template pointer-doc complete — close phase + v5.2 milestone
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ cf30d62 → origin master (2026-04-30) [v52-05-01 implementation]; phase-close commit lands next as part of /paul:unify transition
+Pushed: ✓ 74b9fc8 → origin master (2026-04-30) [phase-close]; cf30d62 [v52-05-01 implementation]
 Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30, before cf30d62 push)
 Resume context (v5.2):
 - v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
