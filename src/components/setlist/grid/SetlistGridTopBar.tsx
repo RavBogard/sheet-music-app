@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, MoreVertical } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,6 @@ export interface SetlistGridTopBarProps {
     name: string
     eventDateLabel?: string
     onBack: () => void
-    onOverflow?: () => void
     syncProps?: SyncIndicatorProps
 }
 
@@ -18,7 +17,6 @@ export function SetlistGridTopBar({
     name,
     eventDateLabel,
     onBack,
-    onOverflow,
     syncProps,
 }: SetlistGridTopBarProps) {
     return (
@@ -56,23 +54,8 @@ export function SetlistGridTopBar({
                 ) : null}
             </div>
 
+            {/* v52-03-01: removed always-disabled kebab (was disabled={!onOverflow}; never wired). SyncIndicator is the only trailing action affordance. */}
             <SyncIndicator {...syncProps} />
-
-            <button
-                type="button"
-                onClick={onOverflow}
-                aria-label="More actions"
-                disabled={!onOverflow}
-                className={cn(
-                    'inline-flex h-11 w-11 items-center justify-center rounded-md',
-                    'cursor-pointer hover:bg-white/5 active:bg-white/10',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2',
-                    'disabled:opacity-40 disabled:cursor-not-allowed',
-                    'transition-colors duration-200 motion-reduce:transition-none',
-                )}
-            >
-                <MoreVertical aria-hidden className="h-5 w-5" />
-            </button>
         </header>
     )
 }

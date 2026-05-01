@@ -8,6 +8,17 @@ import type { SyncState } from '@/lib/sync/state-machine'
 
 import { SyncIndicator } from '../SyncIndicator'
 
+vi.mock('@/lib/sync/cleanup', () => ({
+    clearFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
+}))
+
+const signOutMock = vi.fn(async () => {})
+vi.mock('@/lib/auth-context', () => ({
+    useAuth: () => ({ signOut: signOutMock }),
+}))
+
+import { clearFailedOutboxRows } from '@/lib/sync/cleanup'
+
 function setSyncState(
     state: SyncState,
     queued = 0,
@@ -129,5 +140,69 @@ describe('SyncIndicator', () => {
         expect(screen.getByTestId('sync-indicator-announce')).toHaveTextContent(
             'Saving',
         )
+    })
+
+    describe('v52-03-01: failed-state recovery', () => {
+        beforeEach(() => {
+            vi.mocked(clearFailedOutboxRows).mockClear()
+            signOutMock.mockClear()
+        })
+
+        it('failed state with no onRetryFailed prop has an enabled action button', () => {
+            setSyncState('failed', 0, { lastError: 'Save failed' })
+            render(<SyncIndicator />)
+            const btn = screen.getByTestId('sync-indicator')
+            expect(btn.tagName).toBe('BUTTON')
+            expect(btn).not.toBeDisabled()
+        })
+
+        it('clicking the failed-state action button calls clearFailedOutboxRows() when no prop passed', async () => {
+            setSyncState('failed', 0, { lastError: 'Save failed' })
+            render(<SyncIndicator />)
+            const btn = screen.getByTestId('sync-indicator')
+            await userEvent.click(btn)
+            expect(clearFailedOutboxRows).toHaveBeenCalledTimes(1)
+        })
+
+        it('an explicit onRetryFailed prop wins over the default cleanup fallback', async () => {
+            setSyncState('failed', 0, { lastError: 'Save failed' })
+            const onRetry = vi.fn()
+            render(<SyncIndicator onRetryFailed={onRetry} />)
+            const btn = screen.getByTestId('sync-indicator')
+            await userEvent.click(btn)
+            expect(onRetry).toHaveBeenCalledTimes(1)
+            expect(clearFailedOutboxRows).not.toHaveBeenCalled()
+        })
+
+        it('renders the sign-out link when lastError matches auth/permission keywords', () => {
+            setSyncState('failed', 0, {
+                lastError:
+                    'Permission denied: missing or insufficient permissions',
+            })
+            render(<SyncIndicator />)
+            expect(
+                screen.getByTestId('sync-indicator-signout-link'),
+            ).toBeInTheDocument()
+        })
+
+        it('does NOT render the sign-out link for non-auth errors', () => {
+            setSyncState('failed', 0, {
+                lastError: 'Network error: ECONNRESET',
+            })
+            render(<SyncIndicator />)
+            expect(
+                screen.queryByTestId('sync-indicator-signout-link'),
+            ).toBeNull()
+        })
+
+        it('clicking the sign-out link calls useAuth().signOut()', async () => {
+            setSyncState('failed', 0, {
+                lastError: 'unauthenticated: token expired',
+            })
+            render(<SyncIndicator />)
+            const link = screen.getByTestId('sync-indicator-signout-link')
+            await userEvent.click(link)
+            expect(signOutMock).toHaveBeenCalledTimes(1)
+        })
     })
 })

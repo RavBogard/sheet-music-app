@@ -11,10 +11,19 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/auth-context'
+import { clearFailedOutboxRows } from '@/lib/sync/cleanup'
 import { useSyncStatus } from '@/lib/sync/store'
 import type { SyncState } from '@/lib/sync/state-machine'
 
 import { useReconciliationModalOptional } from './ReconciliationProvider'
+
+// v52-03-01: lastError patterns that indicate auth-claim staleness rather
+// than a transient network/server failure. When matched, SyncIndicator
+// surfaces a "Sign out and back in" affordance below the inline error pill
+// so users can recover without DevTools (Track B Q2 firming: auth-claim
+// staleness is the plausible co-factor with phantom-row blocking on iPad).
+const AUTH_ERROR_PATTERN = /permission|auth|denied|unauthenticated|unauthorized/i
 
 interface VisualSpec {
     icon: typeof Check
@@ -134,10 +143,23 @@ export function SyncIndicator({
     const resolveConflictHandler =
         onResolveConflict ?? reconciliation?.openModal
 
+    // v52-03-01: production default — when SyncIndicator's parent doesn't
+    // pass `onRetryFailed`, fall back to the cleanup helper so the failed
+    // state always has a real recovery affordance. Mirrors v50-06-02's
+    // ReconciliationProvider fallback for `onResolveConflict`. Failed rows
+    // are dead-letter (engine has already given up) so deletion is loss-of-
+    // no-progress; pending/sending rows are preserved by clearFailedOutboxRows.
+    const defaultRetryFailed = async () => {
+        await clearFailedOutboxRows()
+    }
+    const retryFailedHandler = onRetryFailed ?? defaultRetryFailed
+
+    const { signOut } = useAuth()
+
     const Icon = visual.icon
     const isAction = state === 'failed' || state === 'conflict'
     const onClick =
-        state === 'conflict' ? resolveConflictHandler : onRetryFailed
+        state === 'conflict' ? resolveConflictHandler : retryFailedHandler
 
     const Element = isAction ? 'button' : 'span'
 
@@ -197,6 +219,33 @@ export function SyncIndicator({
                 >
                     {inlineError}
                 </span>
+            )}
+            {/* v52-03-01: auth-staleness recovery affordance. Only renders
+                when lastError mentions permission/auth keywords (Track B Q2:
+                auth-claim staleness is the plausible co-factor with phantom-
+                row blocking on iPad). Avoids cargo-cult sign-out for
+                unrelated errors. Neutral zinc color to read as a distinct
+                action vs the red error description above. */}
+            {showInlineError && AUTH_ERROR_PATTERN.test(lastError ?? '') && (
+                <button
+                    type="button"
+                    onClick={() => signOut()}
+                    data-testid="sync-indicator-signout-link"
+                    className={cn(
+                        'mt-1.5 inline-flex items-center self-start',
+                        'text-[12px] font-medium underline underline-offset-2',
+                        'text-zinc-300 hover:text-white',
+                        'rounded-sm px-1 py-0.5',
+                        // v50-05-04 ≥44px floor on touch — pad enough so the
+                        // tap target meets the rule even though the visible
+                        // text is small.
+                        '[@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:py-2',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                        'transition-colors duration-200 motion-reduce:transition-none',
+                    )}
+                >
+                    Sign out and back in
+                </button>
             )}
             <span
                 role="status"
