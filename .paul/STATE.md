@@ -11,7 +11,7 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 
 Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 4 of 5 phases complete. Only v52-05 (default-template management — Issue 6) remains. Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
 Phase: v52-05 — Default-template management. Planning. Issue 6 — Option C admin-curated pointer doc at `config/defaults` (NOT `system/templates` from Track D's hypothetical naming; codebase convention is `config/` matching neighbors `config/featured`, `config/congregation`, `config/admins`). Phase 1 scope: shabbat_morning + friday_night only. Admin-only write; signed-in read. Silent fallback on missing/dangling/repurposed pointer. UI entry point: SetlistCards kebab dropdown (NOT editor kebab — v52-03 removed that; superseded). /ui-ux-pro-max BLOCKING.
-Plan: v52-05-01 PLAN created 2026-04-30. type=execute. autonomous=false (1 HUMAN-ACTION rules-deploy gate + 1 HUMAN-VERIFY at end). 6 tasks (3 auto + 1 human-action + 1 commit-auto + 1 human-verify). ~135 LOC source + tests across 6 files (firestore.rules, setlist-firebase.ts, SetlistCards.tsx, use-setlist-dashboard.ts, SetlistDashboard.tsx, 2 test files). Rules-then-code ordering enforced via human-action checkpoint per v50-05 cutover lesson. Awaiting Daniel approval for /paul:apply. PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`.
+Plan: v52-05-01 PLAN created 2026-04-30 (revised same-day to fold rules-deploy into auto Task 4 — feedback: Claude has firebase CLI, not human-action). type=execute. autonomous=false (1 HUMAN-VERIFY at end only). 5 tasks (3 implementation auto + 1 deploy/commit/push auto + 1 human-verify). ~135 LOC source + tests across 6 files (firestore.rules, setlist-firebase.ts, SetlistCards.tsx, use-setlist-dashboard.ts, SetlistDashboard.tsx, 2 test files). Rules-then-code ordering enforced inside Task 4 (firebase deploy → git commit → git push) per v50-05 cutover lesson. Awaiting Daniel approval for /paul:apply. PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
@@ -102,7 +102,7 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 Last session: 2026-04-30 — v52-05-01 PLAN created
 Stopped at: v52-05-01 PLAN created; awaiting Daniel approval to /paul:apply. v5.2 milestone now 4 of 5 phases shipped + 1 in planning (last phase).
-Next action: Review PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`, then `/paul:apply` to ship the default-template pointer-doc + SetlistCards kebab item. Note: includes a HUMAN-ACTION checkpoint (firebase deploy --only firestore:rules) BEFORE source push to honor v50-05 cutover lesson.
+Next action: Review PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`, then `/paul:apply` to ship the default-template pointer-doc + SetlistCards kebab item. Note: Task 4 runs `firebase deploy --only firestore:rules --project crcmusiccharts` BEFORE the git push (auto, not human-action — Claude has firebase CLI access).
 Resume file: `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`
 
 ### Decisions (v52-02-01)
