@@ -10,12 +10,12 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.2 — Band-Onboarding Hardening — 4 of 5 phases complete. Only v52-05 (default-template management — Issue 6) remains. Daniel-loop UAT discipline (codified v51-04) gates every data-flow phase before close. Tablet-first; v5.0 UAT close still pending (v5.2 is the gate-clearer for band onboarding).
-Phase: v52-05 — Default-template management. Not started. Issue 6 — Option C `system/templates` pointer doc (admin-only write, phased Shabbat morning + Erev Shabbat first, editor kebab entry point, silent fallback on deleted pointer). Estimate ~125 LOC + new API route per Track D research. /ui-ux-pro-max BLOCKING.
-Plan: not started. Ready to plan via /paul:plan or /paul:discuss-phase.
+Phase: v52-05 — Default-template management. Planning. Issue 6 — Option C admin-curated pointer doc at `config/defaults` (NOT `system/templates` from Track D's hypothetical naming; codebase convention is `config/` matching neighbors `config/featured`, `config/congregation`, `config/admins`). Phase 1 scope: shabbat_morning + friday_night only. Admin-only write; signed-in read. Silent fallback on missing/dangling/repurposed pointer. UI entry point: SetlistCards kebab dropdown (NOT editor kebab — v52-03 removed that; superseded). /ui-ux-pro-max BLOCKING.
+Plan: v52-05-01 PLAN created 2026-04-30. type=execute. autonomous=false (1 HUMAN-ACTION rules-deploy gate + 1 HUMAN-VERIFY at end). 6 tasks (3 auto + 1 human-action + 1 commit-auto + 1 human-verify). ~135 LOC source + tests across 6 files (firestore.rules, setlist-firebase.ts, SetlistCards.tsx, use-setlist-dashboard.ts, SetlistDashboard.tsx, 2 test files). Rules-then-code ordering enforced via human-action checkpoint per v50-05 cutover lesson. Awaiting Daniel approval for /paul:apply. PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v52-04 loop complete; v52-04 phase complete]
+  ✓        ○        ○     [v52-05-01 PLAN created, awaiting approval]
 
 ### v52-04 close (2026-04-30)
 - v52-04-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `814a50d` (pushed origin master; Vercel auto-deployed). type=execute. **Issue 5 (3 P0 hover-reveals from Track C):** Append `[@media(pointer:coarse)]:opacity-100` to UpcomingSetlistCard kebab (SetlistCards.tsx:80), SetlistCard kebab (SetlistCards.tsx:208), CalendarDayCell empty-day "Plan Service" placeholder (CalendarDayCell.tsx:104). Desktop md+ hover-reveal preserved (md: prefix preserved on SetlistCards; transition-opacity duration-300 preserved on CalendarDayCell). **Issue 7 (CTA hierarchy):** Promote "Edit Setlist" (SetlistCards.tsx:137) and "Edit" (SetlistCards.tsx:256) from `variant="secondary"` + `bg-muted hover:bg-muted/80 text-foreground` overrides → `variant="brand"` (solid `bg-brand text-brand-foreground hover:bg-brand/85` from button.tsx). Redundant overrides removed; `flex-1 rounded-xl font-bold` layout preserved. Clone buttons untouched (UpcomingSetlistCard `bg-brand/10` tinted; SetlistCard `text-brand/80` subtle — both correct as secondary). Result: solid brand = primary = Edit; tinted brand = secondary = Clone. ~7 source LOC delta across 2 files. Suite 1528/1528 (pre-existing parallel-suite flake didn't surface this run). tsc + next build clean. Boundary diff confirms changes ONLY under SetlistCards.tsx + CalendarDayCell.tsx. Button component unchanged (consumes existing `variant="brand"`); no Tailwind theme changes. v52-02 + v52-03 contracts preserved. /ui-ux-pro-max gate satisfied (carryover; Track C audit + plan-time decisions covered design ground). Daniel approved sight-unseen at HUMAN-VERIFY checkpoint with "Go"; AC-7 real-iPad UAT deferred to standing Daniel-loop discipline (failures route to v52-04-02 follow-up plan in same phase per v51-04 rule). P1 Track C findings (C-04 SetlistCards watermark opacity-10/20; C-05 HeroCard arrow opacity-60/100) deferred per audit recommendation. SUMMARY at `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md`.
@@ -100,10 +100,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-30 — v52-04 phase complete
-Stopped at: v52-04 phase complete; v5.2 milestone now 4 of 5 phases shipped. Only v52-05 (default-template management — Issue 6) remains.
-Next action: `/paul:plan` (or `/paul:discuss-phase`) for **v52-05 — Default-template management**. Track D research already locked Option C (`system/templates` pointer doc) with 6 OQ defaults (admin-only write; phased Shabbat morning + Erev Shabbat first; editor kebab entry point; silent fallback on deleted pointer). Estimate ~125 LOC + 1 new API route. Last v5.2 phase before milestone close.
-Resume file: `.paul/ROADMAP.md` (Phase v52-05 entry) or `.paul/phases/v52-04-touch-affordance-setlist-lifecycle/v52-04-01-SUMMARY.md` for v52-04 close context.
+Last session: 2026-04-30 — v52-05-01 PLAN created
+Stopped at: v52-05-01 PLAN created; awaiting Daniel approval to /paul:apply. v5.2 milestone now 4 of 5 phases shipped + 1 in planning (last phase).
+Next action: Review PLAN at `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`, then `/paul:apply` to ship the default-template pointer-doc + SetlistCards kebab item. Note: includes a HUMAN-ACTION checkpoint (firebase deploy --only firestore:rules) BEFORE source push to honor v50-05 cutover lesson.
+Resume file: `.paul/phases/v52-05-default-template-management/v52-05-01-PLAN.md`
 
 ### Decisions (v52-02-01)
 

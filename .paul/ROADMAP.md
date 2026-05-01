@@ -17,7 +17,7 @@ Constraint: Daniel-loop UAT discipline (codified v51-04) — every phase that to
 | v52-02 | iPad focus + cmdk system fix | 2/2 | ✅ Complete | 2026-04-30 |
 | v52-03 | SyncIndicator failure UX overhaul | 1/1 | ✅ Complete | 2026-04-30 |
 | v52-04 | Touch affordance + setlist lifecycle UX | 1/1 | ✅ Complete | 2026-04-30 |
-| v52-05 | Default-template management | TBD | Not started | - |
+| v52-05 | Default-template management | 1 (planning) | Planning | - |
 
 ### Phase v52-01: Recursive research ✅ COMPLETE 2026-04-30
 
@@ -80,9 +80,10 @@ Plans:
 
 ### Phase v52-05: Default-template management
 
-Focus: Issue 6 — execution informed by Track D's storage decision (implicit vs. explicit collection vs. per-setlist flag). UX entry point in editor kebab vs. admin panel TBD by research. /ui-ux-pro-max BLOCKING.
+Focus: Issue 6 — Track D Option C admin-curated pointer doc at `config/defaults` (codebase `config/` convention; NOT Track D's hypothetical `system/templates`). Phase 1 scope: shabbat_morning + friday_night only. Admin-only write per `match /config/defaults` rule (signed-in read). Service helpers `getDefaultForServiceType` + `setDefaultForServiceType` added to `createSetlistService`; `findLastMatchingService` consults pointer first with silent fallback on missing/dangling/repurposed (OQ Q5). UI entry point: new "Save as Default for {type}" menu item in SetlistCards kebab (NOT editor kebab — v52-03 removed that; OQ Q4 superseded). Rules-then-code deploy ordering enforced via HUMAN-ACTION checkpoint per v50-05 cutover lesson. /ui-ux-pro-max BLOCKING.
 
-Plans: TBD
+Plans:
+- v52-05-01 PLAN created 2026-04-30 — Track D Option C pointer-doc + SetlistCards kebab item. 6 files modified (firestore.rules + setlist-firebase.ts + SetlistCards.tsx + use-setlist-dashboard.ts + SetlistDashboard.tsx + 2 test files). ~135 LOC source + tests. autonomous=false (1 HUMAN-ACTION rules-deploy + 1 HUMAN-VERIFY UAT). Awaiting approval to /paul:apply.
 
 ## Next Milestone
 
