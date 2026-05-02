@@ -390,6 +390,92 @@ describe('SetlistGrid — WCAG AA audit (jest-axe / v50-05-05 §6.13)', () => {
         expect(contentTitleBtn.className).toContain('text-foreground')
     })
 
+    // v53-02-01 AC-4: ChartCell column is discoverable on iPad without
+    // horizontal scrolling past Notes. Affordance choice locked at
+    // checkpoint:decision following /ui-ux-pro-max consultation =
+    // sticky-right (Excel/Sheets-style pin-column). Header + body cells
+    // for the chart column carry sticky positioning + opaque bg so they
+    // remain visible against the overflow-x-auto wrapper on any viewport.
+    describe('SetlistGrid v53-02-01: sticky-right ChartCell column', () => {
+        it('AC-4: chart header + body cells carry sticky-right classes', async () => {
+            await seedTracks('set-a', [
+                { id: 't-0', order: 0, title: 'Row 0', key: 'D' },
+                { id: 't-1', order: 1, title: 'Row 1', key: 'G' },
+            ])
+            render(
+                <DeleteConfirmProvider>
+                    <SetlistGrid setlistId="set-a" name="Test" />
+                </DeleteConfirmProvider>,
+            )
+            await screen.findAllByTestId('drag-handle')
+
+            // Chart column header: scope="col" <th> wrapping the sr-only
+            // "Chart" label. It is the right-most column so we filter to
+            // the th whose text content matches the sr-only span.
+            const allHeaders =
+                document.querySelectorAll<HTMLElement>('th[scope="col"]')
+            const chartHeader = Array.from(allHeaders).find((th) =>
+                th.textContent?.trim() === 'Chart',
+            )
+            if (!chartHeader) throw new Error('Chart column header not found')
+
+            const chartHeaderCls = chartHeader.className
+            expect(chartHeaderCls).toContain('sticky')
+            expect(chartHeaderCls).toContain('right-0')
+            expect(chartHeaderCls).toContain('border-l')
+
+            // Chart body cell: <td role="gridcell"> containing the
+            // ChartCell button (data-testid="chart-cell"). Walk up from
+            // the button to the parent <td>.
+            const chartButtons = screen.getAllByTestId('chart-cell')
+            expect(chartButtons.length).toBeGreaterThan(0)
+            const firstChartTd = chartButtons[0].closest('td')
+            if (!firstChartTd) throw new Error('Chart <td> not found')
+
+            const chartTdCls = firstChartTd.className
+            expect(chartTdCls).toContain('sticky')
+            expect(chartTdCls).toContain('right-0')
+            expect(chartTdCls).toContain('border-l')
+            // bg-card is the opaque token from the design system;
+            // required for siblings to scroll cleanly behind.
+            expect(chartTdCls).toContain('bg-card')
+
+            // v51-02 tier classes preserved on a non-chart Tier 2 (Key)
+            // cell — confirms the sticky-right shim didn't leak onto
+            // sibling cells. KeyCell renders a button with the key value.
+            const keyCells = document.querySelectorAll<HTMLElement>(
+                '[data-testid="key-cell-button"]',
+            )
+            if (keyCells.length > 0) {
+                const keyTd = keyCells[0].closest('td')
+                if (keyTd) {
+                    expect(keyTd.className).not.toContain('sticky')
+                    expect(keyTd.className).not.toContain('right-0')
+                }
+            }
+        })
+
+        it('AC-4 + AC-6: sticky-right Chart column passes axe with zero violations', async () => {
+            await seedTracks('set-a', [
+                { id: 't-0', order: 0, title: 'Row 0', key: 'D' },
+                { id: 't-1', order: 1, title: 'Row 1', key: 'G' },
+                { id: 't-2', order: 2, title: 'Row 2', key: 'A' },
+            ])
+            const { container } = render(
+                <DeleteConfirmProvider>
+                    <SetlistGrid setlistId="set-a" name="Test" />
+                </DeleteConfirmProvider>,
+            )
+            await screen.findAllByTestId('drag-handle')
+            // Confirm chart cells rendered before scanning so the sticky
+            // positioning context is part of the axe pass.
+            await screen.findAllByTestId('chart-cell')
+
+            const results = await axe(container, axeOpts)
+            expect(results).toHaveNoViolations()
+        })
+    })
+
     it('AC-7: Tab traverses cells in row 0 in visual order', async () => {
         await seedTracks('set-a', [
             { id: 't-0', order: 0, title: 'Row 0' },

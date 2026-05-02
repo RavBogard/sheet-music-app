@@ -585,6 +585,7 @@ function SortableRow({
                                 </td>
                             )
                         }
+                        const isChartCell = cell.column.id === 'chart'
                         return (
                             <td
                                 key={cell.id}
@@ -595,7 +596,24 @@ function SortableRow({
                                 // / 48px tablet (44px tap floor preserved
                                 // by the inner h-10/h-11 cell triggers).
                                 // Per DESIGN-CONTRACT.md.
-                                className="px-2.5 py-0.5 [@media(pointer:coarse)]:py-0.5 align-middle"
+                                // v53-02-01: sticky-right Chart column body
+                                // cell. Pins against overflow-x-auto wrapper
+                                // so chart affordance stays in view on iPad
+                                // landscape/portrait without horizontal
+                                // scroll past Notes. bg-card is opaque so
+                                // sibling td cells scroll behind cleanly;
+                                // z-[5] keeps chart-td above sibling tds
+                                // (z-auto) but BELOW thead's z-10 so the
+                                // header still wins on vertical scroll.
+                                // Trade-off (accepted per plan): the
+                                // sticky bg hides row hover/selection tint
+                                // on the chart cell specifically; other
+                                // cells still tint correctly.
+                                className={cn(
+                                    'px-2.5 py-0.5 [@media(pointer:coarse)]:py-0.5 align-middle',
+                                    isChartCell &&
+                                        'sticky right-0 z-[5] bg-card border-l border-white/10',
+                                )}
                             >
                                 {flexRender(
                                     cell.column.columnDef.cell,
@@ -1581,6 +1599,8 @@ export function SetlistGrid({
                                             {headerGroup.headers.map((header) => {
                                                 const isDragCol =
                                                     header.id === 'drag'
+                                                const isChartCol =
+                                                    header.id === 'chart'
                                                 return (
                                                     <th
                                                         key={header.id}
@@ -1597,6 +1617,16 @@ export function SetlistGrid({
                                                             'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
                                                             isDragCol &&
                                                                 'w-[44px] [@media(pointer:coarse)]:w-[52px]',
+                                                            // v53-02-01: sticky-right Chart column. Pins
+                                                            // the chart header against the overflow-x-auto
+                                                            // wrapper so the affordance stays visible on
+                                                            // iPad without scrolling past Notes. Own
+                                                            // opaque bg matches the thead chrome so
+                                                            // sibling th cells scroll cleanly behind.
+                                                            // z-20 > thead's z-10 so the chart-th wins
+                                                            // any horizontal stacking against siblings.
+                                                            isChartCol &&
+                                                                'sticky right-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-l border-white/10',
                                                         )}
                                                     >
                                                         {header.isPlaceholder

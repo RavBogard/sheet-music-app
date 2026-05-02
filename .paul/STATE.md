@@ -10,18 +10,32 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
-Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — LOOP COMPLETE on v5h3-01-04 (4 of 4 plans)
-Plan: v5h3-01-04 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-04-SUMMARY.md`. Both tasks landed: (1) postmortem at `.paul/postmortems/v5h3-01-save-loss-recurrence.md` (177 lines; 8 H2 sections; 2 v5h-01 cross-links; 4 investigation cross-links; AC-1 PASS); (2) "Harness Fidelity Gate (binding from v5.3)" subsection in PROJECT.md Constraints line 186 (AC-2 PASS). One auto-fix during execution (cross-link count below threshold; added inline Lessons.3 link). Zero scope drift; zero deferrals introduced.
-Status: ✅ PHASE v5h3-01 LOOP COMPLETE (4 of 4 plans). Suite 1560/1560; `next build` clean; boundary clean. **TRANSITION REQUIRED** — last plan in phase; transition-phase workflow MUST run next (evolve PROJECT.md / update ROADMAP / phase-close commit / clean handoffs / route to next phase).
+Phase: v53-02 of 4 (Chart binding picker fix + ChartCell discoverability) — Planning v53-02-01
+Plan: v53-02-01 created 2026-05-02. PLAN at `.paul/phases/v53-02-chart-binding-and-verification/v53-02-01-PLAN.md`. CONTEXT.md from /paul:discuss-phase locked the systemic-fix path for Goal 1 + /ui-ux-pro-max-decides-Goal-2 + single-plan vertical slice + Recent-via-existing-v50-04-fields (no Dexie bump). 3 tasks: (1) Goal 1 entire vertical slice (cmdk fix at 2 sites + Recent section in ChartBindPopover + library priming helper + SetlistGridHydrator effect + tests); (2) Goal 2 affordance — checkpoint:decision via /ui-ux-pro-max consultation, then implementation; (3) HUMAN-VERIFY iPad UAT. autonomous=false. 7 ACs. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md. Harness Fidelity Gate waiver entry counter at 1 of 3.
+Status: 📝 PLAN CREATED, READY FOR APPLY. v5h3-01 PENDING-UAT runs in parallel (Sentry instrumentation captures any new save-loss class; 2026-05-16 routine triages); soft-block lifted per Daniel "no block, keep building" 2026-05-02. Phase v5h3-01 also remains LOOP COMPLETE pending UAT closure of milestone.
 
 Progress:
-- v5.3 — Editor UX Repair: [███████░░░] ~75% (v53-01 ✅ + v5h3-01 ✅ 4-of-4 PLANS-APPLIED; v5h3-01 PENDING-UAT pending Daniel weekly worship cycle; v53-02 + v53-03 still ahead behind v5h3-01 UAT clear)
+- v5.3 — Editor UX Repair: [████████░░] ~80% (v53-01 ✅ + v5h3-01 ✅ + v53-02 PLAN ready; v53-03 + v53-04 still ahead)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
 - Phase v5h3-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `36e9fa1`)
+- Phase v53-02: [░░░░░░░░░░] 0% — PLAN created; APPLY pending /ui-ux-pro-max load + Daniel approval
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v5h3-01-04 LOOP COMPLETE; phase v5h3-01 4-of-4 — TRANSITION REQUIRED]
+  ✓        ○        ○     [v53-02-01 PLAN created, awaiting approval + /ui-ux-pro-max load at APPLY entry]
+
+### Decisions (v53-02-01)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-02 | v53-02 unblocked from v5h3-01 PENDING-UAT per Daniel "no block, keep building" | v53-02 | ROADMAP soft-block lifted; v5h3-01 instrumentation captures parallel save-loss signals; 2026-05-16 routine triages |
+| 2026-05-02 | Goal 1 = systemic-fix path (Recent section + library priming + cmdk fix), NOT smallest-fix | v53-02-01 | Daniel's weekly-cycle workflow ("90% same week to week") makes Recent dominant signal; +120-180 LOC vs. +10 LOC smallest-fix |
+| 2026-05-02 | Goal 1 Recent ranking via existing v50-04 `SongRecentEntry.performedAt` (no Dexie schema bump) | v53-02-01 | Avoids v3→v4 schema migration; Harness Fidelity Gate waiver scope reduced to SetlistGridHydrator priming effect only |
+| 2026-05-02 | Goal 1 Recent in ChartBindPopover ONLY (NOT AddRowPlaceholder) | v53-02-01 | Chart-binding flow has higher Recent-signal value than add-track flow; defer add-track Recent to v5.4 if Daniel asks |
+| 2026-05-02 | Goal 2 affordance = sticky-right column (locked at checkpoint:decision after /ui-ux-pro-max consultation) | v53-02-01 | Standard spreadsheet pattern (Excel/Sheets/Numbers); preserves Daniel's column-order muscle memory; Chart cell always visible regardless of horizontal scroll; ~25 LOC + careful z-index layering against v50-05-03 selection highlights |
+| 2026-05-02 | Library priming via one-shot `getDocs(songs)` post-hydration; NO new snapshot listener | v53-02-01 | Cross-device freshness deferred to v5.4; Harness Fidelity Gate waiver path (b) clause; counter at 1 of 3 before auto-escalation |
+| 2026-05-02 | Harness Fidelity Gate waiver entry recorded for v53-02 (SetlistGridHydrator priming-adjacent touch) | v53-02-01 | Waiver counter 1 of 3; reason: additive one-shot getDocs; no engine path; UAT closes the gap; v5.4 phase 1 ticket open |
+| 2026-05-02 | dan-executor agent dispatched for Sub-task 2b (sticky-right implementation) — same pattern as v52-05 / v5h3-01-02/03 | v53-02-01 | Saves parent context; well-specified by PLAN; agent reports back with verify status for parent's UAT routing |
 
 ### Decisions (v5h3-01-02 + v5h3-01-03)
 
@@ -158,10 +172,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-05-02 — v5h3-01-04 LOOP COMPLETE + phase v5h3-01 closed (4-of-4) + transition complete; phase-close commit `5728a90` pushed origin master
-Stopped at: Phase v5h3-01 transition COMPLETE. PROJECT.md evolved (binding Harness Fidelity Gate constraint added Task 2 + footer entry); ROADMAP.md v5h3-01 row marked ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT; phase-close commit `5728a90` (6 files / +695 / −13) pushed origin master 2026-05-02 (Vercel auto-deploying — docs-only push but Vercel rebuilds anyway). State consistency verified across STATE.md / PROJECT.md / ROADMAP.md.
-Next action: Soft pause — phase v5h3-01 enters PENDING-UAT until Daniel weekly worship cycle confirms `36e9fa1` H-SL-7 fix holds. v53-02..04 are soft-blocked behind that signal. Two paths forward when Daniel returns: (a) Daniel reports UAT pass on weekly worship cycle → /paul:plan v53-02 (chart binding picker fix + ChartCell discoverability); (b) Daniel reports new save-loss class via instrumentation Sentry capture → /paul:plan follow-up plan in v5h3-01 phase per v51-04 rule. Until then no further v5.3 planning work is unblocked. Parallel: v5.0 + v5.2 milestone-close UAT also pending Daniel weekly cycle (independent of v5h3 fix).
-Resume file: `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-04-SUMMARY.md` (or `.paul/postmortems/v5h3-01-save-loss-recurrence.md` for the broader incident narrative)
+Last session: 2026-05-02 — v53-02-01 PLAN created (chart binding systemic fix + ChartCell discoverability); v5h3-01 unblocked per Daniel "no block, keep building"
+Stopped at: PLAN at `.paul/phases/v53-02-chart-binding-and-verification/v53-02-01-PLAN.md` ready for review. CONTEXT.md captures all locked discuss-phase decisions (systemic Goal 1; /ui-ux-pro-max-decides Goal 2; single plan; no Dexie bump; Recent via existing v50-04 fields). 3 tasks: Goal 1 vertical slice / Goal 2 checkpoint:decision + implementation / HUMAN-VERIFY iPad UAT. 7 ACs. Harness Fidelity Gate waiver entry recorded (counter 1 of 3 before auto-escalation).
+Next action: Review and approve plan, then run `/paul:apply .paul/phases/v53-02-chart-binding-and-verification/v53-02-01-PLAN.md`. APPLY entry MUST load /ui-ux-pro-max (BLOCKING per SPECIAL-FLOWS.md). Goal 2 affordance choice locked at the in-plan checkpoint:decision via /ui-ux-pro-max consultation. Daniel-loop UAT discipline applies at AC-7 HUMAN-VERIFY checkpoint.
+Resume file: `.paul/phases/v53-02-chart-binding-and-verification/v53-02-01-PLAN.md`
 
 **Parallel track (not blocking v5.3 planning):** v5.2 + v5.0 still pending Daniel weekly worship cycle UAT on real production. UAT can run in parallel with v5.3 planning/research; UAT failures on v5.2 surfaces route to follow-up plans in their original v52-* phases per v51-04 rule.
 

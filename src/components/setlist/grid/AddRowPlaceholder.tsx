@@ -135,7 +135,7 @@ export function AddRowPlaceholder({
                                 {options.map((song) => (
                                     <CommandItem
                                         key={song.id}
-                                        value={`${song.title} ${song.id}`}
+                                        value={song.title}
                                         onSelect={() =>
                                             handlePick({
                                                 id: song.id,

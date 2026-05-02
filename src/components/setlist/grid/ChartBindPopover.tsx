@@ -17,6 +17,13 @@ import type { LocalSong } from '@/lib/local/types'
 
 import { TouchOrPopover } from './TouchOrPopover'
 
+/**
+ * v53-02-01: cap on the Recent CommandGroup. Daniel's stated workflow
+ * ("90% same week to week") makes the top-5 recent picks the dominant
+ * signal; deeper history lives in the alphabetical Library group.
+ */
+const RECENT_LIMIT = 5
+
 export interface ChartBindSelection {
     songId: string
     title: string
@@ -66,9 +73,29 @@ export function ChartBindPopover({
         [] as LocalSong[],
     )
 
-    const options = useMemo(() => {
+    // v53-02-01: derive TWO arrays from the source list — `recentSongs`
+    // (capped, sorted by `recent[0].performedAt` desc) and `librarySongs`
+    // (full alphabetical). Both render as separate CommandGroups so
+    // Daniel's most-recently-used picks float to the top while the full
+    // library remains one cmdk filter-keystroke away. No dedup penalty:
+    // a song appearing in BOTH groups is the Apple-Music / Spotify
+    // "Recently Played + Library" pattern (acceptable; cmdk's filter
+    // narrows both groups in lockstep).
+    const { recentSongs, librarySongs } = useMemo(() => {
         const list = songs ?? []
-        return list.slice().sort((a, b) => a.title.localeCompare(b.title))
+        const librarySongs = list
+            .slice()
+            .sort((a, b) => a.title.localeCompare(b.title))
+        const recentSongs = list
+            .filter((s) => Array.isArray(s.recent) && s.recent.length > 0)
+            .slice()
+            .sort(
+                (a, b) =>
+                    (b.recent?.[0]?.performedAt ?? 0) -
+                    (a.recent?.[0]?.performedAt ?? 0),
+            )
+            .slice(0, RECENT_LIMIT)
+        return { recentSongs, librarySongs }
     }, [songs])
 
     const close = () => {
@@ -115,12 +142,42 @@ export function ChartBindPopover({
                     <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
                         No matches.
                     </CommandEmpty>
-                    {options.length > 0 && (
+                    {recentSongs.length > 0 && (
+                        <CommandGroup heading="Recent">
+                            {recentSongs.map((song) => (
+                                <CommandItem
+                                    key={`recent-${song.id}`}
+                                    value={song.title}
+                                    onSelect={() =>
+                                        handlePick({
+                                            id: song.id,
+                                            title: song.title,
+                                        })
+                                    }
+                                    data-current={
+                                        song.id === currentSongId
+                                            ? 'true'
+                                            : undefined
+                                    }
+                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
+                                >
+                                    <FileText
+                                        aria-hidden
+                                        className="h-3.5 w-3.5 text-muted-foreground/70"
+                                    />
+                                    <span className="truncate">
+                                        {song.title}
+                                    </span>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+                    {librarySongs.length > 0 && (
                         <CommandGroup heading="Library">
-                            {options.map((song) => (
+                            {librarySongs.map((song) => (
                                 <CommandItem
                                     key={song.id}
-                                    value={`${song.title} ${song.id}`}
+                                    value={song.title}
                                     onSelect={() =>
                                         handlePick({
                                             id: song.id,
