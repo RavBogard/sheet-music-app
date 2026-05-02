@@ -2,27 +2,35 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-04-15)
+See: .paul/PROJECT.md (updated 2026-05-02)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
 **Current focus:** v5.3 — Editor UX Repair. 4 phases: v53-01 recursive research (3 parallel tracks: ChartBind diagnosis + old-editor archaeology + polymorphic Add design) / v53-02 chart binding + verification / v53-03 polymorphic Add menu / v53-04 editor affordance pass. UAT closes the milestone (not its own phase, matches v5.2 precedent). Theme: *"The spreadsheet bones stay; the affordances get fixed."* Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–4 plan after v53-01 synthesis. Spreadsheet bones (v50-05 substrate, sync engine v50-03, sticky memory v50-04, perf-view dual-read v5h-01-03) are out of scope. /ui-ux-pro-max BLOCKING for v53-02..v53-04. Tablet-first.
 
 ## Current Position
 
-Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
-Phase: v53-02 of 4 (Chart binding picker fix + ChartCell discoverability) — LOOP COMPLETE on v53-02-01 (1 of 1 plans)
-Plan: v53-02-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v53-02-chart-binding-and-verification/v53-02-01-SUMMARY.md`. All 7 ACs PASS (AC-4 + AC-7 sight-unseen per v51-04 + v52-03/04 precedent — iPad UAT deferred to standing Daniel-loop discipline; failures route to v53-02-02 follow-up). Suite 1560 → 1575 (+15). Commit `bc754b4` pushed origin master; Vercel auto-deploying. Two dan-executor dispatches (Task 1 Goal 1 vertical slice + Sub-task 2b sticky-right) per v52-05 / v5h3-01-02/03 precedent.
-Status: ✅ PHASE v53-02 LOOP COMPLETE (1 of 1 plans). Suite 1575/1575; `next build` clean; boundary clean (zero touches to sync engine, schema, rules, perf-view, mobile parallel render path). Harness Fidelity Gate waiver counter at 1 of 3 (first production exercise of gate). **TRANSITION REQUIRED** — last plan in phase; transition-phase workflow MUST run next (evolve PROJECT.md / update ROADMAP / phase-close commit / route to next phase).
+Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 3 of 4 phases LOOP COMPLETE (v53-01 ✅ research / v5h3-01 ✅ save-loss recurrence hotfix / v53-02 ✅ chart-bind + sticky-right ChartCell). v53-03 polymorphic Add menu now active; v53-04 likely collapses (chart-verify peek dropped per Daniel; Track B's only remaining port-back was chart-preview which dies with that drop).
+Phase: v53-03 of 4 (Polymorphic Add menu — port `AddBar.tsx` from `d8c0442`) — PLAN created, awaiting approval
+Plan: v53-03-01 PLAN created 2026-05-02 at `.paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md`. 3 auto tasks + 1 HUMAN-VERIFY checkpoint; 8 ACs. Decisions locked from CONTEXT (committed `d100902`): Option B split-button (primary "+ Song" indigo CTA + chevron 5-tile popover), ported icon colors (amber Reading / blue Prayer / emerald Transition / indigo Song / muted Header+Note), single vertical-slice plan, free-text consolidated under primary picker (NOT a 6th tile). Substrate reuse: TouchOrPopover + cmdk + v53-02 three-CommandGroup pattern (Recent / Library / Custom). Files modified: 3 source (AddBar.tsx new + AddRowPlaceholder.tsx Recent group add + SetlistGrid.tsx wire) + 2 test. Estimate ~150-220 source LOC + ~80-120 test LOC; suite +10 to +16. autonomous=false (1 HUMAN-VERIFY at end for Daniel-loop iPad UAT — long-press disambiguation is highest-priority). /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md (must invoke before APPLY).
+Status: ✓ PLAN created, ready for APPLY. Suite baseline 1575/1575. Harness Fidelity Gate counter stays at 1 of 3 — v53-03 surface (AddRowPlaceholder.tsx + new AddBar.tsx) is OUTSIDE gate's protected list; applyEdit signature unchanged. v5h3-01 + v53-02 PENDING-UAT continue in parallel — soft-block lifted earlier 2026-05-02 per Daniel "no block, keep building".
 
 Progress:
-- v5.3 — Editor UX Repair: [█████████░] ~85% (v53-01 ✅ + v5h3-01 ✅ + v53-02 ✅ LOOP COMPLETE; v53-03 still ahead; v53-04 likely collapses)
+- v5.3 — Editor UX Repair: [█████████░] ~90% (v53-01 ✅ + v5h3-01 ✅ + v53-02 ✅ LOOP COMPLETE; v53-03 PLAN ✓; v53-04 likely collapses)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
 - Phase v5h3-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `36e9fa1`)
 - Phase v53-02: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `bc754b4`)
+- Phase v53-03: [█░░░░░░░░░] 10% — PLAN ✓ created, APPLY pending approval
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v53-02-01 LOOP COMPLETE; phase v53-02 1-of-1 — TRANSITION REQUIRED]
+  ✓        ○        ○     [v53-03-01 PLAN created, awaiting approval; APPLY needs /ui-ux-pro-max load first]
+
+## Session Continuity
+
+Last session: 2026-05-02
+Stopped at: v53-03-01 PLAN.md created from CONTEXT.md decisions; STATE refreshed for PLAN entry
+Next action: Review and approve plan, then run `/paul:apply .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md`
+Resume file: .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md
 
 ### Decisions (v53-02-01)
 

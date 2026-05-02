@@ -58,7 +58,7 @@ import { useGridSelection } from '@/hooks/use-grid-selection'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
-import { AddRowPlaceholder } from './AddRowPlaceholder'
+import { AddBar, type NonSongTrackType } from './AddBar'
 import { BatchActionBar, type BulkSetPatch } from './BatchActionBar'
 import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
@@ -1503,6 +1503,30 @@ export function SetlistGrid({
         [rows.length, setlistId],
     )
 
+    // v53-03-01: insert a new non-Song row from AddBar's chevron tile click.
+    // Mirrors handleCreateFreeText but writes the chosen TrackType with an
+    // empty title so the user fills inline. Single applyEdit write path —
+    // NO direct Dexie writes; NO embedded-array side effects (v5h-01 anti-
+    // pattern audit lock).
+    const handleAddTrackOfType = useCallback(
+        async (type: NonSongTrackType) => {
+            const newId = makeId()
+            const order = rows.length
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: {
+                    id: newId,
+                    setlistId,
+                    order,
+                    title: '',
+                    type,
+                },
+            })
+        },
+        [rows.length, setlistId],
+    )
+
     const [cloneBusy, setCloneBusy] = useState(false)
     const handleClone = useCallback(async () => {
         if (!onMakeNextWeeks) return
@@ -1693,11 +1717,12 @@ export function SetlistGrid({
                 </DndContext>
             )}
 
-            <AddRowPlaceholder
+            <AddBar
                 key={placeholderKey}
                 autoOpen={addOpenSignal > 0}
                 onPickSong={(song) => void handlePickSong(song)}
                 onCreateFreeText={(title) => void handleCreateFreeText(title)}
+                onAddTrackOfType={(type) => void handleAddTrackOfType(type)}
             />
 
             {/* v50-05-05: mobile-flow ChartBindPopover. The desktop table
