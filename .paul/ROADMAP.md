@@ -17,8 +17,8 @@ Constraint: Spreadsheet bones stay (no revert; new editor's TanStack/cmdk/shadcn
 |-------|------|-------|--------|-----------|
 | v53-01 | Recursive research (3 parallel tracks) | 1/1 | ✅ Complete | 2026-05-02 |
 | **v5h3-01** | **Save-loss recurrence hotfix** (inserted 2026-05-02 via rescope) | 4/4 (research / instrumentation / H-SL-7 fix `36e9fa1` / postmortem + binding harness-fidelity gate) | ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-02 |
-| v53-02 | Chart binding picker fix + ChartCell discoverability *(chart-verify peek DROPPED per Daniel)* | TBD | 🚧 Discuss (unblocked 2026-05-02 — Daniel: "no block, keep building"; v5h3-01 PENDING-UAT runs in parallel via Sentry instrumentation) | - |
-| v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | TBD | Not started | - |
+| v53-02 | Chart binding picker fix + ChartCell discoverability *(chart-verify peek DROPPED per Daniel)* | 1/1 (cmdk fix + Recent section + library priming + sticky-right ChartCell at `bc754b4`) | ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-02 |
+| v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | TBD | Not started — unblocks now that v53-02 closed | - |
 | v53-04 | Editor affordance pass | TBD (likely collapses to 0) | Not started — pending Daniel decision | - |
 
 ### Phase v53-01: Recursive research (3 parallel tracks) ✅ COMPLETE 2026-05-02
