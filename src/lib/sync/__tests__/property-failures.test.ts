@@ -2443,3 +2443,390 @@ describe('v5h-01-01: track-edit save-loss reproduction (cached-then-fresh listen
         }
     }, 30_000)
 })
+
+// ─── v5h3-01-03: pending-outbox expectedUpdatedAt threading ─────────────────
+//
+// H-SL-7 regression: when the engine writes back a server-stamped
+// `updatedAt` after a successful commit, it must ALSO thread that new
+// `updatedAt` into any PENDING outbox rows for the same (collection, docId)
+// inside the SAME writeback transaction. Without this, rapid same-doc
+// edits queued by the editor BEFORE the first commit's writeback re-rendered
+// useLiveQuery still hold the stale baseline `expectedUpdatedAt`, and the
+// next drain phantom-trips VersionMismatchError → reconciliation modal
+// (single-user "Keep mine / Take theirs" with NO real concurrent writer).
+//
+// Cases:
+//   1. Rapid same-doc edits drain successfully without VersionMismatch.
+//   2. Genuine multi-writer scenario STILL triggers VersionMismatch
+//      (preserves v50-06-02 reconciliation contract).
+//   3. Cross-doc rows are NOT touched by the threading.
+//
+// Reuses TwoWriterAdapter (already threads expectedUpdatedAt + returns real
+// updatedAt) + SharedRemote + FakeChannelHub + applyEdit (real write path).
+describe('v5h3-01-03: pending-outbox expectedUpdatedAt threading', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+    })
+    afterEach(async () => {
+        await resetDbForTests()
+    })
+
+    // Adapter that wraps TwoWriterAdapter but lets the test assert the
+    // expectedUpdatedAt threaded into each row at commit time. Captures a
+    // breadcrumb of every commit's (docId, expectedUpdatedAt) so the test
+    // can prove that the SECOND same-doc commit saw the THREADED baseline
+    // (not the stale `undefined` from the editor's pre-pump call).
+    class CapturingTwoWriterAdapter implements FirestoreAdapter {
+        readonly inner: TwoWriterAdapter
+        readonly seen: Array<{
+            docId: string
+            op: OutboxRow['op']
+            expectedUpdatedAt: number | undefined
+        }> = []
+        constructor(remote: SharedRemote) {
+            this.inner = new TwoWriterAdapter(remote)
+        }
+        async commitOutboxRow(
+            row: OutboxRow,
+        ): Promise<{ updatedAt?: number }> {
+            this.seen.push({
+                docId: row.docId,
+                op: row.op,
+                expectedUpdatedAt: row.expectedUpdatedAt,
+            })
+            return this.inner.commitOutboxRow(row)
+        }
+        async refreshAuthToken(): Promise<void> {
+            return this.inner.refreshAuthToken()
+        }
+        async readDoc(
+            collection: LocalCollection,
+            docId: string,
+        ): Promise<{ data: Record<string, unknown>; updatedAt: number } | null> {
+            return this.inner.readDoc(collection, docId)
+        }
+    }
+
+    // Adapter that throws VersionMismatchError on a specific call index to
+    // simulate a genuine cross-tab/server-side concurrent write. Used by
+    // Case 2 to verify the reconciliation modal contract is preserved.
+    class FailNthCallAdapter implements FirestoreAdapter {
+        readonly inner: TwoWriterAdapter
+        calls = 0
+        constructor(
+            remote: SharedRemote,
+            private readonly failOnCall: number,
+        ) {
+            this.inner = new TwoWriterAdapter(remote)
+        }
+        async commitOutboxRow(
+            row: OutboxRow,
+        ): Promise<{ updatedAt?: number }> {
+            this.calls += 1
+            if (this.calls === this.failOnCall) {
+                throw new VersionMismatchError(
+                    'simulated cross-tab write bumped remote.updatedAt',
+                )
+            }
+            return this.inner.commitOutboxRow(row)
+        }
+        async refreshAuthToken(): Promise<void> {
+            return this.inner.refreshAuthToken()
+        }
+        async readDoc(
+            collection: LocalCollection,
+            docId: string,
+        ): Promise<{ data: Record<string, unknown>; updatedAt: number } | null> {
+            return this.inner.readDoc(collection, docId)
+        }
+    }
+
+    // Drain helper: pump + flush + advance backoff until outbox is empty
+    // or capped (defensive — no test should exceed a handful of pumps).
+    async function drainToQuiescence(
+        engine: SyncEngine,
+        clock: FakeClock,
+        maxIterations = 12,
+    ): Promise<void> {
+        for (let i = 0; i < maxIterations; i++) {
+            await engine.pump()
+            await flushTwoWriter()
+            const remaining = await getDb().outbox.count()
+            if (remaining === 0) return
+            // Skip past the longest backoff so retry-pending rows fire.
+            await clock.advance(10_000)
+        }
+    }
+
+    it('Case 1 (AC-2): rapid same-doc edits drain without phantom VersionMismatch', async () => {
+        const remote = new SharedRemote()
+        // Seed remote at a known baseline.
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', setlistId: 's1', title: 'orig' },
+            updatedAt: 1000,
+        })
+
+        // Seed local row with the matching baseline so applyEdit's first
+        // committed update threads expectedUpdatedAt=1000 (the editor would
+        // capture this from useLiveQuery in production).
+        const db = getDb()
+        await db.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        })
+
+        const adapter = new CapturingTwoWriterAdapter(remote)
+        const clock = new FakeClock()
+        const hub = new FakeChannelHub()
+        const lock = new CrossTabLock('crc-v5h3-01-03-c1', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const engine = new SyncEngine({
+            db,
+            adapter,
+            lock,
+            clock,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        await engine.start()
+        await flushTwoWriter()
+
+        // Three rapid sequential applyEdit calls — all on the SAME
+        // (collection, docId) — issued BEFORE any pump. In production,
+        // calls 2 and 3 would capture stale `expectedUpdatedAt=1000` from
+        // useLiveQuery (the editor only re-renders after engine writeback).
+        // We mirror that by passing expectedUpdatedAt=1000 on all three.
+        for (const title of ['edit-1', 'edit-2', 'edit-3']) {
+            await applyEdit(
+                {
+                    op: 'update',
+                    collection: 'tracks',
+                    docId: 't1',
+                    patch: { title },
+                    expectedUpdatedAt: 1000,
+                },
+                { withoutUndo: true },
+            )
+        }
+
+        // Three pending outbox rows for the same doc, all with stale
+        // baseline 1000. The threading fix bumps rows 2+3 to the new
+        // server ts after row 1 commits.
+        const beforeDrain = await db.outbox.toArray()
+        expect(beforeDrain.length).toBe(3)
+        for (const r of beforeDrain) {
+            expect(r.expectedUpdatedAt).toBe(1000)
+        }
+
+        await drainToQuiescence(engine, clock)
+
+        // All 3 commits drained; no rows left.
+        expect(await db.outbox.count()).toBe(0)
+        // Engine quiesced — NOT in 'conflict' state.
+        expect(engine.getState()).toBe('idle')
+        // No row was marked failed mid-drain.
+        const failed = (await db.outbox.toArray()).filter(
+            (r) => r.status === 'failed',
+        )
+        expect(failed.length).toBe(0)
+        // Adapter saw 3 calls — i.e. the engine didn't bail early on a
+        // VersionMismatch.
+        expect(adapter.seen.length).toBe(3)
+        // First call carried the baseline; calls 2 and 3 carried the
+        // threaded server timestamps from the prior commit (NOT 1000).
+        expect(adapter.seen[0].expectedUpdatedAt).toBe(1000)
+        expect(adapter.seen[1].expectedUpdatedAt).not.toBe(1000)
+        expect(adapter.seen[1].expectedUpdatedAt).toBeDefined()
+        expect(adapter.seen[2].expectedUpdatedAt).not.toBe(1000)
+        expect(adapter.seen[2].expectedUpdatedAt).toBeDefined()
+        // Local row's final updatedAt reflects the LATEST commit.
+        const localFinal = await db.tracks.get('t1')
+        const remoteFinal = remote.snapshot().get('tracks/t1')
+        expect(localFinal?.updatedAt).toBe(remoteFinal?.updatedAt)
+        expect(remoteFinal?.payload.title).toBe('edit-3')
+
+        engine.shutdown()
+    }, 30_000)
+
+    it('Case 2 (AC-3): genuine multi-writer scenario STILL triggers VersionMismatch reconciliation', async () => {
+        const remote = new SharedRemote()
+        remote.seed('tracks', 't1', {
+            payload: { id: 't1', setlistId: 's1', title: 'orig' },
+            updatedAt: 1000,
+        })
+
+        const db = getDb()
+        await db.tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            title: 'orig',
+            updatedAt: 1000,
+        })
+
+        // Adapter throws VersionMismatchError on the 2nd commit — modeling
+        // a real cross-tab write that bumped remote.updatedAt between our
+        // first and second drain. The threading fix MUST NOT mask this.
+        const adapter = new FailNthCallAdapter(remote, 2)
+        const clock = new FakeClock()
+        const hub = new FakeChannelHub()
+        const lock = new CrossTabLock('crc-v5h3-01-03-c2', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const engine = new SyncEngine({
+            db,
+            adapter,
+            lock,
+            clock,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        await engine.start()
+        await flushTwoWriter()
+
+        // Two applyEdit calls (both with stale baseline 1000 — same as
+        // Case 1's editor-capture model). Drain. The 2nd commit throws
+        // VersionMismatchError → row marked failed → FSM → 'conflict'.
+        for (const title of ['mine-1', 'mine-2']) {
+            await applyEdit(
+                {
+                    op: 'update',
+                    collection: 'tracks',
+                    docId: 't1',
+                    patch: { title },
+                    expectedUpdatedAt: 1000,
+                },
+                { withoutUndo: true },
+            )
+        }
+
+        await drainToQuiescence(engine, clock)
+
+        // Exactly 1 outbox row remains (the failed second edit).
+        const after = await db.outbox.toArray()
+        expect(after.length).toBe(1)
+        expect(after[0].status).toBe('failed')
+        expect(after[0].lastError).toContain('cross-tab')
+        // FSM in 'conflict' — reconciliation modal would open.
+        expect(engine.getState()).toBe('conflict')
+        // Adapter saw exactly 2 calls (the 2nd threw); engine stopped on
+        // VersionMismatch per v50-06-02 contract.
+        expect(adapter.calls).toBe(2)
+
+        engine.shutdown()
+    }, 30_000)
+
+    it('Case 3 (AC-1 boundary): cross-doc pending rows are NOT touched by threading', async () => {
+        const remote = new SharedRemote()
+        remote.seed('tracks', 'track-A', {
+            payload: { id: 'track-A', setlistId: 's1', title: 'A-orig' },
+            updatedAt: 1000,
+        })
+        remote.seed('tracks', 'track-B', {
+            payload: { id: 'track-B', setlistId: 's1', title: 'B-orig' },
+            updatedAt: 1500,
+        })
+
+        const db = getDb()
+        await db.tracks.put({
+            id: 'track-A',
+            setlistId: 's1',
+            order: 0,
+            title: 'A-orig',
+            updatedAt: 1000,
+        })
+        await db.tracks.put({
+            id: 'track-B',
+            setlistId: 's1',
+            order: 1,
+            title: 'B-orig',
+            updatedAt: 1500,
+        })
+
+        const adapter = new CapturingTwoWriterAdapter(remote)
+        const clock = new FakeClock()
+        const hub = new FakeChannelHub()
+        const lock = new CrossTabLock('crc-v5h3-01-03-c3', {
+            channelFactory: (n) => hub.create(n),
+            leaseMs: 5000,
+        })
+        const engine = new SyncEngine({
+            db,
+            adapter,
+            lock,
+            clock,
+            isOnline: () => true,
+            onlineListener: { addListener: () => {}, removeListener: () => {} },
+        })
+        await engine.start()
+        await flushTwoWriter()
+
+        // Queue an edit on track-A FIRST (so it's the first to drain by
+        // localId order), then an edit on track-B. After A commits, the
+        // threading fix MUST update only A's same-doc pending rows (none
+        // here) — track-B's expectedUpdatedAt MUST remain 1500.
+        await applyEdit(
+            {
+                op: 'update',
+                collection: 'tracks',
+                docId: 'track-A',
+                patch: { title: 'A-edit' },
+                expectedUpdatedAt: 1000,
+            },
+            { withoutUndo: true },
+        )
+        await applyEdit(
+            {
+                op: 'update',
+                collection: 'tracks',
+                docId: 'track-B',
+                patch: { title: 'B-edit' },
+                expectedUpdatedAt: 1500,
+            },
+            { withoutUndo: true },
+        )
+
+        // Snapshot B's expectedUpdatedAt BEFORE drain.
+        const bRowBefore = (await db.outbox.toArray()).find(
+            (r) => r.docId === 'track-B',
+        )
+        expect(bRowBefore).toBeDefined()
+        expect(bRowBefore!.expectedUpdatedAt).toBe(1500)
+
+        // Drive ONE pump tick. Per per-doc-ordering, drainOnce dispatches
+        // BOTH due rows in a single drain (different docIds → no
+        // blocking). Pause and inspect: the FIRST adapter call belongs to
+        // track-A; immediately after that writeback tx, track-B's pending
+        // row's expectedUpdatedAt MUST still equal 1500 (threading filter
+        // does not match cross-doc rows).
+        //
+        // We do this by checking the adapter's seen[] log AFTER drain
+        // completes: if the threading had leaked across docs, B's commit
+        // would have seen expectedUpdatedAt = A's new server timestamp
+        // (which would have caused a VersionMismatchError on the
+        // TwoWriterAdapter, since remote B's updatedAt is still 1500).
+        await drainToQuiescence(engine, clock)
+
+        // Both committed without VersionMismatch.
+        expect(await db.outbox.count()).toBe(0)
+        expect(engine.getState()).toBe('idle')
+        // The adapter saw track-B's commit with expectedUpdatedAt=1500
+        // (its OWN baseline) — NOT the threaded value from A's commit.
+        const seenB = adapter.seen.find((s) => s.docId === 'track-B')
+        expect(seenB).toBeDefined()
+        expect(seenB!.expectedUpdatedAt).toBe(1500)
+        // Both edits landed on the remote.
+        const remoteA = remote.snapshot().get('tracks/track-A')
+        const remoteB = remote.snapshot().get('tracks/track-B')
+        expect(remoteA?.payload.title).toBe('A-edit')
+        expect(remoteB?.payload.title).toBe('B-edit')
+
+        engine.shutdown()
+    }, 30_000)
+})

@@ -267,6 +267,34 @@ export class SyncEngine {
                             result.updatedAt !== undefined &&
                             row.op !== 'delete'
                         ) {
+                            // v5h3-01-03 fix: thread the new server
+                            // updatedAt into any pending outbox rows for the
+                            // same (collection, docId). Without this, rapid
+                            // same-doc edits captured `expectedUpdatedAt`
+                            // from useLiveQuery before this commit's
+                            // writeback re-rendered, leading to a phantom
+                            // VersionMismatch on the next drain. Atomic
+                            // with the entity writeback. Filter on
+                            // status='pending' only so in-flight ('sending')
+                            // and terminal ('failed') rows are untouched —
+                            // they get re-evaluated on the next pump or via
+                            // resolveConflict respectively.
+                            const pendingSameDoc = await this.db.outbox
+                                .where('status')
+                                .equals('pending')
+                                .filter(
+                                    (r) =>
+                                        r.collection === row.collection &&
+                                        r.docId === row.docId,
+                                )
+                                .toArray()
+                            for (const p of pendingSameDoc) {
+                                if (p.localId !== undefined) {
+                                    await this.db.outbox.update(p.localId, {
+                                        expectedUpdatedAt: result.updatedAt,
+                                    })
+                                }
+                            }
                             const existing = await this.db[
                                 row.collection
                             ].get(row.docId)
