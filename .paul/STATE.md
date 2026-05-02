@@ -10,27 +10,39 @@ See: .paul/PROJECT.md (updated 2026-05-02)
 ## Current Position
 
 Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 3 of 4 phases LOOP COMPLETE (v53-01 ✅ research / v5h3-01 ✅ save-loss recurrence hotfix / v53-02 ✅ chart-bind + sticky-right ChartCell). v53-03 polymorphic Add menu now active; v53-04 likely collapses (chart-verify peek dropped per Daniel; Track B's only remaining port-back was chart-preview which dies with that drop).
-Phase: v53-03 of 4 (Polymorphic Add menu — port `AddBar.tsx` from `d8c0442`) — PLAN created, awaiting approval
-Plan: v53-03-01 PLAN created 2026-05-02 at `.paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md`. 3 auto tasks + 1 HUMAN-VERIFY checkpoint; 8 ACs. Decisions locked from CONTEXT (committed `d100902`): Option B split-button (primary "+ Song" indigo CTA + chevron 5-tile popover), ported icon colors (amber Reading / blue Prayer / emerald Transition / indigo Song / muted Header+Note), single vertical-slice plan, free-text consolidated under primary picker (NOT a 6th tile). Substrate reuse: TouchOrPopover + cmdk + v53-02 three-CommandGroup pattern (Recent / Library / Custom). Files modified: 3 source (AddBar.tsx new + AddRowPlaceholder.tsx Recent group add + SetlistGrid.tsx wire) + 2 test. Estimate ~150-220 source LOC + ~80-120 test LOC; suite +10 to +16. autonomous=false (1 HUMAN-VERIFY at end for Daniel-loop iPad UAT — long-press disambiguation is highest-priority). /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md (must invoke before APPLY).
-Status: ✓ PLAN created, ready for APPLY. Suite baseline 1575/1575. Harness Fidelity Gate counter stays at 1 of 3 — v53-03 surface (AddRowPlaceholder.tsx + new AddBar.tsx) is OUTSIDE gate's protected list; applyEdit signature unchanged. v5h3-01 + v53-02 PENDING-UAT continue in parallel — soft-block lifted earlier 2026-05-02 per Daniel "no block, keep building".
+Phase: v53-03 of 4 (Polymorphic Add menu — port `AddBar.tsx` from `d8c0442`) — LOOP COMPLETE on v53-03-01 (1 of 1 plans)
+Plan: v53-03-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v53-03-polymorphic-add-menu/v53-03-01-SUMMARY.md`. All 8 ACs PASS (AC-8 sight-unseen "do it" per v51-04 + v52-03/04 + v53-02 precedent — iPad UAT deferred to standing Daniel-loop discipline; failures route to v53-03-02 follow-up). Suite 1575 → 1597 (+22). Commit `3a321c9` pushed origin master; Vercel auto-deploying. Single-context execution; no agent dispatches. /ui-ux-pro-max gate satisfied at APPLY entry. Two auto-fixed test-fixture issues (curly-quote regex + jest-axe `aria-dialog-name` disable for v51-01-locked TouchOrPopover Radix dialog wrapper) — essential test quality, no scope creep.
+Status: ✅ PHASE v53-03 LOOP COMPLETE (1 of 1 plans). Suite 1597/1597; `next build` clean; boundary clean (zero touches to sync engine, schema, rules, perf-view, mobile parallel render path, ChartBindPopover, admin panels). Harness Fidelity Gate counter stays at 1 of 3 (AddBar surface OUTSIDE protected list; applyEdit unchanged). **TRANSITION REQUIRED** — last plan in phase; transition-phase workflow MUST run next (evolve PROJECT.md / update ROADMAP / phase-close commit / route to v53-04 collapse decision or v5.4 milestone planning).
 
 Progress:
-- v5.3 — Editor UX Repair: [█████████░] ~90% (v53-01 ✅ + v5h3-01 ✅ + v53-02 ✅ LOOP COMPLETE; v53-03 PLAN ✓; v53-04 likely collapses)
+- v5.3 — Editor UX Repair: [██████████] ~95% (v53-01 ✅ + v5h3-01 ✅ + v53-02 ✅ + v53-03 ✅ LOOP COMPLETE; v53-04 collapse decision pending at transition)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
 - Phase v5h3-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `36e9fa1`)
 - Phase v53-02: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `bc754b4`)
-- Phase v53-03: [█░░░░░░░░░] 10% — PLAN ✓ created, APPLY pending approval
+- Phase v53-03: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `3a321c9`)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v53-03-01 PLAN created, awaiting approval; APPLY needs /ui-ux-pro-max load first]
+  ✓        ✓        ✓     [v53-03-01 LOOP COMPLETE; phase v53-03 1-of-1 — TRANSITION REQUIRED]
+
+### Decisions (v53-03-01)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-02 | Option B split-button (NOT Option A grouped CommandList) | v53-03-01 | Daniel-locked at /paul:discuss-phase per Track B muscle-memory finding; ~+180 LOC AddBar.tsx vs ~+50 LOC for Option A; pattern reusable for future split-button affordances |
+| 2026-05-02 | AddRowPlaceholder modified in-place (NOT prop sprawl with triggerLabel/triggerIcon) | v53-03-01 | Smaller surface change; AddBar owns layout, AddRowPlaceholder owns picker contents; existing testids preserved |
+| 2026-05-02 | Long-press disambiguation as defense-in-depth on chevron + every tile + primary trigger | v53-03-01 | AddBar lives outside row scope so positional analysis says no conflict; 4-line edits = cost zero; bug from collision is hard to catch in tests; reusable pattern |
+| 2026-05-02 | jest-axe `aria-dialog-name` disabled for chevron-open scan with documented rationale | v53-03-01 | TouchOrPopover is v51-01 boundary-locked (cannot add contentAriaLabel prop); chevron + role='grid' both carry aria-labels; Radix dialog wrapper is structural detail; pattern documented for future axe scans of boundary-locked Radix popovers |
+| 2026-05-02 | Daniel approved AC-8 sight-unseen with "do it" | v53-03-01 | v51-04 + v52-03/04 + v53-02 precedent; iPad UAT deferred to standing Daniel-loop discipline; failures route to v53-03-02 follow-up |
+| 2026-05-02 | Suite delta +22 (over +10-16 estimate) | v53-03-01 | Comprehensive AC matrix coverage (Recent group + tiles + colors + size floors + 3 contextmenu scopes + 2 jest-axe scans); not scope creep — every assertion ties to AC line |
+| 2026-05-02 | Single-context execution; no agent dispatches | v53-03-01 | Per CARL [FRESH] rule "Work in current context unless task exceeds 500 LOC"; total source delta ~+285 LOC fit comfortably; saved ~1 dan-executor dispatch overhead |
 
 ## Session Continuity
 
 Last session: 2026-05-02
-Stopped at: v53-03-01 PLAN.md created from CONTEXT.md decisions; STATE refreshed for PLAN entry
-Next action: Review and approve plan, then run `/paul:apply .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md`
-Resume file: .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-PLAN.md
+Stopped at: v53-03-01 LOOP COMPLETE — SUMMARY written; commit `3a321c9` pushed; checkpoint approved sight-unseen; phase transition pending
+Next action: Run transition-phase workflow (evolve PROJECT.md / update ROADMAP / phase-close commit / decide on v53-04 collapse or v5.4 milestone planning)
+Resume file: .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-SUMMARY.md
 
 ### Decisions (v53-02-01)
 

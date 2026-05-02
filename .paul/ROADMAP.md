@@ -4,7 +4,7 @@
 
 **v5.3 — Editor UX Repair** *(RESCOPED 2026-05-02 — v5h3 hotfix inserted)*
 Status: 🚧 In Progress
-Phases: 1 of 4 complete (v53-01 done; v53-04 likely collapses to 0)
+Phases: 4 of 4 LOOP COMPLETE (v53-01 ✅ research + v5h3-01 ✅ save-loss recurrence hotfix + v53-02 ✅ chart-bind + v53-03 ✅ polymorphic Add menu — all PENDING-UAT in parallel; v53-04 RECOMMENDED for collapse pending Daniel decision at milestone audit or UAT pull-in)
 Theme: *"The spreadsheet bones stay; the affordances get fixed."* Targeted UX repair on the v50-05 spreadsheet editor — frictionless chart binding + chart-cell discoverability + polymorphic Add menu — informed by what the old `SetlistEditorV2` (amputated in v50-02) did well. NOT a scrap of the spreadsheet model.
 
 **Rescope (2026-05-02, after v53-01 research):** Daniel iPad UAT surfaced a **save-loss recurrence** (same class as v5h-01, 2026-04-27). Synthesis recommended + Daniel approved: insert **v5h3 hotfix phase** BEFORE v53-02..04 (same precedent as v5.0-hotfix). Chart-verification peek DROPPED per Daniel ("don't worry about this. Fix the other pieces."). v53-04 likely collapses (Track B's only remaining port-back candidate was the chart-preview pattern, which dies with the chart-verify drop).
@@ -18,7 +18,7 @@ Constraint: Spreadsheet bones stay (no revert; new editor's TanStack/cmdk/shadcn
 | v53-01 | Recursive research (3 parallel tracks) | 1/1 | ✅ Complete | 2026-05-02 |
 | **v5h3-01** | **Save-loss recurrence hotfix** (inserted 2026-05-02 via rescope) | 4/4 (research / instrumentation / H-SL-7 fix `36e9fa1` / postmortem + binding harness-fidelity gate) | ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-02 |
 | v53-02 | Chart binding picker fix + ChartCell discoverability *(chart-verify peek DROPPED per Daniel)* | 1/1 (cmdk fix + Recent section + library priming + sticky-right ChartCell at `bc754b4`) | ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-02 |
-| v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | TBD | Not started — unblocks now that v53-02 closed | - |
+| v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | 1/1 (split-button + 5 colored tiles + Recent group + handleAddTrackOfType at `3a321c9`) | ✅ LOOP COMPLETE 2026-05-02 — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-02 |
 | v53-04 | Editor affordance pass | TBD (likely collapses to 0) | Not started — pending Daniel decision | - |
 
 ### Phase v53-01: Recursive research (3 parallel tracks) ✅ COMPLETE 2026-05-02
