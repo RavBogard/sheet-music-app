@@ -10,18 +10,28 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
-Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — v5h3-01-02 PLAN created
-Plan: v5h3-01-02 created 2026-05-02 (autonomous=true; type=execute; depends_on v5h3-01-01). 3 tasks: (1) Dexie edit_log schema bump + helper module + tests; (2) Sentry breadcrumb wrapper + upload-on-mount helper + tests; (3) Wire breadcrumbs at 5 hot sites + tests + suite/build verify. 7 ACs. Boundaries lock engine FSM + state-machine + LWW guards + applyEdit atomicity + firestore.rules.
-Status: PLAN created, ready for APPLY. Will dispatch dan-executor agent for APPLY (substantial code-touching scope, ~400-600 LOC across 13 files; agent has clean context window).
+Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — v5h3-01-02 + v5h3-01-03 BOTH SHIPPED
+Plan: v5h3-01-02 + v5h3-01-03 LOOP COMPLETE 2026-05-02. SUMMARYs at `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-02-SUMMARY.md` + `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-03-SUMMARY.md`. Phase v5h3-01 has 3/4 plans done; v5h3-01-04 (postmortem + harness fidelity gap closure) still ahead.
+Status: 🚀 BOTH FIXES DEPLOYED. (1) `1d8d94c` v5h3-01-02 auto-capture instrumentation (Sentry breadcrumbs + IndexedDB edit_log + upload-on-mount) pushed origin/master. (2) `36e9fa1` v5h3-01-03 H-SL-7 phantom-VersionMismatch fix (engine writeback threads server updatedAt into pending outbox rows for same doc) pushed origin/master. Vercel auto-deploying both. Daniel resumes editing after refresh; phantom reconciliation modal should stop firing for single-user rapid same-doc edits; auto-capture catches any DIFFERENT save-loss class via Sentry. Suite 1528 → 1560 (+32 across both plans).
 
 Progress:
-- v5.3 — Editor UX Repair: [████░░░░░░] ~40%
+- v5.3 — Editor UX Repair: [██████░░░░] ~60% (v53-01 ✅ + v5h3-01-01..03 ✅; v5h3-01-04 + v53-02 + v53-03 still ahead)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
-- Phase v5h3-01: [█████░░░░░] 50% (1 of ~3 plans complete + v5h3-01-02 plan written)
+- Phase v5h3-01: [█████████░] 75% (3 of 4 plans complete; v5h3-01-04 postmortem still ahead)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v5h3-01-02 plan created, dispatching APPLY]
+  ✓        ✓        ✓     [v5h3-01-03 LOOP COMPLETE; ready for v5h3-01-04 PLAN]
+
+### Decisions (v5h3-01-02 + v5h3-01-03)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-02 | v5h3-01-02 instrumentation built + deployed (Sentry breadcrumbs at 5 hot write paths + edit_log table + upload-on-mount) | v5h3-01-02 | Future save-loss recurrences auto-captured to Sentry; no manual iPad inspection required |
+| 2026-05-02 | Mid-execution Daniel UAT surfaced reconciliation-modal evidence → NEW H-SL-7 (HIGH confidence) | v5h3-01-02 → v5h3-01-03 | Pivoted from "instrumentation only / wait for evidence" to "diagnose + ship targeted fix today" |
+| 2026-05-02 | v5h3-01-03 H-SL-7 fix shipped: engine writeback threads server updatedAt into pending outbox rows for same (collection, docId) | v5h3-01-03 | Single-user rapid same-doc edits no longer trigger phantom VersionMismatch; v50-06-02 reconciliation contract preserved (AC-3 explicit test) |
+| 2026-05-02 | Daniel-loop UAT discipline (codified v51-04) validated for SECOND time today: caught reconciliation symptom mid-execution + enabled same-day surgical fix | discipline | Pattern: even mid-execution UAT signal worth pivoting plan; reconciliation-modal-in-single-user-context is high-signal evidence pointing at VersionMismatch class |
+| 2026-05-02 | v5h-01 §5 harness fidelity gap NOW twice-implicated (v5h-01 + v5h3) | v5h3-01-04 | Final postmortem MUST commit to closure (Firebase emulator + RTL editor↔perf-view test pair); deferring three times is no longer acceptable |
 
 ### Decisions (v5h3-01-01)
 
@@ -166,13 +176,14 @@ Resume file: `.paul/postmortems/v5h3-01-save-loss-recurrence-investigation.md` (
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: e63837c — feat(v53-01): recursive research complete + RESCOPE — insert v5h3 hotfix before v53-02..04
+Last commit: 36e9fa1 — fix(v5h3-01-03): thread server updatedAt into pending outbox rows — fixes single-user phantom VersionMismatch
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✗ e63837c NOT YET pushed to origin master (research-only commit; safe to push when ready — no source code changes, just .paul artifacts)
+Pushed: ✓ 36e9fa1 → origin master (2026-05-02) [v5h3-01-03 fix; Vercel auto-deploying]
+Earlier pushes today: ✓ 1d8d94c → origin master (2026-05-02) [v5h3-01-02 instrumentation]; ✓ d559b77 → (committed; not yet pushed when 1d8d94c was pushed — landed in same push); ✓ e63837c → (research-only; landed in 1d8d94c push)
 Earlier pushes: ✓ 74b9fc8 → origin master (2026-04-30)
-Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30, before cf30d62 push)
-Pre-existing working-tree change NOT in commit: package.json version string (2.11.19 → 0.0.6) — unrelated to v53-01; intentionally left out of phase commit
+Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30); none needed for v5h3-01-02 or v5h3-01-03 (no rules changes)
+Pre-existing working-tree change NOT in any commit: package.json version string (2.11.19 → 0.0.6) — unrelated to v5.3 work; intentionally left out of all phase commits
 
 Resume context (v5.3):
 - v5.3 is a 4-phase milestone surfaced post-v5.2 from Daniel UAT regret on the v50-05 spreadsheet editor itself (substrate-level UX, not the v5.1/v5.2 polish surfaces)
