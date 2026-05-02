@@ -5,25 +5,26 @@
 See: .paul/PROJECT.md (updated 2026-05-02)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v5.3 — Editor UX Repair. 4 phases: v53-01 recursive research (3 parallel tracks: ChartBind diagnosis + old-editor archaeology + polymorphic Add design) / v53-02 chart binding + verification / v53-03 polymorphic Add menu / v53-04 editor affordance pass. UAT closes the milestone (not its own phase, matches v5.2 precedent). Theme: *"The spreadsheet bones stay; the affordances get fixed."* Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–4 plan after v53-01 synthesis. Spreadsheet bones (v50-05 substrate, sync engine v50-03, sticky memory v50-04, perf-view dual-read v5h-01-03) are out of scope. /ui-ux-pro-max BLOCKING for v53-02..v53-04. Tablet-first.
+**Current focus:** Awaiting v5.4 milestone definition. v5.3 ✅ COMPLETE 2026-05-02 (closed with PENDING-UAT marker per Daniel "push and finish the milestone" — explicit override of v51-04-codified "UAT closes the milestone" rule). v5.0 + v5.2 + v5.3 all in PENDING-UAT close paths against deployed commits over upcoming worship cycle (Erev Shabbat + Shabbat morning). Likely v5.4 starting points: Harness Fidelity Gate remediation phase 1 (Firebase emulator + RTL editor↔perf-view test pair — BINDING per v5h3-01-04 postmortem) / mobile parallel-render AddBar variant / cross-device library staleness fix.
 
 ## Current Position
 
-Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 3 of 4 phases LOOP COMPLETE (v53-01 ✅ research / v5h3-01 ✅ save-loss recurrence hotfix / v53-02 ✅ chart-bind + sticky-right ChartCell). v53-03 polymorphic Add menu now active; v53-04 likely collapses (chart-verify peek dropped per Daniel; Track B's only remaining port-back was chart-preview which dies with that drop).
-Phase: v53-03 of 4 (Polymorphic Add menu — port `AddBar.tsx` from `d8c0442`) — LOOP COMPLETE on v53-03-01 (1 of 1 plans)
-Plan: v53-03-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v53-03-polymorphic-add-menu/v53-03-01-SUMMARY.md`. All 8 ACs PASS (AC-8 sight-unseen "do it" per v51-04 + v52-03/04 + v53-02 precedent — iPad UAT deferred to standing Daniel-loop discipline; failures route to v53-03-02 follow-up). Suite 1575 → 1597 (+22). Commit `3a321c9` pushed origin master; Vercel auto-deploying. Single-context execution; no agent dispatches. /ui-ux-pro-max gate satisfied at APPLY entry. Two auto-fixed test-fixture issues (curly-quote regex + jest-axe `aria-dialog-name` disable for v51-01-locked TouchOrPopover Radix dialog wrapper) — essential test quality, no scope creep.
-Status: ✅ PHASE v53-03 LOOP COMPLETE (1 of 1 plans). Suite 1597/1597; `next build` clean; boundary clean (zero touches to sync engine, schema, rules, perf-view, mobile parallel render path, ChartBindPopover, admin panels). Harness Fidelity Gate counter stays at 1 of 3 (AddBar surface OUTSIDE protected list; applyEdit unchanged). **TRANSITION REQUIRED** — last plan in phase; transition-phase workflow MUST run next (evolve PROJECT.md / update ROADMAP / phase-close commit / route to v53-04 collapse decision or v5.4 milestone planning).
+Milestone: ✅ v5.3 — Editor UX Repair COMPLETE 2026-05-02 (closed with PENDING-UAT marker per Daniel "push and finish the milestone"). Awaiting v5.4 milestone definition.
+Phase: None active. v5.3 phases archived under MILESTONES.md § v5.3 entry + ROADMAP.md Completed Milestones collapsed details.
+Plan: None active. Last plan: v53-03-01 LOOP COMPLETE 2026-05-02 at commit `3a321c9` (PENDING-UAT). Last phase-close: v5.3 milestone close at no-tagged-yet (git tag `v5.3` to be created by complete-milestone workflow next step).
+Status: ✅ MILESTONE v5.3 COMPLETE. 4 of 4 phases LOOP COMPLETE; v53-04 ❌ collapsed cleanly. Suite 1597/1597; tsc clean; `next build` Compiled successfully in 6.8s. Harness Fidelity Gate counter at 1 of 3 (codified during v5h3-01-04; binding from v5.3 onward; v53-02 used clause-(b) waiver for SetlistGridHydrator priming-adjacent additive getDocs; v53-03 unchanged; two more waivers in a row triggers re-prioritization to v5.4 phase 1). Daniel-loop UAT discipline (codified v51-04) validated 3x in single milestone (research-phase capture / mid-execution pivot / sight-unseen approval contexts). v5.0 + v5.2 + v5.3 all PENDING-UAT against deployed commits over upcoming worship cycle.
 
 Progress:
-- v5.3 — Editor UX Repair: [██████████] ~95% (v53-01 ✅ + v5h3-01 ✅ + v53-02 ✅ + v53-03 ✅ LOOP COMPLETE; v53-04 collapse decision pending at transition)
+- v5.3 — Editor UX Repair: [██████████] 100% ✅ COMPLETE (closed 2026-05-02 with PENDING-UAT marker)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
 - Phase v5h3-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `36e9fa1`)
 - Phase v53-02: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `bc754b4`)
 - Phase v53-03: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `3a321c9`)
+- Phase v53-04: ❌ COLLAPSED (chart-preview port-back died with chart-verify drop; net zero scope)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v53-03-01 LOOP COMPLETE; phase v53-03 1-of-1 — TRANSITION REQUIRED]
+  ○        ○        ○     [Milestone v5.3 complete — ready for /paul:discuss-milestone or /paul:milestone]
 
 ### Decisions (v53-03-01)
 
@@ -36,13 +37,14 @@ PLAN ──▶ APPLY ──▶ UNIFY
 | 2026-05-02 | Daniel approved AC-8 sight-unseen with "do it" | v53-03-01 | v51-04 + v52-03/04 + v53-02 precedent; iPad UAT deferred to standing Daniel-loop discipline; failures route to v53-03-02 follow-up |
 | 2026-05-02 | Suite delta +22 (over +10-16 estimate) | v53-03-01 | Comprehensive AC matrix coverage (Recent group + tiles + colors + size floors + 3 contextmenu scopes + 2 jest-axe scans); not scope creep — every assertion ties to AC line |
 | 2026-05-02 | Single-context execution; no agent dispatches | v53-03-01 | Per CARL [FRESH] rule "Work in current context unless task exceeds 500 LOC"; total source delta ~+285 LOC fit comfortably; saved ~1 dan-executor dispatch overhead |
+| 2026-05-02 | v53-04 ❌ COLLAPSED at v53-03 close per Daniel decision ("push and finish the milestone") | v5.3 milestone | Track B's only remaining port-back candidate (chart-preview from SongRow collapsed-state file-name link) died with chart-verify drop earlier same day. Net zero remaining scope. ROADMAP table struck through; phase details section replaced with collapse outcome; empty phase directory removed. v5.3 milestone shape becomes 4 implementation phases (v53-01 / v5h3-01 / v53-02 / v53-03), all LOOP COMPLETE, all PENDING-UAT — ready for /paul:complete-milestone routing |
 
 ## Session Continuity
 
 Last session: 2026-05-02
-Stopped at: v53-03-01 LOOP COMPLETE — SUMMARY written; commit `3a321c9` pushed; checkpoint approved sight-unseen; phase transition pending
-Next action: Run transition-phase workflow (evolve PROJECT.md / update ROADMAP / phase-close commit / decide on v53-04 collapse or v5.4 milestone planning)
-Resume file: .paul/phases/v53-03-polymorphic-add-menu/v53-03-01-SUMMARY.md
+Stopped at: Milestone v5.3 ✅ COMPLETE — MILESTONES.md entry written; ROADMAP archived to `.paul/milestones/v5.3-ROADMAP.md`; ROADMAP reorganized (v5.3 collapsed to Completed Milestones); PROJECT.md evolved (Current State updated; v5.3 block added to Validated this cycle; Active section now points at v5.4 TBD); v53-04 ❌ COLLAPSED cleanly per Daniel decision; STATE cleared for post-milestone state
+Next action: `/paul:discuss-milestone` to define v5.4 scope, OR `/paul:milestone` to create directly. Likely starting points: Harness Fidelity Gate remediation phase 1 (Firebase emulator + RTL editor↔perf-view test pair — BINDING per v5h3-01-04 postmortem) / mobile parallel-render AddBar variant / cross-device library staleness fix
+Resume file: .paul/MILESTONES.md
 
 ### Decisions (v53-02-01)
 
