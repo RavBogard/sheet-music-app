@@ -141,6 +141,10 @@ Alternative: `round-2` — only if Daniel disagrees with the rescope framing and
 
 ---
 
+## Back-propagated update — ChartBind H2 disambiguation status
+
+**Updated 2026-05-02 by v5h3-01-01-investigation.md:** ChartBind H2 (Dexie hydration empty/stale at first ChartBindPopover render) DISAMBIGUATION DEFERRED — songs-table count not captured (Daniel's iPad refresh + autonomous-mode session). Verdict pending production capture in v5h3-01-01b round-2 plan. v53-02 fix-path decision (smallest vs. systemic) cannot lock until H2 resolves.
+
 ## Files produced
 
 - `.paul/phases/v53-01-recursive-research/track-a-chartbind-research.md` (Track A — 170 lines)

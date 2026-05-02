@@ -10,18 +10,28 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
-Phase: v5h3-01 of 4 (Save-loss recurrence hotfix — NEW inserted via rescope 2026-05-02). v53-01 complete; v5h3-01 next.
-Plan: Not started (next: `/paul:plan` for v5h3-01-01 reproduce + diagnose)
-Status: v53-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md`. Phase v53-01 complete (1/1 plans). Rescope applied: v5h3-01 phase inserted in ROADMAP; chart-verification peek dropped from v53-02; v53-04 likely collapses. Next: `/paul:plan` for v5h3-01-01 (reproduce + diagnose save-loss recurrence) — Daniel will be asked to capture IndexedDB outbox + Safari Web Inspector state from this morning's affected setlist.
+Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — v5h3-01-01 LOOP COMPLETE; v5h3-01-02 next
+Plan: v5h3-01-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-01-SUMMARY.md`. Phase v5h3-01 NOT complete — v5h3-01-02 (auto-capture instrumentation build) still ahead.
+Status: v5h3-01-01 closed; planning v5h3-01-02 next (autonomous-mode session continues). v5h3-01-02 builds Sentry breadcrumbs at hot write paths + IndexedDB edit_log + upload-on-mount.
 
 Progress:
-- v5.3 — Editor UX Repair: [██░░░░░░░░] ~25% (1 of 4 phases complete; v5h3 inserted)
+- v5.3 — Editor UX Repair: [████░░░░░░] ~35% (1 of 4 phases complete + 1 hotfix plan done)
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
-- Phase v5h3-01: [░░░░░░░░░░] 0% (ready to plan)
+- Phase v5h3-01: [████░░░░░░] 33% (1 of ~3 plans complete; v5h3-01-02 next)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v53-01-01 LOOP COMPLETE; phase v53-01 complete; ready for next phase v5h3-01]
+  ✓        ✓        ✓     [v5h3-01-01 LOOP COMPLETE; ready for v5h3-01-02 PLAN]
+
+### Decisions (v5h3-01-01)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-02 | HUMAN-ACTION DEFERRED per Daniel "continue autonomously" + already-refreshed iPad | v5h3-01 | Evidence-blocked diagnosis; code-scan only narrows hypothesis space, cannot confirm |
+| 2026-05-02 | Code-scan verdicts: H-SL-2/3/4 RULED OUT (definitive); H-SL-1/5/6 STILL OPEN (need evidence) | v5h3-01 | 3 of 6 hypotheses eliminated by code path analysis; remaining 3 require production capture |
+| 2026-05-02 | Anti-pattern audit PASSES — all v5h-01 fixes intact (rules + LWW guards + outbox-pending guard + engine writeback atomicity + Sentry instrumentation) | v5h3-01 | Recurrence is NOT a regression of v5h-01 fixes; it's a NEW failure mode the existing defenses don't cover |
+| 2026-05-02 | RESCOPE Daniel selection: Round-2 Option B (auto-capture instrumentation) | v5h3-01 | v5h3-01-02 builds Sentry breadcrumbs + IndexedDB recovery log; deploys; waits for next recurrence; evidence-driven fix lands in v5h3-01-03 (or new sibling phase) |
+| 2026-05-02 | Harness fidelity gap (v5h-01 §5 action item #2) ESCALATED — recurrence is evidence v5h-01-04 deferral was wrong | v5h3-01 → postmortem | v5h3-01 final postmortem must commit to closing the gap (Firebase emulator + RTL editor↔perf-view test pair) as v5.4 commitment OR include in v5h3-01-02 fix scope |
 
 ### Decisions (v53-01-01)
 
@@ -138,10 +148,10 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-05-02 — v53-01 LOOP COMPLETE end-to-end (PLAN ✓ → APPLY ✓ → UNIFY ✓). Rescope applied; v5h3 phase inserted; SUMMARY + STATE + PROJECT + ROADMAP updated.
-Stopped at: v53-01-01 LOOP COMPLETE; phase v53-01 complete (1/1 plans). Phase v5h3-01-save-loss-recurrence directory created; ready to plan. Phase commit pending (next).
-Next action: `/paul:plan` for v5h3-01-01 (reproduce + diagnose save-loss recurrence). Plan should mirror v5h-01-01 structure: research + HUMAN-ACTION for Daniel to capture production state from this morning's affected setlist (IndexedDB outbox + Safari Web Inspector console + Network tab + songs-table count). 6 hypotheses (H-SL-1..6) listed in `.paul/phases/v53-01-recursive-research/ipad-uat-capture.md`.
-Resume file: `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md` (close-loop record) + `.paul/phases/v53-01-recursive-research/RESEARCH-SYNTHESIS.md` (rescope rationale + open questions)
+Last session: 2026-05-02 — v5h3-01-01 APPLY complete (autonomous code-scan investigation + Round-2 Option B decision)
+Stopped at: v5h3-01-01 APPLY COMPLETE. Tasks: (1) HUMAN-ACTION production capture DEFERRED (Daniel refreshed iPad + directed autonomous mode); (2) Code-scan diagnostics on 6 hypotheses → 3 RULED OUT, 3 STILL OPEN, anti-pattern audit PASSES, ChartBind H2 sibling diagnosis deferred + back-propagated to RESEARCH-SYNTHESIS.md; (3) Daniel selected Round-2 Option B at decision checkpoint (auto-capture instrumentation only). Investigation doc at `.paul/postmortems/v5h3-01-save-loss-recurrence-investigation.md`.
+Next action: `/paul:unify .paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-01-PLAN.md` to close v5h3-01-01 loop. UNIFY will write SUMMARY + commit phase artifacts; phase v5h3-01 is NOT complete (more plans to come). Then `/paul:plan` v5h3-01-02 — build auto-capture instrumentation (Sentry breadcrumbs + IndexedDB recovery log + upload-on-mount). v53-02..04 + v5h3-01-03 stay blocked behind v5h3-01-02 deploy + first recurrence signal.
+Resume file: `.paul/postmortems/v5h3-01-save-loss-recurrence-investigation.md` (verdicts + Round-2 Option B rationale)
 
 **Parallel track (not blocking v5.3 planning):** v5.2 + v5.0 still pending Daniel weekly worship cycle UAT on real production. UAT can run in parallel with v5.3 planning/research; UAT failures on v5.2 surfaces route to follow-up plans in their original v52-* phases per v51-04 rule.
 
@@ -156,11 +166,13 @@ Resume file: `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md` (clos
 | 2026-04-30 | Generic Daniel "approved" treated as ship-it; sub-mode (b)/(c) disambiguation deferred to continued real-iPad use per codified Daniel-loop discipline | v52-02 | If sub-mode surfaces, route follow-up plan in same phase per v51-04 UAT-failure rule |
 
 ### Git State
-Last commit: 74b9fc8 — feat(v52-05): default-template pointer-doc complete — close phase + v5.2 milestone
+Last commit: e63837c — feat(v53-01): recursive research complete + RESCOPE — insert v5h3 hotfix before v53-02..04
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ 74b9fc8 → origin master (2026-04-30)
+Pushed: ✗ e63837c NOT YET pushed to origin master (research-only commit; safe to push when ready — no source code changes, just .paul artifacts)
+Earlier pushes: ✓ 74b9fc8 → origin master (2026-04-30)
 Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30, before cf30d62 push)
+Pre-existing working-tree change NOT in commit: package.json version string (2.11.19 → 0.0.6) — unrelated to v53-01; intentionally left out of phase commit
 
 Resume context (v5.3):
 - v5.3 is a 4-phase milestone surfaced post-v5.2 from Daniel UAT regret on the v50-05 spreadsheet editor itself (substrate-level UX, not the v5.1/v5.2 polish surfaces)
