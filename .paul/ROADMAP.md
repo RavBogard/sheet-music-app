@@ -2,8 +2,114 @@
 
 ## Current Milestone
 
+**v5.3 — Editor UX Repair** *(RESCOPED 2026-05-02 — v5h3 hotfix inserted)*
+Status: 🚧 In Progress
+Phases: 1 of 4 complete (v53-01 done; v53-04 likely collapses to 0)
+Theme: *"The spreadsheet bones stay; the affordances get fixed."* Targeted UX repair on the v50-05 spreadsheet editor — frictionless chart binding + chart-cell discoverability + polymorphic Add menu — informed by what the old `SetlistEditorV2` (amputated in v50-02) did well. NOT a scrap of the spreadsheet model.
+
+**Rescope (2026-05-02, after v53-01 research):** Daniel iPad UAT surfaced a **save-loss recurrence** (same class as v5h-01, 2026-04-27). Synthesis recommended + Daniel approved: insert **v5h3 hotfix phase** BEFORE v53-02..04 (same precedent as v5.0-hotfix). Chart-verification peek DROPPED per Daniel ("don't worry about this. Fix the other pieces."). v53-04 likely collapses (Track B's only remaining port-back candidate was the chart-preview pattern, which dies with the chart-verify drop).
+
+Origin: Daniel-loop UAT post-v5.2 surfaced editor regrets that v5.1 + v5.2 polish never addressed at the substrate level. Daniel: *"it needs to be super easy to bind a chart to a particular line… super easy to add a new track/chart/line/song/teaching whatever to the setlist. the old 'add' menu was MUCH better."* Three high-friction surfaces: (1) `ChartBindPopover.tsx` search reported broken on iPad/desktop — Track A confirmed sub-mode (c) (picker opens, typing produces NO results); cmdk value-format scoring (H1) + library hydration (H2) implicated; smallest-fix path is ~10 LOC; **NEW from UAT:** ChartCell off-screen on iPad ("scroll way to the right") added as a 4th surface for v53-02; (2) ~~chart-verification peek~~ — DROPPED per Daniel; (3) `AddRowPlaceholder.tsx` only inserts **song** rows but `TrackType` union has 6 types — the polymorphic Add menu from the old editor was ripped out in the v50-02 amputation; Track B found the deletion in commit `d8c0442` (`AddBar.tsx` 6-tile dropdown), RECOMMENDED to port to v53-03. Same v52-style **systemic, not bandaids** directive — recursive research front-loaded into Phase 1 so phases 2–4 execute against root-cause findings + ported-back patterns instead of guesses.
+
+Constraint: Spreadsheet bones stay (no revert; new editor's TanStack/cmdk/shadcn substrate, sync engine v50-03, Dexie schema v50-04 sticky memory, perf-view dual-read v5h-01-03 all out of scope). Daniel-loop UAT discipline (codified v51-04) — every phase that touches data flow or UI gets Daniel UAT pass on real production before milestone close; UAT failures route to follow-up plans in same phase. /ui-ux-pro-max BLOCKING for every UI-touching phase per SPECIAL-FLOWS.md (v53-02 / v53-03 / v53-04); optional for v53-01 + v5h3-01 research/postmortem plans. Tablet-first (verify every fix on iPad in addition to desktop). UAT is the milestone-close gate, not its own phase (matches v5.2 precedent). v5.0 + v5.2 UAT closes still pending — v5.3 plans in parallel with band onboarding (does not block); v5h3 ships THROUGH band-onboarding window (save-loss must be fixed before band invitation).
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v53-01 | Recursive research (3 parallel tracks) | 1/1 | ✅ Complete | 2026-05-02 |
+| **v5h3-01** | **Save-loss recurrence hotfix** ⚠️ NEW (inserted 2026-05-02 via rescope) | TBD (~3 plans expected: reproduce / fix / postmortem) | Not started | - |
+| v53-02 | Chart binding picker fix + ChartCell discoverability *(chart-verify peek DROPPED per Daniel)* | TBD | Not started (blocked behind v5h3-01) | - |
+| v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | TBD | Not started (blocked behind v5h3-01) | - |
+| v53-04 | Editor affordance pass | TBD (likely collapses to 0) | Not started — pending Daniel decision | - |
+
+### Phase v53-01: Recursive research (3 parallel tracks) ✅ COMPLETE 2026-05-02
+
+Outcome (2026-05-02): 3 parallel research tracks (Track A ChartBind diagnosis / Track B old-editor archaeology / Track C polymorphic Add + chart-peek option sets) + iPad UAT capture (NOT deferred) + RESEARCH-SYNTHESIS.md with rescope recommendation. Daniel selected RESCOPE at decision checkpoint. ~45min end-to-end. Zero source code modified (boundary clean).
+
+Headline outcomes:
+- ⚠️ **Save-loss recurrence surfaced via UAT** (NOT in original v53-01 scope) — same class as v5h-01 (2026-04-27); 6 hypotheses open; LOW confidence; needs production state capture in v5h3-01-01. **Daniel-loop UAT discipline (codified v51-04) WORKS** — caught the bug before any v5.3 code shipped.
+- **ChartBind picker filter broken (sub-mode c confirmed):** picker opens, typing produces no results. cmdk value-format scoring (H1 confirmed) + library hydration timing (H2 partial) implicated. Smallest-fix path ~10 LOC; systemic-fix path ~80-120 LOC. AddRow no-suggestions shares root cause (identical useLiveQuery + cmdk value pattern) — fix bundle covers both surfaces.
+- **NEW iPad finding: ChartCell off-screen** ("scroll way to the right"). Added to v53-02 scope as 4th surface. /ui-ux-pro-max consultation needed at v53-02 PLAN entry for column-reorder vs. row-side affordance.
+- **Polymorphic Add menu found in git history:** commit `d8c0442` (v50-05-02 amputation) deleted `AddBar.tsx` — single "Add Item" button → 6-tile dropdown (Song / Section / Reading / Prayer / Transition / Note) with distinctive icon colors. Track B verdict: **RECOMMENDED** to port to v53-03. Track C Option A (grouped CommandList in current cmdk substrate) is the modern equivalent; Option B (split-button) more literally matches old-editor — Daniel decides at v53-03 PLAN time.
+- **Anti-patterns guarded against:** Inline chart binding (Replace/Unlink) REJECTED — re-introduces v5h-01 fragility class. Dual-write to embedded `setlists/{id}.tracks[]` + top-level `tracks/{id}` REJECTED — same bug class. Optimistic-write state divergence (`use-setlist-logic.ts` 3-state-machine pattern) REJECTED.
+- **Chart-verification peek DROPPED from v5.3 scope** per Daniel. Track C's option set shelved for future-milestone revival. v53-04 likely collapses (chart-preview port-back was its only remaining candidate).
+
+Plans:
+- v53-01-01 ✅ COMPLETE 2026-05-02 — 3 parallel research subagents + iPad UAT capture + synthesis with RESCOPE decision. SUMMARY at `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md`.
+
+Patterns established:
+- Recursive research with HUMAN-ACTION UAT checkpoint can surface NEW high-severity findings outside original scope (save-loss recurrence here); synthesis MUST adapt and recommend rescope rather than force-fit.
+- Old-editor archaeology format (Pattern \| Old SHA \| What-it-did-well \| Risk-if-ported \| Verdict) — directly portable to future amputation/rebuild research.
+- One-root-cause-two-surfaces detection: if 2+ surfaces share substrate code, fix at substrate; do NOT split into per-surface plans (AddRow + ChartBind picker bundle here).
+
+### ⚠️ Phase v5h3-01: Save-loss recurrence hotfix (NEW — inserted via rescope 2026-05-02)
+
+Focus: Reproduce + diagnose + fix the save-loss recurrence Daniel surfaced during v53-01 UAT. Same playbook as v5h-01 (`.paul/postmortems/v5h-01-save-loss.md`).
+
+Daniel's report: *"I made all sorts of changes to a setlist this morning and they didn't save when I just went back to it. This is so annoying. Some of them did, some didn't. Beyond irritating."* — same class as v5h-01 (2026-04-27); the v5.0-hotfix's E+F+B defense-in-depth was supposed to prevent this. Recurrence is evidence that either a new code path bypasses the protections OR auth-claim staleness is back OR the kitchen-sink harness (v50-07-04) fidelity gap that v5h-01-04 deferred has surfaced again.
+
+6 hypotheses surfaced in `.paul/phases/v53-01-recursive-research/ipad-uat-capture.md`:
+- H-SL-1: TextCell single-tap-to-edit (v52-02-02) blur/commit race
+- H-SL-2: Sticky-memory propagation (v50-04 1s debounce) clobbers in-flight edits
+- H-SL-3: `clearFailedOutboxRows` (v52-03) drops a pending row mid-FSM-transition
+- H-SL-4: `config/defaults` write path (v52-05) shares engine pump capacity with track writes
+- H-SL-5: Auth-claim staleness redux (v5h-01 §3 pattern)
+- H-SL-6: Different bug entirely — new code path not yet traced
+
+Recommended structure (3 plans, mirroring v5h-01):
+- **v5h3-01-01 — Reproduce + diagnose** (research; autonomous=false; HUMAN-ACTION for Daniel to capture IndexedDB outbox + Safari Web Inspector console + Network tab from this morning's affected setlist + songs-table count for ChartBind H2 disambiguation. AddRow no-suggestions likely diagnosed in same investigation since it shares root cause with ChartBind picker.)
+- **v5h3-01-02 — Fix** (execute; ~2-4h depending on diagnosis; defense-in-depth pattern from v5h-01-02 precedent if multi-cause).
+- **v5h3-01-03 — Postmortem update** (execute; ~30min; autonomous=true). Extend `.paul/postmortems/v5h-01-save-loss.md` OR create new `v5h3-01-save-loss-recurrence.md`. Critically: identify why kitchen-sink harness (v50-07-04) didn't catch this — the named harness-fidelity gap from v5h-01 §5 (Firebase emulator + thin RTL editor↔perf-view test pair) has NOT been closed since v5h-01-04 deferred it. Recurrence is evidence the deferral was wrong; postmortem MUST escalate or close the gap.
+
+Plans: TBD (defined during /paul:plan)
+/ui-ux-pro-max gate: optional for v5h3-01-01 (research) + v5h3-01-03 (postmortem). Required for v5h3-01-02 only if fix surfaces UI (e.g., new error/recovery affordance).
+
+Tracks:
+- **Track A — ChartBind diagnosis.** Why search reported broken on iPad and desktop. Audit (1) cmdk `value={\`${song.title} ${song.id}\`}` format vs. CommandInput query — fuzzy-match collision likely; (2) `useLiveQuery(getDb().songs.toArray())` hydration timing in the bind context — empty/stale at first render?; (3) iPad-specific focus residue from v52-02 — is `suppressAutoFocus=false` actually firing for ChartBindPopover or is something downstream re-suppressing?; (4) library size + sort order — should recents / "from this setlist" / sticky-memory-bound songs surface ahead of full library? Output: ranked hypotheses + smallest-fix recommendation.
+- **Track B — Old-editor archaeology.** Git-spelunk pre-v50-02 commit history (the amputation deleted ~3,000 LOC of editor surface). Identify what the old `SetlistEditorV2` Add menu + chart-binding flow did well that Daniel misses. Pattern-match against the NEW editor: which patterns can be ported back as additive enhancements without re-introducing old data-flow fragility? Explicit non-goal: revert. Goal: inventory of port-back-worthy patterns ranked by effort × user-impact.
+- **Track C — Polymorphic Add design.** Trade-offs for one Add trigger covering 6 TrackTypes (`song | header | reading | prayer | transition | note`): grouped CommandList (shadcn `<CommandGroup heading>`) vs. split-button with type submenu vs. type-prefixed shortcuts (e.g. `/r` for reading). Default focus = most-used path (Library Song). Chart-verification interaction: row-side thumbnail vs. tap-to-peek modal vs. hover-card preview — and the iPad-specific path (no hover). Output: 2–3 implementable option sets with mockup descriptions for /ui-ux-pro-max consultation in v53-02 / v53-03.
+
+Plans: TBD (defined during /paul:plan)
+/ui-ux-pro-max gate: optional (research, no UI changes)
+
+### Phase v53-02: Chart binding picker fix + ChartCell discoverability *(blocked behind v5h3-01)*
+
+**Updated scope (chart-verify peek DROPPED per Daniel; ChartCell discoverability ADDED per UAT):**
+
+Focus: Two surfaces — (1) ChartBind picker filter actually returns results when typing (Track A Smallest-Fix path: cmdk value format `\`${title} ${id}\`` → `${title}` at ChartBindPopover.tsx:123 + mirror in AddRowPlaceholder.tsx:138, ~10 LOC). (2) ChartCell discoverable on iPad without scrolling right past Notes column — column-reorder vs. sticky-right-column vs. row-side affordance (chart-icon at row gutter); /ui-ux-pro-max consultation at PLAN entry locks the choice. (3) OPTIONAL: if v5h3-01-01 production state reveals library hydration is the dominant cause AND Daniel still feels library friction after smallest-fix lands, add Track A Systemic-Fix path "Recent" section in a v53-02-02 follow-up plan (~80-120 LOC). AddRow no-suggestions fix is automatic byproduct of (1) — same substrate.
+
+Done means: open ChartBind picker → instant focus + keyboard on iPad → type a few chars → matches surface immediately → tap to bind → ChartCell visible without horizontal scroll on iPad. Chart verification peek explicitly OUT OF SCOPE.
+
+Plans: TBD (defined during /paul:plan after v5h3-01 closes)
+/ui-ux-pro-max gate: BLOCKING
+
+### Phase v53-03: Polymorphic Add menu *(blocked behind v5h3-01)*
+
+Focus: Replace `AddRowPlaceholder.tsx` single-purpose Add (Library Song / free-text only) with polymorphic Add trigger covering all 6 `TrackType` values — Library Song / Free-text Song / Reading / Prayer / Transition / Section header / Note. Track C surfaced 3 option sets; Track B confirmed old-editor `AddBar.tsx` (commit `d8c0442`) had a 6-tile dropdown with distinctive icon colors that Daniel misses. Decision at v53-03 PLAN entry between Track C Option A (grouped CommandList in current cmdk substrate — strongest by Track C ranking) vs. Option B (split-button matching old-editor more literally — Daniel's "MUCH better" memory may favor this). /ui-ux-pro-max consultation drives.
+
+**MANDATORY:** Touch-target compliance fix — current CommandItems use `py-1` (~16px), violates 44×44 floor. Bump to `min-h-[44px] [@media(pointer:coarse)]:py-2` per /ui-ux-pro-max rule.
+
+Plans: TBD (defined during /paul:plan after v5h3-01 closes)
+/ui-ux-pro-max gate: BLOCKING
+
+### Phase v53-04: Editor affordance pass *(likely COLLAPSES — pending Daniel decision)*
+
+Original focus: whatever Track B surfaces beyond polymorphic Add menu as port-back-worthy. Track B surfaced ONE additional candidate (chart-preview port-back from `SongRow` collapsed-state file-name link) and Daniel **dropped chart-verification entirely** from v5.3 scope. Net: v53-04 has **zero remaining scope** unless Daniel pulls in something specific during v53-02/03 execution.
+
+Recommendation at v53-02 / v53-03 close: **collapse v53-04 entirely** unless Daniel explicitly pulls in something. v5.3 becomes 3 implementation phases (v53-01 / v5h3-01 / v53-02 / v53-03) instead of 4.
+
+Plans: 0 expected (TBD if anything emerges)
+/ui-ux-pro-max gate: N/A unless plans materialize
+
+### Milestone-close gate
+
+UAT (Daniel runs real-production weekly worship cycle on iPad — Erev Shabbat + Shabbat morning) closes the milestone. Not its own phase. UAT failures route to follow-up plans in the affected phase per v51-04 rule. Once UAT passes: `/paul:complete-milestone v5.3` → then `/paul:audit-milestone v5.0` (or v5.2 if still pending) per the parent-milestone close path.
+
+---
+
+## Previously Active Milestone (Pending Band UAT)
+
 **v5.2 — Band-Onboarding Hardening**
-Status: ✅ ALL 5 PHASES SHIPPED (milestone-close UAT pending)
+Status: ✅ ALL 5 PHASES SHIPPED 2026-04-30 (milestone-close UAT pending — band onboarding cycle)
 Phases: 5 of 5 complete
 Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Systemic fixes — iPad input/focus, sync-error UX, touch-affordance discoverability, setlist lifecycle, plus template-management as a real feature. Daniel explicitly requested **systemic fixes, not bandaids** — recursive research front-loaded into Phase 1 so phases 2–5 execute against root-cause findings instead of guesses.
 
@@ -94,9 +200,9 @@ Plans:
 
 ## Next Milestone
 
-After v5.2 ships and Daniel completes a real-production weekly worship cycle UAT, `/paul:audit-milestone v5.0` closes the v5.0 parent milestone. Then v5.3 scope (or v6.0) is defined via `/paul:discuss-milestone`.
+After v5.3 ships and Daniel-loop UAT closes it, `/paul:complete-milestone v5.3` archives it. Parent v5.0 + v5.2 milestone audits can run in parallel against the same band-onboarding UAT cycle. Next-next scope (v5.4 / v6.0) defined via `/paul:discuss-milestone` post-close.
 
-**Open carry-over from v5.0 (still pending UAT):** v5.0 milestone has been pending UAT since 2026-04-27 — v5.1 + v5.2 are the prerequisite polish to make Daniel's full v5.0 UAT comfortable on iPad. v5.2 is the band-onboarding gate-clearer.
+**Open carry-over from v5.0 + v5.2 (still pending UAT):** v5.0 has been pending UAT since 2026-04-27; v5.2 since 2026-04-30. v5.1 + v5.2 + v5.3 are the prerequisite polish stack to make Daniel's full v5.0 UAT comfortable on iPad. v5.3 closes the editor-UX-regret gap that v5.1 + v5.2 didn't address at the substrate level.
 
 ## Completed Milestones
 

@@ -5,18 +5,37 @@
 See: .paul/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v5.2 — Band-Onboarding Hardening. 5 phases: v52-01 recursive research (4 parallel tracks) / v52-02 iPad focus + cmdk system fix / v52-03 SyncIndicator failure UX overhaul / v52-04 touch affordance + setlist lifecycle UX / v52-05 default-template management. Theme: *"Make iPad bulletproof + give setlists a real lifecycle, so we can invite the band."* Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis. /ui-ux-pro-max BLOCKING for every UI-touching phase.
+**Current focus:** v5.3 — Editor UX Repair. 4 phases: v53-01 recursive research (3 parallel tracks: ChartBind diagnosis + old-editor archaeology + polymorphic Add design) / v53-02 chart binding + verification / v53-03 polymorphic Add menu / v53-04 editor affordance pass. UAT closes the milestone (not its own phase, matches v5.2 precedent). Theme: *"The spreadsheet bones stay; the affordances get fixed."* Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–4 plan after v53-01 synthesis. Spreadsheet bones (v50-05 substrate, sync engine v50-03, sticky memory v50-04, perf-view dual-read v5h-01-03) are out of scope. /ui-ux-pro-max BLOCKING for v53-02..v53-04. Tablet-first.
 
 ## Current Position
 
-Milestone: ✅ v5.2 — Band-Onboarding Hardening — ALL 5 phases shipped 2026-04-30. All 7 v52-01 issues closed across 4 implementation phases (v52-02 + v52-03 + v52-04 + v52-05). Awaiting Daniel weekly worship cycle UAT before band onboarding + v5.0 audit. Tablet-first; iPad-bulletproof.
-Phase: (none active — milestone-close UAT pending)
-Plan: (none active)
-Status: v5.2 milestone-close UAT pending. Next: Daniel runs real-production weekly worship cycle (Erev Shabbat + Shabbat morning) → invite band → first-week smoke → `/paul:audit-milestone v5.0` to formally close the parent v5.0 milestone (which v5.1 + v5.2 were prerequisite hardening for).
+Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
+Phase: v5h3-01 of 4 (Save-loss recurrence hotfix — NEW inserted via rescope 2026-05-02). v53-01 complete; v5h3-01 next.
+Plan: Not started (next: `/paul:plan` for v5h3-01-01 reproduce + diagnose)
+Status: v53-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md`. Phase v53-01 complete (1/1 plans). Rescope applied: v5h3-01 phase inserted in ROADMAP; chart-verification peek dropped from v53-02; v53-04 likely collapses. Next: `/paul:plan` for v5h3-01-01 (reproduce + diagnose save-loss recurrence) — Daniel will be asked to capture IndexedDB outbox + Safari Web Inspector state from this morning's affected setlist.
+
+Progress:
+- v5.3 — Editor UX Repair: [██░░░░░░░░] ~25% (1 of 4 phases complete; v5h3 inserted)
+- Phase v53-01: [██████████] 100% ✅ COMPLETE
+- Phase v5h3-01: [░░░░░░░░░░] 0% (ready to plan)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v52-05 loop complete; v52-05 phase complete; v5.2 milestone-shipped UAT pending]
+  ✓        ✓        ✓     [v53-01-01 LOOP COMPLETE; phase v53-01 complete; ready for next phase v5h3-01]
+
+### Decisions (v53-01-01)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-02 | iPad UAT captured (NOT deferred); save-loss recurrence surfaced as NEW high-severity finding | v53-01 | Triggered rescope recommendation; closes Track A confidence gap; opens save-loss LOW-confidence gap |
+| 2026-05-02 | Chart-verification peek DROPPED from v5.3 scope per Daniel ("don't worry about this. Fix the other pieces.") | v53-01 | v53-02 scope shrinks ~half; Track C chart-peek option set shelved for future milestone; v53-04 likely collapses (Track B's only remaining candidate was chart-preview) |
+| 2026-05-02 | RESCOPE selected at synthesis decision checkpoint — insert v5h3-hotfix BEFORE v53-02..04 | v53-01 | v5.3 milestone shape changes: was [v53-01 / v53-02 / v53-03 / v53-04] → becomes [v53-01 (done) / v5h3-01..03 (NEW) / v53-02 / v53-03] (v53-04 collapse pending Daniel confirmation in unify or v5h3 plan) |
+| 2026-05-02 | NEW finding: ChartCell off-screen on iPad ("scroll way to the right to see the chart button") | v53-01 → v53-02 | v53-02 scope expands by 1 surface (ChartCell discoverability fix); /ui-ux-pro-max consultation needed at PLAN entry for column-reorder vs. row-side affordance |
+| 2026-05-02 | NEW finding: AddRow no-suggestions-when-typing shares root cause with ChartBind picker (both use identical useLiveQuery + cmdk value pattern) — ONE root cause, TWO surfaces | v53-01 → v5h3 / v53-02 | Likely diagnosed for free in v5h3-01-01 production state capture (songs-table count check); fix bundle covers both surfaces |
+
+**Previously active (pending UAT close, NOT blocking v5.3 planning):**
+- v5.2 Band-Onboarding Hardening — ALL 5 phases shipped 2026-04-30 (v52-01..v52-05). Awaiting Daniel weekly worship cycle UAT.
+- v5.0 Bulletproof Editor — pending UAT since 2026-04-27. v5.1 + v5.2 + v5.3 are the prerequisite polish stack. Closes via `/paul:audit-milestone v5.0` post-band-cycle.
 
 ### v52-05 close (2026-04-30)
 - v52-05-01 LOOP COMPLETE 2026-04-30. Vertical-slice commit `cf30d62` (pushed origin master; Vercel auto-deployed) + Firebase rules deploy (compile + release confirmed via CLI). type=execute. **Track D Option C admin-curated pointer doc** at `config/defaults` (codebase convention — matches `config/featured` / `config/congregation` neighbors; NOT Track D's hypothetical `system/templates`). Doc shape: `{ shabbat_morning?, friday_night?, updatedAt, updatedBy }`. Phase 1 scope: shabbat_morning + friday_night (OQ Q3 lock); future ServiceType expansion is additive. New `match /config/defaults` Firestore rule (read: signed-in; write: admin per OQ Q2 lock). New service helpers: `getDefaultForServiceType` returns null on missing/invalid; `setDefaultForServiceType` uses `setDoc(merge: true)` so each call updates one key only. `findLastMatchingService` consults pointer first; on missing/dangling/repurposed silently falls through to legacy 20-most-recent query (OQ Q5 silent-fallback lock — no Sentry, no toast, alerting on absence is alert fatigue). UI: NEW "Save as Default for {Shabbat Morning | Friday Night}" menu item in BOTH UpcomingSetlistCard + SetlistCard kebabs (Star icon, between "Save as Template" and "Delete"; data-testid="setlist-card-save-as-default"). Gated `isAdmin && type ∈ PHASE_1_DEFAULT_TYPES`. handleSaveAsDefaultClick toast wrapper in use-setlist-dashboard.ts. SetlistDashboard.tsx wires `isAdmin` + handler through both card sites. 9 files modified (7 source + 2 test; 0 new files). 2 auto-fixes beyond plan files_modified: AuditAction union extension in setlist-audit.ts triggered exhaustive-map error → added matching label "Set as default for service" to SetlistHistoryPanel.tsx (essential type-system fix). New "v52-05 default-template pointer" describe with 5 cases in setlist-firebase.test.ts; new "v52-05: handleSaveAsDefaultClick" describe with 3 cases in use-setlist-dashboard.test.ts. Mock @/components/setlist/SetlistCards in hook tests to avoid pulling component graph. Suite 1528 → 1536 (+8 cases; exceeds plan estimate of +7). tsc clean; next build clean. Boundary diff confirms 9 source files (excluding auto-touched package.json + src/build-info.json). Engine FSM, state-machine, init.ts, snapshot-listener, ReconciliationProvider, write.ts, sticky-memory contract (v50-04), v52-02 + v52-03 + v52-04 contracts ALL preserved. /ui-ux-pro-max gate satisfied (carryover from v52-04). Daniel approved with explicit "Approved" at HUMAN-VERIFY checkpoint (milestone-close phase warranted careful surface review — NOT sight-unseen unlike v52-03/v52-04). AC-7 dangling-pointer fallback UAT optional, not exercised (covered by unit test). SUMMARY at `.paul/phases/v52-05-default-template-management/v52-05-01-SUMMARY.md`.
@@ -119,10 +138,12 @@ Last activity: 2026-04-27 — v51-03 LOOP COMPLETE end-to-end in single fresh-se
 
 ## Session Continuity
 
-Last session: 2026-04-30 — v5.2 milestone all 5 phases shipped
-Stopped at: v52-05 phase complete; v5.2 milestone reaches 5 of 5 phases shipped (all 7 v52-01 issues closed across v52-02 / v52-03 / v52-04 / v52-05). Awaiting Daniel weekly worship cycle UAT.
-Next action: **Pause for Daniel UAT.** Daniel runs real-production weekly worship cycle (Erev Shabbat + Shabbat morning) on iPad → invites band → first-week smoke. UAT failures route to follow-up plans in the affected phase per v51-04 rule. Once UAT passes + first-week smoke is clean, run `/paul:audit-milestone v5.0` to formally close the parent v5.0 milestone (v5.1 + v5.2 were prerequisite polish + hardening). Recommend a `/clear` or fresh session before the next major phase — context is at ~450k of 1M.
-Resume file: `.paul/ROADMAP.md` for milestone-close path, or `.paul/phases/v52-05-default-template-management/v52-05-01-SUMMARY.md` for v52-05 close context.
+Last session: 2026-05-02 — v53-01 LOOP COMPLETE end-to-end (PLAN ✓ → APPLY ✓ → UNIFY ✓). Rescope applied; v5h3 phase inserted; SUMMARY + STATE + PROJECT + ROADMAP updated.
+Stopped at: v53-01-01 LOOP COMPLETE; phase v53-01 complete (1/1 plans). Phase v5h3-01-save-loss-recurrence directory created; ready to plan. Phase commit pending (next).
+Next action: `/paul:plan` for v5h3-01-01 (reproduce + diagnose save-loss recurrence). Plan should mirror v5h-01-01 structure: research + HUMAN-ACTION for Daniel to capture production state from this morning's affected setlist (IndexedDB outbox + Safari Web Inspector console + Network tab + songs-table count). 6 hypotheses (H-SL-1..6) listed in `.paul/phases/v53-01-recursive-research/ipad-uat-capture.md`.
+Resume file: `.paul/phases/v53-01-recursive-research/v53-01-01-SUMMARY.md` (close-loop record) + `.paul/phases/v53-01-recursive-research/RESEARCH-SYNTHESIS.md` (rescope rationale + open questions)
+
+**Parallel track (not blocking v5.3 planning):** v5.2 + v5.0 still pending Daniel weekly worship cycle UAT on real production. UAT can run in parallel with v5.3 planning/research; UAT failures on v5.2 surfaces route to follow-up plans in their original v52-* phases per v51-04 rule.
 
 ### Decisions (v52-02-01)
 
@@ -138,16 +159,19 @@ Resume file: `.paul/ROADMAP.md` for milestone-close path, or `.paul/phases/v52-0
 Last commit: 74b9fc8 — feat(v52-05): default-template pointer-doc complete — close phase + v5.2 milestone
 Branch: master
 Feature branches merged: none (no feature branches per project preference)
-Pushed: ✓ 74b9fc8 → origin master (2026-04-30) [phase-close]; cf30d62 [v52-05-01 implementation]
+Pushed: ✓ 74b9fc8 → origin master (2026-04-30)
 Firebase deploys: ✓ firestore:rules → crcmusiccharts (2026-04-30, before cf30d62 push)
-Resume context (v5.2):
-- v5.2 is a 5-phase milestone surfaced post-v5.1 by 7 issues from Daniel-loop UAT (5 bugs + 1 feature + 1 UX hierarchy fix)
-- Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–5 plan after v52-01 synthesis
-- v52-01 is research-only (no code); 4 parallel tracks A/B/C/D mapping to Issue clusters
-- /ui-ux-pro-max BLOCKING gate applies to v52-02, v52-03, v52-04, v52-05 (UI-touching phases) — optional for v52-01
-- Tablet-first; verify every fix on iPad in addition to desktop (per v5h-01 postmortem lesson)
-- Daniel-loop UAT discipline: every phase touching data flow gets Daniel UAT pass on real production before milestone close
-- v5.0 UAT close still pending — v5.2 is the gate-clearer for band onboarding; `/paul:audit-milestone v5.0` runs after v5.2 ships
+
+Resume context (v5.3):
+- v5.3 is a 4-phase milestone surfaced post-v5.2 from Daniel UAT regret on the v50-05 spreadsheet editor itself (substrate-level UX, not the v5.1/v5.2 polish surfaces)
+- Daniel explicit ask: **systemic fixes, not bandaids** — research-first; phases 2–4 plan after v53-01 synthesis (same v52-01 pattern)
+- v53-01 is research-only (no code); 3 parallel tracks A (ChartBind diagnosis) / B (old-editor archaeology) / C (polymorphic Add design + chart-verification interaction)
+- v50-02 amputation deleted ~3,000 LOC of old editor surface (incl. polymorphic Add menu); Track B git-spelunks that history for port-back-worthy patterns — explicit non-goal: revert
+- /ui-ux-pro-max BLOCKING gate applies to v53-02, v53-03, v53-04 (UI-touching phases) — optional for v53-01
+- Tablet-first; verify every fix on iPad in addition to desktop (per v5h-01 postmortem lesson, reinforced by v5.2)
+- Daniel-loop UAT discipline (codified v51-04): every phase touching data flow or UI gets Daniel UAT pass on real production before milestone close; UAT closes the milestone (not its own phase, matches v5.2 precedent)
+- Spreadsheet bones (v50-05 substrate, sync engine v50-03, sticky memory v50-04, perf-view dual-read v5h-01-03) are out of scope — v5.3 is affordance repair, not substrate rebuild
+- v5.0 + v5.2 UAT closes still pending — v5.3 plans in parallel with band onboarding; does not block
 - Standing prefs reminder: push to `origin master` (NOT origin master:main); no local dev server; tablet-first; Reform Jewish (Friday night + Shabbat morning, NOT Sunday); "Vocal Lead" terminology; explicitly stage `.paul/phases/{phase}/` on PAUL commits; run `next build` not just `tsc`; multi-computer flow → always pull + fetch --tags before starting
 - Pre-existing dirty state on package.json + src/build-info.json — auto-touched by dev script; do NOT stage on PAUL commits
 
