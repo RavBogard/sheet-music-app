@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 
 import type {
+    LocalEditLog,
     LocalSetlist,
     LocalSong,
     LocalTrack,
@@ -14,6 +15,7 @@ export class LocalDb extends Dexie {
     songs!: Table<LocalSong, string>
     outbox!: Table<OutboxRow, number>
     meta!: Table<MetaRow, string>
+    edit_log!: Table<LocalEditLog, number>
 
     constructor(name = 'crc-local') {
         super(name)
@@ -36,6 +38,23 @@ export class LocalDb extends Dexie {
             songs: 'id, normalizedTitle',
             outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
             meta: 'key',
+        })
+        // v3 (v5h3-01-02): additive new `edit_log` table for save-loss
+        // recurrence auto-capture. ONLY new table; existing tables
+        // re-declared verbatim per Dexie's per-version index carryover
+        // semantics. Per the v50-04 additive-non-indexed rule, the new
+        // table's only index beyond the auto-increment primary key is
+        // `ts` (used for FIFO eviction + descending recent-N queries by
+        // upload-on-mount). No upgrade callback needed — adding a table
+        // is non-destructive and existing rows in other tables are
+        // untouched.
+        this.version(3).stores({
+            setlists: 'id, updatedAt, ownerId, eventDate',
+            tracks: 'id, setlistId, [setlistId+order], songId',
+            songs: 'id, normalizedTitle',
+            outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
+            meta: 'key',
+            edit_log: '++id, ts',
         })
     }
 }

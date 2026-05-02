@@ -113,3 +113,47 @@ export class WriteAtomicityError extends Error {
         this.cause = cause
     }
 }
+
+// v5h3-01-02: edit-log instrumentation row.
+//
+// Append-only IDB-persisted breadcrumb for the v5.0 sync substrate's hot
+// write paths (see .paul/phases/v5h3-01-save-loss-recurrence). Every write
+// path (TextCell.commit, DropdownCell.commit, applyEdit, engine.drainOnce
+// per-row, snapshot-listener.handleTracks per-change) records ONE row.
+//
+// HARD CONTRACT: NO USER-TYPED CONTENT IN ANY FIELD. All fields are stable
+// identifiers (ids, opcodes, outcome strings) or timestamps. `payloadKeys`
+// is the list of FIELD NAMES touched, never the values. The TextCell /
+// DropdownCell call sites pass placeholders ('(text)' / '(dropdown)') so
+// the breadcrumb sequence still tells the story without ever touching the
+// user's typed value. Anyone adding a field must preserve this rule —
+// see the no-PII test in src/lib/sync/__tests__/edit-log.test.ts.
+export type EditLogSource =
+    | 'text-cell'
+    | 'dropdown-cell'
+    | 'apply-edit'
+    | 'engine-drain'
+    | 'snapshot-listener'
+
+export interface LocalEditLog {
+    /** Auto-increment primary key assigned by Dexie. */
+    id?: number
+    /** Wall-clock ms when the entry was recorded. */
+    ts: number
+    source: EditLogSource
+    /** Outbox op for apply-edit / engine-drain rows; outcome verb for
+     *  snapshot-listener rows. Always a small fixed string vocabulary. */
+    op?: string
+    collection?: string
+    docId?: string
+    cellType?: 'text' | 'dropdown'
+    /** Names (NOT values) of fields touched. Cells pass a single
+     *  placeholder ('(text)' / '(dropdown)') to avoid leaking aria labels. */
+    payloadKeys?: string[]
+    /** Outcome string from the call site's vocabulary. See PLAN.md AC-4. */
+    outcome?: string
+    /** Engine drain attempt counter (used by engine-drain rows). */
+    attempts?: number
+    /** Local row updatedAt for snapshot-listener guard outcomes. */
+    localUpdatedAt?: number
+}

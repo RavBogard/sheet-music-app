@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { getDb, resetDbForTests } from '../schema'
 import type { LocalSong } from '../types'
 
-describe('LocalDb schema (v50-04: v2 additive defaults + recent on songs)', () => {
+describe('LocalDb schema (v5h3-01-02: v3 additive edit_log)', () => {
     beforeEach(async () => {
         await resetDbForTests()
     })
@@ -13,10 +13,10 @@ describe('LocalDb schema (v50-04: v2 additive defaults + recent on songs)', () =
         await resetDbForTests()
     })
 
-    it('opens at Dexie version 2', async () => {
+    it('opens at Dexie version 3', async () => {
         const db = getDb()
         await db.open()
-        expect(db.verno).toBe(2)
+        expect(db.verno).toBe(3)
     })
 
     it('round-trips a song row carrying defaults + recent', async () => {

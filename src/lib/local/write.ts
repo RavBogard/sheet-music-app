@@ -1,3 +1,5 @@
+import { recordEdit } from '../sync/edit-log'
+
 import { getDb } from './schema'
 import {
     type EditDescriptor,
@@ -123,6 +125,25 @@ export async function applyEdit(
             err,
         )
     }
+
+    // v5h3-01-02: edit-log breadcrumb. Fire-and-forget; recordEdit is
+    // failure-swallowing so this never blocks or crashes the caller. Placed
+    // OUTSIDE the Dexie tx so instrumentation can't corrupt applyEdit's
+    // atomicity (see boundaries in v5h3-01-02-PLAN.md).
+    const payloadKeys =
+        edit.op === 'set'
+            ? Object.keys(edit.doc)
+            : edit.op === 'update'
+              ? Object.keys(edit.patch)
+              : []
+    void recordEdit({
+        ts: now,
+        source: 'apply-edit',
+        op: edit.op,
+        collection: edit.collection,
+        docId,
+        payloadKeys,
+    })
 
     // After commit: read newDoc + push undo snapshot. Fire-and-forget so
     // we don't block the user-perceived save latency on the snapshot.

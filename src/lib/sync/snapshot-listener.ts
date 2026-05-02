@@ -37,6 +37,7 @@ import { db as defaultFirestoreDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import { logger as defaultLogger } from '@/lib/logger'
+import { recordEdit } from './edit-log'
 import { captureSyncFailure } from './sentry-capture'
 
 interface ListenerLogger {
@@ -207,6 +208,14 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
     async function handleTracks(changes: TrackChange[]): Promise<void> {
         if (cancelled || changes.length === 0) return
         try {
+            // v5h3-01-02: collect per-change outcomes inside the tx so we
+            // can fire the recordEdit breadcrumbs OUTSIDE the tx (avoids
+            // nesting a second Dexie transaction inside this one).
+            const outcomes: Array<{
+                docId: string
+                outcome: string
+                localUpdatedAt?: number
+            }> = []
             await db.transaction('rw', db.tracks, db.outbox, async () => {
                 for (const change of changes) {
                     if (await hasPendingOutboxRow(db, 'tracks', change.docId)) {
@@ -215,12 +224,20 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                         // will sync the local row when its commit lands, OR
                         // ReconciliationProvider (v50-06-02) will surface
                         // the conflict.
+                        outcomes.push({
+                            docId: change.docId,
+                            outcome: 'guard-skipped-pending',
+                        })
                         continue
                     }
 
                     if (change.type === 'removed') {
                         const local = await db.tracks.get(change.docId)
                         if (local) await db.tracks.delete(change.docId)
+                        outcomes.push({
+                            docId: change.docId,
+                            outcome: 'remove-applied',
+                        })
                         continue
                     }
 
@@ -231,8 +248,21 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                     // updatedAt is undefined (engine writeback unresolved)
                     // OR when it's at least as new as the delivery.
                     if (local) {
-                        if (local.updatedAt === undefined) continue
-                        if (local.updatedAt >= change.updatedAt) continue
+                        if (local.updatedAt === undefined) {
+                            outcomes.push({
+                                docId: change.docId,
+                                outcome: 'guard-skipped-undefined',
+                            })
+                            continue
+                        }
+                        if (local.updatedAt >= change.updatedAt) {
+                            outcomes.push({
+                                docId: change.docId,
+                                outcome: 'guard-skipped-stale',
+                                localUpdatedAt: local.updatedAt,
+                            })
+                            continue
+                        }
                     }
                     const next: LocalTrack = {
                         ...(change.data as LocalTrack),
@@ -240,8 +270,27 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                         updatedAt: change.updatedAt,
                     } as LocalTrack
                     await db.tracks.put(next)
+                    outcomes.push({
+                        docId: change.docId,
+                        outcome: 'applied',
+                        localUpdatedAt: change.updatedAt,
+                    })
                 }
             })
+            // v5h3-01-02: emit edit-log breadcrumbs AFTER the tx commits.
+            // Fire-and-forget; recordEdit is failure-swallowing so this
+            // never blocks or crashes the listener.
+            const breadcrumbTs = Date.now()
+            for (const o of outcomes) {
+                void recordEdit({
+                    ts: breadcrumbTs,
+                    source: 'snapshot-listener',
+                    collection: 'tracks',
+                    docId: o.docId,
+                    outcome: o.outcome,
+                    localUpdatedAt: o.localUpdatedAt,
+                })
+            }
         } catch (err) {
             logger.warn('[SnapshotListener] tracks apply failed', err)
             captureSyncFailure(err, {

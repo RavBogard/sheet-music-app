@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { recordEdit } from '@/lib/sync/edit-log'
 import { cn } from '@/lib/utils'
 
 export interface TextCellProps {
@@ -77,6 +78,18 @@ export function TextCell({
     const commit = (advance?: 'up' | 'down' | 'left' | 'right') => {
         if (draft !== asString(value)) {
             onCommit(draft)
+            // v5h3-01-02: edit-log breadcrumb. Fire-and-forget; PII-safe
+            // — only the placeholder '(text)' is recorded. Never the
+            // draft value, never the ariaLabel (which can leak setlist
+            // context like "Track title for row 3"). The breadcrumb
+            // sequence (text-cell → apply-edit → engine-drain) tells the
+            // story without any user-typed content.
+            void recordEdit({
+                ts: Date.now(),
+                source: 'text-cell',
+                cellType: 'text',
+                payloadKeys: ['(text)'],
+            })
         }
         setEditing(false)
         if (advance) onMoveFocus?.(advance)

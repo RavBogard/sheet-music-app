@@ -16,7 +16,7 @@ Constraint: Spreadsheet bones stay (no revert; new editor's TanStack/cmdk/shadcn
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v53-01 | Recursive research (3 parallel tracks) | 1/1 | ✅ Complete | 2026-05-02 |
-| **v5h3-01** | **Save-loss recurrence hotfix** ⚠️ NEW (inserted 2026-05-02 via rescope) | TBD (~3 plans expected: reproduce / fix / postmortem) | Not started | - |
+| **v5h3-01** | **Save-loss recurrence hotfix** ⚠️ NEW (inserted 2026-05-02 via rescope) | 0/1 (~3 plans expected total: reproduce ✏️ / fix / postmortem) | 🚧 Planning | - |
 | v53-02 | Chart binding picker fix + ChartCell discoverability *(chart-verify peek DROPPED per Daniel)* | TBD | Not started (blocked behind v5h3-01) | - |
 | v53-03 | Polymorphic Add menu (port `AddBar.tsx` from commit d8c0442) | TBD | Not started (blocked behind v5h3-01) | - |
 | v53-04 | Editor affordance pass | TBD (likely collapses to 0) | Not started — pending Daniel decision | - |

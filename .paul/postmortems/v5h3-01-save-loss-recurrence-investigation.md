@@ -232,6 +232,51 @@ Zero source code modified. `git diff sheet-music-app/src/ sheet-music-app/firest
 
 ---
 
+## ⚠️ NEW EVIDENCE — 2026-05-02 (mid-instrumentation-build, Daniel live UAT)
+
+**Daniel's words:** *"I'm in the middle of making setlists right now and having the terrible bugs around saving. it seems to be related to the 'keep mine' vs 'take theirs' things.... EVEN THOUGH I AM THE ONLY ONE USING THE SETLIST OR EDITING IT. Super terrible bug. this has to get fixed."*
+
+### What this means
+
+The reconciliation modal ("Keep mine / Take theirs", v50-06-02) ONLY fires on `VersionMismatchError` — engine.ts:309-316 marks the outbox row `failed` and dispatches `DRAIN_VERSION_MISMATCH`, which transitions FSM to `conflict`, which opens the modal via ReconciliationProvider.
+
+`VersionMismatchError` only comes from the production Firestore adapter when `runTransaction` precondition `expectedUpdatedAt` doesn't match server's current `updatedAt`. Single-user context = phantom conflict — Daniel is the only writer, but somehow the precondition is failing.
+
+### Hypothesis re-ranking (post-evidence)
+
+| # | Hypothesis | Status (post-evidence) | Reasoning |
+|---|---|---|---|
+| **NEW H-SL-7** | **expectedUpdatedAt threading stale across rapid same-doc edits** | 🔴 **HIGH CONFIDENCE** | Most likely cause. Editor passes `expectedUpdatedAt: row.updatedAt` from useLiveQuery. If user makes 2 edits in rapid succession (e.g., types into Notes, then Title) before Edit 1's engine writeback completes + useLiveQuery re-renders, Edit 2 captures STALE row.updatedAt. Edit 1 commits → server bumps to ts1 → engine writeback updates local to ts1 → but Edit 2 (already queued) has expectedUpdatedAt=ts0 → VersionMismatch on Edit 2. |
+| **NEW H-SL-8** | **Snapshot-listener delivery bumps local.updatedAt between edit-prep and edit-commit** | 🟠 **MEDIUM-HIGH CONFIDENCE** | Listener delivery for the same doc updates local.updatedAt to ts1 (server-stamped). User-pending edit was prepared with expectedUpdatedAt=ts0. When engine drains, server has ts1, expectedUpdatedAt=ts0 → VersionMismatch. v50-06-03 outbox-pending guard SHOULD prevent listener from bumping local while outbox row exists, but maybe: (a) listener guard runs BEFORE outbox row written; (b) cross-tab scenario; (c) initial delivery before first edit. |
+| H-SL-1 | TextCell single-tap-to-edit blur/commit race | 🟡 WEAKENED | If the bug were "edit doesn't reach Dexie", reconciliation modal wouldn't fire (no VersionMismatch — just no commit attempt). Reconciliation = commit attempted + rejected. So edit DOES reach Dexie + outbox; bug is downstream at engine drain. |
+| H-SL-5 | Auth-claim staleness redux | ❌ RULED OUT (post-evidence) | Auth errors → AuthError class, not VersionMismatchError. Reconciliation modal never opens for AuthError. Different code path entirely. |
+| H-SL-6 | Different bug entirely | ✅ **CRYSTALLIZED** as H-SL-7/H-SL-8 | The "different bug" turned out to be expectedUpdatedAt threading race. Renamed; confidence upgraded. |
+| H-SL-2 | Sticky-memory writes-songs-not-tracks | ❌ RULED OUT | Unchanged. |
+| H-SL-3 | clearFailedOutboxRows mid-FSM race | ❌ RULED OUT | Unchanged. |
+| H-SL-4 | config/defaults pump-capacity contention | ❌ RULED OUT | Unchanged. |
+
+### Selective-failure pattern explained (matches Daniel's "some did, some didn't")
+
+Some edits succeed because their `expectedUpdatedAt` thread is current; others fail because they captured a stale `row.updatedAt` before the previous edit's writeback re-rendered useLiveQuery. **Pattern:** rapid same-doc edits (key change → notes change on the same row, OR multi-cell bulk-edit) → first succeeds, subsequent fail with VersionMismatch → reconciliation modal opens → user clicks "Keep mine" → engine retries with `newExpectedUpdatedAt` (engine.resolveConflict) → succeeds.
+
+### Why this didn't surface in v5h-01
+
+v5h-01 was about save-loss with NO reconciliation modal (silent failure due to missing firestore.rules). E+F+B fix added rules + LWW guards. **VersionMismatch path was already wired (v50-06-02) and known correct under sane expectedUpdatedAt threading** — we didn't audit threading because v5h-01 was a different bug class.
+
+### Recommended fix shape (UPDATED — post-evidence)
+
+**Single-cause fix on H-SL-7 (expectedUpdatedAt threading) — likely 30-80 LOC.**
+
+Two implementation options for v5h3-01-03 to pick at PLAN time:
+- **Option Alpha — Read latest local.updatedAt inside applyEdit** (instead of editor passing stale captured value). applyEdit reads `db.{collection}.get(docId)` inside its tx, takes the CURRENT updatedAt, writes that as the outbox row's expectedUpdatedAt. Editor's passed value becomes a hint, not authoritative.
+- **Option Beta — Auto-resolve VersionMismatch to "Keep mine" silently when only-one-writer is detected** (e.g., no other-device snapshot-delivery has bumped local in the last N seconds). Less surgical; modal still exists for genuine conflicts.
+
+Option Alpha is preferred — it fixes the root cause; Option Beta is a bandaid that masks the threading bug.
+
+**Fallback:** if v5h3-01-02 instrumentation captures Sentry breadcrumbs from Daniel's continued editing showing a different sequence than H-SL-7 predicts, re-rank in v5h3-01-03 PLAN.
+
+---
+
 ## Verdict Summary
 
 - 6 hypotheses → 3 RULED OUT (H-SL-2, H-SL-3, H-SL-4) by code-scan; 3 STILL OPEN (H-SL-1, H-SL-5, H-SL-6) requiring evidence.

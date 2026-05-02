@@ -17,6 +17,7 @@ import {
     TransientError,
     VersionMismatchError,
 } from './firestore-adapter'
+import { recordEdit } from './edit-log'
 import { captureSyncFailure } from './sentry-capture'
 import {
     type SyncEvent,
@@ -280,6 +281,17 @@ export class SyncEngine {
                         }
                     },
                 )
+                // v5h3-01-02: edit-log breadcrumb on successful commit.
+                // Fire-and-forget; failure-swallowing helper.
+                void recordEdit({
+                    ts: this.clock.now(),
+                    source: 'engine-drain',
+                    op: row.op,
+                    collection: row.collection,
+                    docId: row.docId,
+                    outcome: 'success',
+                    attempts: row.attempts,
+                })
                 continue
             } catch (err) {
                 const handled = await this.handleAdapterError(row, err)
@@ -305,6 +317,33 @@ export class SyncEngine {
         const lastError =
             err instanceof Error ? err.message : String(err ?? 'unknown')
         this.lastError = lastError
+
+        // v5h3-01-02: edit-log breadcrumb at the entry of every error
+        // branch. Outcome is derived from the typed adapter error class
+        // so the breadcrumb sequence in Sentry encodes which branch
+        // fired. Fire-and-forget — instrumentation MUST NOT alter
+        // control flow.
+        const errorOutcome =
+            err instanceof VersionMismatchError
+                ? 'version-mismatch'
+                : err instanceof AuthError
+                  ? 'auth-error'
+                  : err instanceof NetworkError
+                    ? 'network-error'
+                    : err instanceof RemoteDocMissingError
+                      ? 'remote-doc-missing'
+                      : err instanceof TransientError
+                        ? 'transient-error'
+                        : 'unknown-error'
+        void recordEdit({
+            ts: this.clock.now(),
+            source: 'engine-drain',
+            op: row.op,
+            collection: row.collection,
+            docId: row.docId,
+            outcome: errorOutcome,
+            attempts: row.attempts + 1,
+        })
 
         if (err instanceof VersionMismatchError) {
             await this.db.outbox.update(localId, {
@@ -400,6 +439,20 @@ export class SyncEngine {
                 collection: row.collection,
                 docId: row.docId,
                 op: row.op,
+                attempts: nextAttempts,
+            })
+            // v5h3-01-02: extra breadcrumb tagging the dead-letter
+            // transition specifically (the entry-of-handler breadcrumb
+            // already emitted the typed error class; this second one
+            // makes the budget-exhausted moment trivially greppable in
+            // the Sentry breadcrumb sequence).
+            void recordEdit({
+                ts: this.clock.now(),
+                source: 'engine-drain',
+                op: row.op,
+                collection: row.collection,
+                docId: row.docId,
+                outcome: 'dead-letter',
                 attempts: nextAttempts,
             })
             this.dispatch({ type: 'DRAIN_BUDGET_EXHAUSTED' })

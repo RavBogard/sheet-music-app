@@ -16,6 +16,7 @@ import { logger } from '@/lib/logger'
 import type { LocalCollection, OutboxRow } from '@/lib/local/types'
 
 import { CrossTabLock } from './cross-tab-lock'
+import { uploadRecentEditLog } from './edit-log-upload'
 import { SyncEngine } from './engine'
 export { startSnapshotListener } from './snapshot-listener'
 export type {
@@ -168,6 +169,12 @@ function bootEngineOnce(): SyncEngine | null {
         const engine = new SyncEngine({ adapter, lock })
         unsubscribeStore = wireSyncEngineToStore(engine)
         void engine.start()
+        // v5h3-01-02: flush any persisted edit-log breadcrumbs from the
+        // previous session up to Sentry (most-recent 50 rows). Fire-and-
+        // forget — never awaited, never blocks engine startup; the helper
+        // is failure-swallowing so a Sentry/IDB hiccup doesn't crash the
+        // boot path. Runs ONCE per app mount.
+        void uploadRecentEditLog()
         engineSingleton = engine
         adapterSingleton = adapter
         return engine

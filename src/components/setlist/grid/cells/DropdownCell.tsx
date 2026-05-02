@@ -4,6 +4,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { recordEdit } from '@/lib/sync/edit-log'
 import { cn } from '@/lib/utils'
 
 import { TouchOrPopover } from '../TouchOrPopover'
@@ -106,7 +107,19 @@ export function DropdownCell({
     }
 
     const commit = (next: string, advance?: 'up' | 'down' | 'left' | 'right') => {
-        if (next !== (value ?? '')) onCommit(next)
+        if (next !== (value ?? '')) {
+            onCommit(next)
+            // v5h3-01-02: edit-log breadcrumb. Fire-and-forget; PII-safe
+            // — only the placeholder '(dropdown)' is recorded. Never the
+            // selected value, never the ariaLabel. Same discipline as
+            // TextCell.
+            void recordEdit({
+                ts: Date.now(),
+                source: 'dropdown-cell',
+                cellType: 'dropdown',
+                payloadKeys: ['(dropdown)'],
+            })
+        }
         advanceAfterCloseRef.current = advance ?? null
         setOpen(false)
     }

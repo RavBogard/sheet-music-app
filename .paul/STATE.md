@@ -10,18 +10,18 @@ See: .paul/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Milestone: 🚧 v5.3 — Editor UX Repair — created 2026-05-02. 0 of 4 phases complete. Origin: Daniel UAT regret on v50-05 spreadsheet editor — chart binding hard/broken, no chart-verification peek, Add menu single-purpose vs. old editor's polymorphic menu.
-Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — v5h3-01-01 LOOP COMPLETE; v5h3-01-02 next
-Plan: v5h3-01-01 LOOP COMPLETE 2026-05-02. SUMMARY at `.paul/phases/v5h3-01-save-loss-recurrence/v5h3-01-01-SUMMARY.md`. Phase v5h3-01 NOT complete — v5h3-01-02 (auto-capture instrumentation build) still ahead.
-Status: v5h3-01-01 closed; planning v5h3-01-02 next (autonomous-mode session continues). v5h3-01-02 builds Sentry breadcrumbs at hot write paths + IndexedDB edit_log + upload-on-mount.
+Phase: v5h3-01 of 4 (Save-loss recurrence hotfix) — v5h3-01-02 PLAN created
+Plan: v5h3-01-02 created 2026-05-02 (autonomous=true; type=execute; depends_on v5h3-01-01). 3 tasks: (1) Dexie edit_log schema bump + helper module + tests; (2) Sentry breadcrumb wrapper + upload-on-mount helper + tests; (3) Wire breadcrumbs at 5 hot sites + tests + suite/build verify. 7 ACs. Boundaries lock engine FSM + state-machine + LWW guards + applyEdit atomicity + firestore.rules.
+Status: PLAN created, ready for APPLY. Will dispatch dan-executor agent for APPLY (substantial code-touching scope, ~400-600 LOC across 13 files; agent has clean context window).
 
 Progress:
-- v5.3 — Editor UX Repair: [████░░░░░░] ~35% (1 of 4 phases complete + 1 hotfix plan done)
+- v5.3 — Editor UX Repair: [████░░░░░░] ~40%
 - Phase v53-01: [██████████] 100% ✅ COMPLETE
-- Phase v5h3-01: [████░░░░░░] 33% (1 of ~3 plans complete; v5h3-01-02 next)
+- Phase v5h3-01: [█████░░░░░] 50% (1 of ~3 plans complete + v5h3-01-02 plan written)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v5h3-01-01 LOOP COMPLETE; ready for v5h3-01-02 PLAN]
+  ✓        ○        ○     [v5h3-01-02 plan created, dispatching APPLY]
 
 ### Decisions (v5h3-01-01)
 
