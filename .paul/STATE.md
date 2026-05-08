@@ -9,19 +9,19 @@ See: .paul/PROJECT.md (updated 2026-05-02)
 
 ## Current Position
 
-Milestone: 🟡 v5.4 — Hotfix + Harness Fidelity (formalized 2026-05-08; inaugural phase v54-01 planning)
-Phase: v54-01 — Picker bootstrap + thead hotfix (Planning)
-Plan: v54-01-01 created at `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md` — awaiting approval / /paul:apply
-Status: PLAN created 2026-05-08. autonomous: false (3 checkpoints — human-action for production --apply, decision for thead path-a vs path-b after /ui-ux-pro-max consultation, human-verify for Daniel UAT). 3 auto tasks. files_modified: scripts/bootstrap-songs.ts (NEW), scripts/__tests__/bootstrap-songs.test.ts (NEW), src/components/setlist/grid/SetlistGrid.tsx. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md. Harness Fidelity Gate counter at 1 of 3 (path-b on Task 3 may move to 2 of 3 with documented waiver). Suite baseline 1597/1597; expected delta +10-15 from bootstrap tests.
-Last activity: 2026-05-08 — Created `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md`
+Milestone: 🟡 v5.4 — Hotfix + Harness Fidelity (inaugural phase v54-01 LOOP COMPLETE — PENDING-UAT)
+Phase: v54-01 — Picker bootstrap + thead hotfix ✅ LOOP COMPLETE 2026-05-08 (PENDING-UAT per Daniel "go" override)
+Plan: v54-01-01 LOOP COMPLETE at commit `a693d23`. Last phase-close: v54-01 milestone-phase close awaiting transition workflow.
+Status: ✅ LOOP COMPLETE — PENDING-UAT. All 5 tasks executed (3 auto + checkpoint:human-action production --apply + checkpoint:decision /ui-ux-pro-max path-a + checkpoint:human-verify routed to PENDING-UAT). Production data writes: 364 songs/{id} created (94 CRC + 272 Shireinu charts) + 385 setlist tracks back-stitched. Thead repair shipped via Vercel auto-deploy. Bootstrap-songs tests 18/18; grid suite 171/171 serial; a11y 13/13; ChartBindPopover 9/9; next build clean. Mid-phase auto-fix: MIME-type filter added when production dry-run revealed library_index includes 19 folders + 57 audio + 8 docs + non-chart entries (455 → 364). Harness Fidelity Gate counter unchanged at 1/3 (path-a touched no engine seams). UAT continues against `a693d23` over upcoming worship cycle; v54-01-02 follow-up plan opens if Daniel surfaces issues.
+Last activity: 2026-05-08 — Closed v54-01-01 LOOP at SUMMARY `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-SUMMARY.md`; production songs/* + back-stitch APPLIED.
 
 Progress:
-- v5.4 — Hotfix + Harness Fidelity: [░░░░░░░░░░] 0% (planning)
-- Phase v54-01: [█░░░░░░░░░] 10% (PLAN created; APPLY not started)
+- v5.4 — Hotfix + Harness Fidelity: [██░░░░░░░░] 20% (1 of ~5 phases LOOP COMPLETE; v54-02/03/?? remain)
+- Phase v54-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `a693d23`)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval — /paul:apply v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md]
+  ✓        ✓        ✓     [v54-01-01 LOOP COMPLETE — phase complete, transition workflow next]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -32,6 +32,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
 | 2026-05-08 | Back-stitch ON by default (gated behind `--no-backstitch` flag) | v54-01-01 | ~351 of 650 existing tracks get `songId` populated, unlocking sticky-memory propagation on legacy tracks |
 | 2026-05-08 | Free-text "Create new track called …" does NOT auto-promote to songs/* | v54-01-01 | Preserves escape hatch; avoids typo-pollution of curated library; revisit if Daniel asks |
 | 2026-05-08 | Thead path (a sticky-th/td vs b display:grid) deferred to checkpoint:decision after /ui-ux-pro-max consultation in APPLY | v54-01-01 | Smallest-fix bias favors path-a; path-b reserved if path-a fails iPad UAT or hits Safari border-collapse quirks |
+| 2026-05-08 | Path-a locked at /ui-ux-pro-max checkpoint (drop overflow-x-auto + sticky-right via existing th/td + literal top-[3.75rem] + extensions kept) | v54-01-01 | ~10 LOC change vs 150-300 for path-b; cells/* untouched; Harness Fidelity Gate counter stays at 1/3 |
+| 2026-05-08 | MIME-type filter (PDF + MusicXML only) added mid-phase when production dry-run showed 455 candidates vs 366 expected | v54-01-01 | Filter excludes 19 folders + 57 audio + 8 docs + 4 octet-stream + 3 spreadsheets + 2 xml-non-musicxml + others; final write count 364 matches Daniel's CRC+Shireinu chart total within ±2 |
+| 2026-05-08 | Closed v54-01-01 PENDING-UAT per Daniel "go" override | v54-01-01 | 4th use of v51-04 codified pattern (after v5h3-01 / v53-02 / v53-03); UAT continues against `a693d23` over upcoming worship cycle |
 
 (Pre-v54-01 history preserved below — v5.3 closure decisions / v53-* / v5h3-01 unchanged.)
 
@@ -58,10 +61,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-02
-Stopped at: Milestone v5.3 ✅ COMPLETE — MILESTONES.md entry written; ROADMAP archived to `.paul/milestones/v5.3-ROADMAP.md`; ROADMAP reorganized (v5.3 collapsed to Completed Milestones); PROJECT.md evolved (Current State updated; v5.3 block added to Validated this cycle; Active section now points at v5.4 TBD); v53-04 ❌ COLLAPSED cleanly per Daniel decision; STATE cleared for post-milestone state
-Next action: `/paul:discuss-milestone` to define v5.4 scope, OR `/paul:milestone` to create directly. Likely starting points: Harness Fidelity Gate remediation phase 1 (Firebase emulator + RTL editor↔perf-view test pair — BINDING per v5h3-01-04 postmortem) / mobile parallel-render AddBar variant / cross-device library staleness fix
-Resume file: .paul/MILESTONES.md
+Last session: 2026-05-08
+Stopped at: Phase v54-01 ✅ LOOP COMPLETE — SUMMARY written at `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-SUMMARY.md`; PROJECT.md evolved (Current State updated to v5.4; v54-01 block added to Validated this cycle); ROADMAP.md v54-01 row marked LOOP COMPLETE; transition workflow ran. Production songs/* + back-stitch APPLIED at commit `a693d23`. PENDING-UAT against Daniel weekly worship cycle.
+Next action: `/paul:plan` for v54-02 Harness Fidelity Gate remediation phase 1 (BINDING per v5h3-01-04 postmortem; Firebase Local Emulator Suite + thin RTL editor↔perf-view test pair), OR `/paul:discuss-phase v54-03` for cross-device library staleness fix + library_index↔songs/* continuous sync (extends v54-01 one-shot to listener-driven), OR pause and let Daniel-loop UAT run against `a693d23` over the upcoming worship cycle.
+Resume file: .paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-SUMMARY.md
+
+## Git State
+
+Last commit: `a693d23` (feat(v54-01-01): bootstrap songs/* from library_index + repair sticky thead)
+Branch: master
+Feature branches merged: none (single-context single-commit per v53-02 / v53-03 precedent)
 
 ### Decisions (v53-02-01)
 

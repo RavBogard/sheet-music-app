@@ -10,7 +10,7 @@ Constraint: Spreadsheet bones stay (preserved from v5.3). /ui-ux-pro-max BLOCKIN
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| **v54-01** | **Picker bootstrap + thead hotfix** (inaugural v5.4 phase) | 0/1 (`v54-01-01-PLAN.md` ready for /paul:apply) | 🟡 Planning | - |
+| **v54-01** | **Picker bootstrap + thead hotfix** (inaugural v5.4 phase) | 1/1 LOOP COMPLETE (commit `a693d23`) | ✅ LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-08 |
 | v54-02 | Harness Fidelity Gate remediation phase 1 (Firebase Local Emulator Suite + RTL editor↔perf-view propagation test pair — BINDING per v5h3-01-04 postmortem) | TBD | ⚪ Not started | - |
 | v54-03 | Cross-device library staleness fix + library_index↔songs/* continuous sync (one-shot bootstrap from v54-01 promoted to listener-driven; covers /api/library/upload + /api/library/rename write paths) | TBD | ⚪ Not started | - |
 | v54-?? | Mobile parallel-render AddBar variant (deferred from v53-03 Q1) | TBD | ⚪ Not started | - |
