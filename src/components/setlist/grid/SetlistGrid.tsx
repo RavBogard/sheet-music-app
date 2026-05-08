@@ -1084,6 +1084,12 @@ export function SetlistGrid({
             const defaults = await seedTrackFromSong(sel.songId)
             const patch: Record<string, unknown> = {
                 songId: sel.songId,
+                // v54-01-02: same reason as handlePickSong above —
+                // perform-view's SetlistRow.hasFile gate requires fileId.
+                // ChartBindPopover writes songId; we mirror it as fileId
+                // so re-binding a free-text track makes it clickable in
+                // perform mode.
+                fileId: sel.songId,
                 title: sel.title,
             }
             if (defaults.key !== undefined) patch.key = defaults.key
@@ -1457,6 +1463,14 @@ export function SetlistGrid({
                     id: newId,
                     setlistId,
                     songId: song.id,
+                    // v54-01-02: SetlistRow.tsx:47 gates clickability in
+                    // perform-view on `track.fileId`. Per v54-01-01 locked
+                    // decision, songs/{libId} uses the library_index doc
+                    // id as both songs/{id}.id AND songs/{id}.fileId, so
+                    // song.id IS the fileId. Without this, newly-picked
+                    // tracks would be unclickable in perform mode (UAT
+                    // regression 2026-05-08).
+                    fileId: song.id,
                     order,
                     title: song.title,
                     type: 'song',
