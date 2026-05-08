@@ -5,26 +5,43 @@
 See: .paul/PROJECT.md (updated 2026-05-02)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** Awaiting v5.4 milestone definition. v5.3 ✅ COMPLETE 2026-05-02 (closed with PENDING-UAT marker per Daniel "push and finish the milestone" — explicit override of v51-04-codified "UAT closes the milestone" rule). v5.0 + v5.2 + v5.3 all in PENDING-UAT close paths against deployed commits over upcoming worship cycle (Erev Shabbat + Shabbat morning). Likely v5.4 starting points: Harness Fidelity Gate remediation phase 1 (Firebase emulator + RTL editor↔perf-view test pair — BINDING per v5h3-01-04 postmortem) / mobile parallel-render AddBar variant / cross-device library staleness fix.
+**Current focus:** v5.4 inaugural phase v54-01 (Picker bootstrap + thead hotfix) PLANNED 2026-05-08, awaiting /paul:apply. Two regressions surfaced on v5.3 PENDING-UAT commits during Daniel-loop UAT 2026-05-08: (a) `+ Song` picker empty — songs/* never bootstrapped from library_index (foreseen failure mode v50-07-01-DRY-RUN-REPORT.md:163 + v53-02-01-SUMMARY.md:212); (b) spreadsheet thead visually overlaps first body row — v53-02-01's overflow-x-auto wrapper turned the table ancestor into a scroll container, breaking sticky offset. Both block band onboarding. v5.0 + v5.2 + v5.3 all still in PENDING-UAT close paths.
 
 ## Current Position
 
-Milestone: ✅ v5.3 — Editor UX Repair COMPLETE 2026-05-02 (closed with PENDING-UAT marker per Daniel "push and finish the milestone"). Awaiting v5.4 milestone definition.
-Phase: None active. v5.3 phases archived under MILESTONES.md § v5.3 entry + ROADMAP.md Completed Milestones collapsed details.
-Plan: None active. Last plan: v53-03-01 LOOP COMPLETE 2026-05-02 at commit `3a321c9` (PENDING-UAT). Last phase-close: v5.3 milestone close at no-tagged-yet (git tag `v5.3` to be created by complete-milestone workflow next step).
-Status: ✅ MILESTONE v5.3 COMPLETE. 4 of 4 phases LOOP COMPLETE; v53-04 ❌ collapsed cleanly. Suite 1597/1597; tsc clean; `next build` Compiled successfully in 6.8s. Harness Fidelity Gate counter at 1 of 3 (codified during v5h3-01-04; binding from v5.3 onward; v53-02 used clause-(b) waiver for SetlistGridHydrator priming-adjacent additive getDocs; v53-03 unchanged; two more waivers in a row triggers re-prioritization to v5.4 phase 1). Daniel-loop UAT discipline (codified v51-04) validated 3x in single milestone (research-phase capture / mid-execution pivot / sight-unseen approval contexts). v5.0 + v5.2 + v5.3 all PENDING-UAT against deployed commits over upcoming worship cycle.
+Milestone: 🟡 v5.4 — Hotfix + Harness Fidelity (formalized 2026-05-08; inaugural phase v54-01 planning)
+Phase: v54-01 — Picker bootstrap + thead hotfix (Planning)
+Plan: v54-01-01 created at `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md` — awaiting approval / /paul:apply
+Status: PLAN created 2026-05-08. autonomous: false (3 checkpoints — human-action for production --apply, decision for thead path-a vs path-b after /ui-ux-pro-max consultation, human-verify for Daniel UAT). 3 auto tasks. files_modified: scripts/bootstrap-songs.ts (NEW), scripts/__tests__/bootstrap-songs.test.ts (NEW), src/components/setlist/grid/SetlistGrid.tsx. /ui-ux-pro-max BLOCKING per SPECIAL-FLOWS.md. Harness Fidelity Gate counter at 1 of 3 (path-b on Task 3 may move to 2 of 3 with documented waiver). Suite baseline 1597/1597; expected delta +10-15 from bootstrap tests.
+Last activity: 2026-05-08 — Created `.paul/phases/v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md`
 
 Progress:
-- v5.3 — Editor UX Repair: [██████████] 100% ✅ COMPLETE (closed 2026-05-02 with PENDING-UAT marker)
-- Phase v53-01: [██████████] 100% ✅ COMPLETE
-- Phase v5h3-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `36e9fa1`)
-- Phase v53-02: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `bc754b4`)
-- Phase v53-03: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle on `3a321c9`)
-- Phase v53-04: ❌ COLLAPSED (chart-preview port-back died with chart-verify drop; net zero scope)
+- v5.4 — Hotfix + Harness Fidelity: [░░░░░░░░░░] 0% (planning)
+- Phase v54-01: [█░░░░░░░░░] 10% (PLAN created; APPLY not started)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Milestone v5.3 complete — ready for /paul:discuss-milestone or /paul:milestone]
+  ✓        ○        ○     [Plan created, awaiting approval — /paul:apply v54-01-picker-bootstrap-and-thead-hotfix/v54-01-01-PLAN.md]
+
+### Decisions (v54-01-01 / 2026-05-08)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-08 | v5.4 milestone formalized; inaugural phase = v54-01 (picker bootstrap + thead hotfix bundled) | v5.4 | v5.3 PENDING-UAT regressions take priority over deferred Harness Fidelity Gate phase (which becomes v54-02) |
+| 2026-05-08 | Bootstrap script writes `songs/{library_index.id}` (uses library_index doc id directly) instead of generating fresh ids | v54-01-01 | Back-stitch becomes trivial (`track.fileId === song.id`); v50-04's "songId distinct from fileId" intent was theoretical, never shipped |
+| 2026-05-08 | Back-stitch ON by default (gated behind `--no-backstitch` flag) | v54-01-01 | ~351 of 650 existing tracks get `songId` populated, unlocking sticky-memory propagation on legacy tracks |
+| 2026-05-08 | Free-text "Create new track called …" does NOT auto-promote to songs/* | v54-01-01 | Preserves escape hatch; avoids typo-pollution of curated library; revisit if Daniel asks |
+| 2026-05-08 | Thead path (a sticky-th/td vs b display:grid) deferred to checkpoint:decision after /ui-ux-pro-max consultation in APPLY | v54-01-01 | Smallest-fix bias favors path-a; path-b reserved if path-a fails iPad UAT or hits Safari border-collapse quirks |
+
+(Pre-v54-01 history preserved below — v5.3 closure decisions / v53-* / v5h3-01 unchanged.)
+
+### Pre-v54-01 baseline (v5.3 close)
+
+✅ MILESTONE v5.3 COMPLETE 2026-05-02 (closed with PENDING-UAT marker per Daniel "push and finish the milestone"). 4 of 4 phases LOOP COMPLETE; v53-04 ❌ collapsed cleanly. Suite 1597/1597; tsc clean; `next build` Compiled successfully in 6.8s. Harness Fidelity Gate counter at 1 of 3. v5.0 + v5.2 + v5.3 all PENDING-UAT against deployed commits over upcoming worship cycle. v5.3 phases archived under MILESTONES.md § v5.3 entry + ROADMAP.md Completed Milestones collapsed details. Last plan pre-v5.4: v53-03-01 LOOP COMPLETE at commit `3a321c9`.
+
+Loop position pre-v54-01:
+PLAN ──▶ APPLY ──▶ UNIFY
+  ○        ○        ○     [Milestone v5.3 complete]
 
 ### Decisions (v53-03-01)
 

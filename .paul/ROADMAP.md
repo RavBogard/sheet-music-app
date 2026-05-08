@@ -2,15 +2,19 @@
 
 ## Current Milestone
 
-**v5.4 — TBD**
-Status: ⚪ Not yet defined
-Next: Run `/paul:discuss-milestone` to define scope, OR `/paul:milestone` to create directly.
+**v5.4 — Hotfix + Harness Fidelity** *(formalized 2026-05-08; inaugural phase v54-01 planned)*
+Status: 🟡 In progress
+Origin: Daniel-loop UAT 2026-05-08 surfaced two regressions on v5.3 PENDING-UAT commits — `+ Song` picker is empty (foreseen failure mode v50-07-01 / v53-02-01 §212) and spreadsheet thead visually overlaps the first body row (sticky offset broken by v53-02-01's `overflow-x-auto` wrapper). Both are blockers for band onboarding ("bulletproof and easy and intuitive"). Inaugural v5.4 phase v54-01 bundles both fixes; subsequent phases work the deferred Harness Fidelity Gate + cross-device staleness items from v5.3.
 
-Likely starting points (deferred during v5.3):
-- **Harness Fidelity Gate remediation phase 1** (Firebase Local Emulator Suite integration in property-failures harness + thin RTL editor↔perf-view cross-view propagation test pair) — BINDING per PROJECT.md §Constraints since v5.3; v5h3-01-04 postmortem committed v5.4 phase 1 ship target.
-- **Mobile parallel-render AddBar variant** — CONTEXT v53-03 Q1 deferred; current mobile UX (`MobileCardList` / `MobileRowCard` / `MobileEditSheet`) keeps single-tap-to-add-track flow and may feel like a v5.3 regression vs. desktop+tablet polish.
-- **Cross-device library staleness fix** — v53-02 deferred; currently a song bound on iPad doesn't appear in desktop's library until next setlist navigation primes via one-shot getDocs.
-- **Pre-existing local-only state cleanup** — `package.json` version regression to "0.2.6" (suspicious; possibly `update-build-info.js` artifact) + `src/build-info.json` 4 commits behind HEAD. Both auto-regenerated on Vercel deploy but introduce git noise.
+Constraint: Spreadsheet bones stay (preserved from v5.3). /ui-ux-pro-max BLOCKING for any frontend work (SPECIAL-FLOWS.md). Daniel-loop UAT (codified v51-04) closes every phase. Tablet-first verification on iPad. Harness Fidelity Gate counter currently 1 of 3; v54-01 thead repair MAY land at 2 of 3 (path-b only) with documented waiver.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| **v54-01** | **Picker bootstrap + thead hotfix** (inaugural v5.4 phase) | 0/1 (`v54-01-01-PLAN.md` ready for /paul:apply) | 🟡 Planning | - |
+| v54-02 | Harness Fidelity Gate remediation phase 1 (Firebase Local Emulator Suite + RTL editor↔perf-view propagation test pair — BINDING per v5h3-01-04 postmortem) | TBD | ⚪ Not started | - |
+| v54-03 | Cross-device library staleness fix + library_index↔songs/* continuous sync (one-shot bootstrap from v54-01 promoted to listener-driven; covers /api/library/upload + /api/library/rename write paths) | TBD | ⚪ Not started | - |
+| v54-?? | Mobile parallel-render AddBar variant (deferred from v53-03 Q1) | TBD | ⚪ Not started | - |
+| v54-?? | Pre-existing local-only state cleanup (package.json 0.2.6 regression + src/build-info.json) | TBD | ⚪ Not started | - |
 
 ---
 
