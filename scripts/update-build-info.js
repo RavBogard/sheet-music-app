@@ -46,15 +46,31 @@ try {
         latestTag = null;
     }
 
-    // If no tag found (shallow clone), read version from package.json as baseline
+    // v54-02 fix: previously, when no tag was found (shallow clone), this
+    // fell back to `pkg.version` and computed bumps from there. That made
+    // the version regress whenever pkg.version was already stale — a
+    // bad run wrote pkg.version=0.2.6, the next run read 0.2.6 as
+    // baseline and computed 0.3.0, etc. The high-water v5.3 git tag was
+    // ignored. Fix: when git describe fails, KEEP whatever pkg.version
+    // already says — do not recompute, do not bump. This way shallow
+    // clones (Vercel default) preserve the version set by the most-recent
+    // full-history run instead of regressing.
     let base;
+    let skipBump = false;
     if (latestTag) {
         base = parseVersion(latestTag) || { major: 0, minor: 0, patch: 0 };
     } else {
         const pkgPath = path.join(__dirname, '..', 'package.json');
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        base = parseVersion('v' + (pkg.version || '0.0.0')) || { major: 0, minor: 0, patch: 0 };
+        const parsed = parseVersion('v' + (pkg.version || '0.0.0'));
+        base = parsed || { major: 0, minor: 0, patch: 0 };
         latestTag = 'v' + pkg.version;
+        // Skip the bump arithmetic when we're operating without a real
+        // tag — preserve the version we read.
+        skipBump = true;
+        console.warn(
+            `[build-info] no git tag found (shallow clone?). Using package.json version v${pkg.version || '0.0.0'} as-is; will not bump.`,
+        );
     }
 
     // Get commits since that tag
@@ -72,7 +88,10 @@ try {
 
     // Compute version
     let version;
-    if (commitsSinceTag.length === 0) {
+    if (skipBump) {
+        // No real tag → use whatever pkg.version was as-is, no arithmetic.
+        version = `${base.major}.${base.minor}.${base.patch}`;
+    } else if (commitsSinceTag.length === 0) {
         // Exactly at the tag
         version = `${base.major}.${base.minor}.${base.patch}`;
     } else {

@@ -10,11 +10,11 @@ Constraint: Spreadsheet bones stay (preserved from v5.3). /ui-ux-pro-max BLOCKIN
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| **v54-01** | **Picker bootstrap + thead hotfix** (inaugural v5.4 phase) | 1/1 LOOP COMPLETE (commit `a693d23`) | ✅ LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-08 |
-| v54-02 | Harness Fidelity Gate remediation phase 1 (Firebase Local Emulator Suite + RTL editor↔perf-view propagation test pair — BINDING per v5h3-01-04 postmortem) | TBD | ⚪ Not started | - |
-| v54-03 | Cross-device library staleness fix + library_index↔songs/* continuous sync (one-shot bootstrap from v54-01 promoted to listener-driven; covers /api/library/upload + /api/library/rename write paths) | TBD | ⚪ Not started | - |
-| v54-?? | Mobile parallel-render AddBar variant (deferred from v53-03 Q1) | TBD | ⚪ Not started | - |
-| v54-?? | Pre-existing local-only state cleanup (package.json 0.2.6 regression + src/build-info.json) | TBD | ⚪ Not started | - |
+| **v54-01** | **Picker bootstrap + thead hotfix** (inaugural v5.4 phase) | 2/2 LOOP COMPLETE (`a693d23` Plans 1 + `6735f48` v54-01-02 perform-view fix-up) | ✅ LOOP COMPLETE — PENDING-UAT (Daniel weekly worship cycle) | 2026-05-08 |
+| v54-02 | Harness Fidelity Gate remediation phase 1 (Firebase Local Emulator Suite + RTL editor↔perf-view propagation test pair — BINDING per v5h3-01-04 postmortem) | 1/2 (Plan 01 emulator infra ✅ shipped; Plan 02 H-SL-7 regression canary DEFERRED — needs Java on dev machine) | 🟡 Partial — Plan 02 outstanding | 2026-05-08 (Plan 01) |
+| ~~Pre-existing local-only state cleanup~~ | Bundled into v54-02-01 as side-fix (package.json `0.2.6` → `5.4.0`; `update-build-info.js` skip-bump on shallow clones to break the regression loop) | n/a | ✅ COMPLETE | 2026-05-08 |
+| v54-03 | Cross-device library staleness fix + library_index↔songs/* continuous sync (one-shot bootstrap from v54-01 promoted to listener-driven; covers /api/library/upload + /api/library/rename write paths) | TBD | ⚪ DEFERRED — would inherit clause-(b) waiver (HFG counter → 2/3); recommendation: ship v54-02-02 first | - |
+| v54-?? | Mobile parallel-render AddBar variant (deferred from v53-03 Q1) | TBD | ⚪ DEFERRED — frontend, /ui-ux-pro-max BLOCKING, needs UAT iteration | - |
 
 ---
 

@@ -21,6 +21,19 @@ export default defineConfig({
             'bridge/src/**/*.test.ts',
             'scripts/**/*.test.ts',
         ],
+        // v54-02-01: emulator tests opt-in only via vitest.emulator.config.ts
+        // (`npm run test:emulator`). They require Java + a running Firebase
+        // Local Emulator Suite, so they MUST NOT run as part of the default
+        // `vitest run` flow. Vitest's `*.test.ts` glob also matches
+        // `*.emulator.test.ts`, so this exclude is required to keep the
+        // main suite emulator-free.
+        exclude: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/.next/**',
+            '**/*.emulator.test.ts',
+            '**/*.emulator.test.tsx',
+        ],
         env: {
             // Skip @t3-oss/env-nextjs validation — tests don't need real Firebase creds
             SKIP_ENV_VALIDATION: '1',

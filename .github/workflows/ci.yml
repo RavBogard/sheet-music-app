@@ -42,6 +42,40 @@ jobs:
       - name: Run Tests
         run: npx vitest run --reporter=verbose
 
+  # v54-02-01: Harness Fidelity Gate phase 1. Runs the *.emulator.test.ts
+  # subset against a real Firebase Local Emulator Suite (Firestore + Auth)
+  # to catch v5h3-01-class cache-vs-fresh races the in-memory FakeFirestore
+  # adapter misses. Local devs need Java JDK 11+ on PATH; CI uses
+  # actions/setup-java@v4 so this gate doesn't depend on local installs.
+  emulator-tests:
+    name: Emulator Tests (Firestore + Auth)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - run: npm ci
+
+      - name: Cache Firebase emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firebase.json') }}
+
+      - name: Run emulator tests
+        run: npm run test:emulator:ci
+        env:
+          SKIP_ENV_VALIDATION: '1'
+
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
