@@ -12,6 +12,7 @@ import { ChartSuggestions } from './ChartSuggestions'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
+import { getFile } from '@/lib/offline-idb'
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/copy-pdf-worker.js during postinstall + build). Local worker
@@ -48,9 +49,23 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         setError(null)
         resolvedUrlRef.current = fetchUrl
 
-        // Rely on standard ServiceWorker caching instead of IndexedDB.
-        // Fetch the PDF ourselves so we can diagnose failures
         try {
+            // 1. Intercept for Offline PWA Support: Check Dexie IDB first
+            const fileIdMatch = fetchUrl.match(/\/api\/drive\/file\/([^/?]+)/)
+            if (fileIdMatch && fileIdMatch[1]) {
+                const fileId = fileIdMatch[1]
+                const cachedBlob = await getFile(fileId)
+                if (cachedBlob && cachedBlob.size > 0) {
+                    const arrayBuffer = await cachedBlob.arrayBuffer()
+                    setSource({ data: new Uint8Array(arrayBuffer) })
+                    setError(null)
+                    retryCountRef.current = 0
+                    setLoading(false)
+                    return
+                }
+            }
+
+            // 2. Fall back to network fetch if not in IDB
             const res = await fetch(fetchUrl, { signal })
 
             if (!res.ok) {

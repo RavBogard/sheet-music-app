@@ -5,7 +5,6 @@ import { useState } from 'react'
 import type { LocalTrack } from '@/lib/local/types'
 import { applyEdit } from '@/lib/local/write'
 
-import { MobileEditSheet } from './MobileEditSheet'
 import { MobileRowCard } from './MobileRowCard'
 
 export interface MobileCardListProps {
@@ -128,6 +127,8 @@ export function MobileCardList({
                 {tracks.map((track, idx) => {
                     const inSelection = selectedIds.has(track.id)
                     const isInBulk = inSelection && selectionCount >= 2
+                    const isEditing = editingTrackId === track.id
+                    
                     return (
                         <MobileRowCard
                             key={track.id}
@@ -135,10 +136,13 @@ export function MobileCardList({
                             isSelected={inSelection}
                             isInBulkSelection={isInBulk}
                             bulkSelectionCount={selectionCount}
+                            isEditing={isEditing}
+                            canMoveUp={idx > 0}
+                            canMoveDown={idx >= 0 && idx < tracks.length - 1}
                             onSelectionClick={(mods) =>
                                 onSelectionClick(track.id, mods)
                             }
-                            onTap={() => setEditingTrackId(track.id)}
+                            onTap={() => setEditingTrackId(isEditing ? null : track.id)}
                             onContextEditRow={() => onContextEditRow(idx)}
                             onContextBindChart={() =>
                                 onContextBindChart(track.id)
@@ -147,41 +151,23 @@ export function MobileCardList({
                                 onContextDuplicate(track.id)
                             }
                             onContextDelete={() => onContextDelete(track)}
+                            onCommit={async (patch) => {
+                                await onCommitTrackPatch(
+                                    track.id,
+                                    patch as Record<string, unknown>,
+                                    track.updatedAt,
+                                )
+                            }}
+                            onMoveUp={handleMoveUp}
+                            onMoveDown={handleMoveDown}
+                            onDeleteRow={() => {
+                                onDeleteRow(track)
+                                setEditingTrackId(null)
+                            }}
                         />
                     )
                 })}
             </ul>
-
-            <MobileEditSheet
-                track={editingTrack}
-                open={editingTrackId !== null}
-                onOpenChange={(next) => {
-                    if (!next) setEditingTrackId(null)
-                }}
-                canMoveUp={editingIndex > 0}
-                canMoveDown={
-                    editingIndex >= 0 && editingIndex < tracks.length - 1
-                }
-                onCommit={async (patch) => {
-                    if (!editingTrack) return
-                    await onCommitTrackPatch(
-                        editingTrack.id,
-                        patch as Record<string, unknown>,
-                        editingTrack.updatedAt,
-                    )
-                }}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-                onDelete={() => {
-                    if (!editingTrack) return
-                    onDeleteRow(editingTrack)
-                    setEditingTrackId(null)
-                }}
-                onBindChart={() => {
-                    if (!editingTrack) return
-                    onContextBindChart(editingTrack.id)
-                }}
-            />
         </>
     )
 }
