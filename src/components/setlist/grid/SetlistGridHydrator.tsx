@@ -1,5 +1,6 @@
 'use client'
 
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 
 import { logger } from '@/lib/logger'
@@ -253,6 +254,61 @@ export function SetlistGridHydrator({
         primedRef.current = true
         void primeSongsLibrary().catch(() => {})
     }, [hydration, primeSongsLibrary])
+
+    // v54-01-03: trackCount reconciler. v50-05 moved tracks from the embedded
+    // `setlists/{id}.tracks[]` array into a top-level `tracks/{id}` collection,
+    // but `setlists/{id}.trackCount` was only written at create-time from the
+    // (empty) initial tracks array. Result: every v50-05+ setlist's dashboard
+    // card showed "0 songs" no matter how many tracks the user actually added.
+    //
+    // Fix: subscribe to the live tracks-by-setlistId count via Dexie, and when
+    // it drifts from the last value we wrote (or from the initial snapshot)
+    // patch `setlist.trackCount` via applyEdit. Single coupling point so every
+    // track-mutating path in SetlistGrid (handlePickSong / handleCreateFreeText
+    // / handleAddTrackOfType / handleDelete / handleBulkDelete / handleClone /
+    // bulk drag-reorder) gets correct counts without each having to update
+    // setlist.trackCount itself.
+    //
+    // Debounced 800ms so rapid adds (e.g. paste-multiple) write one count
+    // patch instead of N. Skips the redundant write when the count already
+    // matches what we last wrote (avoids a write loop on listener echo).
+    const liveTrackCount = useLiveQuery(
+        () =>
+            getDb()
+                .tracks.where('setlistId')
+                .equals(setlistId)
+                .count(),
+        [setlistId],
+    )
+    const lastWrittenCountRef = useRef<number | null>(null)
+    useEffect(() => {
+        if (hydration !== 'done') return
+        if (liveTrackCount === undefined) return
+        const currentStored =
+            lastWrittenCountRef.current ?? initialSetlist.trackCount
+        if (liveTrackCount === currentStored) return
+        const handle = setTimeout(() => {
+            // Re-check post-debounce in case writes raced — only fire the
+            // patch if we still differ.
+            if (liveTrackCount === lastWrittenCountRef.current) return
+            void applyEdit({
+                op: 'update',
+                collection: 'setlists',
+                docId: setlistId,
+                patch: { trackCount: liveTrackCount },
+            })
+                .then(() => {
+                    lastWrittenCountRef.current = liveTrackCount
+                })
+                .catch((err) => {
+                    logger.warn(
+                        '[SetlistGridHydrator] trackCount reconcile failed',
+                        err,
+                    )
+                })
+        }, 800)
+        return () => clearTimeout(handle)
+    }, [hydration, liveTrackCount, setlistId, initialSetlist.trackCount, applyEdit])
 
     return (
         <div data-testid="setlist-grid-hydrator" data-hydration={hydration}>

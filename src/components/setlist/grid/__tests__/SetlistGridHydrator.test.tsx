@@ -653,4 +653,100 @@ describe('SetlistGridHydrator', () => {
         unmount()
         expect(stopFn).toHaveBeenCalledTimes(1)
     })
+
+    // v54-01-03 trackCount reconciler — fires applyEdit on setlists/{id}
+    // whenever the live Dexie tracks-by-setlistId count drifts from
+    // initialSetlist.trackCount. Fixes the dashboard "0 songs" display
+    // for v50-05+ setlists where trackCount was only set at create-time
+    // from the (empty) initial tracks array.
+    describe('v54-01-03 trackCount reconciliation', () => {
+        it('patches setlist.trackCount when Dexie count differs from initial snapshot', async () => {
+            const setlist: LocalSetlist = {
+                id: SETLIST_ID,
+                ownerId: 'user-1',
+                name: 'Friday Service',
+                updatedAt: 1_700_000_000_000,
+                trackCount: 0,        // stored on doc — stale
+                hydrated: true,        // skip lazy-hydration cascade
+            }
+            // 3 tracks in Dexie but setlist.trackCount = 0 → reconciler should patch to 3
+            const tracks: LocalTrack[] = [0, 1, 2].map((i) => ({
+                id: `t-${i}`,
+                setlistId: SETLIST_ID,
+                order: i,
+                title: `Track ${i}`,
+                updatedAt: 1_700_000_000_000,
+            }))
+            await getDb().setlists.put(setlist)
+            await getDb().tracks.bulkPut(tracks)
+
+            const applyEditSpy = makeApplyEditSpy()
+
+            render(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={setlist}
+                    initialTracks={tracks}
+                    applyEdit={applyEditSpy}
+                />,
+            )
+
+            // Reconciler is debounced 800ms; allow up to 3s for the spy to fire.
+            await waitFor(
+                () => {
+                    const trackCountCall = applyEditSpy.mock.calls.find(
+                        ([edit]) =>
+                            edit.op === 'update' &&
+                            edit.collection === 'setlists' &&
+                            edit.docId === SETLIST_ID &&
+                            (edit.patch as Record<string, unknown>)?.trackCount === 3,
+                    )
+                    expect(trackCountCall).toBeDefined()
+                },
+                { timeout: 3000 },
+            )
+        })
+
+        it('does NOT patch when trackCount already matches', async () => {
+            const setlist: LocalSetlist = {
+                id: SETLIST_ID,
+                ownerId: 'user-1',
+                name: 'Friday Service',
+                updatedAt: 1_700_000_000_000,
+                trackCount: 2,        // matches
+                hydrated: true,
+            }
+            const tracks: LocalTrack[] = [0, 1].map((i) => ({
+                id: `t-${i}`,
+                setlistId: SETLIST_ID,
+                order: i,
+                title: `Track ${i}`,
+                updatedAt: 1_700_000_000_000,
+            }))
+            await getDb().setlists.put(setlist)
+            await getDb().tracks.bulkPut(tracks)
+
+            const applyEditSpy = makeApplyEditSpy()
+
+            render(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={setlist}
+                    initialTracks={tracks}
+                    applyEdit={applyEditSpy}
+                />,
+            )
+
+            // Wait past the debounce window. No trackCount patch should fire.
+            await new Promise((resolve) => setTimeout(resolve, 1200))
+            const trackCountCalls = applyEditSpy.mock.calls.filter(
+                ([edit]) =>
+                    edit.op === 'update' &&
+                    edit.collection === 'setlists' &&
+                    edit.docId === SETLIST_ID &&
+                    (edit.patch as Record<string, unknown>)?.trackCount !== undefined,
+            )
+            expect(trackCountCalls).toHaveLength(0)
+        })
+    })
 })
