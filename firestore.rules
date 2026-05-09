@@ -81,13 +81,9 @@ service cloud.firestore {
     // v4.0: All setlists are public among band members — no private/public
     // distinction for access control beyond role-gating.
     match /setlists/{setlistId} {
-      // 1. READ: Members (musicians+) and the setlist's owner.
-      // v4.3 P10-04: restored isMember() gate. The claim-sync race that
-      // forced the 0b10ecf relaxation is structurally addressed by the
-      // P9/P10 drift-repair chain (sync-claims + getIdToken(true) + cookie
-      // refresh fire on profile updates). Owners keep read access during
-      // the brief post-creation sync window.
-      allow read: if isMember() || isOwner(resource);
+      // 1. READ: All users (public)
+      // Restored public read access so the /perform dashboard works for unsigned-in users.
+      allow read: if true;
 
       // 2. CREATE: Any signed-in user, must set ownerId to self
       allow create: if isSignedIn()

@@ -1593,10 +1593,7 @@ export function SetlistGrid({
                     onUseTemplate={onUseTemplate ?? (() => {})}
                     busy={cloneBusy}
                 />
-            ) : isMobile ? (
-                // v50-05-05: parallel mobile render path. BatchActionBar
-                // mounts above (selection ≥ 2) for both render paths;
-                // AddRowPlaceholder mounts below for both.
+            ) : (
                 <MobileCardList
                     setlistId={setlistId}
                     tracks={rows}
@@ -1611,148 +1608,6 @@ export function SetlistGrid({
                     onCommitTrackPatch={commitTrackPatchImpl}
                     onDeleteRow={(track) => void handleDeleteRow(track)}
                 />
-            ) : (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(e) => void handleDragEnd(e)}
-                >
-                    <SortableContext
-                        items={sortableIds}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {/* v54-01-01 fix: removed `<div className="overflow-x-auto">`
-                            wrapper that v53-02-01 added for sticky-right ChartCell.
-                            Per CSS spec, an `overflow-x-auto` ancestor establishes
-                            a scroll container, which made `<thead>`'s `position:
-                            sticky` pin against the wrapper's scrollport instead of
-                            the viewport — body rows then visually slid under the
-                            still-pinned header at every scroll depth. Sticky-right
-                            ChartCell still works fine without the wrapper because
-                            the chart `<th>` (`sticky right-0 z-20`) and `<td>`
-                            (`sticky right-0 z-[5]`) pin against the page's natural
-                            horizontal scrollport. SetlistGrid is tablet+desktop
-                            only (mobile flow uses MobileCardList), so column-sum
-                            ~704-784px fits iPad portrait (768) and landscape (1024)
-                            without horizontal page scroll. */}
-                        <table
-                            role="grid"
-                            aria-rowcount={rows.length + 1}
-                            className="w-full border-collapse text-left"
-                        >
-                            {/* v54-01-01 fix: thead `top-[3.75rem]` MUST stay in
-                                lockstep with SetlistGridTopBar's real height
-                                (back button h-11 = 44px + container py-2 = 16px →
-                                60px = 3.75rem). v51-02-01-DESIGN-CONTRACT.md:18
-                                codifies this rule; v52-03 violated it by growing
-                                SyncIndicator content without updating offsets, and
-                                v53-02-01's overflow-x-auto wrapper masked the
-                                misalignment. If you grow the topbar (event date
-                                line, multi-line SyncIndicator, etc.) bump this
-                                value too. Bg is fully opaque (no `/95`) so any
-                                browser without `backdrop-filter` support still
-                                masks body row text fully. */}
-                            <thead className="sticky top-[3.75rem] z-10 bg-background backdrop-blur supports-[backdrop-filter]:bg-background/90">
-                                    {table.getHeaderGroups().map((headerGroup) => (
-                                        <tr
-                                            key={headerGroup.id}
-                                            role="row"
-                                            className="border-b border-white/10"
-                                        >
-                                            {headerGroup.headers.map((header) => {
-                                                const isDragCol =
-                                                    header.id === 'drag'
-                                                const isChartCol =
-                                                    header.id === 'chart'
-                                                return (
-                                                    <th
-                                                        key={header.id}
-                                                        role="columnheader"
-                                                        scope="col"
-                                                        style={
-                                                            isDragCol
-                                                                ? undefined
-                                                                : {
-                                                                      width: header.column.getSize(),
-                                                                  }
-                                                        }
-                                                        className={cn(
-                                                            'px-2 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground',
-                                                            isDragCol &&
-                                                                'w-[44px] [@media(pointer:coarse)]:w-[52px]',
-                                                            // v53-02-01: sticky-right Chart column. Pins
-                                                            // the chart header against the overflow-x-auto
-                                                            // wrapper so the affordance stays visible on
-                                                            // iPad without scrolling past Notes. Own
-                                                            // opaque bg matches the thead chrome so
-                                                            // sibling th cells scroll cleanly behind.
-                                                            // z-20 > thead's z-10 so the chart-th wins
-                                                            // any horizontal stacking against siblings.
-                                                            isChartCol &&
-                                                                'sticky right-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-l border-white/10',
-                                                        )}
-                                                    >
-                                                        {header.isPlaceholder
-                                                            ? null
-                                                            : flexRender(
-                                                                  header.column.columnDef.header,
-                                                                  header.getContext(),
-                                                              )}
-                                                    </th>
-                                                )
-                                            })}
-                                        </tr>
-                                    ))}
-                                </thead>
-                                <tbody>
-                                    {table.getRowModel().rows.map((row) => {
-                                        const rowId = row.original.id
-                                        const inSelection =
-                                            meta.selectedIds.has(rowId)
-                                        const isInBulkSelection =
-                                            inSelection &&
-                                            meta.selectedIds.size >= 2
-                                        return (
-                                            <SortableRow
-                                                key={row.id}
-                                                row={row}
-                                                onDeleteRow={
-                                                    meta.onDeleteRow
-                                                }
-                                                isSelected={inSelection}
-                                                onSelectionClick={(mods) =>
-                                                    meta.onDragHandleClick(
-                                                        rowId,
-                                                        mods,
-                                                    )
-                                                }
-                                                isInBulkSelection={
-                                                    isInBulkSelection
-                                                }
-                                                bulkSelectionCount={
-                                                    meta.selectedIds.size
-                                                }
-                                                onContextEditRow={
-                                                    handleContextEditRow
-                                                }
-                                                onContextBindChart={
-                                                    handleContextBindChart
-                                                }
-                                                onContextDuplicate={(id) =>
-                                                    void handleContextDuplicate(
-                                                        id,
-                                                    )
-                                                }
-                                                onContextDelete={
-                                                    handleContextDelete
-                                                }
-                                            />
-                                        )
-                                    })}
-                            </tbody>
-                        </table>
-                    </SortableContext>
-                </DndContext>
             )}
 
             <AddBar
@@ -1806,3 +1661,4 @@ export function SetlistGrid({
         </div>
     )
 }
+

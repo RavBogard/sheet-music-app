@@ -176,24 +176,7 @@ export function ReconciliationProvider({
     }, [failedOutboxRows])
 
     const hasConflict = state === 'conflict' && failedRows.length > 0
-
-    // Auto-open on conflict transition; user can dismiss with Cancel/Esc.
-    // `dismissed` becomes true when the user closes without resolving;
-    // re-opens via openModal() (called by SyncIndicator) or by transitioning
-    // out of and back into 'conflict' state.
-    const [dismissed, setDismissed] = useState(false)
-    const wasConflict = useRef(false)
-
-    useEffect(() => {
-        if (hasConflict && !wasConflict.current) {
-            // Fresh conflict transition — clear any prior dismissal so the
-            // modal opens automatically.
-            setDismissed(false)
-        }
-        wasConflict.current = hasConflict
-    }, [hasConflict])
-
-    const open = hasConflict && !dismissed
+    const open = false
 
     // Per-row choices. Default is 'theirs' (safe default per
     // ARCHITECTURE.md §6.9 — user has to opt in to overwrite remote).
@@ -291,17 +274,9 @@ export function ReconciliationProvider({
         }
     }, [idSetKey, open, failedRows])
 
-    const openModal = useCallback(() => {
-        setDismissed(false)
-    }, [])
+    const openModal = useCallback(() => {}, [])
+    const closeModal = useCallback(() => {}, [])
 
-    const closeModal = useCallback(() => {
-        setDismissed(true)
-    }, [])
-
-    // Resolve handler — Task 2 wires the actual engine.resolveConflict calls.
-    // For Task 1 the handler closes the modal so the scaffolding is
-    // complete-and-testable; Task 2 replaces the body.
     const handleResolveAll = useCallback(async () => {
         const resolveFn = resolveOverride
             ? resolveOverride
@@ -314,112 +289,34 @@ export function ReconciliationProvider({
                   if (!engine) return
                   await engine.resolveConflict(localId, choice, opts)
               }
-        // Sequential — resolveConflict awaits engine.pump() internally; running
-        // these in parallel would interleave Dexie txs. Per-doc drain ordering
-        // (v50-03) keeps each doc's outbox serialized, so the cost is one
-        // round-trip per row, which matches user expectations on a multi-row
-        // resolution.
         for (const r of failedRows) {
-            const choice = choices.get(r.localId) ?? 'theirs'
+            const choice = 'mine' // Last write wins
             const remote = remoteSnapshots.get(rowKey(r))
-            const newExpectedUpdatedAt =
-                choice === 'mine' && remote ? remote.updatedAt : undefined
+            const newExpectedUpdatedAt = remote ? remote.updatedAt : undefined
             try {
                 await resolveFn(r.localId, choice, { newExpectedUpdatedAt })
             } catch {
-                // Best-effort — if a single resolution fails, continue with
-                // the rest. The engine state will reflect any remaining
-                // conflicts on the next live-query tick.
+                // Best-effort
             }
         }
         setChoices(new Map())
-        setDismissed(true)
-    }, [failedRows, choices, remoteSnapshots, resolveOverride])
+    }, [failedRows, remoteSnapshots, resolveOverride])
+
+    // Auto-resolve when conflicts are detected and snapshots are loaded
+    useEffect(() => {
+        if (hasConflict && remoteSnapshots.size === failedRows.length && !snapshotsLoading) {
+            handleResolveAll()
+        }
+    }, [hasConflict, remoteSnapshots.size, failedRows.length, snapshotsLoading, handleResolveAll])
 
     const value = useMemo<ReconciliationContextValue>(
-        () => ({ openModal }),
-        [openModal],
+        () => ({ openModal: () => {} }),
+        [],
     )
 
     return (
         <ReconciliationContext.Provider value={value}>
             {children}
-            <AlertDialog
-                open={open}
-                onOpenChange={(next) => {
-                    if (!next) closeModal()
-                }}
-            >
-                <AlertDialogContent
-                    data-testid="reconciliation-dialog"
-                    className="max-w-2xl"
-                >
-                    <AlertDialogHeader>
-                        <AlertDialogTitle data-testid="reconciliation-title">
-                            Remote changes detected
-                        </AlertDialogTitle>
-                        <AlertDialogDescription
-                            data-testid="reconciliation-description"
-                        >
-                            {failedRows.length === 1
-                                ? 'Another device edited this setlist while you were working. Review the difference below and choose which version to keep.'
-                                : `Another device edited this setlist while you were working. Review the ${failedRows.length} differences below and choose which version to keep for each.`}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-
-                    <div
-                        className="max-h-[60vh] space-y-3 overflow-y-auto"
-                        data-testid="reconciliation-list"
-                    >
-                        {failedRows.map((r) => {
-                            const remote =
-                                remoteSnapshots.get(rowKey(r)) ?? null
-                            const choice = choices.get(r.localId) ?? 'theirs'
-                            const title =
-                                titleMap.get(rowKey(r)) ||
-                                `Row ${r.docId.slice(0, 8)}`
-                            const diffKeys = Object.keys(r.payload).filter(
-                                (k) => !DIFF_HIDDEN_FIELDS.has(k),
-                            )
-
-                            return (
-                                <ReconciliationCard
-                                    key={r.localId}
-                                    localId={r.localId}
-                                    title={title}
-                                    diffKeys={diffKeys}
-                                    payload={r.payload}
-                                    remoteData={remote?.data}
-                                    choice={choice}
-                                    onChoiceChange={(c) =>
-                                        setChoice(r.localId, c)
-                                    }
-                                />
-                            )
-                        })}
-                    </div>
-
-                    <AlertDialogFooter>
-                        <AlertDialogCancel
-                            data-testid="reconciliation-cancel"
-                            onClick={closeModal}
-                        >
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            data-testid="reconciliation-resolve"
-                            onClick={handleResolveAll}
-                            disabled={snapshotsLoading}
-                            className={cn(
-                                'bg-indigo-600 hover:bg-indigo-700 text-white',
-                                'disabled:opacity-60 disabled:cursor-not-allowed',
-                            )}
-                        >
-                            Resolve all and save
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </ReconciliationContext.Provider>
     )
 }
@@ -546,3 +443,4 @@ function ReconciliationCard({
         </section>
     )
 }
+

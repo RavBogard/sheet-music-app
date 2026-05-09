@@ -263,7 +263,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const copyData = stripUndefinedDeep({
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
-                    tracks: setlistData.tracks,
+                    tracks: setlistData.tracks.map((t, i) => ({
+                        ...t,
+                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
+                    })),
                     trackCount: setlistData.tracks.length,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
@@ -388,7 +391,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     // for the rationale — closes the lazy-hydration precondition
                     // race that landed Daniel's editor in 'failed' state on phone.
                     updatedAt: serverTimestamp(),
-                    tracks: source.tracks,
+                    tracks: source.tracks.map((t, i) => ({
+                        ...t,
+                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
+                    })),
                     trackCount: source.tracks.length,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
@@ -432,7 +438,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const templateData = stripUndefinedDeep({
                     name: templateName || `${source.name} (Template)`,
                     date: serverTimestamp(),
-                    tracks: source.tracks,
+                    tracks: source.tracks.map((t, i) => ({
+                        ...t,
+                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
+                    })),
                     trackCount: source.tracks.length,
                     isTemplate: true,
                     templateType: 'other',

@@ -761,3 +761,4 @@ export async function preExtractChords(fileIds: string[]): Promise<PreExtractRes
     logger.info(`[PreExtract] Done: ${result.extracted} extracted, ${result.alreadyCached} cached, ${result.errors} errors`)
     return result
 }
+
