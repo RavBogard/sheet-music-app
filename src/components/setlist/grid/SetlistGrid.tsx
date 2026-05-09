@@ -1568,47 +1568,75 @@ export function SetlistGrid({
         <div
             data-testid="setlist-grid"
             data-setlist-id={setlistId}
-            className="flex w-full flex-col"
+            className="flex w-full flex-col min-h-screen relative"
             onKeyDown={handleRootKeyDown}
         >
+            <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/4 translate-x-1/4" />
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/4 -translate-x-1/4" />
+            </div>
+
             <SetlistGridTopBar
                 name={name ?? 'New Setlist'}
                 eventDateLabel={eventDateLabel}
                 onBack={onBack ?? (() => router.back())}
             />
 
-            {selectedTracks.length >= 2 ? (
-                <BatchActionBar
-                    selectedTracks={selectedTracks}
-                    onClear={selection.clear}
-                    onBulkSet={handleBulkSet}
-                    onBulkDelete={handleBulkDelete}
-                />
-            ) : null}
+            <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6 flex-grow pb-32">
+                <div className="flex justify-between items-end px-2">
+                    <div>
+                        <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">
+                            Upcoming Performance
+                        </p>
+                        <p className="text-2xl sm:text-3xl font-bold text-foreground">
+                            {eventDateLabel || 'Date TBD'}
+                        </p>
+                    </div>
+                    <div className="flex gap-4 sm:gap-6">
+                        <div className="text-right">
+                            <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
+                                Tracks
+                            </p>
+                            <p className="text-brand text-xl sm:text-2xl font-bold">
+                                {rows.length}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-            {showEmpty ? (
-                <EmptyState
-                    onMakeNextWeeks={handleClone}
-                    onAddSong={triggerAddOpen}
-                    onUseTemplate={onUseTemplate ?? (() => {})}
-                    busy={cloneBusy}
-                />
-            ) : (
-                <MobileCardList
-                    setlistId={setlistId}
-                    tracks={rows}
-                    selectedIds={selection.selectedIds}
-                    onSelectionClick={handleDragHandleClick}
-                    onContextEditRow={handleContextEditRow}
-                    onContextBindChart={handleContextBindChart}
-                    onContextDuplicate={(id) =>
-                        void handleContextDuplicate(id)
-                    }
-                    onContextDelete={handleContextDelete}
-                    onCommitTrackPatch={commitTrackPatchImpl}
-                    onDeleteRow={(track) => void handleDeleteRow(track)}
-                />
-            )}
+                {selectedTracks.length >= 2 ? (
+                    <BatchActionBar
+                        selectedTracks={selectedTracks}
+                        onClear={selection.clear}
+                        onBulkSet={handleBulkSet}
+                        onBulkDelete={handleBulkDelete}
+                    />
+                ) : null}
+
+                {showEmpty ? (
+                    <EmptyState
+                        onMakeNextWeeks={handleClone}
+                        onAddSong={triggerAddOpen}
+                        onUseTemplate={onUseTemplate ?? (() => {})}
+                        busy={cloneBusy}
+                    />
+                ) : (
+                    <MobileCardList
+                        setlistId={setlistId}
+                        tracks={rows}
+                        selectedIds={selection.selectedIds}
+                        onSelectionClick={handleDragHandleClick}
+                        onContextEditRow={handleContextEditRow}
+                        onContextBindChart={handleContextBindChart}
+                        onContextDuplicate={(id) =>
+                            void handleContextDuplicate(id)
+                        }
+                        onContextDelete={handleContextDelete}
+                        onCommitTrackPatch={commitTrackPatchImpl}
+                        onDeleteRow={(track) => void handleDeleteRow(track)}
+                    />
+                )}
+            </div>
 
             <AddBar
                 key={placeholderKey}

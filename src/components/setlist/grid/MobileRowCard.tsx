@@ -167,13 +167,13 @@ export function MobileRowCard({
                     tabIndex={0}
                     aria-label={`${track.title || 'Untitled track'}. Tap to edit.`}
                     className={cn(
-                        'flex items-center gap-3 rounded-lg border px-3 py-3',
-                        'min-h-[64px] cursor-pointer',
-                        'border-white/10 bg-card hover:bg-white/[0.02]',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
-                        'transition-colors duration-150 motion-reduce:transition-none',
+                        'group flex items-center gap-4 rounded-2xl border px-4 py-4',
+                        'min-h-[72px] cursor-pointer relative overflow-hidden',
+                        'bg-white/[0.02] backdrop-blur-md border-white/10 hover:bg-white-[0.04]',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                        'transition-all duration-200 motion-reduce:transition-none',
                         isSelected &&
-                            'border-indigo-400/40 bg-indigo-500/5',
+                            'border-brand/40 bg-brand/5 shadow-[0_0_15px_rgba(67,56,202,0.15)]',
                     )}
                 >
                     <button
@@ -183,55 +183,61 @@ export function MobileRowCard({
                         data-testid={`mobile-card-handle-${track.id}`}
                         onClick={handleHandleClick}
                         className={cn(
-                            'flex h-11 w-11 flex-none items-center justify-center rounded-sm',
-                            'cursor-pointer',
+                            'flex flex-col items-center gap-1 justify-center rounded-md',
+                            'cursor-pointer p-2 -ml-2',
                             isSelected
-                                ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-400/40'
-                                : 'text-muted-foreground/60',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
+                                ? 'text-brand bg-brand/10 ring-1 ring-brand/40'
+                                : 'text-muted-foreground/50 hover:text-muted-foreground',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                             'transition-colors duration-150 motion-reduce:transition-none',
                         )}
                     >
-                        <GripVertical aria-hidden className="h-4 w-4" />
+                        <GripVertical aria-hidden className="h-5 w-5" />
+                        <span className="text-[10px] font-bold opacity-40 font-mono tracking-widest">{(track.order + 1).toString().padStart(2, '0')}</span>
                     </button>
 
-                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-foreground">
+                    <div className="min-w-0 flex-1 flex flex-col gap-1">
+                        <span className="truncate text-lg font-semibold text-foreground group-hover:text-brand transition-colors">
                             {track.title || (
-                                <span className="text-muted-foreground/60">
-                                    Untitled
+                                <span className="text-muted-foreground/60 font-medium">
+                                    Untitled Track
                                 </span>
                             )}
                         </span>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {track.key ? (
-                                <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono">
-                                    {track.key}
-                                </span>
-                            ) : null}
-                            {track.leadMusician ? (
-                                <span className="truncate">
-                                    {track.leadMusician}
-                                </span>
-                            ) : null}
-                        </div>
+                        {/* Empty subtitle slot for potential future use (e.g. artist) */}
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                        {track.key ? (
+                            <div className="bg-brand/10 border border-brand/20 rounded-lg px-2.5 py-1 text-center min-w-[3rem]">
+                                <p className="text-[9px] text-brand/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Key</p>
+                                <p className="text-brand font-bold text-xs leading-none">{track.key}</p>
+                            </div>
+                        ) : null}
+                        
+                        {track.leadMusician ? (
+                            <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
+                                <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Lead</p>
+                                <p className="text-foreground font-bold text-xs leading-none truncate">{track.leadMusician}</p>
+                            </div>
+                        ) : null}
                     </div>
 
                     <span
                         aria-label={
                             track.songId ? 'Chart bound' : 'No chart bound'
                         }
-                        className="flex-none"
+                        className="flex-none ml-2"
                     >
                         {track.songId ? (
                             <Music
                                 aria-hidden
-                                className="h-4 w-4 text-indigo-400"
+                                className="h-5 w-5 text-brand opacity-80"
                             />
                         ) : (
                             <FileText
                                 aria-hidden
-                                className="h-4 w-4 text-muted-foreground/50"
+                                className="h-5 w-5 text-muted-foreground/30"
                             />
                         )}
                     </span>

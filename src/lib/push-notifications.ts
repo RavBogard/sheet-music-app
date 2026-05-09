@@ -38,17 +38,15 @@ export async function registerPushNotifications(uid: string): Promise<string | n
             return null
         }
 
-        // Register the messaging SW and send it the Firebase config
-        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        swRegistration.active?.postMessage({
-            type: 'FIREBASE_CONFIG',
-            config: {
-                apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-                messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-                appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-            },
-        })
+        // Register the messaging SW with the Firebase config as URL parameters
+        // This ensures the SW always has the config even on cold starts from background notifications
+        const swUrl = new URL('/firebase-messaging-sw.js', window.location.origin)
+        if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) swUrl.searchParams.set('apiKey', process.env.NEXT_PUBLIC_FIREBASE_API_KEY)
+        if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) swUrl.searchParams.set('projectId', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)
+        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) swUrl.searchParams.set('messagingSenderId', process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID)
+        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) swUrl.searchParams.set('appId', process.env.NEXT_PUBLIC_FIREBASE_APP_ID)
+
+        const swRegistration = await navigator.serviceWorker.register(swUrl.toString())
 
         // Get FCM token
         const { getMessaging, getToken } = await import('firebase/messaging')

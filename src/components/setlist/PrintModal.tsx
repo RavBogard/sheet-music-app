@@ -15,6 +15,7 @@ import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { toast } from "sonner"
+import { generatePdfBlob, generateZipBlob, downloadBlob } from "@/lib/print-generation"
 
 const STORAGE_KEY = "crc-print-selection"
 
@@ -185,46 +186,29 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const generateForMusician = async (
         name: string, transposition: number, preferFlats: boolean, capoFret: number
     ): Promise<Blob> => {
-        const response = await apiFetch('/api/setlist/print', {
-            method: 'POST',
-            body: JSON.stringify({
-                title, date,
-                musicianName: name || undefined,
-                eventName: eventName || undefined,
-                rabbi: rabbi || undefined,
-                coverOnly,
-                tracks: tracks.map(t => {
-                    const useTransposition = printMode === "just-me"
-                    const tp = useTransposition ? trackTranspositions[t.id] : null
-                    return {
-                        title: t.title, key: t.key || '', tune: t.tune || '', notes: t.notes || '',
-                        leadMusician: t.leadMusician || '', fileId: t.fileId,
-                        transposition: tp ? tp.transposition : transposition,
-                        preferFlats: tp ? tp.preferFlats : preferFlats,
-                        capoFret: tp ? tp.capoFret : capoFret,
-                        omitPdf: !trackIncludedIds.has(t.id),
-                        type: t.type,
-                        performer: t.performer,
-                        estimatedMinutes: t.estimatedMinutes,
-                        description: t.description,
-                    }
-                })
+        return generatePdfBlob({
+            title, date,
+            musicianName: name || undefined,
+            eventName: eventName || undefined,
+            rabbi: rabbi || undefined,
+            coverOnly,
+            tracks: tracks.map(t => {
+                const useTransposition = printMode === "just-me"
+                const tp = useTransposition ? trackTranspositions[t.id] : null
+                return {
+                    title: t.title, key: t.key || '', tune: t.tune || '', notes: t.notes || '',
+                    leadMusician: t.leadMusician || '', fileId: t.fileId,
+                    transposition: tp ? tp.transposition : transposition,
+                    preferFlats: tp ? tp.preferFlats : preferFlats,
+                    capoFret: tp ? tp.capoFret : capoFret,
+                    omitPdf: !trackIncludedIds.has(t.id),
+                    type: t.type,
+                    performer: t.performer,
+                    estimatedMinutes: t.estimatedMinutes,
+                    description: t.description,
+                }
             })
         })
-
-        if (!response.ok) {
-            let errorMsg = 'Failed to generate PDF'
-            try {
-                const err = await response.json()
-                errorMsg = err.error || errorMsg
-            } catch {
-                // Response might be non-JSON for 500s
-                errorMsg = `Server error (${response.status})`
-            }
-            throw new Error(errorMsg)
-        }
-
-        return response.blob()
     }
 
     const executeEmailPackets = async () => {
@@ -269,15 +253,12 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
         try {
             if (printMode === "select-musicians" && selectedUids.length > 1) {
-                const JSZip = (await import("jszip")).default
-                const zip = new JSZip()
-
                 let completed = 0
                 const total = selectedUids.length
 
-                const promises = selectedUids.map(async (uid) => {
+                const files = await Promise.all(selectedUids.map(async (uid) => {
                     const m = musicians.find(x => x.uid === uid)
-                    if (!m) return
+                    if (!m) return null
                     const preset = m.profile.instrument ? INSTRUMENT_PRESETS[m.profile.instrument] : null
                     const label = preset?.label || ''
                     const name = `${m.displayName}${label ? ` - ${label}` : ''}`
@@ -286,22 +267,21 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                         name, m.profile.defaultTransposition || 0,
                         m.profile.preferFlats || false, m.profile.preferredCapoFret || 0
                     )
-
-                    zip.file(`${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`, blob)
+                    
                     completed++
                     setProgressMsg(`Processing packets... (${completed}/${total})`)
-                })
 
-                await Promise.all(promises)
+                    return {
+                        name: `${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`,
+                        blob
+                    }
+                }))
 
                 setProgressMsg("Zipping files...")
-                const zipBlob = await zip.generateAsync({ type: 'blob' })
-                const url = URL.createObjectURL(zipBlob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_packets.zip`
-                document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                URL.revokeObjectURL(url)
+                const validFiles = files.filter(f => f !== null) as { name: string, blob: Blob }[]
+                const zipBlob = await generateZipBlob(validFiles)
+                
+                downloadBlob(zipBlob, `${title.replace(/[^a-z0-9]/gi, '_')}_packets.zip`)
                 onClose()
                 return
             }
@@ -330,16 +310,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
             const blob = await generateForMusician(name, transposition, preferFlats, capoFret)
 
-            const url = URL.createObjectURL(blob)
-
-            const a = document.createElement('a')
-            a.href = url
-            // Convert something like "My Gig Packet!" into "My_Gig_Packet"
-            a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
+            downloadBlob(blob, `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`)
             
             onClose()
         } catch (e: unknown) {

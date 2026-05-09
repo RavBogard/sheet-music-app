@@ -24,38 +24,41 @@ export function SetlistGridTopBar({
             data-testid="setlist-grid-top-bar"
             className={cn(
                 'sticky top-0 z-20 w-full',
-                'flex items-center gap-3 px-3 py-2 sm:px-4',
-                'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-                'border-b border-white/10',
+                'flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4',
+                'bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40',
+                'border-b border-white/10 shadow-lg shadow-brand/5',
             )}
         >
-            <button
-                type="button"
-                onClick={onBack}
-                aria-label="Back"
-                className={cn(
-                    'inline-flex h-11 w-11 items-center justify-center rounded-md',
-                    'cursor-pointer hover:bg-white/5 active:bg-white/10',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2',
-                    'transition-colors duration-200 motion-reduce:transition-none',
-                )}
-            >
-                <ChevronLeft aria-hidden className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    aria-label="Back"
+                    className={cn(
+                        'inline-flex p-2 items-center justify-center rounded-full',
+                        'text-foreground hover:bg-white/5 active:bg-white/10',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                        'transition-colors',
+                    )}
+                >
+                    <ChevronLeft aria-hidden className="h-6 w-6" />
+                </button>
 
-            <div className="min-w-0 flex-1">
-                <h1 className="truncate text-base font-semibold leading-tight sm:text-lg">
-                    {name || 'New Setlist'}
-                </h1>
-                {eventDateLabel ? (
-                    <p className="truncate text-xs text-muted-foreground">
-                        {eventDateLabel}
-                    </p>
-                ) : null}
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                        {name || 'New Setlist'}
+                    </h1>
+                    {eventDateLabel ? (
+                        <p className="truncate text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
+                            {eventDateLabel}
+                        </p>
+                    ) : null}
+                </div>
             </div>
 
-            {/* v52-03-01: removed always-disabled kebab (was disabled={!onOverflow}; never wired). SyncIndicator is the only trailing action affordance. */}
-            <SyncIndicator {...syncProps} />
+            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 pl-4">
+                <SyncIndicator {...syncProps} />
+            </div>
         </header>
     )
 }

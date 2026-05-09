@@ -69,138 +69,126 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
             setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
         }).catch(() => setOfflineStatus('none'))
     }, [setlist.tracks])
+
     return (
         <div
             role="button"
             tabIndex={0}
             onClick={onPerform}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
-            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border-l-4 border-l-brand border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative overflow-hidden shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''} ${!!navigatingTo ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
                     <Loader2 className="h-6 w-6 animate-spin text-brand" />
                 </div>
             )}
-            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Calendar className="h-24 w-24 -mr-4 -mt-4 text-brand" />
+            
+            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-lg bg-gradient-to-br from-brand/20 to-transparent flex items-center justify-center relative">
+                <Calendar className="h-8 w-8 text-brand/50 absolute z-0" />
+                <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay"></div>
+                <div className="z-10 font-bold text-brand-foreground/80 text-xl tracking-tighter">
+                    {toDateHelper(setlist.eventDate)?.getDate() || '--'}
+                </div>
             </div>
 
-            <div className="relative z-10 w-full">
-                <div className="flex justify-between items-start mb-2 w-full gap-2">
-                    <div className="inline-flex items-center gap-2 bg-brand/10 text-foreground px-2 py-1 rounded text-xs font-bold uppercase tracking-wider shrink-0">
-                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <div
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onDownload(setlist)
-                            }}
-                            className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer"
-                            title="Download for Offline"
-                        >
-                            <Download className={`h-4 w-4 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
-                        </div>
-
-                        {/* Overflow Menu — always visible on touch, hover-reveal on desktop */}
-                        <div className="md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <div className="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer -mr-2 text-muted-foreground hover:text-foreground">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                    {canDuplicate && (
-                                        <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>
-                                            <Copy className="h-4 w-4 mr-2" />
-                                            Duplicate Setlist
-                                        </DropdownMenuItem>
-                                    )}
-                                    {canDuplicate && (
-                                        <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
-                                            <PlusSquare className="h-4 w-4 mr-2" />
-                                            Clone for Next Week
-                                        </DropdownMenuItem>
-                                    )}
-                                    {canDuplicate && (
-                                        <DropdownMenuItem onClick={(e) => onSaveAsTemplate(setlist, e)}>
-                                            <BookmarkPlus className="h-4 w-4 mr-2" />
-                                            Save as Template
-                                        </DropdownMenuItem>
-                                    )}
-                                    {(() => {
-                                        const inferred = inferServiceType(setlist)
-                                        const canSaveAsDefault =
-                                            isAdmin &&
-                                            !!onSaveAsDefault &&
-                                            !!inferred &&
-                                            PHASE_1_DEFAULT_TYPES.includes(inferred)
-                                        const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
-                                        if (!canSaveAsDefault || !label || !inferred) return null
-                                        return (
-                                            <DropdownMenuItem
-                                                onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
-                                                data-testid="setlist-card-save-as-default"
-                                            >
-                                                <Star className="h-4 w-4 mr-2" />
-                                                Save as Default for {label}
-                                            </DropdownMenuItem>
-                                        )
-                                    })()}
-                                    {canDelete && (
-                                        <DropdownMenuItem onClick={(e) => onDelete(setlist, e)} className="text-red-500 focus:text-red-500">
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Delete Setlist
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    </div>
-                </div>
-                <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-brand transition-colors">{setlist.name}</h3>
-                {setlist.ownerName && <p className="text-muted-foreground text-sm">Leader: {setlist.ownerName}</p>}
-                {setlist.rabbi && <p className="text-muted-foreground text-sm">Rabbi {setlist.rabbi}</p>}
-
-                <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{setlist.trackCount || 0} songs</span>
+            <div className="flex-1 min-w-0">
+                <h5 className="text-xl font-bold text-foreground group-hover:text-brand transition-colors truncate tracking-tight">{setlist.name}</h5>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'No Date'}
+                    </span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        {setlist.trackCount || 0} Songs
+                    </span>
                     {offlineStatus === 'full' && (
-                        <span className="flex items-center gap-1 text-green-500 text-xs">
-                            <CheckCircle2 className="h-3 w-3" /> Offline ready
-                        </span>
-                    )}
-                    {offlineStatus === 'partial' && (
-                        <span className="flex items-center gap-1 text-amber-500 text-xs">
-                            <CloudOff className="h-3 w-3" /> Partial
+                        <span className="text-xs text-green-400 flex items-center gap-1 font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Offline ready
                         </span>
                     )}
                 </div>
+            </div>
 
-                <div className="mt-4 flex flex-col sm:flex-row items-center gap-2 w-full">
-                    <Button
-                        variant="brand"
-                        onClick={onEdit}
-                        className="flex-1 rounded-xl font-bold"
-                    >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit Setlist
-                    </Button>
-                    
-                    {/* Prominent "Duplicate for next week" button */}
-                    {canDuplicate && (
-                        <div
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onCloneNextWeek(setlist, e)
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 py-2 h-10 rounded-xl bg-brand/10 hover:bg-brand/20 text-foreground text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer border border-brand/20"
-                        >
-                            <CalendarPlus className="h-3.5 w-3.5" />
-                            Clone
-                        </div>
-                    )}
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); onEdit(e); }}
+                    className="hidden sm:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-10"
+                >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                </Button>
+                
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onDownload(setlist)
+                    }}
+                    className="w-10 h-10 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                    title="Download for Offline"
+                >
+                    <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                </div>
+
+                <div className="md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <div className="w-10 h-10 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground">
+                                <MoreVertical className="h-5 w-5" />
+                            </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
+                            {canDuplicate && (
+                                <DropdownMenuItem onClick={(e) => onCloneNextWeek(setlist, e)}>
+                                    <PlusSquare className="h-4 w-4 mr-2" />
+                                    Clone for Next Week
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="sm:hidden">
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit Setlist
+                            </DropdownMenuItem>
+                            {canDuplicate && (
+                                <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Duplicate Setlist
+                                </DropdownMenuItem>
+                            )}
+                            {canDuplicate && (
+                                <DropdownMenuItem onClick={(e) => onSaveAsTemplate(setlist, e)}>
+                                    <BookmarkPlus className="h-4 w-4 mr-2" />
+                                    Save as Template
+                                </DropdownMenuItem>
+                            )}
+                            {(() => {
+                                const inferred = inferServiceType(setlist)
+                                const canSaveAsDefault =
+                                    isAdmin &&
+                                    !!onSaveAsDefault &&
+                                    !!inferred &&
+                                    PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
+                                if (!canSaveAsDefault || !label || !inferred) return null
+                                return (
+                                    <DropdownMenuItem
+                                        onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
+                                        data-testid="setlist-card-save-as-default"
+                                    >
+                                        <Star className="h-4 w-4 mr-2" />
+                                        Save as Default for {label}
+                                    </DropdownMenuItem>
+                                )
+                            })()}
+                            {canDelete && (
+                                <DropdownMenuItem onClick={(e) => onDelete(setlist, e)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Setlist
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </div>
@@ -233,113 +221,98 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             tabIndex={0}
             onClick={onPerform}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
-            className={`h-auto w-full flex-col bg-card/60 backdrop-blur-md hover:bg-brand/5 border border-brand/10 rounded-2xl p-4 md:p-6 text-left whitespace-normal items-start group relative shadow-sm active:scale-100 ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''} ${!!navigatingTo ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
                     <Loader2 className="h-5 w-5 animate-spin text-brand" />
                 </div>
             )}
-            <div className="flex items-start justify-between mb-2 w-full gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="flex flex-col min-w-0 flex-1">
-                        <h3 className="text-xl font-semibold truncate text-foreground" title={setlist.name}>{setlist.name}</h3>
-                        {setlist.eventDate && (
-                            <span className="text-xs text-muted-foreground">
-                                {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Action Menu (MoreVertical) */}
-                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    {(canDuplicate || canDelete) && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <div className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground cursor-pointer">
-                                    <MoreVertical className="h-4 w-4" />
-                                </div>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                {canDuplicate && (
-                                    <>
-                                        <DropdownMenuItem onClick={(e) => onDuplicate?.(setlist, e)}>
-                                            <Copy className="h-4 w-4 mr-2" />
-                                            Duplicate Setlist
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => onCloneNextWeek?.(setlist, e)}>
-                                            <PlusSquare className="h-4 w-4 mr-2" />
-                                            Clone for Next Week
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => onSaveAsTemplate?.(setlist, e)}>
-                                            <BookmarkPlus className="h-4 w-4 mr-2" />
-                                            Save as Template
-                                        </DropdownMenuItem>
-                                    </>
-                                )}
-                                {(() => {
-                                    const inferred = inferServiceType(setlist)
-                                    const canSaveAsDefault =
-                                        isAdmin &&
-                                        !!onSaveAsDefault &&
-                                        !!inferred &&
-                                        PHASE_1_DEFAULT_TYPES.includes(inferred)
-                                    const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
-                                    if (!canSaveAsDefault || !label || !inferred) return null
-                                    return (
-                                        <DropdownMenuItem
-                                            onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
-                                            data-testid="setlist-card-save-as-default"
-                                        >
-                                            <Star className="h-4 w-4 mr-2" />
-                                            Save as Default for {label}
-                                        </DropdownMenuItem>
-                                    )
-                                })()}
-                                {canDelete && (
-                                    <DropdownMenuItem onClick={(e) => onDelete?.(setlist, e)} className="text-red-500 focus:text-red-500">
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete Setlist
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+            
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-md bg-gradient-to-br from-surface-container to-background flex items-center justify-center relative grayscale group-hover:grayscale-0 transition-all">
+                <Calendar className="h-6 w-6 text-muted-foreground absolute z-0" />
+                <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay"></div>
+                <div className="z-10 font-bold text-muted-foreground/80 text-sm tracking-tighter">
+                    {toDateHelper(setlist.eventDate)?.getDate() || '--'}
                 </div>
             </div>
 
-            {setlist.ownerName && (
-                <div className="text-sm text-muted-foreground">
-                    by {setlist.ownerName}
+            <div className="flex-1 min-w-0">
+                <h5 className="text-lg font-semibold text-foreground group-hover:text-brand transition-colors truncate tracking-tight">{setlist.name}</h5>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {toDateHelper(setlist.eventDate)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'No Date'}
+                    </span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <PlayCircle className="h-3 w-3" />
+                        {setlist.trackCount || 0} Songs
+                    </span>
                 </div>
-            )}
-            <div className="mt-2 text-muted-foreground text-sm mb-4">
-                {setlist.trackCount || 0} songs{setlist.rabbi ? ` · Rabbi ${setlist.rabbi}` : ''}
             </div>
 
-            <div className="mt-auto pt-2 flex flex-col sm:flex-row items-center gap-2 w-full">
+            {/* Action Menu */}
+            <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                 <Button
-                    variant="brand"
-                    onClick={onEdit}
-                    className="flex-1 rounded-xl font-bold"
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => { e.stopPropagation(); onEdit(e); }}
+                    className="h-10 w-10 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
                 >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
+                    <Pencil className="h-4 w-4" />
                 </Button>
                 
-                {/* Quick clone action */}
-                {canDuplicate && (
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onCloneNextWeek?.(setlist, e)
-                        }}
-                        className="flex-1 flex items-center justify-center gap-1.5 h-10 text-xs text-brand/80 hover:text-brand hover:bg-brand/5 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-brand/20"
-                    >
-                        <CalendarPlus className="h-3.5 w-3.5" />
-                        <span>Clone</span>
-                    </div>
+                {(canDuplicate || canDelete) && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <div className="h-10 w-10 hover:bg-white/10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer">
+                                <MoreVertical className="h-5 w-5" />
+                            </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
+                            {canDuplicate && (
+                                <>
+                                    <DropdownMenuItem onClick={(e) => onDuplicate?.(setlist, e)}>
+                                        <Copy className="h-4 w-4 mr-2" />
+                                        Duplicate Setlist
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => onCloneNextWeek?.(setlist, e)}>
+                                        <PlusSquare className="h-4 w-4 mr-2" />
+                                        Clone for Next Week
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => onSaveAsTemplate?.(setlist, e)}>
+                                        <BookmarkPlus className="h-4 w-4 mr-2" />
+                                        Save as Template
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {(() => {
+                                const inferred = inferServiceType(setlist)
+                                const canSaveAsDefault =
+                                    isAdmin &&
+                                    !!onSaveAsDefault &&
+                                    !!inferred &&
+                                    PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
+                                if (!canSaveAsDefault || !label || !inferred) return null
+                                return (
+                                    <DropdownMenuItem
+                                        onClick={(e) => onSaveAsDefault(setlist, inferred, e)}
+                                        data-testid="setlist-card-save-as-default"
+                                    >
+                                        <Star className="h-4 w-4 mr-2" />
+                                        Save as Default for {label}
+                                    </DropdownMenuItem>
+                                )
+                            })()}
+                            {canDelete && (
+                                <DropdownMenuItem onClick={(e) => onDelete?.(setlist, e)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Setlist
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 )}
             </div>
         </div>
@@ -355,25 +328,27 @@ interface PlaceholderCardProps {
 
 export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
     return (
-        <Button
-            variant="ghost"
+        <div
+            role="button"
+            tabIndex={0}
             onClick={() => onCreate(date)}
-            className="h-auto border-2 border-dashed border-brand/10 hover:border-brand/30 hover:bg-brand/5 rounded-2xl p-4 md:p-6 text-left whitespace-normal flex flex-col justify-center items-center gap-3 group opacity-70 hover:opacity-100 active:scale-100"
+            className="glass-card hover:border-brand/30 border-dashed rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] opacity-60 hover:opacity-100"
         >
-            <div className="h-12 w-12 rounded-full bg-card flex items-center justify-center group-hover:bg-brand/15 group-hover:text-foreground transition-colors">
-                <Plus className="h-6 w-6" />
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-dashed border-white/20 bg-background/30 flex items-center justify-center group-hover:border-brand/50 group-hover:bg-brand/10 transition-colors">
+                <Plus className="h-6 w-6 text-muted-foreground group-hover:text-brand transition-colors" />
             </div>
-            <div className="text-center">
-                <div className="font-bold text-foreground">
-                    {date.toLocaleDateString('en-US', { weekday: 'long' })}
+            
+            <div className="flex-1 min-w-0">
+                <h5 className="text-lg font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate tracking-tight">
+                    Plan Service
+                </h5>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </span>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                    {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </div>
             </div>
-            <div className="text-xs font-medium text-foreground bg-brand/10 px-3 py-1 rounded-full uppercase tracking-wider">
-                Plan Service
-            </div>
-        </Button>
+        </div>
     )
 }

@@ -9,9 +9,28 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js')
 
-// Firebase config is received from the main app via postMessage.
-// The SW waits for config before initializing Firebase.
+// Firebase config is received from URL parameters to ensure background execution works.
+// Fallback to postMessage just in case it's registered the old way.
 let messaging = null
+
+const urlParams = new URL(location).searchParams
+const initialConfig = {
+    apiKey: urlParams.get('apiKey'),
+    projectId: urlParams.get('projectId'),
+    messagingSenderId: urlParams.get('messagingSenderId'),
+    appId: urlParams.get('appId'),
+}
+
+if (initialConfig.apiKey && initialConfig.projectId) {
+    try {
+        firebase.initializeApp(initialConfig)
+        messaging = firebase.messaging()
+        messaging.onBackgroundMessage(handleBackgroundMessage)
+    } catch (e) {
+        // Already initialized
+        try { messaging = firebase.messaging() } catch { /* ignore */ }
+    }
+}
 
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'FIREBASE_CONFIG') {
@@ -21,7 +40,7 @@ self.addEventListener('message', (event) => {
             messaging = firebase.messaging()
             messaging.onBackgroundMessage(handleBackgroundMessage)
         } catch (e) {
-            // Already initialized (e.g. after SW update)
+            // Already initialized
             try { messaging = firebase.messaging() } catch { /* ignore */ }
         }
     }

@@ -128,7 +128,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             {/* Vertical fader track */}
             <div
                 ref={sliderRef}
-                className="relative w-8 h-[200px] rounded-lg bg-zinc-900/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none"
+                className="relative w-8 h-[200px] rounded-lg bg-muted/80 border border-brand/10 overflow-hidden cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -182,13 +182,13 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                 {/* Pending indicator */}
                 {isPending && !isDragging && (
                     <div className="absolute top-1 left-1/2 -translate-x-1/2">
-                        <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
+                        <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
                     </div>
                 )}
             </div>
 
             {/* Percentage value */}
-            <div className="text-[10px] font-mono font-bold text-zinc-500 mt-1 mb-0.5">
+            <div className="text-[10px] font-mono font-bold text-muted-foreground/70 mt-1 mb-0.5">
                 {percentage}%
             </div>
 
@@ -211,10 +211,11 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             
             {/* Channel name (Moved to bottom) */}
             <div
-                className={`text-xs sm:text-sm font-bold truncate max-w-[56px] text-center mt-2 px-1.5 py-0.5 rounded ${isMaster ? "text-brand bg-brand/10" : "text-white bg-zinc-800/80 shadow-sm"}`}
+                className={`text-xs sm:text-sm font-bold truncate max-w-[56px] text-center mt-2 px-1.5 py-0.5 rounded ${isMaster ? "text-brand bg-brand/10" : "text-foreground bg-muted shadow-sm"}`}
                 title={label}
             >
                 {label}
             </div>
-            </div>    )
+        </div>
+    )
 }

@@ -183,13 +183,41 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                     )}
 
                     {!loading && !error && (
-                        <div className="space-y-10">
+                        <div className="space-y-8 max-w-5xl mx-auto">
+                            {/* Welcome Section */}
+                            {user && (
+                                <section className="mb-2 mt-4 px-2">
+                                    <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2">
+                                        Welcome Back{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.
+                                    </h2>
+                                    <p className="text-lg text-muted-foreground">
+                                        Your stage is ready. {upcoming.length} upcoming setlists scheduled.
+                                    </p>
+                                </section>
+                            )}
+
+                            {/* Create Action Card */}
+                            {user && isMember && (
+                                <section className="group" onClick={() => setShowWizard(true)}>
+                                    <div className="glass-card rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-2 border-brand/20 hover:border-brand/50 transition-all cursor-pointer relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div className="w-16 h-16 rounded-full bg-brand flex items-center justify-center shadow-[0_0_20px_rgba(67,56,202,0.4)] transition-transform group-hover:scale-110">
+                                            <Plus className="h-8 w-8 text-brand-foreground" />
+                                        </div>
+                                        <div className="z-10">
+                                            <h3 className="text-xl font-bold text-foreground">Create New Setlist</h3>
+                                            <p className="text-sm text-muted-foreground">Start fresh or build from a template</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            )}
+
                             {hasUpcoming && (
                                 <section>
-                                    <h2 className="text-eyebrow mb-4 flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-brand" /> Upcoming Services
-                                    </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="flex justify-between items-center px-2 mb-4">
+                                        <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Upcoming Services</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {upcoming.map(setlist => (
                                             <UpcomingSetlistCard
                                                 key={setlist.id}
@@ -217,15 +245,13 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                             )}
 
                             <section>
-                                {hasUpcoming && (
-                                    <h2 className="text-eyebrow mb-4 border-t border-brand/10 pt-8">
-                                        Library &amp; Past Events
-                                    </h2>
-                                )}
+                                <div className="flex justify-between items-center px-2 mb-4 mt-8">
+                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Library & Past Events</h4>
+                                </div>
                                 {pastOrNoDate.length === 0 ? (
                                     <div className="text-muted-foreground italic py-10 text-center">No other setlists found.</div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {pastOrNoDate.map(setlist => (
                                             <SetlistCard
                                                 key={setlist.id}
