@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Link as LinkIcon, CheckCircle, Music, Globe, Search } from "lucide-react"
+import { Loader2, Link as LinkIcon, CheckCircle, Music, Globe, Search, Send, Bot, User } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
@@ -27,8 +27,15 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
     const [open, setOpen] = useState(false)
     const [url, setUrl] = useState("")
     const [rawText, setRawText] = useState("")
-    const [searchQuery, setSearchQuery] = useState("")
-    const [searchResults, setSearchResults] = useState<{title: string, artist: string, url: string}[]>([])
+    
+    type ChatMessage = {
+        role: 'user' | 'model'
+        content: string
+        results?: { title: string, artist: string, url: string }[]
+    }
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    const [chatInput, setChatInput] = useState("")
+    
     const [mode, setMode] = useState<'search' | 'url' | 'text'>('search')
     const [scraping, setScraping] = useState(false)
     const [searching, setSearching] = useState(false)
@@ -53,8 +60,8 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
     const reset = useCallback(() => {
         setUrl("")
         setRawText("")
-        setSearchQuery("")
-        setSearchResults([])
+        setChatInput("")
+        setChatMessages([])
         setTitle("")
         setArtist("")
         setContent("")
@@ -66,17 +73,20 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
         setStep('input')
     }, [])
 
-    const handleSearch = async () => {
-        if (!searchQuery.trim()) return
+    const handleChatSubmit = async () => {
+        if (!chatInput.trim()) return
         
+        const newUserMsg: ChatMessage = { role: 'user', content: chatInput.trim() }
+        const newHistory = [...chatMessages, newUserMsg]
+        setChatMessages(newHistory)
+        setChatInput("")
         setSearching(true)
-        setSearchResults([])
         
         try {
             const res = await fetch('/api/charts/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: searchQuery.trim() })
+                body: JSON.stringify({ messages: newHistory })
             })
             
             const data = await res.json()
@@ -85,9 +95,15 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                 throw new Error(data.error || 'Search failed')
             }
             
-            setSearchResults(data.results || [])
+            const newBotMsg: ChatMessage = {
+                role: 'model',
+                content: data.message || "Here's what I found:",
+                results: data.results || []
+            }
+            
+            setChatMessages([...newHistory, newBotMsg])
         } catch (err: any) {
-            toast.error(err.message || 'Error searching web')
+            toast.error(err.message || 'Error communicating with assistant')
         } finally {
             setSearching(false)
         }
@@ -244,70 +260,93 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                         </div>
 
                         {mode === 'search' ? (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs text-muted-foreground mb-1 block">Song Title & Artist</label>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                placeholder="e.g. Dancing in the Dark Bruce Springsteen"
-                                                className="pl-9"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') handleSearch()
-                                                }}
-                                            />
+                            <div className="space-y-4 flex flex-col h-[400px]">
+                                {/* Chat History Area */}
+                                <div className="flex-1 overflow-y-auto bg-muted/20 rounded-lg p-4 space-y-4 border border-border">
+                                    {chatMessages.length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-2">
+                                            <Bot className="h-8 w-8" />
+                                            <p className="text-xs text-center max-w-[200px]">Ask me to find a specific song, or describe it and I'll figure it out!</p>
                                         </div>
+                                    ) : (
+                                        chatMessages.map((msg, i) => (
+                                            <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-brand text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+                                                    {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                                                </div>
+                                                <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                                    <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-brand text-white rounded-tr-sm' : 'bg-zinc-800/80 text-zinc-100 rounded-tl-sm'}`}>
+                                                        {msg.content}
+                                                    </div>
+                                                    
+                                                    {msg.results && msg.results.length > 0 && (
+                                                        <div className="flex flex-col gap-2 w-full mt-1">
+                                                            {msg.results.map((res, idx) => (
+                                                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50 gap-3 w-full shadow-sm">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-sm font-medium text-foreground truncate">{res.title}</p>
+                                                                        <p className="text-xs text-muted-foreground truncate">{res.artist}</p>
+                                                                    </div>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        className="shrink-0 bg-brand hover:bg-brand/80 h-7 text-xs px-3"
+                                                                        onClick={() => {
+                                                                            setUrl(res.url)
+                                                                            handleScrape(res.url)
+                                                                        }}
+                                                                        disabled={scraping}
+                                                                    >
+                                                                        {scraping && url === res.url ? (
+                                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                                        ) : (
+                                                                            "Import"
+                                                                        )}
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    {searching && (
+                                        <div className="flex gap-3">
+                                            <div className="shrink-0 w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
+                                                <Bot className="h-4 w-4" />
+                                            </div>
+                                            <div className="p-3 rounded-2xl bg-zinc-800/80 text-zinc-100 rounded-tl-sm flex items-center gap-2">
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                <span className="text-xs">Thinking...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Chat Input Area */}
+                                <div className="flex gap-2 shrink-0">
+                                    <div className="relative flex-1">
+                                        <Input
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            placeholder="Describe a song or type a title..."
+                                            className="bg-muted/50 border-border pr-10"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleChatSubmit()
+                                            }}
+                                            disabled={searching}
+                                        />
+                                        <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-brand hover:bg-brand/10 hover:text-brand"
+                                            onClick={handleChatSubmit}
+                                            disabled={searching || !chatInput.trim()}
+                                        >
+                                            <Send className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </div>
-                                <Button
-                                    onClick={handleSearch}
-                                    disabled={searching || !searchQuery.trim()}
-                                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
-                                >
-                                    {searching ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                            Searching...
-                                        </>
-                                    ) : (
-                                        "Search Web for Chords"
-                                    )}
-                                </Button>
-                                
-                                {searchResults.length > 0 && (
-                                    <div className="space-y-2 mt-4">
-                                        <label className="text-xs text-brand font-medium block">Select Version to Import</label>
-                                        <div className="grid gap-2">
-                                            {searchResults.map((res, i) => (
-                                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border bg-muted/20 gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="text-sm font-medium truncate">{res.title}</p>
-                                                        <p className="text-xs text-muted-foreground truncate">{res.artist}</p>
-                                                        <p className="text-[10px] text-zinc-500 truncate mt-1">{res.url}</p>
-                                                    </div>
-                                                    <Button 
-                                                        size="sm" 
-                                                        className="shrink-0 bg-brand hover:bg-brand/80"
-                                                        onClick={() => {
-                                                            setUrl(res.url)
-                                                            handleScrape(res.url)
-                                                        }}
-                                                        disabled={scraping}
-                                                    >
-                                                        {scraping && url === res.url ? (
-                                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                                        ) : (
-                                                            "Import"
-                                                        )}
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         ) : mode === 'url' ? (
                             <div>
