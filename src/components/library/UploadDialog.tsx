@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { broadcastCacheInvalidation } from "@/lib/library-cache"
 import { toast } from "sonner"
 
-const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx"
+const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt"
 const MAX_SIZE_MB = 25
 
 const KEY_OPTIONS = [
@@ -70,9 +70,9 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             return
         }
 
-        const validExt = /\.(pdf|xml|musicxml|mxl|mscz|mscx)$/i.test(selectedFile.name)
+        const validExt = /\.(pdf|xml|musicxml|mxl|mscz|mscx|txt)$/i.test(selectedFile.name)
         if (!validExt) {
-            toast.error("Only PDF, MusicXML, and MuseScore files are supported.")
+            toast.error("Only PDF, MusicXML, MuseScore, and Text files are supported.")
             return
         }
 

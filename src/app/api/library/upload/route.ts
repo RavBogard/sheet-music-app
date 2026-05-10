@@ -20,6 +20,7 @@ const ALLOWED_TYPES: Record<string, string> = {
     'application/vnd.recordare.musicxml': '.musicxml',
     'application/x-musescore': '.mscz',
     'application/x-musescore+xml': '.mscx',
+    'text/plain': '.txt',
 }
 
 /**
@@ -69,9 +70,9 @@ export const POST = createApiHandler(
 
         // Validate file type
         const mimeType = file.type || 'application/octet-stream'
-        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx)$/i)) {
+        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx|txt)$/i)) {
             return NextResponse.json(
-                { error: "Only PDF, MusicXML, and MuseScore files are supported" },
+                { error: "Only PDF, MusicXML, MuseScore, and Text files are supported" },
                 { status: 400 }
             )
         }
@@ -194,7 +195,7 @@ export const POST = createApiHandler(
             ...(tags.length > 0 && { tags }),
             collection,
             // Storage reference
-            storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : '.xml'}`,
+            storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : contentType.includes('text') ? '.txt' : '.xml'}`,
             // MuseScore-specific fields
             ...(originalStorageUrl && { originalStorageUrl }),
             ...(sourceFormat && { sourceFormat }),
