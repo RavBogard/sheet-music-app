@@ -18,7 +18,7 @@ function cleanFileName(name: string): string {
 
 /** Ensure the fileName has the correct extension based on mimeType */
 function getFileNameWithExtension(file: DriveFile): string {
-  const name = file.originalName || file.name;
+  const name = file.name;
   if (file.mimeType === 'text/plain' && !name.endsWith('.txt')) return `${name}.txt`;
   if (file.mimeType === 'application/xml' && !name.match(/\.(xml|mxl|musicxml)$/i)) return `${name}.musicxml`;
   if (file.mimeType === 'application/pdf' && !name.endsWith('.pdf')) return `${name}.pdf`;
