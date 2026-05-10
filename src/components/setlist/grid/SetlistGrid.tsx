@@ -208,9 +208,14 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
             const colId = 'title'
-            // Section rows render the title as a smallcaps banner; content
-            // rows use the primary tier (text-sm 600 foreground).
-            const titleCls = isSectionRow(row.type) ? HEADER_TITLE : TIER1_TITLE
+            // Section rows render the title as a smallcaps banner; other non-song 
+            // rows are italicized. Content rows use the primary tier.
+            const isSong = !row.type || row.type === 'song'
+            const titleCls = isSectionRow(row.type) 
+                ? HEADER_TITLE 
+                : !isSong 
+                    ? 'text-[13px] italic text-muted-foreground/90' 
+                    : TIER1_TITLE
             return (
                 <TextCell
                     value={(ctx.getValue() ?? '') as string}
@@ -243,6 +248,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
             const colId = 'key'
+            const isSong = !row.type || row.type === 'song'
+            if (!isSong) return <div className="flex h-full w-full items-center justify-center text-muted-foreground/20 text-xs font-mono select-none">—</div>
             return (
                 <KeyCell
                     value={(ctx.getValue() ?? undefined) as string | undefined}
@@ -278,6 +285,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
             const colId = 'bpm'
+            const isSong = !row.type || row.type === 'song'
+            if (!isSong) return <div className="flex h-full w-full items-center justify-center text-muted-foreground/20 text-xs font-mono select-none">—</div>
             return (
                 <TextCell
                     value={
@@ -331,6 +340,8 @@ const COLUMNS: ColumnDef<LocalTrack>[] = [
             const meta = getMeta(ctx.table)
             const row = ctx.row.original
             const colId = 'leadMusician'
+            const isSong = !row.type || row.type === 'song'
+            if (!isSong) return <div className="flex h-full w-full items-center justify-start px-3 text-muted-foreground/20 text-xs font-mono select-none">—</div>
             return (
                 <LeadCell
                     value={(ctx.getValue() ?? undefined) as string | undefined}

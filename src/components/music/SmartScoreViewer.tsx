@@ -26,9 +26,12 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
 
         const loadOffline = async () => {
             if (active) {
-                // We rely on standard browser ServiceWorker caching now. No IndexedDB.
-                const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-                setSourceUrl(bustUrl)
+                if (url.startsWith('blob:')) {
+                    setSourceUrl(url)
+                } else {
+                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
+                    setSourceUrl(bustUrl)
+                }
             }
         }
         loadOffline()
@@ -81,7 +84,28 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                 // Yielding is the only way to prevent application lockup during parsing.
                 await new Promise(resolve => setTimeout(resolve, 50))
 
-                await osmdRef.current.load(contentToLoad)
+                let finalContent = contentToLoad;
+
+                // If contentToLoad is a URL (not an AI XML string), we fetch it manually.
+                // OSMD's internal fetcher relies on file extensions (e.g. .xml, .mxl) which
+                // our API routes (/api/drive/file/[id]) and Blob URLs lack, leading to parse errors.
+                if (typeof contentToLoad === 'string' && (contentToLoad.startsWith('http') || contentToLoad.startsWith('blob:') || contentToLoad.startsWith('/'))) {
+                    const res = await fetch(contentToLoad)
+                    if (!res.ok) throw new Error("Failed to fetch score file from URL")
+                    
+                    const buffer = await res.arrayBuffer()
+                    const text = new TextDecoder('utf-8').decode(buffer)
+                    
+                    // Check if it's uncompressed MusicXML
+                    if (text.trim().startsWith('<?xml') || text.trim().startsWith('<score-partwise') || text.trim().startsWith('<!DOCTYPE')) {
+                        finalContent = text
+                    } else {
+                        // Compressed MXL file
+                        finalContent = new Uint8Array(buffer)
+                    }
+                }
+
+                await osmdRef.current.load(finalContent)
 
                 // Yield again before the heavy render loop
                 await new Promise(resolve => setTimeout(resolve, 50))

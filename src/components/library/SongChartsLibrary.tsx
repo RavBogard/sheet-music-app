@@ -25,6 +25,7 @@ import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
+import { ScraperModal } from "./ScraperModal"
 import { LibraryFileRow } from "./LibraryFileRow"
 import { SelectionActionBar } from "./SelectionActionBar"
 import { useLibraryActions } from "./useLibraryActions"
@@ -39,8 +40,8 @@ function isAudioFile(f: DriveFile) {
 }
 
 function isChartFile(f: DriveFile) {
-    return (f.mimeType.includes('pdf') || f.mimeType.includes('xml') ||
-        /\.(pdf|musicxml|xml|mxl|chordpro)$/i.test(f.name)) &&
+    return (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.mimeType.includes('text/plain') ||
+        /\.(pdf|musicxml|xml|mxl|chordpro|txt)$/i.test(f.name)) &&
         !f.mimeType.startsWith('audio/')
 }
 
@@ -75,7 +76,8 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         }
 
         const isXml = file.mimeType.includes('xml') || file.name.endsWith('.xml') || file.name.endsWith('.musicxml')
-        const type: FileType = isXml ? 'musicxml' : 'pdf'
+        const isText = file.mimeType.includes('text/plain') || file.name.endsWith('.txt')
+        const type: FileType = isXml ? 'musicxml' : isText ? 'text' : 'pdf'
         setFile(`/api/drive/file/${file.id}`, type, '/library')
         router.push(`/perform/${file.id}`)
     }
@@ -204,19 +206,32 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <h1 className="text-2xl font-bold font-display">Song Charts</h1>
                 </div>
                 {canUpload && (
-                    <UploadDialog onUploadComplete={async () => {
-                        toast.success("Library updated with your upload")
-                        try {
-                            // Bust both browser and CDN caches to instantly show the new file
-                            const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
-                            if (res.ok) {
-                                const data = await res.json()
-                                hydrate(data.files)
+                    <div className="flex gap-2">
+                        <UploadDialog onUploadComplete={async () => {
+                            toast.success("Library updated with your upload")
+                            try {
+                                // Bust both browser and CDN caches to instantly show the new file
+                                const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
+                                if (res.ok) {
+                                    const data = await res.json()
+                                    hydrate(data.files)
+                                }
+                            } catch (err) {
+                                logger.error("Failed to refresh library after upload", err)
                             }
-                        } catch (err) {
-                            logger.error("Failed to refresh library after upload", err)
-                        }
-                    }} />
+                        }} />
+                        <ScraperModal onUploadComplete={async () => {
+                            try {
+                                const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
+                                if (res.ok) {
+                                    const data = await res.json()
+                                    hydrate(data.files)
+                                }
+                            } catch (err) {
+                                logger.error("Failed to refresh library after upload", err)
+                            }
+                        }} />
+                    </div>
                 )}
                 <Button
                     variant={selectMode ? "default" : "ghost"}

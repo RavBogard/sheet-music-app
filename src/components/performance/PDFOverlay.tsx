@@ -22,6 +22,11 @@ const SmartScoreViewer = dynamic(
     { ssr: false }
 )
 
+const TextScoreViewer = dynamic(
+    () => import("@/components/music/TextScoreViewer").then((mod) => mod.TextScoreViewer),
+    { ssr: false }
+)
+
 export interface PDFOverlayProps {
     track: SetlistTrack
     tracks: SetlistTrack[]
@@ -131,6 +136,7 @@ export function PDFOverlay({
     // Determine file type from current queue item
     const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
     const isMusicXml = currentItem?.type === 'musicxml'
+    const isText = currentItem?.type === 'text'
 
     // Build the file URL from the track's fileId (used for both PDF and MusicXML).
     // Prefer the IDB blob when we have one so offline-preloaded charts render
@@ -246,6 +252,8 @@ export function PDFOverlay({
                 <SectionErrorBoundary key={track.fileId} label="Chart">
                     {isMusicXml ? (
                         fileUrl && <SmartScoreViewer url={fileUrl} />
+                    ) : isText ? (
+                        fileUrl && <TextScoreViewer url={fileUrl} />
                     ) : (
                         pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
                     )}

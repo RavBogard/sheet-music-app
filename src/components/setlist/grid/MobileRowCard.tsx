@@ -76,6 +76,9 @@ export function MobileRowCard({
     const [lead, setLead] = useState(String(track.leadMusician ?? ''))
     const [notes, setNotes] = useState(String(track.notes ?? ''))
 
+    const isSong = !track.type || track.type === 'song'
+    const isSection = track.type === 'header' || track.type === 'section'
+
     useEffect(() => {
         setTitle(String(track.title ?? ''))
         setKey(String(track.key ?? ''))
@@ -229,24 +232,29 @@ export function MobileRowCard({
                         </button>
 
                         <div className="min-w-0 flex-1 flex flex-col gap-1">
-                            <span className="truncate text-lg font-semibold text-foreground group-hover:text-brand transition-colors">
+                            <span className={cn(
+                                "truncate transition-colors group-hover:text-brand",
+                                isSection ? "text-xs font-bold uppercase tracking-[0.1em] text-brand/80" 
+                                : !isSong ? "text-sm italic text-muted-foreground/80" 
+                                : "text-lg font-semibold text-foreground"
+                            )}>
                                 {track.title || (
                                     <span className="text-muted-foreground/60 font-medium">
-                                        Untitled Track
+                                        Untitled {isSection ? 'Section' : isSong ? 'Track' : String(track.type)}
                                     </span>
                                 )}
                             </span>
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0">
-                            {track.key ? (
+                            {isSong && track.key ? (
                                 <div className="bg-brand/10 border border-brand/20 rounded-lg px-2.5 py-1 text-center min-w-[3rem]">
                                     <p className="text-[9px] text-brand/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Key</p>
                                     <p className="text-brand font-bold text-xs leading-none">{track.key}</p>
                                 </div>
                             ) : null}
                             
-                            {track.leadMusician ? (
+                            {isSong && track.leadMusician ? (
                                 <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
                                     <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Lead</p>
                                     <p className="text-foreground font-bold text-xs leading-none truncate">{track.leadMusician}</p>
@@ -337,25 +345,29 @@ export function MobileRowCard({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <label className="block">
+                        <label className="block sm:col-span-2">
                             <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Title</span>
                             <input type="text" value={title} onChange={e => setTitle(e.target.value)} onBlur={commitTitle} className={inputBase} />
                         </label>
-                        <label className="block">
-                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Lead</span>
-                            <input type="text" value={lead} onChange={e => setLead(e.target.value)} onBlur={commitLead} className={inputBase} />
-                        </label>
-                        <label className="block">
-                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Key</span>
-                            <select value={key} onChange={e => { setKey(e.target.value); commitKey(e.target.value); }} className={inputBase}>
-                                <option value="">— None —</option>
-                                {KEY_OPTIONS_DATA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
-                        </label>
-                        <label className="block">
-                            <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">BPM</span>
-                            <input type="number" inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} onBlur={commitBpm} className={inputBase} />
-                        </label>
+                        {isSong && (
+                            <>
+                                <label className="block">
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Lead</span>
+                                    <input type="text" value={lead} onChange={e => setLead(e.target.value)} onBlur={commitLead} className={inputBase} />
+                                </label>
+                                <label className="block">
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Key</span>
+                                    <select value={key} onChange={e => { setKey(e.target.value); commitKey(e.target.value); }} className={inputBase}>
+                                        <option value="">— None —</option>
+                                        {KEY_OPTIONS_DATA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                    </select>
+                                </label>
+                                <label className="block">
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">BPM</span>
+                                    <input type="number" inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} onBlur={commitBpm} className={inputBase} />
+                                </label>
+                            </>
+                        )}
                     </div>
                     
                     <label className="block mb-6">

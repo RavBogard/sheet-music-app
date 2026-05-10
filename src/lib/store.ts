@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ChordOverlay } from '@/lib/chord-cache'
 
-export type FileType = 'pdf' | 'musicxml' | 'chordpro'
+export type FileType = 'pdf' | 'musicxml' | 'chordpro' | 'text'
 
 export interface QueueItem {
     name: string
