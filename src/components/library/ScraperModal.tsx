@@ -5,32 +5,40 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Link as LinkIcon, CheckCircle, Music, Globe } from "lucide-react"
+import { Loader2, Link as LinkIcon, CheckCircle, Music, Globe, Search } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
 import { broadcastCacheInvalidation } from "@/lib/library-cache"
 
+import { type Setlist } from "@/lib/setlist-firebase"
+
 interface ScraperModalProps {
     onUploadComplete?: (fileId: string, title: string) => void
+    setlists?: Setlist[]
+    onAddToSetlist?: (setId: string, files: { id: string, name: string, mimeType: string, metadata?: any }[]) => void
 }
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { DialogDescription } from '@radix-ui/react-dialog'
 
-export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
+export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }: ScraperModalProps) {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [url, setUrl] = useState("")
     const [rawText, setRawText] = useState("")
-    const [mode, setMode] = useState<'url' | 'text'>('url')
+    const [searchQuery, setSearchQuery] = useState("")
+    const [searchResults, setSearchResults] = useState<{title: string, artist: string, url: string}[]>([])
+    const [mode, setMode] = useState<'search' | 'url' | 'text'>('search')
     const [scraping, setScraping] = useState(false)
+    const [searching, setSearching] = useState(false)
     
     // Verified data
     const [title, setTitle] = useState("")
     const [artist, setArtist] = useState("")
     const [content, setContent] = useState("")
     const [collection, setCollection] = useState("uploads")
+    const [selectedSetlistId, setSelectedSetlistId] = useState("")
     const [step, setStep] = useState<'input' | 'verify' | 'success'>('input')
     const [uploading, setUploading] = useState(false)
     
@@ -45,25 +53,57 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
     const reset = useCallback(() => {
         setUrl("")
         setRawText("")
+        setSearchQuery("")
+        setSearchResults([])
         setTitle("")
         setArtist("")
         setContent("")
         setCollection("uploads")
+        setSelectedSetlistId("")
         setScraping(false)
+        setSearching(false)
         setUploading(false)
         setStep('input')
     }, [])
 
-    const handleScrape = async () => {
-        if (mode === 'url') {
-            if (!url.trim()) return
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) return
+        
+        setSearching(true)
+        setSearchResults([])
+        
+        try {
+            const res = await fetch('/api/charts/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: searchQuery.trim() })
+            })
+            
+            const data = await res.json()
+            
+            if (!res.ok) {
+                throw new Error(data.error || 'Search failed')
+            }
+            
+            setSearchResults(data.results || [])
+        } catch (err: any) {
+            toast.error(err.message || 'Error searching web')
+        } finally {
+            setSearching(false)
+        }
+    }
+
+    const handleScrape = async (targetUrl?: string) => {
+        const scrapeUrl = targetUrl || url
+        if (mode === 'url' || targetUrl) {
+            if (!scrapeUrl.trim()) return
             try {
-                new URL(url)
+                new URL(scrapeUrl)
             } catch {
                 toast.error("Please enter a valid URL")
                 return
             }
-        } else {
+        } else if (mode === 'text') {
             if (!rawText.trim()) return
         }
 
@@ -73,7 +113,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
             const res = await fetch('/api/charts/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mode === 'url' ? { url: url.trim() } : { rawText: rawText.trim() })
+                body: JSON.stringify((mode === 'url' || targetUrl) ? { url: scrapeUrl.trim() } : { rawText: rawText.trim() })
             })
             
             const data = await res.json()
@@ -132,6 +172,14 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
             
             queryClient.invalidateQueries({ queryKey: ['library'] })
             broadcastCacheInvalidation()
+
+            if (selectedSetlistId && onAddToSetlist && data.fileId) {
+                onAddToSetlist(selectedSetlistId, [{
+                    id: data.fileId,
+                    name: title || fileName,
+                    mimeType: "text/plain"
+                }])
+            }
             
             onUploadComplete?.(data.fileId, data.title)
             
@@ -152,7 +200,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                     <Globe className="h-4 w-4" />
-                    Import from URL
+                    Add Song
                 </Button>
             </DialogTrigger>
 
@@ -160,10 +208,10 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Globe className="h-5 w-5 text-brand" />
-                        Import Chart from URL
+                        Add Song to Library
                     </DialogTitle>
                     <VisuallyHidden>
-                        <DialogDescription>Import chords and lyrics from a website URL and save them as a native text chart.</DialogDescription>
+                        <DialogDescription>Search the web, import from URL, or paste text to add a new song to the library.</DialogDescription>
                     </VisuallyHidden>
                 </DialogHeader>
 
@@ -175,6 +223,12 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                 ) : step === 'input' ? (
                     <div className="space-y-4 py-4">
                         <div className="flex bg-muted/50 p-1 rounded-lg mb-4">
+                            <button
+                                onClick={() => setMode('search')}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'search' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                Search Web
+                            </button>
                             <button
                                 onClick={() => setMode('url')}
                                 className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
@@ -189,7 +243,73 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                             </button>
                         </div>
 
-                        {mode === 'url' ? (
+                        {mode === 'search' ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs text-muted-foreground mb-1 block">Song Title & Artist</label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                placeholder="e.g. Dancing in the Dark Bruce Springsteen"
+                                                className="pl-9"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleSearch()
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={handleSearch}
+                                    disabled={searching || !searchQuery.trim()}
+                                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
+                                >
+                                    {searching ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Searching...
+                                        </>
+                                    ) : (
+                                        "Search Web for Chords"
+                                    )}
+                                </Button>
+                                
+                                {searchResults.length > 0 && (
+                                    <div className="space-y-2 mt-4">
+                                        <label className="text-xs text-brand font-medium block">Select Version to Import</label>
+                                        <div className="grid gap-2">
+                                            {searchResults.map((res, i) => (
+                                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border bg-muted/20 gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-medium truncate">{res.title}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">{res.artist}</p>
+                                                        <p className="text-[10px] text-zinc-500 truncate mt-1">{res.url}</p>
+                                                    </div>
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="shrink-0 bg-brand hover:bg-brand/80"
+                                                        onClick={() => {
+                                                            setUrl(res.url)
+                                                            handleScrape(res.url)
+                                                        }}
+                                                        disabled={scraping}
+                                                    >
+                                                        {scraping && url === res.url ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                        ) : (
+                                                            "Import"
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : mode === 'url' ? (
                             <div>
                                 <label className="text-xs text-muted-foreground mb-1 block">Chart URL (Chordie, etc.)</label>
                                 <div className="flex gap-2">
@@ -219,23 +339,27 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                             </div>
                         )}
                         
-                        <Button
-                            onClick={handleScrape}
-                            disabled={scraping || (mode === 'url' ? !url.trim() : !rawText.trim())}
-                            className="w-full bg-brand hover:bg-brand/80 text-white"
-                        >
-                            {scraping ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    Extracting Chart...
-                                </>
-                            ) : (
-                                "Fetch Chart"
-                            )}
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center">
-                            The system will try to extract just the lyrics and chords and format them perfectly.
-                        </p>
+                        {mode !== 'search' && (
+                            <Button
+                                onClick={() => handleScrape()}
+                                disabled={scraping || (mode === 'url' ? !url.trim() : !rawText.trim())}
+                                className="w-full bg-brand hover:bg-brand/80 text-white"
+                            >
+                                {scraping ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Extracting Chart...
+                                    </>
+                                ) : (
+                                    "Fetch Chart"
+                                )}
+                            </Button>
+                        )}
+                        {mode !== 'search' && (
+                            <p className="text-xs text-muted-foreground text-center">
+                                The system will try to extract just the lyrics and chords and format them perfectly.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4 py-2">
@@ -264,18 +388,38 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                         </div>
 
                         {/* Collection */}
-                        <div>
-                            <label htmlFor="scraper-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
-                            <select
-                                id="scraper-collection"
-                                value={collection}
-                                onChange={(e) => setCollection(e.target.value)}
-                                className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
-                            >
-                                <option value="crc">CRC Charts</option>
-                                <option value="supplemental">Shireinu</option>
-                                <option value="uploads">Uploads</option>
-                            </select>
+                        <div className="flex gap-3">
+                            <div className="flex-1">
+                                <label htmlFor="scraper-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
+                                <select
+                                    id="scraper-collection"
+                                    value={collection}
+                                    onChange={(e) => setCollection(e.target.value)}
+                                    className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                >
+                                    <option value="crc">CRC Charts</option>
+                                    <option value="supplemental">Shireinu</option>
+                                    <option value="uploads">Uploads</option>
+                                </select>
+                            </div>
+
+                            {/* Add to Setlist */}
+                            {setlists.length > 0 && (
+                                <div className="flex-1">
+                                    <label htmlFor="scraper-setlist" className="text-xs text-brand font-medium mb-1 block">Add to Setlist (Optional)</label>
+                                    <select
+                                        id="scraper-setlist"
+                                        value={selectedSetlistId}
+                                        onChange={(e) => setSelectedSetlistId(e.target.value)}
+                                        className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                    >
+                                        <option value="">— Don't add to setlist —</option>
+                                        {setlists.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex justify-end gap-2 pt-2">

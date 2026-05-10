@@ -20,3 +20,11 @@ export function geminiProVision() {
     // Using Flash Preview (Pro returning 404)
     return getGenAI().getGenerativeModel({ model: "gemini-3-flash-preview" });
 }
+
+export function geminiFlashWithSearch() {
+    return getGenAI().getGenerativeModel({ 
+        model: "gemini-2.5-flash", // 2.5 flash supports search grounding reliably
+        // @ts-ignore - Tool type in older SDK versions doesn't include googleSearch
+        tools: [{ googleSearch: {} }] 
+    });
+}

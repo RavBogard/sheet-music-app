@@ -21,14 +21,18 @@ const KEY_OPTIONS = [
     'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bbm', 'Bm',
 ]
 
+import { type Setlist } from "@/lib/setlist-firebase"
+
 interface UploadDialogProps {
     onUploadComplete?: (fileId: string, title: string) => void
+    setlists?: Setlist[]
+    onAddToSetlist?: (setId: string, files: { id: string, name: string, mimeType: string, metadata?: any }[]) => void
 }
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { DialogDescription } from '@radix-ui/react-dialog'
 
-export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
+export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }: UploadDialogProps) {
     const { user } = useAuth()
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
@@ -38,6 +42,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const [bpm, setBpm] = useState("")
     const [tags, setTags] = useState("")
     const [collection, setCollection] = useState("uploads")
+    const [selectedSetlistId, setSelectedSetlistId] = useState("")
     const [uploading, setUploading] = useState(false)
     const [success, setSuccess] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -60,6 +65,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
         setBpm("")
         setTags("")
         setCollection("uploads")
+        setSelectedSetlistId("")
         setUploading(false)
         setSuccess(false)
     }, [])
@@ -141,6 +147,24 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             // then broadcast to any other open tabs via BroadcastChannel.
             queryClient.invalidateQueries({ queryKey: ['library'] })
             broadcastCacheInvalidation()
+
+            // Auto-add to Setlist if selected
+            if (selectedSetlistId && onAddToSetlist && data.fileId) {
+                // Determine mock mimeType from file name extension
+                let mimeType = file.type || "application/pdf"
+                if (file.name.toLowerCase().endsWith('.xml') || file.name.toLowerCase().endsWith('.musicxml') || file.name.toLowerCase().endsWith('.mxl')) {
+                    mimeType = "application/xml"
+                } else if (file.name.toLowerCase().endsWith('.txt')) {
+                    mimeType = "text/plain"
+                }
+                
+                onAddToSetlist(selectedSetlistId, [{
+                    id: data.fileId,
+                    name: title || file.name,
+                    mimeType,
+                    metadata: { key }
+                }])
+            }
 
             // Notify parent
             onUploadComplete?.(data.fileId, data.title)
@@ -296,6 +320,24 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                         <option value="uploads">Uploads</option>
                                     </select>
                                 </div>
+
+                                {/* Add to Setlist */}
+                                {setlists.length > 0 && (
+                                    <div>
+                                        <label htmlFor="upload-setlist" className="text-xs text-brand font-medium mb-1 block">Add to Setlist (Optional)</label>
+                                        <select
+                                            id="upload-setlist"
+                                            value={selectedSetlistId}
+                                            onChange={(e) => setSelectedSetlistId(e.target.value)}
+                                            className="w-full h-9 px-3 rounded-md bg-brand/10 border border-brand/30 text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                        >
+                                            <option value="">— Don't add to setlist —</option>
+                                            {setlists.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 {/* Upload button */}
                                 <Button

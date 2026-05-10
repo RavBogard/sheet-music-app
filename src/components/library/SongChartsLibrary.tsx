@@ -213,48 +213,56 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </div>
                 {canUpload && (
                     <div className="flex gap-2">
-                        <UploadDialog onUploadComplete={async (fileId, title) => {
-                            toast.success("Library updated with your upload")
-                            try {
-                                // Add to local Dexie immediately so the Setlist picker sees it
-                                if (fileId && title) {
-                                    await getDb().songs.put({
-                                        id: fileId,
-                                        title,
-                                        normalizedTitle: title.toLowerCase(),
-                                        updatedAt: Date.now()
-                                    })
+                        <UploadDialog 
+                            setlists={addToSetlist.editableSetlists}
+                            onAddToSetlist={addToSetlist.addDirectlyToSetlist}
+                            onUploadComplete={async (fileId, title) => {
+                                toast.success("Library updated with your upload")
+                                try {
+                                    // Add to local Dexie immediately so the Setlist picker sees it
+                                    if (fileId && title) {
+                                        await getDb().songs.put({
+                                            id: fileId,
+                                            title,
+                                            normalizedTitle: title.toLowerCase(),
+                                            updatedAt: Date.now()
+                                        })
+                                    }
+                                    // Bust both browser and CDN caches to instantly show the new file
+                                    const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
+                                    if (res.ok) {
+                                        const data = await res.json()
+                                        hydrate(data.files)
+                                    }
+                                } catch (err) {
+                                    logger.error("Failed to refresh library after upload", err)
                                 }
-                                // Bust both browser and CDN caches to instantly show the new file
-                                const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
-                                if (res.ok) {
-                                    const data = await res.json()
-                                    hydrate(data.files)
+                            }} 
+                        />
+                        <ScraperModal 
+                            setlists={addToSetlist.editableSetlists}
+                            onAddToSetlist={addToSetlist.addDirectlyToSetlist}
+                            onUploadComplete={async (fileId, title) => {
+                                try {
+                                    // Add to local Dexie immediately so the Setlist picker sees it
+                                    if (fileId && title) {
+                                        await getDb().songs.put({
+                                            id: fileId,
+                                            title,
+                                            normalizedTitle: title.toLowerCase(),
+                                            updatedAt: Date.now()
+                                        })
+                                    }
+                                    const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
+                                    if (res.ok) {
+                                        const data = await res.json()
+                                        hydrate(data.files)
+                                    }
+                                } catch (err) {
+                                    logger.error("Failed to refresh library after upload", err)
                                 }
-                            } catch (err) {
-                                logger.error("Failed to refresh library after upload", err)
-                            }
-                        }} />
-                        <ScraperModal onUploadComplete={async (fileId, title) => {
-                            try {
-                                // Add to local Dexie immediately so the Setlist picker sees it
-                                if (fileId && title) {
-                                    await getDb().songs.put({
-                                        id: fileId,
-                                        title,
-                                        normalizedTitle: title.toLowerCase(),
-                                        updatedAt: Date.now()
-                                    })
-                                }
-                                const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
-                                if (res.ok) {
-                                    const data = await res.json()
-                                    hydrate(data.files)
-                                }
-                            } catch (err) {
-                                logger.error("Failed to refresh library after upload", err)
-                            }
-                        }} />
+                            }} 
+                        />
                     </div>
                 )}
                 <Button

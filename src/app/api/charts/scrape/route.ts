@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { geminiFlash } from '@/lib/gemini'
+import { geminiFlash, geminiFlashWithSearch } from '@/lib/gemini'
 
 export const maxDuration = 60
 
@@ -9,6 +9,8 @@ export async function POST(request: Request) {
         
         let contentToParse = rawText
         
+        let useGeminiFallback = false;
+
         if (url) {
             // Fetch the HTML
             const response = await fetch(url, {
@@ -20,28 +22,51 @@ export async function POST(request: Request) {
             })
             
             if (!response.ok) {
-                if (response.status === 403) {
-                    throw new Error("This site blocks automated tools (Cloudflare). Please use the 'Paste Text' tab instead.")
+                if (response.status === 403 || response.status === 401) {
+                    console.log("Cloudflare block detected. Falling back to Gemini Search Extractor.");
+                    useGeminiFallback = true;
+                } else {
+                    throw new Error(`Failed to fetch URL: ${response.statusText}`)
                 }
-                throw new Error(`Failed to fetch URL: ${response.statusText}`)
+            } else {
+                const html = await response.text()
+                
+                if (html.length < 5000 && html.toLowerCase().includes('cloudflare')) {
+                    console.log("Cloudflare JS block detected. Falling back to Gemini Search Extractor.");
+                    useGeminiFallback = true;
+                } else {
+                    contentToParse = html
+                }
             }
-            
-            const html = await response.text()
-            
-            if (html.length < 5000 && html.toLowerCase().includes('cloudflare')) {
-                throw new Error("Blocked by anti-bot protection. Please use the 'Paste Text' tab instead.")
-            }
-            contentToParse = html
         }
 
-        if (!contentToParse) {
+        if (!contentToParse && !useGeminiFallback) {
             return NextResponse.json({ error: 'URL or raw text is required' }, { status: 400 })
         }
 
-        const model = geminiFlash()
-        
-        const prompt = `You are a music chord extraction tool. I will provide you with the raw HTML or raw text of a webpage that contains a chord chart.
-        
+        let model;
+        let prompt;
+
+        if (useGeminiFallback) {
+            model = geminiFlashWithSearch()
+            prompt = `Use your Google Search tool to extract the chords from this exact URL: ${url}. 
+Your task is to:
+1. Identify the Song Title.
+2. Identify the Artist.
+3. Extract the actual lyrics and chords in plain text.
+   - You MUST preserve the exact monospaced spacing and relative alignment of the chords above the lyrics.
+   - Do NOT include any ads, sidebars, comments, or unnecessary metadata.
+   
+Respond ONLY with a JSON object in the following format. Do not include markdown code blocks (like \`\`\`json), just the raw JSON object:
+{
+  "title": "Song Title",
+  "artist": "Artist Name",
+  "content": "Line 1\\nLine 2\\n..."
+}`
+        } else {
+            model = geminiFlash()
+            prompt = `You are a music chord extraction tool. I will provide you with the raw HTML or raw text of a webpage that contains a chord chart.
+            
 Your task is to:
 1. Identify the Song Title.
 2. Identify the Artist.
@@ -59,6 +84,7 @@ Respond ONLY with a JSON object in the following format. Do not include markdown
 
 Here is the content (truncated if necessary):
 ${contentToParse.slice(0, 100000)}`
+        }
 
         const result = await model.generateContent(prompt)
         const text = result.response.text()

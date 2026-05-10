@@ -188,6 +188,58 @@ export function useAddToSetlist() {
     setPendingSongs([])
   }, [pendingSongs, setlistService])
 
+  // Allows adding songs without passing through the pendingSongs state
+  const addDirectlyToSetlist = useCallback(async (setlistId: string, files: { id: string, name: string, mimeType: string, metadata?: any }[]) => {
+    if (files.length === 0) return
+
+    const setlist = allSetlists.find(s => s.id === setlistId)
+    if (!setlist) {
+        toast.error("Setlist not found")
+        return
+    }
+
+    // Check for duplicates
+    const existingFileIds = new Set(
+      setlist.tracks
+        .filter(t => t.fileId)
+        .map(t => t.fileId)
+    )
+    const hasDuplicates = files.some(f => existingFileIds.has(f.id))
+
+    const now = Date.now()
+    const newTracks: SetlistTrack[] = files.map((file, index) => ({
+      id: `track-${now}-${file.id}-${index}`,
+      title: cleanFileName(file.name),
+      fileId: file.id,
+      fileName: getFileNameWithExtension(file as any),
+      key: file.metadata?.key || "",
+      notes: "",
+      type: 'song' as const,
+    }))
+
+    const updatedTracks = [...setlist.tracks, ...newTracks]
+
+    const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
+    await setlistService.updateSetlist(setlistId, {
+      tracks: updatedTracks,
+      trackCount: updatedTracks.length,
+    }, expected)
+
+    let message: string
+    if (files.length === 1) {
+      const songName = cleanFileName(files[0].name)
+      if (hasDuplicates) {
+        message = `"${songName}" is already in this setlist. Added again.`
+      } else {
+        message = `Added "${songName}" to ${setlist.name}`
+      }
+    } else {
+      message = `Added ${files.length} songs to "${setlist.name}"`
+    }
+
+    toast.success(message)
+  }, [allSetlists, setlistService])
+
   const createNewSetlist = useCallback(async (name: string) => {
     if (pendingSongs.length === 0) return
 
@@ -223,6 +275,7 @@ export function useAddToSetlist() {
     setSearchQuery,
     openForSongs,
     addToSetlist,
+    addDirectlyToSetlist,
     createNewSetlist,
     canAddToSetlist,
   }
