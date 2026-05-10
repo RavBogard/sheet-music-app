@@ -79,15 +79,17 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
     // A better approach would be to estimateKey on the whole document, but this is simple and fast
     const preferFlats = transposition !== 0 ? undefined : undefined // default music-math behavior
 
-    const renderLine = (line: string, idx: number) => {
+    const processedLines = lines.map((line, idx) => {
         if (transposition === 0 || !isChordLine(line)) {
-            return <div key={idx} className="whitespace-pre">{line || ' '}</div>
+            return { 
+                id: idx,
+                textLength: line.trimEnd().length, 
+                content: <div key={idx} className="whitespace-pre">{line || ' '}</div> 
+            }
         }
 
-        // Transpose chords in the line
-        // The regex captures words and their trailing spaces to adjust alignment
         const regex = /([a-zA-Z0-9#b/]+)(\s*)/g
-        const transposedLine = line.replace(regex, (match, word, spaces) => {
+        const htmlLine = line.replace(regex, (match, word, spaces) => {
             if (isChordToken(word)) {
                 const transposed = transposeChord(word, transposition, preferFlats)
                 const lengthDiff = transposed.length - word.length
@@ -99,27 +101,36 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
                     newSpaces = spaces + ' '.repeat(-lengthDiff)
                 }
                 
-                // Wrap chords in a span for slight emphasis (bold/blue) like the Vision Transposer
                 return `<span class="text-brand font-bold">${transposed}</span>${newSpaces}`
             }
             return match
         })
+        
+        const plainText = htmlLine.replace(/<[^>]+>/g, '')
+        
+        return { 
+            id: idx,
+            textLength: plainText.trimEnd().length, 
+            content: <div key={idx} className="whitespace-pre" dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }} />
+        }
+    })
 
-        return (
-            <div 
-                key={idx} 
-                className="whitespace-pre" 
-                dangerouslySetInnerHTML={{ __html: transposedLine || ' ' }} 
-            />
-        )
-    }
+    // Calculate max length to scale font-size so it fits in the container without scrolling
+    const maxLineLength = Math.max(...processedLines.map(l => l.textLength), 40)
+    // 0.605 is roughly the aspect ratio (width/height) of a typical monospace character
+    const fontSizeCalc = `min(15px, calc(100cqi / ${(maxLineLength + 2) * 0.605}))`
 
     return (
         <div className="min-h-full bg-background text-foreground overflow-auto">
             {/* Chart Container */}
-            <div className="max-w-4xl mx-auto bg-card sm:my-8 sm:rounded-xl shadow-sm sm:border border-border min-h-[850px]">
-                <div className="p-8 sm:p-12 font-mono text-[14px] sm:text-[15px] leading-relaxed overflow-x-auto">
-                    {lines.map((line, idx) => renderLine(line, idx))}
+            <div className="max-w-4xl mx-auto bg-card sm:my-8 sm:rounded-xl shadow-sm sm:border border-border min-h-[850px] p-4 sm:p-12">
+                <div className="@container w-full">
+                    <div 
+                        className="font-mono leading-relaxed overflow-x-hidden"
+                        style={{ fontSize: fontSizeCalc }}
+                    >
+                        {processedLines.map((line) => line.content)}
+                    </div>
                 </div>
             </div>
             {/* Bottom padding for toolbar */}
