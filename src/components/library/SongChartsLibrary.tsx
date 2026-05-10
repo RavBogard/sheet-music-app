@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useCongregation } from "@/lib/congregation-store"
 import { toast } from "sonner"
+import { getDb } from "@/lib/local/schema"
 import { AudioPlayer } from "@/components/audio/AudioPlayer"
 import { UploadDialog } from "./UploadDialog"
 import { ScraperModal } from "./ScraperModal"
@@ -212,9 +213,18 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </div>
                 {canUpload && (
                     <div className="flex gap-2">
-                        <UploadDialog onUploadComplete={async () => {
+                        <UploadDialog onUploadComplete={async (fileId, title) => {
                             toast.success("Library updated with your upload")
                             try {
+                                // Add to local Dexie immediately so the Setlist picker sees it
+                                if (fileId && title) {
+                                    await getDb().songs.put({
+                                        id: fileId,
+                                        title,
+                                        normalizedTitle: title.toLowerCase(),
+                                        updatedAt: Date.now()
+                                    })
+                                }
                                 // Bust both browser and CDN caches to instantly show the new file
                                 const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
                                 if (res.ok) {
@@ -225,8 +235,17 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                                 logger.error("Failed to refresh library after upload", err)
                             }
                         }} />
-                        <ScraperModal onUploadComplete={async () => {
+                        <ScraperModal onUploadComplete={async (fileId, title) => {
                             try {
+                                // Add to local Dexie immediately so the Setlist picker sees it
+                                if (fileId && title) {
+                                    await getDb().songs.put({
+                                        id: fileId,
+                                        title,
+                                        normalizedTitle: title.toLowerCase(),
+                                        updatedAt: Date.now()
+                                    })
+                                }
                                 const res = await apiFetch(`/api/library/list?all=true&t=${Date.now()}`)
                                 if (res.ok) {
                                     const data = await res.json()
