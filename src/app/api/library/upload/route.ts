@@ -205,6 +205,13 @@ export const POST = createApiHandler(
 
         await db.collection('library_index').doc(fileId).set(indexEntry)
 
+        // Seed the 'songs' collection so the offline Setlist picker can find it immediately
+        await db.collection('songs').doc(fileId).set({
+            title,
+            normalizedTitle: title.toLowerCase(),
+            updatedAt: Date.now()
+        }, { merge: true })
+
         logger.info(`[Upload] ${title} uploaded successfully as ${fileId}`)
 
         // Purge CDN and Next.js data caches so the next library fetch sees the upload

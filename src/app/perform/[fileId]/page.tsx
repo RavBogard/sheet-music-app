@@ -40,11 +40,20 @@ export default function StandalonePerformPage() {
 
     if (!file) return null
 
+    const getFileNameWithExtension = (f: typeof file) => {
+        if (!f) return "";
+        const name = (f as any).originalName || f.name;
+        if (f.mimeType === 'text/plain' && !name.endsWith('.txt')) return `${name}.txt`;
+        if (f.mimeType === 'application/xml' && !name.match(/\.(xml|mxl|musicxml)$/i)) return `${name}.musicxml`;
+        if (f.mimeType === 'application/pdf' && !name.endsWith('.pdf')) return `${name}.pdf`;
+        return name;
+    }
+
     const track: SetlistTrack = {
         id: file.id,
         title: file.name.replace(/\.[^/.]+$/, ""), // remove extension for display
         fileId: file.id,
-        fileName: file.name,
+        fileName: getFileNameWithExtension(file),
         key: file.metadata?.key
     }
 

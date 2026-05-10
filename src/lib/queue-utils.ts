@@ -12,8 +12,16 @@ export function toQueueItem(track: SetlistTrack, index: number): QueueItem {
 
     const fileType = (() => {
         if (!track.fileId) return 'pdf'
-        if (track.fileId.startsWith('db-') || track.fileId.endsWith('.musicxml') || track.fileId.endsWith('.xml') || track.fileId.endsWith('.mxl')) return 'musicxml'
-        if (track.fileId.endsWith('.chordpro')) return 'chordpro'
+        const idLower = track.fileId.toLowerCase()
+        const nameLower = (track.fileName || '').toLowerCase()
+        
+        if (idLower.startsWith('db-') || 
+            idLower.endsWith('.musicxml') || idLower.endsWith('.xml') || idLower.endsWith('.mxl') ||
+            nameLower.endsWith('.musicxml') || nameLower.endsWith('.xml') || nameLower.endsWith('.mxl')) return 'musicxml'
+        
+        if (idLower.endsWith('.chordpro') || nameLower.endsWith('.chordpro')) return 'chordpro'
+        if (idLower.endsWith('.txt') || nameLower.endsWith('.txt')) return 'text'
+        
         return 'pdf'
     })()
 

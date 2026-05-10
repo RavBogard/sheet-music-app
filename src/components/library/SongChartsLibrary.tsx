@@ -410,6 +410,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 searchQuery={addToSetlist.searchQuery}
                 onSearchChange={addToSetlist.setSearchQuery}
                 onSelectSetlist={addToSetlist.addToSetlist}
+                createNewSetlist={addToSetlist.createNewSetlist}
                 pendingCount={addToSetlist.pendingSongs.length}
             />
 

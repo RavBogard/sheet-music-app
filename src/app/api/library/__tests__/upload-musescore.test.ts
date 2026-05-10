@@ -189,14 +189,14 @@ describe('Upload route - MuseScore files', () => {
         expect(xmlCall).toBeTruthy()
     })
 
-    it('still rejects unsupported file types (.doc, .txt)', async () => {
+    it('still rejects unsupported file types (.doc, .exe)', async () => {
         const reqDoc = createUploadRequest('file.doc')
         const resDoc = await POST(reqDoc)
         expect(resDoc.status).toBe(400)
 
-        const reqTxt = createUploadRequest('file.txt')
-        const resTxt = await POST(reqTxt)
-        expect(resTxt.status).toBe(400)
+        const reqExe = createUploadRequest('file.exe')
+        const resExe = await POST(reqExe)
+        expect(resExe.status).toBe(400)
     })
 
     it('library index entry has mimeType application/xml and originalStorageUrl for MuseScore uploads', async () => {

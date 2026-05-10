@@ -137,6 +137,11 @@ vi.mock("../UploadDialog", () => ({
         <button data-testid="upload-btn" onClick={onUploadComplete}>Upload</button>
     ),
 }))
+vi.mock("../ScraperModal", () => ({
+    ScraperModal: ({ onUploadComplete }: { onUploadComplete: () => void }) => (
+        <button data-testid="scraper-btn" onClick={onUploadComplete}>Scrape</button>
+    ),
+}))
 vi.mock("../SelectionActionBar", () => ({
     SelectionActionBar: ({ selectMode, selectedIds, onSelectAll, onClear, onDismiss }: {
         selectMode: boolean; selectedIds: Set<string>;
@@ -176,6 +181,7 @@ vi.mock("@/hooks/use-add-to-setlist", () => ({
         searchQuery: "",
         setSearchQuery: vi.fn(),
         addToSetlist: vi.fn(),
+        createNewSetlist: vi.fn(),
         pendingSongs: [],
     }),
 }))

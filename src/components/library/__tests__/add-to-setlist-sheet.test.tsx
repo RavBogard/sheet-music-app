@@ -54,6 +54,7 @@ describe('AddToSetlistSheet', () => {
         searchQuery=""
         onSearchChange={onSearchChange}
         onSelectSetlist={onSelectSetlist}
+        createNewSetlist={vi.fn()}
         pendingCount={1}
         {...overrides}
       />

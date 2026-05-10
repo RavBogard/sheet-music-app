@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ListPlus, Search, Music } from "lucide-react"
+import { ListPlus, Search, Music, Plus, Loader2 } from "lucide-react"
 import type { Setlist, FirestoreDate } from "@/types/models"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 
 interface AddToSetlistSheetProps {
   isOpen: boolean
@@ -20,6 +22,7 @@ interface AddToSetlistSheetProps {
   searchQuery: string
   onSearchChange: (query: string) => void
   onSelectSetlist: (id: string, setlist: Setlist) => void
+  createNewSetlist: (name: string) => Promise<void>
   pendingCount: number
 }
 
@@ -47,11 +50,25 @@ export function AddToSetlistSheet({
   searchQuery,
   onSearchChange,
   onSelectSetlist,
+  createNewSetlist,
   pendingCount,
 }: AddToSetlistSheetProps) {
+  const [isCreating, setIsCreating] = useState(false)
+  const [newSetName, setNewSetName] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const title = pendingCount > 1
     ? `Add ${pendingCount} songs to Setlist`
     : 'Add to Setlist'
+
+  const handleCreate = async () => {
+    if (!newSetName.trim()) return
+    setIsSubmitting(true)
+    await createNewSetlist(newSetName.trim())
+    setIsSubmitting(false)
+    setIsCreating(false)
+    setNewSetName("")
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -70,16 +87,49 @@ export function AddToSetlistSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {/* Search input */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search setlists..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 bg-muted/50 border-border/50 focus-visible:ring-primary/30"
-          />
+        {/* Search input and Create button */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search setlists..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-9 bg-muted/50 border-border/50 focus-visible:ring-primary/30"
+              disabled={isCreating}
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="shrink-0"
+            onClick={() => setIsCreating(!isCreating)}
+            aria-label="Create new setlist"
+          >
+            <Plus className={`h-4 w-4 transition-transform ${isCreating ? 'rotate-45' : ''}`} />
+          </Button>
         </div>
+
+        {/* Create New Setlist Inline Form */}
+        {isCreating && (
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 animate-in slide-in-from-top-2 fade-in">
+            <Input
+              autoFocus
+              placeholder="New Setlist Name (e.g. Friday Night)"
+              value={newSetName}
+              onChange={(e) => setNewSetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate()
+                if (e.key === 'Escape') setIsCreating(false)
+              }}
+              className="bg-background"
+              disabled={isSubmitting}
+            />
+            <Button size="sm" onClick={handleCreate} disabled={!newSetName.trim() || isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+            </Button>
+          </div>
+        )}
 
         {/* Setlist list */}
         <ScrollArea className="flex-1 -mx-6 px-6">

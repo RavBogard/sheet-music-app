@@ -10,10 +10,19 @@ import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 /** Clean a filename into a display title (same logic as addSongsFromLibrary) */
 function cleanFileName(name: string): string {
   return name
-    .replace(/\.(pdf|musicxml|xml|mxl)$/i, '')
+    .replace(/\.(pdf|musicxml|xml|mxl|txt)$/i, '')
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .trim() || "Untitled"
+}
+
+/** Ensure the fileName has the correct extension based on mimeType */
+function getFileNameWithExtension(file: DriveFile): string {
+  const name = file.originalName || file.name;
+  if (file.mimeType === 'text/plain' && !name.endsWith('.txt')) return `${name}.txt`;
+  if (file.mimeType === 'application/xml' && !name.match(/\.(xml|mxl|musicxml)$/i)) return `${name}.musicxml`;
+  if (file.mimeType === 'application/pdf' && !name.endsWith('.pdf')) return `${name}.pdf`;
+  return name;
 }
 
 /** Convert a FirestoreDate-like value to a comparable timestamp */
@@ -108,7 +117,7 @@ export function useAddToSetlist() {
       id: `track-${now}-${file.id}-${index}`,
       title: cleanFileName(file.name),
       fileId: file.id,
-      fileName: file.name,
+      fileName: getFileNameWithExtension(file),
       key: file.metadata?.key || "",
       notes: "",
       type: 'song' as const,
@@ -179,6 +188,31 @@ export function useAddToSetlist() {
     setPendingSongs([])
   }, [pendingSongs, setlistService])
 
+  const createNewSetlist = useCallback(async (name: string) => {
+    if (pendingSongs.length === 0) return
+
+    const now = Date.now()
+    const newTracks: SetlistTrack[] = pendingSongs.map((file, index) => ({
+      id: `track-${now}-${file.id}-${index}`,
+      title: cleanFileName(file.name),
+      fileId: file.id,
+      fileName: getFileNameWithExtension(file),
+      key: file.metadata?.key || "",
+      notes: "",
+      type: 'song' as const,
+    }))
+
+    setIsOpen(false)
+
+    try {
+      await setlistService.createSetlist(name, newTracks)
+      toast.success(`Created setlist "${name}" with ${pendingSongs.length} songs.`)
+      setPendingSongs([])
+    } catch (err: any) {
+      toast.error(err.message || 'Error creating setlist')
+    }
+  }, [pendingSongs, setlistService])
+
   return {
     isOpen,
     setIsOpen,
@@ -189,6 +223,7 @@ export function useAddToSetlist() {
     setSearchQuery,
     openForSongs,
     addToSetlist,
+    createNewSetlist,
     canAddToSetlist,
   }
 }
