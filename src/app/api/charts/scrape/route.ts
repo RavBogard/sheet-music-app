@@ -5,34 +5,42 @@ export const maxDuration = 60
 
 export async function POST(request: Request) {
     try {
-        const { url } = await request.json()
+        const { url, rawText } = await request.json()
         
-        if (!url) {
-            return NextResponse.json({ error: 'URL is required' }, { status: 400 })
-        }
+        let contentToParse = rawText
         
-        // Fetch the HTML
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
+        if (url) {
+            // Fetch the HTML
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                }
+            })
+            
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error("This site blocks automated tools (Cloudflare). Please use the 'Paste Text' tab instead.")
+                }
+                throw new Error(`Failed to fetch URL: ${response.statusText}`)
             }
-        })
-        
-        if (!response.ok) {
-            throw new Error(`Failed to fetch URL: ${response.statusText}`)
+            
+            const html = await response.text()
+            
+            if (html.length < 5000 && html.toLowerCase().includes('cloudflare')) {
+                throw new Error("Blocked by anti-bot protection. Please use the 'Paste Text' tab instead.")
+            }
+            contentToParse = html
         }
-        
-        const html = await response.text()
-        
-        if (html.length < 5000 && html.toLowerCase().includes('cloudflare')) {
-            throw new Error('Blocked by anti-bot protection. Please paste the raw text instead.')
+
+        if (!contentToParse) {
+            return NextResponse.json({ error: 'URL or raw text is required' }, { status: 400 })
         }
 
         const model = geminiFlash()
         
-        const prompt = `You are a music chord extraction tool. I will provide you with the raw HTML of a webpage that contains a chord chart.
+        const prompt = `You are a music chord extraction tool. I will provide you with the raw HTML or raw text of a webpage that contains a chord chart.
         
 Your task is to:
 1. Identify the Song Title.
@@ -49,8 +57,8 @@ Respond ONLY with a JSON object in the following format. Do not include markdown
   "content": "Line 1\\nLine 2\\n..."
 }
 
-Here is the HTML (truncated if necessary):
-${html.slice(0, 100000)}`
+Here is the content (truncated if necessary):
+${contentToParse.slice(0, 100000)}`
 
         const result = await model.generateContent(prompt)
         const text = result.response.text()

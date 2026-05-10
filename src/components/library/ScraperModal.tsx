@@ -22,6 +22,8 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [url, setUrl] = useState("")
+    const [rawText, setRawText] = useState("")
+    const [mode, setMode] = useState<'url' | 'text'>('url')
     const [scraping, setScraping] = useState(false)
     
     // Verified data
@@ -42,6 +44,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
 
     const reset = useCallback(() => {
         setUrl("")
+        setRawText("")
         setTitle("")
         setArtist("")
         setContent("")
@@ -52,14 +55,16 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
     }, [])
 
     const handleScrape = async () => {
-        if (!url.trim()) return
-        
-        try {
-            // Very basic URL validation
-            new URL(url)
-        } catch {
-            toast.error("Please enter a valid URL")
-            return
+        if (mode === 'url') {
+            if (!url.trim()) return
+            try {
+                new URL(url)
+            } catch {
+                toast.error("Please enter a valid URL")
+                return
+            }
+        } else {
+            if (!rawText.trim()) return
         }
 
         setScraping(true)
@@ -68,7 +73,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
             const res = await fetch('/api/charts/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url.trim() })
+                body: JSON.stringify(mode === 'url' ? { url: url.trim() } : { rawText: rawText.trim() })
             })
             
             const data = await res.json()
@@ -169,27 +174,54 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                     </div>
                 ) : step === 'input' ? (
                     <div className="space-y-4 py-4">
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Chart URL (Ultimate Guitar, Chordie, etc.)</label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        value={url}
-                                        onChange={(e) => setUrl(e.target.value)}
-                                        placeholder="https://tabs.ultimate-guitar.com/..."
-                                        className="pl-9"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleScrape()
-                                        }}
-                                    />
+                        <div className="flex bg-muted/50 p-1 rounded-lg mb-4">
+                            <button
+                                onClick={() => setMode('url')}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                From URL
+                            </button>
+                            <button
+                                onClick={() => setMode('text')}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'text' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                Paste Text
+                            </button>
+                        </div>
+
+                        {mode === 'url' ? (
+                            <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Chart URL (Chordie, etc.)</label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            value={url}
+                                            onChange={(e) => setUrl(e.target.value)}
+                                            placeholder="https://tabs.ultimate-guitar.com/..."
+                                            className="pl-9"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleScrape()
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Paste Webpage Text (Ctrl+A, Ctrl+C on the site)</label>
+                                <Textarea
+                                    value={rawText}
+                                    onChange={(e) => setRawText(e.target.value)}
+                                    placeholder="Paste the messy webpage text here. The AI will extract the chords and lyrics automatically."
+                                    className="h-32 text-xs font-mono bg-muted/20"
+                                />
+                            </div>
+                        )}
                         
                         <Button
                             onClick={handleScrape}
-                            disabled={scraping || !url.trim()}
+                            disabled={scraping || (mode === 'url' ? !url.trim() : !rawText.trim())}
                             className="w-full bg-brand hover:bg-brand/80 text-white"
                         >
                             {scraping ? (
