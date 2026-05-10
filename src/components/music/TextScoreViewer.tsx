@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { transposeChord, keyUsesFlats } from "@/lib/music-math"
-import { Loader2 } from "lucide-react"
+import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface TextScoreViewerProps {
     url: string
@@ -14,6 +15,15 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
     const [content, setContent] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [wrapMode, setWrapMode] = useState(false)
+    const [zoomLevel, setZoomLevel] = useState(1.0)
+
+    // Auto-enable wrap mode on small screens on initial load
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            setWrapMode(true)
+        }
+    }, [])
 
     useEffect(() => {
         let cancelled = false
@@ -79,57 +89,155 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
     // A better approach would be to estimateKey on the whole document, but this is simple and fast
     const preferFlats = transposition !== 0 ? undefined : undefined // default music-math behavior
 
-    const processedLines = lines.map((line, idx) => {
-        if (transposition === 0 || !isChordLine(line)) {
-            return { 
-                id: idx,
-                textLength: line.trimEnd().length, 
-                content: <div key={idx} className="whitespace-pre">{line || ' '}</div> 
-            }
+    // --- PARSER LOGIC ---
+    
+    // Chunk parser for wrap mode
+    const parseIntoChunks = (chordLine: string, lyricLine: string) => {
+        const chunks: { chord: string, lyric: string, isChord: boolean }[] = []
+        let match
+        const chordPositions: { index: number, word: string }[] = []
+        
+        // Find all non-space tokens in the chord line
+        const tokenRegex = /(\S+)/g
+        while ((match = tokenRegex.exec(chordLine)) !== null) {
+            chordPositions.push({ index: match.index, word: match[1] })
         }
+        
+        if (chordPositions.length > 0 && chordPositions[0].index > 0) {
+            // Initial chunk for lyrics before the first chord
+            chunks.push({
+                chord: '',
+                lyric: lyricLine.substring(0, chordPositions[0].index).padEnd(chordPositions[0].index, ' '),
+                isChord: false
+            })
+        }
+        
+        for (let i = 0; i < chordPositions.length; i++) {
+            const chordPos = chordPositions[i]
+            const nextPos = chordPositions[i + 1]
+            
+            const isActualChord = isChordToken(chordPos.word)
+            let displayChord = chordPos.word
+            if (isActualChord) {
+                displayChord = transposeChord(chordPos.word, transposition, preferFlats)
+            }
+            
+            const endIdx = nextPos ? nextPos.index : Math.max(chordLine.length, lyricLine.length)
+            const lyricChunk = lyricLine.substring(chordPos.index, endIdx)
+            const paddedLyricChunk = lyricChunk.padEnd(endIdx - chordPos.index, ' ')
+            
+            chunks.push({
+                chord: displayChord,
+                lyric: paddedLyricChunk,
+                isChord: isActualChord
+            })
+        }
+        return chunks
+    }
 
-        const regex = /([a-zA-Z0-9#b/]+)(\s*)/g
-        const htmlLine = line.replace(regex, (match, word, spaces) => {
-            if (isChordToken(word)) {
-                const transposed = transposeChord(word, transposition, preferFlats)
-                const lengthDiff = transposed.length - word.length
-                
-                let newSpaces = spaces
-                if (lengthDiff > 0) {
-                    newSpaces = spaces.slice(0, Math.max(0, spaces.length - lengthDiff))
-                } else if (lengthDiff < 0) {
-                    newSpaces = spaces + ' '.repeat(-lengthDiff)
+    // Group lines
+    type LineGroup = 
+        | { type: 'chord-lyric', id: number, chunks: { chord: string, lyric: string, isChord: boolean }[] }
+        | { type: 'text-only', id: number, content: React.ReactNode, textLength: number }
+
+    const parsedGroups: LineGroup[] = []
+    
+    for (let i = 0; i < lines.length; i++) {
+        const current = lines[i]
+        
+        if (isChordLine(current)) {
+            // It's a chord line
+            if (i + 1 < lines.length) {
+                const next = lines[i + 1]
+                if (!isChordLine(next) && next.trim().length > 0) {
+                    // It's a chord-lyric pair!
+                    parsedGroups.push({
+                        type: 'chord-lyric',
+                        id: i,
+                        chunks: parseIntoChunks(current, next)
+                    })
+                    i++ // skip next line
+                    continue
                 }
-                
-                return `<span class="text-brand font-bold">${transposed}</span>${newSpaces}`
             }
-            return match
-        })
-        
-        const plainText = htmlLine.replace(/<[^>]+>/g, '')
-        
-        return { 
-            id: idx,
-            textLength: plainText.trimEnd().length, 
-            content: <div key={idx} className="whitespace-pre" dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }} />
+            // Chord line without lyrics
+            parsedGroups.push({
+                type: 'chord-lyric',
+                id: i,
+                chunks: parseIntoChunks(current, '')
+            })
+        } else {
+            // Text-only line
+            let htmlLine = current
+            const plainText = htmlLine.replace(/<[^>]+>/g, '')
+            parsedGroups.push({
+                type: 'text-only',
+                id: i,
+                textLength: plainText.trimEnd().length,
+                content: <div key={i} className="whitespace-pre min-h-[1.5em]" dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }} />
+            })
         }
-    })
+    }
 
     // Calculate max length to scale font-size so it fits in the container without scrolling
-    const maxLineLength = Math.max(...processedLines.map(l => l.textLength), 40)
+    const maxLineLength = Math.max(...parsedGroups.map(g => g.type === 'text-only' ? g.textLength : 40), 40)
     // 0.605 is roughly the aspect ratio (width/height) of a typical monospace character
-    const fontSizeCalc = `min(15px, calc(100cqi / ${(maxLineLength + 2) * 0.605}))`
+    const baseFontSizeCalc = `min(15px, calc(100cqi / ${(maxLineLength + 2) * 0.605}))`
+    const fontSizeStyle = wrapMode ? `${14 * zoomLevel}px` : `calc(${baseFontSizeCalc} * ${zoomLevel})`
 
     return (
-        <div className="min-h-full bg-background text-foreground overflow-auto">
+        <div className="min-h-full bg-background text-foreground overflow-auto relative">
+            {/* Control Bar */}
+            <div className="fixed bottom-24 right-4 sm:right-8 z-20 flex gap-2 bg-card border border-border p-1.5 rounded-lg shadow-lg">
+                <Button 
+                    variant={wrapMode ? "default" : "outline"} 
+                    size="sm" 
+                    className={`gap-2 h-8 ${wrapMode ? 'bg-brand text-white hover:bg-brand/90' : ''}`}
+                    onClick={() => setWrapMode(!wrapMode)}
+                >
+                    {wrapMode ? <WrapText className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    {wrapMode ? "Wrap" : "Fit"}
+                </Button>
+                <div className="w-px bg-border my-1" />
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))}>
+                    <ZoomOut className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center justify-center w-12 text-xs font-medium">
+                    {Math.round(zoomLevel * 100)}%
+                </div>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoomLevel(z => Math.min(3.0, z + 0.1))}>
+                    <ZoomIn className="h-4 w-4" />
+                </Button>
+            </div>
+
             {/* Chart Container */}
             <div className="max-w-4xl mx-auto bg-card sm:my-8 sm:rounded-xl shadow-sm sm:border border-border min-h-[850px] p-4 sm:p-12">
                 <div className="@container w-full">
                     <div 
                         className="font-mono leading-relaxed overflow-x-hidden"
-                        style={{ fontSize: fontSizeCalc }}
+                        style={{ fontSize: fontSizeStyle }}
                     >
-                        {processedLines.map((line) => line.content)}
+                        {parsedGroups.map((group) => {
+                            if (group.type === 'text-only') {
+                                return group.content;
+                            }
+                            
+                            // Render Chord-Lyric chunks
+                            return (
+                                <div key={group.id} className={`flex ${wrapMode ? 'flex-wrap' : 'flex-nowrap w-max'} mb-1`}>
+                                    {group.chunks.map((chunk, idx) => (
+                                        <div key={idx} className="flex flex-col">
+                                            <div className={`whitespace-pre h-[1.5em] ${chunk.isChord ? 'text-brand font-bold' : ''}`}>
+                                                {chunk.chord}
+                                            </div>
+                                            <div className="whitespace-pre min-h-[1.5em]">
+                                                {chunk.lyric}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             </div>
