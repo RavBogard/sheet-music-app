@@ -125,6 +125,7 @@ export const POST = createApiHandler(
         const bpm = bpmRaw != null && !isNaN(bpmRaw) && bpmRaw > 0 ? bpmRaw : undefined
         const tagsRaw = (formData.get('tags') as string | null)?.trim()
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
+        const collection = (formData.get('collection') as string | null)?.trim() || 'crc'
 
         // Determine content type for storage
         // MuseScore files are already converted to MusicXML at this point
@@ -191,6 +192,7 @@ export const POST = createApiHandler(
             ...(key && { key }),
             ...(bpm && { bpm }),
             ...(tags.length > 0 && { tags }),
+            collection,
             // Storage reference
             storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : '.xml'}`,
             // MuseScore-specific fields

@@ -32,7 +32,7 @@ import { useLibraryActions } from "./useLibraryActions"
 import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
 
-type LibraryTab = "core" | "supplemental" | "audio"
+type LibraryTab = "core" | "supplemental" | "uploads" | "audio"
 
 function isAudioFile(f: DriveFile) {
     return f.mimeType.startsWith('audio/') ||
@@ -154,7 +154,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     // Apply library filters (key, topic, recency) to chart files
     const allFilteredCore = useMemo(
-        () => applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental'), libraryFilters, usageMap),
+        () => applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads'), libraryFilters, usageMap),
         [rawFiles, libraryFilters, usageMap]
     )
     
@@ -163,7 +163,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
         [rawFiles, libraryFilters, usageMap]
     )
 
-    const files = tab === "supplemental" ? allFilteredSupplemental : allFilteredCore
+    const allFilteredUploads = useMemo(
+        () => applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, usageMap),
+        [rawFiles, libraryFilters, usageMap]
+    )
+
+    const files = tab === "supplemental" ? allFilteredSupplemental : tab === "uploads" ? allFilteredUploads : allFilteredCore
     const combinedItems = tab === "audio" ? audioFiles : files
 
     // v4.3 P01: memoize the id-key so the effect below has a stable dep.
@@ -283,6 +288,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                             className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
                         >
                             Shireinu ({allFilteredSupplemental.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="uploads"
+                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                        >
+                            Uploads ({allFilteredUploads.length})
                         </TabsTrigger>
                         {hasAudio && (
                             <TabsTrigger

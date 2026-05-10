@@ -28,6 +28,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
     const [title, setTitle] = useState("")
     const [artist, setArtist] = useState("")
     const [content, setContent] = useState("")
+    const [collection, setCollection] = useState("uploads")
     const [step, setStep] = useState<'input' | 'verify' | 'success'>('input')
     const [uploading, setUploading] = useState(false)
     
@@ -44,6 +45,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
         setTitle("")
         setArtist("")
         setContent("")
+        setCollection("uploads")
         setScraping(false)
         setUploading(false)
         setStep('input')
@@ -106,6 +108,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
             const formData = new FormData()
             formData.append('file', file)
             formData.append('title', title)
+            if (collection) formData.append('collection', collection)
             
             const res = await apiFetch('/api/library/upload', {
                 method: 'POST',
@@ -155,7 +158,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                         Import Chart from URL
                     </DialogTitle>
                     <VisuallyHidden>
-                        <DialogDescription>Import chords and lyrics from a website URL and save them as a PDF chart.</DialogDescription>
+                        <DialogDescription>Import chords and lyrics from a website URL and save them as a native text chart.</DialogDescription>
                     </VisuallyHidden>
                 </DialogHeader>
 
@@ -227,6 +230,21 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                                 spellCheck={false}
                             />
                         </div>
+
+                        {/* Collection */}
+                        <div>
+                            <label htmlFor="scraper-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
+                            <select
+                                id="scraper-collection"
+                                value={collection}
+                                onChange={(e) => setCollection(e.target.value)}
+                                className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                            >
+                                <option value="crc">CRC Charts</option>
+                                <option value="supplemental">Shireinu</option>
+                                <option value="uploads">Uploads</option>
+                            </select>
+                        </div>
                         
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="ghost" onClick={() => setStep('input')} disabled={uploading}>
@@ -240,7 +258,7 @@ export function ScraperModal({ onUploadComplete }: ScraperModalProps) {
                                 {uploading ? (
                                     <>
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Generating PDF...
+                                        Generating Chart...
                                     </>
                                 ) : (
                                     "Save Chart to Library"

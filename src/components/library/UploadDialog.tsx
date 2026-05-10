@@ -37,6 +37,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
     const [key, setKey] = useState("")
     const [bpm, setBpm] = useState("")
     const [tags, setTags] = useState("")
+    const [collection, setCollection] = useState("uploads")
     const [uploading, setUploading] = useState(false)
     const [success, setSuccess] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -58,6 +59,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
         setKey("")
         setBpm("")
         setTags("")
+        setCollection("uploads")
         setUploading(false)
         setSuccess(false)
     }, [])
@@ -114,6 +116,7 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
             if (key) formData.append('key', key)
             if (bpm) formData.append('bpm', bpm)
             if (tags.trim()) formData.append('tags', tags.trim())
+            if (collection) formData.append('collection', collection)
 
             const res = await apiFetch('/api/library/upload', {
                 method: 'POST',
@@ -277,6 +280,21 @@ export function UploadDialog({ onUploadComplete }: UploadDialogProps) {
                                         onChange={(e) => setTags(e.target.value)}
                                         placeholder="shabbat, morning, healing"
                                     />
+                                </div>
+
+                                {/* Collection */}
+                                <div>
+                                    <label htmlFor="upload-collection" className="text-xs text-muted-foreground mb-1 block">Library Section</label>
+                                    <select
+                                        id="upload-collection"
+                                        value={collection}
+                                        onChange={(e) => setCollection(e.target.value)}
+                                        className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                                    >
+                                        <option value="crc">CRC Charts</option>
+                                        <option value="supplemental">Shireinu</option>
+                                        <option value="uploads">Uploads</option>
+                                    </select>
                                 </div>
 
                                 {/* Upload button */}

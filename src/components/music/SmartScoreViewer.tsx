@@ -84,7 +84,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                 // Yielding is the only way to prevent application lockup during parsing.
                 await new Promise(resolve => setTimeout(resolve, 50))
 
-                let finalContent = contentToLoad;
+                let finalContent: string | Blob = contentToLoad;
 
                 // If contentToLoad is a URL (not an AI XML string), we fetch it manually.
                 // OSMD's internal fetcher relies on file extensions (e.g. .xml, .mxl) which
@@ -101,7 +101,7 @@ export function SmartScoreViewer({ url }: SmartScoreViewerProps) {
                         finalContent = text
                     } else {
                         // Compressed MXL file
-                        finalContent = new Uint8Array(buffer)
+                        finalContent = new Blob([buffer])
                     }
                 }
 
