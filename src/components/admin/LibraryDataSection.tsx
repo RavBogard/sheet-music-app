@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Loader2, CheckCircle, AlertCircle, Clock, ArchiveRestore, ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
-import { collection, query, orderBy, limit, getDocs, getCountFromServer } from "firebase/firestore"
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
 import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api-client"
@@ -83,14 +83,12 @@ export function LibraryDataSection() {
                     orderBy("startedAt", "desc"),
                     limit(1)
                 )
-                const [syncSnap, countSnap] = await Promise.all([
-                    getDocs(syncRunsQuery),
-                    getCountFromServer(collection(db, "library_index")),
-                ])
+                const syncSnap = await getDocs(syncRunsQuery)
                 if (!syncSnap.empty) {
-                    setLastSync(syncSnap.docs[0].data() as SyncRunData)
+                    const syncData = syncSnap.docs[0].data() as SyncRunData
+                    setLastSync(syncData)
+                    setFileCount(syncData.stats?.totalScanned ?? null)
                 }
-                setFileCount(countSnap.data().count)
             } catch {
                 // Silent -- will show "No sync data" state
             } finally {
