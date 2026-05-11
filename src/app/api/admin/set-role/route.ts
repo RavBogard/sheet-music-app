@@ -49,13 +49,17 @@ export const POST = createApiHandler(
         })
 
         // Update Auth custom claims (external service, after Firestore transaction succeeds)
+        let claimsUpdated = true
         try {
             await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
         } catch (e) {
             logger.error("[Set Role] Auth claims update failed after Firestore commit:", e)
+            claimsUpdated = false
         }
 
-        return NextResponse.json({ success: true, role: newRole })
+        // claimsUpdated=false means role is set in Firestore but the ID token still carries
+        // the old claim until the user's next sign-in. Caller should surface a warning.
+        return NextResponse.json({ success: true, role: newRole, claimsUpdated })
     },
     { role: 'admin', schema: setRoleSchema }
 )

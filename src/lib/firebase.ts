@@ -116,6 +116,11 @@ export async function clearFirestoreIndexedDB(): Promise<void> {
 if (typeof window !== "undefined") {
     const RECOVERY_FLAG = "firestore-idb-recovery-attempted"
 
+    // Clear the recovery flag on clean load so future assertion failures can still trigger recovery.
+    window.addEventListener("load", () => {
+        sessionStorage.removeItem(RECOVERY_FLAG)
+    })
+
     window.addEventListener("unhandledrejection", async (event) => {
         const msg = String(event.reason?.message || event.reason || "")
         if (
@@ -131,13 +136,15 @@ if (typeof window !== "undefined") {
 
     // When a new deployment lands, the service worker updates and fires controllerchange.
     // That triggers an IndexedDB onversionchange event which terminates all Firestore
-    // listeners with "Firestore shutting down". Reloading immediately after the new SW
-    // takes control prevents the cascade — the fresh page opens Firestore against the
-    // already-bumped IDB version with no version conflict.
+    // listeners with "Firestore shutting down". Reloading after the new SW takes control
+    // prevents the cascade — the fresh page opens Firestore against the already-bumped
+    // IDB version with no version conflict.
+    // Delay 3 seconds to let any in-flight Firestore writes (setlist edits, etc.) drain
+    // before the page reloads.
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            logger.info("[FirestoreRecovery] Service worker updated — reloading to prevent Firestore shutdown cascade")
-            window.location.reload()
+            logger.info("[FirestoreRecovery] Service worker updated — reloading in 3s to prevent Firestore shutdown cascade")
+            setTimeout(() => window.location.reload(), 3000)
         })
     }
 }

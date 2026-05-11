@@ -55,6 +55,21 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
     // Phase D: Create sync run document
     initAdmin()
     const db = getFirestore()
+
+    // Concurrency guard: abort if another sync started within the last 10 minutes.
+    // Prevents Vercel cron retries or rapid admin re-clicks from running two syncs
+    // simultaneously, which would double-count stats and create duplicate sync_run docs.
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    const runningSnap = await db.collection('sync_runs')
+        .where('status', '==', 'running')
+        .where('startedAt', '>=', tenMinutesAgo)
+        .limit(1)
+        .get()
+    if (!runningSnap.empty) {
+        const running = runningSnap.docs[0].data()
+        throw new Error(`[Sync] Another sync is already running (started ${running.startedAt}). Aborting to prevent concurrent runs.`)
+    }
+
     const syncRunId = crypto.randomUUID()
     const syncRunRef = db.collection('sync_runs').doc(syncRunId)
     await syncRunRef.set({
@@ -77,6 +92,14 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         const allFiles = await drive.listAllFiles(rootFolderId)
 
         logger.info(`[Sync] Found ${allFiles.length} files in Drive.`)
+
+        // Safety: if Drive returns 0 files it almost certainly means an API error or
+        // misconfigured folder, not a genuinely empty library. Proceeding would delete
+        // everything in library_index. Abort instead.
+        if (allFiles.length === 0) {
+            throw new Error('[Sync] Drive returned 0 files — aborting to prevent accidental library wipe. Check GOOGLE_DRIVE_ROOT_FOLDER_ID and Drive API access.')
+        }
+
         stats.totalScanned = allFiles.length
 
         // 3. Get existing docs with modifiedTime, storageCopiedAt, storageFailed for change detection
@@ -234,11 +257,15 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             } catch (err) {
                 const errorMsg = err instanceof Error ? err.message : 'Unknown error'
 
-                // Mark as failed in Firestore
+                // Mark as failed in Firestore so the next sync retries this file.
+                // Log but don't swallow — if this update also fails, the file has neither
+                // storageCopiedAt nor storageFailed=true and would be silently skipped forever.
                 await db.collection('library_index').doc(file.id).update({
                     storageFailed: true,
                     storageError: errorMsg,
-                }).catch(() => {})
+                }).catch((markErr) => {
+                    logger.warn(`[Sync] Could not mark storageFailed for ${file.name}:`, markErr)
+                })
 
                 stats.copyErrors++
                 stats.copyFailedFiles!.push(file.name)
