@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase"
+import { db, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import { doc, onSnapshot, setDoc } from "firebase/firestore"
 import { create } from "zustand"
 import { logger } from "@/lib/logger"
@@ -38,6 +38,7 @@ export const useAlertStore = create<AlertStore>((set) => ({
                 set({ alert: { visible: false, message: "", type: "info" }, loading: false })
             }
         }, (err) => {
+            recoverFromFirestoreShutdown(err)
             // B02: surface the real error to telemetry — previously silently
             // set loading: false with no diagnostic, making permission /
             // rule failures invisible in prod.

@@ -149,4 +149,22 @@ if (typeof window !== "undefined") {
     }
 }
 
+/**
+ * Call from any Firestore onSnapshot error handler.
+ * If the error is "Firestore shutting down" (caused by a multi-tab IDB version change
+ * when a new deployment lands), reloads the page once to recover.
+ * Debounced: subsequent calls within 5s are no-ops.
+ */
+let _shutdownRecoveryScheduled = false
+export function recoverFromFirestoreShutdown(err: unknown): void {
+    if (typeof window === 'undefined') return
+    const msg = String((err as Error)?.message || err || '')
+    if (!msg.toLowerCase().includes('firestore') && !msg.toLowerCase().includes('shutting down')) return
+    if (!msg.toLowerCase().includes('shutting down')) return
+    if (_shutdownRecoveryScheduled) return
+    _shutdownRecoveryScheduled = true
+    logger.warn('[FirestoreRecovery] Firestore shut down — reloading in 1.5s')
+    setTimeout(() => window.location.reload(), 1500)
+}
+
 export { app, db, auth, googleProvider };

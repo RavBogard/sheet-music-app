@@ -1,4 +1,4 @@
-import { db, auth } from "./firebase"
+import { db, auth, recoverFromFirestoreShutdown } from "./firebase"
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
 import { UserProfile, UserRole } from "@/types/models"
@@ -89,6 +89,7 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
             }
         }
     }, (err) => {
+        recoverFromFirestoreShutdown(err)
         logger.error("[Users] Profile listener error:", err)
     })
 }

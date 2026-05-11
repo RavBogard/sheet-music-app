@@ -16,7 +16,7 @@
  *   - scheduling_cancelled: A service assignment was cancelled
  */
 
-import { db } from '@/lib/firebase'
+import { db, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import {
     collection, query, where, orderBy, limit,
     onSnapshot, doc, updateDoc, writeBatch,
@@ -64,6 +64,7 @@ export function subscribeToNotifications(
         }) as Notification)
         callback(notifs)
     }, (err) => {
+        recoverFromFirestoreShutdown(err)
         logger.warn('[Notifications] Subscribe failed:', err)
         callback([])
     })

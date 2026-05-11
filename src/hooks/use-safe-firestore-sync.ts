@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { DocumentReference, DocumentData, Query, onSnapshot, DocumentSnapshot, QuerySnapshot } from "firebase/firestore"
 import { logger } from "@/lib/logger"
+import { recoverFromFirestoreShutdown } from "@/lib/firebase"
 
 type FirestoreRef = DocumentReference<DocumentData> | Query<DocumentData>
 
@@ -110,6 +111,7 @@ export function useSafeFirestoreSync<T = any>(
                     if (!isMounted.current) return
                     if (timeoutId) clearTimeout(timeoutId)
 
+                    recoverFromFirestoreShutdown(err)
                     logger.error("[useSafeFirestoreSync] onSnapshot error:", err)
                     setState(prev => ({ ...prev, loading: false, error: err }))
                     if (options.onError) options.onError(err)

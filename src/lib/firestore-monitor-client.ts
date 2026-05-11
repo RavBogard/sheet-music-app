@@ -11,7 +11,7 @@
  * Zero configuration on iPads — uses the existing authenticated Firestore connection.
  */
 
-import { db, auth } from "@/lib/firebase"
+import { db, auth, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import {
     doc,
     collection,
@@ -140,6 +140,7 @@ export class FirestoreMonitorClient {
                 // on every bridge state push (since bridge config lacks that field).
             },
             (err) => {
+                recoverFromFirestoreShutdown(err)
                 this._consecutiveErrors++
                 logger.error("[MonitorFS] State listener error (%d/%d):", this._consecutiveErrors, MAX_CONSECUTIVE_ERRORS, err.message)
 
