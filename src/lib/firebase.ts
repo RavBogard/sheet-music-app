@@ -128,6 +128,18 @@ if (typeof window !== "undefined") {
             window.location.reload()
         }
     })
+
+    // When a new deployment lands, the service worker updates and fires controllerchange.
+    // That triggers an IndexedDB onversionchange event which terminates all Firestore
+    // listeners with "Firestore shutting down". Reloading immediately after the new SW
+    // takes control prevents the cascade — the fresh page opens Firestore against the
+    // already-bumped IDB version with no version conflict.
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            logger.info("[FirestoreRecovery] Service worker updated — reloading to prevent Firestore shutdown cascade")
+            window.location.reload()
+        })
+    }
 }
 
 export { app, db, auth, googleProvider };
