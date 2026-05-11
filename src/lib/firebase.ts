@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentMultipleTabManager, setLogLevel } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, setLogLevel } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -46,8 +46,14 @@ try {
 
         try {
             db = initializeFirestore(app, {
+                // persistentSingleTabManager: each tab manages its own IDB independently.
+                // Eliminates the cross-tab IDB version coordination that caused the
+                // "Firestore shutting down" cascade when multiple tabs were open and
+                // one tab's IDB upgrade fired onversionchange across all others.
+                // Tradeoff: each tab opens its own Firestore WebChannel instead of sharing
+                // one — fine for a small band app.
                 localCache: persistentLocalCache({
-                    tabManager: persistentMultipleTabManager(),
+                    tabManager: persistentSingleTabManager(),
                 }),
             } as FirestoreSettings);
         } catch (e1) {
@@ -159,7 +165,6 @@ let _shutdownRecoveryScheduled = false
 export function recoverFromFirestoreShutdown(err: unknown): void {
     if (typeof window === 'undefined') return
     const msg = String((err as Error)?.message || err || '')
-    if (!msg.toLowerCase().includes('firestore') && !msg.toLowerCase().includes('shutting down')) return
     if (!msg.toLowerCase().includes('shutting down')) return
     if (_shutdownRecoveryScheduled) return
     _shutdownRecoveryScheduled = true
