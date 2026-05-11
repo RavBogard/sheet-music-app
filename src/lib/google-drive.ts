@@ -76,6 +76,7 @@ interface DriveFileResult {
     webContentLink?: string
     webViewLink?: string
     parents?: string[]
+    shortcutDetails?: { targetId: string; targetMimeType?: string }
 }
 
 export class DriveClient {
@@ -144,7 +145,7 @@ export class DriveClient {
             do {
                 const res = await withRetry(() => this.drive.files.list({
                     pageSize: 100,
-                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents)',
+                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents, shortcutDetails)',
                     q,
                     pageToken: nextPageToken,
                     supportsAllDrives: true,
@@ -226,8 +227,24 @@ export class DriveClient {
 
     async getFile(fileId: string) {
         try {
-            const res = await withRetry(() => this.drive.files.get({
+            // Shortcuts can't be downloaded directly — resolve to target ID first.
+            // Drive returns 403 if you try alt=media on a shortcut.
+            let downloadId = fileId
+            const meta = await withRetry(() => this.drive.files.get({
                 fileId,
+                fields: 'mimeType, shortcutDetails',
+                supportsAllDrives: true,
+            }))
+            const metaData = meta.data as { mimeType?: string; shortcutDetails?: { targetId?: string } }
+            if (metaData.mimeType === 'application/vnd.google-apps.shortcut') {
+                const targetId = metaData.shortcutDetails?.targetId
+                if (!targetId) throw new Error(`Drive shortcut ${fileId} has no targetId`)
+                logger.info(`[Drive] Resolving shortcut ${fileId} → ${targetId}`)
+                downloadId = targetId
+            }
+
+            const res = await withRetry(() => this.drive.files.get({
+                fileId: downloadId,
                 alt: 'media',
                 supportsAllDrives: true,
                 acknowledgeAbuse: true

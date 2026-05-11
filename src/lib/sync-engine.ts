@@ -207,6 +207,10 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     modifiedTime: file.modifiedTime || null,
                     webViewLink: file.webViewLink || null,
                     parents: file.parents || [],
+                    // Store shortcut target so file-fetcher can resolve without an extra Drive API call
+                    ...(file.shortcutDetails?.targetId
+                        ? { shortcutTargetId: file.shortcutDetails.targetId }
+                        : {}),
                     lastSyncedAt: now,
                     source: 'google_drive'
                 }, { merge: true })
