@@ -19,6 +19,7 @@ export interface SyncStats {
     deletedFiles?: string[]
     copiedToStorage: number
     copyErrors: number
+    copyFailedFiles?: string[]
     retriedCopies: number
     deletedFromStorage: number
     syncRunId?: string
@@ -44,6 +45,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         deletedFiles: [],
         copiedToStorage: 0,
         copyErrors: 0,
+        copyFailedFiles: [],
         retriedCopies: 0,
         deletedFromStorage: 0,
     }
@@ -239,6 +241,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 }).catch(() => {})
 
                 stats.copyErrors++
+                stats.copyFailedFiles!.push(file.name)
                 syncErrors.push({
                     fileId: file.id,
                     fileName: file.name,

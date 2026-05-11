@@ -68,9 +68,12 @@ export function LibrarySyncCard() {
                         {lastStats.copiedToStorage > 0 && ` · Copied to Storage: ${lastStats.copiedToStorage}`}
                     </span>
                     {lastStats.copyErrors > 0 && (
-                        <span className="text-destructive">
-                            ⚠ {lastStats.copyErrors} file{lastStats.copyErrors > 1 ? 's' : ''} failed to copy — unavailable until next sync
-                        </span>
+                        <div className="text-destructive space-y-0.5">
+                            <div>⚠ {lastStats.copyErrors} file{lastStats.copyErrors > 1 ? 's' : ''} failed to copy — sync again to retry</div>
+                            {lastStats.copyFailedFiles?.map((name, i) => (
+                                <div key={i} className="pl-3 text-[10px] text-destructive/80 truncate">{name}</div>
+                            ))}
+                        </div>
                     )}
                     {(lastStats.addedFiles?.length || lastStats.deletedFiles?.length) ? (
                         <details className="mt-1">

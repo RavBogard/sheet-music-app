@@ -1,18 +1,20 @@
 /**
- * Server-side file fetcher — Firebase Storage only.
+ * Server-side file fetcher.
+ *
+ * Primary path: Firebase Storage (fast, CDN-backed).
+ * Fallback: Google Drive direct download when Storage misses (transient sync failure).
  *
  * Used by: file proxy API, print pipeline, enrichment engine.
- * Files must be synced from Google Drive to Storage via the sync engine.
- * There is no Drive fallback — if a file isn't in Storage, it returns null.
  */
 
 import { downloadFromStorage } from "@/lib/firebase-storage"
+import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 
 export interface FetchedFile {
     buffer: Buffer
     contentType: string
-    source: 'firebase-storage'
+    source: 'firebase-storage' | 'google-drive-fallback'
 }
 
 /**
@@ -38,7 +40,26 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
     if (storageResult.reason === 'network') {
         logger.warn(`[FileFetcher] Storage error for ${fileId}: ${storageResult.message}`)
     } else {
-        logger.warn(`[FileFetcher] File not in Storage: ${fileId} — run a sync to copy from Drive`)
+        logger.warn(`[FileFetcher] File not in Storage: ${fileId} — attempting Drive fallback`)
     }
+
+    // Drive fallback: handles transient sync copy failures so files remain accessible
+    // Only runs when Storage misses; Drive IDs starting with 'upload-' are local-only and won't be in Drive
+    if (!cleanId.startsWith('upload-')) {
+        try {
+            const drive = new DriveClient()
+            const data = await drive.getFile(cleanId)
+            const buffer = Buffer.from(data as ArrayBuffer)
+            logger.info(`[FileFetcher] Served ${fileId} from Drive fallback (Storage miss)`)
+            return {
+                buffer,
+                contentType: mimeType || 'application/pdf',
+                source: 'google-drive-fallback',
+            }
+        } catch (driveErr) {
+            logger.warn(`[FileFetcher] Drive fallback failed for ${fileId}:`, driveErr instanceof Error ? driveErr.message : driveErr)
+        }
+    }
+
     return null
 }
