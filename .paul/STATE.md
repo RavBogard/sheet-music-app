@@ -94,7 +94,7 @@ Push history this run:
   - `6735f48` fix(v54-01-02): write track.fileId on pick + bind — PUSHED (Daniel UAT interrupt)
   - v54-02-01 feat: Firebase Local Emulator Suite infra + build-info script fix — PUSHED in v60-01 bundle
   - `6dc44f3` feat(v60-01): SyncIndicator conflict click rewire + silent LWW on retry — PUSHED
-  - `e1af6a0` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED THIS RUN
+  - `878afa9` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
