@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMP
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 LOOP COMPLETE; ~6-7 plans remaining
 Plan: v60-06-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: dashboard counts on iPad)
 Status: v60-06-01 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. 2 dashboard surfaces (HeroCard + CompactSetlistRow) now read denormalized `setlist.trackCount` (maintained by v54-01-03 reconciler) with embedded-array fallback for legacy setlists. Net +3 LOC. All 6 AC PASS (AC-6 deferred to UAT). Zero new failures; HFG 0/3 held. v60-06 phase continues — remaining plans cover: filtered counts (NextServiceCard, PublicSetlistListing), full-list iterations (UpcomingTimeline, PrepRecommendations, SetlistCards, use-upcoming-prep), SetlistDrawer queue, TemplatesSection admin, matrix/route.ts (deferred from v60-05), 15-setlist backfill + migration_snapshots rollback collection.
-Last activity: 2026-05-12 — v60-06-01 LOOP COMPLETE; commit + push pending.
+Last activity: 2026-05-12 — v60-06-01 LOOP COMPLETE; committed as `4dcbb5c`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED 2026-05-12.
+Last commit: `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -115,7 +115,9 @@ Push history this run:
   - `dee66de` docs(v60-04-02): correct commit SHA in STATE.md Git State section — PUSHED
   - `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED
   - `536ac88` docs(v60-04-03): correct commit SHA in STATE.md + ROADMAP.md — PUSHED
-  - `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED THIS RUN
+  - `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED
+  - `2c3bbe7` docs(v60-05-01): correct commit SHA in STATE.md Git State section — PUSHED
+  - `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
