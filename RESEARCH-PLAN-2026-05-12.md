@@ -317,9 +317,30 @@ A + B + D can run in parallel (B is read-heavy, D is survey-heavy). C is gated o
 
 ---
 
-## Decisions still required from the user before Phase D can finish
+## Decisions made (2026-05-12)
 
-- Budget tolerance for a managed-service option (Liveblocks pricing) vs self-hosted CRDT infrastructure.
-- Acceptable migration window for existing setlists (one-shot vs gradual).
-- Hard requirements on offline-first capability — current outbox is the durability story; CRDT pivot must match or exceed it.
-- Whether "Google-Docs-like" includes presence (live cursors / "who's editing now") or just merge.
+User locked these inputs to Phase D so research can proceed without
+re-asking:
+
+- **Tech choice: self-hosted Y.js** (not Liveblocks). Rationale: small
+  user base; avoid vendor lock-in + per-MAU pricing; Y.js is mature,
+  MIT-licensed, integrates cleanly with the existing Firebase stack as
+  a durability adapter.
+- **Migration: one-shot, ASAP.** User is effectively the sole active
+  user right now, so the risk of bulk converting existing setlists is
+  acceptable. This deletes the gradual / lazy-hydration code path from
+  scope and simplifies the cutover significantly.
+- **Offline-first: non-negotiable.** Must match or exceed the current
+  outbox engine's durability (survive tab-close, force-quit, multi-tab,
+  offline). Y.js + `y-indexeddb` + a Firestore-as-durability adapter is
+  the working hypothesis.
+- **Presence: deferred to v2.** Ship merge semantics first; live cursors
+  and "who's editing now" are a follow-up. Y.js's awareness protocol
+  makes adding presence later cheap.
+
+## Open inputs that still need to surface during research
+
+- Per-field merge strategy (Phase D.2 — needs the data-model audit).
+- Whether the outbox engine survives in some form post-pivot or gets
+  retired entirely (Phase D.3 / D.4 — depends on whether Y.js's IDB
+  persister + a Firestore-update-log adapter fully replaces it).
