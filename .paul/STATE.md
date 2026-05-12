@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 1 plan closed)
-Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 LOOP COMPLETE; ~6-7 plans remaining
-Plan: v60-06-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: dashboard counts on iPad)
-Status: v60-06-01 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. 2 dashboard surfaces (HeroCard + CompactSetlistRow) now read denormalized `setlist.trackCount` (maintained by v54-01-03 reconciler) with embedded-array fallback for legacy setlists. Net +3 LOC. All 6 AC PASS (AC-6 deferred to UAT). Zero new failures; HFG 0/3 held. v60-06 phase continues — remaining plans cover: filtered counts (NextServiceCard, PublicSetlistListing), full-list iterations (UpcomingTimeline, PrepRecommendations, SetlistCards, use-upcoming-prep), SetlistDrawer queue, TemplatesSection admin, matrix/route.ts (deferred from v60-05), 15-setlist backfill + migration_snapshots rollback collection.
-Last activity: 2026-05-12 — v60-06-01 LOOP COMPLETE; committed as `4dcbb5c`; pushed to origin master.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed)
+Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; ~5 plans remaining
+Plan: v60-06-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: HeroCard chart preloads + NextServiceCard/PublicSetlistListing filtered song counts on iPad)
+Status: v60-06-02 extended the v54-01-03 reconciler with two denormalized fields (songCount + fileIds) via parallel useLiveQuery + lastWrittenRef + debounced applyEdit blocks. Three dashboard consumers migrated (HeroCard fileIds, NextServiceCard + PublicSetlistListing songCount). Architectural decision locked after Daniel design discussion: client reconciler (option B), NOT Cloud Function trigger (option D) — "historical counts don't matter" + single-write-path topology removes D's drift-robustness benefit. Net +144 LOC production source — flagged AC-8 deviation; justified by tight coupling between reconciler producer + consumer reads (split commit would orphan denormalized fields). 1 in-flight test contract update auto-fixed (cascade-patch assertion at SetlistGridHydrator.test.tsx:264). tsc clean, next build clean, main suite 1581/52 baseline preserved, emulator green, HFG 0/3 held.
+Last activity: 2026-05-12 — v60-06-02 LOOP COMPLETE; commit + push pending.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [█░░░░░░░░░] 12% (v60-06-01 of ~7 plans LOOP COMPLETE — HeroCard + CompactSetlistRow trackCount migration)
+- Phase v60-06: [██░░░░░░░░] 28% (v60-06-01 + v60-06-02 of ~7 plans LOOP COMPLETE — total count + filtered count + fileIds denormalization)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-06-01 LOOP COMPLETE; ready for /paul:plan v60-06-02]
+  ✓        ✓        ✓     [v60-06-02 LOOP COMPLETE; ready for /paul:plan v60-06-03]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 

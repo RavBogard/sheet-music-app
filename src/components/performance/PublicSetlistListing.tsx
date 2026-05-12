@@ -64,9 +64,12 @@ export function PublicSetlistListing() {
                 <div className="flex flex-col gap-3">
                     {sortedSetlists.map((setlist) => {
                         const eventDate = toDate(setlist.eventDate)
-                        const songCount = (setlist.tracks || []).filter(
-                            (t) => !t.type || t.type === "song"
-                        ).length
+                        // v60-06-02: read denormalized songCount with embedded fallback for legacy setlists
+                        const songCount =
+                            setlist.songCount ??
+                            (setlist.tracks || []).filter(
+                                (t) => !t.type || t.type === "song"
+                            ).length
 
                         return (
                             <Link

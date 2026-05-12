@@ -261,7 +261,14 @@ describe('SetlistGridHydrator', () => {
         // P0 cascade-race fix (2026-05-12): trackCount is now folded into
         // the cascade's hydrated:true update so a parallel reconciler
         // write doesn't race the cascade on setlists/{S}.
-        expect(updateEdit.patch).toEqual({ hydrated: true, trackCount: 2 })
+        // v60-06-02: songCount + fileIds also folded in (same race-prevention
+        // reasoning — denormalized fields land atomically with hydrated:true).
+        expect(updateEdit.patch).toEqual({
+            hydrated: true,
+            trackCount: 2,
+            songCount: 2,
+            fileIds: [],
+        })
         expect(updateEdit.expectedUpdatedAt).toBe(updatedAt)
         expect(updateOptions).toEqual({ withoutUndo: true })
     })

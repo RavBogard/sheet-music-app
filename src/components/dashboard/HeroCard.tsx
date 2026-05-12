@@ -50,8 +50,12 @@ export function HeroCard({
 
     // Memoize fileIds to avoid re-running cache check on every render
     const fileIds = useMemo(
-        () => (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!),
-        [setlist.tracks]
+        // v60-06-02: read denormalized fileIds (maintained by SetlistGridHydrator
+        // reconciler); fall back to embedded tracks for legacy setlists.
+        () =>
+            setlist.fileIds ??
+            (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!),
+        [setlist.fileIds, setlist.tracks]
     )
 
     // Check offline readiness for this setlist's charts

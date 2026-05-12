@@ -65,6 +65,10 @@ export function SetlistGridHydrator({
      *  it after writing trackCount in the same setlist update — without
      *  the seed, the reconciler would fire spuriously on first mount. */
     const lastWrittenCountRef = useRef<number | null>(null)
+    /** v60-06-02: same dedup pattern for songCount + fileIds, seeded in
+     *  the cascade alongside trackCount. */
+    const lastWrittenSongCountRef = useRef<number | null>(null)
+    const lastWrittenFileIdsRef = useRef<string[] | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -252,6 +256,23 @@ export function SetlistGridHydrator({
                 // cascade's expectedUpdatedAt precondition failed → the
                 // setlist row went 'failed' → modal opened. Single-write
                 // fixes both.
+                // v60-06-02: bundle songCount + fileIds into the same patch
+                // so all three denormalized fields land atomically with
+                // hydrated:true. Computed from the legacy embedded tracks
+                // (the only authoritative source pre-hydration).
+                const seedSongCount = initialTracks.filter(
+                    (t) => !t.type || t.type === 'song',
+                ).length
+                const seedFileIds = Array.from(
+                    new Set(
+                        initialTracks
+                            .map((t) => (t as { fileId?: string }).fileId)
+                            .filter(
+                                (id): id is string =>
+                                    typeof id === 'string' && id.length > 0,
+                            ),
+                    ),
+                ).sort()
                 await applyEdit(
                     {
                         op: 'update',
@@ -260,6 +281,8 @@ export function SetlistGridHydrator({
                         patch: {
                             hydrated: true,
                             trackCount: initialTracks.length,
+                            songCount: seedSongCount,
+                            fileIds: seedFileIds,
                         },
                         expectedUpdatedAt: initialSetlist.updatedAt,
                     },
@@ -269,6 +292,8 @@ export function SetlistGridHydrator({
                 // diff against initialSetlist.trackCount doesn't re-fire
                 // immediately for the count we just wrote.
                 lastWrittenCountRef.current = initialTracks.length
+                lastWrittenSongCountRef.current = seedSongCount
+                lastWrittenFileIdsRef.current = seedFileIds
             } catch (err) {
                 logger.warn(
                     `[SetlistGridHydrator] lazy-hydration fan-out failed for setlist ${setlistId}`,
@@ -368,6 +393,109 @@ export function SetlistGridHydrator({
         }, 800)
         return () => clearTimeout(handle)
     }, [hydration, liveTrackCount, setlistId, initialSetlist.trackCount, applyEdit])
+
+    // v60-06-02: parallel reconcilers for songCount + fileIds. Same 800ms
+    // debounced applyEdit pattern as trackCount above. JS-side filter inside
+    // useLiveQuery is fine for ~50 tracks/setlist; dexie-react-hooks
+    // invalidates on any setlistId-scoped track change.
+    const liveSongCount = useLiveQuery(
+        () =>
+            getDb()
+                .tracks.where('setlistId')
+                .equals(setlistId)
+                .filter((t) => !t.type || (t.type as unknown) === 'song')
+                .count(),
+        [setlistId],
+    )
+    useEffect(() => {
+        if (hydration !== 'done') return
+        if (liveSongCount === undefined) return
+        const currentStored =
+            lastWrittenSongCountRef.current ??
+            (initialSetlist as { songCount?: number }).songCount ??
+            null
+        if (liveSongCount === currentStored) return
+        const handle = setTimeout(() => {
+            if (liveSongCount === lastWrittenSongCountRef.current) return
+            void applyEdit({
+                op: 'update',
+                collection: 'setlists',
+                docId: setlistId,
+                patch: { songCount: liveSongCount },
+            })
+                .then(() => {
+                    lastWrittenSongCountRef.current = liveSongCount
+                })
+                .catch((err) => {
+                    logger.warn(
+                        '[SetlistGridHydrator] songCount reconcile failed',
+                        err,
+                    )
+                })
+        }, 800)
+        return () => clearTimeout(handle)
+    }, [hydration, liveSongCount, setlistId, initialSetlist, applyEdit])
+
+    const liveFileIds = useLiveQuery<string[]>(
+        async () => {
+            const rows = await getDb()
+                .tracks.where('setlistId')
+                .equals(setlistId)
+                .toArray()
+            return Array.from(
+                new Set(
+                    rows
+                        .map((r) => (r as { fileId?: string }).fileId)
+                        .filter(
+                            (id): id is string =>
+                                typeof id === 'string' && id.length > 0,
+                        ),
+                ),
+            ).sort()
+        },
+        [setlistId],
+    )
+    useEffect(() => {
+        if (hydration !== 'done') return
+        if (liveFileIds === undefined) return
+        const lastWritten = lastWrittenFileIdsRef.current
+        const lastFromInitial =
+            (initialSetlist as { fileIds?: string[] }).fileIds
+        const currentStored = lastWritten ?? lastFromInitial
+        if (
+            currentStored &&
+            currentStored.length === liveFileIds.length &&
+            currentStored.every((id, i) => id === liveFileIds[i])
+        ) {
+            return
+        }
+        const handle = setTimeout(() => {
+            const echo = lastWrittenFileIdsRef.current
+            if (
+                echo &&
+                echo.length === liveFileIds.length &&
+                echo.every((id, i) => id === liveFileIds[i])
+            ) {
+                return
+            }
+            void applyEdit({
+                op: 'update',
+                collection: 'setlists',
+                docId: setlistId,
+                patch: { fileIds: liveFileIds },
+            })
+                .then(() => {
+                    lastWrittenFileIdsRef.current = liveFileIds
+                })
+                .catch((err) => {
+                    logger.warn(
+                        '[SetlistGridHydrator] fileIds reconcile failed',
+                        err,
+                    )
+                })
+        }, 800)
+        return () => clearTimeout(handle)
+    }, [hydration, liveFileIds, setlistId, initialSetlist, applyEdit])
 
     return (
         <div data-testid="setlist-grid-hydrator" data-hydration={hydration}>

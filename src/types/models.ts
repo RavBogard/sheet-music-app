@@ -72,6 +72,12 @@ export interface Setlist {
     updatedAt?: FirestoreDate
     tracks: SetlistTrack[]
     trackCount: number
+    /** v60-06-02: denormalized count of song-typed tracks. Maintained by
+     *  the SetlistGridHydrator reconciler (same pattern as trackCount). */
+    songCount?: number
+    /** v60-06-02: distinct fileId values across the setlist's tracks.
+     *  Maintained by the SetlistGridHydrator reconciler. */
+    fileIds?: string[]
     ownerId?: string
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service
