@@ -56,7 +56,6 @@ import {
 } from '@/lib/songs/defaults'
 import { useGridKeyboard } from '@/hooks/use-grid-keyboard'
 import { useGridSelection } from '@/hooks/use-grid-selection'
-import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
 import { AddBar, type NonSongTrackType } from './AddBar'
@@ -915,14 +914,6 @@ export function SetlistGrid({
 }: SetlistGridProps) {
     const router = useRouter()
     const dialogCtx = useDeleteConfirmOptional()
-    // v50-05-05: parallel mobile render path below 768px. The existing
-    // TanStack Table layout breaks ~640px — phones become unusable.
-    // Match max-width:767px so anything <768px (mobile) gets cards;
-    // anything ≥ 768px (tablet portrait + iPad + desktop) gets the
-    // table. Touch detection (pointer:coarse) is independent — iPad
-    // landscape gets the table + Sheet-on-coarse cell dropdowns from
-    // v50-05-04.
-    const isMobile = useMediaQuery('(max-width: 767px)')
 
     // Resolves a confirmation request via the precedence:
     //   1. explicit `confirmDelete` prop (rich info shape; tests + power callers)
