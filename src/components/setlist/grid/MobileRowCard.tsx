@@ -1,5 +1,7 @@
 'use client'
 
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
     Copy,
     Edit3,
@@ -14,7 +16,6 @@ import {
     ContextMenu,
     ContextMenuContent,
     ContextMenuItem,
-    ContextMenuLabel,
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
@@ -24,16 +25,7 @@ import { KEY_OPTIONS_DATA } from './cells/KeyCell'
 
 export interface MobileRowCardProps {
     track: LocalTrack
-    isSelected: boolean
-    /** True when row is part of a multi-selection ≥ 2 — enables ContextMenu
-     *  bulk-routing semantics (Edit/Bind/Duplicate disable; Delete → bulk). */
-    isInBulkSelection: boolean
-    /** Total selection size — drives the "N rows selected" label. */
-    bulkSelectionCount: number
     isEditing?: boolean
-    canMoveUp?: boolean
-    canMoveDown?: boolean
-    onSelectionClick: (modifiers: { shift: boolean; meta: boolean }) => void
     /** Plain card tap (no modifier) — toggles inline editing. */
     onTap: () => void
     onContextEditRow: () => void
@@ -41,33 +33,33 @@ export interface MobileRowCardProps {
     onContextDuplicate: () => void
     onContextDelete: () => void
     onCommit?: (patch: Partial<LocalTrack>) => Promise<void> | void
-    onMoveUp?: () => void | Promise<void>
-    onMoveDown?: () => void | Promise<void>
     onDeleteRow?: () => void
 }
 
 /**
- * v50-05-05 mobile card row — parallel to desktop SortableRow but for the
- * stacked-card render path (below 768px). Title / key / lead visible at
- * rest, chart-bound icon on the right, drag/select handle on the left.
+ * v50-05-05 mobile card row — REPURPOSED as the single render path
+ * post-0ec6773c (no desktop table).
+ *
+ * T1.1 fix (2026-05-12, Bug 4):
+ *  - Grip is now a real drag handle via @dnd-kit's useSortable, not a
+ *    multi-select toggle. Spreads {...attributes} + {...listeners} on
+ *    the button so dnd-kit can drag-activate without dragging the whole
+ *    card on tap.
+ *  - Removed Move Up / Move Down buttons from the inline edit pane
+ *    (drag is the only reorder UI).
+ *  - Removed multi-select wiring (`isSelected`, `onSelectionClick`,
+ *    `isInBulkSelection`, `bulkSelectionCount`). The grip click no
+ *    longer toggles selection; multi-select isn't a feature anymore.
  */
 export function MobileRowCard({
     track,
-    isSelected,
-    isInBulkSelection,
-    bulkSelectionCount,
     isEditing,
-    canMoveUp,
-    canMoveDown,
-    onSelectionClick,
     onTap,
     onContextEditRow,
     onContextBindChart,
     onContextDuplicate,
     onContextDelete,
     onCommit,
-    onMoveUp,
-    onMoveDown,
     onDeleteRow,
 }: MobileRowCardProps) {
     const [title, setTitle] = useState(String(track.title ?? ''))
@@ -111,8 +103,33 @@ export function MobileRowCard({
         }
     }, [])
 
+    // T1.1: dnd-kit Sortable. `attributes` + `listeners` are spread on the
+    // GRIP button only — the card body remains tap-to-edit. `setNodeRef`
+    // attaches the draggable element (card) so dnd-kit can transform it
+    // during drag. `transform` + `transition` drive the visual move.
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: track.id })
+
+    const dragStyle: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+    }
+
     const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
         if (e.pointerType !== 'touch') return
+        // T1.1: don't start the long-press context-menu timer if the touch
+        // originated inside the drag handle — TouchSensor (200ms hold)
+        // owns that gesture. Mirrors the desktop guard added in the
+        // original Bug 1 fix.
+        const target = e.target as HTMLElement | null
+        if (target?.closest('[data-drag-handle]')) return
         cancelLongPress()
         const x = e.clientX
         const y = e.clientY
@@ -152,30 +169,11 @@ export function MobileRowCard({
     useEffect(() => () => cancelLongPress(), [cancelLongPress])
 
     const handleCardClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-        if (e.shiftKey || e.metaKey || e.ctrlKey) {
-            e.preventDefault()
-            onSelectionClick({
-                shift: e.shiftKey,
-                meta: e.metaKey || e.ctrlKey,
-            })
-            return
-        }
+        // T1.1: ignore clicks originating from the drag handle button so a
+        // plain mousedown-up on the grip doesn't toggle the edit pane.
+        const target = e.target as HTMLElement | null
+        if (target?.closest('[data-drag-handle]')) return
         onTap()
-    }
-
-    const handleHandleClick: React.MouseEventHandler<HTMLButtonElement> = (
-        e,
-    ) => {
-        e.stopPropagation()
-        if (e.shiftKey || e.metaKey || e.ctrlKey) {
-            e.preventDefault()
-            onSelectionClick({
-                shift: e.shiftKey,
-                meta: e.metaKey || e.ctrlKey,
-            })
-            return
-        }
-        onSelectionClick({ shift: false, meta: true })
     }
 
     const inputBase =
@@ -184,14 +182,21 @@ export function MobileRowCard({
         'transition-colors duration-150 motion-reduce:transition-none text-foreground'
 
     return (
-        <li className="flex flex-col gap-2 relative">
+        <li
+            ref={(el) => {
+                // Attach the dnd-kit ref to the <li> so it transforms during drag.
+                setNodeRef(el)
+            }}
+            style={dragStyle}
+            className="flex flex-col gap-2 relative"
+            data-dragging={isDragging || undefined}
+        >
             <ContextMenu>
                 <ContextMenuTrigger asChild>
                     <div
                         ref={cardElRef}
                         data-testid={`mobile-card-${track.id}`}
                         data-row-id={track.id}
-                        data-selected={isSelected || undefined}
                         onClick={handleCardClick}
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
@@ -207,22 +212,21 @@ export function MobileRowCard({
                             'bg-white/[0.02] backdrop-blur-md border-white/10 hover:bg-white/[0.04]',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                             'transition-all duration-200 motion-reduce:transition-none',
-                            isSelected &&
-                                'border-brand/40 bg-brand/5 shadow-[0_0_15px_rgba(67,56,202,0.15)]',
+                            isDragging &&
+                                'shadow-lg ring-2 ring-indigo-400/40',
                         )}
                     >
                         <button
                             type="button"
-                            aria-label={`${isSelected ? 'Selected — ' : ''}Toggle selection for ${track.title || 'untitled track'}`}
-                            aria-pressed={isSelected ? true : undefined}
+                            aria-label={`Drag to reorder ${track.title || 'untitled track'}`}
                             data-testid={`mobile-card-handle-${track.id}`}
-                            onClick={handleHandleClick}
+                            data-drag-handle=""
+                            {...attributes}
+                            {...listeners}
                             className={cn(
                                 'flex flex-col items-center gap-1 justify-center rounded-md',
-                                'cursor-pointer p-2 -ml-2',
-                                isSelected
-                                    ? 'text-brand bg-brand/10 ring-1 ring-brand/40'
-                                    : 'text-muted-foreground/50 hover:text-muted-foreground',
+                                'cursor-grab active:cursor-grabbing p-2 -ml-2 touch-none',
+                                'text-muted-foreground/50 hover:text-muted-foreground',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                                 'transition-colors duration-150 motion-reduce:transition-none',
                             )}
@@ -234,8 +238,8 @@ export function MobileRowCard({
                         <div className="min-w-0 flex-1 flex flex-col gap-1">
                             <span className={cn(
                                 "truncate transition-colors group-hover:text-brand",
-                                isSection ? "text-xs font-bold uppercase tracking-[0.1em] text-brand/80" 
-                                : !isSong ? "text-sm italic text-muted-foreground/80" 
+                                isSection ? "text-xs font-bold uppercase tracking-[0.1em] text-brand/80"
+                                : !isSong ? "text-sm italic text-muted-foreground/80"
                                 : "text-lg font-semibold text-foreground"
                             )}>
                                 {track.title || (
@@ -253,7 +257,7 @@ export function MobileRowCard({
                                     <p className="text-brand font-bold text-xs leading-none">{track.key}</p>
                                 </div>
                             ) : null}
-                            
+
                             {isSong && track.leadMusician ? (
                                 <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
                                     <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Lead</p>
@@ -285,20 +289,8 @@ export function MobileRowCard({
                 <ContextMenuContent
                     data-testid={`mobile-card-context-menu-${track.id}`}
                 >
-                    {isInBulkSelection ? (
-                        <>
-                            <ContextMenuLabel
-                                data-testid="mobile-card-context-menu-bulk-label"
-                                className="text-indigo-300"
-                            >
-                                {bulkSelectionCount} rows selected
-                            </ContextMenuLabel>
-                            <ContextMenuSeparator />
-                        </>
-                    ) : null}
                     <ContextMenuItem
                         onSelect={onContextEditRow}
-                        disabled={isInBulkSelection}
                         data-testid="mobile-card-context-menu-edit"
                         className="cursor-pointer"
                     >
@@ -307,7 +299,6 @@ export function MobileRowCard({
                     </ContextMenuItem>
                     <ContextMenuItem
                         onSelect={onContextBindChart}
-                        disabled={isInBulkSelection}
                         data-testid="mobile-card-context-menu-bind-chart"
                         className="cursor-pointer"
                     >
@@ -316,7 +307,6 @@ export function MobileRowCard({
                     </ContextMenuItem>
                     <ContextMenuItem
                         onSelect={onContextDuplicate}
-                        disabled={isInBulkSelection}
                         data-testid="mobile-card-context-menu-duplicate"
                         className="cursor-pointer"
                     >
@@ -369,7 +359,7 @@ export function MobileRowCard({
                             </>
                         )}
                     </div>
-                    
+
                     <label className="block mb-6">
                         <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Notes</span>
                         <textarea
@@ -382,42 +372,22 @@ export function MobileRowCard({
                         />
                     </label>
 
-                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/5 justify-between">
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => onMoveUp?.()}
-                                disabled={!canMoveUp}
-                                className={cn("h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed")}
-                            >
-                                Move Up
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onMoveDown?.()}
-                                disabled={!canMoveDown}
-                                className={cn("h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed")}
-                            >
-                                Move Down
-                            </button>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={onContextBindChart}
-                                className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-brand/30 bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
-                            >
-                                <Music className="h-4 w-4" />
-                                Bind Chart
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onDeleteRow}
-                                className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/5 justify-end">
+                        <button
+                            type="button"
+                            onClick={onContextBindChart}
+                            className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-brand/30 bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+                        >
+                            <Music className="h-4 w-4" />
+                            Bind Chart
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onDeleteRow}
+                            className="h-9 px-3 rounded-lg flex items-center justify-center gap-2 text-sm border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
                     </div>
                 </aside>
             )}

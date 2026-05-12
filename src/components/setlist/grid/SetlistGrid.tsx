@@ -1653,14 +1653,13 @@ export function SetlistGrid({
                     </div>
                 </div>
 
-                {selectedTracks.length >= 2 ? (
-                    <BatchActionBar
-                        selectedTracks={selectedTracks}
-                        onClear={selection.clear}
-                        onBulkSet={handleBulkSet}
-                        onBulkDelete={handleBulkDelete}
-                    />
-                ) : null}
+                {/* T1.1 (2026-05-12, Bug 4): BatchActionBar removed —
+                    multi-select is no longer a feature. The grip icon on
+                    each card is now a real drag handle (drag to reorder),
+                    not a multi-select toggle. The legacy useGridSelection
+                    hook and its derived state (selectedTracks, handleBulk*,
+                    handleDragHandleClick) are now dead and will be removed
+                    in the T2.6 dead-code sweep. */}
 
                 {showEmpty ? (
                     <EmptyState
@@ -1673,8 +1672,6 @@ export function SetlistGrid({
                     <MobileCardList
                         setlistId={setlistId}
                         tracks={rows}
-                        selectedIds={selection.selectedIds}
-                        onSelectionClick={handleDragHandleClick}
                         onContextEditRow={handleContextEditRow}
                         onContextBindChart={handleContextBindChart}
                         onContextDuplicate={(id) =>
