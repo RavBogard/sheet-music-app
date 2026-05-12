@@ -145,12 +145,33 @@ if (typeof window !== "undefined") {
     // listeners with "Firestore shutting down". Reloading after the new SW takes control
     // prevents the cascade — the fresh page opens Firestore against the already-bumped
     // IDB version with no version conflict.
-    // Delay 3 seconds to let any in-flight Firestore writes (setlist edits, etc.) drain
-    // before the page reloads.
+    //
+    // T2.4 (2026-05-12): the previous handler reloaded after a fixed 3-second
+    // setTimeout. That was uncoordinated — fast on idle, but if the user was
+    // mid-edit with rows still in the outbox, the reload could happen before
+    // the engine drained, requiring the cross-restart 'sending' reset path
+    // on the next session to recover those writes. Coordinating with the
+    // engine via whenEngineIdle() is friendlier: wait for outbox==0 idle
+    // OR a 10-second hard timeout (so a stuck engine still gets a reload).
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            logger.info("[FirestoreRecovery] Service worker updated — reloading in 3s to prevent Firestore shutdown cascade")
-            setTimeout(() => window.location.reload(), 3000)
+            logger.info('[FirestoreRecovery] Service worker updated — waiting for sync drain before reload')
+            void (async () => {
+                try {
+                    // Dynamic import avoids a top-level cycle with @/lib/sync/init,
+                    // which itself imports auth/db from this file.
+                    const { whenEngineIdle } = await import('./sync/init')
+                    const outcome = await whenEngineIdle(10_000)
+                    if (outcome === 'timeout') {
+                        logger.warn('[FirestoreRecovery] Sync drain timed out at 10s — reloading anyway')
+                    } else {
+                        logger.info('[FirestoreRecovery] Sync drained — reloading')
+                    }
+                } catch (err) {
+                    logger.warn('[FirestoreRecovery] whenEngineIdle failed — reloading anyway', err)
+                }
+                window.location.reload()
+            })()
         })
     }
 }

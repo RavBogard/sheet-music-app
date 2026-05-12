@@ -235,6 +235,51 @@ export function getSyncAdapter(): FirestoreAdapter | null {
     return adapterSingleton
 }
 
+/**
+ * T2.4 (2026-05-12) — wait for the sync engine to reach the idle/drained
+ * state, with a hard timeout. Used by the SW-update reload coordinator
+ * in firebase.ts so we don't reload mid-flush and lose in-flight outbox
+ * rows (Dexie persists them, but giving the engine a chance to drain
+ * cleanly is friendlier than depending on the cross-restart 'sending'-
+ * reset path in engine.start).
+ *
+ * Resolves to `'idle'` when the engine reports state === 'idle' AND
+ * queued === 0, or `'timeout'` if the deadline expires first. Never
+ * rejects. If the engine is already idle at call time, resolves
+ * synchronously on the next microtask.
+ *
+ * Reads from the same Zustand store the engine writes to via
+ * `wireSyncEngineToStore`. No new subscriber on the engine itself —
+ * onStateChange is single-callback by design.
+ */
+export async function whenEngineIdle(
+    timeoutMs = 10_000,
+): Promise<'idle' | 'timeout'> {
+    // Dynamic import to avoid a top-level cycle with `./store` consumers.
+    const { useSyncStatus } = await import('./store')
+    return new Promise<'idle' | 'timeout'>((resolve) => {
+        const isIdle = (s: { state: string; queued: number }) =>
+            s.state === 'idle' && s.queued === 0
+        const current = useSyncStatus.getState()
+        if (isIdle(current)) {
+            resolve('idle')
+            return
+        }
+        let settled = false
+        const finish = (outcome: 'idle' | 'timeout') => {
+            if (settled) return
+            settled = true
+            clearTimeout(timer)
+            unsubscribe()
+            resolve(outcome)
+        }
+        const unsubscribe = useSyncStatus.subscribe((s) => {
+            if (isIdle(s)) finish('idle')
+        })
+        const timer = setTimeout(() => finish('timeout'), timeoutMs)
+    })
+}
+
 export function shutdownSyncEngine(): void {
     if (engineSingleton) {
         engineSingleton.shutdown()
