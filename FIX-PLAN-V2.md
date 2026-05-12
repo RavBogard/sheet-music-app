@@ -6,6 +6,55 @@ The synthesis deliverable for the research effort started in [RESEARCH-PLAN-2026
 
 ---
 
+## Status — what's shipped vs what's open (2026-05-12, final autonomous-session commit)
+
+This session shipped **8 of 9 Tier 1 items + 4 of 7 Tier 2 items**. All on master via fast-forward commits. Audit corrections from Phase F were applied. **Test failure count dropped from 79 (master baseline) → 52.**
+
+### ✅ Shipped this session
+
+| Item | Status | Commit |
+|------|--------|--------|
+| Lock T2.3 + T2.4 + T3 decisions | ✅ | included in audit-corrections commit |
+| Phase F audit + corrections | ✅ | `1a8abbc8` |
+| **T1.1 Bug 4 — drag-reorder restored, Move Up/Down + multi-select removed** | ✅ | `a311f62f` |
+| T1.2 — `applyEdit` nudges engine via `notifyEditCommitted` | ✅ | `57f4447c` |
+| T1.3 — silent-LWW gap closed via `checkUpdatePrecondition` helper | ✅ | `5cdc4059` |
+| T1.4 — reconciliation modal classifies failure cause per row | ✅ | `6878c53c` |
+| T1.5 — `clearFirestoreIndexedDB` outbox-safety regression test | ✅ | `01c423c5` |
+| T1.6 (partial) — obsoleted tests skipped + documented | ✅ | `d824f111` |
+| T2.1 Bug 5 — re-prime songs library on `ChartBindDialog` open | ✅ | `8eef7654` |
+| T2.2 Bug 6 — dropped `navigationPreload` to silence SW errors | ✅ | `8075c146` |
+| T2.3 — renamed `_shutdownRecoveryScheduled` → `_shutdownRecoveryAttempted` | ✅ | `b4f128f7` |
+| T2.4 — SW reload coordinates with engine drain via `whenEngineIdle()` | ✅ | `a7aee762` |
+
+### ⏳ Still open
+
+**T1.6 (deeper test harness work) — 52 tests still failing.** Clusters:
+  - `SetlistGrid.dnd.test.tsx` (3 fails) + `SetlistGrid.contextmenu.test.tsx` (~11 fails) — assert on the deleted desktop `<tr>` structure. Drag-reorder coverage now lives in `MobileCardList` and should be tested there. Both files want full rewrites against the cards layout.
+  - `src/lib/sync-engine.test.ts` (~9 fails) — a DIFFERENT legacy file (not the substrate `src/lib/sync/engine.test.ts` which is green). Pre-existing on master. Unclear if anyone still relies on `src/lib/sync-engine.ts` — verify before deleting.
+  - ~29 misc failures across other files; need triage.
+
+**T2.5 — type debt** (jest-axe ambient types, implicit `any` in test callbacks, `@serwist/next` type resolution). Untouched.
+
+**T2.6 — dead-code sweep.** Now ripe — `SortableRow`, `DragHandleCell`, `BatchActionBar`, `BatchActionBar.test.tsx`, `useGridSelection`, `selectedTracks`/`handleBulk*`/`handleDragHandleClick` in `SetlistGrid.tsx`, the TanStack-Table column config, the `SetlistGrid.selection.test.tsx` file, the in-cell `ChartBindPopover` (migrate to Dialog and delete), `clearFailedOutboxRows` alias. Plus the dead `isMobile` declaration. All untouched this session — these are mechanical deletes after T1.1.
+
+**T2.7 — UX timings audit.** 500ms long-press in [MobileRowCard.tsx](src/components/setlist/grid/MobileRowCard.tsx). Untouched.
+
+**Tier 3 (Y.js collab pivot)** — design in [RESEARCH/COLLAB-PIVOT.md](RESEARCH/COLLAB-PIVOT.md), unstarted.
+
+**Tier 4** — post-pivot cleanup, blocked on T3.
+
+### Test status
+
+```
+Total tests:  1647
+Passing:      1568
+Skipped:      27   (T1.6 — obsoleted assertions, marked with explanatory comments)
+Failing:      52   (down from 79 on master baseline)
+```
+
+---
+
 ## How to read this plan
 
 - **Tier 1 (ship-now, data-integrity)** — risk of data loss or user-blocking bugs. Ship first.
@@ -292,15 +341,33 @@ When you `git pull` on the other machine, here's what's on master and what to do
   - [BUGS-4-5-6-PLAN.md](BUGS-4-5-6-PLAN.md) — implementation plan for Bug 4/5/6.
   - [FIX-PLAN-V2.md](FIX-PLAN-V2.md) — **this file. Read me first when resuming.**
 
-### What to do next (in order)
+### What to do next (in order, updated 2026-05-12 final commit)
 
-1. **`npm install`** in the worktree. The branch tracks `origin/master`; latest is `63e3debc..HEAD`.
-2. **Read this file** (FIX-PLAN-V2.md) — you're already here.
-3. **Read [RESEARCH/ARCHITECTURE-MAP.md](RESEARCH/ARCHITECTURE-MAP.md)** end-to-end. It's the source of truth for what the codebase actually does at HEAD. Most of the v1 bug-fix plan was fabricated by subagents; this map is what we actually verified.
-4. **Start T1.1 (Bug 4).** It's the most user-impactful. See [BUGS-4-5-6-PLAN.md § Bug 4](BUGS-4-5-6-PLAN.md#bug-4--drag-reorder-broken-move-updown-broken-multi-select-unwanted).
-5. **Phase F (audit)** — independent agent verification of FIX-PLAN-V2.md was scheduled but may or may not have run yet (check for `RESEARCH/PLAN-AUDIT.md`). If it ran, address any flagged issues before implementing. If not, kick it off — see the audit prompt template in [RESEARCH-PLAN-2026-05-12.md § Phase F](RESEARCH-PLAN-2026-05-12.md#phase-f--independent-review).
-6. **Tier 2 items** — pick any in any order while Tier 1 lands.
-7. **Tier 3 spike** — start with T3.1 data model on a branch when ready; gather size + cost data before committing.
+1. **`npm install`** in the worktree. Latest master is `d824f111`.
+2. **Skim this status block** — it lists what shipped + what's still open.
+3. **Manually verify the shipped fixes** in a browser. See § "Manual verification list" below.
+4. **Pick a remaining item:**
+   - If a user-visible bug is reported → tackle that first.
+   - If proceeding sequentially → next item is **T2.6 dead-code sweep** (mechanical, low-risk, large net-LoC delete). Then **T2.5 type debt**. Then **T1.6 deeper** (rewrite the `SetlistGrid.dnd.test.tsx` + `.contextmenu.test.tsx` against the new cards layout).
+   - If ready for the pivot → spike **T3.1** (Y.js data model) per [RESEARCH/COLLAB-PIVOT.md](RESEARCH/COLLAB-PIVOT.md).
+5. **Audit doc is already on master** at [RESEARCH/PLAN-AUDIT.md](RESEARCH/PLAN-AUDIT.md). Read it for context on what Phase F found and what's already corrected.
+
+### Manual verification list (run these in a browser before assuming the shipped fixes work)
+
+The shipped fixes pass unit tests but I can't drive a real browser from here. Smoke-test:
+
+- [ ] Open a setlist. Drag a card's grip handle → row reorders. Refresh → persists.
+- [ ] Click handle (no drag motion) → no edit pane toggle.
+- [ ] Tap card body → edit pane opens. Tap again → closes.
+- [ ] iPad: long-press handle ~200ms → drag activates. Tap handle quickly → no drag.
+- [ ] Long-press card body (not handle) → context menu opens.
+- [ ] Add a new song in another tab; reopen Bind chart dialog → new song appears in the picker.
+- [ ] Edit a track. Trigger a precondition mismatch (edit same track in another tab so updatedAt advances). The reconciliation modal opens labeled "Remote changes detected" + the diff renders correctly.
+- [ ] Force a non-VersionMismatch failure (offline → dead-letter). Modal title flips to "Some saves need attention" + the per-card error chip shows the right cause.
+- [ ] Click "Failed — retry" pill → outbox row goes from `failed` to `pending` and engine drains.
+- [ ] Trigger a SW update (deploy or force-update). Console should NOT show `Failed to enable or disable navigation preload` or `Only the active worker can claim clients`. Page reloads only after engine drains (or 10s timeout).
+- [ ] Edit, immediately reload. Edits stay.
+- [ ] Delete a track. Force engine offline mid-commit. Reload. Track stays deleted (tombstone holds).
 
 ### Decisions already locked
 
