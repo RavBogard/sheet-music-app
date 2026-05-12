@@ -1,4 +1,5 @@
 import { recordEdit } from '../sync/edit-log'
+import { getSyncEngine } from '../sync/init'
 
 import { getDb } from './schema'
 import {
@@ -177,6 +178,16 @@ export async function applyEdit(
         docId,
         payloadKeys,
     })
+
+    // T1.2 fix (2026-05-12): nudge the engine. Without this, if the pump
+    // drains to idle and a new edit lands without a concurrent network /
+    // lock event, scheduleNextPump early-returns (engine.ts:524) and the
+    // pump stays asleep. Edits then sit in the outbox until something
+    // unrelated wakes the engine. Fire-and-forget — notifyEditCommitted is
+    // async but we don't gate the user's write on the network round-trip.
+    // In test environments where the engine hasn't booted (no <SyncEngineBoot/>
+    // mounted), getSyncEngine() returns null and the optional-chain no-ops.
+    void getSyncEngine()?.notifyEditCommitted()
 
     // After commit: read newDoc + push undo snapshot. Fire-and-forget so
     // we don't block the user-perceived save latency on the snapshot.

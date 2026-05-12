@@ -1,6 +1,15 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// T1.2: mock the sync engine getter so we can assert applyEdit nudges
+// it after every successful commit. Production code calls
+// `getSyncEngine()?.notifyEditCommitted()` fire-and-forget; we replace
+// the module-level singleton with a spy here.
+const notifyEditCommittedMock = vi.fn(async () => {})
+vi.mock('../../sync/init', () => ({
+    getSyncEngine: () => ({ notifyEditCommitted: notifyEditCommittedMock }),
+}))
+
 import { getDb, resetDbForTests } from '../schema'
 import type { LocalTrack, OutboxRow } from '../types'
 import { WriteAtomicityError } from '../types'
@@ -9,11 +18,70 @@ import { applyEdit } from '../write'
 describe('applyEdit', () => {
     beforeEach(async () => {
         await resetDbForTests()
+        notifyEditCommittedMock.mockClear()
     })
 
     afterEach(async () => {
-        vi.restoreAllMocks()
+        // Note: do NOT call vi.restoreAllMocks() here — that would un-mock the
+        // sync/init module hoisted at the top of the file. Just clear call
+        // history; the module mock persists for the whole test run.
         await resetDbForTests()
+    })
+
+    // T1.2: every successful applyEdit must nudge the engine so the pump
+    // wakes up if it idled. Test against the spy mocked at module scope.
+    describe('T1.2: engine nudge after commit', () => {
+        it("'set' commits notify the engine via notifyEditCommitted()", async () => {
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: { id: 't-nudge-set', setlistId: 's1', order: 0 },
+            })
+            expect(notifyEditCommittedMock).toHaveBeenCalledTimes(1)
+        })
+
+        it("'update' commits notify the engine", async () => {
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: { id: 't-nudge-up', setlistId: 's1', order: 0 },
+            })
+            notifyEditCommittedMock.mockClear()
+            await applyEdit({
+                op: 'update',
+                collection: 'tracks',
+                docId: 't-nudge-up',
+                patch: { key: 'G' },
+            })
+            expect(notifyEditCommittedMock).toHaveBeenCalledTimes(1)
+        })
+
+        it("'delete' commits notify the engine", async () => {
+            await applyEdit({
+                op: 'set',
+                collection: 'tracks',
+                doc: { id: 't-nudge-del', setlistId: 's1', order: 0 },
+            })
+            notifyEditCommittedMock.mockClear()
+            await applyEdit({
+                op: 'delete',
+                collection: 'tracks',
+                docId: 't-nudge-del',
+            })
+            expect(notifyEditCommittedMock).toHaveBeenCalledTimes(1)
+        })
+
+        it('failed commits (update on missing doc) do NOT notify the engine', async () => {
+            await expect(
+                applyEdit({
+                    op: 'update',
+                    collection: 'tracks',
+                    docId: 't-does-not-exist',
+                    patch: { key: 'G' },
+                }),
+            ).rejects.toThrow()
+            expect(notifyEditCommittedMock).not.toHaveBeenCalled()
+        })
     })
 
     it("'set' lands the entity row and a matching outbox row", async () => {
