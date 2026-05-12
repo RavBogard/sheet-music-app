@@ -60,6 +60,11 @@ export function SetlistGridHydrator({
      *  mount; effect dependency churn must not retrigger it (would burn
      *  Firestore reads for no benefit — Dexie already has the data). */
     const primedRef = useRef(false)
+    /** v54-01-03 trackCount reconciler memory of the last value we wrote.
+     *  Declared at the top so the lazy-hydration cascade (below) can seed
+     *  it after writing trackCount in the same setlist update — without
+     *  the seed, the reconciler would fire spuriously on first mount. */
+    const lastWrittenCountRef = useRef<number | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -237,16 +242,33 @@ export function SetlistGridHydrator({
                     ),
                 )
                 if (cancelled) return
+                // P0 cascade-race fix (2026-05-12): include trackCount in
+                // the same setlist update that flips hydrated:true. Pre-
+                // fix the trackCount reconciler (below) would fire on its
+                // 800ms debounce after the live count drifted from the
+                // initial snapshot's trackCount, racing the cascade's
+                // hydrated:true write. The race bumped setlists/{S}'s
+                // server updatedAt past initialSetlist.updatedAt, so the
+                // cascade's expectedUpdatedAt precondition failed → the
+                // setlist row went 'failed' → modal opened. Single-write
+                // fixes both.
                 await applyEdit(
                     {
                         op: 'update',
                         collection: 'setlists',
                         docId: setlistId,
-                        patch: { hydrated: true },
+                        patch: {
+                            hydrated: true,
+                            trackCount: initialTracks.length,
+                        },
                         expectedUpdatedAt: initialSetlist.updatedAt,
                     },
                     { withoutUndo: true },
                 )
+                // Seed the reconciler's last-written ref so its initial
+                // diff against initialSetlist.trackCount doesn't re-fire
+                // immediately for the count we just wrote.
+                lastWrittenCountRef.current = initialTracks.length
             } catch (err) {
                 logger.warn(
                     `[SetlistGridHydrator] lazy-hydration fan-out failed for setlist ${setlistId}`,
@@ -318,7 +340,6 @@ export function SetlistGridHydrator({
                 .count(),
         [setlistId],
     )
-    const lastWrittenCountRef = useRef<number | null>(null)
     useEffect(() => {
         if (hydration !== 'done') return
         if (liveTrackCount === undefined) return
