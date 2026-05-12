@@ -64,14 +64,20 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-08 (autonomous milestone run)
-Stopped at: End of autonomous run. v54-01 ✅ COMPLETE (Plans 01+02 both shipped; perform-view fix `6735f48` deployed); v54-02 Plan 01 LOOP COMPLETE pending final push (emulator infra + build-info script fix); Plan 02, v54-03, mobile AddBar all DEFERRED with documented prerequisites.
-Next action (3 candidate paths, choose one):
-  (A) Install Java JDK 21 locally (`winget install Microsoft.OpenJDK.21` — needs admin), then `/paul:plan` for v54-02-02 (H-SL-7 regression canary on emulator). This unblocks the BINDING gate; counter resets to 0 on canary green.
-  (B) Skip v54-02-02 for now; `/paul:discuss-phase v54-03` (cross-device library sync) WITH explicit clause-(b) waiver. Counter goes to 2/3.
-  (C) Pause and run iPad UAT against `6735f48`: open new setlist, add a song from picker, navigate to perform-view, tap row → chart should open (this was the v54-01-02 regression). Surface any other issues for follow-up plans.
-Recommendation: (C) first — UAT before more risk. (A) second — close the BINDING gate before adding more engine-seam work. (B) only if Java install isn't feasible.
-Resume file: .paul/phases/v54-02-harness-fidelity-emulator-and-rtl/v54-02-01-SUMMARY.md
+Last session: 2026-05-12 (P0 patch sprint + architectural audit + v6.0 milestone reconciliation)
+Stopped at: Between milestones. v5.4 awaiting clean close; v6.0 plan locked in `.paul/MILESTONE-CONTEXT.md` but milestone not yet created. Master HEAD `4ee6e70` pushed; working tree has the v6.0 plan + audit docs uncommitted.
+Next action sequence:
+  1. `/paul:complete-milestone` — close v5.4. Fold-forward labels: v54-02-02 → v60-03, v54-03 → v60-09, Mobile AddBar → v60-10.
+  2. `/paul:milestone` — create v6.0 scaffolding from `.paul/MILESTONE-CONTEXT.md`. 12 decisions locked; do NOT re-ask.
+  3. `/paul:apply` v60-01 (SyncIndicator conflict click rewire) — Monday 2026-05-13 start recommended.
+Resume file: .paul/HANDOFF-2026-05-12.md
+Resume context:
+- v5.4 closing pathway: shipped work (v54-01 + v54-01-02 + v54-02-01) archives cleanly; the three deferrals fold forward into v6.0 as v60-03 / v60-09 / v60-10.
+- v6.0 = "Tracks Single-Source-of-Truth" — 10 phases in 4 waves (orthogonal openers / HFG closure / migration spine / folded-in deferrals).
+- Today shipped 10 commits: 2 cleanups (T2.6.a + T2.6.d) + 8 P0 patches (tombstone retention / SSR top-level read / modal kill / cascade trackCount / legacy-stamp self-heal / library mirror). All pushed.
+- User halted band-aid fixes mid-session; architectural audit (4 parallel agents + synthesizer) drove the v6.0 plan. RESEARCH docs uncommitted at pause.
+- HFG counter at 1/3 (clause-(b) waiver from v53-02). v60-03 resets it to 0/3 before Wave 3 client phases.
+- PENDING-UAT carry-over: v5.0 / v5.2 / v5.3 / v54-01 plus today's 8 P0 patches. Daniel-loop UAT continues over upcoming worship cycle.
 
 ## Git State
 
