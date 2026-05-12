@@ -257,12 +257,27 @@ export class SyncEngine {
                 // land or both roll back. Skipped for delete ops (no
                 // resulting doc) and when the adapter doesn't surface a
                 // server timestamp (test fakes; legacy adapters).
+                //
+                // Bug 2 fix (2026-05-12): for successful delete commits, also
+                // clear the tombstone — server has acknowledged the delete,
+                // so the deletion intent is now durably realized on the
+                // server. Future server-priming passes will simply not see
+                // the doc; the tombstone is no longer needed. Done inside
+                // the same tx so a crash between outbox-delete and
+                // tombstone-clear can't leave them inconsistent.
                 await this.db.transaction(
                     'rw',
                     this.db.outbox,
                     this.db[row.collection],
+                    this.db.tombstones,
                     async () => {
                         await this.db.outbox.delete(row.localId!)
+                        if (row.op === 'delete') {
+                            await this.db.tombstones.delete([
+                                row.collection,
+                                row.docId,
+                            ])
+                        }
                         if (
                             result.updatedAt !== undefined &&
                             row.op !== 'delete'

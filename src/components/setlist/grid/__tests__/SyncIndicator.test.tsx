@@ -10,6 +10,7 @@ import { SyncIndicator } from '../SyncIndicator'
 
 vi.mock('@/lib/sync/cleanup', () => ({
     clearFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
+    retryFailedOutboxRows: vi.fn(async () => ({ retried: 0 })),
 }))
 
 const signOutMock = vi.fn(async () => {})
@@ -17,7 +18,10 @@ vi.mock('@/lib/auth-context', () => ({
     useAuth: () => ({ signOut: signOutMock }),
 }))
 
-import { clearFailedOutboxRows } from '@/lib/sync/cleanup'
+import {
+    clearFailedOutboxRows,
+    retryFailedOutboxRows,
+} from '@/lib/sync/cleanup'
 
 function setSyncState(
     state: SyncState,
@@ -145,6 +149,7 @@ describe('SyncIndicator', () => {
     describe('v52-03-01: failed-state recovery', () => {
         beforeEach(() => {
             vi.mocked(clearFailedOutboxRows).mockClear()
+            vi.mocked(retryFailedOutboxRows).mockClear()
             signOutMock.mockClear()
         })
 
@@ -156,12 +161,21 @@ describe('SyncIndicator', () => {
             expect(btn).not.toBeDisabled()
         })
 
-        it('clicking the failed-state action button calls clearFailedOutboxRows() when no prop passed', async () => {
+        // Bug 2 fix (2026-05-12): the default action must actually retry, not
+        // discard. Previously the button called `clearFailedOutboxRows` which
+        // deleted failed outbox rows without applying — silently abandoning
+        // the user's edit. Now it calls `retryFailedOutboxRows` which resets
+        // status to 'pending' + attempts=0 + scheduledFor=now and nudges the
+        // engine.
+        it('clicking the failed-state action button calls retryFailedOutboxRows() when no prop passed', async () => {
             setSyncState('failed', 0, { lastError: 'Save failed' })
             render(<SyncIndicator />)
             const btn = screen.getByTestId('sync-indicator')
             await userEvent.click(btn)
-            expect(clearFailedOutboxRows).toHaveBeenCalledTimes(1)
+            expect(retryFailedOutboxRows).toHaveBeenCalledTimes(1)
+            // The destructive discard helper must NOT be the default —
+            // that's the bug we just fixed.
+            expect(clearFailedOutboxRows).not.toHaveBeenCalled()
         })
 
         it('an explicit onRetryFailed prop wins over the default cleanup fallback', async () => {
@@ -171,6 +185,7 @@ describe('SyncIndicator', () => {
             const btn = screen.getByTestId('sync-indicator')
             await userEvent.click(btn)
             expect(onRetry).toHaveBeenCalledTimes(1)
+            expect(retryFailedOutboxRows).not.toHaveBeenCalled()
             expect(clearFailedOutboxRows).not.toHaveBeenCalled()
         })
 

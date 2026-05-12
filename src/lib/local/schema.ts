@@ -7,6 +7,7 @@ import type {
     LocalTrack,
     MetaRow,
     OutboxRow,
+    Tombstone,
 } from './types'
 
 export class LocalDb extends Dexie {
@@ -16,6 +17,7 @@ export class LocalDb extends Dexie {
     outbox!: Table<OutboxRow, number>
     meta!: Table<MetaRow, string>
     edit_log!: Table<LocalEditLog, number>
+    tombstones!: Table<Tombstone, [string, string]>
 
     constructor(name = 'crc-local') {
         super(name)
@@ -55,6 +57,22 @@ export class LocalDb extends Dexie {
             outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
             meta: 'key',
             edit_log: '++id, ts',
+        })
+        // v4 (Bug 2 fix, 2026-05-12): additive `tombstones` table for delete
+        // intent durability. See Tombstone in types.ts for rationale. Compound
+        // primary key `[collection+docId]` gives O(1) lookup + dedupe; indexed
+        // by `deletedAt` to support future TTL prune. Adding a table is
+        // non-destructive — no upgrade callback needed; existing rows in
+        // other tables are untouched. Existing tables re-declared verbatim
+        // per Dexie's per-version index-carryover semantics.
+        this.version(4).stores({
+            setlists: 'id, updatedAt, ownerId, eventDate',
+            tracks: 'id, setlistId, [setlistId+order], songId',
+            songs: 'id, normalizedTitle',
+            outbox: '++localId, status, scheduledFor, [status+scheduledFor]',
+            meta: 'key',
+            edit_log: '++id, ts',
+            tombstones: '[collection+docId], deletedAt',
         })
     }
 }

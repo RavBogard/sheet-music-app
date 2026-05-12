@@ -90,34 +90,67 @@ export async function applyEdit(
     }
 
     try {
-        await db.transaction('rw', db[collection], db.outbox, async () => {
-            if (edit.op === 'set') {
-                await db[collection].put(edit.doc as never)
-                await db.outbox.add(
-                    buildOutboxRow(edit, { ...edit.doc }, now) as OutboxRow,
-                )
-                return
-            }
-
-            if (edit.op === 'update') {
-                const existing = await db[collection].get(edit.docId)
-                if (!existing) {
-                    throw new WriteAtomicityError(
-                        `applyEdit update target missing: ${collection}/${edit.docId}`,
+        // Bug 2 fix (2026-05-12): tombstones table participates in this tx
+        // so delete-intent and physical-delete land atomically. On 'set' we
+        // also remove any stale tombstone — re-creating a docId clears its
+        // tombstone. On 'delete' we write the tombstone keyed by
+        // [collection+docId] (compound primary key auto-dedupes).
+        await db.transaction(
+            'rw',
+            db[collection],
+            db.outbox,
+            db.tombstones,
+            async () => {
+                if (edit.op === 'set') {
+                    await db[collection].put(edit.doc as never)
+                    await db.outbox.add(
+                        buildOutboxRow(edit, { ...edit.doc }, now) as OutboxRow,
                     )
+                    // Defensive: if a tombstone exists for this docId (user
+                    // deleted then recreated with same id — rare but
+                    // possible), clear it so the new set isn't blocked by
+                    // server-priming guards.
+                    await db.tombstones.delete([collection, edit.doc.id])
+                    return
                 }
-                const merged = { ...existing, ...edit.patch, id: edit.docId }
-                await db[collection].put(merged as never)
-                await db.outbox.add(
-                    buildOutboxRow(edit, { ...edit.patch }, now) as OutboxRow,
-                )
-                return
-            }
 
-            // delete
-            await db[collection].delete(edit.docId)
-            await db.outbox.add(buildOutboxRow(edit, {}, now) as OutboxRow)
-        })
+                if (edit.op === 'update') {
+                    const existing = await db[collection].get(edit.docId)
+                    if (!existing) {
+                        throw new WriteAtomicityError(
+                            `applyEdit update target missing: ${collection}/${edit.docId}`,
+                        )
+                    }
+                    const merged = {
+                        ...existing,
+                        ...edit.patch,
+                        id: edit.docId,
+                    }
+                    await db[collection].put(merged as never)
+                    await db.outbox.add(
+                        buildOutboxRow(edit, { ...edit.patch }, now) as OutboxRow,
+                    )
+                    return
+                }
+
+                // delete — write tombstone alongside the physical delete +
+                // outbox enqueue. Tombstone survives outbox loss (auto-
+                // resolve, dead-letter, user-discard) so subsequent server-
+                // priming passes (hydrator, snapshot-listener) can refuse to
+                // resurrect a row the user intentionally removed.
+                const existingForTombstone = (await db[collection].get(
+                    edit.docId,
+                )) as { updatedAt?: number } | undefined
+                await db[collection].delete(edit.docId)
+                await db.outbox.add(buildOutboxRow(edit, {}, now) as OutboxRow)
+                await db.tombstones.put({
+                    collection,
+                    docId: edit.docId,
+                    deletedAt: now,
+                    originalUpdatedAt: existingForTombstone?.updatedAt,
+                })
+            },
+        )
     } catch (err) {
         if (err instanceof WriteAtomicityError) throw err
         throw new WriteAtomicityError(

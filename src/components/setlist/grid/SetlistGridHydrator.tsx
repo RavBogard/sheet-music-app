@@ -82,7 +82,21 @@ export function SetlistGridHydrator({
                 db.setlists,
                 db.tracks,
                 db.outbox,
+                db.tombstones,
                 async () => {
+                    // Bug 2 fix (2026-05-12): pre-fetch tombstones in this
+                    // setlist's scope so we can refuse to resurrect rows
+                    // the user intentionally deleted. Without this guard,
+                    // the loop below would treat "local missing" as "needs
+                    // server seed" — which is wrong when the user just
+                    // deleted the row and the outbox row was discarded
+                    // (via auto-resolve, dead-letter, or the user
+                    // clicking "Discard failed change").
+                    const tombstonedSetlist = await db.tombstones.get([
+                        'setlists',
+                        setlistId,
+                    ])
+
                     const setlistOutboxRow = await db.outbox
                         .filter(
                             (r) =>
@@ -90,7 +104,7 @@ export function SetlistGridHydrator({
                                 r.docId === setlistId,
                         )
                         .first()
-                    if (setlistOutboxRow === undefined) {
+                    if (setlistOutboxRow === undefined && !tombstonedSetlist) {
                         const localSetlist = await db.setlists.get(setlistId)
                         if (
                             !localSetlist ||
@@ -113,6 +127,27 @@ export function SetlistGridHydrator({
                     for (const r of trackOutboxRows)
                         trackOutboxIds.add(r.docId)
 
+                    // Pre-fetch track tombstones for this initialTracks set.
+                    // We only need to check the ids the server is about to
+                    // hand us, not the whole table.
+                    const trackTombstoneIds = new Set<string>()
+                    if (initialTracks.length > 0) {
+                        const tombstones = await db.tombstones
+                            .where('[collection+docId]')
+                            .anyOf(
+                                initialTracks.map(
+                                    (t) =>
+                                        [
+                                            'tracks' as const,
+                                            t.id,
+                                        ] as [string, string],
+                                ),
+                            )
+                            .toArray()
+                        for (const tb of tombstones)
+                            trackTombstoneIds.add(tb.docId)
+                    }
+
                     const localById = new Map<string, LocalTrack>()
                     const localTracks = await db.tracks
                         .where('setlistId')
@@ -123,6 +158,9 @@ export function SetlistGridHydrator({
                     const toPut: LocalTrack[] = []
                     for (const t of initialTracks) {
                         if (trackOutboxIds.has(t.id)) continue
+                        // Bug 2 fix: tombstone guard — user deleted this
+                        // track; server priming must not resurrect it.
+                        if (trackTombstoneIds.has(t.id)) continue
                         const local = localById.get(t.id)
                         if (
                             !local ||

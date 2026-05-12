@@ -85,6 +85,34 @@ export interface MetaRow {
     value: unknown
 }
 
+/**
+ * Tombstone — durable marker that the user intentionally deleted a row.
+ *
+ * Written in the same Dexie transaction as the physical delete + outbox
+ * enqueue (see write.ts). Cleared when the engine successfully drains the
+ * delete outbox row (server has acknowledged the delete) OR when the user
+ * explicitly re-creates the same docId.
+ *
+ * Why it exists: deletes can be lost from the outbox via reconciliation
+ * choices, dead-letter, or user-discard. Without a tombstone, the next
+ * server-priming pass (SetlistGridHydrator or snapshot-listener) sees
+ * "local doesn't have it, server does" and resurrects the row. The
+ * tombstone makes deletion intent a first-class durable signal,
+ * independent of outbox state.
+ *
+ * Compound primary key `[collection+docId]` inherently dedupes — there
+ * can only be one active tombstone per (collection, docId).
+ */
+export interface Tombstone {
+    collection: LocalCollection
+    docId: string
+    /** ms since epoch. */
+    deletedAt: number
+    /** Server-confirmed updatedAt the row had at delete time (if known).
+     *  Diagnostic only; not consulted by the resurrection guards. */
+    originalUpdatedAt?: number
+}
+
 export type EditDescriptor =
     | {
           op: 'set'

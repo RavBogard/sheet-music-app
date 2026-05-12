@@ -6,7 +6,6 @@ import {
     useContext,
     useEffect,
     useMemo,
-    useRef,
     useState,
     type ReactNode,
 } from 'react'
@@ -175,8 +174,18 @@ export function ReconciliationProvider({
         return out
     }, [failedOutboxRows])
 
-    const hasConflict = (state === 'conflict' || state === 'failed') && failedRows.length > 0
-    const open = false
+    const hasConflict =
+        (state === 'conflict' || state === 'failed') && failedRows.length > 0
+
+    // Bug 2 fix (2026-05-12): the modal must actually open. The previous
+    // `const open = false` plus no-op `openModal/closeModal` stub meant the
+    // user never saw conflicts — they were silently auto-resolved as 'mine'
+    // (overwriting remote) regardless of intent, and if the retry failed
+    // again the row sat in 'failed' forever. We now drive `open` from
+    // `hasConflict`, with a `dismissed` ref so the user can close the modal
+    // (Cancel/Esc) and not have it pop back open within the same conflict
+    // set — but a NEW conflict set re-opens it.
+    const [dismissedKey, setDismissedKey] = useState<string | null>(null)
 
     // Per-row choices. Default is 'theirs' (safe default per
     // ARCHITECTURE.md §6.9 — user has to opt in to overwrite remote).
@@ -196,10 +205,6 @@ export function ReconciliationProvider({
         Map<string, RemoteDocSnapshot | null>
     >(new Map())
     const [snapshotsLoading, setSnapshotsLoading] = useState(false)
-    // Tracks the idSetKey for which we've already fired auto-resolve this mount.
-    // Prevents infinite retry: if a row goes pending → fails again with the same
-    // localId set, we don't auto-resolve it a second time in this session.
-    const autoResolvedKeyRef = useRef<string | null>(null)
 
     // Stable id-set fingerprint so we refetch only when rows change.
     const idSetKey = useMemo(
@@ -210,6 +215,12 @@ export function ReconciliationProvider({
                 .join('|'),
         [failedRows],
     )
+
+    // Derive the open state: show the modal whenever there's a conflict and
+    // the user hasn't dismissed THIS specific id-set yet. A new conflict
+    // (different id-set) re-opens the modal even if the previous one was
+    // dismissed.
+    const open = hasConflict && dismissedKey !== idSetKey
 
     useEffect(() => {
         if (!hasConflict || !adapter) {
@@ -278,8 +289,17 @@ export function ReconciliationProvider({
         }
     }, [idSetKey, open, failedRows])
 
-    const openModal = useCallback(() => {}, [])
-    const closeModal = useCallback(() => {}, [])
+    // Real open / close handlers (the previous no-op stubs are what made the
+    // modal invisible). `openModal` is called from SyncIndicator's conflict
+    // action button when the user has dismissed and wants to revisit; it
+    // clears `dismissedKey` so `open` becomes true again for the current
+    // conflict set.
+    const openModal = useCallback(() => {
+        setDismissedKey(null)
+    }, [])
+    const closeModal = useCallback(() => {
+        setDismissedKey(idSetKey)
+    }, [idSetKey])
 
     const handleResolveAll = useCallback(async () => {
         const resolveFn = resolveOverride
@@ -294,9 +314,20 @@ export function ReconciliationProvider({
                   await engine.resolveConflict(localId, choice, opts)
               }
         for (const r of failedRows) {
-            const choice = 'mine' // Last write wins
+            // Bug 2 fix (2026-05-12): respect the user's per-row choice.
+            // The previous hardcoded 'mine' silently overwrote cross-device
+            // edits regardless of intent. Default is 'theirs' (safe — user
+            // must opt in to overwrite remote), matching the documented
+            // intent in ARCHITECTURE.md §6.9.
+            const choice = choices.get(r.localId) ?? 'theirs'
             const remote = remoteSnapshots.get(rowKey(r))
-            const newExpectedUpdatedAt = remote ? remote.updatedAt : undefined
+            // newExpectedUpdatedAt is only meaningful for 'mine' — when the
+            // engine retries the user's write it needs a precondition that
+            // matches the current remote. For 'theirs', the outbox row is
+            // simply deleted without applying anything (engine.resolveConflict
+            // semantics), so the precondition is moot.
+            const newExpectedUpdatedAt =
+                choice === 'mine' && remote ? remote.updatedAt : undefined
             try {
                 await resolveFn(r.localId, choice, { newExpectedUpdatedAt })
             } catch {
@@ -304,32 +335,110 @@ export function ReconciliationProvider({
             }
         }
         setChoices(new Map())
-    }, [failedRows, remoteSnapshots, resolveOverride])
-
-    // Auto-resolve when conflicts are detected and snapshots are loaded.
-    // idSetKey-based dedup prevents infinite loops: if the same set of failed
-    // rows re-appears after a resolve attempt (row failed again with same localId),
-    // we don't fire a second time this mount.
-    useEffect(() => {
-        if (
-            hasConflict &&
-            remoteSnapshots.size === failedRows.length &&
-            !snapshotsLoading &&
-            autoResolvedKeyRef.current !== idSetKey
-        ) {
-            autoResolvedKeyRef.current = idSetKey
-            void handleResolveAll()
-        }
-    }, [hasConflict, remoteSnapshots.size, failedRows.length, snapshotsLoading, handleResolveAll, idSetKey])
+        setDismissedKey(null)
+    }, [choices, failedRows, remoteSnapshots, resolveOverride])
 
     const value = useMemo<ReconciliationContextValue>(
-        () => ({ openModal: () => {} }),
-        [],
+        () => ({ openModal }),
+        [openModal],
     )
+
+    // Compute per-row diff keys (fields where payload differs from remote).
+    // Done at render so it stays in sync with snapshot state.
+    function diffKeysFor(r: FailedRow): string[] {
+        const remote = remoteSnapshots.get(rowKey(r))
+        const remoteData = (remote?.data ?? {}) as Record<string, unknown>
+        const payload = r.payload
+        const fields = new Set<string>([
+            ...Object.keys(payload),
+            ...Object.keys(remoteData),
+        ])
+        const out: string[] = []
+        for (const f of fields) {
+            if (DIFF_HIDDEN_FIELDS.has(f)) continue
+            if (formatValue(payload[f]) === formatValue(remoteData[f])) continue
+            out.push(f)
+        }
+        return out
+    }
 
     return (
         <ReconciliationContext.Provider value={value}>
             {children}
+            <AlertDialog
+                open={open}
+                onOpenChange={(next) => {
+                    if (!next) closeModal()
+                }}
+            >
+                <AlertDialogContent
+                    data-testid="reconciliation-dialog"
+                    onEscapeKeyDown={() => {
+                        closeModal()
+                    }}
+                    className="max-w-2xl"
+                >
+                    <AlertDialogHeader>
+                        <AlertDialogTitle data-testid="reconciliation-title">
+                            Remote changes detected
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Someone else (or another device) changed{' '}
+                            {failedRows.length === 1 ? 'this row' : 'these rows'}{' '}
+                            while you were editing. Pick which version to keep.
+                            "Take theirs" is the safe default.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
+                        {failedRows.map((r) => {
+                            const remote = remoteSnapshots.get(rowKey(r))
+                            const title =
+                                titleMap.get(rowKey(r)) ?? r.docId
+                            const choice = choices.get(r.localId) ?? 'theirs'
+                            return (
+                                <ReconciliationCard
+                                    key={r.localId}
+                                    localId={r.localId}
+                                    title={title}
+                                    diffKeys={diffKeysFor(r)}
+                                    payload={r.payload}
+                                    remoteData={
+                                        (remote?.data ?? undefined) as
+                                            | Record<string, unknown>
+                                            | undefined
+                                    }
+                                    choice={choice}
+                                    onChoiceChange={(c) =>
+                                        setChoice(r.localId, c)
+                                    }
+                                />
+                            )
+                        })}
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel
+                            data-testid="reconciliation-cancel"
+                            onClick={() => closeModal()}
+                        >
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            data-testid="reconciliation-resolve"
+                            onClick={() => {
+                                void handleResolveAll()
+                            }}
+                            disabled={
+                                snapshotsLoading ||
+                                remoteSnapshots.size < failedRows.length
+                            }
+                        >
+                            Resolve all and save
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </ReconciliationContext.Provider>
     )
 }

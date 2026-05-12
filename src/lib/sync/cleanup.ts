@@ -14,6 +14,7 @@
 
 import { getDb } from '@/lib/local/schema'
 import type { LocalDb } from '@/lib/local/schema'
+import { getSyncEngine } from '@/lib/sync/init'
 
 export interface ClearFailedResult {
     removed: number
@@ -23,7 +24,27 @@ export interface ClearFailedOptions {
     db?: LocalDb
 }
 
+/**
+ * DEPRECATED — prefer `retryFailedOutboxRows` for the "Failed — retry" UI
+ * action (which is what the user expects), or `discardFailedOutboxRows`
+ * for an explicit "give up" path with confirmation.
+ *
+ * Original semantics preserved: deletes every outbox row with status='failed'
+ * WITHOUT applying the operation. This abandons the user's edit. Kept for
+ * backward compatibility with tests; new callers should not use this.
+ */
 export async function clearFailedOutboxRows(
+    options: ClearFailedOptions = {},
+): Promise<ClearFailedResult> {
+    return discardFailedOutboxRows(options)
+}
+
+/**
+ * Discard every failed outbox row (does NOT retry). Pending / sending rows
+ * are preserved. Use this for an explicit, user-confirmed "give up" path —
+ * never as the default action of a button labeled "retry".
+ */
+export async function discardFailedOutboxRows(
     options: ClearFailedOptions = {},
 ): Promise<ClearFailedResult> {
     const db = options.db ?? getDb()
@@ -41,4 +62,62 @@ export async function clearFailedOutboxRows(
     }
 
     return { removed }
+}
+
+export interface RetryFailedResult {
+    retried: number
+}
+
+export interface RetryFailedOptions {
+    db?: LocalDb
+    /** Test seam — defaults to the engine singleton from init.ts. */
+    pump?: () => Promise<void> | void
+}
+
+/**
+ * Reset every failed outbox row to status='pending' (attempts=0,
+ * scheduledFor=now, lastError=undefined) and nudge the engine to drain.
+ *
+ * This is the systemic fix for the previous "Failed — retry" pill which
+ * actually deleted rows. The button now does what its label says.
+ */
+export async function retryFailedOutboxRows(
+    options: RetryFailedOptions = {},
+): Promise<RetryFailedResult> {
+    const db = options.db ?? getDb()
+    const now = Date.now()
+    const failedRows = await db.outbox
+        .where('status')
+        .equals('failed')
+        .toArray()
+
+    let retried = 0
+    for (const row of failedRows) {
+        if (row.localId !== undefined) {
+            await db.outbox.update(row.localId, {
+                status: 'pending',
+                attempts: 0,
+                scheduledFor: now,
+                lastError: undefined,
+            })
+            retried += 1
+        }
+    }
+
+    if (retried > 0) {
+        try {
+            const pump =
+                options.pump ??
+                (async () => {
+                    const engine = getSyncEngine()
+                    if (engine) await engine.pump()
+                })
+            await pump()
+        } catch {
+            // Best-effort. If pump throws, the engine's interval timer will
+            // pick up the now-pending rows on its next tick.
+        }
+    }
+
+    return { retried }
 }

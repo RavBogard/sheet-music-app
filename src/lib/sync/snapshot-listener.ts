@@ -175,26 +175,43 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
     async function handleSetlist(delivery: SetlistDelivery | null): Promise<void> {
         if (cancelled || !delivery) return
         try {
-            await db.transaction('rw', db.setlists, db.outbox, async () => {
-                if (await hasPendingOutboxRow(db, 'setlists', setlistId)) return
-                const local = await db.setlists.get(setlistId)
-                // v5h-01-02 fix (B): strict-equality guard against undefined
-                // local.updatedAt — falling open under uncertainty would let
-                // a cached delivery clobber a user edit the engine hasn't
-                // resolved yet. Prefer the local row in two cases:
-                //   - local exists but has no resolved updatedAt yet
-                //   - local.updatedAt is at least as new as delivery
-                if (local) {
-                    if (local.updatedAt === undefined) return
-                    if (local.updatedAt >= delivery.updatedAt) return
-                }
-                const next: LocalSetlist = {
-                    ...(delivery.data as LocalSetlist),
-                    id: setlistId,
-                    updatedAt: delivery.updatedAt,
-                } as LocalSetlist
-                await db.setlists.put(next)
-            })
+            await db.transaction(
+                'rw',
+                db.setlists,
+                db.outbox,
+                db.tombstones,
+                async () => {
+                    if (await hasPendingOutboxRow(db, 'setlists', setlistId))
+                        return
+                    // Bug 2 fix (2026-05-12): tombstone guard. If the user
+                    // intentionally deleted this setlist, server priming must
+                    // not resurrect it — even if the outbox row was discarded
+                    // (auto-resolve / dead-letter / user-discard) since the
+                    // delete attempt.
+                    const tombstone = await db.tombstones.get([
+                        'setlists',
+                        setlistId,
+                    ])
+                    if (tombstone) return
+                    const local = await db.setlists.get(setlistId)
+                    // v5h-01-02 fix (B): strict-equality guard against undefined
+                    // local.updatedAt — falling open under uncertainty would let
+                    // a cached delivery clobber a user edit the engine hasn't
+                    // resolved yet. Prefer the local row in two cases:
+                    //   - local exists but has no resolved updatedAt yet
+                    //   - local.updatedAt is at least as new as delivery
+                    if (local) {
+                        if (local.updatedAt === undefined) return
+                        if (local.updatedAt >= delivery.updatedAt) return
+                    }
+                    const next: LocalSetlist = {
+                        ...(delivery.data as LocalSetlist),
+                        id: setlistId,
+                        updatedAt: delivery.updatedAt,
+                    } as LocalSetlist
+                    await db.setlists.put(next)
+                },
+            )
         } catch (err) {
             logger.warn('[SnapshotListener] setlist apply failed', err)
             captureSyncFailure(err, {
@@ -216,7 +233,12 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                 outcome: string
                 localUpdatedAt?: number
             }> = []
-            await db.transaction('rw', db.tracks, db.outbox, async () => {
+            await db.transaction(
+                'rw',
+                db.tracks,
+                db.outbox,
+                db.tombstones,
+                async () => {
                 for (const change of changes) {
                     if (await hasPendingOutboxRow(db, 'tracks', change.docId)) {
                         // Engine has an in-flight write for this track —
@@ -234,6 +256,9 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                     if (change.type === 'removed') {
                         const local = await db.tracks.get(change.docId)
                         if (local) await db.tracks.delete(change.docId)
+                        // Server confirmed the delete — clear any tombstone
+                        // we wrote locally so it doesn't linger.
+                        await db.tombstones.delete(['tracks', change.docId])
                         outcomes.push({
                             docId: change.docId,
                             outcome: 'remove-applied',
@@ -242,6 +267,20 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
                     }
 
                     // added / modified
+                    // Bug 2 fix (2026-05-12): tombstone guard. User
+                    // intentionally deleted this track; server priming must
+                    // not resurrect it.
+                    const tombstone = await db.tombstones.get([
+                        'tracks',
+                        change.docId,
+                    ])
+                    if (tombstone) {
+                        outcomes.push({
+                            docId: change.docId,
+                            outcome: 'guard-skipped-tombstoned',
+                        })
+                        continue
+                    }
                     const local = await db.tracks.get(change.docId)
                     // v5h-01-02 fix (B): strict-equality guard mirroring
                     // the setlists branch — preserve local row when its

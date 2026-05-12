@@ -4,7 +4,8 @@ import {
     DndContext,
     type DragEndEvent,
     KeyboardSensor,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     closestCenter,
     useSensor,
     useSensors,
@@ -60,6 +61,7 @@ import { cn } from '@/lib/utils'
 
 import { AddBar, type NonSongTrackType } from './AddBar'
 import { BatchActionBar, type BulkSetPatch } from './BatchActionBar'
+import { ChartBindDialog } from './ChartBindDialog'
 import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
 import {
@@ -491,6 +493,14 @@ function SortableRow({
         e,
     ) => {
         if (e.pointerType !== 'touch') return
+        // Don't start the long-press timer if the touch originated inside
+        // the drag handle — dnd-kit's TouchSensor owns that gesture (200ms
+        // hold activates drag). Without this guard, holding the handle
+        // without moving would activate drag at 200ms AND fire the row's
+        // context menu at 500ms, which is wrong: the handle should never
+        // open the row context menu.
+        const target = e.target as HTMLElement | null
+        if (target?.closest('[data-drag-handle]')) return
         cancelLongPress()
         const x = e.clientX
         const y = e.clientY
@@ -1045,11 +1055,11 @@ export function SetlistGrid({
         setAddOpenSignal((s) => s + 1)
     }, [])
 
-    // v50-05-04: ChartBindPopover open state hoisted to grid level so it
-    // can be opened EITHER by ChartCell click (via the controllable open
-    // prop) OR programmatically by the row ContextMenu's "Bind chart"
-    // action (Task 2). At most one popover is open at a time, so a single
-    // rowId-or-null is sufficient.
+    // v50-05-04: ChartBindPopover open state for the desktop in-cell click
+    // path. The user clicks the chart icon in a cell → Popover anchors to
+    // that button and opens. This state is ONLY for that path; the
+    // context-menu / mobile-card "Bind chart" actions route through
+    // `chartBindDialogTrackId` below (a centered Dialog with no anchor).
     const [chartBindOpenRowId, setChartBindOpenRowId] = useState<
         string | null
     >(null)
@@ -1059,6 +1069,15 @@ export function SetlistGrid({
         },
         [],
     )
+
+    // Bug 3 fix (2026-05-12): centered Dialog state for programmatic
+    // "Bind chart" actions (context menu, mobile card). Decoupled from
+    // ChartCell anchoring — eliminates the fragile context-menu → anchored
+    // popover handoff that was failing silently on desktop and required a
+    // setTimeout(0) workaround on iPad. See ChartBindDialog.tsx.
+    const [chartBindDialogTrackId, setChartBindDialogTrackId] = useState<
+        string | null
+    >(null)
 
     const {
         isCellFocused,
@@ -1250,11 +1269,14 @@ export function SetlistGrid({
 
     const handleContextBindChart = useCallback(
         (rowId: string) => {
-            // setTimeout(0): defer past the context-menu's pointer-up/dismiss
-            // event cycle. Without this, Radix Popover sees the context-menu
-            // close as an "outside tap" and immediately dismisses itself on
-            // iPad (and other touch devices).
-            setTimeout(() => setChartBindOpenRowId(rowId), 0)
+            // Bug 3 fix (2026-05-12): open a centered Dialog instead of the
+            // anchored Popover. The previous setTimeout(0) was a workaround
+            // for the Radix ContextMenu → Radix Popover handoff race (focus
+            // restoration + outside-click detector both fighting across one
+            // microtask). Replacing the second overlay with a Dialog removes
+            // the handoff entirely — Dialog has no anchor, no trigger, and
+            // a single `open` prop. Works identically on desktop + iPad.
+            setChartBindDialogTrackId(rowId)
         },
         [],
     )
@@ -1397,9 +1419,21 @@ export function SetlistGrid({
         meta,
     })
 
+    // Split sensors so each input modality gets the activation pattern that
+    // fits it. The previous unified PointerSensor with delay:150 + tolerance:5
+    // required the user to press-and-hold STILL for 150ms before drag would
+    // activate — fine for touch (disambiguates from tap/scroll), but broken
+    // for mouse: a natural click-and-drag gesture moves >5px before 150ms
+    // elapses → activation cancels → drag never starts. Splitting lets mouse
+    // use distance-based activation (drag after 5px of motion; plain clicks
+    // still fall through to onClick for multi-select) while touch retains
+    // long-press disambiguation.
     const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: { delay: 150, tolerance: 5 },
+        useSensor(MouseSensor, {
+            activationConstraint: { distance: 5 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 200, tolerance: 5 },
         }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
@@ -1661,46 +1695,35 @@ export function SetlistGrid({
                 onAddTrackOfType={(type) => void handleAddTrackOfType(type)}
             />
 
-            {/* v50-05-05: mobile-flow ChartBindPopover. The desktop table
-                path renders one inside the chart column cell; the mobile
-                path needs one at SetlistGrid level since cards don't
-                expose a chart-icon trigger. The hidden span is asChild
-                fodder — the popover is opened programmatically via the
-                controllable open prop, so trigger visibility is moot. */}
-            {isMobile && chartBindOpenRowId
-                ? (() => {
-                      const targetRow = rows.find(
-                          (r) => r.id === chartBindOpenRowId,
-                      )
-                      if (!targetRow) return null
-                      return (
-                          <ChartBindPopover
-                              currentSongId={targetRow.songId}
-                              inputAriaLabel={`Bind a chart to ${
-                                  targetRow.title || 'track'
-                              }`}
-                              onBind={(sel) =>
-                                  void handleBindChart(targetRow, sel)
-                              }
-                              open={true}
-                              onOpenChange={(next) => {
-                                  if (!next) setChartBindOpenRowId(null)
-                              }}
-                          >
-                              {/* Visually-hidden but layout-present trigger
-                                  so Radix Popover can anchor (display:none
-                                  breaks anchoring). For Sheet variant on
-                                  touch this is irrelevant — Sheet positions
-                                  to viewport bottom regardless. */}
-                              <span
-                                  aria-hidden
-                                  data-testid="mobile-chart-bind-anchor"
-                                  className="sr-only"
-                              />
-                          </ChartBindPopover>
-                      )
-                  })()
-                : null}
+            {/* Bug 3 fix (2026-05-12): centered command dialog for programmatic
+                "Bind chart" actions — used by BOTH the desktop row context-menu
+                and the mobile card list. Replaces the previous mobile-anchored
+                ChartBindPopover and eliminates the desktop context-menu →
+                anchored-popover handoff fragility. No anchor dependency; one
+                code path across desktop + iPad. Desktop in-cell chart-icon
+                click still uses the inline ChartBindPopover (different entry
+                point, no handoff problem). */}
+            {(() => {
+                const targetRow = chartBindDialogTrackId
+                    ? rows.find((r) => r.id === chartBindDialogTrackId)
+                    : null
+                return (
+                    <ChartBindDialog
+                        open={Boolean(targetRow)}
+                        onOpenChange={(next) => {
+                            if (!next) setChartBindDialogTrackId(null)
+                        }}
+                        currentSongId={targetRow?.songId}
+                        inputAriaLabel={`Bind a chart to ${
+                            targetRow?.title || 'track'
+                        }`}
+                        onBind={(sel) => {
+                            if (targetRow) void handleBindChart(targetRow, sel)
+                            setChartBindDialogTrackId(null)
+                        }}
+                    />
+                )
+            })()}
         </div>
     )
 }

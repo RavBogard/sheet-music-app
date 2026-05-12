@@ -51,9 +51,12 @@ export function DragHandleCell({
     }
 
     // v50-05-03 multi-select: Shift / Cmd / Ctrl + click routes to selection.
-    // Plain clicks fall through to dnd-kit (which uses pointerdown for drag
-    // activation, gated by activationConstraint delay:150 + tolerance:5 — a
-    // quick click without movement does NOT activate drag).
+    // Plain clicks fall through. Mouse drag activates after 5px of motion
+    // (MouseSensor distance-based constraint); touch drag activates after a
+    // 200ms hold (TouchSensor delay-based constraint). The row's long-press
+    // → context-menu handler (SortableRow.handlePointerDown) early-returns
+    // on events whose target is inside [data-drag-handle], so touching the
+    // handle never opens the row's context menu.
     const onClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
         if (!onSelectionClick) return
         if (e.shiftKey || e.metaKey || e.ctrlKey) {
@@ -71,6 +74,7 @@ export function DragHandleCell({
             type="button"
             tabIndex={0}
             data-testid="drag-handle"
+            data-drag-handle=""
             data-row-title={title}
             data-selected={isSelected || undefined}
             {...attributes}

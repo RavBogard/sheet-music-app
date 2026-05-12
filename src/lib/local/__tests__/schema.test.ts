@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { getDb, resetDbForTests } from '../schema'
 import type { LocalSong } from '../types'
 
-describe('LocalDb schema (v5h3-01-02: v3 additive edit_log)', () => {
+describe('LocalDb schema (Bug 2 fix 2026-05-12: v4 additive tombstones)', () => {
     beforeEach(async () => {
         await resetDbForTests()
     })
@@ -13,10 +13,43 @@ describe('LocalDb schema (v5h3-01-02: v3 additive edit_log)', () => {
         await resetDbForTests()
     })
 
-    it('opens at Dexie version 3', async () => {
+    it('opens at Dexie version 4', async () => {
         const db = getDb()
         await db.open()
-        expect(db.verno).toBe(3)
+        expect(db.verno).toBe(4)
+    })
+
+    it('round-trips a tombstone row keyed by [collection+docId]', async () => {
+        const db = getDb()
+        await db.tombstones.put({
+            collection: 'tracks',
+            docId: 'track-abc',
+            deletedAt: 1700000000000,
+            originalUpdatedAt: 1699999999000,
+        })
+        const fetched = await db.tombstones.get(['tracks', 'track-abc'])
+        expect(fetched).toBeDefined()
+        expect(fetched?.collection).toBe('tracks')
+        expect(fetched?.docId).toBe('track-abc')
+        expect(fetched?.deletedAt).toBe(1700000000000)
+        expect(fetched?.originalUpdatedAt).toBe(1699999999000)
+    })
+
+    it('compound primary key dedupes — second put for same (collection, docId) overwrites', async () => {
+        const db = getDb()
+        await db.tombstones.put({
+            collection: 'tracks',
+            docId: 'track-abc',
+            deletedAt: 1,
+        })
+        await db.tombstones.put({
+            collection: 'tracks',
+            docId: 'track-abc',
+            deletedAt: 2,
+        })
+        const all = await db.tombstones.toArray()
+        expect(all).toHaveLength(1)
+        expect(all[0].deletedAt).toBe(2)
     })
 
     it('round-trips a song row carrying defaults + recent', async () => {

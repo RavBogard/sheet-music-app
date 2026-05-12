@@ -12,7 +12,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
-import { clearFailedOutboxRows } from '@/lib/sync/cleanup'
+import { retryFailedOutboxRows } from '@/lib/sync/cleanup'
 import { useSyncStatus } from '@/lib/sync/store'
 import type { SyncState } from '@/lib/sync/state-machine'
 
@@ -143,14 +143,16 @@ export function SyncIndicator({
     const resolveConflictHandler =
         onResolveConflict ?? reconciliation?.openModal
 
-    // v52-03-01: production default — when SyncIndicator's parent doesn't
-    // pass `onRetryFailed`, fall back to the cleanup helper so the failed
-    // state always has a real recovery affordance. Mirrors v50-06-02's
-    // ReconciliationProvider fallback for `onResolveConflict`. Failed rows
-    // are dead-letter (engine has already given up) so deletion is loss-of-
-    // no-progress; pending/sending rows are preserved by clearFailedOutboxRows.
+    // Bug 2 fix (2026-05-12): the button labeled "Failed — retry" must
+    // actually retry. The previous default called `clearFailedOutboxRows`
+    // which deleted failed outbox rows without applying their operation —
+    // a silent abandonment of the user's edit that combined with server-
+    // priming to resurrect deleted rows on reload. `retryFailedOutboxRows`
+    // resets failed rows to pending + attempts=0 + scheduledFor=now and
+    // nudges the engine. A separate, explicit "Discard" affordance can be
+    // added in the future for a user-confirmed give-up path.
     const defaultRetryFailed = async () => {
-        await clearFailedOutboxRows()
+        await retryFailedOutboxRows()
     }
     const retryFailedHandler = onRetryFailed ?? defaultRetryFailed
 
