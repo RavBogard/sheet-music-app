@@ -90,15 +90,36 @@ describe('SyncIndicator', () => {
         expect(indicator.querySelector('svg.animate-spin')).not.toBeNull()
     })
 
-    it('renders Conflict — review with a clickable action button', async () => {
+    // v60-01: conflict pill click now calls retryFailedHandler (silent LWW)
+    // instead of resolveConflictHandler (modal — force-disabled at a0c61cc).
+    // The `onResolveConflict` prop is retained for backward compat but
+    // no longer wired to clicks.
+    it('v60-01: clicking the conflict pill invokes retryFailedHandler, NOT resolveConflictHandler', async () => {
         setSyncState('conflict')
         const onResolve = vi.fn()
-        render(<SyncIndicator onResolveConflict={onResolve} />)
+        const onRetry = vi.fn()
+        render(
+            <SyncIndicator
+                onResolveConflict={onResolve}
+                onRetryFailed={onRetry}
+            />,
+        )
         const btn = screen.getByTestId('sync-indicator')
         expect(btn.tagName).toBe('BUTTON')
         expect(btn).toHaveTextContent('Conflict — review')
         await userEvent.click(btn)
-        expect(onResolve).toHaveBeenCalledTimes(1)
+        expect(onRetry).toHaveBeenCalledTimes(1)
+        expect(onResolve).not.toHaveBeenCalled()
+    })
+
+    it('v60-01: conflict pill click without explicit prop falls through to retryFailedOutboxRows default', async () => {
+        setSyncState('conflict')
+        render(<SyncIndicator />)
+        const btn = screen.getByTestId('sync-indicator')
+        expect(btn.tagName).toBe('BUTTON')
+        expect(btn).not.toBeDisabled()
+        await userEvent.click(btn)
+        expect(vi.mocked(retryFailedOutboxRows)).toHaveBeenCalledTimes(1)
     })
 
     it('renders Failed — retry with a clickable action button', async () => {

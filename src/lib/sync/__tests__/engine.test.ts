@@ -524,4 +524,106 @@ describe('SyncEngine', () => {
         expect(rows[0].status).toBe('pending')
         h.engine.shutdown()
     })
+
+    // ── v60-01: silent last-write-wins on manual retry ─────────────────
+    // forceLwwOnConflict is set by retryFailedOutboxRows when the user
+    // clicks the conflict pill. Per locked decision #4, that IS intent
+    // to overwrite on a sole-admin app — engine takes the silent LWW
+    // path instead of re-failing the row.
+
+    it('v60-01: VersionMismatch on forceLwwOnConflict row strips precondition + clears flag + retries to idle', async () => {
+        const h = buildEngine()
+        await getDb().tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            key: 'C',
+        })
+        // Seed a "reset by retryFailedOutboxRows" outbox row directly —
+        // status=pending, attempts=0, forceLwwOnConflict=true, with a
+        // stale expectedUpdatedAt that will trip VersionMismatch.
+        await getDb().outbox.add({
+            status: 'pending',
+            scheduledFor: h.clock.now(),
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            payload: { key: 'G' },
+            expectedUpdatedAt: 999,
+            attempts: 0,
+            createdAt: h.clock.now(),
+            forceLwwOnConflict: true,
+        } as OutboxRow)
+
+        // First drain throws VersionMismatch; engine should clear the
+        // precondition + flag and dispatch DRAIN_RETRY_PENDING. Second
+        // drain (after the immediate-retry schedule fires) succeeds.
+        h.adapter.queue(new VersionMismatchError(), 'ok')
+        await h.engine.start()
+        await flushAll()
+
+        // After the first drain, state should be 'saving' (DRAIN_RETRY_PENDING)
+        // and the row should be reset with the flag cleared.
+        expect(h.engine.getState()).toBe('saving')
+        const midRow = (await getDb().outbox.toArray())[0]
+        expect(midRow.forceLwwOnConflict).toBeUndefined()
+        expect(midRow.expectedUpdatedAt).toBeUndefined()
+        expect(midRow.attempts).toBe(1)
+        expect(midRow.status).toBe('pending')
+
+        // The immediate-retry schedule is `scheduledFor: clock.now()`. Pump
+        // explicitly rather than relying on the FakeClock timer race — gives
+        // a deterministic await for the second drain to complete.
+        await h.engine.pump()
+        await flushAll()
+
+        expect(h.engine.getState()).toBe('idle')
+        expect(await getDb().outbox.count()).toBe(0)
+        // The adapter saw exactly one successful write — the LWW retry
+        // after the conflict-resolution branch fired.
+        expect(h.adapter.received).toHaveLength(1)
+        const written = h.adapter.received[0]
+        // expectedUpdatedAt was stripped before the retry.
+        expect(written.expectedUpdatedAt).toBeUndefined()
+        // forceLwwOnConflict was cleared before the retry.
+        expect(written.forceLwwOnConflict).toBeUndefined()
+        // attempts was bumped from 0 → 1 before the retry.
+        expect(written.attempts).toBe(1)
+        h.engine.shutdown()
+    })
+
+    it('v60-01: VersionMismatch WITHOUT forceLwwOnConflict still routes to Conflict (AC-4 contract preserved)', async () => {
+        // Sanity guard: applyEdit-emitted rows never carry the flag, so
+        // a first-time conflict must still surface — only manual retry
+        // opts into the silent LWW path.
+        const h = buildEngine()
+        await getDb().tracks.put({
+            id: 't1',
+            setlistId: 's1',
+            order: 0,
+            key: 'C',
+        })
+        await applyEdit({
+            op: 'update',
+            collection: 'tracks',
+            docId: 't1',
+            patch: { key: 'G' },
+            expectedUpdatedAt: 999,
+        })
+        // Confirm applyEdit did NOT set the flag.
+        const enqueued = (await getDb().outbox.toArray())[0]
+        expect(enqueued.forceLwwOnConflict).toBeUndefined()
+
+        h.adapter.queue(new VersionMismatchError())
+        await h.engine.start()
+        await flushAll()
+        expect(h.engine.getState()).toBe('conflict')
+        const rows = await getDb().outbox.toArray()
+        expect(rows).toHaveLength(1)
+        expect(rows[0].status).toBe('failed')
+        // No auto-retry — adapter sees the conflict but nothing else.
+        await h.clock.advance(60_000)
+        expect(h.adapter.received).toHaveLength(0)
+        h.engine.shutdown()
+    })
 })

@@ -2,29 +2,27 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-02)
+See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v5.4 inaugural phase v54-01 (Picker bootstrap + thead hotfix) PLANNED 2026-05-08, awaiting /paul:apply. Two regressions surfaced on v5.3 PENDING-UAT commits during Daniel-loop UAT 2026-05-08: (a) `+ Song` picker empty — songs/* never bootstrapped from library_index (foreseen failure mode v50-07-01-DRY-RUN-REPORT.md:163 + v53-02-01-SUMMARY.md:212); (b) spreadsheet thead visually overlaps first body row — v53-02-01's overflow-x-auto wrapper turned the table ancestor into a scroll container, breaking sticky offset. Both block band onboarding. v5.0 + v5.2 + v5.3 all still in PENDING-UAT close paths.
+**Current focus:** v5.4 ✅ COMPLETE 2026-05-12 — Hotfix + Harness Fidelity closed via `/paul:complete-milestone`. v6.0 — Tracks Single-Source-of-Truth plan locked in `.paul/MILESTONE-CONTEXT.md` (10 phases / 4 waves / 12 decisions); awaiting `/paul:milestone` invocation. First commit target: Monday 2026-05-13 with `/paul:apply v60-01` (SyncIndicator conflict click rewire). v5.0 + v5.2 + v5.3 + v5.4 (incl. 8 P0 patches from 2026-05-12) all in PENDING-UAT close paths over the upcoming worship cycle.
 
 ## Current Position
 
-Milestone: 🟡 v5.4 — Hotfix + Harness Fidelity (autonomous run 2026-05-08 closed 2 phases + 1 fix-up; v54-03 + mobile AddBar deferred)
-Phase: v54-02 — Harness Fidelity emulator + RTL ✅ Plan 01 LOOP COMPLETE; Plan 02 DEFERRED (Java prereq)
-Plan: v54-02-01 LOOP COMPLETE at commit (pending push). Prior: v54-01-01 (`a693d23`) + v54-01-02 (`6735f48` PUSHED — perform-view fix-up). Counter: still 1 of 3 (Plan 02 didn't ship; gate not yet reset).
-Status: Autonomous milestone run 2026-05-08 17:00–18:30. Per Daniel "Whatever you recommend. Continue. Autonomously. Through the entire milestone. Then push." Three things shipped: (1) v54-01-01 picker bootstrap + thead repair (`a693d23`); (2) v54-01-02 perform-view click fix-up (`6735f48` PUSHED mid-run after Daniel UAT interrupt — handlePickSong + handleBindChart now write track.fileId so SetlistRow.hasFile gate passes; +2 regression tests; v51-04 same-phase routing); (3) v54-02-01 Firebase Local Emulator Suite infra + build-info cleanup side-fix. Plan 02 (H-SL-7 regression canary on emulator) DEFERRED — local Java not installed on this machine, `winget install Microsoft.OpenJDK.21 --scope user` failed; iterating against CI alone is too error-prone for sync-engine-adjacent tests. v54-03 (cross-device library sync) DEFERRED — would need clause-(b) waiver moving counter to 2/3, AND v5h3-01 pattern shows engine-seam phases need the harness gate first. Mobile AddBar variant DEFERRED — frontend phase, /ui-ux-pro-max BLOCKING, needs UAT iteration. Suite: 1615 baseline + 18 (bootstrap) + 2 (v54-01-02 regression test) + 2 (emulator canary, excluded from main config) = 1635 declared / 1633 in main config. Grid suite 173/173 serial. Harness Fidelity Gate counter unchanged at 1 of 3.
-Last activity: 2026-05-08 — autonomous run end-of-batch; awaiting final push of v54-02 commit + Daniel iPad UAT against `6735f48` (and the upcoming v54-02 commit).
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (1 of 10 phases LOOP COMPLETE — PENDING-UAT)
+Phase: 2 of 10 — v60-02 pagehide/visibilitychange blur (mid-edit text protection) — Wave 1, parallel-safe (v60-01 transition complete, ready to plan v60-02)
+Plan: None active
+Status: Phase v60-01 LOOP COMPLETE — PENDING-UAT closed via transition-phase (PROJECT.md evolved, ROADMAP.md marked, git commit pending). v60-02 is Wave 1 parallel-safe — ~15 LOC patch in MobileRowCard + TextCell + engine-side `whenEngineIdle` wait. Wave 2 (v60-03 Java install + emulator canary) still BLOCKS Wave 3 engine-touching phases. HFG counter held at 1/3.
+Last activity: 2026-05-12 — Phase v60-01 transition complete; v60-02 ready to plan.
 
 Progress:
-- v5.4 — Hotfix + Harness Fidelity: [████░░░░░░] 40% (v54-01 ✅ + v54-02 partial; v54-03 + mobile AddBar deferred)
-- Phase v54-01: [██████████] 100% LOOP COMPLETE — PENDING-UAT (Plans 01 + 02 both shipped against `a693d23` and `6735f48`)
-- Phase v54-02: [█████░░░░░] 50% Plan 01 LOOP COMPLETE; Plan 02 DEFERRED (Java prereq — see SUMMARY)
-- Phase v54-03 (library sync): ⚪ DEFERRED (would inherit clause-(b) waiver; HFG gate not yet reset)
-- Phase v54-?? (mobile AddBar): ⚪ DEFERRED (frontend; /ui-ux-pro-max BLOCKING; needs UAT iteration)
+- v6.0 Tracks Single-Source-of-Truth: [█░░░░░░░░░] 10% (1 of 10 phases LOOP COMPLETE — PENDING-UAT)
+- Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT (browser-smoke against deployed commit closes AC-4)
+- Phase v60-02: [░░░░░░░░░░] 0% (not started)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [autonomous run ended; v54-02 phase still has Plan 02 outstanding]
+  ○        ○        ○     [Phase v60-01 closed; ready for /paul:plan v60-02]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -64,20 +62,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (P0 patch sprint + architectural audit + v6.0 milestone reconciliation)
-Stopped at: Between milestones. v5.4 awaiting clean close; v6.0 plan locked in `.paul/MILESTONE-CONTEXT.md` but milestone not yet created. Master HEAD `4ee6e70` pushed; working tree has the v6.0 plan + audit docs uncommitted.
-Next action sequence:
-  1. `/paul:complete-milestone` — close v5.4. Fold-forward labels: v54-02-02 → v60-03, v54-03 → v60-09, Mobile AddBar → v60-10.
-  2. `/paul:milestone` — create v6.0 scaffolding from `.paul/MILESTONE-CONTEXT.md`. 12 decisions locked; do NOT re-ask.
-  3. `/paul:apply` v60-01 (SyncIndicator conflict click rewire) — Monday 2026-05-13 start recommended.
-Resume file: .paul/HANDOFF-2026-05-12.md
+Last session: 2026-05-12 (full v60-01 PLAN → APPLY → UNIFY end-to-end after `/paul:complete-milestone` v5.4 + `/paul:milestone` v6.0)
+Stopped at: UNIFY complete for v60-01-01; phase v60-01 has 1 plan total so phase LOOP COMPLETE. Transition-phase pending (PROJECT.md evolve + ROADMAP.md phase status → complete + git commit). No commit yet — v60-01 deltas uncommitted.
+Next action: Run transition-phase: commit v60-01-01 work as `feat(sync): v60-01 SyncIndicator conflict click rewire + silent LWW on retry`, push to master for Vercel auto-deploy, Daniel browser-smoke against deployed commit per appended checklist (closes AC-4 PENDING-UAT). Then `/paul:plan v60-02` (parallel-safe; pagehide blur for mid-edit text protection) targeting same Wave 1.
+Resume file: .paul/phases/v60-01-sync-indicator-conflict-click-rewire/v60-01-01-SUMMARY.md
 Resume context:
-- v5.4 closing pathway: shipped work (v54-01 + v54-01-02 + v54-02-01) archives cleanly; the three deferrals fold forward into v6.0 as v60-03 / v60-09 / v60-10.
-- v6.0 = "Tracks Single-Source-of-Truth" — 10 phases in 4 waves (orthogonal openers / HFG closure / migration spine / folded-in deferrals).
-- Today shipped 10 commits: 2 cleanups (T2.6.a + T2.6.d) + 8 P0 patches (tombstone retention / SSR top-level read / modal kill / cascade trackCount / legacy-stamp self-heal / library mirror). All pushed.
-- User halted band-aid fixes mid-session; architectural audit (4 parallel agents + synthesizer) drove the v6.0 plan. RESEARCH docs uncommitted at pause.
-- HFG counter at 1/3 (clause-(b) waiver from v53-02). v60-03 resets it to 0/3 before Wave 3 client phases.
-- PENDING-UAT carry-over: v5.0 / v5.2 / v5.3 / v54-01 plus today's 8 P0 patches. Daniel-loop UAT continues over upcoming worship cycle.
+- v5.4 archived: MILESTONES.md § v5.4 entry + `.paul/milestones/v5.4-ROADMAP.md` snapshot + git tag `v5.4`. Fold-forward labels applied: v54-02-02 → v60-03, v54-03 → v60-09, Mobile AddBar → v60-10.
+- v6.0 = "Tracks Single-Source-of-Truth" — finishes v50-05 migration so top-level `tracks/{id}` is the single source. 10 phases in 4 waves (Wave 1 orthogonal UX fixes / Wave 2 HFG closure BLOCKING Wave 3 / Wave 3 migration spine / Wave 4 folded-in deferrals).
+- Master HEAD `9914c17` (paul pause commit). Last code commit `4ee6e70` pushed; tree clean against origin/master.
+- HFG counter at 1/3 (clause-(b) waiver from v53-02). v60-03 resets it to 0/3 before Wave 3 engine-touching phases.
+- PENDING-UAT carry-over: v5.0 / v5.2 / v5.3 / v5.4 (including the 8 P0 patches from 2026-05-12). Daniel-loop UAT continues over upcoming worship cycle.
+- Friday/Shabbat cadence: no risky deploys Thu PM → Sun. Wave 1 phases are low-risk and safe anytime; engine-touching phases respect the cadence.
 
 ## Git State
 

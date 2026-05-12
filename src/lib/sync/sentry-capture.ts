@@ -27,6 +27,12 @@ export type SyncFailureFeature =
     | 'dead-letter'
     | 'snapshot-listener'
     | 'write-atomicity'
+    // v60-01: silent last-write-wins resolution of a manual retry after a
+    // conflict. Warning-level (not in ERROR_LEVEL_FEATURES) — this is
+    // expected behavior on a sole-admin app per locked decision #4, not
+    // an incident. Useful for tracking how often the conflict path
+    // actually fires in production.
+    | 'conflict-resolution'
 
 export interface SyncFailureContext {
     feature: SyncFailureFeature

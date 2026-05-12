@@ -386,6 +386,39 @@ export class SyncEngine {
         })
 
         if (err instanceof VersionMismatchError) {
+            // v60-01 silent LWW on manual retry. User clicked the conflict
+            // pill (which calls retryFailedOutboxRows, which sets
+            // forceLwwOnConflict=true). Sole-admin app per locked decision
+            // #4 — manual retry IS intent to overwrite. Clear the
+            // precondition + flag, increment attempts so we never loop,
+            // capture once to Sentry as 'conflict-resolution', and let the
+            // next drain retry unconditionally via LWW. Runs BEFORE the
+            // legacy-stamp self-heal so a manual retry of a legacy doc
+            // also takes this branch and resolves cleanly.
+            if (row.forceLwwOnConflict === true) {
+                await this.db.outbox.update(localId, {
+                    // Reset 'sending' (set on drainOnce entry) back to
+                    // 'pending' so scheduleNextPump picks it up and
+                    // drainOnce doesn't classify it as blocked.
+                    status: 'pending',
+                    expectedUpdatedAt: undefined,
+                    forceLwwOnConflict: undefined,
+                    attempts: row.attempts + 1,
+                    scheduledFor: this.clock.now(),
+                    lastError: undefined,
+                })
+                captureSyncFailure(err, {
+                    feature: 'conflict-resolution',
+                    site: 'silent-lww-on-retry',
+                    collection: row.collection,
+                    docId: row.docId,
+                    op: row.op,
+                    attempts: row.attempts + 1,
+                })
+                this.dispatch({ type: 'DRAIN_RETRY_PENDING' })
+                return 'continue'
+            }
+
             // P0 legacy-stamp self-heal (2026-05-12): pre-v50-06 production
             // docs may exist on Firestore without an `updatedAt` field at
             // all. T1.3's checkUpdatePrecondition now correctly fails such

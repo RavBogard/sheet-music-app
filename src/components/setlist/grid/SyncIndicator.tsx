@@ -134,14 +134,15 @@ export function SyncIndicator({
         return label
     }, [state, lastSyncAt, lastError, queued, label, nowFn])
 
-    // v50-06-02: when no explicit `onResolveConflict` prop is passed (the
-    // production path), fall back to the ReconciliationProvider context. The
-    // optional hook returns null in non-editor contexts (perform view, tests
-    // without a provider), in which case the conflict action button stays
-    // disabled — same UX as 'failed' without an `onRetryFailed` handler.
+    // v50-06-02 / v60-01: `resolveConflictHandler` is retained for prop-shape
+    // backward-compat (callers may still pass `onResolveConflict`), but as of
+    // v60-01 (locked decision #4) it is NO LONGER wired to clicks. The
+    // reconciliation modal was force-disabled at `a0c61cc` and gets fully
+    // deleted in v60-08; the conflict pill now retries silently last-write-
+    // wins via `retryFailedHandler`. The optional hook is kept as a no-op
+    // reference so removing the prop in v60-08 is a clean delete.
     const reconciliation = useReconciliationModalOptional()
-    const resolveConflictHandler =
-        onResolveConflict ?? reconciliation?.openModal
+    void (onResolveConflict ?? reconciliation?.openModal)
 
     // Bug 2 fix (2026-05-12): the button labeled "Failed — retry" must
     // actually retry. The previous default discarded failed outbox rows
@@ -151,6 +152,11 @@ export function SyncIndicator({
     // pending + attempts=0 + scheduledFor=now and nudges the engine. A
     // separate, explicit "Discard" affordance can be added in the future
     // for a user-confirmed give-up path (see `discardFailedOutboxRows`).
+    //
+    // v60-01: this handler now ALSO drives the conflict pill — clicking
+    // "Conflict — review" calls retryFailedOutboxRows, which marks the
+    // reset rows with `forceLwwOnConflict: true` so the engine takes a
+    // silent last-write-wins path on the next drain. No modal, no banner.
     const defaultRetryFailed = async () => {
         await retryFailedOutboxRows()
     }
@@ -160,8 +166,10 @@ export function SyncIndicator({
 
     const Icon = visual.icon
     const isAction = state === 'failed' || state === 'conflict'
-    const onClick =
-        state === 'conflict' ? resolveConflictHandler : retryFailedHandler
+    // v60-01: both 'conflict' and 'failed' invoke retry. Conflict-state
+    // click flows through retryFailedOutboxRows → engine silent-LWW branch
+    // (see `forceLwwOnConflict` in engine.ts).
+    const onClick = retryFailedHandler
 
     const Element = isAction ? 'button' : 'span'
 

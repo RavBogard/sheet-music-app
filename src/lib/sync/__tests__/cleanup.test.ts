@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { getDb, resetDbForTests } from '../../local/schema'
 import type { OutboxOp, OutboxRow, OutboxStatus } from '../../local/types'
-import { discardFailedOutboxRows } from '../cleanup'
+import { discardFailedOutboxRows, retryFailedOutboxRows } from '../cleanup'
 
 function makeRow(
     status: OutboxStatus,
@@ -86,5 +86,73 @@ describe('discardFailedOutboxRows', () => {
         const remaining = await db.outbox.toArray()
         expect(remaining).toHaveLength(1)
         expect(remaining[0]!.status).toBe('pending')
+    })
+
+    it('discardFailedOutboxRows does NOT set forceLwwOnConflict (explicit give-up path)', async () => {
+        const db = getDb()
+        // Seed a failed row WITHOUT the flag; the give-up path should
+        // never accidentally couple to the retry path.
+        await db.outbox.add(makeRow('failed') as OutboxRow)
+        await db.outbox.add(makeRow('pending') as OutboxRow)
+
+        await discardFailedOutboxRows({ db })
+
+        const remaining = await db.outbox.toArray()
+        for (const row of remaining) {
+            expect(row.forceLwwOnConflict).toBeUndefined()
+        }
+    })
+})
+
+describe('retryFailedOutboxRows', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+    })
+
+    afterEach(async () => {
+        await resetDbForTests()
+    })
+
+    it("resets every failed row to status='pending' with forceLwwOnConflict=true", async () => {
+        const db = getDb()
+        await db.outbox.add(
+            makeRow('failed', {
+                attempts: 5,
+                lastError: 'VersionMismatch',
+                scheduledFor: 0,
+            }) as OutboxRow,
+        )
+        await db.outbox.add(makeRow('failed') as OutboxRow)
+        await db.outbox.add(makeRow('pending') as OutboxRow)
+
+        // No-op pump for the test seam — we only care about the Dexie writes.
+        const result = await retryFailedOutboxRows({ db, pump: () => {} })
+
+        expect(result.retried).toBe(2)
+        const rows = await db.outbox.toArray()
+        const reset = rows.filter((r) => r.forceLwwOnConflict === true)
+        expect(reset).toHaveLength(2)
+        for (const row of reset) {
+            expect(row.status).toBe('pending')
+            expect(row.attempts).toBe(0)
+            expect(row.lastError).toBeUndefined()
+        }
+        // The originally-pending row is untouched and carries no flag.
+        const untouched = rows.find((r) => r.forceLwwOnConflict === undefined)
+        expect(untouched?.status).toBe('pending')
+    })
+
+    it('is a no-op when no failed rows exist (flag never gets set on pending/sending)', async () => {
+        const db = getDb()
+        await db.outbox.add(makeRow('pending') as OutboxRow)
+        await db.outbox.add(makeRow('sending') as OutboxRow)
+
+        const result = await retryFailedOutboxRows({ db, pump: () => {} })
+
+        expect(result.retried).toBe(0)
+        const rows = await db.outbox.toArray()
+        for (const row of rows) {
+            expect(row.forceLwwOnConflict).toBeUndefined()
+        }
     })
 })

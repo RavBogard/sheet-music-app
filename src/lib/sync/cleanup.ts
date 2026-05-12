@@ -84,6 +84,13 @@ export async function retryFailedOutboxRows(
                 attempts: 0,
                 scheduledFor: now,
                 lastError: undefined,
+                // v60-01: mark this row as "user clicked retry" so the
+                // engine's VersionMismatch branch can take silent LWW +
+                // Sentry capture on the retry instead of re-failing the
+                // row. Sole-admin app per locked decision #4 — manual
+                // retry IS intent to overwrite. discardFailedOutboxRows
+                // does NOT set this flag (explicit give-up path).
+                forceLwwOnConflict: true,
             })
             retried += 1
         }
