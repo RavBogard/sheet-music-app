@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
 import type { LocalTrack } from "@/lib/local/types"
+import { getTracksForSetlistClient } from "@/lib/client-tracks"
 import {
     type SnapshotListenerOpts,
     startSnapshotListener as defaultStartSnapshotListener,
@@ -122,12 +123,12 @@ export function useSetlistPerformance(
     // Dual-read fallback for unhydrated legacy setlists. After lazy-cascade
     // has run (hydrated:true), Dexie is the authoritative source and we
     // ignore the embedded array entirely (post-migration stale-by-design).
-    const tracks: SetlistTrack[] = useMemo(() => {
-        const fromDexie = (dexieTracks ?? []) as unknown as SetlistTrack[]
-        if (setlistData?.hydrated === true) return fromDexie
-        if (fromDexie.length > 0) return fromDexie
-        return (setlistData?.tracks as SetlistTrack[] | undefined) ?? []
-    }, [dexieTracks, setlistData?.hydrated, setlistData?.tracks])
+    // v60-05-01: 3-branch logic extracted to @/lib/client-tracks for unit
+    // testability + symmetry with the server-side helper.
+    const tracks: SetlistTrack[] = useMemo(
+        () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
+        [dexieTracks, setlistData?.hydrated, setlistData?.tracks],
+    )
 
     const name: string = setlistData?.name || "Untitled"
     const serviceNotes: string | null = setlistData?.serviceNotes || null
