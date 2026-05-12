@@ -9,22 +9,22 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE; v60-04 in progress with 1 of 3 plans closed)
-Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-01 LOOP COMPLETE; v60-04-02 (print routes) + v60-04-03 (email routes) pending
-Plan: v60-04-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke against deployed master commit)
-Status: v60-04-01 closed via full PLAN → APPLY → UNIFY cycle. Single combined commit per v60-01/02/03 precedent. Helper extract + page.tsx reroute + publish-route migration + 3-test emulator-backed coverage all in one commit. Net production source +18 LOC (≤30 budget met). All 7 AC PASS. One spec deviation auto-fixed in-plan (helper signature widened from narrow object type to `Record<string, unknown>` to satisfy TS2559 at SSR call site). Zero scope creep, zero deferred items. HFG counter stays at 0/3 — real-emulator coverage added, no waiver taken. v60-04 phase still in progress: v60-04-02 covers print/public + print/personal migration (~5-8 LOC net per route); v60-04-03 covers email-packets + resend-email migration. Same drop-in pattern shown in publish/route.ts.
-Last activity: 2026-05-12 — v60-04-01 LOOP COMPLETE; committed as `f03dcb1`; pushed to origin master.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE; v60-04 in progress with 2 of 3 plans closed)
+Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-02 LOOP COMPLETE; v60-04-03 (email routes) pending
+Plan: v60-04-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: public packet via email link + personal packet flow on iPad)
+Status: v60-04-02 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. Single combined commit. Net production +8 LOC (≤30 budget met). All 6 AC PASS. Zero deviations, zero deferred items, zero new tests (helper contract already proven by v60-04-01 emulator suite). Both print packet endpoints now read live top-level tracks for hydrated setlists. HFG counter stays at 0/3. v60-04 phase still in progress: v60-04-03 covers email-packets + resend-email migration as final v60-04 plan.
+Last activity: 2026-05-12 — v60-04-02 LOOP COMPLETE; commit + push complete (SHA pending fill).
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 33% (3 of 10 phases LOOP COMPLETE; v60-04-01 of 3 plans within Phase 4 LOOP COMPLETE)
+- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 37% (3 of 10 phases LOOP COMPLETE; 2 of 3 plans within Phase 4 LOOP COMPLETE)
 - Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
 - Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
-- Phase v60-04: [███░░░░░░░] 33% (v60-04-01 of 3 plans LOOP COMPLETE; v60-04-02 + v60-04-03 pending)
+- Phase v60-04: [██████░░░░] 67% (v60-04-01 + v60-04-02 LOOP COMPLETE; v60-04-03 pending)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-04-01 LOOP COMPLETE; ready for /paul:plan v60-04-02]
+  ✓        ✓        ✓     [v60-04-02 LOOP COMPLETE; ready for /paul:plan v60-04-03]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -64,10 +64,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (full PLAN → APPLY → UNIFY for v60-04-01 in one session after `/paul:resume`)
-Stopped at: Phase v60-04-01 LOOP COMPLETE — committed + pushed. Wave 3 server-reader migration spine has its anchor helper (`getTracksForSetlist`) + first non-SSR consumer (publish route) + emulator-backed test coverage. Next two plans (v60-04-02 print routes, v60-04-03 email routes) follow the same drop-in pattern; each ~5-8 LOC net per route. PENDING-UAT folds into the Daniel-loop browser-smoke against the deployed master commit over the upcoming worship cycle.
-Next action: `/paul:plan v60-04-02` — Migrate print/public + print/personal route readers through `getTracksForSetlist`. Two routes, near-identical surface — file-bundle into one commit per the original phase plan.
-Resume file: .paul/phases/v60-04-server-side-reader-migration/v60-04-01-SUMMARY.md
+Last session: 2026-05-12 (autonomous mode — v60-04-02 full PLAN → APPLY → UNIFY in one pass after Daniel "1" approval)
+Stopped at: v60-04-02 LOOP COMPLETE; both print packet endpoints migrated. v60-04-03 (email-packets + resend-email) follows next under same autonomous mandate.
+Next action: `/paul:plan v60-04-03` — Migrate email-packets + resend-email route readers through `getTracksForSetlist`. Final v60-04 plan. Same drop-in pattern.
+Resume file: .paul/phases/v60-04-server-side-reader-migration/v60-04-02-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

@@ -4,6 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { SetlistTrack } from "@/types/models"
+import { getTracksForSetlist } from "@/lib/server-tracks"
 
 export const maxDuration = 120
 
@@ -47,8 +48,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Setlist is not published' }, { status: 403 })
         }
 
-        // Build print request — generic (no personal transposition)
-        const tracks = (setlist.tracks || []) as SetlistTrack[]
+        // v60-04-02: hydration-aware read via shared helper. For hydrated
+        // setlists, the embedded setlist.tracks[] is stale (engine writes
+        // through top-level tracks/{id} only). Cast preserves SetlistTrack[]
+        // for the downstream .map() PrintRequest builder.
+        const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as SetlistTrack[]
         const printReq: PrintRequest = {
             title: setlist.name || 'Setlist',
             date: setlist.eventDate?.toDate?.()?.toISOString?.() || setlist.date || '',

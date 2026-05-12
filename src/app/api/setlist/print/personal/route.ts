@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { MusicianProfile, SetlistTrack } from "@/types/models"
+import { getTracksForSetlist } from "@/lib/server-tracks"
 
 export const maxDuration = 120
 
@@ -45,8 +46,11 @@ export const GET = createApiHandler(
         const profile: MusicianProfile = userDoc.data()?.musicianProfile || {}
         const userName = userDoc.data()?.displayName || userDoc.data()?.email || 'Musician'
 
-        // Build print request with user's transposition applied
-        const tracks = (setlist.tracks || []) as SetlistTrack[]
+        // v60-04-02: hydration-aware read via shared helper. Same drop-in
+        // pattern as print/public; cast preserves SetlistTrack[] shape for
+        // the downstream .map() PrintRequest builder (which here also
+        // applies musician profile transposition math).
+        const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as SetlistTrack[]
         const printReq: PrintRequest = {
             title: setlist.name || 'Setlist',
             date: setlist.eventDate?.toDate?.()?.toISOString?.() || setlist.date || '',
