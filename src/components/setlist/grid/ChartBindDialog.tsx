@@ -10,7 +10,7 @@ import {
 } from 'cmdk'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { FileText } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
     Dialog,
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { getDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
+import { primeSongsLibrary } from '@/lib/songs/prime'
 
 /**
  * v54-02-01 (Bug 3 fix, 2026-05-12): centered command dialog for binding a
@@ -61,6 +62,16 @@ export interface ChartBindDialogProps {
     onBind: (selection: ChartBindSelection) => void
 }
 
+/**
+ * T2.1 (2026-05-12) — minimum interval between re-primes when the
+ * dialog is reopened. The mount-once prime in `SetlistGridHydrator`
+ * still guarantees Dexie has *something* on first session open; this
+ * throttle prevents hammering Firestore when the user reopens the
+ * dialog rapidly. 5s is short enough to feel "fresh" for the common
+ * "I just added a song in another tab" workflow.
+ */
+const REPRIME_MIN_INTERVAL_MS = 5_000
+
 export function ChartBindDialog({
     open,
     onOpenChange,
@@ -75,6 +86,24 @@ export function ChartBindDialog({
         [],
         [] as LocalSong[],
     )
+
+    // T2.1 fix (Bug 5): re-prime the local songs cache from Firestore
+    // every time the dialog opens (throttled). Without this, songs added
+    // to the library mid-session never appear in the picker — the
+    // mount-once SetlistGridHydrator prime is a one-shot getDocs and
+    // doesn't subscribe. Long-term fix retires this in the Phase D
+    // (Y.js) cutover; until then, refresh on demand. Fire-and-forget;
+    // `primeSongsLibrary` is failure-swallowing so a network blip won't
+    // crash the dialog. The Dexie put inside the helper triggers our
+    // useLiveQuery above, so the list updates as the prime resolves.
+    const lastPrimedAtRef = useRef<number>(0)
+    useEffect(() => {
+        if (!open) return
+        const now = Date.now()
+        if (now - lastPrimedAtRef.current < REPRIME_MIN_INTERVAL_MS) return
+        lastPrimedAtRef.current = now
+        void primeSongsLibrary()
+    }, [open])
 
     const { recentSongs, librarySongs } = useMemo(() => {
         const list = songs ?? []
