@@ -216,8 +216,23 @@ export function ReconciliationProvider({
         return out
     }, [failedOutboxRows])
 
+    // P0 modal-flood fix (2026-05-12): the modal is for cross-writer
+    // conflicts only. Other failure classes (auth, remote-doc-missing,
+    // dead-letter transient) surface via SyncIndicator's "Failed — retry"
+    // affordance instead. Without this filter, every dead-lettered
+    // transient — including a single network blip after MAX_ATTEMPTS —
+    // popped the conflict modal with misleading "Keep mine / Take theirs"
+    // radios. T1.4's per-row classifyOutboxError gives us the kind cheaply.
+    const conflictRows = useMemo<FailedRow[]>(
+        () =>
+            failedRows.filter(
+                (r) => classifyOutboxError(r.lastError) === 'version-mismatch',
+            ),
+        [failedRows],
+    )
+
     const hasConflict =
-        (state === 'conflict' || state === 'failed') && failedRows.length > 0
+        (state === 'conflict' || state === 'failed') && conflictRows.length > 0
 
     // Bug 2 fix (2026-05-12): the modal must actually open. The previous
     // `const open = false` plus no-op `openModal/closeModal` stub meant the
@@ -249,13 +264,16 @@ export function ReconciliationProvider({
     const [snapshotsLoading, setSnapshotsLoading] = useState(false)
 
     // Stable id-set fingerprint so we refetch only when rows change.
+    // Computed from `conflictRows` (not all failedRows) so a new non-conflict
+    // failure (auth / dead-letter) doesn't mutate the key and re-open the
+    // modal the user just dismissed.
     const idSetKey = useMemo(
         () =>
-            failedRows
+            conflictRows
                 .map((r) => `${r.localId}:${r.collection}/${r.docId}`)
                 .sort()
                 .join('|'),
-        [failedRows],
+        [conflictRows],
     )
 
     // Derive the open state: show the modal whenever there's a conflict and
