@@ -4,7 +4,7 @@
 //
 // Recovery flow:
 //   1. User taps the failed-state SyncIndicator action button.
-//   2. SyncIndicator calls `clearFailedOutboxRows()`.
+//   2. SyncIndicator calls `discardFailedOutboxRows()` (explicit give-up path).
 //   3. Failed rows are removed from `db.outbox`.
 //   4. The engine's existing interval-based pump observes the now-clean
 //      outbox on its next tick and the FSM derives back to 'idle' (or
@@ -22,21 +22,6 @@ export interface ClearFailedResult {
 
 export interface ClearFailedOptions {
     db?: LocalDb
-}
-
-/**
- * DEPRECATED — prefer `retryFailedOutboxRows` for the "Failed — retry" UI
- * action (which is what the user expects), or `discardFailedOutboxRows`
- * for an explicit "give up" path with confirmation.
- *
- * Original semantics preserved: deletes every outbox row with status='failed'
- * WITHOUT applying the operation. This abandons the user's edit. Kept for
- * backward compatibility with tests; new callers should not use this.
- */
-export async function clearFailedOutboxRows(
-    options: ClearFailedOptions = {},
-): Promise<ClearFailedResult> {
-    return discardFailedOutboxRows(options)
 }
 
 /**

@@ -144,13 +144,13 @@ export function SyncIndicator({
         onResolveConflict ?? reconciliation?.openModal
 
     // Bug 2 fix (2026-05-12): the button labeled "Failed — retry" must
-    // actually retry. The previous default called `clearFailedOutboxRows`
-    // which deleted failed outbox rows without applying their operation —
-    // a silent abandonment of the user's edit that combined with server-
-    // priming to resurrect deleted rows on reload. `retryFailedOutboxRows`
-    // resets failed rows to pending + attempts=0 + scheduledFor=now and
-    // nudges the engine. A separate, explicit "Discard" affordance can be
-    // added in the future for a user-confirmed give-up path.
+    // actually retry. The previous default discarded failed outbox rows
+    // without applying their operation — a silent abandonment of the
+    // user's edit that combined with server-priming to resurrect deleted
+    // rows on reload. `retryFailedOutboxRows` resets failed rows to
+    // pending + attempts=0 + scheduledFor=now and nudges the engine. A
+    // separate, explicit "Discard" affordance can be added in the future
+    // for a user-confirmed give-up path (see `discardFailedOutboxRows`).
     const defaultRetryFailed = async () => {
         await retryFailedOutboxRows()
     }

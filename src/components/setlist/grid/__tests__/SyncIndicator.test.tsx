@@ -9,7 +9,7 @@ import type { SyncState } from '@/lib/sync/state-machine'
 import { SyncIndicator } from '../SyncIndicator'
 
 vi.mock('@/lib/sync/cleanup', () => ({
-    clearFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
+    discardFailedOutboxRows: vi.fn(async () => ({ removed: 0 })),
     retryFailedOutboxRows: vi.fn(async () => ({ retried: 0 })),
 }))
 
@@ -19,7 +19,7 @@ vi.mock('@/lib/auth-context', () => ({
 }))
 
 import {
-    clearFailedOutboxRows,
+    discardFailedOutboxRows,
     retryFailedOutboxRows,
 } from '@/lib/sync/cleanup'
 
@@ -148,7 +148,7 @@ describe('SyncIndicator', () => {
 
     describe('v52-03-01: failed-state recovery', () => {
         beforeEach(() => {
-            vi.mocked(clearFailedOutboxRows).mockClear()
+            vi.mocked(discardFailedOutboxRows).mockClear()
             vi.mocked(retryFailedOutboxRows).mockClear()
             signOutMock.mockClear()
         })
@@ -162,11 +162,11 @@ describe('SyncIndicator', () => {
         })
 
         // Bug 2 fix (2026-05-12): the default action must actually retry, not
-        // discard. Previously the button called `clearFailedOutboxRows` which
-        // deleted failed outbox rows without applying — silently abandoning
-        // the user's edit. Now it calls `retryFailedOutboxRows` which resets
-        // status to 'pending' + attempts=0 + scheduledFor=now and nudges the
-        // engine.
+        // discard. The destructive `discardFailedOutboxRows` helper deletes
+        // failed outbox rows without applying — silently abandoning the
+        // user's edit. The default must call `retryFailedOutboxRows` which
+        // resets status to 'pending' + attempts=0 + scheduledFor=now and
+        // nudges the engine.
         it('clicking the failed-state action button calls retryFailedOutboxRows() when no prop passed', async () => {
             setSyncState('failed', 0, { lastError: 'Save failed' })
             render(<SyncIndicator />)
@@ -175,7 +175,7 @@ describe('SyncIndicator', () => {
             expect(retryFailedOutboxRows).toHaveBeenCalledTimes(1)
             // The destructive discard helper must NOT be the default —
             // that's the bug we just fixed.
-            expect(clearFailedOutboxRows).not.toHaveBeenCalled()
+            expect(discardFailedOutboxRows).not.toHaveBeenCalled()
         })
 
         it('an explicit onRetryFailed prop wins over the default cleanup fallback', async () => {
@@ -186,7 +186,7 @@ describe('SyncIndicator', () => {
             await userEvent.click(btn)
             expect(onRetry).toHaveBeenCalledTimes(1)
             expect(retryFailedOutboxRows).not.toHaveBeenCalled()
-            expect(clearFailedOutboxRows).not.toHaveBeenCalled()
+            expect(discardFailedOutboxRows).not.toHaveBeenCalled()
         })
 
         it('renders the sign-out link when lastError matches auth/permission keywords', () => {

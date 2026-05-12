@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { getDb, resetDbForTests } from '../../local/schema'
 import type { OutboxOp, OutboxRow, OutboxStatus } from '../../local/types'
-import { clearFailedOutboxRows } from '../cleanup'
+import { discardFailedOutboxRows } from '../cleanup'
 
 function makeRow(
     status: OutboxStatus,
@@ -23,7 +23,7 @@ function makeRow(
     }
 }
 
-describe('clearFailedOutboxRows', () => {
+describe('discardFailedOutboxRows', () => {
     beforeEach(async () => {
         await resetDbForTests()
     })
@@ -38,7 +38,7 @@ describe('clearFailedOutboxRows', () => {
         await db.outbox.add(makeRow('sending') as OutboxRow)
         await db.outbox.add(makeRow('failed') as OutboxRow)
 
-        const result = await clearFailedOutboxRows({ db })
+        const result = await discardFailedOutboxRows({ db })
 
         expect(result.removed).toBe(1)
         const remaining = await db.outbox.toArray()
@@ -53,7 +53,7 @@ describe('clearFailedOutboxRows', () => {
         await db.outbox.add(makeRow('pending') as OutboxRow)
         await db.outbox.add(makeRow('sending') as OutboxRow)
 
-        const result = await clearFailedOutboxRows({ db })
+        const result = await discardFailedOutboxRows({ db })
 
         expect(result.removed).toBe(0)
         const remaining = await db.outbox.toArray()
@@ -62,8 +62,8 @@ describe('clearFailedOutboxRows', () => {
 
     it('is idempotent on an empty outbox', async () => {
         const db = getDb()
-        const first = await clearFailedOutboxRows({ db })
-        const second = await clearFailedOutboxRows({ db })
+        const first = await discardFailedOutboxRows({ db })
+        const second = await discardFailedOutboxRows({ db })
 
         expect(first.removed).toBe(0)
         expect(second.removed).toBe(0)
@@ -78,7 +78,7 @@ describe('clearFailedOutboxRows', () => {
         // Race a pending insert against the cleanup. The cleanup snapshots the
         // failed-row set on entry; any rows added afterward (regardless of
         // status) survive — engine's pending work is never lost.
-        const cleanup = clearFailedOutboxRows({ db })
+        const cleanup = discardFailedOutboxRows({ db })
         await db.outbox.add(makeRow('pending') as OutboxRow)
         const result = await cleanup
 
