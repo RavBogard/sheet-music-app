@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE — v60-04 + v60-05 closed)
-Phase: 5 of 10 — v60-05 Editor + perform-view reader migration ✅ LOOP COMPLETE (1-plan phase)
-Plan: v60-05-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke against /perform/setlist/{id} on iPad)
-Status: v60-05 phase closed in 1 plan after Daniel "1" approval and /ui-ux-pro-max gate satisfaction. Editor side proven unnecessary to migrate (SetlistGrid already Dexie-routed). Only perf-view's 3-branch inline ternary extracted into shared `getTracksForSetlistClient` helper at `src/lib/client-tracks.ts` (20 LOC) + 7 pure-function unit tests (75 LOC, all green) + hook refactor (+7/-6). Net production +21 LOC ≤30. Client/server helper symmetry achieved. tsc clean, next build clean, main suite 1581 passed (+7 new client-tracks tests) / 52 pre-existing failures preserved, emulator suite green, HFG 0/3 held. 1 deferral logged: matrix/route.ts server reader → v60-06.
-Last activity: 2026-05-12 — v60-05 PHASE LOOP COMPLETE; v60-05-01 committed as `ce6147a`; pushed to origin master.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 1 plan closed)
+Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 LOOP COMPLETE; ~6-7 plans remaining
+Plan: v60-06-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: dashboard counts on iPad)
+Status: v60-06-01 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. 2 dashboard surfaces (HeroCard + CompactSetlistRow) now read denormalized `setlist.trackCount` (maintained by v54-01-03 reconciler) with embedded-array fallback for legacy setlists. Net +3 LOC. All 6 AC PASS (AC-6 deferred to UAT). Zero new failures; HFG 0/3 held. v60-06 phase continues — remaining plans cover: filtered counts (NextServiceCard, PublicSetlistListing), full-list iterations (UpcomingTimeline, PrepRecommendations, SetlistCards, use-upcoming-prep), SetlistDrawer queue, TemplatesSection admin, matrix/route.ts (deferred from v60-05), 15-setlist backfill + migration_snapshots rollback collection.
+Last activity: 2026-05-12 — v60-06-01 LOOP COMPLETE; commit + push pending.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [░░░░░░░░░░] 0% (not started — Wave 3 sequential, dashboard reader migration + 15-setlist backfill)
+- Phase v60-06: [█░░░░░░░░░] 12% (v60-06-01 of ~7 plans LOOP COMPLETE — HeroCard + CompactSetlistRow trackCount migration)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-05 PHASE LOOP COMPLETE; ready for /paul:plan v60-06]
+  ✓        ✓        ✓     [v60-06-01 LOOP COMPLETE; ready for /paul:plan v60-06-02]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-04 phase + v60-05 phase fully closed in one session: 4 plans across 2 phases after Daniel "1" approvals + no-stop mandate + /ui-ux-pro-max gate load)
-Stopped at: v60-05 PHASE LOOP COMPLETE. Wave 3 server spine (v60-04) + client perf-view symmetry helper (v60-05) both done. Helper pair `src/lib/{server,client}-tracks.ts` is the canonical hydration-aware reader API for the remainder of v6.0 (v60-06 dashboard, v60-07 writer strip, v60-08 cleanup).
-Next action: `/paul:plan v60-06` — Wave 3 sequential, dashboard reader migration + 15-setlist backfill (`migration_snapshots/{setlistId}` rollback collection). Also pick up the deferred matrix/route.ts server reader from v60-05-01. Larger surface than v60-04/05 — dashboard cards (HeroCard, CompactSetlistRow, NextServiceCard, UpcomingTimeline, PrepRecommendations, PublicSetlistListing, SetlistDrawer) + admin (TemplatesSection) + hooks (use-setlist-dashboard, use-upcoming-prep, use-add-to-setlist). Some surfaces may migrate to `setlist.trackCount` (already maintained by v54-01-03 reconciler) rather than helper reads.
-Resume file: .paul/phases/v60-05-editor-perform-view-reader-migration/v60-05-01-SUMMARY.md
+Last session: 2026-05-12 (autonomous mode — v60-04 + v60-05 phases closed; v60-06-01 closed; ~6 v60-06 plans remaining)
+Stopped at: v60-06-01 LOOP COMPLETE — first dashboard count surfaces migrated. v60-06-02 next: filtered counts (NextServiceCard + PublicSetlistListing). Different pattern — song-typed filter requires either embedded-staleness acceptance, songCount denormalization (over-engineering risk), or filter-via-helper. Plan must surface this trade-off explicitly.
+Next action: `/paul:plan v60-06-02` — Migrate filtered-count surfaces. Decision needed at PLAN time on songCount approach.
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-01-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

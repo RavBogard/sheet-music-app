@@ -90,7 +90,9 @@ export function HeroCard({
     })()
 
     const isImminent = countdown !== null
-    const trackCount = setlist.tracks?.length || 0
+    // v60-06-01: read denormalized trackCount maintained by v54-01-03 reconciler;
+    // fall back to embedded array length for legacy setlists pre-reconciler.
+    const trackCount = setlist.trackCount ?? (setlist.tracks?.length || 0)
     const prepData = prep?.prep
     const allCached = offlineStatus && offlineStatus.cached === offlineStatus.total
 
