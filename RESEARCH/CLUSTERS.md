@@ -27,6 +27,8 @@ Used in the cluster table below.
 | 6 | Tombstone hygiene (TTL + observability) | sync / persistence | **T4** | **Reshapes** — Y.js handles deletes natively | wait |
 | 7 | Reconciliation modal & conflict UX | UI / sync | **T3** (Phase D itself) | **Moots** — Y.js eliminates per-conflict modal | replaced by D |
 | 8 | UX timings (long-press, animations) | UI | **T2** | **Survives** | 0.5 session |
+| 9 | Sync-engine correctness bugs (Phase B-discovered) | sync | **T1** | Partially **moots** (Phase D rewrites the engine; T1 fixes the bugs in the interim) | 1 session |
+| 10 | New bugs 4/5/6 (drag-reorder, song sync, SW noise) | UI / sync / SW | **T1** + T2 | **Survives** | see [BUGS-4-5-6-PLAN.md](../BUGS-4-5-6-PLAN.md) |
 
 ---
 
@@ -95,7 +97,7 @@ Used in the cluster table below.
 
 - **C.2** — `isMobile` at [src/components/setlist/grid/SetlistGrid.tsx:925](../src/components/setlist/grid/SetlistGrid.tsx:925) — sole consumer (the mobile-anchor ChartBindPopover block) was removed by my Bug 3 fix. Now unused.
 - **C.3** — `ChartBindPopover` may be partially dead — after Bug 3, the only remaining caller is the in-cell desktop click path. **Decision logged in RESEARCH-PLAN: migrate the in-cell path to Dialog too, then delete ChartBindPopover entirely.** Treat as T2 cleanup.
-- **C.4** — `subscribeToSetlist` in [src/lib/setlist-firebase.ts:178-189](../src/lib/setlist-firebase.ts:178) looks vestigial; the live-edit visibility path uses `src/lib/sync/snapshot-listener.ts`. **Investigation step:** grep all callers; if none, delete. **Caution:** may have non-grep-visible references via the service factory.
+- ~~**C.4** — `subscribeToSetlist` in [src/lib/setlist-firebase.ts:178-189](../src/lib/setlist-firebase.ts:178) looks vestigial.~~ **CORRECTED 2026-05-12 by Phase B:** `subscribeToSetlist` IS in use — [src/hooks/use-add-to-setlist.ts:167](../src/hooks/use-add-to-setlist.ts:167) actively calls it. **Do not delete.** Removed from this cluster.
 - **D.2** — `clearFailedOutboxRows` is kept as a deprecated alias for the discard helper. Migrate any remaining test references to `discardFailedOutboxRows` and delete the alias.
 
 **Phase D interaction:** if Y.js retires the outbox entirely (which Phase D will decide), then D.2 and likely chunks of `cleanup.ts` go away wholesale. **Recommend:** do C.2, C.3 immediately (independent of Phase D); defer C.4 and D.2 until Phase D scope is known.
@@ -161,6 +163,38 @@ Used in the cluster table below.
 - **(Maybe surfacing from Phase B)** — TouchSensor 200ms delay, MouseSensor 5px distance — both reasonable defaults but worth confirming they don't conflict with iPad VoiceOver or other a11y modes.
 
 **Why T2:** small, no architecture interaction. Could even be a single PR.
+
+---
+
+## Cluster 9 — Sync-engine correctness bugs (Phase B-discovered)
+
+**Scope:** latent bugs in the current outbox engine surfaced by the Phase B architecture map. All three are real and reproducible; none are caused by my Bug 1/2/3 fixes.
+
+**Issues:**
+
+- **P9.1 — Idle pump-gap bug.** `applyEdit` in [src/lib/local/write.ts](../src/lib/local/write.ts) never calls `engine.notifyEditCommitted()`. The method exists at [src/lib/sync/engine.ts](../src/lib/sync/engine.ts) but is only invoked from tests. Net effect: if the pump drains to idle and a new edit lands without a concurrent network/lock event, `scheduleNextPump` early-returns ([engine.ts:524](../src/lib/sync/engine.ts:524)) and the pump stays asleep until the next online/offline transition or timer expiry. **Failure mode:** edits sit in the outbox until something unrelated wakes the engine. This may be contributing to "my edits don't save" reports.
+- **P9.2 — Silent LWW when remote `updatedAt` is undefined.** The `expectedUpdatedAt` precondition in [src/lib/sync/init.ts:80-87](../src/lib/sync/init.ts:80) (per Phase B finding) silently passes when the remote doc has no `updatedAt` stamp. This means writes against pre-stamp docs (legacy data that escaped the v51-h01 backfill) can clobber concurrent edits without surfacing the conflict modal. **Failure mode:** silent data loss on legacy rows.
+- **P9.3 — Reconciliation modal mislabels non-VersionMismatch failures.** My Bug 2 fix that un-stubbed the modal renders "Remote changes detected" for every row with `outbox.status === 'failed'`, but the failed-status bucket includes dead-letter (TransientError budget-exhausted) + auth-failed paths. Those aren't remote changes — they're network/auth problems. **Failure mode:** misleading UX; user clicks "Take theirs" thinking they're picking remote, but really there's no remote conflict.
+
+**Why T1:** P9.1 and P9.2 are silent data-correctness bugs. P9.3 is misleading UX but landed in my Bug 2 fix and should ship now while the modal still exists.
+
+**Phase D interaction:** all three moot post-pivot (engine + outbox + modal all retire). But the bugs are live now and could be causing real user reports — fix them in the interim rather than wait 6-7 weeks for Phase D.
+
+**Investigation already complete:** all three claims verified by Phase B against HEAD source. See [RESEARCH/ARCHITECTURE-MAP.md](ARCHITECTURE-MAP.md) §1.8 and the Cross-cutting findings section.
+
+---
+
+## Cluster 10 — New bugs 4/5/6 (post-deploy reports)
+
+**Scope:** three issues the user reported after my Bug 1/2/3 push.
+
+**Issues:**
+
+- **Bug 4** — Drag-reorder doesn't work; Move Up/Down buttons broken; multi-select unwanted. Root cause: commit `0ec6773c` (May 9, 2026) deleted the desktop table and replaced it with cards-only — but no drag-reorder was added to the cards. My Bug 1 fix targeted the dead code path. See [BUGS-4-5-6-PLAN.md](../BUGS-4-5-6-PLAN.md).
+- **Bug 5** — New library song doesn't appear in chart-bind picker. Root cause: `primeSongsLibrary` is one-shot on mount ([src/lib/songs/prime.ts:31](../src/lib/songs/prime.ts:31)); doesn't refresh during a session.
+- **Bug 6** — SW errors `Failed to enable or disable navigation preload` + `Only the active worker can claim clients`. Likely Serwist `clientsClaim: true` activation timing. Possibly benign noise; investigate.
+
+**Why T1 (Bug 4) + T2 (Bug 5, Bug 6):** Bug 4 is user-blocking (no way to reorder); Bug 5 is workflow-impeding (workaround: refresh page); Bug 6 is console noise.
 
 ---
 
