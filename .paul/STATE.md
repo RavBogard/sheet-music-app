@@ -5,25 +5,26 @@
 See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v6.0 — Tracks Single-Source-of-Truth IN PROGRESS. Wave 1 (orthogonal UX fixes) BEHAVIORALLY COMPLETE — v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain) both LOOP COMPLETE — PENDING-UAT. Together they close the iPad-Safari save-loss class implicated in v5h3-01. Next: Wave 2 — v60-03 (Java JDK 21 + v54-02-02 H-SL-7 emulator canary), which BLOCKS Wave 3 engine-touching phases and resets HFG counter to 0/3. v5.0 + v5.2 + v5.3 + v5.4 + v60-01 + v60-02 all in PENDING-UAT close paths over the upcoming worship cycle.
+**Current focus:** v6.0 — Tracks Single-Source-of-Truth IN PROGRESS. **Wave 1 + Wave 2 closed** — v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain) close the iPad-Safari save-loss class; v60-03 (H-SL-7 emulator canary + HFG counter reset 0/3) closes the Harness Fidelity Gate that has gated v6.0 since milestone open. **Wave 3 UNBLOCKED.** Next: Wave 3 migration spine — v60-04 (server-side reader migration via single `getTracksForSetlist` helper) → v60-05 (editor + perform-view readers) → v60-06 (dashboard + 15-setlist backfill) → v60-07 (writer removal + immediate strip) → v60-08 (cleanup). v5.0 + v5.2 + v5.3 + v5.4 + v60-01 + v60-02 all in PENDING-UAT close paths over the upcoming worship cycle.
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (2 of 10 phases LOOP COMPLETE — PENDING-UAT — Wave 1 behaviorally complete)
-Phase: 3 of 10 — v60-03 Java JDK 21 install + v54-02-02 H-SL-7 emulator canary (Wave 2, BLOCKING for Wave 3 engine phases) — Not started
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE — Wave 1 behaviorally complete + Wave 2 closed; Wave 3 unblocked)
+Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3, sequential; first engine-adjacent migration phase) — Not started
 Plan: None active
-Status: Phase v60-02 LOOP COMPLETE — PENDING-UAT closed via transition-phase. v60-02-01 ships as a single combined commit (~75 LOC source + 13 new tests) alongside .paul/ updates. Daniel browser-smoke against deployed commit closes AC-5 PENDING-UAT (iPad swipe-away repro: edit → swipe → return → verify draft persisted, no conflict pill). Wave 1 of v6.0 (v60-01 + v60-02) now behaviorally complete. Wave 2 (v60-03) is the next phase; involves a fully-attended human-action checkpoint (Windows `winget install Microsoft.OpenJDK.21 --scope user`) followed by the emulator canary that v54-02-02 deferred. HFG counter held at 1/3 — v60-03 resets it to 0/3 before any Wave 3 engine-touching phases.
-Last activity: 2026-05-12 — Phase v60-02 transition complete; commit + push pending.
+Status: Phase v60-03 LOOP COMPLETE — closed via transition-phase. v60-03-01 ships as a single combined commit (+245 LOC test only across engine.emulator.test.ts; engine.ts UNTOUCHED in final tree per AC-3 proof discipline) plus .paul/ updates. HFG counter reset from 1/3 → 0/3 backed by working-tree revert-and-fail-then-restore proof captured verbatim in v60-03-01-SUMMARY.md. v53-02 clause-(b) waiver RESOLVED. v5h3-01 postmortem Action #2 CLOSED. Wave 3 migration spine now has a real-Firestore harness backing every engine-touching phase. Next phase v60-04 introduces a single `getTracksForSetlist` helper that all server-side readers (publish / print / email / scheduling) route through; mirrors the SSR ternary pattern shipped 2026-05-12 in `c9e92a5`. ≤30 LOC net per commit constraint per v6.0 locked decision applies.
+Last activity: 2026-05-12 — Phase v60-03 transition complete; commit + push pending.
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [██░░░░░░░░] 20% (2 of 10 phases LOOP COMPLETE — PENDING-UAT)
+- v6.0 Tracks Single-Source-of-Truth: [███░░░░░░░] 30% (3 of 10 phases LOOP COMPLETE)
 - Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
 - Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
-- Phase v60-03: [░░░░░░░░░░] 0% (not started — BLOCKS Wave 3)
+- Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
+- Phase v60-04: [░░░░░░░░░░] 0% (not started — Wave 3 entry)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase v60-02 closed; ready for /paul:plan v60-03]
+  ✓        ✓        ✓     [Phase v60-03 closed; ready for /paul:plan v60-04]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -63,10 +64,18 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (full PLAN → APPLY → UNIFY → transition for v60-02 in one session after `/paul:resume`)
-Stopped at: Phase v60-02 LOOP COMPLETE — PENDING-UAT, committed + pushed; Wave 1 of v6.0 behaviorally complete. Ready for `/paul:plan v60-03`.
-Next action: `/paul:plan v60-03` — Java JDK 21 install + v54-02-02 H-SL-7 emulator canary (Wave 2). Involves a fully-attended human-action checkpoint (`winget install Microsoft.OpenJDK.21 --scope user`). BLOCKS Wave 3 engine-touching phases; resets HFG counter to 0/3.
-Resume file: .paul/phases/v60-02-pagehide-blur-mid-edit-text-protection/v60-02-01-SUMMARY.md
+Last session: 2026-05-12 (full PLAN → APPLY → UNIFY → transition for v60-02 AND v60-03 in one session after `/paul:resume`)
+Stopped at: Phase v60-03 LOOP COMPLETE — committed + pushed; Wave 2 closed; HFG counter at 0/3; v53-02 waiver RESOLVED; Wave 3 unblocked. Ready for `/paul:plan v60-04`.
+Next action: `/paul:plan v60-04` — Server-side reader migration (Wave 3 entry). Introduces single `getTracksForSetlist` helper; routes publish / print / email / scheduling server reads through it; mirrors SSR ternary pattern from `c9e92a5`. ≤30 LOC net per commit constraint applies. First Wave 3 phase to ride the new emulator harness.
+Resume file: .paul/phases/v60-03-java-install-emulator-canary/v60-03-01-SUMMARY.md
+Resume context:
+- Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
+- HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
+- v60-03 source delta: +245 LOC test-only in engine.emulator.test.ts (no production code change). EmulatorAdapter + FakeChannelHub + flushAll helpers + new H-SL-7 canary describe block.
+- Pre-existing 52 main-suite test failures (SetlistGrid.contextmenu/undo/sync-engine/etc) confirmed orthogonal to v60-03 — not addressed here; remains tracked for future test-infra cleanup pass.
+- Wave 3 migration spine ahead: v60-04 (server reads) → v60-05 (editor/perform reads) → v60-06 (dashboard + 15-setlist backfill) → v60-07 (writer strip) → v60-08 (cleanup). Sequential, engine-adjacent, ≤30 LOC net per commit.
+- Friday/Shabbat cadence still in effect for engine-touching phases — no risky deploys Thu PM → Sun.
+- Vercel `development` env vars in `.env.local` (per Daniel's earlier autonomous mandate this session).
 Resume context:
 - Wave 1 of v6.0 done: v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain). Together close the iPad-Safari save-loss class from v5h3-01.
 - v60-02 source delta: TextCell.tsx +24 LOC / MobileRowCard.tsx +25 LOC / sync/init.ts +25 LOC. Test delta: +13 assertions (4 + 4 + 5). All v60-02-related suites 21/21 green.
@@ -94,7 +103,9 @@ Push history this run:
   - `6735f48` fix(v54-01-02): write track.fileId on pick + bind — PUSHED (Daniel UAT interrupt)
   - v54-02-01 feat: Firebase Local Emulator Suite infra + build-info script fix — PUSHED in v60-01 bundle
   - `6dc44f3` feat(v60-01): SyncIndicator conflict click rewire + silent LWW on retry — PUSHED
-  - `878afa9` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED THIS RUN
+  - `878afa9` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED
+  - `1099cd3` docs(v60-02): correct commit SHA in STATE.md Git State section — PUSHED
+  - `e6284a1` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
