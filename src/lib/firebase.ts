@@ -53,7 +53,7 @@ try {
                 // Tradeoff: each tab opens its own Firestore WebChannel instead of sharing
                 // one — fine for a small band app.
                 localCache: persistentLocalCache({
-                    tabManager: persistentSingleTabManager(),
+                    tabManager: persistentSingleTabManager({}),
                 }),
             } as FirestoreSettings);
         } catch (e1) {
