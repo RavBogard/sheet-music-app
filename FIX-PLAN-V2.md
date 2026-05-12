@@ -58,11 +58,11 @@ Full plan: [BUGS-4-5-6-PLAN.md § Bug 4](BUGS-4-5-6-PLAN.md#bug-4--drag-reorder-
 
 ### T1.3 — Cluster 9.P9.2: silent LWW when remote `updatedAt` is undefined
 
-- **Scope:** the `expectedUpdatedAt` precondition silently passes when remote `updatedAt` is undefined ([Phase B map §1.8](RESEARCH/ARCHITECTURE-MAP.md)). Concurrent edits on pre-stamp legacy docs can clobber. Fix: treat `expectedUpdatedAt: undefined` as a no-precondition write ONLY when the local row has never been server-stamped (`local.updatedAt === undefined`). Otherwise require a stamp match.
-- **Files:** `src/lib/setlist-firebase.ts` (the `timestampsMatch` + `updateSetlistWithVersion` logic) and equivalent track adapter; verify Phase B's exact line reference.
-- **Verification:** unit test: pre-stamp doc on server, two concurrent edits — second should hit `StaleWriteError`, not silently overwrite.
+- **Scope:** the `expectedUpdatedAt` precondition silently passes when remote `updatedAt` is undefined ([Phase B map §1.8](RESEARCH/ARCHITECTURE-MAP.md)). Concurrent edits on pre-stamp legacy docs can clobber. Fix: when the outbox row carries `expectedUpdatedAt` (i.e., the editor saw a server stamp at read time) but the remote doc lacks `updatedAt`, throw `VersionMismatchError` instead of silently passing.
+- **Files:** `src/lib/sync/init.ts` lines 75-88 (the `ProductionFirestoreAdapter.commitOutboxRow` `update` case). The bug is the `remoteMs !== undefined &&` guard: if local expected a stamp but remote has none, the guard short-circuits the precondition check. **Audit-confirmed location (Phase F 2026-05-12).** `setlist-firebase.ts:33-37` (`timestampsMatch`) is a parallel but DIFFERENT precondition path used only by the legacy direct-update API; do NOT edit it for this fix — it uses `null` as sentinel and behaves correctly.
+- **Verification:** unit test: pre-stamp doc on server with `updatedAt === undefined`, outbox row with `expectedUpdatedAt === 1000` → commit should throw `VersionMismatchError`, not silently overwrite. Add to `engine.test.ts` or a new `init.test.ts`.
 - **Rollback:** revert.
-- **Dependencies:** confirm Phase B's exact location (Phase B says `init.ts:80-87`; cross-check before edit).
+- **Dependencies:** none — audit confirmed file + line.
 - **Estimate:** 0.5 session.
 
 ### T1.4 — Cluster 9.P9.3: reconciliation modal mislabels non-VersionMismatch failures
@@ -78,7 +78,7 @@ Full plan: [BUGS-4-5-6-PLAN.md § Bug 4](BUGS-4-5-6-PLAN.md#bug-4--drag-reorder-
 
 **Phase B already verified this:** `crc-local` doesn't match the `/firestore/i` regex in [src/lib/firebase.ts:99-115](src/lib/firebase.ts:99). The outbox is **safe** from auto-IDB-wipe on assertion failure.
 
-- **Scope:** **add a regression test** to lock the invariant in. The test verifies that the regex pattern in `clearFirestoreIndexedDB` does not match the Dexie DB name string.
+- **Scope:** **add a regression test** to lock the invariant in. The test verifies that the regex pattern in `clearFirestoreIndexedDB` does not match the Dexie DB name string. (`clearFirestoreIndexedDB` actually spans `firebase.ts:94-119` — audit-corrected from earlier `:99-115`.)
 - **Files:** new test file (`src/lib/__tests__/firebase-recovery.test.ts`).
 - **Verification:** test passes; if someone renames `crc-local` to `firestore-local` in the future, the test fails loudly.
 - **Estimate:** 0.25 session.
@@ -316,11 +316,11 @@ These don't need re-litigation:
 - Bug 5: re-prime on dialog open (with 5s throttle).
 - Always push to master directly (memory file: [feedback_deploy_to_master.md](~/.claude/projects/.../memory/feedback_deploy_to_master.md)).
 
-### Decisions still open
+### Decisions locked (2026-05-12, while user was away)
 
-- T2.4 SW-reload coordination: implement now, or just bump the timeout from 3s to ~10s?
-- T2.3 `_shutdownRecoveryScheduled` reset semantics — recommended one-shot; team OK with that?
-- T3 spike scope before committing to full rollout.
+- **T2.4 SW-reload coordination:** implement now (not a stopgap bump). Adds a `whenEngineIdle()` helper exported from `src/lib/sync/init.ts`; the controllerchange reload handler awaits idle (with a 10s safety-net hard timeout) instead of using the fixed 3s.
+- **T2.3 `_shutdownRecoveryScheduled` reset:** keep one-shot per session. Rename to `_shutdownRecoveryAttempted` to match semantics. A recurring assertion failure that doesn't resolve after the first reload means something is deeply broken; bombarding the user with reloads doesn't help.
+- **T3 spike scope:** spike T3.1 (data model) + T3.2 (persistence + adapter) on a branch BEFORE committing to the full T3.3-T3.5 rollout. Gather Y.Doc size envelope + Firestore write-volume data first. Recommended; user agreed.
 
 ### Anti-hallucination reminder
 

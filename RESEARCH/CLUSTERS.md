@@ -113,7 +113,7 @@ Used in the cluster table below.
 **Issues:**
 
 - **C.7** — Relative-time label "Saved · just now" appears only in the tooltip, not the visible label, at [src/components/setlist/grid/SyncIndicator.tsx:124-128](../src/components/setlist/grid/SyncIndicator.tsx:124). Worth surfacing inline.
-- **C.10** — `disabled` on a `<span>` element when `isAction` is false at [src/components/setlist/grid/SyncIndicator.tsx:184-186](../src/components/setlist/grid/SyncIndicator.tsx:184). Cosmetic; HTML span doesn't take `disabled`.
+- ~~**C.10** — `disabled` on a `<span>` element when `isAction` is false~~ **WITHDRAWN by Phase F audit 2026-05-12:** at HEAD line 187 reads `disabled={isAction ? !onClick : undefined}` — `disabled` is `undefined` for the span branch. No bug present.
 - **D.4 (from PREEXISTING-ISSUES architectural section)** — Is `dirty` actually reachable in the current state machine? Outbox enqueue → engine pump is fast enough that `dirty` may only flicker; investigate whether the state is dead.
 
 **Why T4:** Phase D will simplify the state machine to roughly `synced | unsynced | offline`. Fixing UX semantics on a state machine that's about to be retired is wasted effort. Land Phase D first, then revisit Cluster 5 against the new shape.
@@ -159,7 +159,7 @@ Used in the cluster table below.
 
 **Issues:**
 
-- **D.5** — 500ms long-press at [src/components/setlist/grid/SetlistGrid.tsx:508](../src/components/setlist/grid/SetlistGrid.tsx:508). iPad system long-press is closer to 400ms. Worth user-testing and possibly tuning.
+- **D.5** — 500ms long-press timer in [src/components/setlist/grid/SetlistGrid.tsx](../src/components/setlist/grid/SetlistGrid.tsx) — the `setTimeout(...)` call begins at line 508; the literal `500)` ms argument is at line 518. iPad system long-press is closer to 400ms. Worth user-testing and possibly tuning. (Audit-corrected line refs from Phase F 2026-05-12.)
 - **(Maybe surfacing from Phase B)** — TouchSensor 200ms delay, MouseSensor 5px distance — both reasonable defaults but worth confirming they don't conflict with iPad VoiceOver or other a11y modes.
 
 **Why T2:** small, no architecture interaction. Could even be a single PR.

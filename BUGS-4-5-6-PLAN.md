@@ -77,7 +77,7 @@ My Bug 1 fix earlier this session (split `MouseSensor` + `TouchSensor` in `Setli
 
 ### Root cause
 
-[src/lib/songs/prime.ts:31-39](src/lib/songs/prime.ts:31) uses a one-shot `getDocs(collection(db, 'songs'))`. The hydrator fires `primeSongsLibrary()` once per mount ([SetlistGridHydrator.tsx:251-256](src/components/setlist/grid/SetlistGridHydrator.tsx:251)) and never re-runs. New songs added to Firestore during the session don't enter Dexie. `ChartBindDialog` reads from Dexie via `useLiveQuery(() => getDb().songs.toArray())` → empty for new songs.
+[src/lib/songs/prime.ts:31-39](src/lib/songs/prime.ts:31) uses a one-shot `getDocs(collection(db, 'songs'))`. The hydrator fires `primeSongsLibrary()` once per mount ([SetlistGridHydrator.tsx:293-294](src/components/setlist/grid/SetlistGridHydrator.tsx:251)) and never re-runs. New songs added to Firestore during the session don't enter Dexie. `ChartBindDialog` reads from Dexie via `useLiveQuery(() => getDb().songs.toArray())` → empty for new songs.
 
 ### What lands
 
