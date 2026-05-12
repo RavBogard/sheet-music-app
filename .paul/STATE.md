@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMP
 Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-01 LOOP COMPLETE; v60-04-02 (print routes) + v60-04-03 (email routes) pending
 Plan: v60-04-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke against deployed master commit)
 Status: v60-04-01 closed via full PLAN → APPLY → UNIFY cycle. Single combined commit per v60-01/02/03 precedent. Helper extract + page.tsx reroute + publish-route migration + 3-test emulator-backed coverage all in one commit. Net production source +18 LOC (≤30 budget met). All 7 AC PASS. One spec deviation auto-fixed in-plan (helper signature widened from narrow object type to `Record<string, unknown>` to satisfy TS2559 at SSR call site). Zero scope creep, zero deferred items. HFG counter stays at 0/3 — real-emulator coverage added, no waiver taken. v60-04 phase still in progress: v60-04-02 covers print/public + print/personal migration (~5-8 LOC net per route); v60-04-03 covers email-packets + resend-email migration. Same drop-in pattern shown in publish/route.ts.
-Last activity: 2026-05-12 — v60-04-01 LOOP COMPLETE; commit + push complete (SHA pending fill).
+Last activity: 2026-05-12 — v60-04-01 LOOP COMPLETE; committed as `f03dcb1`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 33% (3 of 10 phases LOOP COMPLETE; v60-04-01 of 3 plans within Phase 4 LOOP COMPLETE)
@@ -94,9 +94,9 @@ Resume context:
 
 ## Git State
 
-Last commit: v60-02 phase commit (SHA filled at push) — single combined commit per v60-01 precedent.
+Last commit: `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED 2026-05-12.
 Branch: master
-Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 precedent)
+Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
   - `a693d23` feat(v54-01-01): bootstrap songs/* + repair sticky thead — PUSHED
   - `c91d23f` docs(v54-01): close phase metadata — PUSHED
@@ -105,7 +105,9 @@ Push history this run:
   - `6dc44f3` feat(v60-01): SyncIndicator conflict click rewire + silent LWW on retry — PUSHED
   - `878afa9` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED
   - `1099cd3` docs(v60-02): correct commit SHA in STATE.md Git State section — PUSHED
-  - `edca556` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED THIS RUN
+  - `edca556` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED
+  - `bd5f808` docs(v60-03): correct commit SHA in STATE.md Git State section — PUSHED
+  - `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
