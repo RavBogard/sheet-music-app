@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMP
 Phase: 5 of 10 — v60-05 Editor + perform-view reader migration ✅ LOOP COMPLETE (1-plan phase)
 Plan: v60-05-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke against /perform/setlist/{id} on iPad)
 Status: v60-05 phase closed in 1 plan after Daniel "1" approval and /ui-ux-pro-max gate satisfaction. Editor side proven unnecessary to migrate (SetlistGrid already Dexie-routed). Only perf-view's 3-branch inline ternary extracted into shared `getTracksForSetlistClient` helper at `src/lib/client-tracks.ts` (20 LOC) + 7 pure-function unit tests (75 LOC, all green) + hook refactor (+7/-6). Net production +21 LOC ≤30. Client/server helper symmetry achieved. tsc clean, next build clean, main suite 1581 passed (+7 new client-tracks tests) / 52 pre-existing failures preserved, emulator suite green, HFG 0/3 held. 1 deferral logged: matrix/route.ts server reader → v60-06.
-Last activity: 2026-05-12 — v60-05 PHASE LOOP COMPLETE; v60-05-01 commit + push pending.
+Last activity: 2026-05-12 — v60-05 PHASE LOOP COMPLETE; v60-05-01 committed as `ce6147a`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED 2026-05-12.
+Last commit: `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -113,7 +113,9 @@ Push history this run:
   - `f044d1b` docs(v60-04-01): correct commit SHA in STATE.md Git State section — PUSHED
   - `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED
   - `dee66de` docs(v60-04-02): correct commit SHA in STATE.md Git State section — PUSHED
-  - `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED THIS RUN
+  - `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED
+  - `536ac88` docs(v60-04-03): correct commit SHA in STATE.md + ROADMAP.md — PUSHED
+  - `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
