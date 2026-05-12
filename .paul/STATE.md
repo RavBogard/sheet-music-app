@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMP
 Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-02 LOOP COMPLETE; v60-04-03 (email routes) pending
 Plan: v60-04-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: public packet via email link + personal packet flow on iPad)
 Status: v60-04-02 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. Single combined commit. Net production +8 LOC (≤30 budget met). All 6 AC PASS. Zero deviations, zero deferred items, zero new tests (helper contract already proven by v60-04-01 emulator suite). Both print packet endpoints now read live top-level tracks for hydrated setlists. HFG counter stays at 0/3. v60-04 phase still in progress: v60-04-03 covers email-packets + resend-email migration as final v60-04 plan.
-Last activity: 2026-05-12 — v60-04-02 LOOP COMPLETE; commit + push complete (SHA pending fill).
+Last activity: 2026-05-12 — v60-04-02 LOOP COMPLETE; committed as `1e1cdc4`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 37% (3 of 10 phases LOOP COMPLETE; 2 of 3 plans within Phase 4 LOOP COMPLETE)
@@ -94,7 +94,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED 2026-05-12.
+Last commit: `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -107,7 +107,9 @@ Push history this run:
   - `1099cd3` docs(v60-02): correct commit SHA in STATE.md Git State section — PUSHED
   - `edca556` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED
   - `bd5f808` docs(v60-03): correct commit SHA in STATE.md Git State section — PUSHED
-  - `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED THIS RUN
+  - `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED
+  - `f044d1b` docs(v60-04-01): correct commit SHA in STATE.md Git State section — PUSHED
+  - `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
