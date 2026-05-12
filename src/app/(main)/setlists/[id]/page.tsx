@@ -9,7 +9,8 @@ import {
     SetlistGridHydrator,
 } from "@/components/setlist/grid"
 import { canEditSetlist } from "@/lib/setlist-permissions"
-import type { LocalSetlist, LocalTrack } from "@/lib/local/types"
+import type { LocalSetlist } from "@/lib/local/types"
+import { getTracksForSetlist } from "@/lib/server-tracks"
 import { randomUUID } from "node:crypto"
 
 function toMs(value: unknown): number {
@@ -35,65 +36,6 @@ function buildLocalSetlist(
         updatedAt,
         eventDate,
     }
-}
-
-function buildLocalTracks(
-    setlistId: string,
-    setlistUpdatedAt: number,
-    rawTracks: unknown,
-): LocalTrack[] {
-    if (!Array.isArray(rawTracks)) return []
-    return rawTracks.map((t, index) => {
-        const track = (t ?? {}) as Record<string, unknown>
-        return {
-            ...track,
-            id: String(track.id ?? `${setlistId}-${index}`),
-            setlistId,
-            order: typeof track.order === "number" ? track.order : index,
-            updatedAt: setlistUpdatedAt,
-        } as LocalTrack
-    })
-}
-
-// P0 resurrection fix (2026-05-12): once a setlist's lazy-hydration cascade
-// has flipped `hydrated:true`, the embedded `setlists/{S}.tracks[]` array is
-// stale and must NOT be the source of truth. The engine writes through
-// top-level `tracks/{id}` and never cleans the embedded array, so reading it
-// would resurrect any track deleted in a prior session. Query the top-level
-// `tracks` collection directly; sort client-side (no composite index needed —
-// tracks-per-setlist is small).
-async function fetchTopLevelTracks(
-    db: FirebaseFirestore.Firestore,
-    setlistId: string,
-): Promise<LocalTrack[]> {
-    const snap = await db
-        .collection("tracks")
-        .where("setlistId", "==", setlistId)
-        .get()
-    const rows = snap.docs.map((d) => {
-        const data = d.data() as Record<string, unknown>
-        const updatedAtRaw = data.updatedAt as
-            | { toMillis?: () => number }
-            | number
-            | undefined
-        const updatedAt =
-            typeof updatedAtRaw === "object" &&
-            updatedAtRaw !== null &&
-            typeof updatedAtRaw.toMillis === "function"
-                ? updatedAtRaw.toMillis()
-                : typeof updatedAtRaw === "number"
-                  ? updatedAtRaw
-                  : 0
-        return {
-            ...data,
-            id: d.id,
-            setlistId,
-            order: typeof data.order === "number" ? data.order : 0,
-            updatedAt,
-        } as LocalTrack
-    })
-    rows.sort((a, b) => a.order - b.order)
-    return rows
 }
 
 // Note for Next.js 15: params/searchParams must be strings/Promises depending on exact Next.js versions.
@@ -147,18 +89,7 @@ export default async function SetlistEditorPage({
         id: string
     }
     const initialSetlist = buildLocalSetlist(serialized)
-    // P0 resurrection fix: for hydrated setlists, the embedded tracks[] is
-    // stale (engine doesn't maintain it). Query the top-level tracks/{id}
-    // collection instead; only fall back to the embedded array for pre-
-    // hydration legacy setlists (where lazy-hydration hasn't run yet).
-    const initialTracks =
-        serialized.hydrated === true
-            ? await fetchTopLevelTracks(db, id)
-            : buildLocalTracks(
-                  id,
-                  initialSetlist.updatedAt,
-                  serialized.tracks,
-              )
+    const initialTracks = await getTracksForSetlist(db, id, serialized)
 
     const setlistName =
         typeof serialized.name === "string" ? serialized.name : undefined

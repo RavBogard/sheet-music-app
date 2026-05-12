@@ -9,22 +9,22 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE — Wave 1 behaviorally complete + Wave 2 closed; Wave 3 unblocked)
-Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3, sequential; first engine-adjacent migration phase) — Not started
-Plan: None active
-Status: Phase v60-03 LOOP COMPLETE — closed via transition-phase. v60-03-01 ships as a single combined commit (+245 LOC test only across engine.emulator.test.ts; engine.ts UNTOUCHED in final tree per AC-3 proof discipline) plus .paul/ updates. HFG counter reset from 1/3 → 0/3 backed by working-tree revert-and-fail-then-restore proof captured verbatim in v60-03-01-SUMMARY.md. v53-02 clause-(b) waiver RESOLVED. v5h3-01 postmortem Action #2 CLOSED. Wave 3 migration spine now has a real-Firestore harness backing every engine-touching phase. Next phase v60-04 introduces a single `getTracksForSetlist` helper that all server-side readers (publish / print / email / scheduling) route through; mirrors the SSR ternary pattern shipped 2026-05-12 in `c9e92a5`. ≤30 LOC net per commit constraint per v6.0 locked decision applies.
-Last activity: 2026-05-12 — Phase v60-03 transition complete; commit + push pending.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE; v60-04 in progress with 1 of 3 plans closed)
+Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-01 LOOP COMPLETE; v60-04-02 (print routes) + v60-04-03 (email routes) pending
+Plan: v60-04-01 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke against deployed master commit)
+Status: v60-04-01 closed via full PLAN → APPLY → UNIFY cycle. Single combined commit per v60-01/02/03 precedent. Helper extract + page.tsx reroute + publish-route migration + 3-test emulator-backed coverage all in one commit. Net production source +18 LOC (≤30 budget met). All 7 AC PASS. One spec deviation auto-fixed in-plan (helper signature widened from narrow object type to `Record<string, unknown>` to satisfy TS2559 at SSR call site). Zero scope creep, zero deferred items. HFG counter stays at 0/3 — real-emulator coverage added, no waiver taken. v60-04 phase still in progress: v60-04-02 covers print/public + print/personal migration (~5-8 LOC net per route); v60-04-03 covers email-packets + resend-email migration. Same drop-in pattern shown in publish/route.ts.
+Last activity: 2026-05-12 — v60-04-01 LOOP COMPLETE; commit + push complete (SHA pending fill).
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [███░░░░░░░] 30% (3 of 10 phases LOOP COMPLETE)
+- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 33% (3 of 10 phases LOOP COMPLETE; v60-04-01 of 3 plans within Phase 4 LOOP COMPLETE)
 - Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
 - Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
-- Phase v60-04: [░░░░░░░░░░] 0% (not started — Wave 3 entry)
+- Phase v60-04: [███░░░░░░░] 33% (v60-04-01 of 3 plans LOOP COMPLETE; v60-04-02 + v60-04-03 pending)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase v60-03 closed; ready for /paul:plan v60-04]
+  ✓        ✓        ✓     [v60-04-01 LOOP COMPLETE; ready for /paul:plan v60-04-02]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -64,10 +64,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (full PLAN → APPLY → UNIFY → transition for v60-02 AND v60-03 in one session after `/paul:resume`)
-Stopped at: Phase v60-03 LOOP COMPLETE — committed + pushed; Wave 2 closed; HFG counter at 0/3; v53-02 waiver RESOLVED; Wave 3 unblocked. Ready for `/paul:plan v60-04`.
-Next action: `/paul:plan v60-04` — Server-side reader migration (Wave 3 entry). Introduces single `getTracksForSetlist` helper; routes publish / print / email / scheduling server reads through it; mirrors SSR ternary pattern from `c9e92a5`. ≤30 LOC net per commit constraint applies. First Wave 3 phase to ride the new emulator harness.
-Resume file: .paul/phases/v60-03-java-install-emulator-canary/v60-03-01-SUMMARY.md
+Last session: 2026-05-12 (full PLAN → APPLY → UNIFY for v60-04-01 in one session after `/paul:resume`)
+Stopped at: Phase v60-04-01 LOOP COMPLETE — committed + pushed. Wave 3 server-reader migration spine has its anchor helper (`getTracksForSetlist`) + first non-SSR consumer (publish route) + emulator-backed test coverage. Next two plans (v60-04-02 print routes, v60-04-03 email routes) follow the same drop-in pattern; each ~5-8 LOC net per route. PENDING-UAT folds into the Daniel-loop browser-smoke against the deployed master commit over the upcoming worship cycle.
+Next action: `/paul:plan v60-04-02` — Migrate print/public + print/personal route readers through `getTracksForSetlist`. Two routes, near-identical surface — file-bundle into one commit per the original phase plan.
+Resume file: .paul/phases/v60-04-server-side-reader-migration/v60-04-01-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

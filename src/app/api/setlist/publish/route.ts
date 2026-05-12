@@ -14,6 +14,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { recordSongUsage } from '@/lib/song-usage'
+import { getTracksForSetlist } from '@/lib/server-tracks'
 import { emailAllMembers } from '@/lib/email'
 import { sendPushToUsers } from '@/lib/push-send'
 import { sendSMS } from '@/lib/sms'
@@ -82,7 +83,14 @@ export const POST = createApiHandler(
         }
 
         // Validate: must have at least one song
-        const tracks: Array<{ fileId?: string; title: string; key?: string; type?: string }> = setlist.tracks || []
+        // v60-04-01: hydration-aware read via shared helper. For hydrated
+        // setlists, the embedded `setlist.tracks[]` is stale (engine writes
+        // through top-level `tracks/{id}` only); helper queries the live
+        // source. Cast preserves the narrow shape used by downstream
+        // consumers (publishedSnapshot, recordSongUsage, email body).
+        const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as Array<{
+            fileId?: string; title: string; key?: string; type?: string
+        }>
         const hasSongs = tracks.some(t => t.fileId && (!t.type || t.type === 'song'))
         if (!hasSongs) {
             return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
