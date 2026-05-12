@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMP
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; ~5 plans remaining
 Plan: v60-06-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: HeroCard chart preloads + NextServiceCard/PublicSetlistListing filtered song counts on iPad)
 Status: v60-06-02 extended the v54-01-03 reconciler with two denormalized fields (songCount + fileIds) via parallel useLiveQuery + lastWrittenRef + debounced applyEdit blocks. Three dashboard consumers migrated (HeroCard fileIds, NextServiceCard + PublicSetlistListing songCount). Architectural decision locked after Daniel design discussion: client reconciler (option B), NOT Cloud Function trigger (option D) — "historical counts don't matter" + single-write-path topology removes D's drift-robustness benefit. Net +144 LOC production source — flagged AC-8 deviation; justified by tight coupling between reconciler producer + consumer reads (split commit would orphan denormalized fields). 1 in-flight test contract update auto-fixed (cascade-patch assertion at SetlistGridHydrator.test.tsx:264). tsc clean, next build clean, main suite 1581/52 baseline preserved, emulator green, HFG 0/3 held.
-Last activity: 2026-05-12 — v60-06-02 LOOP COMPLETE; commit + push pending.
+Last activity: 2026-05-12 — v60-06-02 LOOP COMPLETE; committed as `9eedb14`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED 2026-05-12.
+Last commit: `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -117,7 +117,9 @@ Push history this run:
   - `536ac88` docs(v60-04-03): correct commit SHA in STATE.md + ROADMAP.md — PUSHED
   - `ce6147a` feat(v60-05-01): extract getTracksForSetlistClient helper; close v60-05 phase — PUSHED
   - `2c3bbe7` docs(v60-05-01): correct commit SHA in STATE.md Git State section — PUSHED
-  - `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED THIS RUN
+  - `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED
+  - `91f9735` docs(v60-06-01): correct commit SHA in STATE.md Git State section — PUSHED
+  - `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
