@@ -519,7 +519,12 @@ describe('T1.4: modal title adapts to error kinds', () => {
         )
     })
 
-    it('non-conflict failure → "Some saves need attention" title', async () => {
+    it('non-conflict-only failure (auth, etc.) does NOT open the modal', async () => {
+        // P0 modal-flood fix (2026-05-12): the reconciliation modal is for
+        // version-mismatch conflicts only. Auth / RemoteDocMissing /
+        // dead-letter transient failures surface via SyncIndicator's
+        // "Failed — retry" affordance instead — the modal's "Keep mine /
+        // Take theirs" radios can't actually resolve those failure modes.
         await seedTrack('t1', { title: 'Aleinu' })
         await seedFailedRows([
             {
@@ -532,7 +537,7 @@ describe('T1.4: modal title adapts to error kinds', () => {
             t1: { data: { id: 't1', key: 'G' }, updatedAt: 2000 },
         })
 
-        setMockState('conflict')
+        setMockState('failed')
 
         render(
             <ReconciliationProvider adapter={adapter}>
@@ -540,12 +545,9 @@ describe('T1.4: modal title adapts to error kinds', () => {
             </ReconciliationProvider>,
         )
 
-        await screen.findByTestId('reconciliation-dialog')
-        expect(screen.getByTestId('reconciliation-title')).toHaveTextContent(
-            'Some saves need attention',
-        )
-        // The error-kind chip surfaces on the card.
-        await screen.findByTestId(/^reconciliation-error-kind-/)
+        // Wait a tick for any conditional render. The dialog should NOT mount.
+        await new Promise((r) => setTimeout(r, 30))
+        expect(screen.queryByTestId('reconciliation-dialog')).toBeNull()
     })
 })
 

@@ -258,7 +258,10 @@ describe('SetlistGridHydrator', () => {
         const [updateEdit, updateOptions] = updateCalls[0]!
         if (updateEdit.op !== 'update') throw new Error('unreachable')
         expect(updateEdit.docId).toBe(SETLIST_ID)
-        expect(updateEdit.patch).toEqual({ hydrated: true })
+        // P0 cascade-race fix (2026-05-12): trackCount is now folded into
+        // the cascade's hydrated:true update so a parallel reconciler
+        // write doesn't race the cascade on setlists/{S}.
+        expect(updateEdit.patch).toEqual({ hydrated: true, trackCount: 2 })
         expect(updateEdit.expectedUpdatedAt).toBe(updatedAt)
         expect(updateOptions).toEqual({ withoutUndo: true })
     })
