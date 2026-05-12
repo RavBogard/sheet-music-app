@@ -105,7 +105,7 @@ Push history this run:
   - `6dc44f3` feat(v60-01): SyncIndicator conflict click rewire + silent LWW on retry — PUSHED
   - `878afa9` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED
   - `1099cd3` docs(v60-02): correct commit SHA in STATE.md Git State section — PUSHED
-  - `e6284a1` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED THIS RUN
+  - `edca556` feat(v60-03): H-SL-7 emulator canary + Harness Fidelity Gate reset — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
