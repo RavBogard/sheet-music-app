@@ -119,7 +119,11 @@ function makeAdapter(
     }
 }
 
-describe('ReconciliationProvider', () => {
+// P0 (2026-05-12, second pass): the reconciliation modal is force-disabled
+// (hasConflict = false). Tests that asserted modal-opening behavior are
+// skipped pending the Tier 3 Y.js pivot which deletes the modal entirely.
+// The classifyOutboxError unit tests below remain active (pure function).
+describe.skip('ReconciliationProvider', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')
@@ -480,7 +484,7 @@ describe('T1.4: classifyOutboxError', () => {
     })
 })
 
-describe('T1.4: modal title adapts to error kinds', () => {
+describe.skip('T1.4: modal title adapts to error kinds', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')
@@ -537,7 +541,7 @@ describe('T1.4: modal title adapts to error kinds', () => {
             t1: { data: { id: 't1', key: 'G' }, updatedAt: 2000 },
         })
 
-        setMockState('failed')
+        setMockState('conflict')
 
         render(
             <ReconciliationProvider adapter={adapter}>
@@ -551,7 +555,7 @@ describe('T1.4: modal title adapts to error kinds', () => {
     })
 })
 
-describe('ReconciliationProvider — WCAG AA (jest-axe)', () => {
+describe.skip('ReconciliationProvider — WCAG AA (jest-axe)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')

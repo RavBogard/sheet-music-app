@@ -231,8 +231,17 @@ export function ReconciliationProvider({
         [failedRows],
     )
 
-    const hasConflict =
-        (state === 'conflict' || state === 'failed') && conflictRows.length > 0
+    // P0 (2026-05-12, second pass): the modal adds nothing the user
+    // actually wants — even "Keep mine / Take theirs" radios on real
+    // version-mismatch rows are friction rather than utility for a sole-
+    // user app. Force-disable the modal entirely. Failed outbox rows still
+    // surface via SyncIndicator's "Failed — retry" pill, and Fix #3 in
+    // engine.ts auto-heals legacy-unstamped VersionMismatchErrors before
+    // they ever reach 'failed' state. This whole component goes away in
+    // the Tier 3 Y.js pivot; until then it's effectively dormant.
+    const hasConflict = false
+    void state
+    void conflictRows
 
     // Bug 2 fix (2026-05-12): the modal must actually open. The previous
     // `const open = false` plus no-op `openModal/closeModal` stub meant the
