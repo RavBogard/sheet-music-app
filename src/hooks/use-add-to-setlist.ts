@@ -4,8 +4,51 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
+import { applyEdit } from "@/lib/local/write"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
+
+/**
+ * P0 fix (2026-05-12): mirror new SetlistTracks into the top-level
+ * `tracks/{id}` collection via the sync engine. The library "Add to
+ * setlist" path historically only wrote the legacy embedded
+ * `setlists/{S}.tracks[]` array, but after the SSR fetcher started
+ * reading top-level `tracks/{id}` for hydrated setlists, embedded-only
+ * tracks became invisible in the editor. We now write BOTH: the embedded
+ * array (for back-compat with perform view, print, dashboard) AND a
+ * top-level doc per track (for the editor). Fire-and-forget — the
+ * embedded-array write already toasted success; the top-level mirror
+ * runs via applyEdit which queues an outbox row and drains when the
+ * engine pumps.
+ */
+async function mirrorTracksToTopLevel(
+    setlistId: string,
+    newTracks: SetlistTrack[],
+    startOrder: number,
+): Promise<void> {
+    await Promise.all(
+        newTracks.map((t, i) =>
+            applyEdit(
+                {
+                    op: "set",
+                    collection: "tracks",
+                    doc: {
+                        id: t.id,
+                        setlistId,
+                        songId: t.fileId,
+                        fileId: t.fileId,
+                        order: startOrder + i,
+                        title: t.title,
+                        type: "song",
+                        ...(t.key ? { key: t.key } : {}),
+                        ...(t.notes ? { notes: t.notes } : {}),
+                    } as unknown as Record<string, unknown> & { id: string },
+                },
+                { withoutUndo: true },
+            ),
+        ),
+    )
+}
 
 /** Clean a filename into a display title (same logic as addSongsFromLibrary) */
 function cleanFileName(name: string): string {
@@ -139,6 +182,16 @@ export function useAddToSetlist() {
       trackCount: updatedTracks.length,
     }, expected)
 
+    // P0 fix (2026-05-12): also mirror into top-level tracks/{id} so the
+    // setlist editor (which reads top-level for hydrated setlists) sees
+    // the additions. Logs and continues on failure — the embedded array
+    // write already succeeded and toast already fired.
+    try {
+      await mirrorTracksToTopLevel(setlistId, newTracks, setlist.tracks.length)
+    } catch (err) {
+      console.warn("[useAddToSetlist] top-level mirror failed", err)
+    }
+
     // Build toast message
     let message: string
     if (pendingSongs.length === 1) {
@@ -224,6 +277,13 @@ export function useAddToSetlist() {
       tracks: updatedTracks,
       trackCount: updatedTracks.length,
     }, expected)
+
+    // P0 fix (2026-05-12): mirror to top-level tracks/{id}, same as addToSetlist above.
+    try {
+      await mirrorTracksToTopLevel(setlistId, newTracks, setlist.tracks.length)
+    } catch (err) {
+      console.warn("[useAddToSetlist] top-level mirror failed", err)
+    }
 
     let message: string
     if (files.length === 1) {
