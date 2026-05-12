@@ -146,6 +146,48 @@ function rowKey(r: FailedRow | { collection: string; docId: string }): string {
     return `${r.collection}/${r.docId}`
 }
 
+/**
+ * T1.4 (2026-05-12) — classify outbox.lastError so the modal can label
+ * each card with the actual failure cause. Pre-T1.4 the modal rendered
+ * "Remote changes detected" for every failed row, including dead-letter
+ * (network exhaustion), auth failures, and remote-doc-missing errors —
+ * misleading UX. Patterns come from the error message strings produced
+ * by engine.handleAdapterError + the typed adapter error classes in
+ * firestore-adapter.ts.
+ */
+export type ErrorKind = 'version-mismatch' | 'remote-missing' | 'auth' | 'transient'
+
+export function classifyOutboxError(lastError: string | undefined): ErrorKind {
+    if (!lastError) return 'transient'
+    if (/expected updatedAt=/.test(lastError)) return 'version-mismatch'
+    if (/isn't on the server|never synced|RemoteDocMissing/.test(lastError))
+        return 'remote-missing'
+    if (
+        /Auth failure|No authenticated user|unauthenticated|permission-denied/.test(
+            lastError,
+        )
+    )
+        return 'auth'
+    return 'transient'
+}
+
+const ERROR_KIND_LABEL: Record<ErrorKind, string> = {
+    'version-mismatch': 'Remote change detected',
+    'remote-missing': 'Server doesn’t have this row',
+    auth: 'Authentication problem',
+    transient: 'Save failed (network / server)',
+}
+
+const ERROR_KIND_HINT: Record<ErrorKind, string> = {
+    'version-mismatch':
+        'Someone else changed this while you were editing. Pick which version to keep.',
+    'remote-missing':
+        'The row was deleted or never landed on the server. Discard the local change to drop it, or keep yours to re-create it.',
+    auth: 'Your session may have expired. Sign out and back in, then retry.',
+    transient:
+        'A network or server error prevented this save. Pick "Keep mine" to retry, or "Take theirs" to discard.',
+}
+
 export function ReconciliationProvider({
     children,
     adapter: adapterOverride,
@@ -378,17 +420,36 @@ export function ReconciliationProvider({
                     }}
                     className="max-w-2xl"
                 >
-                    <AlertDialogHeader>
-                        <AlertDialogTitle data-testid="reconciliation-title">
-                            Remote changes detected
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Someone else (or another device) changed{' '}
-                            {failedRows.length === 1 ? 'this row' : 'these rows'}{' '}
-                            while you were editing. Pick which version to keep.
-                            "Take theirs" is the safe default.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                    {(() => {
+                        // T1.4: derive title + lead copy from the row error
+                        // kinds. When all rows are VersionMismatch, keep the
+                        // legacy "Remote changes detected" title (tests +
+                        // existing UX). When any row is a non-conflict
+                        // failure, switch to neutral title; per-row cards
+                        // surface the specific cause.
+                        const kinds = failedRows.map((r) =>
+                            classifyOutboxError(r.lastError),
+                        )
+                        const allVersionMismatch = kinds.every(
+                            (k) => k === 'version-mismatch',
+                        )
+                        const title = allVersionMismatch
+                            ? 'Remote changes detected'
+                            : 'Some saves need attention'
+                        const desc = allVersionMismatch
+                            ? `Someone else (or another device) changed ${failedRows.length === 1 ? 'this row' : 'these rows'} while you were editing. Pick which version to keep. "Take theirs" is the safe default.`
+                            : `${failedRows.length === 1 ? 'A row' : `${failedRows.length} rows`} couldn’t be saved. Each card below explains why and what to do.`
+                        return (
+                            <AlertDialogHeader>
+                                <AlertDialogTitle data-testid="reconciliation-title">
+                                    {title}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {desc}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                        )
+                    })()}
 
                     <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
                         {failedRows.map((r) => {
@@ -396,6 +457,7 @@ export function ReconciliationProvider({
                             const title =
                                 titleMap.get(rowKey(r)) ?? r.docId
                             const choice = choices.get(r.localId) ?? 'theirs'
+                            const kind = classifyOutboxError(r.lastError)
                             return (
                                 <ReconciliationCard
                                     key={r.localId}
@@ -412,6 +474,9 @@ export function ReconciliationProvider({
                                     onChoiceChange={(c) =>
                                         setChoice(r.localId, c)
                                     }
+                                    errorKindLabel={ERROR_KIND_LABEL[kind]}
+                                    errorKindHint={ERROR_KIND_HINT[kind]}
+                                    errorKindTestId={kind}
                                 />
                             )
                         })}
@@ -451,6 +516,11 @@ interface ReconciliationCardProps {
     remoteData: Record<string, unknown> | undefined
     choice: Choice
     onChoiceChange: (c: Choice) => void
+    /** T1.4: classified error kind shown above the diff so the user can
+     *  tell a real conflict from a network/auth/missing-doc failure. */
+    errorKindLabel?: string
+    errorKindHint?: string
+    errorKindTestId?: string
 }
 
 function ReconciliationCard({
@@ -461,6 +531,9 @@ function ReconciliationCard({
     remoteData,
     choice,
     onChoiceChange,
+    errorKindLabel,
+    errorKindHint,
+    errorKindTestId,
 }: ReconciliationCardProps) {
     const groupName = `reconcile-${localId}`
     const titleId = `reconcile-${localId}-title`
@@ -480,6 +553,23 @@ function ReconciliationCard({
             >
                 {title}
             </h3>
+
+            {errorKindLabel ? (
+                <div
+                    className="mb-2 rounded-sm border border-amber-400/30 bg-amber-500/5 px-2 py-1"
+                    data-testid={`reconciliation-error-kind-${localId}`}
+                    data-error-kind={errorKindTestId}
+                >
+                    <p className="text-xs font-semibold text-amber-300">
+                        {errorKindLabel}
+                    </p>
+                    {errorKindHint ? (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {errorKindHint}
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
 
             {diffKeys.length === 0 ? (
                 <p className="text-xs text-muted-foreground">

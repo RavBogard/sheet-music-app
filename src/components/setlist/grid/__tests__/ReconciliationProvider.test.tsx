@@ -46,7 +46,10 @@ import { getDb, resetDbForTests } from '@/lib/local/schema'
 import type { OutboxRow } from '@/lib/local/types'
 import type { FirestoreAdapter } from '@/lib/sync/firestore-adapter'
 
-import { ReconciliationProvider } from '../ReconciliationProvider'
+import {
+    ReconciliationProvider,
+    classifyOutboxError,
+} from '../ReconciliationProvider'
 
 // Reuse the v50-05-05 axeOpts — same harness-context disabled rules.
 const axeOpts = {
@@ -441,6 +444,108 @@ describe('ReconciliationProvider', () => {
         expect(calls[1][0]).toBe(failedRows[1].localId)
         expect(calls[1][1]).toBe('theirs')
         expect(calls[1][2]).toEqual({ newExpectedUpdatedAt: undefined })
+    })
+})
+
+describe('T1.4: classifyOutboxError', () => {
+    it('VersionMismatchError message → version-mismatch', () => {
+        expect(
+            classifyOutboxError('expected updatedAt=1000, remote=2000'),
+        ).toBe('version-mismatch')
+    })
+
+    it("RemoteDocMissingError message → remote-missing", () => {
+        expect(
+            classifyOutboxError(
+                "This setlist isn't on the server (was deleted or never synced). Refresh your library.",
+            ),
+        ).toBe('remote-missing')
+    })
+
+    it('AuthError message → auth', () => {
+        expect(
+            classifyOutboxError('Auth failure on tracks/abc: permission-denied'),
+        ).toBe('auth')
+        expect(
+            classifyOutboxError('No authenticated user — cannot refresh token'),
+        ).toBe('auth')
+    })
+
+    it('Unknown error → transient (dead-letter)', () => {
+        expect(classifyOutboxError('some random failure')).toBe('transient')
+    })
+
+    it('Undefined lastError → transient', () => {
+        expect(classifyOutboxError(undefined)).toBe('transient')
+    })
+})
+
+describe('T1.4: modal title adapts to error kinds', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+        setMockState('idle')
+    })
+
+    afterEach(async () => {
+        cleanup()
+        await resetDbForTests()
+    })
+
+    it('all VersionMismatch → "Remote changes detected" (legacy title)', async () => {
+        await seedTrack('t1', { title: 'Aleinu', key: 'F' })
+        await seedFailedRows([
+            {
+                docId: 't1',
+                payload: { key: 'A' },
+                expectedUpdatedAt: 1000,
+                lastError: 'expected updatedAt=1000, remote=2000',
+            },
+        ])
+        const adapter = makeAdapter({
+            t1: { data: { id: 't1', key: 'G' }, updatedAt: 2000 },
+        })
+
+        setMockState('conflict')
+
+        render(
+            <ReconciliationProvider adapter={adapter}>
+                <span>child</span>
+            </ReconciliationProvider>,
+        )
+
+        await screen.findByTestId('reconciliation-dialog')
+        expect(screen.getByTestId('reconciliation-title')).toHaveTextContent(
+            'Remote changes detected',
+        )
+    })
+
+    it('non-conflict failure → "Some saves need attention" title', async () => {
+        await seedTrack('t1', { title: 'Aleinu' })
+        await seedFailedRows([
+            {
+                docId: 't1',
+                payload: { key: 'A' },
+                lastError: 'Auth failure on tracks/t1: permission-denied',
+            },
+        ])
+        const adapter = makeAdapter({
+            t1: { data: { id: 't1', key: 'G' }, updatedAt: 2000 },
+        })
+
+        setMockState('conflict')
+
+        render(
+            <ReconciliationProvider adapter={adapter}>
+                <span>child</span>
+            </ReconciliationProvider>,
+        )
+
+        await screen.findByTestId('reconciliation-dialog')
+        expect(screen.getByTestId('reconciliation-title')).toHaveTextContent(
+            'Some saves need attention',
+        )
+        // The error-kind chip surfaces on the card.
+        await screen.findByTestId(/^reconciliation-error-kind-/)
     })
 })
 
