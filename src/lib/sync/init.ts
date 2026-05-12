@@ -38,6 +38,39 @@ import {
 } from './firestore-adapter'
 import { wireSyncEngineToStore } from './store'
 
+/**
+ * T1.3 (2026-05-12): exported for testing.
+ *
+ * Decides whether a write should proceed given the editor's expected
+ * `updatedAt` and the remote doc's current `updatedAt`. Returns `null`
+ * to proceed, or an error message string when the write must throw
+ * `VersionMismatchError`.
+ *
+ * Bug fix vs. the pre-T1.3 inline code: the previous guard short-
+ * circuited the precondition check when the remote stamp was
+ * undefined (`remoteMs !== undefined && remoteMs !== expectedMs`).
+ * That meant: if the editor saw a stamped doc at read time but the
+ * remote doc had no stamp at commit time, the write proceeded as if
+ * there were no precondition. Silent LWW on legacy / pre-stamp data.
+ *
+ * Corrected semantics:
+ *  - No expectation (`expectedUpdatedAt === undefined`) → always pass;
+ *    the engine treats this as "first write, no precondition" (matches
+ *    LocalTrack.updatedAt semantics for freshly-created rows that
+ *    haven't been server-stamped yet).
+ *  - Expected stamp matches remote stamp → pass.
+ *  - Expected stamp does NOT match remote stamp (including the case
+ *    where remote stamp is undefined) → fail with VersionMismatch.
+ */
+export function checkUpdatePrecondition(
+    expectedUpdatedAt: number | undefined,
+    remoteMs: number | undefined,
+): string | null {
+    if (expectedUpdatedAt === undefined) return null
+    if (remoteMs === expectedUpdatedAt) return null
+    return `expected updatedAt=${expectedUpdatedAt}, remote=${remoteMs ?? 'undefined'}`
+}
+
 class ProductionFirestoreAdapter implements FirestoreAdapter {
     async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
@@ -72,19 +105,23 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                                 `This setlist isn't on the server (was deleted or never synced). Refresh your library.`,
                             )
                         }
-                        if (row.expectedUpdatedAt !== undefined) {
-                            const remote = snap.data() as {
-                                updatedAt?: Timestamp
-                            }
-                            const remoteMs = remote.updatedAt?.toMillis()
-                            if (
-                                remoteMs !== undefined &&
-                                remoteMs !== row.expectedUpdatedAt
-                            ) {
-                                throw new VersionMismatchError(
-                                    `expected updatedAt=${row.expectedUpdatedAt}, remote=${remoteMs}`,
-                                )
-                            }
+                        // T1.3 (2026-05-12): precondition check via the
+                        // exported `checkUpdatePrecondition` helper so the
+                        // semantics are unit-testable. Previously the inline
+                        // guard had a `remoteMs !== undefined &&` short-
+                        // circuit that silently passed when local expected
+                        // a stamp but remote had none — silent LWW on
+                        // pre-stamp legacy data. The helper closes that gap.
+                        const remote = snap.data() as {
+                            updatedAt?: Timestamp
+                        }
+                        const remoteMs = remote.updatedAt?.toMillis()
+                        const preconditionError = checkUpdatePrecondition(
+                            row.expectedUpdatedAt,
+                            remoteMs,
+                        )
+                        if (preconditionError !== null) {
+                            throw new VersionMismatchError(preconditionError)
                         }
                         tx.update(ref, {
                             ...row.payload,
