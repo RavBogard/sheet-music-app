@@ -5,6 +5,7 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { sendSetlistEmail } from "@/lib/email"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
+import { getTracksForSetlist } from "@/lib/server-tracks"
 
 export const maxDuration = 120
 
@@ -57,13 +58,18 @@ export const POST = createApiHandler(
         const url = new URL(ctx.req.url)
         const baseUrl = `${url.protocol}//${url.host}`
 
-        // Get song list for email
-        const songs = (setlist.tracks || [])
-            .filter((t: { type?: string }) => !t.type || t.type === 'song')
-            .map((t: { title: string; key?: string }) => ({
-                title: t.title,
-                key: t.key,
-            }))
+        // v60-04-03: hydration-aware read via shared helper. Embedded
+        // setlist.tracks[] is stale post-hydration. The strict typing on
+        // `tracks` surfaces a latent type mismatch — sendSetlistEmail.songs
+        // is typed `string[]` (lib/email.ts:36), but the prior chain passed
+        // `{title, key}[]` via any-passthrough. Mirror the resend-email
+        // route (line 119) and pass just titles.
+        const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as Array<{
+            title: string; type?: string
+        }>
+        const songs = tracks
+            .filter(t => !t.type || t.type === 'song')
+            .map(t => t.title)
 
         // Get event date
         const eventDate = setlist.eventDate?.toDate?.()

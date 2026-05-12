@@ -9,22 +9,23 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (3 of 10 phases LOOP COMPLETE; v60-04 in progress with 2 of 3 plans closed)
-Phase: 4 of 10 — v60-04 Server-side reader migration (Wave 3 entry) — v60-04-02 LOOP COMPLETE; v60-04-03 (email routes) pending
-Plan: v60-04-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: public packet via email link + personal packet flow on iPad)
-Status: v60-04-02 closed via full PLAN → APPLY → UNIFY cycle in autonomous mode. Single combined commit. Net production +8 LOC (≤30 budget met). All 6 AC PASS. Zero deviations, zero deferred items, zero new tests (helper contract already proven by v60-04-01 emulator suite). Both print packet endpoints now read live top-level tracks for hydrated setlists. HFG counter stays at 0/3. v60-04 phase still in progress: v60-04-03 covers email-packets + resend-email migration as final v60-04 plan.
-Last activity: 2026-05-12 — v60-04-02 LOOP COMPLETE; committed as `1e1cdc4`; pushed to origin master.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (4 of 10 phases LOOP COMPLETE — v60-04 closed)
+Phase: 4 of 10 — v60-04 Server-side reader migration ✅ LOOP COMPLETE (3 of 3 plans closed). Next: v60-05 (Wave 3 sequential — editor + perform-view client-side reader migration).
+Plan: v60-04 phase LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke across publish, print packets, email packets, resend-email flows over upcoming worship cycle).
+Status: v60-04 closed via 3-plan PLAN → APPLY → UNIFY cycles, autonomous mode end-to-end after Daniel "1" approvals. Every server-side track reader now routes through `getTracksForSetlist`: SSR page.tsx, publish/route.ts, print/public/route.ts, print/personal/route.ts, email-packets/route.ts, resend-email/route.ts. Aggregate net production +39 LOC across 7 files (≤30/plan budget met on each commit). 3 emulator-backed tests prove the helper contract. HFG counter held at 0/3 throughout the phase. 2 in-flight type fixes auto-resolved (helper signature widening v60-04-01; songs payload alignment v60-04-03 — both surfaced by strict casts, both documented). Zero new main-suite failures introduced (1574 passed / 52 pre-existing failed baseline preserved across all three plan commits). Wave 3 server spine complete; v60-07 writer strip now safe to plan.
+Last activity: 2026-05-12 — v60-04 PHASE LOOP COMPLETE; v60-04-03 committed (SHA pending fill); pushed.
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 37% (3 of 10 phases LOOP COMPLETE; 2 of 3 plans within Phase 4 LOOP COMPLETE)
+- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
 - Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
 - Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
-- Phase v60-04: [██████░░░░] 67% (v60-04-01 + v60-04-02 LOOP COMPLETE; v60-04-03 pending)
+- Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
+- Phase v60-05: [░░░░░░░░░░] 0% (not started — Wave 3 sequential, client-side editor + perform-view reader migration)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-04-02 LOOP COMPLETE; ready for /paul:plan v60-04-03]
+  ✓        ✓        ✓     [v60-04 PHASE LOOP COMPLETE; ready for /paul:plan v60-05]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -64,10 +65,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-04-02 full PLAN → APPLY → UNIFY in one pass after Daniel "1" approval)
-Stopped at: v60-04-02 LOOP COMPLETE; both print packet endpoints migrated. v60-04-03 (email-packets + resend-email) follows next under same autonomous mandate.
-Next action: `/paul:plan v60-04-03` — Migrate email-packets + resend-email route readers through `getTracksForSetlist`. Final v60-04 plan. Same drop-in pattern.
-Resume file: .paul/phases/v60-04-server-side-reader-migration/v60-04-02-SUMMARY.md
+Last session: 2026-05-12 (autonomous mode — v60-04-02 + v60-04-03 full PLAN → APPLY → UNIFY chained after Daniel "1" approvals + no-stop mandate)
+Stopped at: v60-04 PHASE LOOP COMPLETE — all 3 plans closed in one session. Wave 3 server-reader spine done. Helper migration scaffold proven across 5 server route surfaces. v60-07 writer strip now safe to plan.
+Next action: `/paul:plan v60-05` — Wave 3 sequential, client-side editor + perform-view reader migration. /ui-ux-pro-max gate WILL apply per SPECIAL-FLOWS (client React components). New surface: useLiveQuery + v50-07-03 hydrator. Pattern from v60-04 is conceptually transferable; implementation differs (client SDK, React).
+Resume file: .paul/phases/v60-04-server-side-reader-migration/v60-04-03-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

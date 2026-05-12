@@ -15,6 +15,7 @@ import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { emailAllMembers } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { getTracksForSetlist } from '@/lib/server-tracks'
 
 const bodySchema = z.object({
     setlistId: z.string().min(1),
@@ -115,7 +116,13 @@ export async function POST(request: NextRequest) {
         const setlistName = setlist.name || 'Untitled Setlist'
         const eventDate = setlist.eventDate?.toDate?.() || setlist.date?.toDate?.() || new Date()
         const eventDateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        const tracks: Array<{ title: string; type?: string }> = setlist.tracks || []
+        // v60-04-03: hydration-aware read via shared helper. Cast preserves
+        // narrow shape for the songNames builder one line below. Embedded
+        // setlist.tracks[] is stale post-hydration.
+        const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as Array<{
+            title: string; type?: string
+        }>
+
         const songNames = tracks.filter(t => !t.type || t.type === 'song').map(t => t.title)
 
         // Get publisher name
