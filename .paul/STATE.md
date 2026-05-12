@@ -5,24 +5,25 @@
 See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v5.4 ✅ COMPLETE 2026-05-12 — Hotfix + Harness Fidelity closed via `/paul:complete-milestone`. v6.0 — Tracks Single-Source-of-Truth plan locked in `.paul/MILESTONE-CONTEXT.md` (10 phases / 4 waves / 12 decisions); awaiting `/paul:milestone` invocation. First commit target: Monday 2026-05-13 with `/paul:apply v60-01` (SyncIndicator conflict click rewire). v5.0 + v5.2 + v5.3 + v5.4 (incl. 8 P0 patches from 2026-05-12) all in PENDING-UAT close paths over the upcoming worship cycle.
+**Current focus:** v6.0 — Tracks Single-Source-of-Truth IN PROGRESS. Wave 1 (orthogonal UX fixes) BEHAVIORALLY COMPLETE — v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain) both LOOP COMPLETE — PENDING-UAT. Together they close the iPad-Safari save-loss class implicated in v5h3-01. Next: Wave 2 — v60-03 (Java JDK 21 + v54-02-02 H-SL-7 emulator canary), which BLOCKS Wave 3 engine-touching phases and resets HFG counter to 0/3. v5.0 + v5.2 + v5.3 + v5.4 + v60-01 + v60-02 all in PENDING-UAT close paths over the upcoming worship cycle.
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (1 of 10 phases LOOP COMPLETE — PENDING-UAT)
-Phase: 2 of 10 — v60-02 pagehide/visibilitychange blur (mid-edit text protection) — Wave 1, parallel-safe (v60-01 transition complete, ready to plan v60-02)
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (2 of 10 phases LOOP COMPLETE — PENDING-UAT — Wave 1 behaviorally complete)
+Phase: 3 of 10 — v60-03 Java JDK 21 install + v54-02-02 H-SL-7 emulator canary (Wave 2, BLOCKING for Wave 3 engine phases) — Not started
 Plan: None active
-Status: Phase v60-01 LOOP COMPLETE — PENDING-UAT closed via transition-phase (PROJECT.md evolved, ROADMAP.md marked, git commit pending). v60-02 is Wave 1 parallel-safe — ~15 LOC patch in MobileRowCard + TextCell + engine-side `whenEngineIdle` wait. Wave 2 (v60-03 Java install + emulator canary) still BLOCKS Wave 3 engine-touching phases. HFG counter held at 1/3.
-Last activity: 2026-05-12 — Phase v60-01 transition complete; v60-02 ready to plan.
+Status: Phase v60-02 LOOP COMPLETE — PENDING-UAT closed via transition-phase. v60-02-01 ships as a single combined commit (~75 LOC source + 13 new tests) alongside .paul/ updates. Daniel browser-smoke against deployed commit closes AC-5 PENDING-UAT (iPad swipe-away repro: edit → swipe → return → verify draft persisted, no conflict pill). Wave 1 of v6.0 (v60-01 + v60-02) now behaviorally complete. Wave 2 (v60-03) is the next phase; involves a fully-attended human-action checkpoint (Windows `winget install Microsoft.OpenJDK.21 --scope user`) followed by the emulator canary that v54-02-02 deferred. HFG counter held at 1/3 — v60-03 resets it to 0/3 before any Wave 3 engine-touching phases.
+Last activity: 2026-05-12 — Phase v60-02 transition complete; commit + push pending.
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [█░░░░░░░░░] 10% (1 of 10 phases LOOP COMPLETE — PENDING-UAT)
-- Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT (browser-smoke against deployed commit closes AC-4)
-- Phase v60-02: [░░░░░░░░░░] 0% (not started)
+- v6.0 Tracks Single-Source-of-Truth: [██░░░░░░░░] 20% (2 of 10 phases LOOP COMPLETE — PENDING-UAT)
+- Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
+- Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
+- Phase v60-03: [░░░░░░░░░░] 0% (not started — BLOCKS Wave 3)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ○        ○        ○     [Phase v60-01 closed; ready for /paul:plan v60-02]
+  ✓        ✓        ✓     [Phase v60-02 closed; ready for /paul:plan v60-03]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -62,10 +63,18 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (full v60-01 PLAN → APPLY → UNIFY end-to-end after `/paul:complete-milestone` v5.4 + `/paul:milestone` v6.0)
-Stopped at: UNIFY complete for v60-01-01; phase v60-01 has 1 plan total so phase LOOP COMPLETE. Transition-phase pending (PROJECT.md evolve + ROADMAP.md phase status → complete + git commit). No commit yet — v60-01 deltas uncommitted.
-Next action: Run transition-phase: commit v60-01-01 work as `feat(sync): v60-01 SyncIndicator conflict click rewire + silent LWW on retry`, push to master for Vercel auto-deploy, Daniel browser-smoke against deployed commit per appended checklist (closes AC-4 PENDING-UAT). Then `/paul:plan v60-02` (parallel-safe; pagehide blur for mid-edit text protection) targeting same Wave 1.
-Resume file: .paul/phases/v60-01-sync-indicator-conflict-click-rewire/v60-01-01-SUMMARY.md
+Last session: 2026-05-12 (full PLAN → APPLY → UNIFY → transition for v60-02 in one session after `/paul:resume`)
+Stopped at: Phase v60-02 LOOP COMPLETE — PENDING-UAT, committed + pushed; Wave 1 of v6.0 behaviorally complete. Ready for `/paul:plan v60-03`.
+Next action: `/paul:plan v60-03` — Java JDK 21 install + v54-02-02 H-SL-7 emulator canary (Wave 2). Involves a fully-attended human-action checkpoint (`winget install Microsoft.OpenJDK.21 --scope user`). BLOCKS Wave 3 engine-touching phases; resets HFG counter to 0/3.
+Resume file: .paul/phases/v60-02-pagehide-blur-mid-edit-text-protection/v60-02-01-SUMMARY.md
+Resume context:
+- Wave 1 of v6.0 done: v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain). Together close the iPad-Safari save-loss class from v5h3-01.
+- v60-02 source delta: TextCell.tsx +24 LOC / MobileRowCard.tsx +25 LOC / sync/init.ts +25 LOC. Test delta: +13 assertions (4 + 4 + 5). All v60-02-related suites 21/21 green.
+- Pre-existing 52 test failures (SetlistGrid.contextmenu, SetlistGrid.undo, sync-engine, etc.) confirmed orthogonal to v60-02 via git-stash baseline diff. Carry-forward to Wave 2 (v60-03 HFG closure addresses harness fidelity).
+- /ui-ux-pro-max gate satisfied for both Wave 1 phases.
+- Vercel `development` env vars pulled to `.env.local` per Daniel's autonomous mandate this session.
+- HFG counter at 1/3 (clause-(b) waiver from v53-02). v60-03 resets it to 0/3 before Wave 3 engine-touching phases.
+- Friday/Shabbat cadence: no risky deploys Thu PM → Sun. v60-03 is infra (Java + emulator canary), low-risk for the worship cycle.
 Resume context:
 - v5.4 archived: MILESTONES.md § v5.4 entry + `.paul/milestones/v5.4-ROADMAP.md` snapshot + git tag `v5.4`. Fold-forward labels applied: v54-02-02 → v60-03, v54-03 → v60-09, Mobile AddBar → v60-10.
 - v6.0 = "Tracks Single-Source-of-Truth" — finishes v50-05 migration so top-level `tracks/{id}` is the single source. 10 phases in 4 waves (Wave 1 orthogonal UX fixes / Wave 2 HFG closure BLOCKING Wave 3 / Wave 3 migration spine / Wave 4 folded-in deferrals).
@@ -76,14 +85,16 @@ Resume context:
 
 ## Git State
 
-Last commit: `6735f48` (PUSHED) + v54-02-01 commit (pending push end-of-run).
+Last commit: v60-02 phase commit (SHA filled at push) — single combined commit per v60-01 precedent.
 Branch: master
-Feature branches merged: none (single-context single-commit per v53-02 / v53-03 precedent)
+Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 precedent)
 Push history this run:
   - `a693d23` feat(v54-01-01): bootstrap songs/* + repair sticky thead — PUSHED
   - `c91d23f` docs(v54-01): close phase metadata — PUSHED
   - `6735f48` fix(v54-01-02): write track.fileId on pick + bind — PUSHED (Daniel UAT interrupt)
-  - v54-02-01 feat: Firebase Local Emulator Suite infra + build-info script fix — PENDING PUSH
+  - v54-02-01 feat: Firebase Local Emulator Suite infra + build-info script fix — PUSHED in v60-01 bundle
+  - `6dc44f3` feat(v60-01): SyncIndicator conflict click rewire + silent LWW on retry — PUSHED
+  - `e1af6a0` feat(v60-02): pagehide / visibilitychange blur + engine drain coordinator — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 

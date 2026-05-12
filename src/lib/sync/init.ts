@@ -194,6 +194,28 @@ let booted = false
 let engineSingleton: SyncEngine | null = null
 let adapterSingleton: FirestoreAdapter | null = null
 let unsubscribeStore: (() => void) | null = null
+let pagehideHookInstalled = false
+
+/**
+ * v60-02 (2026-05-12) — register a `pagehide` listener that awaits
+ * `whenEngineIdle(2000)` so the outbox gets a flush window before the
+ * tab is suspended (iOS Safari grants ~5s before true suspension).
+ * Best-effort: the promise is intentionally not awaited; we just want
+ * to nudge the engine into its drain path during the grace window.
+ * Idempotent — module-level flag prevents double-registration across
+ * boot retries, HMR, or repeated `SyncEngineBoot` mounts.
+ *
+ * Exported so the test suite can exercise it without booting the full
+ * engine (which requires firebase + Dexie mocks).
+ */
+export function installPagehideDrainHook(): void {
+    if (typeof window === 'undefined') return
+    if (pagehideHookInstalled) return
+    pagehideHookInstalled = true
+    window.addEventListener('pagehide', () => {
+        void whenEngineIdle(2000)
+    })
+}
 
 function bootEngineOnce(): SyncEngine | null {
     if (typeof window === 'undefined') return null
@@ -212,6 +234,9 @@ function bootEngineOnce(): SyncEngine | null {
         // is failure-swallowing so a Sentry/IDB hiccup doesn't crash the
         // boot path. Runs ONCE per app mount.
         void uploadRecentEditLog()
+        // v60-02: pagehide → whenEngineIdle(2000) drain coordinator.
+        // See installPagehideDrainHook docs for rationale.
+        installPagehideDrainHook()
         engineSingleton = engine
         adapterSingleton = adapter
         return engine

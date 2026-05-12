@@ -92,6 +92,33 @@ export function MobileRowCard({
     const commitLead = () => { if (lead !== (track.leadMusician ?? '')) onCommit?.({ leadMusician: lead }) }
     const commitNotes = () => { if (notes !== (track.notes ?? '')) onCommit?.({ notes }) }
 
+    // v60-02: pagehide / visibilitychange:hidden flushes every onBlur-
+    // committed draft (title/lead/bpm/notes). `key` commits synchronously
+    // onChange so it has no pending draft. Per-commit guards de-dupe with
+    // any onBlur that may also fire. Listener only mounts while the
+    // inline editor is open (`isEditing`) so we don't register 30+
+    // listeners across a large setlist.
+    const flushRef = useRef<() => void>(() => {})
+    flushRef.current = () => {
+        commitTitle()
+        commitLead()
+        commitBpm()
+        commitNotes()
+    }
+    useEffect(() => {
+        if (!isEditing) return
+        const onHide = () => flushRef.current()
+        const onVisibility = () => {
+            if (document.visibilityState === 'hidden') flushRef.current()
+        }
+        window.addEventListener('pagehide', onHide)
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => {
+            window.removeEventListener('pagehide', onHide)
+            document.removeEventListener('visibilitychange', onVisibility)
+        }
+    }, [isEditing])
+
     const longPressTimerRef = useRef<number | null>(null)
     const longPressStartRef = useRef<{ x: number; y: number } | null>(null)
     const cardElRef = useRef<HTMLDivElement | null>(null)

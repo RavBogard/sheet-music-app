@@ -3,7 +3,7 @@
 ## Current Milestone
 
 **v6.0 — Tracks Single-Source-of-Truth** *(created 2026-05-12 from MILESTONE-CONTEXT.md)*
-Status: 🚧 In Progress (1 of 10 phases LOOP COMPLETE — PENDING-UAT)
+Status: 🚧 In Progress (2 of 10 phases LOOP COMPLETE — PENDING-UAT — Wave 1 behaviorally complete)
 Theme: *One source of truth, one read path, one write path — no more bandages on a half-migrated model, plus the orthogonal cleanups that have been waiting.*
 
 Finishes the v50-05 tracks migration so every read and every write of "the live track list" routes through `tracks/{id}` only; closes the two orthogonal UX bugs (stuck conflict pill + mid-edit text loss); satisfies the Harness Fidelity Gate; absorbs the deferred v54-03 library sync + Mobile AddBar variant. 10 phases in 4 waves; 12 decisions locked at creation (no re-litigation during planning).
@@ -11,7 +11,7 @@ Finishes the v50-05 tracks migration so every read and every write of "the live 
 | Wave | Phase | Focus | Status |
 |------|-------|-------|--------|
 | 1 (parallel) | v60-01 | SyncIndicator conflict click rewire + silent last-write-wins-on-retry | ✅ LOOP COMPLETE — PENDING-UAT (2026-05-12, v60-01-01 single combined commit; Daniel browser-smoke against deployed commit per appended checklist closes AC-4) |
-| 1 (parallel) | v60-02 | pagehide/visibilitychange blur — mid-edit text protection | ⚪ Not started |
+| 1 (parallel) | v60-02 | pagehide/visibilitychange blur — mid-edit text protection | ✅ LOOP COMPLETE — PENDING-UAT (2026-05-12, v60-02-01 single combined commit; ~75 LOC source + 13 new tests; Daniel browser-smoke against deployed commit closes AC-5; Wave 1 of v6.0 behaviorally complete) |
 | 2 (BLOCKING for Wave 3) | v60-03 | Java JDK 21 install + v54-02-02 H-SL-7 emulator canary green; HFG counter resets to 0/3 | ⚪ Not started (folded forward from v54-02-02) |
 | 3 (sequential) | v60-04 | Server-side reader migration (publish / print / email / scheduling) via single `getTracksForSetlist` helper | ⚪ Not started |
 | 3 (sequential) | v60-05 | Editor + perform-view reader migration | ⚪ Not started |

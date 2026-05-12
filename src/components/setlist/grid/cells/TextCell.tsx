@@ -100,6 +100,30 @@ export function TextCell({
         setEditing(false)
     }
 
+    // v60-02: pagehide / visibilitychange:hidden = window-level blur. On
+    // iPad-Safari tab swipe-away the input never receives a normal blur,
+    // so an in-flight draft is lost. Commit on hide; the existing
+    // `commit()` guard (`draft !== value`) de-dupes if onBlur also runs.
+    // Ref keeps the handler closure fresh across draft/value renders
+    // without re-registering listeners on every keystroke.
+    const commitRef = useRef(commit)
+    useEffect(() => {
+        commitRef.current = commit
+    })
+    useEffect(() => {
+        if (!editing) return
+        const onHide = () => commitRef.current()
+        const onVisibility = () => {
+            if (document.visibilityState === 'hidden') commitRef.current()
+        }
+        window.addEventListener('pagehide', onHide)
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => {
+            window.removeEventListener('pagehide', onHide)
+            document.removeEventListener('visibilitychange', onVisibility)
+        }
+    }, [editing])
+
     const handleButtonKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault()

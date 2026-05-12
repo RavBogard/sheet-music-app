@@ -117,3 +117,74 @@ describe('TextCell — v52-02-02 single-tap-to-edit on coarse pointer', () => {
         expect(screen.getByTestId('text-cell-input')).toBeInTheDocument()
     })
 })
+
+describe('TextCell — v60-02 pagehide / visibilitychange commit', () => {
+    it('pagehide while editing commits the in-flight draft once and exits edit mode', async () => {
+        mockedUseMediaQuery.mockReturnValue(true) // coarse → single-tap to edit
+        const onCommit = vi.fn()
+
+        render(<Harness onCommit={onCommit} value="old" />)
+
+        fireEvent.click(screen.getByTestId('text-cell-button'))
+        const input = await screen.findByTestId('text-cell-input')
+        fireEvent.change(input, { target: { value: 'new' } })
+
+        fireEvent(window, new Event('pagehide'))
+
+        expect(onCommit).toHaveBeenCalledTimes(1)
+        expect(onCommit).toHaveBeenCalledWith('new')
+
+        // Editing state cleared → button is back in the DOM.
+        await waitFor(() => {
+            expect(screen.queryByTestId('text-cell-input')).toBeNull()
+        })
+        expect(screen.getByTestId('text-cell-button')).toBeInTheDocument()
+    })
+
+    it('visibilitychange→hidden while editing commits the draft', async () => {
+        mockedUseMediaQuery.mockReturnValue(true)
+        const onCommit = vi.fn()
+
+        render(<Harness onCommit={onCommit} value="old" />)
+
+        fireEvent.click(screen.getByTestId('text-cell-button'))
+        const input = await screen.findByTestId('text-cell-input')
+        fireEvent.change(input, { target: { value: 'new' } })
+
+        Object.defineProperty(document, 'visibilityState', {
+            value: 'hidden',
+            configurable: true,
+        })
+        fireEvent(document, new Event('visibilitychange'))
+
+        expect(onCommit).toHaveBeenCalledTimes(1)
+        expect(onCommit).toHaveBeenCalledWith('new')
+    })
+
+    it('pagehide while NOT editing does not call onCommit (listener gated on editing)', async () => {
+        mockedUseMediaQuery.mockReturnValue(false) // desktop, button-resting
+        const onCommit = vi.fn()
+
+        render(<Harness onCommit={onCommit} value="old" />)
+
+        // No edit-mode entry — fire pagehide directly.
+        fireEvent(window, new Event('pagehide'))
+
+        expect(onCommit).not.toHaveBeenCalled()
+    })
+
+    it('pagehide with unchanged draft does not call onCommit (commit() guard)', async () => {
+        mockedUseMediaQuery.mockReturnValue(true)
+        const onCommit = vi.fn()
+
+        render(<Harness onCommit={onCommit} value="old" />)
+
+        fireEvent.click(screen.getByTestId('text-cell-button'))
+        await screen.findByTestId('text-cell-input')
+        // No fireEvent.change — draft still equals value.
+
+        fireEvent(window, new Event('pagehide'))
+
+        expect(onCommit).not.toHaveBeenCalled()
+    })
+})
