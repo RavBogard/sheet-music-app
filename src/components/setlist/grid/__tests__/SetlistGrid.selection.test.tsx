@@ -54,7 +54,13 @@ async function rowDragHandles() {
     return screen.getAllByTestId('drag-handle')
 }
 
-describe('SetlistGrid — multi-select via drag-handle modifier-clicks', () => {
+// T1.6 (2026-05-12): entire file obsoleted by T1.1 (Bug 4). Multi-select
+// was removed as a feature; the grip icon on cards is now a real drag
+// handle, not a modifier-aware selection toggle. The useGridSelection
+// hook + BatchActionBar are dead code pending T2.6 sweep. Skipped here
+// rather than deleted so the assertions remain visible for reference
+// when someone reads the history. Delete the whole file in T2.6.
+describe.skip('SetlistGrid — multi-select via drag-handle modifier-clicks', () => {
     beforeEach(async () => {
         await resetDbForTests()
         mockBack.mockClear()

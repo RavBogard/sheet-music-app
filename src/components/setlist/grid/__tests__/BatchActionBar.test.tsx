@@ -36,7 +36,11 @@ function makeTracks(specs: Array<Partial<LocalTrack>>): LocalTrack[] {
     })) as LocalTrack[]
 }
 
-describe('BatchActionBar', () => {
+// T1.6 (2026-05-12): file obsoleted by T1.1 (Bug 4). Multi-select is
+// gone; BatchActionBar no longer renders. The component will be deleted
+// in T2.6 dead-code sweep along with its test file. Skipped rather than
+// deleted to preserve the assertions for historical reference.
+describe.skip('BatchActionBar', () => {
     beforeEach(() => {
         vi.clearAllMocks()
     })
