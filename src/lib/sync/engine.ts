@@ -386,6 +386,27 @@ export class SyncEngine {
         })
 
         if (err instanceof VersionMismatchError) {
+            // P0 legacy-stamp self-heal (2026-05-12): pre-v50-06 production
+            // docs may exist on Firestore without an `updatedAt` field at
+            // all. T1.3's checkUpdatePrecondition now correctly fails such
+            // updates (expectedUpdatedAt defined, remoteMs undefined), but
+            // that surfaces as a hard VersionMismatchError + reconciliation
+            // modal on every legacy-doc edit. Self-heal once: clear the
+            // expectedUpdatedAt precondition for this outbox row and let
+            // the next pump retry. The retry's `tx.update` will write
+            // serverTimestamp() to remote, so subsequent edits see a real
+            // stamp and never trip the precondition again. Bounded by
+            // attempts === 0 — never loops.
+            if (/remote=undefined/.test(lastError) && row.attempts === 0) {
+                await this.db.outbox.update(localId, {
+                    expectedUpdatedAt: undefined,
+                    attempts: 1,
+                    scheduledFor: this.clock.now(),
+                    lastError: undefined,
+                })
+                this.dispatch({ type: 'DRAIN_RETRY_PENDING' })
+                return 'continue'
+            }
             await this.db.outbox.update(localId, {
                 status: 'failed',
                 lastError,
