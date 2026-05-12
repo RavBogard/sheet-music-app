@@ -13,7 +13,7 @@ Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (4 of 10 phases LOOP COMP
 Phase: 4 of 10 — v60-04 Server-side reader migration ✅ LOOP COMPLETE (3 of 3 plans closed). Next: v60-05 (Wave 3 sequential — editor + perform-view client-side reader migration).
 Plan: v60-04 phase LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke across publish, print packets, email packets, resend-email flows over upcoming worship cycle).
 Status: v60-04 closed via 3-plan PLAN → APPLY → UNIFY cycles, autonomous mode end-to-end after Daniel "1" approvals. Every server-side track reader now routes through `getTracksForSetlist`: SSR page.tsx, publish/route.ts, print/public/route.ts, print/personal/route.ts, email-packets/route.ts, resend-email/route.ts. Aggregate net production +39 LOC across 7 files (≤30/plan budget met on each commit). 3 emulator-backed tests prove the helper contract. HFG counter held at 0/3 throughout the phase. 2 in-flight type fixes auto-resolved (helper signature widening v60-04-01; songs payload alignment v60-04-03 — both surfaced by strict casts, both documented). Zero new main-suite failures introduced (1574 passed / 52 pre-existing failed baseline preserved across all three plan commits). Wave 3 server spine complete; v60-07 writer strip now safe to plan.
-Last activity: 2026-05-12 — v60-04 PHASE LOOP COMPLETE; v60-04-03 committed (SHA pending fill); pushed.
+Last activity: 2026-05-12 — v60-04 PHASE LOOP COMPLETE; v60-04-03 committed as `9f5cde3`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
@@ -95,7 +95,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED 2026-05-12.
+Last commit: `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -110,7 +110,9 @@ Push history this run:
   - `bd5f808` docs(v60-03): correct commit SHA in STATE.md Git State section — PUSHED
   - `f03dcb1` feat(v60-04-01): getTracksForSetlist helper + page.tsx reroute + publish migration — PUSHED
   - `f044d1b` docs(v60-04-01): correct commit SHA in STATE.md Git State section — PUSHED
-  - `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED THIS RUN
+  - `1e1cdc4` feat(v60-04-02): migrate print/public + print/personal readers to getTracksForSetlist — PUSHED
+  - `dee66de` docs(v60-04-02): correct commit SHA in STATE.md Git State section — PUSHED
+  - `9f5cde3` feat(v60-04-03): migrate email-packets + resend-email readers; close v60-04 phase — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
