@@ -1250,7 +1250,11 @@ export function SetlistGrid({
 
     const handleContextBindChart = useCallback(
         (rowId: string) => {
-            setChartBindOpenRowId(rowId)
+            // setTimeout(0): defer past the context-menu's pointer-up/dismiss
+            // event cycle. Without this, Radix Popover sees the context-menu
+            // close as an "outside tap" and immediately dismisses itself on
+            // iPad (and other touch devices).
+            setTimeout(() => setChartBindOpenRowId(rowId), 0)
         },
         [],
     )

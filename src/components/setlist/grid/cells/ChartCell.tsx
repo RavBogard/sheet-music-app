@@ -41,7 +41,16 @@ export const ChartCell = forwardRef<HTMLButtonElement, ChartCellProps>(
                     // state to communicate "click me".
                     hasChart
                         ? 'text-indigo-400'
-                        : 'text-muted-foreground/40 [@media(pointer:coarse)]:text-muted-foreground/70',
+                        : [
+                              // Desktop: ghost until hover affordance
+                              'text-muted-foreground/40',
+                              // Touch: no hover state, so always visible +
+                              // dashed ring signals "tap to link a chart"
+                              '[@media(pointer:coarse)]:text-muted-foreground',
+                              '[@media(pointer:coarse)]:ring-1',
+                              '[@media(pointer:coarse)]:ring-dashed',
+                              '[@media(pointer:coarse)]:ring-muted-foreground/30',
+                          ].join(' '),
                     className,
                 )}
             >

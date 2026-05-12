@@ -88,13 +88,19 @@ export function DragHandleCell({
                 'flex h-11 w-11 items-center justify-center rounded-sm cursor-pointer',
                 isSelected
                     ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-400/40'
-                    : 'text-muted-foreground/60 hover:text-muted-foreground',
+                    : [
+                          // Desktop: ghost until hovered
+                          'text-muted-foreground/60 hover:text-muted-foreground',
+                          // Touch: always full opacity — no hover state
+                          // means the muted ghost is invisible on iPad
+                          '[@media(pointer:coarse)]:text-muted-foreground',
+                      ].join(' '),
                 'cursor-grab active:cursor-grabbing touch-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
                 'transition-colors duration-150 motion-reduce:transition-none',
             )}
         >
-            <GripVertical aria-hidden className="h-4 w-4" />
+            <GripVertical aria-hidden className="h-5 w-5" />
         </button>
     )
 }
