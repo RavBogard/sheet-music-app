@@ -175,7 +175,7 @@ export function ReconciliationProvider({
         return out
     }, [failedOutboxRows])
 
-    const hasConflict = state === 'conflict' && failedRows.length > 0
+    const hasConflict = (state === 'conflict' || state === 'failed') && failedRows.length > 0
     const open = false
 
     // Per-row choices. Default is 'theirs' (safe default per
@@ -196,6 +196,10 @@ export function ReconciliationProvider({
         Map<string, RemoteDocSnapshot | null>
     >(new Map())
     const [snapshotsLoading, setSnapshotsLoading] = useState(false)
+    // Tracks the idSetKey for which we've already fired auto-resolve this mount.
+    // Prevents infinite retry: if a row goes pending → fails again with the same
+    // localId set, we don't auto-resolve it a second time in this session.
+    const autoResolvedKeyRef = useRef<string | null>(null)
 
     // Stable id-set fingerprint so we refetch only when rows change.
     const idSetKey = useMemo(
@@ -208,7 +212,7 @@ export function ReconciliationProvider({
     )
 
     useEffect(() => {
-        if (!open || !adapter) {
+        if (!hasConflict || !adapter) {
             setRemoteSnapshots(new Map())
             return
         }
@@ -236,9 +240,9 @@ export function ReconciliationProvider({
         return () => {
             cancelled = true
         }
-        // idSetKey + adapter change drive refetch.
+        // idSetKey + adapter + hasConflict change drive refetch.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [idSetKey, adapter, open])
+    }, [idSetKey, adapter, hasConflict])
 
     // Display-title lookup per (collection, docId). Reads from local Dexie
     // store. Tracks have `title`; setlists have `name`; songs have `title`.
@@ -302,12 +306,21 @@ export function ReconciliationProvider({
         setChoices(new Map())
     }, [failedRows, remoteSnapshots, resolveOverride])
 
-    // Auto-resolve when conflicts are detected and snapshots are loaded
+    // Auto-resolve when conflicts are detected and snapshots are loaded.
+    // idSetKey-based dedup prevents infinite loops: if the same set of failed
+    // rows re-appears after a resolve attempt (row failed again with same localId),
+    // we don't fire a second time this mount.
     useEffect(() => {
-        if (hasConflict && remoteSnapshots.size === failedRows.length && !snapshotsLoading) {
-            handleResolveAll()
+        if (
+            hasConflict &&
+            remoteSnapshots.size === failedRows.length &&
+            !snapshotsLoading &&
+            autoResolvedKeyRef.current !== idSetKey
+        ) {
+            autoResolvedKeyRef.current = idSetKey
+            void handleResolveAll()
         }
-    }, [hasConflict, remoteSnapshots.size, failedRows.length, snapshotsLoading, handleResolveAll])
+    }, [hasConflict, remoteSnapshots.size, failedRows.length, snapshotsLoading, handleResolveAll, idSetKey])
 
     const value = useMemo<ReconciliationContextValue>(
         () => ({ openModal: () => {} }),
