@@ -70,6 +70,7 @@ export type { SetlistTrack }
 import { Setlist } from "@/types/api"
 import { logger } from "@/lib/logger"
 import { apiFetch } from "@/lib/api-client"
+import { applyEdit } from "@/lib/local/write"
 import { toDate } from "@/lib/firestore-helpers"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { generateSetlistName } from "@/lib/liturgical-templates"
@@ -138,27 +139,56 @@ function stripUndefinedDeep(value: unknown): unknown {
 export function createSetlistService(userId: string | null, userName?: string | null) {
     const COLLECTION_PATH = 'setlists';
 
+    // v60-07-02: per-track top-level seeding for create-style writers.
+    // The parent doc is created without an embedded `tracks` array; each
+    // SetlistTrack becomes one `tracks/{id}` doc via applyEdit fanout.
+    // `withoutUndo` because create-style flows are not user-undoable at
+    // the engine level (deletion is the surface-level inverse).
+    async function seedTopLevelTracks(
+        setlistId: string,
+        tracks: SetlistTrack[],
+    ): Promise<void> {
+        if (tracks.length === 0) return
+        await Promise.all(
+            tracks.map((t, i) =>
+                applyEdit(
+                    {
+                        op: "set",
+                        collection: "tracks",
+                        doc: stripUndefined({
+                            ...t,
+                            setlistId,
+                            order: i,
+                            type: t.type ?? "song",
+                            ...(t.fileId ? { songId: t.fileId } : {}),
+                        }) as unknown as Record<string, unknown> & { id: string },
+                    },
+                    { withoutUndo: true },
+                ),
+            ),
+        )
+    }
+
     return {
         async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
             try {
-                // Sanitize tracks: Firebase rejects undefined values
-                const cleanTracks = stripUndefinedDeep(tracks) as SetlistTrack[]
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
                     // v51-h01: stamp updatedAt so SetlistGridHydrator's lazy-hydration
                     // can pass `expectedUpdatedAt: initialSetlist.updatedAt` and have
-                    // it match the remote on first edit. Without this, the precondition
-                    // check in updateSetlistWithVersion compares undefined vs the
-                    // server-stamped value the snapshot-listener may have just
-                    // delivered → StaleWriteError → engine state → 'failed'.
+                    // it match the remote on first edit.
                     updatedAt: serverTimestamp(),
-                    tracks: cleanTracks,
+                    // v60-07-02: parent doc carries denormalization markers only.
+                    // Top-level tracks/{id} rows are seeded post-create via
+                    // seedTopLevelTracks. No embedded `tracks` field is written.
                     trackCount: tracks.length,
+                    hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     ...stripUndefined(additionalData as Record<string, unknown>)
                 });
+                await seedTopLevelTracks(docRef.id, tracks)
                 logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length })
                 return docRef.id;
             } catch (e) {
@@ -260,19 +290,24 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Duplicate a setlist (creates a copy owned by current user)
         async duplicateSetlist(sourceSetlistId: string, setlistData: Setlist) {
             try {
+                // v60-07-02: assign fresh ids before parent-doc create so the
+                // top-level seed fanout receives the same id set we'd previously
+                // embedded.
+                const freshTracks = setlistData.tracks.map((t, i) => ({
+                    ...t,
+                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
+                }))
                 const copyData = stripUndefinedDeep({
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
-                    tracks: setlistData.tracks.map((t, i) => ({
-                        ...t,
-                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
-                    })),
                     trackCount: setlistData.tracks.length,
+                    hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     copiedFrom: sourceSetlistId
                 }) as Record<string, unknown>
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
+                await seedTopLevelTracks(docRef.id, freshTracks)
                 return docRef.id;
             } catch (e) {
                 logger.error("Error duplicating setlist: ", e);
@@ -383,6 +418,14 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const context = await getFullServiceContext(targetDate)
                 const name = generateSetlistName(context)
 
+                // v60-07-02: fresh ids assigned before parent-doc create; the
+                // top-level seed fanout receives the new id set. Source per-track
+                // values (key/bpm/leadMusician/notes/etc.) carry forward verbatim
+                // via the spread inside seedTopLevelTracks.
+                const freshTracks = source.tracks.map((t, i) => ({
+                    ...t,
+                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
+                }))
                 const cloneData = stripUndefinedDeep({
                     name,
                     date: Timestamp.fromDate(targetDate),
@@ -391,11 +434,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     // for the rationale — closes the lazy-hydration precondition
                     // race that landed Daniel's editor in 'failed' state on phone.
                     updatedAt: serverTimestamp(),
-                    tracks: source.tracks.map((t, i) => ({
-                        ...t,
-                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
-                    })),
                     trackCount: source.tracks.length,
+                    hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                     musicians: source.musicians || [],
@@ -404,6 +444,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     clonedFrom: source.id,
                 }) as Record<string, unknown>
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
+                await seedTopLevelTracks(docRef.id, freshTracks)
 
                 logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
                 return docRef.id
@@ -435,20 +476,23 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Save a setlist as a reusable template (strips date, musicians, rabbi)
         async saveAsTemplate(source: Setlist, templateName?: string): Promise<string> {
             try {
+                // v60-07-02: fresh ids + post-create seed via engine path.
+                const freshTracks = source.tracks.map((t, i) => ({
+                    ...t,
+                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
+                }))
                 const templateData = stripUndefinedDeep({
                     name: templateName || `${source.name} (Template)`,
                     date: serverTimestamp(),
-                    tracks: source.tracks.map((t, i) => ({
-                        ...t,
-                        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`
-                    })),
                     trackCount: source.tracks.length,
+                    hydrated: true,
                     isTemplate: true,
                     templateType: 'other',
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                 }) as Record<string, unknown>
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
+                await seedTopLevelTracks(docRef.id, freshTracks)
 
                 logSetlistChange(docRef.id, 'saved_as_template', userId || '', userName || 'Anonymous')
                 return docRef.id

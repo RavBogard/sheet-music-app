@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (6 of 10 phases LOOP COMPLETE; v60-07 in progress with v60-07-01 LOOP COMPLETE)
-Phase: 7 of 10 — v60-07 Embedded-array writer removal + immediate FieldValue.delete strip (Wave 3 sequential) — 1 of ~3-4 plans closed
-Plan: v60-07-01 LOOP COMPLETE — PENDING-UAT (mirrorTracksToTopLevel dual-write bridge decommissioned; 3 write paths in use-add-to-setlist.ts refactored to engine-path-only via applyEdit Promise.all fanout; +14 LOC net; v60-07 template established).
-Status: v60-07-01 LOOP COMPLETE. SUMMARY created. 7 of 7 verifiable ACs PASS; AC-8 PENDING-UAT (Daniel uses library Add-to-setlist; verifies editor + dashboard + Undo). 1 auto-fix documented (existing-test contract migration; not adding new tests). Verification: tsc EXIT=0; next build clean; vitest 1613/52 EXACT baseline. +14 LOC net production. HFG 0/3 held. **v60-07 writer-removal template established**: engine-path applyEdit fanout + denormalization-only parent update. Subsequent v60-07-NN plans follow this template. Pending: combined commit + push.
-Last activity: 2026-05-13 — v60-07-01 LOOP COMPLETE; awaiting combined commit + push.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (6 of 10 phases LOOP COMPLETE; v60-07 in progress — 2 of ~4 plans LOOP COMPLETE)
+Phase: 7 of 10 — v60-07 Embedded-array writer removal + immediate FieldValue.delete strip (Wave 3 sequential) — 2 of ~4 plans closed
+Plan: v60-07-02 LOOP COMPLETE — PENDING-UAT (4 create-style writers in setlist-firebase.ts route to engine-path seeding via shared `seedTopLevelTracks` helper; W5 cloneForNextWeek inherits free; addDoc payloads now carry trackCount + hydrated:true markers only — no embedded `tracks` field). +61 LOC net production (helper-attributable; documented DRIFT on AC-7). HFG 0/3 held.
+Status: v60-07-02 LOOP COMPLETE. SUMMARY created. 7 of 8 verifiable ACs PASS; AC-7 DRIFT documented (helper-attributable); AC-8 PENDING-UAT (Daniel runs 5 create-style flows: scratch / clone / duplicate / cloneForNextWeek / saveAsTemplate). Verification: tsc EXIT=0; next build `Compiled successfully in 6.9s`; vitest 1613/52 EXACT baseline. Pending: combined commit + push.
+Last activity: 2026-05-13 — v60-07-02 LOOP COMPLETE; awaiting combined commit + push.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -23,11 +23,11 @@ Progress:
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
 - Phase v60-06: ✅ [██████████] 100% LOOP COMPLETE (8 of 8 plans closed)
-- Phase v60-07: [██░░░░░░░░] ~25% (v60-07-01 LOOP COMPLETE; 1 of ~3-4 writer-removal plans done — dual-write bridge decommissioned. Next: v60-07-02 setlist-firebase.ts W1-W6.)
+- Phase v60-07: [█████░░░░░] ~50% (v60-07-01 + v60-07-02 LOOP COMPLETE; 2 of ~4 writer-removal plans done — dual-write bridge decommissioned + create-style writers route to engine-path seeding. Next: v60-07-03 W2 updateSetlist + immediate FieldValue.delete strip.)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-07-01 LOOP COMPLETE; ready for /paul:plan v60-07-02]
+  ✓        ✓        ✓     [v60-07-02 LOOP COMPLETE; ready for /paul:plan v60-07-03]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -67,10 +67,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-07-01 LOOP COMPLETE; v60-07 template established)
-Stopped at: SUMMARY written. v60-07 writer-removal pattern locked in. ~2-3 v60-07 plans remain.
-Next action: `/paul:plan v60-07-02` — setlist-firebase.ts W1-W6 writers (createSetlistService methods); same engine-path template, larger blast radius.
-Resume file: .paul/phases/v60-07-writer-removal-strip/v60-07-01-SUMMARY.md
+Last session: 2026-05-13 (v60-07-02 LOOP COMPLETE; W1/W3/W4/W6 + helper template established)
+Stopped at: SUMMARY written. v60-07 create-side fully decommissioned. W5 cloneForNextWeek inherits via delegation. Subsequent plans: v60-07-03 W2 updateSetlist + immediate FieldValue.delete strip (high-traffic patch surface); v60-07-04 API routes W7-W11.
+Next action: `/paul:plan v60-07-03` — W2 updateSetlist + caller patch-`tracks` migration + FieldValue.delete strip mandate. Recommend brief caller audit before /paul:plan invocation.
+Resume file: .paul/phases/v60-07-writer-removal-strip/v60-07-02-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
@@ -132,7 +132,8 @@ Push history this run:
   - `7ad02b1` docs(v60-06-07): correct commit SHA in STATE.md Git State section — PUSHED
   - `7f7e4f8` feat(v60-06-08): 15-setlist backfill script + rollback collection (phase v60-06 LOOP COMPLETE) — PUSHED
   - `98b270d` docs(v60-06-08): correct commit SHA in STATE.md Git State section — PUSHED
-  - `1790d8a` feat(v60-07-01): decommission mirrorTracksToTopLevel dual-write bridge — PUSHED THIS RUN
+  - `1790d8a` feat(v60-07-01): decommission mirrorTracksToTopLevel dual-write bridge — PUSHED
+  - `cb1a7f7` docs(v60-07-01): correct commit SHA in STATE.md Git State section — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 

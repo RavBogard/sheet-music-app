@@ -107,9 +107,15 @@ vi.mock('@/lib/liturgical-templates', () => ({
 vi.mock('@/types/schemas', () => ({
     setlistConverter: {},
 }))
+// v60-07-02: applyEdit fanout mock for create-style writer seeding.
+vi.mock('@/lib/local/write', () => ({
+    applyEdit: vi.fn().mockResolvedValue(undefined),
+}))
 
 import { createSetlistService, StaleWriteError } from './setlist-firebase'
 import { Timestamp } from 'firebase/firestore'
+import { applyEdit } from '@/lib/local/write'
+const mockApplyEdit = vi.mocked(applyEdit)
 
 describe('createSetlistService', () => {
     let service: ReturnType<typeof createSetlistService>
@@ -139,16 +145,38 @@ describe('createSetlistService', () => {
 
             const data = mockAddDoc.mock.calls[0][1]
             expect(data.name).toBe('Friday Night')
-            expect(data.tracks).toHaveLength(2)
+            // v60-07-02: parent doc carries denormalization markers only — no
+            // embedded `tracks` field. Top-level seeding asserted below.
+            expect(data).not.toHaveProperty('tracks')
             expect(data.trackCount).toBe(2)
+            expect(data.hydrated).toBe(true)
             expect(data.ownerId).toBe('user123')
             expect(data.ownerName).toBe('Test User')
+
+            // Engine-path fanout: one applyEdit per source track.
+            expect(mockApplyEdit).toHaveBeenCalledTimes(2)
+            expect(mockApplyEdit).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    op: 'set',
+                    collection: 'tracks',
+                    doc: expect.objectContaining({
+                        id: '1',
+                        setlistId: 'new-setlist-id',
+                        order: 0,
+                        title: 'Song 1',
+                        type: 'song',
+                    }),
+                }),
+                { withoutUndo: true },
+            )
         })
 
         it('never writes isPublic to Firestore (regression guard)', async () => {
             await service.createSetlist('Any Setlist', [])
             const data = mockAddDoc.mock.calls[0][1]
             expect(Object.keys(data)).not.toContain('isPublic')
+            // v60-07-02: empty tracks → no seed fanout.
+            expect(mockApplyEdit).not.toHaveBeenCalled()
         })
 
         it('includes additional data when provided', async () => {
@@ -272,8 +300,25 @@ describe('createSetlistService', () => {
             await service.cloneForNextWeek(sourceSetlist as any)
 
             const data = mockAddDoc.mock.calls[0][1]
-            expect(data.tracks).toHaveLength(2)
+            // v60-07-02: parent doc no longer carries embedded `tracks`. The
+            // trackCount denorm + per-track engine fanout cover the contract.
+            expect(data).not.toHaveProperty('tracks')
             expect(data.trackCount).toBe(2)
+            expect(data.hydrated).toBe(true)
+            expect(mockApplyEdit).toHaveBeenCalledTimes(2)
+            expect(mockApplyEdit).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    op: 'set',
+                    collection: 'tracks',
+                    doc: expect.objectContaining({
+                        setlistId: 'new-setlist-id',
+                        order: 0,
+                        title: 'Shema',
+                        type: 'song',
+                    }),
+                }),
+                { withoutUndo: true },
+            )
         })
 
         it('auto-generates a liturgical name', async () => {
