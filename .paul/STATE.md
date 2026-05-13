@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed + v60-06-03 PLAN created)
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; v60-06-03 in PLAN; ~4 plans remaining after
-Plan: v60-06-03 APPLY complete — ready for UNIFY (2 of 2 tasks PASS; +9 net production LOC; tsc clean; next build clean (warnings pre-existing Sentry deprecations); main suite 1581/52 baseline preserved; use-upcoming-prep targeted 16/16 green; HFG 0/3 held; PrepRecommendations + UpcomingTimeline byte-identical)
-Status: APPLY executed both tasks under E/Q loop with PASS results. Task 1: SetlistCards.tsx offline-cache reader migrated to `setlist.fileIds ?? embedded` + deps array updated (+2 net LOC). Task 2: use-upcoming-prep.ts cross-setlist fileIds collection (loop body migrated to denormalized + filter-header semantics, mirrors reconciler) + per-setlist enrichment (`fileIdsForSetlist` single derivation drives both `total` via `s.songCount ?? fileIdsForSetlist.length` and viewed iteration, +7 net LOC). Net +9 LOC — well under +25 ceiling. /ui-ux-pro-max gate satisfied (loaded for skill-check; pure-logic refactor, no visual changes apply). Boundary check: AC-7 verified via empty `git diff` on PrepRecommendations.tsx + UpcomingTimeline.tsx. AC-4 verified: existing 16/16 use-upcoming-prep tests pass via fallback path (no test edits). Ready for /paul:unify.
-Last activity: 2026-05-12 — v60-06-03 APPLY complete; awaiting UNIFY.
+Plan: v60-06-03 LOOP COMPLETE — PENDING-UAT (committed `2d80f5b`; pushed to origin master). Daniel browser-smoke on iPad: dashboard offline indicator (SetlistCards full/partial/none) + upcoming prep percentages to verify against deployed commit over upcoming worship cycle.
+Status: v60-06-03 closed cleanly: 2 of 2 tasks PASS qualify, 0 deviations, 0 escalations. SetlistCards.tsx offline-cache reader migrated to denormalized `setlist.fileIds ?? embedded` + deps updated (+2 LOC). use-upcoming-prep.ts cross-setlist fileIds collection + per-setlist `fileIdsForSetlist` single-derivation enrichment (drives both `total = s.songCount ?? local.length` and viewed iteration, +7 LOC). Net +9 production LOC vs +25 ceiling. tsc clean, next build "Compiled with warnings in 11.1s" (Sentry deprecations pre-existing), main suite 1581 pass / 52 fail (exact v60-06-02 baseline preserved), targeted use-upcoming-prep 16/16 green via fallback path (no test edits), HFG 0/3 held. AC-7 boundary verified: PrepRecommendations.tsx + UpcomingTimeline.tsx byte-identical via empty git diff. /ui-ux-pro-max gate satisfied as no-op (pure-logic refactor). Single combined commit `2d80f5b` per session precedent.
+Last activity: 2026-05-12 — v60-06-03 LOOP COMPLETE; committed as `2d80f5b`; pushed to origin master.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [███░░░░░░░] 33% (v60-06-01 + v60-06-02 of ~7 plans LOOP COMPLETE; v60-06-03 PLAN created)
+- Phase v60-06: [████░░░░░░] 43% (v60-06-01 + v60-06-02 + v60-06-03 of ~7 plans LOOP COMPLETE — ~4 plans remaining)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [v60-06-03 APPLY complete; ready for /paul:unify]
+  ✓        ✓        ✓     [v60-06-03 LOOP COMPLETE; ready for /paul:plan v60-06-04]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-06-03 PLAN + APPLY complete)
-Stopped at: v60-06-03 APPLY complete. 2 of 2 tasks PASS. Net +9 production LOC (SetlistCards +2 / use-upcoming-prep +7). Verification: tsc clean, next build clean (Sentry deprecation warnings pre-existing), main suite 1581 pass / 52 fail (exact baseline preserved), targeted use-upcoming-prep 16/16, HFG 0/3 held, PrepRecommendations + UpcomingTimeline byte-identical (boundary respected).
-Next action: `/paul:unify .paul/phases/v60-06-dashboard-reader-migration/v60-06-03-PLAN.md` — generate SUMMARY, single combined commit, push to origin master per session precedent.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-03-PLAN.md
+Last session: 2026-05-12 (autonomous mode — v60-06-03 LOOP COMPLETE; committed `2d80f5b`; pushed to origin master)
+Stopped at: v60-06-03 LOOP COMPLETE — SetlistCards offline-cache + use-upcoming-prep cross-setlist + per-setlist enrichment now consume denormalized fileIds/songCount with embedded fallback. Net +9 LOC, single commit, no test edits. ~4 v60-06 plans remaining; next up is v60-06-04 (title-aware reader migration for PrepRecommendations + UpcomingTimeline.ExpandedTrackList — architectural decision pending: denormalize titles vs. bulk Dexie hook vs. per-render fetch).
+Next action: `/paul:plan v60-06-04` — Title-aware reader migration. PLAN should surface the architectural choice as checkpoint:decision (denormalize song titles on setlist.* vs. introduce `useDexieTracksForSetlists(setlistIds)` bulk hook vs. per-render `getTracksForSetlistClient` per setlist).
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-03-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED 2026-05-12.
+Last commit: `2d80f5b` feat(v60-06-03): migrate SetlistCards offline-cache + use-upcoming-prep to denormalized fileIds/songCount — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -119,7 +119,8 @@ Push history this run:
   - `2c3bbe7` docs(v60-05-01): correct commit SHA in STATE.md Git State section — PUSHED
   - `4dcbb5c` feat(v60-06-01): migrate HeroCard + CompactSetlistRow count display to setlist.trackCount — PUSHED
   - `91f9735` docs(v60-06-01): correct commit SHA in STATE.md Git State section — PUSHED
-  - `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED THIS RUN
+  - `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED
+  - `2d80f5b` feat(v60-06-03): migrate SetlistCards offline-cache + use-upcoming-prep to denormalized fileIds/songCount — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
