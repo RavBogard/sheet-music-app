@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed + v60-06-03 PLAN created)
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; v60-06-03 in PLAN; ~4 plans remaining after
-Plan: v60-06-06 APPLY complete — ready for UNIFY (2 of 2 tasks; Task 1 DONE PASS; Task 2 DONE_WITH_CONCERNS for AC-6 LOC overshoot across all 3 files)
-Status: APPLY executed both tasks. Task 1 PASS: fetchTracksForSetlistClient added (Web SDK 2-branch: hydrated → top-level tracks query with sort by order; unhydrated → embedded fallback); 5 new unit tests passing (hydrated path, unhydrated path, missing tracks, empty hydrated result, null/undefined setlistData); 1 tsc type-narrowing iteration to add explicit `Record<string, unknown>[]` type on the rows variable. Task 2 DONE_WITH_CONCERNS: TemplatesSection.handlePickSetlist migrated to async + fetchTracksForSetlistClient; SetlistSummary extended with hydrated: boolean; try/catch with toast.error("Failed to load setlist tracks"); convertSetlistToTemplate call shape preserved verbatim. Verification: tsc EXIT=0, next build "Compiled with warnings in 15.3s" (Sentry baseline), main suite 1591 pass / 52 fail (baseline 1586 + 5 new fetchTracksForSetlistClient tests; ZERO new failures), HFG 0/3 held, AC-7 boundary verified for all 11 protected files via empty git diff. AC-6 deviations: client-tracks.ts +41 vs +30 (+11), test +91 vs +60 (+31), TemplatesSection +20 vs +12 (+8); combined +148 vs +100 (+48). Pattern continues from v60-06-04/05 — per-file LOC ceilings consistently underbudgeted for code with try/catch + JSDoc + comments. All functional ACs pass.
-Last activity: 2026-05-12 — v60-06-06 APPLY complete; awaiting UNIFY.
+Plan: v60-06-06 LOOP COMPLETE — PENDING-UAT (committed `215222f`; pushed to origin master). Admin Daniel UAT deferable to next template-management session.
+Status: v60-06-06 closed: Task 1 PASS (fetchTracksForSetlistClient + 5 unit tests, tsc-iterated type-narrowing fix); Task 2 DONE_WITH_CONCERNS (AC-6 LOC overshoots across all 3 files documented in SUMMARY; functional ACs all PASS). **Client reader inventory COMPLETE** — three canonical readers now cover every consumer pattern (Dexie-aware 3-branch, bulk Dexie subscription, Web-SDK direct-fetch 2-branch). Verification: tsc EXIT=0, next build clean (Sentry baseline), main suite 1591 pass / 52 fail (baseline 1586 + 5 new tests, zero new failures), HFG 0/3 held, AC-7 boundary verified for all 11 prior reader-migration files via empty git diff (existing getTracksForSetlistClient unchanged — additions only). Pattern established: spread-with-id narrowing fix via explicit `Record<string, unknown>[]` annotation. Single combined commit `215222f`.
+Last activity: 2026-05-12 — v60-06-06 LOOP COMPLETE; committed as `215222f`; pushed.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [███████░░░] 71% (v60-06-01..05 of ~7 plans LOOP COMPLETE — ~2 plans remaining: v60-06-06 TemplatesSection + v60-06-07 matrix/route.ts; v60-06-08 backfill closes phase. Upcoming-perf-view flow fully canonical-source-first.)
+- Phase v60-06: [████████░░] 86% (v60-06-01..06 of ~7 plans LOOP COMPLETE — ~1 reader plan remaining: v60-06-07 matrix/route.ts server-side; v60-06-08 backfill closes phase. **Client reader inventory COMPLETE** — all consumer patterns served.)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [v60-06-06 APPLY complete; ready for /paul:unify]
+  ✓        ✓        ✓     [v60-06-06 LOOP COMPLETE; ready for /paul:plan v60-06-07]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-06-06 PLAN created)
-Stopped at: v60-06-06 PLAN created. Adds fetchTracksForSetlistClient (Web SDK port of server-tracks.ts) for Firestore-direct admin-side reads + migrates TemplatesSection.handlePickSetlist. ≤+100 LOC combined.
-Next action: Review v60-06-06-PLAN.md, then `/paul:apply .paul/phases/v60-06-dashboard-reader-migration/v60-06-06-PLAN.md`. /ui-ux-pro-max transitively satisfied.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-06-PLAN.md
+Last session: 2026-05-12 (autonomous mode — v60-06-06 LOOP COMPLETE; committed `215222f`)
+Stopped at: v60-06-06 LOOP COMPLETE. Client reader inventory COMPLETE — 3 canonical readers serve every client consumer pattern. ~1 reader plan remaining: v60-06-07 matrix/route.ts (server-side, uses existing server-tracks.ts::getTracksForSetlist). v60-06-08 backfill closes phase.
+Next action: `/paul:plan v60-06-07` — matrix/route.ts server-side reader migration (deferred from v60-05; uses Admin SDK getTracksForSetlist).
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-06-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED 2026-05-12.
+Last commit: `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -124,7 +124,9 @@ Push history this run:
   - `c1d392a` docs(v60-06-03): correct commit SHA in STATE.md + ROADMAP.md — PUSHED
   - `ef3b49e` feat(v60-06-04): bulk Dexie hook + title-aware dashboard reader migration — PUSHED
   - `89e1c7c` docs(v60-06-04): correct commit SHA in STATE.md + close Wave 3 reader-migration spine — PUSHED
-  - `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED THIS RUN
+  - `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED
+  - `0fcf62a` docs(v60-06-05): correct commit SHA in STATE.md — PUSHED
+  - `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
