@@ -27,6 +27,13 @@ const TextScoreViewer = dynamic(
     { ssr: false }
 )
 
+// v70-01: image-chart support (PNG/JPEG/HEIC).
+// Disabled SSR matches the other viewer dynamic imports.
+const ImageScoreViewer = dynamic(
+    () => import("@/components/music/ImageScoreViewer").then((mod) => mod.ImageScoreViewer),
+    { ssr: false }
+)
+
 export interface PDFOverlayProps {
     track: SetlistTrack
     tracks: SetlistTrack[]
@@ -137,6 +144,7 @@ export function PDFOverlay({
     const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
     const isMusicXml = currentItem?.type === 'musicxml'
     const isText = currentItem?.type === 'text'
+    const isImage = currentItem?.type === 'image'
 
     // Build the file URL from the track's fileId (used for both PDF and MusicXML).
     // Prefer the IDB blob when we have one so offline-preloaded charts render
@@ -254,6 +262,8 @@ export function PDFOverlay({
                         fileUrl && <SmartScoreViewer url={fileUrl} />
                     ) : isText ? (
                         fileUrl && <TextScoreViewer url={fileUrl} />
+                    ) : isImage ? (
+                        fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
                     ) : (
                         pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
                     )}

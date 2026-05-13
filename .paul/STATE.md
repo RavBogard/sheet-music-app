@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-13 after v6.0 ✅ COMPLETE via /paul:comp
 
 ## Current Position
 
-Version: v6.0.0 ✅ COMPLETE 2026-05-13 (via /paul:complete-milestone with PENDING-UAT marker per v51-04 codified pattern; 5th consecutive)
-Milestone: v7.0 — Document-Driven Setlist Creation (newly opened 2026-05-13)
-Phase: 1 of 8 — v70-01 Image-chart support — NOT STARTED
-Plan: None — ready for /paul:plan v70-01
-Status: v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
+Version: v7.0.0-dev (v6.0 closed 2026-05-13; v7.0 first plan in PLAN phase)
+Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
+Phase: 1 of 8 — v70-01 Image-chart support — Planning
+Plan: v70-01-01 created 2026-05-13 (split: 01 = upload+view+toolbar; 02 = print-pipeline embed); awaiting approval
+Status: PLAN ✓ created at .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md — ready for APPLY. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
 Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
@@ -28,11 +28,25 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-13 evening
-Stopped at: Daniel-explicit pause post-v60-12 LOOP COMPLETE + v7.0 milestone structure created
-Next action: /paul:resume — workflow routes to UAT-wait or /paul:complete-milestone after worship cycle
-Resume file: .paul/HANDOFF-2026-05-13-evening.md
-Git strategy: master (synced @ 04499a4)
+Last session: 2026-05-13 (post-/paul:plan v70-01)
+Stopped at: v70-01-01 PLAN created, awaiting approval
+Next action: /paul:apply .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md
+Resume file: .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md
+Git strategy: master (synced @ 7677dd9 — v6.0 milestone-close commit)
+
+Loop position (v70-01-01 — current):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ○        ○     [v70-01-01 PLAN created 2026-05-13; /ui-ux-pro-max BLOCKING gate before APPLY]
+
+Plan summary (v70-01-01):
+- 3 auto tasks + 1 checkpoint:decision (HEIC lib) + 1 checkpoint:human-verify (Daniel UAT after Tasks 1-2)
+- /ui-ux-pro-max REQUIRED for ImageScoreViewer composition + tooltip copy + PrintModal banner
+- Vertical slice: upload PNG/JPEG/HEIC → view in PDFOverlay via new ImageScoreViewer → transpose+AI disabled with tooltip
+- Print-pipeline image embed EXPLICITLY DEFERRED to v70-01-02 (plan 01 only adds skip guard + PrintModal banner — no crash on mixed setlists)
+- HEIC default: heic-convert (pure JS, serverless-safe); converts at upload time so storage holds JPEG
+- AC count: 5 (upload / viewer render / toolbar disable+tooltip / print pipeline image-track-safe / build+test green)
+- Files modified: 8 existing + 2 new (ImageScoreViewer.tsx + test)
+- Boundaries: songs lib + firestore.rules + print-pipeline embed + musescore-converter all DO-NOT-CHANGE in this plan
 Resume context:
 - v6.0 milestone: 12 of 12 phases LOOP COMPLETE; blocked only on Daniel-loop UAT (v60-11 picker / v60-12 incognito-perform / v60-09 two-device / v60-10 iPad sticky AddBar / Issue 2 setlist-missing cascade / accumulated v60-01..v60-08 carry-forwards) across Fri PM + Sat AM worship cycle
 - v7.0 milestone: structure created at .paul/phases/v70-* (8 empty dirs); 12 constraints locked at creation in ROADMAP.md "Next Milestone Planned" section; DOES NOT START until v6.0 closes via /paul:complete-milestone

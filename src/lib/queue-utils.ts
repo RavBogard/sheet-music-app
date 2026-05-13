@@ -14,14 +14,18 @@ export function toQueueItem(track: SetlistTrack, index: number): QueueItem {
         if (!track.fileId) return 'pdf'
         const idLower = track.fileId.toLowerCase()
         const nameLower = (track.fileName || '').toLowerCase()
-        
-        if (idLower.startsWith('db-') || 
+
+        if (idLower.startsWith('db-') ||
             idLower.endsWith('.musicxml') || idLower.endsWith('.xml') || idLower.endsWith('.mxl') ||
             nameLower.endsWith('.musicxml') || nameLower.endsWith('.xml') || nameLower.endsWith('.mxl')) return 'musicxml'
-        
+
         if (idLower.endsWith('.chordpro') || nameLower.endsWith('.chordpro')) return 'chordpro'
         if (idLower.endsWith('.txt') || nameLower.endsWith('.txt')) return 'text'
-        
+
+        // Image charts (v70-01): HEIC fileIds rarely surface (upload route renames
+        // to .jpg post-conversion), but include the guard for legacy/Drive imports.
+        if (/\.(png|jpe?g|heic|heif)$/i.test(idLower) || /\.(png|jpe?g|heic|heif)$/i.test(nameLower)) return 'image'
+
         return 'pdf'
     })()
 

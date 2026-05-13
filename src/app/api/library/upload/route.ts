@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { processMuseScoreFile } from "@/lib/musescore-converter"
+import heicConvert from "heic-convert"
 
 // Max file size: 25MB
 const MAX_FILE_SIZE = 25 * 1024 * 1024
@@ -21,6 +22,20 @@ const ALLOWED_TYPES: Record<string, string> = {
     'application/x-musescore': '.mscz',
     'application/x-musescore+xml': '.mscx',
     'text/plain': '.txt',
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/heic': '.heic',
+    'image/heif': '.heif',
+}
+
+// Map a stored content-type to the file extension used in storageUrl.
+// Centralized so adding a new image format is a single edit.
+function extForContentType(ct: string): string {
+    if (ct.includes('pdf')) return '.pdf'
+    if (ct.includes('text')) return '.txt'
+    if (ct === 'image/png') return '.png'
+    if (ct === 'image/jpeg') return '.jpg'
+    return '.xml' // MusicXML and any xml-ish fallback
 }
 
 /**
@@ -70,9 +85,9 @@ export const POST = createApiHandler(
 
         // Validate file type
         const mimeType = file.type || 'application/octet-stream'
-        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx|txt)$/i)) {
+        if (!ALLOWED_TYPES[mimeType] && !file.name.match(/\.(pdf|xml|musicxml|mxl|mscz|mscx|txt|png|jpe?g|heic|heif)$/i)) {
             return NextResponse.json(
-                { error: "Only PDF, MusicXML, MuseScore, and Text files are supported" },
+                { error: "Only PDF, MusicXML, MuseScore, Text, and Image files are supported" },
                 { status: 400 }
             )
         }
@@ -93,8 +108,15 @@ export const POST = createApiHandler(
 
         // Detect MuseScore files by extension
         const msExt = file.name.match(/\.(mscz|mscx)$/i)?.[1]?.toLowerCase() as 'mscz' | 'mscx' | undefined
+        // Detect HEIC/HEIF by mime type OR extension; convert to JPEG so the stored
+        // bytes are universally renderable (HEIC has no Chrome/Firefox/Windows support).
+        const isHeic = mimeType === 'image/heic' || mimeType === 'image/heif'
+            || /\.(heic|heif)$/i.test(file.name)
         let originalStorageUrl: string | undefined
         let sourceFormat: string | undefined
+        // Tracks the effective content-type after any server-side conversion
+        // (HEIC → JPEG, MuseScore → MusicXML). Defaults to original mime.
+        let effectiveContentType: string = mimeType
 
         if (msExt) {
             logger.info(`[Upload] Converting ${file.name} from ${msExt} to MusicXML`)
@@ -116,6 +138,39 @@ export const POST = createApiHandler(
                     { status: 422 }
                 )
             }
+        } else if (isHeic) {
+            logger.info(`[Upload] Converting ${file.name} from HEIC to JPEG`)
+            try {
+                // Preserve the original HEIC bytes for archival before overwriting.
+                const originalBuffer = buffer
+                // Pass a tightly-sliced ArrayBuffer (Node Buffer reuses an
+                // internal pool whose `.buffer` may be larger than the data).
+                const heicArrayBuffer = originalBuffer.buffer.slice(
+                    originalBuffer.byteOffset,
+                    originalBuffer.byteOffset + originalBuffer.byteLength,
+                )
+                const jpegBytes = await heicConvert({
+                    buffer: heicArrayBuffer,
+                    format: 'JPEG',
+                    quality: 0.9,
+                })
+                const heicExt = /\.(heif)$/i.test(file.name) ? 'heif' : 'heic'
+                await uploadToStorage(
+                    `originals/${fileId}.${heicExt}`,
+                    originalBuffer,
+                    'image/heic',
+                )
+                originalStorageUrl = `library/originals/${fileId}.${heicExt}`
+                sourceFormat = heicExt
+                buffer = Buffer.from(jpegBytes)
+                effectiveContentType = 'image/jpeg'
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Unknown error'
+                return NextResponse.json(
+                    { error: `Failed to convert HEIC image: ${message}` },
+                    { status: 422 }
+                )
+            }
         }
 
         // Extract metadata from form
@@ -128,12 +183,15 @@ export const POST = createApiHandler(
         const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : []
         const collection = (formData.get('collection') as string | null)?.trim() || 'crc'
 
-        // Determine content type for storage
-        // MuseScore files are already converted to MusicXML at this point
+        // Determine content type for storage.
+        // MuseScore files are already converted to MusicXML; HEIC has been
+        // converted to JPEG and effectiveContentType reflects that.
         const contentType = msExt ? 'application/xml'
-            : mimeType.includes('pdf') ? 'application/pdf'
-                : (mimeType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)) ? 'application/xml'
-                    : mimeType
+            : isHeic ? effectiveContentType  // 'image/jpeg' post-conversion
+                : effectiveContentType.startsWith('image/') ? effectiveContentType
+                    : effectiveContentType.includes('pdf') ? 'application/pdf'
+                        : (effectiveContentType.includes('xml') || /\.(xml|musicxml|mxl)$/i.test(file.name)) ? 'application/xml'
+                            : effectiveContentType
 
         // 1. Duplicate Prevention Check -- query by nameLower prefix to avoid scanning all docs
         const nameLower = title.toLowerCase()
@@ -195,7 +253,7 @@ export const POST = createApiHandler(
             ...(tags.length > 0 && { tags }),
             collection,
             // Storage reference
-            storageUrl: `library/${fileId}${contentType.includes('pdf') ? '.pdf' : contentType.includes('text') ? '.txt' : '.xml'}`,
+            storageUrl: `library/${fileId}${extForContentType(contentType)}`,
             // MuseScore-specific fields
             ...(originalStorageUrl && { originalStorageUrl }),
             ...(sourceFormat && { sourceFormat }),

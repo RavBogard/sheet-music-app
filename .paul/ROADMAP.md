@@ -3,14 +3,14 @@
 ## Current Milestone
 
 **v7.0 — Document-Driven Setlist Creation** *(created 2026-05-13 from .paul/MILESTONE-CONTEXT.md; opened 2026-05-13 via /paul:complete-milestone of v6.0)*
-Status: 🚧 In Progress — Structure created (8 phases in 6 waves); 0 of 8 phases started. Ready for /paul:plan v70-01.
+Status: 🚧 In Progress — Structure created (8 phases in 6 waves); v70-01 in PLAN phase (v70-01-01 awaiting APPLY approval; split: 01 = upload+view+toolbar / 02 = print embed).
 Theme: *"Feed a doc, get a setlist. AI parses, the system resolves, the form fills the gaps."*
 
 Daniel feeds any service-outline document (the May 15th Shir Shabbat .docx is the canary) and the system produces a complete setlist with charts bound, recordings linked, and gaps surfaced via a structured form. Major-version bump justified by NEW data domain (recordings) + NEW production input modality (doc-driven creation) + NEW chart-rendering modality (image charts).
 
 | Wave | Phase | Focus | Status |
 |------|-------|-------|--------|
-| 0 (foundation) | v70-01 | **Image-chart support** (PNG / JPEG / HEIC) — upload route ALLOWED_TYPES extended; chart viewer branches PDF→pdfjs vs image→`<img>`; print pipeline embeds images; AI chord detection + transposition DISABLED for image charts with explanation tooltip | 🔵 Not started |
+| 0 (foundation) | v70-01 | **Image-chart support** (PNG / JPEG / HEIC) — upload route ALLOWED_TYPES extended; chart viewer branches PDF→pdfjs vs image→`<img>`; print pipeline embeds images; AI chord detection + transposition DISABLED for image charts with explanation tooltip | 🟡 Planning (v70-01-01 PLAN ✓; v70-01-02 print embed deferred) |
 | 1 (foundation) | v70-02 | Recordings data model + Firestore rules + Storage paths — NEW `recordings/{id}` collection; foreign key `songId?`; `notes` field for attribution; Firebase Storage path; HFG-relevant (emulator coverage required) | 🔵 Not started |
 | 2 (parallel) | v70-03 | Per-track media affordances: (1) chart click-through opens chart in new tab via Storage URL; (2) recording-bind UI analogous to ChartBindPopover with inline `<audio>` playback | 🔵 Not started |
 | 2 (parallel) | v70-04 | Doc upload + text extraction — new `/api/setlist/import/upload` route; `mammoth` for .docx, pdfjs for .pdf, txt trivial; upload modal extends v51-03 CreationWizard with 4th "Import from document" option | 🔵 Not started |
