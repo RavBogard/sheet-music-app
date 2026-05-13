@@ -112,6 +112,54 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         }
     }, [])
 
+    // v60-13-05 (2026-05-13) outbox diagnostic — Daniel reports queue still not
+    // draining despite v60-13-03's pending-row forceLww. Need to see exactly
+    // what error class each row is failing with. Logs once on mount; dev-only
+    // visibility (console). Safe to remove once root cause identified.
+    useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            try {
+                const { getDb } = await import('@/lib/local/schema')
+                const db = getDb()
+                const all = await db.outbox.toArray()
+                if (cancelled) return
+                const byStatus = all.reduce<Record<string, number>>((acc, r) => {
+                    acc[r.status] = (acc[r.status] ?? 0) + 1
+                    return acc
+                }, {})
+                // eslint-disable-next-line no-console
+                console.info(`[Outbox] ${all.length} total — by status:`, byStatus)
+                const samples = all.slice(0, 10).map(r => ({
+                    id: r.localId,
+                    status: r.status,
+                    op: r.op,
+                    collection: r.collection,
+                    docId: r.docId?.slice(0, 12),
+                    attempts: r.attempts,
+                    forceLww: r.forceLwwOnConflict,
+                    lastError: r.lastError?.slice(0, 120),
+                }))
+                // eslint-disable-next-line no-console
+                console.info('[Outbox] first 10 rows:', samples)
+                const errorClasses = all
+                    .map(r => r.lastError)
+                    .filter(Boolean)
+                    .reduce<Record<string, number>>((acc, msg) => {
+                        const key = (msg as string).split(':')[0].slice(0, 40)
+                        acc[key] = (acc[key] ?? 0) + 1
+                        return acc
+                    }, {})
+                // eslint-disable-next-line no-console
+                console.info('[Outbox] lastError class breakdown:', errorClasses)
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.error('[Outbox] diagnostic failed:', e)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [])
+
     // ── ALL setlists: single subscription (v4.0: no private/public split) ──
     useEffect(() => {
         if (!setlistService) return
