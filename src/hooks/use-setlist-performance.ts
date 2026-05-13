@@ -120,14 +120,11 @@ export function useSetlistPerformance(
         [setlistId],
     )
 
-    // Dual-read fallback for unhydrated legacy setlists. After lazy-cascade
-    // has run (hydrated:true), Dexie is the authoritative source and we
-    // ignore the embedded array entirely (post-migration stale-by-design).
-    // v60-05-01: 3-branch logic extracted to @/lib/client-tracks for unit
-    // testability + symmetry with the server-side helper.
+    // v60-08-01: helper is single-branch (Dexie wins, else []). setlistData
+    // param is retained for ABI stability; no longer in the dep list.
     const tracks: SetlistTrack[] = useMemo(
         () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
-        [dexieTracks, setlistData?.hydrated, setlistData?.tracks],
+        [dexieTracks],
     )
 
     const name: string = setlistData?.name || "Untitled"

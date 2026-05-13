@@ -105,11 +105,9 @@ export function useUpcomingPrep() {
 
         let cancelled = false
 
-        // v60-06-03: read denormalized fileIds with embedded fallback (mirrors HeroCard pattern)
         const fileIds = new Set<string>()
         for (const s of setlists) {
-            const ids = s.fileIds ?? (s.tracks || []).filter(t => t.fileId && t.type !== 'header').map(t => t.fileId!)
-            for (const id of ids) fileIds.add(id)
+            for (const id of s.fileIds ?? []) fileIds.add(id)
         }
         if (fileIds.size === 0) return
 
@@ -156,11 +154,8 @@ export function useUpcomingPrep() {
     // Build enriched list
     const enriched: UpcomingSetlistWithPrep[] = useMemo(() => {
         return setlists.map(s => {
-            // v60-06-04: canonical 3-branch resolution per setlist (Dexie if
-            // hydrated, else embedded fallback). See getTracksForSetlistClient.
             const localTracks = getTracksForSetlistClient(tracksMap?.get(s.id), s)
-            // v60-06-03: read denormalized fileIds + songCount with embedded fallback
-            const fileIdsForSetlist = s.fileIds ?? (s.tracks || []).filter(t => t.fileId && t.type !== 'header').map(t => t.fileId!)
+            const fileIdsForSetlist = s.fileIds ?? []
             const total = s.songCount ?? fileIdsForSetlist.length
             let viewed = 0
             const viewedIds = new Set<string>()

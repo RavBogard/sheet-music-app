@@ -56,7 +56,6 @@ const makeSetlist = (overrides: Partial<Setlist> = {}): Setlist => ({
   name: 'Shabbat Morning',
   date: new Date('2026-03-15'),
   updatedAt: new Date('2026-03-15'),
-  tracks: [],
   trackCount: 0,
   ownerId: 'user-1',
   ...overrides,
@@ -203,7 +202,7 @@ describe('useAddToSetlist', () => {
     it('builds tracks with correct ID format and writes them to top-level via applyEdit', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'drive-abc', name: 'My_Song.pdf', metadata: { key: 'Am' } })
-      const setlist = makeSetlist({ id: 'sl-1', tracks: [] })
+      const setlist = makeSetlist({ id: 'sl-1' })
 
       act(() => {
         result.current.openForSongs([file])
@@ -276,8 +275,8 @@ describe('useAddToSetlist', () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'file-dup', name: 'Existing_Song.pdf' })
       const setlist = makeSetlist({
-        tracks: [{ id: 'track-old', title: 'Existing Song', fileId: 'file-dup', type: 'song' }],
         trackCount: 1,
+        fileIds: ['file-dup'],
       })
 
       act(() => {
@@ -331,8 +330,8 @@ describe('useAddToSetlist', () => {
       const file = makeDriveFile({ id: 'file-new' })
       const setlist = makeSetlist({
         id: 'sl-1',
-        tracks: [{ id: 'track-existing', title: 'Existing', fileId: 'file-old', type: 'song' }],
         trackCount: 1,
+        fileIds: ['file-old'],
       })
 
       // Mock subscribeToSetlist to return current state (used by undo for

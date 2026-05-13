@@ -4,7 +4,11 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
 import { getTemplate } from "@/lib/liturgical-templates"
 import { getTracksForSetlist } from "@/lib/server-tracks"
-import { Setlist } from "@/types/models"
+import { Setlist, SetlistTrack } from "@/types/models"
+
+type SetlistWithTracks = Setlist & {
+    tracks: Awaited<ReturnType<typeof getTracksForSetlist>>
+}
 
 export const GET = createApiHandler(
     async (ctx) => {
@@ -24,7 +28,7 @@ export const GET = createApiHandler(
             id: string
             date: string
             context: Awaited<ReturnType<typeof getFullServiceContext>>
-            setlist?: Setlist | null
+            setlist?: SetlistWithTracks | null
         }
         const columns: MatrixColumn[] = []
         let baseDate = new Date()
@@ -72,10 +76,9 @@ export const GET = createApiHandler(
                 ...data,
                 id: doc.id,
                 tracks,
-                // Convert Firestore Timestamp to ISO string
                 date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
                 eventDate: data.eventDate?.toDate ? data.eventDate.toDate().toISOString() : data.eventDate
-            } as unknown as Setlist
+            } as unknown as SetlistWithTracks
         }))
 
         // 3. Map setlists to columns based on chronological proximity
@@ -104,23 +107,21 @@ export const GET = createApiHandler(
 
         // 5. Build the Grid
         // grid[rowId][colId] = { track: SetlistTrack | null }
-        const grid: Record<string, Record<string, { track: Setlist['tracks'] extends (infer T)[] | undefined ? T | null : null }>> = {}
+        const grid: Record<string, Record<string, { track: SetlistTrack | null }>> = {}
 
         rows.forEach(row => {
             grid[row.id] = {}
             columns.forEach(col => {
                 const setlist = col.setlist ?? null
-                let matchedTrack = null
+                let matchedTrack: SetlistTrack | null = null
 
                 if (setlist && setlist.tracks) {
-                    // Primitive matching: if the track title exists and closely matches the slot label or queries
-                    // A true rigorous match would use Fuse.js here too, but simple string matching is fast for now
-                    matchedTrack = setlist.tracks.find(t => {
-                        const tTitle = t.title.toLowerCase()
-                        const tFile = (t.fileName || '').toLowerCase()
+                    matchedTrack = (setlist.tracks.find((t) => {
+                        const tTitle = String(t.title ?? '').toLowerCase()
+                        const tFile = String((t as { fileName?: string }).fileName ?? '').toLowerCase()
                         if (tTitle.includes(row.label.toLowerCase())) return true
                         return row.queries.some(q => tTitle.includes(q.toLowerCase()) || tFile.includes(q.toLowerCase()))
-                    })
+                    }) as unknown as SetlistTrack | undefined) ?? null
                 }
 
                 grid[row.id][col.id] = {

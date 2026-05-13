@@ -42,8 +42,7 @@ export function CompactSetlistRow({ setlist, onSelect }: { setlist: Setlist; onS
                 <div className="font-medium text-sm text-foreground truncate">{setlist.name}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
                     {dateStr && <span>{dateStr}</span>}
-                    {/* v60-06-01: read denormalized trackCount (v54-01-03 reconciler); fall back to embedded */}
-                    <span>{setlist.trackCount ?? (setlist.tracks?.length || 0)} songs</span>
+                    <span>{setlist.trackCount ?? 0} songs</span>
                 </div>
             </div>
             <ChevronRight className="w-4 h-4 text-brand/30 group-hover:text-brand/60 transition-colors shrink-0" />

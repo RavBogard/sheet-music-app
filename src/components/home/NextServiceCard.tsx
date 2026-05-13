@@ -51,12 +51,7 @@ export function NextServiceCard({
     })()
 
     const musicians = setlist.musicians || []
-    // v60-06-02: read denormalized songCount with embedded fallback for legacy setlists
-    const songCount =
-        setlist.songCount ??
-        (setlist.tracks || []).filter(
-            (t) => !t.type || t.type === "song"
-        ).length
+    const songCount = setlist.songCount ?? 0
 
     if (isPastSetlist) {
         return (

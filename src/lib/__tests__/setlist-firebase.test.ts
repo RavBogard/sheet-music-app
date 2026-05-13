@@ -145,9 +145,9 @@ describe('findLastMatchingService', () => {
     it('returns the most recent matching setlist before the cutoff date', async () => {
         // Snapshot pre-sorted by date desc (matches orderBy('date', 'desc')).
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'C', name: 'Erev Shabbat C', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'friday_night', tracks: [], trackCount: 0 },
-            { id: 'B', name: 'Shabbat B', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
-            { id: 'A', name: 'Erev Shabbat A', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', tracks: [], trackCount: 0 },
+            { id: 'C', name: 'Erev Shabbat C', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'friday_night', trackCount: 0 },
+            { id: 'B', name: 'Shabbat B', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', trackCount: 0 },
+            { id: 'A', name: 'Erev Shabbat A', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('friday_night', THURSDAY_APR_30)
@@ -161,7 +161,7 @@ describe('findLastMatchingService', () => {
     it('matches by inferring service type when templateType is missing (legacy)', async () => {
         // No templateType field — should infer friday_night from the Friday eventDate.
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'L', name: 'Legacy Friday', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, tracks: [], trackCount: 0 },
+            { id: 'L', name: 'Legacy Friday', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('friday_night', THURSDAY_APR_30)
@@ -170,7 +170,7 @@ describe('findLastMatchingService', () => {
 
     it('returns null when no candidate matches', async () => {
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'B', name: 'Shabbat B', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
+            { id: 'B', name: 'Shabbat B', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('rosh_hashanah', THURSDAY_APR_30)
@@ -181,8 +181,8 @@ describe('findLastMatchingService', () => {
         // C is dated AFTER the cutoff (Friday May 1), should be skipped in favor of A.
         const FRIDAY_MAY_1 = new Date(2026, 4, 1)
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'future', name: 'Future Friday', eventDate: FRIDAY_MAY_1, date: FRIDAY_MAY_1, templateType: 'friday_night', tracks: [], trackCount: 0 },
-            { id: 'A', name: 'Erev Shabbat A', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', tracks: [], trackCount: 0 },
+            { id: 'future', name: 'Future Friday', eventDate: FRIDAY_MAY_1, date: FRIDAY_MAY_1, templateType: 'friday_night', trackCount: 0 },
+            { id: 'A', name: 'Erev Shabbat A', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('friday_night', FRIDAY_APR_24)
@@ -191,8 +191,8 @@ describe('findLastMatchingService', () => {
 
     it('skips templates (isTemplate=true) even if templateType matches', async () => {
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'tmpl', name: 'Friday Night Template', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'friday_night', isTemplate: true, tracks: [], trackCount: 0 },
-            { id: 'real', name: 'Real Friday', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', tracks: [], trackCount: 0 },
+            { id: 'tmpl', name: 'Friday Night Template', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'friday_night', isTemplate: true, trackCount: 0 },
+            { id: 'real', name: 'Real Friday', eventDate: FRIDAY_APR_17, date: FRIDAY_APR_17, templateType: 'friday_night', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('friday_night', THURSDAY_APR_30)
@@ -201,7 +201,7 @@ describe('findLastMatchingService', () => {
 
     it('matches festival-bucket templateType against specific festival service types', async () => {
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'F', name: 'Sukkot Service', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'festival', tracks: [], trackCount: 0 },
+            { id: 'F', name: 'Sukkot Service', eventDate: FRIDAY_APR_24, date: FRIDAY_APR_24, templateType: 'festival', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('sukkot', THURSDAY_APR_30)
@@ -288,7 +288,7 @@ describe('v52-05 default-template pointer (config/defaults)', () => {
 
         // Legacy query also has a candidate, but should NOT win.
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'most-recent', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
+            { id: 'most-recent', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('shabbat_morning', THURSDAY_APR_30)
@@ -309,7 +309,7 @@ describe('v52-05 default-template pointer (config/defaults)', () => {
 
         // Legacy fallback returns the most-recent matching candidate.
         mockGetDocs.mockResolvedValueOnce(fakeSnapshot([
-            { id: 'fallback', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', tracks: [], trackCount: 0 },
+            { id: 'fallback', name: 'Most Recent Shabbat', eventDate: SATURDAY_APR_18, date: SATURDAY_APR_18, templateType: 'shabbat_morning', trackCount: 0 },
         ]))
 
         const result = await makeService().findLastMatchingService('shabbat_morning', THURSDAY_APR_30)

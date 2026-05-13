@@ -1,41 +1,17 @@
 // Admin-SDK only. Single source of truth for server-side setlist track reads.
-// Hydrated setlists read top-level `tracks/{id}` (post-v50-05); unhydrated
-// setlists fall back to the embedded array. Behavior ported from c9e92a5.
+// Embedded-array fallback removed in v60-08-01 after universal backfill —
+// always returns rows from top-level `tracks/{id}`. The `setlistData` param
+// is retained for ABI stability across 6 server consumers but is no longer
+// inspected; callers MAY pass any record-shape.
 
 import type { LocalTrack } from "@/lib/local/types"
 
-function toMs(value: unknown): number {
-    if (value == null) return 0
-    if (typeof value === "number") return value
-    if (typeof value === "string") {
-        const t = Date.parse(value)
-        return Number.isNaN(t) ? 0 : t
-    }
-    return 0
-}
-
-function buildLocalTracks(
-    setlistId: string,
-    setlistUpdatedAt: number,
-    rawTracks: unknown,
-): LocalTrack[] {
-    if (!Array.isArray(rawTracks)) return []
-    return rawTracks.map((t, index) => {
-        const track = (t ?? {}) as Record<string, unknown>
-        return {
-            ...track,
-            id: String(track.id ?? `${setlistId}-${index}`),
-            setlistId,
-            order: typeof track.order === "number" ? track.order : index,
-            updatedAt: setlistUpdatedAt,
-        } as LocalTrack
-    })
-}
-
-async function fetchTopLevelTracks(
+export async function getTracksForSetlist(
     db: FirebaseFirestore.Firestore,
     setlistId: string,
+    _setlistData: Record<string, unknown>,
 ): Promise<LocalTrack[]> {
+    void _setlistData
     const snap = await db
         .collection("tracks")
         .where("setlistId", "==", setlistId)
@@ -64,16 +40,4 @@ async function fetchTopLevelTracks(
     })
     rows.sort((a, b) => a.order - b.order)
     return rows
-}
-
-export async function getTracksForSetlist(
-    db: FirebaseFirestore.Firestore,
-    setlistId: string,
-    setlistData: Record<string, unknown>,
-): Promise<LocalTrack[]> {
-    if (setlistData.hydrated === true) {
-        return await fetchTopLevelTracks(db, setlistId)
-    }
-    const updatedAtMs = toMs(setlistData.updatedAt)
-    return buildLocalTracks(setlistId, updatedAtMs, setlistData.tracks)
 }

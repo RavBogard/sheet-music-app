@@ -8,11 +8,10 @@ import { applyEdit } from "@/lib/local/write"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 
-// v60-07-01: this hook writes EXCLUSIVELY to the top-level tracks/{id}
-// collection + denormalized parent-doc fields. The embedded
-// setlist.tracks[] array is no longer touched here. Reader fallback
-// (server-tracks.ts + client-tracks.ts buildLocalTracks branch) still
-// handles legacy unhydrated setlists for dashboard/matrix surfaces.
+// v60-08-01: this hook reads only denormalized parent-doc fields
+// (trackCount + fileIds). Order indices for new tracks are computed off
+// trackCount; duplicate detection uses fileIds. Top-level tracks/{id}
+// writes via the engine path remain unchanged.
 
 /** Clean a filename into a display title (same logic as addSongsFromLibrary) */
 function cleanFileName(name: string): string {
@@ -110,12 +109,7 @@ export function useAddToSetlist() {
   const addToSetlist = useCallback(async (setlistId: string, setlist: Setlist) => {
     if (pendingSongs.length === 0) return
 
-    // Check for duplicates
-    const existingFileIds = new Set(
-      setlist.tracks
-        .filter(t => t.fileId)
-        .map(t => t.fileId)
-    )
+    const existingFileIds = new Set(setlist.fileIds ?? [])
     const hasDuplicates = pendingSongs.some(f => existingFileIds.has(f.id))
 
     // Build tracks (same pattern as addSongsFromLibrary)
@@ -136,7 +130,8 @@ export function useAddToSetlist() {
     // Close sheet optimistically
     setIsOpen(false)
 
-    const newTrackCount = setlist.tracks.length + newTracks.length
+    const baseTrackCount = setlist.trackCount ?? 0
+    const newTrackCount = baseTrackCount + newTracks.length
 
     // v60-07-01: per-track top-level writes via the engine. The toast
     // Undo action below is the user-facing undo UX (composite-undo cascade).
@@ -151,7 +146,7 @@ export function useAddToSetlist() {
               setlistId,
               songId: t.fileId,
               fileId: t.fileId,
-              order: setlist.tracks.length + i,
+              order: baseTrackCount + i,
               title: t.title,
               type: "song",
               ...(t.key ? { key: t.key } : {}),
@@ -220,10 +215,7 @@ export function useAddToSetlist() {
               resolve(cur)
             })
           })
-          const currentCount =
-            typeof current?.trackCount === "number"
-              ? current.trackCount
-              : (current?.tracks?.length ?? 0)
+          const currentCount = current?.trackCount ?? 0
           const nextCount = Math.max(0, currentCount - undoTrackIds.length)
           await setlistService.updateSetlist(undoSetlistId, {
             trackCount: nextCount,
@@ -247,12 +239,7 @@ export function useAddToSetlist() {
         return
     }
 
-    // Check for duplicates
-    const existingFileIds = new Set(
-      setlist.tracks
-        .filter(t => t.fileId)
-        .map(t => t.fileId)
-    )
+    const existingFileIds = new Set(setlist.fileIds ?? [])
     const hasDuplicates = files.some(f => existingFileIds.has(f.id))
 
     const now = Date.now()
@@ -266,7 +253,8 @@ export function useAddToSetlist() {
       type: 'song' as const,
     }))
 
-    const newTrackCount = setlist.tracks.length + newTracks.length
+    const baseTrackCount = setlist.trackCount ?? 0
+    const newTrackCount = baseTrackCount + newTracks.length
 
     // v60-07-01: per-track top-level writes via the engine.
     await Promise.all(
@@ -280,7 +268,7 @@ export function useAddToSetlist() {
               setlistId,
               songId: t.fileId,
               fileId: t.fileId,
-              order: setlist.tracks.length + i,
+              order: baseTrackCount + i,
               title: t.title,
               type: "song",
               ...(t.key ? { key: t.key } : {}),

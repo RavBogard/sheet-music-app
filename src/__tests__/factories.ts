@@ -31,7 +31,6 @@ export function createSetlist(overrides?: Partial<Setlist>): Setlist {
         id: `setlist-${counter}`,
         name: 'Test Setlist',
         date: new Date('2026-01-01'),
-        tracks: [],
         trackCount: 0,
         ...overrides,
     }

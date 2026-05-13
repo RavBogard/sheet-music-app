@@ -228,7 +228,7 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect(result.current.tracks.map((t) => t.id)).toEqual(['t1', 't2', 't3'])
   })
 
-  it('falls back to embedded setlists.tracks[] for unhydrated setlists when Dexie is empty', async () => {
+  it('v60-08-01: returns [] for unhydrated setlists when Dexie is empty (embedded fallback removed)', async () => {
     const embedded = [
       { id: 'emb-1', title: 'Pre-cascade A', key: 'C' },
       { id: 'emb-2', title: 'Pre-cascade B', key: 'D' },
@@ -239,11 +239,10 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
       error: null,
     })
 
-    // Dexie has no rows for this setlist (cascade hasn't run yet).
     const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
 
     await waitFor(() => {
-      expect(result.current.tracks).toEqual(embedded)
+      expect(result.current.tracks).toEqual([])
     })
   })
 

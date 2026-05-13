@@ -112,11 +112,18 @@ vi.mock('@/types/schemas', () => ({
 vi.mock('@/lib/local/write', () => ({
     applyEdit: vi.fn().mockResolvedValue(undefined),
 }))
+// v60-08-01: cloneSetlist + saveAsTemplate + duplicateSetlist fetch
+// source tracks via this helper.
+vi.mock('@/lib/client-tracks', () => ({
+    fetchTracksForSetlistClient: vi.fn().mockResolvedValue([]),
+}))
 
 import { createSetlistService, StaleWriteError } from './setlist-firebase'
 import { Timestamp } from 'firebase/firestore'
 import { applyEdit } from '@/lib/local/write'
+import { fetchTracksForSetlistClient } from '@/lib/client-tracks'
 const mockApplyEdit = vi.mocked(applyEdit)
+const mockFetchTracks = vi.mocked(fetchTracksForSetlistClient)
 
 describe('createSetlistService', () => {
     let service: ReturnType<typeof createSetlistService>
@@ -218,7 +225,7 @@ describe('createSetlistService', () => {
                 tracks: [{ id: 'a', title: 'Song A', fileName: 'Song A', type: 'song' as const }],
                 trackCount: 1,
                 name: 'Test Setlist',
-            })
+            } as Parameters<typeof service.updateSetlist>[1])
 
             expect(hoisted.txUpdatePayloads).toHaveLength(1)
             const payload = hoisted.txUpdatePayloads[0]
@@ -257,7 +264,7 @@ describe('createSetlistService', () => {
             await service.updateSetlist('setlist-xyz', {
                 tracks: [{ id: 'a', title: 'A', fileName: 'A', type: 'song' as const }],
                 name: 'rename',
-            })
+            } as Parameters<typeof service.updateSetlist>[1])
 
             expect(hoisted.txUpdatePayloads).toHaveLength(1)
             const payload = hoisted.txUpdatePayloads[0]
@@ -309,20 +316,25 @@ describe('createSetlistService', () => {
     })
 
     describe('cloneForNextWeek', () => {
+        const sourceTracks = [
+            { id: 't1', title: 'Shema', type: 'song' as const },
+            { id: 't2', title: 'Mi Chamocha', type: 'song' as const },
+        ]
         const sourceSetlist = {
             id: 'source-setlist-id',
             name: 'Friday Night — Parashat Tzav — March 13',
             date: { seconds: Math.floor(new Date('2026-03-13T19:00:00').getTime() / 1000), nanoseconds: 0 },
             eventDate: { seconds: Math.floor(new Date('2026-03-13T19:00:00').getTime() / 1000), nanoseconds: 0 },
-            tracks: [
-                { id: 't1', title: 'Shema', type: 'song' as const },
-                { id: 't2', title: 'Mi Chamocha', type: 'song' as const },
-            ],
             trackCount: 2,
             ownerId: 'user123',
             musicians: [{ name: 'Alice', email: 'alice@test.com' }],
             rabbi: 'Daniel',
         }
+
+        beforeEach(() => {
+            // v60-08-01: cloneSetlist reads source tracks via fetchTracksForSetlistClient.
+            mockFetchTracks.mockResolvedValue(sourceTracks as never)
+        })
 
         it('creates a new setlist with advanced date (+7 days)', async () => {
             const newId = await service.cloneForNextWeek(sourceSetlist as any)

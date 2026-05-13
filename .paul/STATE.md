@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (7 of 10 phases LOOP COMPLETE; v60-07 PHASE COMPLETE; Wave 3 done; Wave 4 unblocked)
-Phase: 7 of 10 — v60-07 Embedded-array writer removal + immediate FieldValue.delete strip ✅ LOOP COMPLETE — 4 of 4 plans closed. Phase mandate fully met. v60-08 cleanup unblocked.
-Plan: v60-07-04 LOOP COMPLETE — PENDING-UAT (W7 import/execute route refactored: parent payload omits embedded `tracks`, carries trackCount + hydrated:true; per-track seeding via Admin SDK db.batch(); FieldValue.serverTimestamp() replaces ISO-string nowStr — closes audit-noted Timestamp gap). +27 LOC net production. HFG 0/3 held.
-Status: v60-07-04 LOOP COMPLETE. SUMMARY created. 6 of 7 verifiable ACs PASS; AC-6 DRIFT documented (+2 LOC over ceiling — comment-attributable); AC-7 PENDING-UAT (Daniel uses importer UI). Verification: tsc EXIT=0; next build `Compiled successfully in 7.5s`; vitest 1616/52 EXACT baseline. **Phase v60-07 mandate COMPLETE** — every production code path (W1-W7) now writes top-level tracks only; opportunistic strip-on-touch via v60-07-03 (client) for legacy hydrated docs. Pending: combined commit + push.
-Last activity: 2026-05-13 — v60-07-04 LOOP COMPLETE; phase v60-07 closes; awaiting commit + push + phase-transition routing.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (8 of 10 phases LOOP COMPLETE; v60-08 PHASE COMPLETE; Wave 3 fully done; Wave 4 unblocked)
+Phase: 8 of 10 — v60-08 Migration cleanup ✅ LOOP COMPLETE (single-plan phase). Mandate fully met: top-level `tracks/{id}` is the single source in code (no reader fallback, no schema field, no interface field). 22 consumer sites migrated to denorms.
+Plan: v60-08-01 LOOP COMPLETE — PENDING-UAT. All 4 tasks done. 6 ACs PASS (AC-6 LOC ceiling DRIFT documented and Daniel-approved at mid-APPLY checkpoint). SUMMARY enhanced with frontmatter + skill audit note. Skill audit: /ui-ux-pro-max N/A passed.
+Status: UNIFY complete. Pending: phase transition + combined commit + push of v60-08-01 bundle (entire .paul/phases/v60-08-migration-cleanup/ dir per feedback_paul_phase_commits).
+Last activity: 2026-05-13 — v60-08-01 LOOP COMPLETE; phase v60-08 LOOP COMPLETE; transition phase routing next.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -24,10 +24,11 @@ Progress:
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
 - Phase v60-06: ✅ [██████████] 100% LOOP COMPLETE (8 of 8 plans closed)
 - Phase v60-07: [██████████] 100% LOOP COMPLETE (4 of 4 plans done — v60-07-01 hook + v60-07-02 create-style + v60-07-03 W2 strip + v60-07-04 W7 import-route refactor). Phase mandate fully met. v60-07-05 (W8/W9/W10 opportunistic strip + W11 cascade) is optional polish. v60-08 cleanup unblocked.
+- Phase v60-08: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mandate met: top-level tracks/{id} is sole source in code; readers + schema + interface all cleaned. v60-09/v60-10 (Wave 4) unblocked.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-07-04 LOOP COMPLETE; phase v60-07 LOOP COMPLETE; ready for v60-08 OR v60-07-05 polish]
+  ✓        ✓        ✓     [v60-08-01 LOOP COMPLETE; phase v60-08 LOOP COMPLETE; ready for transition]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -67,13 +68,18 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-07-04 LOOP COMPLETE; phase v60-07 closes)
-Stopped at: SUMMARY written. Phase v60-07 mandate COMPLETE — all 7 production writers (W1-W7) decommissioned against embedded-array writes; client-side opportunistic strip-on-touch via v60-07-03. v60-07-05 (W8/W9/W10 strip + W11 cascade) is OPTIONAL polish. v60-08 cleanup unblocked. v60-09 (cross-device library sync) + v60-10 (Mobile AddBar) — Wave 4 parallel candidates.
-Next action: Three routing options for Daniel:
-  (a) `/paul:plan v60-08` — Migration cleanup (drop embedded-array reader fallback + setlistConverter tracks field). REQUIRES v60-06-08 `--apply` backfill to land first (Daniel's Mon–Wed window).
-  (b) `/paul:plan v60-07-05` — Optional polish: W8/W9/W10 opportunistic strip + W11 cascade-delete top-level tracks orphan cleanup.
-  (c) Pause v6.0 to UAT the accumulated PENDING-UAT bundle (v5.0/v5.2/v5.3/v5.4/v60-01..04).
-Resume file: .paul/phases/v60-07-writer-removal-strip/v60-07-04-SUMMARY.md
+Last session: 2026-05-13 (v60-08-01 LOOP COMPLETE; phase v60-08 closes)
+Stopped at: UNIFY complete. SUMMARY enhanced. Phase v60-08 mandate fully met. Awaiting phase-transition routing (ROADMAP update + git commit per workflow `transition-phase.md`).
+Next action: Execute transition (workflow `~/.claude/paul-framework/workflows/transition-phase.md`) — update ROADMAP, commit + push the v60-08-01 bundle including the entire .paul/phases/v60-08-migration-cleanup/ dir. After transition: v60-09 + v60-10 (Wave 4 parallel candidates) ready to plan.
+Resume file: .paul/phases/v60-08-migration-cleanup/v60-08-01-SUMMARY.md
+Resume context (v60-08-01 plan):
+- v60-08 = final cleanup phase of v6.0 Wave 3. After this, top-level tracks/{id} is the only source of truth in code (was already the only writer post-v60-07; this drops the reader fallback + schema field).
+- Files modified: src/lib/server-tracks.ts (drop unhydrated branch + buildLocalTracks/toMs helpers) + src/lib/client-tracks.ts (collapse both helper functions) + src/types/schemas.ts (drop tracks field from setlistSchema) + their 2 test files.
+- DO-NOT-TOUCH list: SetlistGridHydrator.tsx (lazy-hydrate cascade stays as defense-in-depth) / use-setlist-performance.ts loading-branch / engine code (HFG must stay 0/3) / setlistTrackSchema export (still used by top-level docs) / mirrorTracksToTopLevel already deleted in v60-07-01 (grep confirmed zero source matches; only PAUL/RESEARCH docs reference the name).
+- Backfill prerequisite: checkpoint:human-action gates APPLY on Daniel confirming v60-06-08 --apply has run against production + active-rotation setlists carry hydrated:true. Skipping breaks publish/print/email/perf-view for non-hydrated setlists.
+- LOC budget: expected net-negative production delta; ≤30 LOC absolute per v6.0 milestone constraint.
+- SPECIAL-FLOWS gate: /ui-ux-pro-max N/A (data layer; no UI/UX changes).
+- Friday/Shabbat cadence: today is Wed 2026-05-13; safe deploy window through Thu morning. Engine code untouched, so iPad/worship-cycle risk is data-shape-only.
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

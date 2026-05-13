@@ -73,6 +73,7 @@ async function updateSetlistWithVersion(
 import { SetlistTrack } from "@/types/api"
 import { logSetlistChange } from "@/lib/setlist-audit"
 import { setlistConverter } from "@/types/schemas"
+import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
 
 // export interface SetlistTrack { ... } // Removed local definition
 export type { SetlistTrack }
@@ -304,17 +305,19 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Duplicate a setlist (creates a copy owned by current user)
         async duplicateSetlist(sourceSetlistId: string, setlistData: Setlist) {
             try {
-                // v60-07-02: assign fresh ids before parent-doc create so the
-                // top-level seed fanout receives the same id set we'd previously
-                // embedded.
-                const freshTracks = setlistData.tracks.map((t, i) => ({
+                // v60-08-01: source tracks fetched from top-level collection.
+                const sourceTracks = await fetchTracksForSetlistClient(
+                    sourceSetlistId,
+                    setlistData,
+                ) as unknown as SetlistTrack[]
+                const freshTracks = sourceTracks.map((t, i) => ({
                     ...t,
                     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
                 }))
                 const copyData = stripUndefinedDeep({
                     name: `${setlistData.name} (Copy)`,
                     date: serverTimestamp(),
-                    trackCount: setlistData.tracks.length,
+                    trackCount: sourceTracks.length,
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
@@ -432,11 +435,14 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 const context = await getFullServiceContext(targetDate)
                 const name = generateSetlistName(context)
 
-                // v60-07-02: fresh ids assigned before parent-doc create; the
-                // top-level seed fanout receives the new id set. Source per-track
-                // values (key/bpm/leadMusician/notes/etc.) carry forward verbatim
-                // via the spread inside seedTopLevelTracks.
-                const freshTracks = source.tracks.map((t, i) => ({
+                // v60-08-01: source tracks fetched from top-level collection;
+                // per-track values (key/bpm/leadMusician/notes/etc.) carry
+                // forward verbatim via the spread inside seedTopLevelTracks.
+                const sourceTracks = await fetchTracksForSetlistClient(
+                    source.id,
+                    source,
+                ) as unknown as SetlistTrack[]
+                const freshTracks = sourceTracks.map((t, i) => ({
                     ...t,
                     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
                 }))
@@ -448,7 +454,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     // for the rationale — closes the lazy-hydration precondition
                     // race that landed Daniel's editor in 'failed' state on phone.
                     updatedAt: serverTimestamp(),
-                    trackCount: source.tracks.length,
+                    trackCount: sourceTracks.length,
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
@@ -469,7 +475,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     site: 'cloneSetlist',
                     op: 'create',
                     collection: COLLECTION_PATH,
-                    trackCount: source.tracks?.length ?? 0,
+                    trackCount: source.trackCount ?? 0,
                 })
                 throw e
             }
@@ -490,15 +496,19 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // Save a setlist as a reusable template (strips date, musicians, rabbi)
         async saveAsTemplate(source: Setlist, templateName?: string): Promise<string> {
             try {
-                // v60-07-02: fresh ids + post-create seed via engine path.
-                const freshTracks = source.tracks.map((t, i) => ({
+                // v60-08-01: source tracks fetched from top-level collection.
+                const sourceTracks = await fetchTracksForSetlistClient(
+                    source.id,
+                    source,
+                ) as unknown as SetlistTrack[]
+                const freshTracks = sourceTracks.map((t, i) => ({
                     ...t,
                     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
                 }))
                 const templateData = stripUndefinedDeep({
                     name: templateName || `${source.name} (Template)`,
                     date: serverTimestamp(),
-                    trackCount: source.tracks.length,
+                    trackCount: sourceTracks.length,
                     hydrated: true,
                     isTemplate: true,
                     templateType: 'other',

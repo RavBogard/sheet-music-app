@@ -48,14 +48,9 @@ export function HeroCard({
         return () => clearInterval(iv)
     }, [eventDate])
 
-    // Memoize fileIds to avoid re-running cache check on every render
     const fileIds = useMemo(
-        // v60-06-02: read denormalized fileIds (maintained by SetlistGridHydrator
-        // reconciler); fall back to embedded tracks for legacy setlists.
-        () =>
-            setlist.fileIds ??
-            (setlist.tracks || []).filter(t => t.fileId).map(t => t.fileId!),
-        [setlist.fileIds, setlist.tracks]
+        () => setlist.fileIds ?? [],
+        [setlist.fileIds]
     )
 
     // Check offline readiness for this setlist's charts
@@ -94,9 +89,7 @@ export function HeroCard({
     })()
 
     const isImminent = countdown !== null
-    // v60-06-01: read denormalized trackCount maintained by v54-01-03 reconciler;
-    // fall back to embedded array length for legacy setlists pre-reconciler.
-    const trackCount = setlist.trackCount ?? (setlist.tracks?.length || 0)
+    const trackCount = setlist.trackCount ?? 0
     const prepData = prep?.prep
     const allCached = offlineStatus && offlineStatus.cached === offlineStatus.total
 

@@ -183,7 +183,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             if (mode === 'clone' && cloneSource && eventDate) {
                 loadingId = toast.loading(`Cloning from ${cloneSource.name}…`)
                 const setlistId = await service.cloneSetlist(cloneSource, eventDate)
-                const trackCount = cloneSource.tracks?.length ?? 0
+                const trackCount = cloneSource.trackCount ?? 0
                 toast.success(
                     `Cloned from ${cloneSource.name} — ${trackCount} ${trackCount === 1 ? 'track' : 'tracks'}`,
                     loadingId ? { id: loadingId } : undefined,

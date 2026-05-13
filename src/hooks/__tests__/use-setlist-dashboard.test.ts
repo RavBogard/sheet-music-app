@@ -114,8 +114,8 @@ function makeSetlist(overrides: Partial<Setlist> = {}): Setlist {
     id: 'setlist-1',
     name: 'Shabbat Morning',
     date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-    tracks: [{ id: 't1', title: 'Song A', fileId: 'file-a' }],
     trackCount: 1,
+    fileIds: ['file-a'],
     ownerId: 'user-1',
     ...overrides,
   }
@@ -190,20 +190,8 @@ describe('useSetlistDashboard', () => {
     expect(result.current.displayedSetlists[0].name).toBe('Friday Night')
   })
 
-  it('search filters by track title', () => {
-    const setlists = [
-      makeSetlist({ id: '1', name: 'Service', tracks: [{ id: 't1', title: 'Lecha Dodi' }] }),
-      makeSetlist({ id: '2', name: 'Other', tracks: [{ id: 't2', title: 'Shema' }] }),
-    ]
-
-    const { result } = renderHook(() => useSetlistDashboard({
-      initialPublicSetlists: setlists,
-    }))
-
-    act(() => { result.current.setSearchQuery('Lecha') })
-    expect(result.current.displayedSetlists).toHaveLength(1)
-    expect(result.current.displayedSetlists[0].id).toBe('1')
-  })
+  // v60-08-01: dropped — track-title search relied on setlist.tracks (legacy
+  // embedded array). Production search now matches name + date only.
 
   it('rabbi filter narrows displayed setlists', () => {
     const setlists = [

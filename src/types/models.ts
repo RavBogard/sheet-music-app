@@ -70,7 +70,6 @@ export interface Setlist {
     date: FirestoreDate
     eventDate?: FirestoreDate
     updatedAt?: FirestoreDate
-    tracks: SetlistTrack[]
     trackCount: number
     /** v60-06-02: denormalized count of song-typed tracks. Maintained by
      *  the SetlistGridHydrator reconciler (same pattern as trackCount). */

@@ -19,10 +19,6 @@ const makeSetlist = (overrides: Partial<Setlist> = {}): Setlist => ({
   name: 'Shabbat Morning',
   date: new Date('2026-03-15'),
   updatedAt: new Date('2026-03-15'),
-  tracks: [
-    { id: 't1', title: 'Song A', type: 'song' },
-    { id: 't2', title: 'Song B', type: 'song' },
-  ],
   trackCount: 2,
   ownerId: 'user-1',
   ...overrides,

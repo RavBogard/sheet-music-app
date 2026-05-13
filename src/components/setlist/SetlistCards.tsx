@@ -62,15 +62,13 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
     useEffect(() => {
-        // v60-06-03: read denormalized fileIds (maintained by SetlistGridHydrator
-        // reconciler); fall back to embedded tracks for legacy setlists.
-        const fileIds = setlist.fileIds ?? ((setlist.tracks || []).map(t => t.fileId).filter(Boolean) as string[])
+        const fileIds = setlist.fileIds ?? []
         if (fileIds.length === 0) { setOfflineStatus('none'); return }
         Promise.all(fileIds.map(id => isFileCached(id))).then(results => {
             const cached = results.filter(Boolean).length
             setOfflineStatus(cached === fileIds.length ? 'full' : cached > 0 ? 'partial' : 'none')
         }).catch(() => setOfflineStatus('none'))
-    }, [setlist.fileIds, setlist.tracks])
+    }, [setlist.fileIds])
 
     return (
         <div

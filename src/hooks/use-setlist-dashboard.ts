@@ -5,6 +5,7 @@ import { SERVICE_TYPE_LABELS } from "@/components/setlist/SetlistCards"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
 import { useOffline } from "@/hooks/use-offline"
+import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
 import { toast } from "sonner"
 import { getNextFriday, getNextSaturday, getFullServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName } from "@/lib/liturgical-templates"
@@ -309,7 +310,7 @@ export function useSetlistDashboard({
             toast.success(`Created "${name}" — ${matched}/${total} songs matched`, { id: templateToastId })
 
             handleSelect({
-                id, name, tracks, trackCount: tracks.length,
+                id, name, trackCount: tracks.length,
                 date: { seconds: Date.now() / 1000, nanoseconds: 0 },
                 eventDate: targetDate.toISOString(), ownerId: user.uid,
             })
@@ -319,10 +320,15 @@ export function useSetlistDashboard({
     }
 
     const handleDownload = async (setlist: Setlist) => {
-        if (setlist.tracks && setlist.tracks.length > 0) {
-            await downloadSetlist(setlist.tracks)
-        } else {
-            toast.error("No tracks to download in this setlist")
+        try {
+            const tracks = await fetchTracksForSetlistClient(setlist.id, setlist)
+            if (tracks.length === 0) {
+                toast.error("No tracks to download in this setlist")
+                return
+            }
+            await downloadSetlist(tracks)
+        } catch {
+            toast.error("Failed to load setlist for download")
         }
     }
 
@@ -343,7 +349,6 @@ export function useSetlistDashboard({
             const q = searchQuery.toLowerCase()
             filtered = filtered.filter(s => {
                 if (s.name.toLowerCase().includes(q)) return true
-                if (s.tracks?.some(t => t.title?.toLowerCase().includes(q))) return true
                 if (s.eventDate) {
                     const d = toDateHelper(s.eventDate)
                     if (d) {

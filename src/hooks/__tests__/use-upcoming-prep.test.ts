@@ -61,11 +61,8 @@ function makeSetlist(overrides: Partial<Setlist> = {}): Setlist {
     id: 'setlist-1',
     name: 'Shabbat Morning',
     date: { seconds: Date.now() / 1000, nanoseconds: 0 },
-    tracks: [
-      { id: 't1', title: 'Song A', fileId: 'file-a' },
-      { id: 't2', title: 'Song B', fileId: 'file-b' },
-    ],
     trackCount: 2,
+    fileIds: ['file-a', 'file-b'],
     eventDate: { seconds: Math.floor(Date.now() / 1000) + 86400, nanoseconds: 0 },
     ...overrides,
   }
@@ -239,7 +236,7 @@ describe('useUpcomingPrep', () => {
   })
 
   it('handles empty tracks gracefully', async () => {
-    const setlist = makeSetlist({ tracks: [] })
+    const setlist = makeSetlist({ trackCount: 0, fileIds: [] })
     mockSyncData.current = [setlist]
 
     const { result } = renderHook(() => useUpcomingPrep())
@@ -251,10 +248,8 @@ describe('useUpcomingPrep', () => {
 
   it('handles tracks without fileId', async () => {
     const setlist = makeSetlist({
-      tracks: [
-        { id: 'h1', title: 'Opening', type: 'header' },
-        { id: 't1', title: 'Song A', fileId: 'file-a' },
-      ],
+      trackCount: 2,
+      fileIds: ['file-a'],
     })
     mockSyncData.current = [setlist]
 
