@@ -8,47 +8,11 @@ import { applyEdit } from "@/lib/local/write"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 
-/**
- * P0 fix (2026-05-12): mirror new SetlistTracks into the top-level
- * `tracks/{id}` collection via the sync engine. The library "Add to
- * setlist" path historically only wrote the legacy embedded
- * `setlists/{S}.tracks[]` array, but after the SSR fetcher started
- * reading top-level `tracks/{id}` for hydrated setlists, embedded-only
- * tracks became invisible in the editor. We now write BOTH: the embedded
- * array (for back-compat with perform view, print, dashboard) AND a
- * top-level doc per track (for the editor). Fire-and-forget — the
- * embedded-array write already toasted success; the top-level mirror
- * runs via applyEdit which queues an outbox row and drains when the
- * engine pumps.
- */
-async function mirrorTracksToTopLevel(
-    setlistId: string,
-    newTracks: SetlistTrack[],
-    startOrder: number,
-): Promise<void> {
-    await Promise.all(
-        newTracks.map((t, i) =>
-            applyEdit(
-                {
-                    op: "set",
-                    collection: "tracks",
-                    doc: {
-                        id: t.id,
-                        setlistId,
-                        songId: t.fileId,
-                        fileId: t.fileId,
-                        order: startOrder + i,
-                        title: t.title,
-                        type: "song",
-                        ...(t.key ? { key: t.key } : {}),
-                        ...(t.notes ? { notes: t.notes } : {}),
-                    } as unknown as Record<string, unknown> & { id: string },
-                },
-                { withoutUndo: true },
-            ),
-        ),
-    )
-}
+// v60-07-01: this hook writes EXCLUSIVELY to the top-level tracks/{id}
+// collection + denormalized parent-doc fields. The embedded
+// setlist.tracks[] array is no longer touched here. Reader fallback
+// (server-tracks.ts + client-tracks.ts buildLocalTracks branch) still
+// handles legacy unhydrated setlists for dashboard/matrix surfaces.
 
 /** Clean a filename into a display title (same logic as addSongsFromLibrary) */
 function cleanFileName(name: string): string {
@@ -169,28 +133,43 @@ export function useAddToSetlist() {
     const addedTrackIds = newTracks.map(t => t.id)
     lastAddedTrackIdsRef.current = addedTrackIds
 
-    const updatedTracks = [...setlist.tracks, ...newTracks]
-
     // Close sheet optimistically
     setIsOpen(false)
 
-    // Perform Firestore write. Pass the updatedAt we last saw as the
-    // concurrency precondition so we don't clobber a concurrent edit.
+    const newTrackCount = setlist.tracks.length + newTracks.length
+
+    // v60-07-01: per-track top-level writes via the engine. The toast
+    // Undo action below is the user-facing undo UX (composite-undo cascade).
+    await Promise.all(
+      newTracks.map((t, i) =>
+        applyEdit(
+          {
+            op: "set",
+            collection: "tracks",
+            doc: {
+              id: t.id,
+              setlistId,
+              songId: t.fileId,
+              fileId: t.fileId,
+              order: setlist.tracks.length + i,
+              title: t.title,
+              type: "song",
+              ...(t.key ? { key: t.key } : {}),
+              ...(t.notes ? { notes: t.notes } : {}),
+            } as unknown as Record<string, unknown> & { id: string },
+          },
+          { withoutUndo: true },
+        ),
+      ),
+    )
+
+    // v60-07-01: parent-doc denormalization-only update. No `tracks`
+    // field — the embedded-array writer is decommissioned.
     const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
     await setlistService.updateSetlist(setlistId, {
-      tracks: updatedTracks,
-      trackCount: updatedTracks.length,
+      trackCount: newTrackCount,
+      hydrated: true,
     }, expected)
-
-    // P0 fix (2026-05-12): also mirror into top-level tracks/{id} so the
-    // setlist editor (which reads top-level for hydrated setlists) sees
-    // the additions. Logs and continues on failure — the embedded array
-    // write already succeeded and toast already fired.
-    try {
-      await mirrorTracksToTopLevel(setlistId, newTracks, setlist.tracks.length)
-    } catch (err) {
-      console.warn("[useAddToSetlist] top-level mirror failed", err)
-    }
 
     // Build toast message
     let message: string
@@ -213,24 +192,41 @@ export function useAddToSetlist() {
       action: {
         label: "Undo",
         onClick: async () => {
-          // Re-read current state and filter out added tracks (not snapshot restore)
-          const currentTracks = await new Promise<SetlistTrack[]>((resolve) => {
+          // v60-07-01: per-track deletes via the engine — inverse of the
+          // Promise.all applyEdit('set', ...) cascade above.
+          await Promise.all(
+            undoTrackIds.map((trackId) =>
+              applyEdit(
+                {
+                  op: "delete",
+                  collection: "tracks",
+                  docId: trackId,
+                  expectedUpdatedAt: undefined,
+                },
+                { withoutUndo: true },
+              ),
+            ),
+          )
+          // Decrement parent-doc trackCount. Read the current setlist
+          // freshly to avoid stale-state arithmetic.
+          const current = await new Promise<Setlist | null>((resolve) => {
             let unsub: (() => void) | null = null
             let resolved = false
-            unsub = setlistService.subscribeToSetlist(undoSetlistId, (current) => {
+            unsub = setlistService.subscribeToSetlist(undoSetlistId, (cur) => {
               if (resolved) return
               resolved = true
-              // Defer unsub to avoid "used before initialization" when callback fires synchronously
               if (unsub) unsub()
               else queueMicrotask(() => unsub?.())
-              resolve(current?.tracks ?? [])
+              resolve(cur)
             })
           })
-
-          const filteredTracks = currentTracks.filter(t => !undoTrackIds.includes(t.id))
+          const currentCount =
+            typeof current?.trackCount === "number"
+              ? current.trackCount
+              : (current?.tracks?.length ?? 0)
+          const nextCount = Math.max(0, currentCount - undoTrackIds.length)
           await setlistService.updateSetlist(undoSetlistId, {
-            tracks: filteredTracks,
-            trackCount: filteredTracks.length,
+            trackCount: nextCount,
           })
         },
       },
@@ -270,20 +266,38 @@ export function useAddToSetlist() {
       type: 'song' as const,
     }))
 
-    const updatedTracks = [...setlist.tracks, ...newTracks]
+    const newTrackCount = setlist.tracks.length + newTracks.length
 
+    // v60-07-01: per-track top-level writes via the engine.
+    await Promise.all(
+      newTracks.map((t, i) =>
+        applyEdit(
+          {
+            op: "set",
+            collection: "tracks",
+            doc: {
+              id: t.id,
+              setlistId,
+              songId: t.fileId,
+              fileId: t.fileId,
+              order: setlist.tracks.length + i,
+              title: t.title,
+              type: "song",
+              ...(t.key ? { key: t.key } : {}),
+              ...(t.notes ? { notes: t.notes } : {}),
+            } as unknown as Record<string, unknown> & { id: string },
+          },
+          { withoutUndo: true },
+        ),
+      ),
+    )
+
+    // v60-07-01: parent-doc denormalization-only update. No `tracks` field.
     const expected = (setlist.updatedAt instanceof Timestamp) ? setlist.updatedAt : null
     await setlistService.updateSetlist(setlistId, {
-      tracks: updatedTracks,
-      trackCount: updatedTracks.length,
+      trackCount: newTrackCount,
+      hydrated: true,
     }, expected)
-
-    // P0 fix (2026-05-12): mirror to top-level tracks/{id}, same as addToSetlist above.
-    try {
-      await mirrorTracksToTopLevel(setlistId, newTracks, setlist.tracks.length)
-    } catch (err) {
-      console.warn("[useAddToSetlist] top-level mirror failed", err)
-    }
 
     let message: string
     if (files.length === 1) {

@@ -20,6 +20,14 @@ vi.mock('@/lib/setlist-firebase', () => ({
   }),
 }))
 
+// v60-07-01: this hook now writes per-track via applyEdit to the top-level
+// `tracks/{id}` collection, plus a denormalization-only parent-doc update
+// via updateSetlist. Tests assert against BOTH mocks.
+const mockApplyEdit = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/lib/local/write', () => ({
+  applyEdit: (...args: unknown[]) => mockApplyEdit(...args),
+}))
+
 const mockAuth: { user: { uid: string; displayName: string } | null; isAdmin: boolean; isBandLeader: boolean; isMusician: boolean } = {
   user: { uid: 'user-1', displayName: 'Test User' },
   isAdmin: false,
@@ -192,7 +200,7 @@ describe('useAddToSetlist', () => {
   // --- addToSetlist ---
 
   describe('addToSetlist', () => {
-    it('builds tracks with correct ID format and appends to setlist', async () => {
+    it('builds tracks with correct ID format and writes them to top-level via applyEdit', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'drive-abc', name: 'My_Song.pdf', metadata: { key: 'Am' } })
       const setlist = makeSetlist({ id: 'sl-1', tracks: [] })
@@ -205,17 +213,29 @@ describe('useAddToSetlist', () => {
         await result.current.addToSetlist('sl-1', setlist)
       })
 
+      // v60-07-01: per-track writes via applyEdit('set', 'tracks', ...) — NOT
+      // an embedded `tracks` array on the parent doc.
+      expect(mockApplyEdit).toHaveBeenCalledOnce()
+      const [edit, opts] = mockApplyEdit.mock.calls[0]
+      expect(edit.op).toBe('set')
+      expect(edit.collection).toBe('tracks')
+      expect(edit.doc.id).toMatch(/^track-\d+-drive-abc-0$/)
+      expect(edit.doc.title).toBe('My Song')
+      expect(edit.doc.fileId).toBe('drive-abc')
+      expect(edit.doc.songId).toBe('drive-abc')
+      expect(edit.doc.setlistId).toBe('sl-1')
+      expect(edit.doc.order).toBe(0)
+      expect(edit.doc.type).toBe('song')
+      expect(edit.doc.key).toBe('Am')
+      expect(opts).toEqual({ withoutUndo: true })
+
+      // Parent doc gets denormalization-only update — no `tracks` field.
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
       const [id, data] = mockUpdateSetlist.mock.calls[0]
       expect(id).toBe('sl-1')
-      expect(data.tracks).toHaveLength(1)
-      expect(data.tracks[0].id).toMatch(/^track-\d+-drive-abc-0$/)
-      expect(data.tracks[0].title).toBe('My Song')
-      expect(data.tracks[0].fileId).toBe('drive-abc')
-      expect(data.tracks[0].fileName).toBe('My_Song.pdf')
-      expect(data.tracks[0].key).toBe('Am')
-      expect(data.tracks[0].type).toBe('song')
+      expect(data.tracks).toBeUndefined()
       expect(data.trackCount).toBe(1)
+      expect(data.hydrated).toBe(true)
     })
 
     it('closes the sheet after adding', async () => {
@@ -268,10 +288,13 @@ describe('useAddToSetlist', () => {
         await result.current.addToSetlist('sl-1', setlist)
       })
 
-      // Should still add (not blocked)
+      // Should still add (not blocked) — 1 new applyEdit call + 1 parent update.
+      expect(mockApplyEdit).toHaveBeenCalledOnce()
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
       const data = mockUpdateSetlist.mock.calls[0][1]
-      expect(data.tracks).toHaveLength(2) // original + new
+      // v60-07-01: trackCount reflects existing 1 + new 1; no embedded tracks field.
+      expect(data.tracks).toBeUndefined()
+      expect(data.trackCount).toBe(2)
 
       // Toast should mention duplicate
       expect(mockToast.mock.calls[0][0]).toContain('already in this setlist')
@@ -303,7 +326,7 @@ describe('useAddToSetlist', () => {
   // --- Undo ---
 
   describe('undo', () => {
-    it('removes only the specific added track IDs (not snapshot restore)', async () => {
+    it('deletes only the specific added track IDs via applyEdit (engine-path)', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile({ id: 'file-new' })
       const setlist = makeSetlist({
@@ -312,16 +335,12 @@ describe('useAddToSetlist', () => {
         trackCount: 1,
       })
 
-      // Mock subscribeToSetlist to return current tracks (simulating re-read)
+      // Mock subscribeToSetlist to return current state (used by undo for
+      // freshly-read trackCount before the decrement).
       mockSubscribeToSetlist.mockImplementation((_id: string, cb: (setlist: Setlist | null) => void) => {
-        // Simulate that another user added a track concurrently
         cb({
           ...setlist,
-          tracks: [
-            { id: 'track-existing', title: 'Existing', fileId: 'file-old', type: 'song' },
-            { id: 'track-concurrent', title: 'Concurrent Add', fileId: 'file-concurrent', type: 'song' },
-            // The track we added will match track-{timestamp}-file-new-0 pattern
-          ],
+          trackCount: 2, // existing 1 + added 1 (simulating post-add state)
         })
         return vi.fn() // unsubscribe
       })
@@ -334,45 +353,34 @@ describe('useAddToSetlist', () => {
         await result.current.addToSetlist('sl-1', setlist)
       })
 
-      // Get the undo callback from the toast call
+      // Get the undo callback from the toast call.
       const toastOptions = mockToast.mock.calls[0][1]
       expect(toastOptions.action).toBeDefined()
       expect(toastOptions.action.label).toBe('Undo')
 
-      // Capture the added track ID
-      const addedTrackId = mockUpdateSetlist.mock.calls[0][1].tracks[
-        mockUpdateSetlist.mock.calls[0][1].tracks.length - 1
-      ].id
+      // Capture the added track ID from the first applyEdit('set', ...) call.
+      const addedTrackId = mockApplyEdit.mock.calls[0][0].doc.id
 
-      // Update the subscribeToSetlist mock to include the added track
-      mockSubscribeToSetlist.mockImplementation((_id: string, cb: (setlist: Setlist | null) => void) => {
-        cb({
-          ...setlist,
-          tracks: [
-            { id: 'track-existing', title: 'Existing', fileId: 'file-old', type: 'song' },
-            { id: 'track-concurrent', title: 'Concurrent Add', fileId: 'file-concurrent', type: 'song' },
-            { id: addedTrackId, title: 'Test Song', fileId: 'file-new', type: 'song' },
-          ],
-        })
-        return vi.fn()
-      })
-
+      // Clear and execute undo.
+      mockApplyEdit.mockClear()
       mockUpdateSetlist.mockClear()
-
-      // Execute undo
       await act(async () => {
         await toastOptions.action.onClick()
       })
 
-      // Undo should have called updateSetlist
+      // v60-07-01: undo issues applyEdit('delete', 'tracks', ...) per added id.
+      expect(mockApplyEdit).toHaveBeenCalledOnce()
+      const [edit, opts] = mockApplyEdit.mock.calls[0]
+      expect(edit.op).toBe('delete')
+      expect(edit.collection).toBe('tracks')
+      expect(edit.docId).toBe(addedTrackId)
+      expect(opts).toEqual({ withoutUndo: true })
+
+      // Parent doc gets trackCount decrement — no embedded tracks field.
       expect(mockUpdateSetlist).toHaveBeenCalledOnce()
       const undoData = mockUpdateSetlist.mock.calls[0][1]
-
-      // Should keep existing + concurrent, remove only the added track
-      expect(undoData.tracks).toHaveLength(2)
-      expect(undoData.tracks.find((t: { id: string }) => t.id === 'track-existing')).toBeDefined()
-      expect(undoData.tracks.find((t: { id: string }) => t.id === 'track-concurrent')).toBeDefined()
-      expect(undoData.tracks.find((t: { id: string }) => t.id === addedTrackId)).toBeUndefined()
+      expect(undoData.tracks).toBeUndefined()
+      expect(undoData.trackCount).toBe(1) // 2 - 1 = 1
     })
   })
 })
