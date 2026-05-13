@@ -1,9 +1,7 @@
 {
   "version": "5.4.0",
-  "commit": "7646049",
+  "commit": "f46b940",
   "branch": "master",
-  "buildDate": "5/10/2026",
-  "changelog": [
-    "5.4.0 - fix: immediately sync uploaded songs to Dexie for the offline picker"
-  ]
+  "buildDate": "5/12/2026",
+  "changelog": []
 }

@@ -9,24 +9,24 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed)
-Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; ~5 plans remaining
-Plan: v60-06-02 LOOP COMPLETE — PENDING-UAT (Daniel browser-smoke: HeroCard chart preloads + NextServiceCard/PublicSetlistListing filtered song counts on iPad)
-Status: v60-06-02 extended the v54-01-03 reconciler with two denormalized fields (songCount + fileIds) via parallel useLiveQuery + lastWrittenRef + debounced applyEdit blocks. Three dashboard consumers migrated (HeroCard fileIds, NextServiceCard + PublicSetlistListing songCount). Architectural decision locked after Daniel design discussion: client reconciler (option B), NOT Cloud Function trigger (option D) — "historical counts don't matter" + single-write-path topology removes D's drift-robustness benefit. Net +144 LOC production source — flagged AC-8 deviation; justified by tight coupling between reconciler producer + consumer reads (split commit would orphan denormalized fields). 1 in-flight test contract update auto-fixed (cascade-patch assertion at SetlistGridHydrator.test.tsx:264). tsc clean, next build clean, main suite 1581/52 baseline preserved, emulator green, HFG 0/3 held.
-Last activity: 2026-05-12 — v60-06-02 LOOP COMPLETE; committed as `9eedb14`; pushed to origin master.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed + v60-06-03 PLAN created)
+Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; v60-06-03 in PLAN; ~4 plans remaining after
+Plan: v60-06-03 APPLY complete — ready for UNIFY (2 of 2 tasks PASS; +9 net production LOC; tsc clean; next build clean (warnings pre-existing Sentry deprecations); main suite 1581/52 baseline preserved; use-upcoming-prep targeted 16/16 green; HFG 0/3 held; PrepRecommendations + UpcomingTimeline byte-identical)
+Status: APPLY executed both tasks under E/Q loop with PASS results. Task 1: SetlistCards.tsx offline-cache reader migrated to `setlist.fileIds ?? embedded` + deps array updated (+2 net LOC). Task 2: use-upcoming-prep.ts cross-setlist fileIds collection (loop body migrated to denormalized + filter-header semantics, mirrors reconciler) + per-setlist enrichment (`fileIdsForSetlist` single derivation drives both `total` via `s.songCount ?? fileIdsForSetlist.length` and viewed iteration, +7 net LOC). Net +9 LOC — well under +25 ceiling. /ui-ux-pro-max gate satisfied (loaded for skill-check; pure-logic refactor, no visual changes apply). Boundary check: AC-7 verified via empty `git diff` on PrepRecommendations.tsx + UpcomingTimeline.tsx. AC-4 verified: existing 16/16 use-upcoming-prep tests pass via fallback path (no test edits). Ready for /paul:unify.
+Last activity: 2026-05-12 — v60-06-03 APPLY complete; awaiting UNIFY.
 
 Progress:
-- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (4 of 10 phases LOOP COMPLETE — v60-04 closed)
+- v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
 - Phase v60-01: ✅ LOOP COMPLETE — PENDING-UAT
 - Phase v60-02: ✅ LOOP COMPLETE — PENDING-UAT (Wave 1 behaviorally complete)
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [██░░░░░░░░] 28% (v60-06-01 + v60-06-02 of ~7 plans LOOP COMPLETE — total count + filtered count + fileIds denormalization)
+- Phase v60-06: [███░░░░░░░] 33% (v60-06-01 + v60-06-02 of ~7 plans LOOP COMPLETE; v60-06-03 PLAN created)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-06-02 LOOP COMPLETE; ready for /paul:plan v60-06-03]
+  ✓        ✓        ○     [v60-06-03 APPLY complete; ready for /paul:unify]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-04 + v60-05 phases closed; v60-06-01 closed; ~6 v60-06 plans remaining)
-Stopped at: v60-06-01 LOOP COMPLETE — first dashboard count surfaces migrated. v60-06-02 next: filtered counts (NextServiceCard + PublicSetlistListing). Different pattern — song-typed filter requires either embedded-staleness acceptance, songCount denormalization (over-engineering risk), or filter-via-helper. Plan must surface this trade-off explicitly.
-Next action: `/paul:plan v60-06-02` — Migrate filtered-count surfaces. Decision needed at PLAN time on songCount approach.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-01-SUMMARY.md
+Last session: 2026-05-12 (autonomous mode — v60-06-03 PLAN + APPLY complete)
+Stopped at: v60-06-03 APPLY complete. 2 of 2 tasks PASS. Net +9 production LOC (SetlistCards +2 / use-upcoming-prep +7). Verification: tsc clean, next build clean (Sentry deprecation warnings pre-existing), main suite 1581 pass / 52 fail (exact baseline preserved), targeted use-upcoming-prep 16/16, HFG 0/3 held, PrepRecommendations + UpcomingTimeline byte-identical (boundary respected).
+Next action: `/paul:unify .paul/phases/v60-06-dashboard-reader-migration/v60-06-03-PLAN.md` — generate SUMMARY, single combined commit, push to origin master per session precedent.
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-03-PLAN.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.

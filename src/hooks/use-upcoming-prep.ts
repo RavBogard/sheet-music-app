@@ -99,11 +99,11 @@ export function useUpcomingPrep() {
 
         let cancelled = false
 
+        // v60-06-03: read denormalized fileIds with embedded fallback (mirrors HeroCard pattern)
         const fileIds = new Set<string>()
         for (const s of setlists) {
-            for (const t of (s.tracks || [])) {
-                if (t.fileId) fileIds.add(t.fileId)
-            }
+            const ids = s.fileIds ?? (s.tracks || []).filter(t => t.fileId && t.type !== 'header').map(t => t.fileId!)
+            for (const id of ids) fileIds.add(id)
         }
         if (fileIds.size === 0) return
 
@@ -144,14 +144,15 @@ export function useUpcomingPrep() {
     // Build enriched list
     const enriched: UpcomingSetlistWithPrep[] = useMemo(() => {
         return setlists.map(s => {
-            const tracks = (s.tracks || []).filter(t => t.fileId && t.type !== 'header')
-            const total = tracks.length
+            // v60-06-03: read denormalized fileIds + songCount with embedded fallback
+            const fileIdsForSetlist = s.fileIds ?? (s.tracks || []).filter(t => t.fileId && t.type !== 'header').map(t => t.fileId!)
+            const total = s.songCount ?? fileIdsForSetlist.length
             let viewed = 0
             const viewedIds = new Set<string>()
-            for (const t of tracks) {
-                if (songPrefs[t.fileId!]?.lastViewedAt) {
+            for (const fid of fileIdsForSetlist) {
+                if (songPrefs[fid]?.lastViewedAt) {
                     viewed++
-                    viewedIds.add(t.fileId!)
+                    viewedIds.add(fid)
                 }
             }
             const percent = total > 0 ? Math.round((viewed / total) * 100) : 100
