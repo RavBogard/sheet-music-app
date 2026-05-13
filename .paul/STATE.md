@@ -97,7 +97,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `7f7e4f8` feat(v60-06-08): 15-setlist backfill script + rollback collection (phase v60-06 LOOP COMPLETE) — PUSHED 2026-05-13.
+Last commit: `1790d8a` feat(v60-07-01): decommission mirrorTracksToTopLevel dual-write bridge — PUSHED 2026-05-13.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -131,7 +131,8 @@ Push history this run:
   - `35ed9d3` feat(v60-06-07): matrix endpoint migration to getTracksForSetlist + Promise.all parallel fetch — PUSHED
   - `7ad02b1` docs(v60-06-07): correct commit SHA in STATE.md Git State section — PUSHED
   - `7f7e4f8` feat(v60-06-08): 15-setlist backfill script + rollback collection (phase v60-06 LOOP COMPLETE) — PUSHED
-  - `98b270d` docs(v60-06-08): correct commit SHA in STATE.md Git State section — PUSHED THIS RUN
+  - `98b270d` docs(v60-06-08): correct commit SHA in STATE.md Git State section — PUSHED
+  - `1790d8a` feat(v60-07-01): decommission mirrorTracksToTopLevel dual-write bridge — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
