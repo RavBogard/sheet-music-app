@@ -113,9 +113,9 @@ describe('retryFailedOutboxRows', () => {
         await resetDbForTests()
     })
 
-    it("resets every failed row to status='pending' with forceLwwOnConflict=true", async () => {
+    it("resets every failed row to status='pending' with forceLwwOnConflict=true AND stamps pending rows so the queue drains as LWW (v60-13-03)", async () => {
         const db = getDb()
-        await db.outbox.add(
+        const failedHighAttemptsId = await db.outbox.add(
             makeRow('failed', {
                 attempts: 5,
                 lastError: 'VersionMismatch',
@@ -128,31 +128,32 @@ describe('retryFailedOutboxRows', () => {
         // No-op pump for the test seam — we only care about the Dexie writes.
         const result = await retryFailedOutboxRows({ db, pump: () => {} })
 
-        expect(result.retried).toBe(2)
+        // v60-13-03: 2 failed rows reset + 1 pending row stamped = 3 total touched.
+        expect(result.retried).toBe(3)
         const rows = await db.outbox.toArray()
-        const reset = rows.filter((r) => r.forceLwwOnConflict === true)
-        expect(reset).toHaveLength(2)
-        for (const row of reset) {
-            expect(row.status).toBe('pending')
-            expect(row.attempts).toBe(0)
-            expect(row.lastError).toBeUndefined()
-        }
-        // The originally-pending row is untouched and carries no flag.
-        const untouched = rows.find((r) => r.forceLwwOnConflict === undefined)
-        expect(untouched?.status).toBe('pending')
+        // Every row now carries the LWW flag and is pending.
+        expect(rows.every((r) => r.forceLwwOnConflict === true)).toBe(true)
+        expect(rows.every((r) => r.status === 'pending')).toBe(true)
+        // The high-attempts failed row specifically had attempts/lastError cleared.
+        const previouslyFailedHigh = rows.find((r) => r.localId === failedHighAttemptsId)
+        expect(previouslyFailedHigh?.attempts).toBe(0)
+        expect(previouslyFailedHigh?.lastError).toBeUndefined()
     })
 
-    it('is a no-op when no failed rows exist (flag never gets set on pending/sending)', async () => {
+    it('stamps pending rows even when no failed rows exist (v60-13-03 — drains stuck queues without a head failure)', async () => {
         const db = getDb()
         await db.outbox.add(makeRow('pending') as OutboxRow)
         await db.outbox.add(makeRow('sending') as OutboxRow)
 
         const result = await retryFailedOutboxRows({ db, pump: () => {} })
 
-        expect(result.retried).toBe(0)
+        // 1 pending row gets stamped; sending row is intentionally NOT touched
+        // (in-flight to Firestore — touching risks double-write).
+        expect(result.retried).toBe(1)
         const rows = await db.outbox.toArray()
-        for (const row of rows) {
-            expect(row.forceLwwOnConflict).toBeUndefined()
-        }
+        const pendingRow = rows.find((r) => r.status === 'pending')
+        expect(pendingRow?.forceLwwOnConflict).toBe(true)
+        const sendingRow = rows.find((r) => r.status === 'sending')
+        expect(sendingRow?.forceLwwOnConflict).toBeUndefined()
     })
 })

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, setLogLevel } from "firebase/firestore";
+import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, memoryLocalCache, setLogLevel } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 import { env } from "./env";
@@ -44,8 +44,33 @@ try {
         // Suppress harmless "Detected an update time that is in the future" clock-skew warnings
         setLogLevel("error");
 
+        // v60-13-04 (2026-05-13): probe IndexedDB synchronously before choosing
+        // the Firestore cache strategy. Daniel UAT showed the dashboard
+        // subscription HANGING (no success, no error) in incognito Chrome —
+        // the persistentLocalCache config tries to write to IDB and silently
+        // blocks the listener when the browser restricts storage. Detect that
+        // up front and use memoryLocalCache instead (no offline persistence,
+        // but the listener actually fires).
+        //
+        // Probe heuristic: try localStorage write+read+delete. If it throws
+        // OR returns nothing, the browser is in a restricted-storage mode
+        // (Safari private, Firefox private, Chrome with site data blocked,
+        // etc.) and IDB is also likely restricted.
+        const storageOk = (() => {
+            if (typeof window === 'undefined') return false  // SSR — doesn't matter
+            try {
+                const k = '__crc_storage_probe__'
+                window.localStorage.setItem(k, '1')
+                const ok = window.localStorage.getItem(k) === '1'
+                window.localStorage.removeItem(k)
+                return ok
+            } catch {
+                return false
+            }
+        })()
+
         try {
-            db = initializeFirestore(app, {
+            db = initializeFirestore(app, storageOk ? {
                 // persistentSingleTabManager: each tab manages its own IDB independently.
                 // Eliminates the cross-tab IDB version coordination that caused the
                 // "Firestore shutting down" cascade when multiple tabs were open and
@@ -55,17 +80,26 @@ try {
                 localCache: persistentLocalCache({
                     tabManager: persistentSingleTabManager({}),
                 }),
+            } : {
+                // v60-13-04: incognito / restricted-storage path. memoryLocalCache
+                // means no offline persistence — but the listener fires immediately
+                // instead of hanging on a blocked IDB write. Acceptable tradeoff
+                // for incognito since the user has no expectation of persistence.
+                localCache: memoryLocalCache(),
             } as FirestoreSettings);
+            if (!storageOk) {
+                logger.warn("Firestore: restricted-storage detected (likely incognito) — using memory cache, no offline persistence");
+            }
         } catch (e1) {
             // Persistence may fail in private browsing or restricted environments.
             // Fall back to in-memory cache (no offline persistence).
             try {
-                db = initializeFirestore(app, {} as FirestoreSettings);
+                db = initializeFirestore(app, { localCache: memoryLocalCache() } as FirestoreSettings);
             } catch {
                 // Already initialized (e.g. hot reload)
                 db = getFirestore(app);
             }
-            logger.warn("Firestore offline persistence unavailable, using network-only", e1);
+            logger.warn("Firestore persistent cache failed at init, fell back to memory cache", e1);
         }
         auth = getAuth(app);
         googleProvider = new GoogleAuthProvider();
