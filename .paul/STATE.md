@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed + v60-06-03 PLAN created)
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; v60-06-03 in PLAN; ~4 plans remaining after
-Plan: v60-06-05 APPLY complete — ready for UNIFY (1 of 1 task DONE_WITH_CONCERNS; AC-6 minor +2 LOC overshoot; functional ACs all PASS)
-Status: APPLY executed Task 1: SetlistDrawer.handleSelectSetlist migrated to async + one-shot Dexie read + getTracksForSetlistClient resolution + try/catch error logging. Imports added: getDb, getTracksForSetlistClient. QueueItem .filter().map() shape preserved verbatim. tsc EXIT=0, next build clean (Sentry deprecations pre-existing baseline), main suite 1586 pass / 52 fail (EXACT v60-06-04 baseline preserved — zero new failures). AC-7 boundary verified: all 10 protected reader-migration files byte-identical via empty git diff. AC-6 deviation: actual +17 net LOC vs +15 ceiling (try/catch + 3-line comment + multi-line await chain). DONE_WITH_CONCERNS reporting — minor overshoot, no functional impact, to document in SUMMARY.
-Last activity: 2026-05-12 — v60-06-05 APPLY complete; awaiting UNIFY.
+Plan: v60-06-05 LOOP COMPLETE — PENDING-UAT (committed `7205f2f`; pushed to origin master). Daniel iPad: drawer→public-setlist pick→perf-view load with queue; cross-user (no local Dexie) → embedded fallback; own hydrated → Dexie path.
+Status: v60-06-05 closed: 1 task DONE_WITH_CONCERNS (AC-6 minor +2 LOC overshoot, +17 vs +15 — try/catch envelope + multi-line Dexie chain + 3-line comment; functional ACs all PASS). SetlistDrawer.handleSelectSetlist async + Dexie + getTracksForSetlistClient; QueueItem .filter().map() preserved verbatim; try/catch + logger.error for failures. Upcoming-perf-view flow fully canonical-source-first; last embedded-array reader in that flow closed. tsc EXIT=0, next build clean (Sentry deprecations baseline), main suite 1586 pass / 52 fail (EXACT v60-06-04 baseline), HFG 0/3 held, AC-7 boundary verified for all 10 prior reader-migration files. Single combined commit `7205f2f`.
+Last activity: 2026-05-12 — v60-06-05 LOOP COMPLETE; committed as `7205f2f`; pushed.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [██████░░░░] 57% (v60-06-01 + v60-06-02 + v60-06-03 + v60-06-04 of ~7 plans LOOP COMPLETE — ~3 plans remaining; Wave 3 reader-migration spine COMPLETE; v60-07 unblocked)
+- Phase v60-06: [███████░░░] 71% (v60-06-01..05 of ~7 plans LOOP COMPLETE — ~2 plans remaining: v60-06-06 TemplatesSection + v60-06-07 matrix/route.ts; v60-06-08 backfill closes phase. Upcoming-perf-view flow fully canonical-source-first.)
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [v60-06-05 APPLY complete; ready for /paul:unify]
+  ✓        ✓        ✓     [v60-06-05 LOOP COMPLETE; ready for /paul:plan v60-06-06]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-06-05 PLAN created)
-Stopped at: v60-06-05 PLAN created. Single-file (SetlistDrawer.tsx) click-time read migration. ≤+15 LOC.
-Next action: Review v60-06-05-PLAN.md, then `/paul:apply .paul/phases/v60-06-dashboard-reader-migration/v60-06-05-PLAN.md`. /ui-ux-pro-max transitively satisfied.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-05-PLAN.md
+Last session: 2026-05-12 (autonomous mode — v60-06-05 LOOP COMPLETE; committed `7205f2f`)
+Stopped at: v60-06-05 LOOP COMPLETE. SetlistDrawer.handleSelectSetlist now routes through canonical sources. ~2 v60-06 plans remaining (v60-06-06 TemplatesSection, v60-06-07 matrix/route.ts) + v60-06-08 backfill closes phase. v60-07 writer removal further unblocked.
+Next action: `/paul:plan v60-06-06` — TemplatesSection admin template conversion. Likely consumer of bulk Dexie hook (v60-06-04) OR click-time pattern (v60-06-05); decide at PLAN time based on handler shape.
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-05-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `ef3b49e` feat(v60-06-04): bulk Dexie hook + title-aware dashboard reader migration — PUSHED 2026-05-12.
+Last commit: `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED 2026-05-12.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -122,7 +122,9 @@ Push history this run:
   - `9eedb14` feat(v60-06-02): denormalize songCount + fileIds via reconciler extension — PUSHED
   - `2d80f5b` feat(v60-06-03): migrate SetlistCards offline-cache + use-upcoming-prep to denormalized fileIds/songCount — PUSHED
   - `c1d392a` docs(v60-06-03): correct commit SHA in STATE.md + ROADMAP.md — PUSHED
-  - `ef3b49e` feat(v60-06-04): bulk Dexie hook + title-aware dashboard reader migration — PUSHED THIS RUN
+  - `ef3b49e` feat(v60-06-04): bulk Dexie hook + title-aware dashboard reader migration — PUSHED
+  - `89e1c7c` docs(v60-06-04): correct commit SHA in STATE.md + close Wave 3 reader-migration spine — PUSHED
+  - `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
