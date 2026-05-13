@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { FieldValue } from 'firebase-admin/firestore'
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
@@ -126,24 +127,50 @@ export const POST = createApiHandler(
             }
         }
 
-        // Build the Setlist Document
+        // v60-07-04: Build the parent setlist doc WITHOUT embedded tracks.
+        // Top-level tracks/{id} rows are seeded via batch after the parent
+        // write. FieldValue.serverTimestamp() produces a proper Firestore
+        // Timestamp so the first editor edit round-trips cleanly through
+        // the v60-07-03 expectedUpdatedAt precondition (vs the prior
+        // ISO-string gap noted in RESEARCH/audit-writes.md W7).
         const setlistId = crypto.randomUUID()
-        const nowStr = new Date().toISOString()
         const setlistPayload = {
             id: setlistId,
             name: setName,
-            date: nowStr,
-            eventDate: nowStr,
-            updatedAt: nowStr,
-            tracks: resolvedTracks,
+            date: FieldValue.serverTimestamp(),
+            eventDate: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
             trackCount: resolvedTracks.length,
+            hydrated: true,
             ownerId: ctx.auth.uid,
             ownerName: ctx.auth.email || "Unknown",
         }
 
         await db.collection('setlists').doc(setlistId).set(setlistPayload)
 
-        logger.info(`[Setlist Importer] Importer generated setlist ${setlistId} with ${resolvedTracks.length} items.`)
+        // v60-07-04: Seed top-level tracks/{id} via Admin SDK batch.
+        // Server-side equivalent of v60-07-02's client-side seedTopLevelTracks
+        // (engine-path applyEdit fanout); on the server, we use a batched
+        // write because applyEdit is client-only. Sequential after the parent
+        // set() so partial failures leave a recoverable state (parent exists
+        // with hydrated:true + trackCount; reader fallback handles the gap
+        // until a retry or backfill seeds the rows).
+        if (resolvedTracks.length > 0) {
+            const batch = db.batch()
+            for (let i = 0; i < resolvedTracks.length; i++) {
+                const t = resolvedTracks[i]
+                const trackRef = db.collection('tracks').doc(t.id as string)
+                batch.set(trackRef, {
+                    ...t,
+                    setlistId,
+                    order: i,
+                    type: t.type ?? 'song',
+                })
+            }
+            await batch.commit()
+        }
+
+        logger.info(`[Setlist Importer] Importer generated setlist ${setlistId} with ${resolvedTracks.length} top-level tracks.`)
 
         return NextResponse.json({
             success: true,

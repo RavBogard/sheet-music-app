@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (6 of 10 phases LOOP COMPLETE; v60-07 in progress — 3 of ~4 plans LOOP COMPLETE)
-Phase: 7 of 10 — v60-07 Embedded-array writer removal + immediate FieldValue.delete strip (Wave 3 sequential) — 3 of ~4 plans closed
-Plan: v60-07-03 LOOP COMPLETE — PENDING-UAT (W2 updateSetlist defensive strip + updateSetlistWithVersion immediate FieldValue.delete on hydrated docs LANDED; transaction-scoped read-then-strip pattern; AuditAction union extended with `'updated'`; 3 new tests). +24 LOC net production across 4 files (setlist-firebase.ts +22, setlist-audit.ts +1, SetlistHistoryPanel.tsx +1). HFG 0/3 held.
-Status: v60-07-03 LOOP COMPLETE. SUMMARY created. 6 of 7 verifiable ACs PASS; AC-6 DRIFT documented (LOC ceiling +2 over + scope addition for AuditAction type extension); AC-7 PENDING-UAT (Daniel triggers any updateSetlist on a hydrated setlist; verifies embedded `tracks` field deleted via Firebase Console). Verification: tsc EXIT=0; next build `Compiled successfully in 7.7s`; vitest 1616/52 EXACT (1613 baseline + 3 new). Pending: combined commit + push.
-Last activity: 2026-05-13 — v60-07-03 LOOP COMPLETE; awaiting combined commit + push.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (7 of 10 phases LOOP COMPLETE; v60-07 PHASE COMPLETE; Wave 3 done; Wave 4 unblocked)
+Phase: 7 of 10 — v60-07 Embedded-array writer removal + immediate FieldValue.delete strip ✅ LOOP COMPLETE — 4 of 4 plans closed. Phase mandate fully met. v60-08 cleanup unblocked.
+Plan: v60-07-04 LOOP COMPLETE — PENDING-UAT (W7 import/execute route refactored: parent payload omits embedded `tracks`, carries trackCount + hydrated:true; per-track seeding via Admin SDK db.batch(); FieldValue.serverTimestamp() replaces ISO-string nowStr — closes audit-noted Timestamp gap). +27 LOC net production. HFG 0/3 held.
+Status: v60-07-04 LOOP COMPLETE. SUMMARY created. 6 of 7 verifiable ACs PASS; AC-6 DRIFT documented (+2 LOC over ceiling — comment-attributable); AC-7 PENDING-UAT (Daniel uses importer UI). Verification: tsc EXIT=0; next build `Compiled successfully in 7.5s`; vitest 1616/52 EXACT baseline. **Phase v60-07 mandate COMPLETE** — every production code path (W1-W7) now writes top-level tracks only; opportunistic strip-on-touch via v60-07-03 (client) for legacy hydrated docs. Pending: combined commit + push.
+Last activity: 2026-05-13 — v60-07-04 LOOP COMPLETE; phase v60-07 closes; awaiting commit + push + phase-transition routing.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -23,11 +23,11 @@ Progress:
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
 - Phase v60-06: ✅ [██████████] 100% LOOP COMPLETE (8 of 8 plans closed)
-- Phase v60-07: [████████░░] ~75% (v60-07-01 + v60-07-02 + v60-07-03 LOOP COMPLETE; 3 of ~4 writer-removal plans done — dual-write bridge decommissioned + create-style writers route to engine-path seeding + W2 updateSetlist defensive strip + immediate FieldValue.delete on hydrated docs. Next: v60-07-04 API routes W7-W11.)
+- Phase v60-07: [██████████] 100% LOOP COMPLETE (4 of 4 plans done — v60-07-01 hook + v60-07-02 create-style + v60-07-03 W2 strip + v60-07-04 W7 import-route refactor). Phase mandate fully met. v60-07-05 (W8/W9/W10 opportunistic strip + W11 cascade) is optional polish. v60-08 cleanup unblocked.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-07-03 LOOP COMPLETE; ready for /paul:plan v60-07-04]
+  ✓        ✓        ✓     [v60-07-04 LOOP COMPLETE; phase v60-07 LOOP COMPLETE; ready for v60-08 OR v60-07-05 polish]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -67,10 +67,13 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-07-03 LOOP COMPLETE; W2 defensive strip + immediate FieldValue.delete + AuditAction union extension)
-Stopped at: SUMMARY written. v60-07 client-side writer surface fully closed (W1-W6 done + immediate strip realized). Transaction-scoped read-then-strip pattern documented. v60-07-04 picks up API routes W7-W11 (server-side strips via Admin SDK).
-Next action: `/paul:plan v60-07-04` — API route writers W7-W11 (publish / rename / transfer / delete / import-execute). Same transaction-scoped strip pattern adapted to Admin SDK + admin.firestore.FieldValue.delete().
-Resume file: .paul/phases/v60-07-writer-removal-strip/v60-07-03-SUMMARY.md
+Last session: 2026-05-13 (v60-07-04 LOOP COMPLETE; phase v60-07 closes)
+Stopped at: SUMMARY written. Phase v60-07 mandate COMPLETE — all 7 production writers (W1-W7) decommissioned against embedded-array writes; client-side opportunistic strip-on-touch via v60-07-03. v60-07-05 (W8/W9/W10 strip + W11 cascade) is OPTIONAL polish. v60-08 cleanup unblocked. v60-09 (cross-device library sync) + v60-10 (Mobile AddBar) — Wave 4 parallel candidates.
+Next action: Three routing options for Daniel:
+  (a) `/paul:plan v60-08` — Migration cleanup (drop embedded-array reader fallback + setlistConverter tracks field). REQUIRES v60-06-08 `--apply` backfill to land first (Daniel's Mon–Wed window).
+  (b) `/paul:plan v60-07-05` — Optional polish: W8/W9/W10 opportunistic strip + W11 cascade-delete top-level tracks orphan cleanup.
+  (c) Pause v6.0 to UAT the accumulated PENDING-UAT bundle (v5.0/v5.2/v5.3/v5.4/v60-01..04).
+Resume file: .paul/phases/v60-07-writer-removal-strip/v60-07-04-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
