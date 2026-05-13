@@ -52,6 +52,11 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     // indistinguishable from "no setlists exist". This diagnostic surface
     // tells us WHY the subscription fails so we can route the next fix.
     const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
+    // v60-13-02b: also track count + fromCache so the empty-state can show
+    // whether the subscription actually fired with no docs vs whether it
+    // never fired at all. Differentiates "Firestore returned []" from
+    // "subscription stuck in pending".
+    const [diagInfo, setDiagInfo] = useState<{ count: number; fromCache: boolean; firedAt: string } | null>(null)
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -118,8 +123,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         // logged to console; the UI just stayed in skeleton → empty state.
         // This surfaces the actual error so we can diagnose incognito blanks
         // and other cold-load failures.
+        // v60-13-02b: log auth state alongside subscription so we can correlate
+        // "incognito blanks" with the actual auth posture seen by Firestore.
+        // eslint-disable-next-line no-console
+        console.info(`[Dashboard] subscribing — authUid=${authUser?.uid ?? 'null'} serverUid=${serverUid ?? 'null'} effectiveUid=${effectiveUid ?? 'null'}`)
         const unsub = setlistService.subscribeToAllSetlists(
-            (setlists) => {
+            (setlists, fromCache) => {
                 const upcoming = filterUpcoming(setlists)
                 setUpcomingSetlistsState(upcoming.slice(0, 5))
                 const recent = setlists
@@ -130,11 +139,9 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 setAllSetlists(setlists)
                 setSetlistsLoaded(true)
                 setSubscriptionError(null)
-                // v60-13-02 diagnostic: log fromCache + count so we can correlate
-                // "blank dashboard" reports with whether Firestore actually
-                // returned data (cached or fresh) or zero results.
+                setDiagInfo({ count: setlists.length, fromCache, firedAt: new Date().toLocaleTimeString() })
                 // eslint-disable-next-line no-console
-                console.info(`[Dashboard] subscription fired: ${setlists.length} setlists`)
+                console.info(`[Dashboard] subscription fired: ${setlists.length} setlists, fromCache=${fromCache}`)
             },
             (err) => {
                 const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
@@ -284,9 +291,24 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                 <p className="text-[10px] text-muted-foreground">If this keeps happening, share this message with support.</p>
                             </div>
                         ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                No services scheduled yet
-                            </p>
+                            <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                    No services scheduled yet
+                                </p>
+                                {/* v60-13-02b diagnostic strip — visible only when no
+                                    setlist + no error; tells us whether the subscription
+                                    truly returned 0 docs or never fired at all. */}
+                                {diagInfo && (
+                                    <p className="text-[10px] text-muted-foreground text-center font-mono">
+                                        diag: subscription returned {diagInfo.count} setlists, fromCache={String(diagInfo.fromCache)}, fired @ {diagInfo.firedAt}, authUid={authUser?.uid?.slice(0, 8) ?? 'null'}, serverUid={serverUid?.slice(0, 8) ?? 'null'}
+                                    </p>
+                                )}
+                                {!diagInfo && (
+                                    <p className="text-[10px] text-muted-foreground text-center font-mono">
+                                        diag: subscription has not fired yet (still subscribing or auth-blocked)
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
