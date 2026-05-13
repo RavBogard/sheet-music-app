@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase"
 import { getAllTemplateKeys, getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useCustomTemplates } from "@/lib/template-firebase"
 import { TemplateEditor } from "@/app/(main)/manage/templates/TemplateEditor"
+import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
 import type { SetlistTrack } from "@/types/models"
 import { toast } from "sonner"
 
@@ -18,6 +19,7 @@ interface SetlistSummary {
     trackCount: number
     date?: string
     tracks: SetlistTrack[]
+    hydrated: boolean
 }
 
 export function TemplatesSection() {
@@ -54,6 +56,7 @@ export function TemplatesSection() {
                     trackCount: data.trackCount || (data.tracks?.length ?? 0),
                     date: data.date?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) ?? '',
                     tracks: data.tracks || [],
+                    hydrated: data.hydrated === true,
                 }
             })
             setRecentSetlists(setlists)
@@ -65,8 +68,21 @@ export function TemplatesSection() {
         }
     }
 
-    const handlePickSetlist = (setlist: SetlistSummary) => {
-        const slots = convertSetlistToTemplate(setlist.tracks)
+    const handlePickSetlist = async (setlist: SetlistSummary) => {
+        // v60-06-06: read tracks via canonical 2-branch fetcher — hydrated
+        // setlists hit the top-level `tracks` collection; legacy setlists
+        // use the embedded array from the picker fetch.
+        let resolvedTracks
+        try {
+            resolvedTracks = await fetchTracksForSetlistClient(setlist.id, {
+                hydrated: setlist.hydrated,
+                tracks: setlist.tracks,
+            })
+        } catch (err) {
+            toast.error("Failed to load setlist tracks")
+            return
+        }
+        const slots = convertSetlistToTemplate(resolvedTracks)
         setImportedSlots(slots)
         setShowImportPicker(false)
         toast.success(`Imported ${slots.length} slots from "${setlist.name}" — review and save`)
