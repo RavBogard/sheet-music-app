@@ -1,6 +1,6 @@
 import { collection, onSnapshot, type DocumentChange } from 'firebase/firestore'
 
-import { db as firestoreDb } from '@/lib/firebase'
+import { db as firestoreDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { logger } from '@/lib/logger'
@@ -100,6 +100,7 @@ export function subscribeSongsLibrary(
         },
         (err) => {
             logger.warn('[subscribeSongsLibrary] snapshot error (listener stays alive)', err)
+            recoverFromFirestoreShutdown(err)
         },
     )
 

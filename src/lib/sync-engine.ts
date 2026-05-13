@@ -8,6 +8,43 @@ import { logger } from "@/lib/logger"
 
 const COPY_DELAY_MS = 200 // Gentle pacing between Storage uploads
 
+/**
+ * v60-11-01 Task 2 — derive songs/{fileId} mirror payload from library_index batch input.
+ *
+ * Closes the gap between library_index (498 docs) and songs/* (364 docs) for the
+ * chart-binder picker. v54-01-01 bootstrap intentionally MIME-filtered (PDF + MusicXML
+ * only), excluding ~134 Drive shortcuts + folders + audio + docs from songs/*. v60-11
+ * drops that filter at the mirror site so every library_index write also writes
+ * songs/{id}. The picker's v60-09 `status !== 'archived'` Dexie filter is now the
+ * single gate.
+ *
+ * Critical invariants:
+ * - Title is library_index.name VERBATIM (no .pdf stripping). Matches bootstrap-songs.ts:142
+ *   so the 364 existing docs and the new mirrored docs share shape — picker results stay consistent.
+ * - NO `status` field on this payload. Status is owned by /api/library/archive.
+ *   Cron writing status would clobber user-driven archives on next hourly tick.
+ *   .set({ merge: true }) preserves any existing status field on the songs doc.
+ * - createdAt only when the file is NEW to library_index. .set({ merge: true })
+ *   preserves prior createdAt on subsequent ticks.
+ */
+function buildSongsMirrorPayload(
+    fileId: string,
+    rawName: string,
+    existsInLibrary: boolean,
+): Record<string, unknown> {
+    const title = rawName.trim() // caller has already guarded against empty
+    const payload: Record<string, unknown> = {
+        id: fileId,
+        title,
+        normalizedTitle: title.toLowerCase(),
+        fileId,
+    }
+    if (!existsInLibrary) {
+        payload.createdAt = Date.now()
+    }
+    return payload
+}
+
 export interface SyncStats {
     totalScanned: number
     added: number
@@ -194,6 +231,10 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
         for (const chunk of chunks) {
             const batch = db.batch()
+            // v60-11-01: parallel songs/* mirror batch. No MIME filter — every named
+            // library_index entry mirrors. Status field intentionally absent (owned
+            // by /api/library/archive). See buildSongsMirrorPayload header for invariants.
+            const songsBatch = db.batch()
             const now = new Date().toISOString()
 
             for (const file of chunk) {
@@ -215,6 +256,17 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     source: 'google_drive'
                 }, { merge: true })
 
+                // v60-11-01: songs/* mirror. Skip empty/missing name (matches subscribe.ts:85 guard).
+                const rawName = typeof file.name === 'string' ? file.name.trim() : ''
+                if (rawName.length > 0) {
+                    const songsRef = db.collection('songs').doc(file.id)
+                    songsBatch.set(
+                        songsRef,
+                        buildSongsMirrorPayload(file.id, rawName, existingDocs.has(file.id)),
+                        { merge: true },
+                    )
+                }
+
                 if (existingDocs.has(file.id)) {
                     stats.updated++
                     stats.updatedFiles!.push(file.name)
@@ -224,7 +276,19 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 }
             }
 
-            await batch.commit()
+            // Commit both batches in parallel. allSettled → a songs/* failure is non-fatal
+            // (logged, library_index commit independent). Self-heals on the next snapshot tick
+            // via v60-09's continuous listener.
+            const [libResult, songsResult] = await Promise.allSettled([
+                batch.commit(),
+                songsBatch.commit(),
+            ])
+            if (libResult.status === 'rejected') {
+                throw libResult.reason
+            }
+            if (songsResult.status === 'rejected') {
+                logger.warn('[Sync] songs/* mirror batch failed (non-fatal)', songsResult.reason)
+            }
         }
 
         // Phase B: Copy files to Storage (after metadata batch write)

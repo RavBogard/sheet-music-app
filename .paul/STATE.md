@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (9 of 10 phases LOOP COMPLETE; v60-09 PHASE COMPLETE; v60-10 in parallel session). Wave 3 done; Wave 4 in progress.
-Phase: 9 of 10 — v60-09 Library Sync ✅ LOOP COMPLETE (single-plan phase). Cross-device `library_index ↔ songs/*` continuous sync delivered end-to-end. /ui-ux-pro-max consulted at Task 1 entry (verdicts: Dexie-layer filter, hide archived from Library + Recent, silent removal). HFG counter held at 0/3 via real-Firestore emulator coverage (5/5 cases GREEN).
-Plan: v60-09-01 LOOP COMPLETE — PENDING-UAT. Tasks 1 + 2 done. 8 ACs PASS (AC-3 PENDING-UAT for two-device smoke against deployed commit; AC-8 LOC DRIFT documented and approved-in-plan for the new-file listener). 1 auto-fix during APPLY (client→admin SDK pivot for emulator test — jsdom streaming incompatibility).
-Status: APPLY complete. tsc EXIT=0; next build Compiled successfully in 12.3s; vitest 1615/52 (was 1612/52 — +3 new mirror tests; 52-failure baseline preserved exactly); emulator suite 5/5 GREEN. Pending: phase transition + combined commit + push of v60-09-01 bundle (entire .paul/phases/v60-09-library-sync/ dir per feedback_paul_phase_commits). Will `git pull --rebase` before push to absorb any v60-10 commit from parallel session.
-Last activity: 2026-05-13 — v60-09-01 APPLY complete; SUMMARY written; awaiting UNIFY/transition. v60-10-01 PLAN concurrent in parallel Claude session.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (10 of 10 original phases LOOP COMPLETE; v60-11 emergent milestone-close-gate phase in PLAN). Waves 1-4 done; Wave 5 milestone-close gate planned.
+Phase: 11 of 11 — v60-11 Shortcut-aware Songs Mirror (+ subscribe.ts self-heal) — PLAN created 2026-05-13. Emergent follow-up phase added post-v60-09 push to close UAT Issue 1 (134 Drive-shortcut docs missing from songs/* despite being in library_index — picker invisible) + latent Issue 3 (subscribe.ts missing recoverFromFirestoreShutdown call). v6.0 milestone-close gate.
+Plan: v60-11-01 PLAN ✓ awaiting approval. 3 tasks: subscribe.ts self-heal + emulator test; syncLibraryIndex songs/* mirror extension (no MIME filter, 4 write sites + new test); one-off backfill script for 134 historical missing docs. 6 ACs. ~80-120 LOC source + ~50-80 LOC test + ~120 LOC backfill script. autonomous: true (no checkpoints — decisions locked in CONTEXT.md from 2026-05-13 handoff).
+Status: LOOP COMPLETE 2026-05-13 — PENDING-UAT. v60-11-01 SUMMARY written, PROJECT.md + ROADMAP.md evolved with v60-11 entry, STATE.md transitioned. tsc EXIT=0; next build ✓ Compiled successfully in 8.6s; vitest 1636/52 (52-failure baseline matches v60-09 exactly). All 6 ACs reconciled: AC-1/2/5/6 PASS at commit; AC-3 backfill structural PASS + production --dry-run/--apply PENDING-UAT; AC-4 picker UAT PENDING-UAT. Pre-APPLY architectural audit caught 5 spec issues (A1/A2 BLOCKING, B1/B2 MEDIUM, C2 LOW) — all patched into PLAN before code work; APPLY clean (no DRIFT/GAP). **v6.0 milestone-close gate cleared from code-readiness perspective — 11 of 11 phases LOOP COMPLETE.** Milestone close eligible once Daniel runs backfill --apply against production + worship-cycle picker UAT clears (AC-3 + AC-4). Pending: combined commit + push (entire .paul/phases/v60-11-shortcut-aware-songs-mirror/ dir per feedback_paul_phase_commits).
+Last activity: 2026-05-13 — v60-11-01 LOOP COMPLETE. SUMMARY at `.paul/phases/v60-11-shortcut-aware-songs-mirror/v60-11-01-SUMMARY.md`. PROJECT.md gained v60-11 entry under "Validated (Shipped this cycle)" with full mechanism / decisions / verification / patterns / PENDING-UAT block. ROADMAP.md v60-11 row updated to ✅ LOOP COMPLETE — PENDING-UAT.
 
 **PARALLEL-SESSION NOTE:** Daniel is running v60-10 (Mobile AddBar variant) in another Claude session simultaneously — v60-10-01 PLAN created 2026-05-13 at `.paul/phases/v60-10-mobile-addbar-variant/v60-10-01-PLAN.md`. Both phases are file-disjoint:
 - **v60-09 owns:** library routes + songs lib + AddRowPlaceholder.tsx picker filter (`status !== 'archived'`) + ChartBindPopover filter + new subscribeSongsLibrary listener.
@@ -32,15 +32,20 @@ Progress:
 - Phase v60-07: [██████████] 100% LOOP COMPLETE (4 of 4 plans done — v60-07-01 hook + v60-07-02 create-style + v60-07-03 W2 strip + v60-07-04 W7 import-route refactor). Phase mandate fully met. v60-07-05 (W8/W9/W10 opportunistic strip + W11 cascade) is optional polish. v60-08 cleanup unblocked.
 - Phase v60-08: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mandate met: top-level tracks/{id} is sole source in code; readers + schema + interface all cleaned. v60-09/v60-10 (Wave 4) unblocked.
 - Phase v60-09: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Cross-device library sync delivered. Production delta ~+170 LOC (subscribe.ts new file); emulator coverage 5/5 GREEN; HFG 0/3 preserved.
+- Phase v60-11: [██████████] 100% LOOP COMPLETE 2026-05-13 (1 of 1 plans done — single-plan phase). SUMMARY written. Emergent milestone-close-gate phase. v60-11-01 delivered end-to-end: subscribe.ts self-heal (recoverFromFirestoreShutdown parity with 5 siblings) + syncLibraryIndex parallel songsBatch mirror at line 200 (no MIME filter, no status writes — bootstrap-pattern verbatim title) + backfill script for 134 historical missing docs + diag script relocation to scripts/diag/. Pre-APPLY audit caught 5 spec issues; patched into PLAN before code work. Suite: 1636/52 (baseline preserved); tsc EXIT=0; next build ✓ Compiled in 8.6s. 4 ACs PASS at commit (AC-1/2/5/6); AC-3 backfill structurally PASS, production --dry-run + --apply PENDING-UAT; AC-4 picker UAT PENDING.
 - Phase v60-10: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mobile AddBar variant delivered: coarse-pointer-only sticky-bottom positioning via CSS-driven `[@media(pointer:coarse)]:fixed` (no first-paint flash) + hide-on-virtual-keyboard via new useVirtualKeyboardOpen hook + Tailwind `hidden` display:none primitive. SetlistGrid.tsx unmodified (pb-32 = measured equivalent of plan's pb-20 request; DRIFT documented + plan-authorized). Suite +12; tsc + next build clean. HFG 0/3 preserved. /ui-ux-pro-max gate satisfied. **v6.0 Wave 4 complete from this session's perspective.** Pending: transition-phase commit + push (with git pull --rebase to absorb v60-09's parallel-session commit per STATE.md note). AC-6 PENDING-UAT carry-forward post-deploy.
 
-Loop position (v60-09):
+Loop position (v60-11 — current):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ○     [v60-09-01 APPLY complete; SUMMARY written; UNIFY/transition next]
+  ✓        ✓        ✓     [v60-11-01 LOOP COMPLETE 2026-05-13; phase transition + commit/push next]
 
-Loop position (v60-10 — parallel session):
+Loop position (v60-09 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-10-01 LOOP COMPLETE; SUMMARY written; phase transition + commit/push next]
+  ✓        ✓        ✓     [LOOP COMPLETE — PENDING-UAT; pushed @ 6909c01]
+
+Loop position (v60-10 — closed, parallel session):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [LOOP COMPLETE — PENDING-UAT; pushed @ 6288c97]
 
 ### Decisions (v60-10-01 / 2026-05-13)
 
@@ -87,10 +92,18 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-09-01 PLAN created; v60-10 underway in parallel session)
-Stopped at: v60-09-01 PLAN written; awaiting approval to enter APPLY. Will `/ui-ux-pro-max` consult before Task 1 + checkpoint:human-verify for two-device smoke after Task 2.
-Next action: Daniel reviews v60-09-01 PLAN; "approved" / "1" / "go" routes to /paul:apply v60-09-01. Before final commit, `git pull --rebase` to absorb v60-10's commit (parallel session). v60-10 changes are file-disjoint with v60-09 — clean rebase expected.
-Resume file: .paul/phases/v60-09-library-sync/v60-09-01-PLAN.md
+Last session: 2026-05-13 (post-v60-09-push UAT diagnosis; Daniel paused to clear context)
+Stopped at: v60-09-01 LOOP COMPLETE + pushed (`6909c01` + `95f83fa` docs SHA backfill). Wave 4 done (v60-09 + v60-10). UAT surfaced TWO issues, both classified as SPEC (out-of-v60-09-scope), both diagnosed via scripts/diag-lechu-goldman.ts admin SDK read. Issue 1: "Lechu Goldman" is a Drive shortcut (mimeType: google-apps.shortcut), filtered out of songs/* by v54-01-01 bootstrap MIME filter — songs/{id} doesn't exist so picker can't show it. Issue 2: Failed-retry banner on every setlist (sync-engine RemoteDocMissingError) — separate phase. Latent issue 3 found: subscribe.ts missing recoverFromFirestoreShutdown call (3 LOC fix to fold into follow-up).
+Next action: Read .paul/HANDOFF-2026-05-13.md, then choose routing — (1) plan v60-11 shortcut-aware songs mirror + recoverFromFirestoreShutdown fix [RECOMMENDED], (2) investigate Issue 2 sync-engine cascade after Daniel reports clear-data outcome, (3) continue UAT on worship cycle and treat both as deferred non-blockers.
+Resume file: .paul/HANDOFF-2026-05-13.md
+Resume context (post-pause v60-09-01):
+- v60-09-01 listener is working correctly — the bug is upstream of v60-09's scope.
+- Production diagnostic confirmed: songs/* total = 364 (exactly v54-01-01 bootstrap), library_index total = 498. 134-doc gap = cron-sync entries (mostly Drive shortcuts) that bootstrap MIME filter excluded.
+- Drive shortcut docs in library_index have `name` (not `title`), `nameLower` (not `normalizedTitle`), and `mimeType: 'application/vnd.google-apps.shortcut'`. Library section + /perform/{id} both work for them (Storage has resolved PDF post `storageCopiedAt`); only the picker excludes them.
+- Failed-retry banner on Daniel's new setlist (Issue 2): likely client-Firestore stuck state from back-to-back v60-08/09/10 deploys; service-worker controllerchange + IDB race candidate. Asked Daniel to try Chrome clear-data + re-sign-in before declaring it a real bug.
+- scripts/diag-lechu-goldman.ts is uncommitted; reusable production read helper.
+- HFG counter 0/3 held; v60-09 emulator coverage preserved it.
+- Wave 4 close: v60-09 + v60-10 both LOOP COMPLETE + pushed. v6.0 milestone close eligible once both issues are resolved or deemed non-blocking.
 Resume context (v60-08-01 plan):
 - v60-08 = final cleanup phase of v6.0 Wave 3. After this, top-level tracks/{id} is the only source of truth in code (was already the only writer post-v60-07; this drops the reader fallback + schema field).
 - Files modified: src/lib/server-tracks.ts (drop unhydrated branch + buildLocalTracks/toMs helpers) + src/lib/client-tracks.ts (collapse both helper functions) + src/types/schemas.ts (drop tracks field from setlistSchema) + their 2 test files.
