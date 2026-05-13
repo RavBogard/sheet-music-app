@@ -17,7 +17,8 @@ export function PrepRecommendations({
 
     for (const item of items) {
         if (item.daysUntil === null || item.daysUntil > 3) continue
-        const tracks = (item.setlist.tracks || []).filter(t => t.fileId && t.type !== 'header')
+        // v60-06-04: iterate canonical tracks (Dexie + fallback) instead of embedded array
+        const tracks = item.localTracks.filter(t => t.fileId && t.type !== 'header')
         for (const track of tracks) {
             if (!track.fileId || item.viewedFileIds.has(track.fileId)) continue
             urgent.push({

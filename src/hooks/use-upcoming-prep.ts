@@ -5,9 +5,11 @@ import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
-import { Setlist } from "@/lib/setlist-firebase"
+import { Setlist, type SetlistTrack } from "@/lib/setlist-firebase"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { reportSaveError } from "@/lib/save-error"
+import { useDexieTracksForSetlists } from "@/hooks/use-dexie-tracks-for-setlists"
+import { getTracksForSetlistClient } from "@/lib/client-tracks"
 
 interface SongPref {
     lastViewedAt?: string | { seconds: number }
@@ -29,6 +31,10 @@ export interface UpcomingSetlistWithPrep {
     urgencyLabel: string | null
     /** Set of fileIds the user has viewed (for per-track checkmarks) */
     viewedFileIds: Set<string>
+    /** v60-06-04: per-setlist tracks via Dexie (canonical) with embedded
+     *  fallback through getTracksForSetlistClient. Used by title-aware
+     *  surfaces (PrepRecommendations, UpcomingTimeline.ExpandedTrackList). */
+    localTracks: SetlistTrack[]
 }
 
 /**
@@ -141,9 +147,18 @@ export function useUpcomingPrep() {
         return () => { cancelled = true }
     }, [user, setlists])
 
+    // v60-06-04: bulk Dexie subscription for title-aware surfaces; one
+    // useLiveQuery covers every upcoming setlist's tracks. Auto-reactive
+    // to song renames via dexie-react-hooks' BroadcastChannel.
+    const setlistIds = useMemo(() => setlists.map(s => s.id), [setlists])
+    const tracksMap = useDexieTracksForSetlists(setlistIds)
+
     // Build enriched list
     const enriched: UpcomingSetlistWithPrep[] = useMemo(() => {
         return setlists.map(s => {
+            // v60-06-04: canonical 3-branch resolution per setlist (Dexie if
+            // hydrated, else embedded fallback). See getTracksForSetlistClient.
+            const localTracks = getTracksForSetlistClient(tracksMap?.get(s.id), s)
             // v60-06-03: read denormalized fileIds + songCount with embedded fallback
             const fileIdsForSetlist = s.fileIds ?? (s.tracks || []).filter(t => t.fileId && t.type !== 'header').map(t => t.fileId!)
             const total = s.songCount ?? fileIdsForSetlist.length
@@ -194,9 +209,10 @@ export function useUpcomingPrep() {
                 dateStr,
                 urgencyLabel,
                 viewedFileIds: viewedIds,
+                localTracks,
             }
         })
-    }, [setlists, songPrefs, lastVisitedAt, nowMinute])
+    }, [setlists, songPrefs, lastVisitedAt, nowMinute, tracksMap])
 
     return {
         items: enriched,

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Setlist } from "@/lib/setlist-firebase"
+import { Setlist, type SetlistTrack } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { type UpcomingSetlistWithPrep } from "@/hooks/use-upcoming-prep"
 import { Clock, ChevronRight, CheckCircle2, Circle } from "lucide-react"
@@ -134,7 +134,7 @@ export function UpcomingTimeline({
 
                                         {/* Expanded track list */}
                                         {isExp && (
-                                            <ExpandedTrackList setlist={s} viewedFileIds={item.viewedFileIds} />
+                                            <ExpandedTrackList tracks={item.localTracks} viewedFileIds={item.viewedFileIds} />
                                         )}
                                     </div>
                                 )
@@ -150,8 +150,10 @@ export function UpcomingTimeline({
 /**
  * Expanded track list inside a timeline card.
  */
-function ExpandedTrackList({ setlist, viewedFileIds }: { setlist: Setlist; viewedFileIds: Set<string> }) {
-    const tracks = (setlist.tracks || []).filter(t => t.type !== 'header')
+function ExpandedTrackList({ tracks: rawTracks, viewedFileIds }: { tracks: SetlistTrack[]; viewedFileIds: Set<string> }) {
+    // v60-06-04: tracks sourced from Dexie (canonical) via use-upcoming-prep's
+    // localTracks; filter header rows here for display.
+    const tracks = rawTracks.filter(t => t.type !== 'header')
 
     return (
         <div className="border-t border-brand/10 px-3 py-2 space-y-0.5 bg-brand/5">
