@@ -47,6 +47,7 @@ function diffSnapshots(prev: TrackSnapshot[], curr: TrackSnapshot[]): DiffResult
 const actionLabels: Record<AuditAction, string> = {
     created: 'Created',
     tracks_updated: 'Tracks updated',
+    updated: 'Updated',
     renamed: 'Renamed',
     made_public: 'Made public',
     made_private: 'Made private',

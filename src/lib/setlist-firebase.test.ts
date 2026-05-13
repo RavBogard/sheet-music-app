@@ -50,6 +50,7 @@ vi.mock('firebase/firestore', () => ({
     limit: vi.fn(),
     where: vi.fn(),
     serverTimestamp: vi.fn(() => 'SERVER_TIMESTAMP'),
+    deleteField: vi.fn(() => '__DELETE_FIELD__'),
     Timestamp: hoisted.MockTimestamp,
     getDoc: (...args: unknown[]) => hoisted.mockGetDoc(...args),
     getDocs: vi.fn().mockResolvedValue({
@@ -223,6 +224,45 @@ describe('createSetlistService', () => {
             const payload = hoisted.txUpdatePayloads[0]
             expect(payload.name).toBe('Test Setlist')
             expect(payload.updatedAt).toBe('SERVER_TIMESTAMP')
+            // v60-07-03: caller-passed tracks dropped defensively;
+            // remote unhydrated → no deleteField strip emitted either.
+            expect(Object.keys(payload)).not.toContain('tracks')
+        })
+
+        it('strips embedded tracks via deleteField when remote is hydrated', async () => {
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null, hydrated: true } }
+
+            await service.updateSetlist('setlist-xyz', { name: 'rename me' })
+
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(payload.name).toBe('rename me')
+            expect(payload.tracks).toBe('__DELETE_FIELD__')
+        })
+
+        it('does NOT strip tracks when remote is not hydrated (legacy doc safety)', async () => {
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
+
+            await service.updateSetlist('setlist-xyz', { name: 'rename me' })
+
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(payload.name).toBe('rename me')
+            expect(Object.keys(payload)).not.toContain('tracks')
+        })
+
+        it('drops embedded tracks from caller patch defensively', async () => {
+            hoisted.txRemoteDoc = { exists: true, data: { updatedAt: null } }
+
+            await service.updateSetlist('setlist-xyz', {
+                tracks: [{ id: 'a', title: 'A', fileName: 'A', type: 'song' as const }],
+                name: 'rename',
+            })
+
+            expect(hoisted.txUpdatePayloads).toHaveLength(1)
+            const payload = hoisted.txUpdatePayloads[0]
+            expect(payload.name).toBe('rename')
+            expect(Object.keys(payload)).not.toContain('tracks')
         })
 
         it('with a matching expectedUpdatedAt, commits successfully', async () => {

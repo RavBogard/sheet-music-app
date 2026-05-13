@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger"
 export type AuditAction =
     | 'created'
     | 'tracks_updated'
+    | 'updated'
     | 'renamed'
     | 'made_public'
     | 'made_private'

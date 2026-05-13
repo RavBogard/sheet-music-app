@@ -17,6 +17,7 @@ import {
     getDocs,
     writeBatch,
     runTransaction,
+    deleteField,
     type DocumentReference,
 } from "firebase/firestore";
 
@@ -50,13 +51,22 @@ async function updateSetlistWithVersion(
     await runTransaction(db, async (tx) => {
         const snap = await tx.get(ref)
         if (!snap.exists()) throw new Error('NOT_FOUND')
-        const remote = snap.data() as { updatedAt?: Timestamp }
+        const remote = snap.data() as { updatedAt?: Timestamp; hydrated?: boolean }
         const remoteUpdatedAt = remote.updatedAt ?? null
         // Skip precondition only when both sides know there's no stamp yet.
         if (expectedUpdatedAt !== null && !timestampsMatch(remoteUpdatedAt, expectedUpdatedAt)) {
             throw new StaleWriteError(remoteUpdatedAt)
         }
-        tx.update(ref, { ...patch, updatedAt: serverTimestamp() })
+        // v60-07-03: immediate FieldValue.delete strip for hydrated docs.
+        // If the remote setlist has been migrated (hydrated:true post-v60-07-02
+        // or post-v60-06-08 backfill), any update is a safe moment to clear
+        // the embedded `tracks` field. Legacy unhydrated docs are left alone —
+        // backfill (v60-06-08 --apply) will hydrate + strip them separately.
+        const applied: Record<string, unknown> = { ...patch, updatedAt: serverTimestamp() }
+        if (remote.hydrated === true) {
+            applied.tracks = deleteField()
+        }
+        tx.update(ref, applied)
     })
 }
 
@@ -226,16 +236,20 @@ export function createSetlistService(userId: string | null, userName?: string | 
             const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
             // updateSetlistWithVersion adds its own updatedAt; don't double-set
             delete cleanData.updatedAt;
+            // v60-07-03: defensive strip — embedded-array writes are dead post v60-07.
+            // No production caller passes `tracks` today; this guards against future
+            // regressions. updateSetlistWithVersion separately emits FieldValue.delete()
+            // for hydrated docs (the actual cleanup mechanism).
+            delete cleanData.tracks;
             await updateSetlistWithVersion(docRef, expectedUpdatedAt, cleanData);
 
-            // Determine what changed for audit
-            const action = data.name !== undefined ? 'renamed'
-                : data.tracks !== undefined ? 'tracks_updated'
-                    : 'tracks_updated'
+            // v60-07-03: audit-log action collapsed — non-rename writes log as `updated`.
+            // The dead-code embedded-tracks branch + tracks-snapshot extras are gone.
+            const action = data.name !== undefined ? 'renamed' : 'updated'
             logSetlistChange(id, action, userId || '', userName || 'Anonymous', {
                 ...(data.name !== undefined && { newName: data.name }),
-                ...(data.tracks !== undefined && { trackCount: data.tracks.length }),
-            }, data.tracks)
+                ...(data.trackCount !== undefined && { trackCount: data.trackCount }),
+            })
 
             // Note: Update notifications are handled server-side (publish route)
             // Client-side broadcast would fail because Firestore rules restrict user doc reads
