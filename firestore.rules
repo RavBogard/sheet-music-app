@@ -108,8 +108,14 @@ service cloud.firestore {
     // v5h-01-02 fix (E): added to close the v5.0 save-loss bug — without
     // this block, the default-deny fallback at the bottom rejected every
     // tracks write with permission-denied.
+    // v60-12-01: Public READ enabled for the public perform view
+    // (centralreform.live → upcoming setlist → "Perform" link). Setlists
+    // themselves are already publicly readable (line 86); tracks are the
+    // natural extension of the same surface. Writes remain locked behind
+    // band-leader/admin authentication. Audit: 2026-05-13 — Daniel UAT
+    // reported "No tracks yet" on incognito perform view.
     match /tracks/{trackId} {
-      allow read: if isMember();
+      allow read: if true;
       allow create: if isSignedIn() && (isBandLeader() || isAdmin());
       allow update: if isSignedIn() && (isBandLeader() || isAdmin());
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());

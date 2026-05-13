@@ -85,6 +85,7 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@next/bundle-analyzer": "^16.1.6",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",

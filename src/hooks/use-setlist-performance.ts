@@ -86,12 +86,16 @@ export function useSetlistPerformance(
     const { data: setlistData, loading: setlistLoading, error } =
         useSafeFirestoreSync<Setlist>(setlistRef)
 
-    // Mount the snapshot-listener for cross-device delivery into Dexie.
-    // Skip for unauthenticated public sessions — they'd hit permission-denied
-    // on the underlying onSnapshot calls (see firestore.rules: read requires
-    // isMember()). The page itself renders an error for public users.
+    // v60-12-01: Mount the snapshot-listener for cross-device delivery into
+    // Dexie, INCLUDING unauthenticated public sessions. Prior version skipped
+    // public users because firestore.rules required isMember() to read
+    // tracks/{trackId}; v60-12-01 opened tracks/* to public read (setlists
+    // are already public, tracks are the natural extension). The stale
+    // comment claiming "the page itself renders an error for public users"
+    // was never true — the page renders the regular empty-state ("No tracks
+    // yet"), which is what Daniel UAT 2026-05-13 reported as the bug.
     useEffect(() => {
-        if (!setlistId || !user) return
+        if (!setlistId) return
         try {
             const stop = startSnapshotListener({
                 setlistId,
@@ -104,7 +108,7 @@ export function useSetlistPerformance(
                 err,
             )
         }
-    }, [setlistId, user, startSnapshotListener])
+    }, [setlistId, startSnapshotListener])
 
     // Tracks: live-query Dexie, sorted by order. dexie-react-hooks returns
     // undefined while the query is in flight, [] when it resolves with no

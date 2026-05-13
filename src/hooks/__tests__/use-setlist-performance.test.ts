@@ -322,7 +322,12 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect(stopFn).toHaveBeenCalledTimes(1)
   })
 
-  it('does NOT mount the snapshot listener for unauthenticated public sessions', () => {
+  it('v60-12-01: DOES mount the snapshot listener for unauthenticated public sessions', () => {
+    // Contract reversal: prior to v60-12-01, this test asserted the listener
+    // was SKIPPED for public users because firestore.rules required isMember()
+    // to read tracks/{trackId}. v60-12-01 opened tracks/* to public read —
+    // Daniel UAT 2026-05-13 reported incognito perform view showed "No tracks
+    // yet" because the listener was skipped and Dexie never got populated.
     mockUseAuth.mockReturnValue({
       user: null,
       isAdmin: false,
@@ -340,7 +345,10 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
       useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
     )
 
-    expect(startFn).not.toHaveBeenCalled()
+    expect(startFn).toHaveBeenCalledTimes(1)
+    expect(startFn).toHaveBeenCalledWith(
+      expect.objectContaining({ setlistId: SETLIST_ID }),
+    )
   })
 
   it('does not crash when snapshot listener factory throws on mount', async () => {

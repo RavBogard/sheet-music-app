@@ -54,12 +54,17 @@ Progress:
 - Phase v60-07: [██████████] 100% LOOP COMPLETE (4 of 4 plans done — v60-07-01 hook + v60-07-02 create-style + v60-07-03 W2 strip + v60-07-04 W7 import-route refactor). Phase mandate fully met. v60-07-05 (W8/W9/W10 opportunistic strip + W11 cascade) is optional polish. v60-08 cleanup unblocked.
 - Phase v60-08: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mandate met: top-level tracks/{id} is sole source in code; readers + schema + interface all cleaned. v60-09/v60-10 (Wave 4) unblocked.
 - Phase v60-09: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Cross-device library sync delivered. Production delta ~+170 LOC (subscribe.ts new file); emulator coverage 5/5 GREEN; HFG 0/3 preserved.
+- Phase v60-12: [██████████] 100% LOOP COMPLETE + DEPLOYED 2026-05-13 (1 of 1 plans done — single-plan emergent close-gate phase). Public tracks visibility bug closed: firestore.rules tracks/{trackId} opened to `allow read: if true` (writes still band-leader/admin-gated); use-setlist-performance.ts hook mounts snapshot listener for unauthenticated users; @firebase/rules-unit-testing dev dep added + 8-scenario emulator rules test GREEN. Production deployed via `firebase deploy --only firestore:rules --project crcmusiccharts` — rules compile clean, release confirmed. Pre-APPLY architectural audit cleared 5 concerns. Suite 1636/52 (baseline matches v60-11 exactly). AC-1/2/3/5/6 PASS; AC-4 PENDING incognito-perform UAT post-deploy.
 - Phase v60-11: [██████████] 100% LOOP COMPLETE + DEPLOYED + BACKFILLED 2026-05-13 (1 of 1 plans done — single-plan phase). SUMMARY written. Emergent milestone-close-gate phase. v60-11-01 delivered end-to-end: subscribe.ts self-heal (recoverFromFirestoreShutdown parity with 5 siblings) + syncLibraryIndex parallel songsBatch mirror at line 200 (no MIME filter, no status writes — bootstrap-pattern verbatim title) + backfill script for 131 historical missing docs (134-gap minus 3 empty-name skips) + diag script relocation to scripts/diag/. Pre-APPLY audit caught 5 spec issues; patched into PLAN before code work. Suite: 1636/52 (baseline preserved); tsc EXIT=0; next build ✓ Compiled in 8.6s. **AC-1/2/3/5/6 ✅ PASS (AC-3 production --dry-run + --apply both clean; 131 docs written; sticky memory preserved; marker set); AC-4 ⏳ PENDING picker UAT post-deploy.** Pushed to origin/master @ 291ea95 (Vercel auto-deploys).
 - Phase v60-10: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mobile AddBar variant delivered: coarse-pointer-only sticky-bottom positioning via CSS-driven `[@media(pointer:coarse)]:fixed` (no first-paint flash) + hide-on-virtual-keyboard via new useVirtualKeyboardOpen hook + Tailwind `hidden` display:none primitive. SetlistGrid.tsx unmodified (pb-32 = measured equivalent of plan's pb-20 request; DRIFT documented + plan-authorized). Suite +12; tsc + next build clean. HFG 0/3 preserved. /ui-ux-pro-max gate satisfied. **v6.0 Wave 4 complete from this session's perspective.** Pending: transition-phase commit + push (with git pull --rebase to absorb v60-09's parallel-session commit per STATE.md note). AC-6 PENDING-UAT carry-forward post-deploy.
 
-Loop position (v60-11 — current):
+Loop position (v60-12 — current):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-11-01 LOOP COMPLETE 2026-05-13; phase transition + commit/push next]
+  ✓        ✓        ✓     [v60-12-01 LOOP COMPLETE + DEPLOYED 2026-05-13; firebase rules pushed to crcmusiccharts]
+
+Loop position (v60-11 — closed):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [LOOP COMPLETE + DEPLOYED + BACKFILLED 2026-05-13; pushed @ e3fa5f1]
 
 Loop position (v60-09 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
