@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED 2026-05-12.
+Last commit: `35ed9d3` feat(v60-06-07): matrix endpoint migrated to getTracksForSetlist + Promise.all — PUSHED 2026-05-13.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -126,7 +126,8 @@ Push history this run:
   - `89e1c7c` docs(v60-06-04): correct commit SHA in STATE.md + close Wave 3 reader-migration spine — PUSHED
   - `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED
   - `0fcf62a` docs(v60-06-05): correct commit SHA in STATE.md — PUSHED
-  - `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED THIS RUN
+  - `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED
+  - `35ed9d3` feat(v60-06-07): matrix endpoint migration to getTracksForSetlist + Promise.all parallel fetch — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
