@@ -2,22 +2,19 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE; v7.0 milestone structure created 2026-05-13 — awaits v6.0 close before opening)
-
-## Next Milestone Planned
-
-**v7.0 — Document-Driven Setlist Creation** — 8 phases in 6 waves, structure created 2026-05-13. Daniel feeds service-outline docs (May 15 Shir Shabbat .docx is canary) → system parses + resolves + interviews-for-gaps + commits a complete setlist. NEW domains: recordings collection, image-chart rendering (PNG/JPEG/HEIC), Gemini-driven structured extraction. End-of-milestone best-practice audit (v70-08) blocks close. Phase scaffold: v70-01 image-chart support → v70-02 recordings model → v70-03 media affordances (chart click-through + recording bind) || v70-04 doc upload → v70-05 Gemini extract → v70-06 resolve+bind → v70-07 interview+commit → v70-08 best-practice audit. **DOES NOT START until v6.0 closes via /paul:complete-milestone** post worship-cycle UAT.
-
+See: .paul/PROJECT.md (updated 2026-05-13 after v6.0 ✅ COMPLETE via /paul:complete-milestone; v7.0 milestone now active — ready for /paul:plan v70-01)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v6.0 — Tracks Single-Source-of-Truth IN PROGRESS. **Wave 1 + Wave 2 closed** — v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain) close the iPad-Safari save-loss class; v60-03 (H-SL-7 emulator canary + HFG counter reset 0/3) closes the Harness Fidelity Gate that has gated v6.0 since milestone open. **Wave 3 UNBLOCKED.** Next: Wave 3 migration spine — v60-04 (server-side reader migration via single `getTracksForSetlist` helper) → v60-05 (editor + perform-view readers) → v60-06 (dashboard + 15-setlist backfill) → v60-07 (writer removal + immediate strip) → v60-08 (cleanup). v5.0 + v5.2 + v5.3 + v5.4 + v60-01 + v60-02 all in PENDING-UAT close paths over the upcoming worship cycle.
+**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 0 of 8 started. First phase: v70-01 image-chart support (PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary because the May 15 Shir Shabbat doc references `dodi li (sher).png`).
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (10 of 10 original phases LOOP COMPLETE; v60-11 emergent milestone-close-gate phase in PLAN). Waves 1-4 done; Wave 5 milestone-close gate planned.
-Phase: 11 of 11 — v60-11 Shortcut-aware Songs Mirror (+ subscribe.ts self-heal) — PLAN created 2026-05-13. Emergent follow-up phase added post-v60-09 push to close UAT Issue 1 (134 Drive-shortcut docs missing from songs/* despite being in library_index — picker invisible) + latent Issue 3 (subscribe.ts missing recoverFromFirestoreShutdown call). v6.0 milestone-close gate.
-Plan: v60-11-01 PLAN ✓ awaiting approval. 3 tasks: subscribe.ts self-heal + emulator test; syncLibraryIndex songs/* mirror extension (no MIME filter, 4 write sites + new test); one-off backfill script for 134 historical missing docs. 6 ACs. ~80-120 LOC source + ~50-80 LOC test + ~120 LOC backfill script. autonomous: true (no checkpoints — decisions locked in CONTEXT.md from 2026-05-13 handoff).
-Status: LOOP COMPLETE 2026-05-13 — PENDING-UAT (AC-4 only). v60-11-01 SUMMARY written, PROJECT.md + ROADMAP.md evolved with v60-11 entry, STATE.md transitioned, **commits pushed to origin/master, production backfill APPLIED**. tsc EXIT=0; next build ✓ Compiled successfully in 8.6s; vitest 1636/52 (52-failure baseline matches v60-09 exactly). ACs reconciled: AC-1/2/3/5/6 ✅ PASS at commit (AC-3 production --apply confirmed; see Production Verification block below); AC-4 picker UAT ⏳ PENDING (Daniel-loop on iPad/Mac post-deploy). Pre-APPLY architectural audit caught 5 spec issues (A1/A2 BLOCKING, B1/B2 MEDIUM, C2 LOW) — all patched into PLAN before code work; APPLY clean (no DRIFT/GAP). **v6.0 milestone-close gate cleared from code-readiness + production-data perspectives — 11 of 11 phases LOOP COMPLETE.** Final milestone close gated on AC-4 + worship-cycle UAT across upcoming Fri PM + Sat AM.
+Version: v6.0.0 ✅ COMPLETE 2026-05-13 (via /paul:complete-milestone with PENDING-UAT marker per v51-04 codified pattern; 5th consecutive)
+Milestone: v7.0 — Document-Driven Setlist Creation (newly opened 2026-05-13)
+Phase: 1 of 8 — v70-01 Image-chart support — NOT STARTED
+Plan: None — ready for /paul:plan v70-01
+Status: v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
+Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
 
@@ -27,7 +24,22 @@ Status: LOOP COMPLETE 2026-05-13 — PENDING-UAT (AC-4 only). v60-11-01 SUMMARY 
 | Backfill --apply | 131 docs written. Marker `system/v60-11-backfill` set. Songs total now 495 (was 364). 364 existing songs/* docs UNTOUCHED (sticky memory preserved). |
 | Spot-check via scripts/diag/diag-lechu-goldman.ts | songs/1jgs72zwhfEvqsqeeCFMw8Th7Zsk0mVJj NOW exists (was missing pre-apply). Title stored verbatim as "Lechu Goldman.pdf" (matches bootstrap-pattern per A1 audit fix). Exact-match search for "Lechu Goldman" returns 0 (expected — cmdk substring/fuzzy will surface on Daniel's "Lechu" prefix). |
 | Push origin/master | 95f83fa..291ea95 — 2 commits (101d619 feat + 291ea95 docs) live. Vercel auto-deploy triggered. |
-Last activity: 2026-05-13 — v60-11-01 LOOP COMPLETE + COMMITTED @ `101d619` (13 files / +1724 / -18 LOC; includes entire .paul/phases/v60-11-shortcut-aware-songs-mirror/ dir per feedback_paul_phase_commits + scripts/backfill-shortcuts-songs.ts + scripts/diag/diag-lechu-goldman.ts move + 2 new test files + 2 production source edits + 3 .paul state docs). SUMMARY at `.paul/phases/v60-11-shortcut-aware-songs-mirror/v60-11-01-SUMMARY.md`. PROJECT.md gained v60-11 entry under "Validated (Shipped this cycle)" with full mechanism / decisions / verification / patterns / PENDING-UAT block. ROADMAP.md v60-11 row updated to ✅ LOOP COMPLETE — PENDING-UAT. Pending: push to origin/master per memory feedback_git_push (master branch is the production deploy target; Vercel auto-deploys).
+Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v7.0 milestone planning. Session shipped v60-11 fully (PLAN+audit+APPLY+UNIFY+commit+push+backfill --apply for 131 docs) and v60-12 fully (PLAN+audit+APPLY+UNIFY+commit+push+rules deploy) and created v7.0 milestone structure (8 phases in 6 waves; awaits v6.0 close before opening). HANDOFF at `.paul/HANDOFF-2026-05-13-evening.md`. master synced with origin/master @ `04499a4`.
+
+## Session Continuity
+
+Last session: 2026-05-13 evening
+Stopped at: Daniel-explicit pause post-v60-12 LOOP COMPLETE + v7.0 milestone structure created
+Next action: /paul:resume — workflow routes to UAT-wait or /paul:complete-milestone after worship cycle
+Resume file: .paul/HANDOFF-2026-05-13-evening.md
+Git strategy: master (synced @ 04499a4)
+Resume context:
+- v6.0 milestone: 12 of 12 phases LOOP COMPLETE; blocked only on Daniel-loop UAT (v60-11 picker / v60-12 incognito-perform / v60-09 two-device / v60-10 iPad sticky AddBar / Issue 2 setlist-missing cascade / accumulated v60-01..v60-08 carry-forwards) across Fri PM + Sat AM worship cycle
+- v7.0 milestone: structure created at .paul/phases/v70-* (8 empty dirs); 12 constraints locked at creation in ROADMAP.md "Next Milestone Planned" section; DOES NOT START until v6.0 closes via /paul:complete-milestone
+- Production deploys live: v60-11 backfill applied (songs 364 → 495); v60-12 firestore rules released; Vercel auto-deploy in flight for `04499a4` hook change
+- /paul:audit is BROKEN in this repo per feedback_no_paul_audit — manual architectural audit inline instead (proven again on v60-12: cleared 5 concerns)
+- HFG counter held at 0/3 throughout v6.0
+- After UAT clears: /paul:complete-milestone closes v6.0 → /paul:plan v70-01 (image-chart support — PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary)
 
 ### Git State (v60-11-01 transition)
 Last commit: `291ea95` — docs(v60-11-01): backfill commit SHA + Git State block in STATE.md

@@ -31,6 +31,81 @@ Completed milestone log for this project.
 | v5.2 Band-Onboarding Hardening | 2026-04-30 | 1 session | 5 phases, 5 plans (PENDING-UAT at close) |
 | v5.3 Editor UX Repair (rescoped 2026-05-02 to insert v5h3 hotfix) | 2026-05-02 | 1 session (~12h wall-clock) | 4 phases, 7 plans (PENDING-UAT at close — UAT discipline waiver per Daniel) |
 | v5.4 Hotfix + Harness Fidelity | 2026-05-12 | ~4 days (2026-05-08 → 2026-05-12) | 2 phases shipped + 1 partial (3 deferred fold-forward to v6.0), 4 plans + 8 P0 patches + 2 cleanups, ~18 commits (PENDING-UAT at close — Daniel-loop discipline; HFG counter 1/3 carried into v6.0) |
+| v6.0 Tracks Single-Source-of-Truth | 2026-05-13 | ~2 days (2026-05-12 → 2026-05-13) | 12 phases LOOP COMPLETE (10 original + 2 emergent close-gates v60-11/v60-12), 24 plans, 25 commits (PENDING-UAT at close — 5th consecutive use of v51-04 codified pattern; HFG counter 0/3 held throughout via emulator coverage) |
+
+---
+
+## ✅ v6.0 Tracks Single-Source-of-Truth
+
+**Completed:** 2026-05-13
+**Duration:** ~2 days (2026-05-12 milestone open → 2026-05-13 close)
+**Status:** Closed via `/paul:complete-milestone` with PENDING-UAT marker per v51-04 codified pattern (5th consecutive: v5.3 → v5.4 → v6.0). Master HEAD `04499a4`. Daniel-loop UAT continues against deployed commits over the upcoming worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans per v51-04 rule.
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 12 LOOP COMPLETE (10 original from milestone design + 2 emergent close-gates v60-11 + v60-12 added 2026-05-13 after UAT-class bugs surfaced) |
+| Plans | 24 (one per phase except v60-04 = 3 / v60-06 = 8 / v60-07 = 4) |
+| Total commits in milestone | 25 across the v6.0 window (2026-05-12 v60-01 first commit → 2026-05-13 `04499a4` v60-12 close) |
+| Tests added | +44 within v6.0 (1597 v5.4 baseline → 1636 v6.0 close; +9 from v60-11 / v60-12 emergent phases alone) |
+| 52-failure baseline | Held EXACTLY from v60-09 (1615/52) through v60-11 (1636/52) through v60-12 (1636/52) — every phase preserved the baseline as an explicit AC |
+| Production data writes | 131 chart docs created in `songs/*` (v60-11 backfill of MIME-filter-excluded shortcuts); 5 setlists migrated via `scripts/backfill-tracks-v60.ts --apply` (v60-06); 22 consumer sites migrated to denorms (v60-08); 4 firestore.rules deploys via `firebase deploy --only firestore:rules` |
+| Harness Fidelity Gate counter | Held at 0/3 THROUGHOUT v6.0 — every data-layer phase (v60-03/04/05/06/07/08/09/11/12) shipped emulator-backed coverage. Counter reset from 1/3 → 0/3 at v60-03 (Java JDK 21 + emulator canary green). No clause-(b) waivers consumed across 12 phases. |
+| /ui-ux-pro-max gate | BLOCKING for v60-01/02 (Wave 1 UX) / v60-05 (perf-view + editor reads) / v60-06 (dashboard) / v60-09 (picker filter) / v60-10 (Mobile AddBar); satisfied for all. NOT applicable to v60-03 (infra) / v60-04 (server-side) / v60-07 (writer removal) / v60-08 (cleanup) / v60-11 (data-layer) / v60-12 (auth-rules) per SPECIAL-FLOWS.md. |
+| Master HEAD at close | `04499a4` feat(v60-12-01): public read on tracks/* + perf-view hook + emulator rules test; close incognito-perform bug |
+
+### Key Accomplishments
+
+- **The v50-05 tracks migration is finally complete.** Top-level `tracks/{id}` is now the SOLE source for "the live track list" across the entire codebase. Every reader routes through one of three helpers (`getTracksForSetlist` server / `getTracksForSetlistClient` client / `fetchTracksForSetlistClient` Web-SDK direct) — no more embedded-array fallback, no more half-migrated dual-source state, no more class of regressions that has dominated 2026-04..05. The architectural-audit antidote Daniel demanded at v5.4 close ("stop with the bandaids. I want a real plan and a real fix") shipped end-to-end.
+
+- **Wave 1 (orthogonal UX) — v60-01 + v60-02.** SyncIndicator conflict-pill rewired to silent last-write-wins + Sentry capture (sole-admin app; true two-writer conflicts essentially impossible; user fatigue with modals takes priority); pagehide/visibilitychange blur protection for mid-edit text (closes the kitchen-sink-harness-undetectable iPad save-loss class first hit at v5h-01 then v5h3 then v50-07).
+
+- **Wave 2 (HFG reset) — v60-03.** Java JDK 21 + emulator canary green; HFG counter reset from 1/3 → 0/3 via working-tree revert-and-fail-then-restore proof; v53-02 clause-(b) waiver RESOLVED; v5h3-01-04 postmortem Action #2 CLOSED after carrying for ~6 weeks. Counter then held at 0/3 across the remaining 9 phases — every data-layer phase shipped real-Firestore emulator coverage instead of waivers.
+
+- **Wave 3 (migration spine) — v60-04 + v60-05 + v60-06 + v60-07 + v60-08 across ~12 plans.** Server-reader spine first (publish / print / public / personal / email-packets / matrix / resend — all route through `getTracksForSetlist`). Client-reader inventory next (3 patterns: Dexie-aware single + Dexie bulk via `useDexieTracksForSetlists` + Web-SDK direct-fetch `fetchTracksForSetlistClient`). Dashboard denormalization (`trackCount` + `songCount` + `fileIds[]` cascaded atomically via SetlistGridHydrator). 15-setlist historical backfill via `scripts/backfill-tracks-v60.ts` (apply/dry-run/rollback triad reusing migrate-v50 MigrationFirestore abstraction); production --apply: 5 migrated / 5 skip-hydrated / 5 skip-empty / 0 errors. Writer removal: 7 write sites stripped of embedded-array writes (W1-W7) + opportunistic `FieldValue.delete()` for hydrated docs in the same transaction (zero extra round-trips). Cleanup: dropped reader fallback from server + client helpers; dropped `tracks` field from both Zod schema AND hand-defined `Setlist` interface; 22 consumer sites across 10 files migrated to denorms in a single Daniel-approved spec-issue expansion ("≤2 consumer sites" estimate proved off by an order of magnitude).
+
+- **Wave 4 (v5.4 fold-forwards) — v60-09 + v60-10 (parallel sessions).** v54-03 cross-device library sync delivered via new `subscribeSongsLibrary` continuous listener (replaces v53-02-01's one-shot `primeSongsLibrary`); write-side parity in rename/archive/upload routes via `Promise.allSettled` non-fatal songs mirror; LocalSong gains `status?: 'active' | 'archived'`; picker filter at Dexie query layer per /ui-ux-pro-max consult; emulator-backed listener round-trip coverage 5/5. Mobile AddBar variant delivered via coarse-pointer sticky-bottom CSS (`[@media(pointer:coarse)]:fixed`) — no first-paint flash on iPad — + new `useVirtualKeyboardOpen` hook (visualViewport.resize listener, 150px threshold) + Tailwind `hidden` for keyboard-up state. Both phases zero file overlap; sequential commits (v60-10 first, v60-09 rebased + second).
+
+- **Wave 5 (emergent close-gate) — v60-11.** Daniel UAT post-v60-09 push surfaced "Lechu Goldman" picker visibility bug — 134 Drive shortcuts in `library_index` but not in `songs/*` (v54-01-01 bootstrap MIME filter excluded them). Fixed by extending `syncLibraryIndex` with a parallel `songsBatch` mirror at the chunk-commit site (no MIME filter, no status writes — status owned by archive route; cron can't clobber). One-off backfill script seeded the 131 historical missing docs (134-gap minus 3 empty-name skips). Pre-APPLY architectural audit (per `feedback_no_paul_audit` memory — /paul:audit broken in this repo so manual audit inline) caught 5 spec issues (A1 title strip / A2 status clobber / B1 batch pattern / B2 scope-name / C2 void prefix) — all patched into PLAN before code touched. Bundled subscribe.ts self-heal (missing `recoverFromFirestoreShutdown` call vs 5 sibling listeners).
+
+- **Wave 6 (emergent close-gate) — v60-12.** Daniel UAT during v7.0 planning surfaced "No tracks yet" on the public perform view at centralreform.live — `tracks/{trackId}` required `isMember()` to read AND `useSetlistPerformance` skipped the snapshot listener for unauthenticated users (citing a stale comment that lied about the page rendering an error for public users). Fixed both layers + added `@firebase/rules-unit-testing` dev dep + first emulator-backed rules test in the project (8 scenarios: read × write × auth-context matrix). Production rules deployed; incognito visitors now see tracks.
+
+- **Architectural-audit + manual-audit patterns paid off repeatedly.** /paul:audit (per-PLAN) is broken in this repo (feedback_no_paul_audit). Manual architectural audit inline caught 5 spec issues on v60-11 (would have been APPLY-time DRIFT/GAP) and 5 architectural concerns on v60-12 (all cleared before code touched). Pattern established: read PLAN + cross-check against source files + classify findings as BLOCKING/MEDIUM/LOW + patch PLAN before APPLY rather than auto-fix during APPLY.
+
+- **Daniel-loop UAT discipline (codified v51-04) validated 6+ times across v6.0.** Caught UAT Issue 1 (v60-09 push → v60-11), UAT Issue 2 (mid-v60-11 push → v60-12 candidate; pending Daniel's clear-site-data diagnostic), Issue 3 (latent subscribe.ts self-heal omission folded into v60-11). Pattern: emergent close-gate phases get added to the milestone rather than deferred; "every milestone closes" discipline preserved.
+
+- **No engine touches across v6.0 client phases.** v60-03 emulator infra alone touched engine-adjacent surfaces; the migration spine (v60-04..v60-08) routed all reads through helpers + all writes through existing `applyEdit` fanout. The kitchen-sink-harness fidelity gap that drove v5h-01 + v5h3 + v50-07 doesn't reappear because every data-layer phase has emulator-backed coverage as a precondition.
+
+### Key Decisions (12 locked at /paul:discuss-milestone 2026-05-12 + emergent during v6.0)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-12 | Option A (finish v50-05 tracks migration) over Option B (rollback) | v6.0 design | Top-level `tracks/{id}` becomes single source of truth. Synthesized from `RESEARCH/TRACKS-MIGRATION-AUDIT-2026-05-12.md`; 27 writers + 26 readers + 5 subscriptions catalogued. |
+| 2026-05-12 | Major-version bump v6.0 (not v5.5) for the data-model nature of the migration | v6.0 design | Top-level tracks SSOT replaces half-migrated dual-source state — the dominant regression source since v50-05. |
+| 2026-05-12 | 15-setlist historical backfill (not full-library) | v6.0 design | Scope bounded; Daniel-approved at /paul:discuss-milestone; 5 migrated / 5 skip-hydrated / 5 skip-empty in production. |
+| 2026-05-12 | Conflict retry → silent last-write-wins + Sentry capture (no user-facing modal) | v60-01 | Sole-admin app; true two-writer conflicts essentially impossible; user fatigue with modals > edge-case fidelity. |
+| 2026-05-12 | Browser-smoke before phase close MANDATORY in v6.0 | v6.0 design | User instruction made permanent. Vitest green is necessary but not sufficient; each phase ships a Daniel-runs-this-in-Safari checklist as AC-N. PENDING-UAT marker preserved as the close pattern. |
+| 2026-05-12 | v60-03 Java install + emulator canary BLOCKS Wave 3 engine phases | v60-03 | HFG counter must reset to 0/3 before any engine-adjacent phase ships. Resolved v53-02 clause-(b) waiver + closed v5h3-01-04 postmortem action #2. |
+| 2026-05-12 | v54-03 cross-device library sync + Mobile AddBar variant fold INTO v6.0 (not deferred to v6.1) | v60-09 + v60-10 | Lands the app in a coherent end state — data model + library sync + mobile add-track all shipped in the same milestone. |
+| 2026-05-12 | Immediate `FieldValue.delete()` strip on writer touch, NOT a sweeping cleanup | v60-07 | Smaller surface; each writer naturally drops the field as it touches the doc; no risk of cleanup-script orphaning. |
+| 2026-05-13 | Daniel-approved mid-APPLY spec expansion (v60-08 from "≤2 consumer sites" to 22 across 10 files) | v60-08 | First production exercise of "spec-issue diagnostic at mid-APPLY" — pause, present scope reality, let user choose expand vs defer. Pattern: when "≤N estimate" proves off by 10x, surface the choice. |
+| 2026-05-13 | songs/* mirror at sync-engine site drops MIME filter; status field owned by archive route | v60-11 | Architectural-audit-caught: A1 title strip + A2 status clobber + B1 batch pattern both BLOCKING before any code. Pattern: pre-APPLY audit reads PLAN + cross-checks against source. |
+| 2026-05-13 | Public-read on tracks/{trackId} (Option A simple) vs parent-doc visibility check (Option B) | v60-12 | Setlists already publicly readable; tracks are natural extension. Option B would require `public: true` flag + backfill + dashboard logic — out of scope. |
+| 2026-05-13 | @firebase/rules-unit-testing dev dep + 8-scenario rules test pattern | v60-12 | First emulator-backed rules test in the project; reusable template (read × write × auth-context matrix) for future rules edits. |
+| 2026-05-13 | Close v6.0 with PENDING-UAT marker per v51-04 codified pattern | v6.0 close | 5th consecutive use (v5.0/v5.2/v5.3/v5.4/v6.0). Daniel "go" override; UAT continues against deployed commits; failures route to in-phase follow-up plans. |
+
+### Patterns Established (carry to v7.0 + beyond)
+
+- **Pre-APPLY manual architectural audit** (per `feedback_no_paul_audit` since /paul:audit is broken in this repo) — read PLAN + cross-check against source files + classify findings as BLOCKING/MEDIUM/LOW + patch PLAN before APPLY rather than auto-fix during APPLY. Proven on v60-11 (5 findings) and v60-12 (5 findings).
+- **Emulator-backed coverage as HFG-preserving alternative to clause-(b) waivers** for engine-adjacent / listener / rules phases. Counter held 0/3 across all v6.0 data-layer phases via this discipline.
+- **Parallel batch pairs committed via `Promise.allSettled`** for non-fatal secondary writes (v60-09 rename/archive/upload routes + v60-11 sync-engine mirror).
+- **Status-field ownership boundary** — each Firestore field has a sole writer; other writers respect via `.set({ merge: true })` with no conflicting field in their payload (codified at v60-11 audit; carry to v7.0 recordings model).
+- **Sibling-listener resilience contract** — every Firestore onSnapshot error handler calls `recoverFromFirestoreShutdown` (codified at v60-11; verified at v60-12 hook update).
+- **Spec-issue diagnostic at mid-APPLY** — when an estimate is off by 10x, pause and surface the scope-reality choice (expand vs defer); used at v60-08 (22 consumer sites vs ≤2 estimate).
+- **Emergent close-gate phases inside a milestone close path** — v60-11 + v60-12 both added during v6.0 PENDING-UAT close window after UAT-class bugs surfaced; pattern reusable when "every milestone closes" + "Daniel-loop UAT" combine.
+- **Combined single-commit per phase** with entire `.paul/phases/{phase}/` dir staged together (per memory `feedback_paul_phase_commits`).
+- **Firebase CLI as automated task** (per memory `feedback_firebase_cli`) — `firebase deploy --project crcmusiccharts` is automatable; NOT a human-action checkpoint.
 
 ---
 
