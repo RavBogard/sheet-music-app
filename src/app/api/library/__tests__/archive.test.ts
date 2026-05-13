@@ -5,12 +5,15 @@ import { makeReq } from '@/__tests__/api-test-helpers'
 
 let docExists = true
 const mockUpdate = vi.fn()
+const mockSongsSet = vi.fn()
 
 const mockFirestoreLocal = {
-    collection: vi.fn(() => ({
+    collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
             get: vi.fn(async () => ({ exists: docExists })),
             update: mockUpdate,
+            // v60-09-01: songs/{fileId} mirror writes go through .set() with merge.
+            set: name === 'songs' ? mockSongsSet : vi.fn(),
         })),
     })),
 }
@@ -112,6 +115,40 @@ describe('PATCH /api/library/archive', () => {
         const res = await PATCH(req)
 
         expect(res.status).toBe(404)
+    })
+
+    it('v60-09-01: mirrors archive status to songs/{fileId} with merge:true', async () => {
+        mockAuth('band_leader')
+        const req = makeReq('/api/library/archive', {
+            method: 'PATCH',
+            token: 'valid',
+            body: { fileId: 'file-1', archive: true },
+        })
+        await PATCH(req)
+
+        expect(mockSongsSet).toHaveBeenCalledTimes(1)
+        expect(mockSongsSet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: 'archived',
+                updatedAt: expect.any(Number),
+            }),
+            { merge: true },
+        )
+    })
+
+    it('v60-09-01: mirrors restore status to songs/{fileId}', async () => {
+        mockAuth('band_leader')
+        const req = makeReq('/api/library/archive', {
+            method: 'PATCH',
+            token: 'valid',
+            body: { fileId: 'file-1', archive: false },
+        })
+        await PATCH(req)
+
+        expect(mockSongsSet).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'active' }),
+            { merge: true },
+        )
     })
 
     it('returns correct response shape', async () => {

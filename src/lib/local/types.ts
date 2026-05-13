@@ -55,9 +55,10 @@ export interface LocalSong {
     normalizedTitle: string
     defaults?: SongDefaults
     recent?: SongRecentEntry[]
-    /** v50-06-01: last server-confirmed `updatedAt` (ms). See LocalTrack
-     *  for semantics. Songs are written by sticky-memory propagation
-     *  (v50-04 helpers) which can also race remote writes. */
+    /** v60-09-01: archive flag mirrored from library_index/{id}.status.
+     *  Picker filters `status !== 'archived'`; missing status reads as
+     *  active (backward compat with v54-01-01 bootstrap docs). */
+    status?: 'active' | 'archived'
     updatedAt?: number
     [key: string]: unknown
 }

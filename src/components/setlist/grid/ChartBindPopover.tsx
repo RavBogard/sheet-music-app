@@ -67,8 +67,15 @@ export function ChartBindPopover({
         onOpenChange?.(next)
     }
 
+    // v60-09-01: archive filter — `status !== 'archived'` keeps the predicate
+    // inside the Dexie worker and excludes archived rows from cmdk filter
+    // surface, Recent group, and Library group uniformly. Missing-status docs
+    // (v54-01-01 bootstrap) pass through as active.
     const songs = useLiveQuery(
-        () => getDb().songs.toArray(),
+        () =>
+            getDb()
+                .songs.filter((s) => s.status !== 'archived')
+                .toArray(),
         [],
         [] as LocalSong[],
     )

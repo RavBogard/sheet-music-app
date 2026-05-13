@@ -41,13 +41,28 @@ export const PATCH = createApiHandler(
             return NextResponse.json({ error: "File not found" }, { status: 404 })
         }
 
-        // Soft delete (or restore)
-        await docRef.update({
-            status: archive ? 'archived' : 'active',
-            modifiedTime: new Date().toISOString(),
-            archivedBy: archive ? ctx.auth.uid : null,
-            archivedAt: archive ? new Date().toISOString() : null,
-        })
+        // v60-09-01: mirror status to songs/{fileId} so the picker can filter.
+        // sticky memory (recent[] + defaults from v50-04) is preserved — we
+        // only flip the status flag, never delete the songs doc.
+        const songRef = db.collection('songs').doc(fileId)
+        const [, songWriteResult] = await Promise.allSettled([
+            docRef.update({
+                status: archive ? 'archived' : 'active',
+                modifiedTime: new Date().toISOString(),
+                archivedBy: archive ? ctx.auth.uid : null,
+                archivedAt: archive ? new Date().toISOString() : null,
+            }),
+            songRef.set(
+                {
+                    status: archive ? 'archived' : 'active',
+                    updatedAt: Date.now(),
+                },
+                { merge: true },
+            ),
+        ])
+        if (songWriteResult.status === 'rejected') {
+            logger.warn(`[Archive] songs/{${fileId}} mirror failed`, songWriteResult.reason)
+        }
 
         logger.info(`[Archive] ${archive ? 'Archived' : 'Restored'} ${fileId}`)
 

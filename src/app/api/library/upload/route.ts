@@ -205,10 +205,13 @@ export const POST = createApiHandler(
 
         await db.collection('library_index').doc(fileId).set(indexEntry)
 
-        // Seed the 'songs' collection so the offline Setlist picker can find it immediately
+        // Seed the 'songs' collection so the offline Setlist picker can find it immediately.
+        // v60-09-01: stamp status:'active' so the picker's archive-filter (status !== 'archived')
+        // treats new uploads as active without relying on the missing-status backward-compat fallback.
         await db.collection('songs').doc(fileId).set({
             title,
             normalizedTitle: title.toLowerCase(),
+            status: 'active',
             updatedAt: Date.now()
         }, { merge: true })
 

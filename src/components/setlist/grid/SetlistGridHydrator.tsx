@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { getDb } from '@/lib/local/schema'
 import { primeSongsLibrary as defaultPrimeSongsLibrary } from '@/lib/songs/prime'
+import { subscribeSongsLibrary as defaultSubscribeSongsLibrary } from '@/lib/songs/subscribe'
 import { captureSyncFailure } from '@/lib/sync/sentry-capture'
 import type {
     EditDescriptor,
@@ -36,10 +37,16 @@ export interface SetlistGridHydratorProps {
         edit: EditDescriptor,
         options?: { withoutUndo?: boolean },
     ) => Promise<void>
-    /** Test-seam (v53-02-01): lets unit tests assert library priming fires
-     *  once-per-mount without booting Firestore. Defaults to the production
-     *  primeSongsLibrary export. */
+    /** Test-seam (v53-02-01, deprecated post v60-09-01): existing tests may
+     *  still inject this; production no longer calls it (subscribeSongsLibrary
+     *  replaces it). Retained so old `primeSongsLibrary={spy}` test props
+     *  continue to compile without forcing test rewrites; the spy will simply
+     *  never fire. */
     primeSongsLibrary?: () => Promise<{ written: number }>
+    /** Test-seam (v60-09-01): lets unit tests assert library subscription
+     *  starts once-per-mount without booting Firestore. Defaults to the
+     *  production subscribeSongsLibrary export. */
+    subscribeSongsLibrary?: () => () => void
 }
 
 export function SetlistGridHydrator({
@@ -49,17 +56,19 @@ export function SetlistGridHydrator({
     gridProps,
     startSnapshotListener = defaultStartSnapshotListener,
     applyEdit = defaultApplyEdit,
-    primeSongsLibrary = defaultPrimeSongsLibrary,
+    primeSongsLibrary: _primeSongsLibrary = defaultPrimeSongsLibrary,
+    subscribeSongsLibrary = defaultSubscribeSongsLibrary,
 }: SetlistGridHydratorProps) {
+    void _primeSongsLibrary
     const [hydration, setHydration] = useState<'pending' | 'done'>('pending')
     /** v50-07-03 fire-once guard. Lazy-hydration is a one-shot migration
      *  cascade per mount; React effect dependency churn must not retrigger
      *  it (would enqueue duplicate outbox rows). */
     const fanoutStartedRef = useRef(false)
-    /** v53-02-01 fire-once guard. Library priming is a one-shot read per
-     *  mount; effect dependency churn must not retrigger it (would burn
-     *  Firestore reads for no benefit — Dexie already has the data). */
-    const primedRef = useRef(false)
+    /** v60-09-01 fire-once guard. The continuous songs subscription mounts
+     *  once per Hydrator instance; re-mounts cleanly unsubscribe via the
+     *  effect's cleanup. Replaces the v53-02-01 primedRef one-shot. */
+    const songsSubscribeRef = useRef<(() => void) | null>(null)
     /** v54-01-03 trackCount reconciler memory of the last value we wrote.
      *  Declared at the top so the lazy-hydration cascade (below) can seed
      *  it after writing trackCount in the same setlist update — without
@@ -322,23 +331,22 @@ export function SetlistGridHydrator({
     // v53-02-01: best-effort library priming after Dexie hydration
     // completes. ChartBindPopover lives off `getDb().songs`; without a
     // priming read the picker is empty on first session open. Fire-and-
-    // forget — the prime helper already swallows errors (defense-in-depth
-    // catch here too); priming runs concurrently with lazy-hydration and
-    // never blocks the user.
-    //
-    // Harness Fidelity Gate waiver scope: this effect is an additive
-    // one-shot getDocs alongside the v50-07-03 lazy-hydration cascade.
-    // No new write paths through the sync engine, no snapshot listener
-    // on `songs/*` (cross-device freshness deferred to v5.4), no Dexie
-    // schema bump. Mirrors the v50-06-03 server-authoritative read
-    // pattern: priming uses `db.songs.put` directly (NOT applyEdit) so
-    // it never enqueues outbox rows.
+    // v60-09-01: continuous `songs/*` subscription replaces the v53-02-01
+    // one-shot prime. First snapshot delivers the same population effect;
+    // subsequent snapshots keep Dexie live so rename/archive/upload mutations
+    // from another device propagate to the picker without a reload. Single
+    // mount per Hydrator instance via songsSubscribeRef; clean unsubscribe
+    // on unmount. Server-authoritative reads — direct db.songs.put inside
+    // the helper, never through the engine (no circular writes).
     useEffect(() => {
         if (hydration !== 'done') return
-        if (primedRef.current) return
-        primedRef.current = true
-        void primeSongsLibrary().catch(() => {})
-    }, [hydration, primeSongsLibrary])
+        if (songsSubscribeRef.current) return
+        songsSubscribeRef.current = subscribeSongsLibrary()
+        return () => {
+            songsSubscribeRef.current?.()
+            songsSubscribeRef.current = null
+        }
+    }, [hydration, subscribeSongsLibrary])
 
     // v54-01-03: trackCount reconciler. v50-05 moved tracks from the embedded
     // `setlists/{id}.tracks[]` array into a top-level `tracks/{id}` collection,

@@ -1,3 +1,8 @@
+// v60-09-01: superseded by subscribeSongsLibrary (./subscribe.ts). Retained
+// as a test seam — v53-02-01 tests inject `primeSongsLibrary={spy}` and we
+// don't force a rewrite. Production call sites flipped at SetlistGridHydrator
+// + ChartBindDialog; the helper here no longer fires at runtime.
+
 import { collection, getDocs } from 'firebase/firestore'
 
 import { db as firestoreDb } from '@/lib/firebase'

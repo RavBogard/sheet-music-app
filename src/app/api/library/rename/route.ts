@@ -42,10 +42,27 @@ export const PATCH = createApiHandler(
             return NextResponse.json({ error: "File not found" }, { status: 404 })
         }
 
-        await docRef.update({
-            displayName: trimmed,
-            modifiedTime: new Date().toISOString(),
-        })
+        // v60-09-01: mirror rename to songs/{fileId} so the ChartBindPopover
+        // picker (driven by Dexie via subscribeSongsLibrary) reflects the new
+        // title across devices without a manual reload.
+        const songRef = db.collection('songs').doc(fileId)
+        const [, songWriteResult] = await Promise.allSettled([
+            docRef.update({
+                displayName: trimmed,
+                modifiedTime: new Date().toISOString(),
+            }),
+            songRef.set(
+                {
+                    title: trimmed,
+                    normalizedTitle: trimmed.toLowerCase(),
+                    updatedAt: Date.now(),
+                },
+                { merge: true },
+            ),
+        ])
+        if (songWriteResult.status === 'rejected') {
+            logger.warn(`[Rename] songs/{${fileId}} mirror failed`, songWriteResult.reason)
+        }
 
         logger.info(`[Rename] ${fileId} → "${trimmed}"`)
 

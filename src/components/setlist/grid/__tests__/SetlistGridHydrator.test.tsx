@@ -34,6 +34,14 @@ vi.mock('@/lib/sync/snapshot-listener', () => ({
     startSnapshotListener: vi.fn(() => () => {}),
 }))
 
+// v60-09-01: same mock posture for the songs subscription — production
+// default calls onSnapshot(collection(firestoreDb,'songs')) which would
+// fail against the empty firebase mock. Tests that assert subscribe-wiring
+// behavior pass an explicit `subscribeSongsLibrary` prop spy below.
+vi.mock('@/lib/songs/subscribe', () => ({
+    subscribeSongsLibrary: vi.fn(() => () => {}),
+}))
+
 import { SetlistGridHydrator } from '../SetlistGridHydrator'
 
 const SETLIST_ID = 'set-hyd-1'
@@ -544,10 +552,12 @@ describe('SetlistGridHydrator', () => {
         expect(t1?.key).toBe('E')
     })
 
-    // v53-02-01: library priming runs once after Dexie hydration completes.
-    // Test-seam injection (`primeSongsLibrary` prop) avoids booting Firestore.
-    it('v53-02-01: calls primeSongsLibrary once after hydration completes', async () => {
-        const primeSpy = vi.fn(async () => ({ written: 0 }))
+    // v60-09-01: library subscription runs once after Dexie hydration completes.
+    // Replaces the v53-02-01 prime tests. Test-seam injection
+    // (`subscribeSongsLibrary` prop) avoids booting Firestore.
+    it('v60-09-01: calls subscribeSongsLibrary once after hydration completes', async () => {
+        const stopSpy = vi.fn()
+        const subscribeSpy = vi.fn(() => stopSpy)
 
         const { findByTestId } = render(
             <SetlistGridHydrator
@@ -557,19 +567,20 @@ describe('SetlistGridHydrator', () => {
                     hydrated: true,
                 }}
                 initialTracks={[]}
-                primeSongsLibrary={primeSpy}
+                subscribeSongsLibrary={subscribeSpy}
             />,
         )
 
         await findByTestId('setlist-grid-empty-state')
 
         await waitFor(() => {
-            expect(primeSpy).toHaveBeenCalledTimes(1)
+            expect(subscribeSpy).toHaveBeenCalledTimes(1)
         })
     })
 
-    it('v53-02-01: does NOT re-prime on re-render (sentinel guard)', async () => {
-        const primeSpy = vi.fn(async () => ({ written: 0 }))
+    it('v60-09-01: does NOT re-subscribe on re-render (sentinel guard)', async () => {
+        const stopSpy = vi.fn()
+        const subscribeSpy = vi.fn(() => stopSpy)
         const setlist = {
             ...makeSetlist(1_700_000_000_000),
             hydrated: true,
@@ -580,13 +591,13 @@ describe('SetlistGridHydrator', () => {
                 setlistId={SETLIST_ID}
                 initialSetlist={setlist}
                 initialTracks={[]}
-                primeSongsLibrary={primeSpy}
+                subscribeSongsLibrary={subscribeSpy}
             />,
         )
 
         await findByTestId('setlist-grid-empty-state')
         await waitFor(() => {
-            expect(primeSpy).toHaveBeenCalledTimes(1)
+            expect(subscribeSpy).toHaveBeenCalledTimes(1)
         })
 
         rerender(
@@ -594,40 +605,37 @@ describe('SetlistGridHydrator', () => {
                 setlistId={SETLIST_ID}
                 initialSetlist={setlist}
                 initialTracks={[]}
-                primeSongsLibrary={primeSpy}
+                subscribeSongsLibrary={subscribeSpy}
             />,
         )
 
-        // Drain microtasks; ensure no additional calls landed.
         await new Promise((r) => setTimeout(r, 20))
-        expect(primeSpy).toHaveBeenCalledTimes(1)
+        expect(subscribeSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('v53-02-01: priming failure does not affect hydration state', async () => {
-        const primeSpy = vi.fn(async () => {
-            throw new Error('prime boom')
-        })
-        const updatedAt = 1_700_000_000_000
+    it('v60-09-01: calls unsubscribe on unmount', async () => {
+        const stopSpy = vi.fn()
+        const subscribeSpy = vi.fn(() => stopSpy)
 
-        render(
+        const { findByTestId, unmount } = render(
             <SetlistGridHydrator
                 setlistId={SETLIST_ID}
-                initialSetlist={{ ...makeSetlist(updatedAt), hydrated: true }}
+                initialSetlist={{
+                    ...makeSetlist(1_700_000_000_000),
+                    hydrated: true,
+                }}
                 initialTracks={[]}
-                primeSongsLibrary={primeSpy}
+                subscribeSongsLibrary={subscribeSpy}
             />,
         )
 
-        // Hydration completes (Dexie has the setlist) regardless of priming.
-        await waitFor(async () => {
-            const local = await getDb().setlists.get(SETLIST_ID)
-            expect(local).toBeDefined()
-            expect(local?.updatedAt).toBe(updatedAt)
+        await findByTestId('setlist-grid-empty-state')
+        await waitFor(() => {
+            expect(subscribeSpy).toHaveBeenCalledTimes(1)
         })
 
-        await waitFor(() => {
-            expect(primeSpy).toHaveBeenCalled()
-        })
+        unmount()
+        expect(stopSpy).toHaveBeenCalledTimes(1)
     })
 
     // v50-06-03: hydrator mounts the snapshot listener after hydration

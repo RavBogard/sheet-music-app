@@ -5,12 +5,15 @@ import { makeReq } from '@/__tests__/api-test-helpers'
 
 let docExists = true
 const mockUpdate = vi.fn()
+const mockSongsSet = vi.fn()
 
 const mockFirestoreLocal = {
-    collection: vi.fn(() => ({
+    collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
             get: vi.fn(async () => ({ exists: docExists })),
             update: mockUpdate,
+            // v60-09-01: songs/{fileId} mirror writes go through .set() with merge.
+            set: name === 'songs' ? mockSongsSet : vi.fn(),
         })),
     })),
 }
@@ -102,6 +105,26 @@ describe('PATCH /api/library/rename', () => {
         const res = await PATCH(req)
 
         expect(res.status).toBe(404)
+    })
+
+    it('v60-09-01: mirrors title + normalizedTitle to songs/{fileId} with merge:true', async () => {
+        mockAuth('band_leader')
+        const req = makeReq('/api/library/rename', {
+            method: 'PATCH',
+            token: 'valid',
+            body: { fileId: 'file-1', displayName: 'New Title' },
+        })
+        await PATCH(req)
+
+        expect(mockSongsSet).toHaveBeenCalledTimes(1)
+        expect(mockSongsSet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: 'New Title',
+                normalizedTitle: 'new title',
+                updatedAt: expect.any(Number),
+            }),
+            { merge: true },
+        )
     })
 
     it('calls revalidatePath after rename', async () => {

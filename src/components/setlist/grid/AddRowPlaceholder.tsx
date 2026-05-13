@@ -50,8 +50,14 @@ export function AddRowPlaceholder({
         if (autoOpen) setOpen(true)
     }, [autoOpen])
 
+    // v60-09-01: archive filter mirrors ChartBindPopover — archived songs
+    // disappear from both Recent and Library cmdk groups; missing-status
+    // bootstrap docs pass through as active.
     const songs = useLiveQuery(
-        () => getDb().songs.toArray(),
+        () =>
+            getDb()
+                .songs.filter((s) => s.status !== 'archived')
+                .toArray(),
         [],
         [] as LocalSong[],
     )

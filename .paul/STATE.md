@@ -9,11 +9,17 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (8 of 10 phases LOOP COMPLETE; v60-08 PHASE COMPLETE; Wave 3 fully done; Wave 4 unblocked)
-Phase: 8 of 10 — v60-08 Migration cleanup ✅ LOOP COMPLETE (single-plan phase). Mandate fully met: top-level `tracks/{id}` is the single source in code (no reader fallback, no schema field, no interface field). 22 consumer sites migrated to denorms.
-Plan: v60-08-01 LOOP COMPLETE — PENDING-UAT. All 4 tasks done. 6 ACs PASS (AC-6 LOC ceiling DRIFT documented and Daniel-approved at mid-APPLY checkpoint). SUMMARY enhanced with frontmatter + skill audit note. Skill audit: /ui-ux-pro-max N/A passed.
-Status: UNIFY complete. Pending: phase transition + combined commit + push of v60-08-01 bundle (entire .paul/phases/v60-08-migration-cleanup/ dir per feedback_paul_phase_commits).
-Last activity: 2026-05-13 — v60-08-01 LOOP COMPLETE; phase v60-08 LOOP COMPLETE; transition phase routing next.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (9 of 10 phases LOOP COMPLETE; v60-09 PHASE COMPLETE; v60-10 in parallel session). Wave 3 done; Wave 4 in progress.
+Phase: 9 of 10 — v60-09 Library Sync ✅ LOOP COMPLETE (single-plan phase). Cross-device `library_index ↔ songs/*` continuous sync delivered end-to-end. /ui-ux-pro-max consulted at Task 1 entry (verdicts: Dexie-layer filter, hide archived from Library + Recent, silent removal). HFG counter held at 0/3 via real-Firestore emulator coverage (5/5 cases GREEN).
+Plan: v60-09-01 LOOP COMPLETE — PENDING-UAT. Tasks 1 + 2 done. 8 ACs PASS (AC-3 PENDING-UAT for two-device smoke against deployed commit; AC-8 LOC DRIFT documented and approved-in-plan for the new-file listener). 1 auto-fix during APPLY (client→admin SDK pivot for emulator test — jsdom streaming incompatibility).
+Status: APPLY complete. tsc EXIT=0; next build Compiled successfully in 12.3s; vitest 1615/52 (was 1612/52 — +3 new mirror tests; 52-failure baseline preserved exactly); emulator suite 5/5 GREEN. Pending: phase transition + combined commit + push of v60-09-01 bundle (entire .paul/phases/v60-09-library-sync/ dir per feedback_paul_phase_commits). Will `git pull --rebase` before push to absorb any v60-10 commit from parallel session.
+Last activity: 2026-05-13 — v60-09-01 APPLY complete; SUMMARY written; awaiting UNIFY/transition. v60-10-01 PLAN concurrent in parallel Claude session.
+
+**PARALLEL-SESSION NOTE:** Daniel is running v60-10 (Mobile AddBar variant) in another Claude session simultaneously — v60-10-01 PLAN created 2026-05-13 at `.paul/phases/v60-10-mobile-addbar-variant/v60-10-01-PLAN.md`. Both phases are file-disjoint:
+- **v60-09 owns:** library routes + songs lib + AddRowPlaceholder.tsx picker filter (`status !== 'archived'`) + ChartBindPopover filter + new subscribeSongsLibrary listener.
+- **v60-10 owns:** AddBar.tsx wrapper (coarse-pointer sticky-bottom positioning + virtual-keyboard hide-guard) + SetlistGrid.tsx AddBar-mount neighborhood (row-list bottom-padding spacer) + NEW `src/hooks/use-virtual-keyboard-open.ts` + AddBar.test.tsx + new hook test file. EXPLICITLY DOES NOT touch AddRowPlaceholder.tsx internals (boundary-locked per v60-10 PLAN to avoid v60-09 collision).
+
+Zero file overlap confirmed. Both end in commits to `master`. Whichever finishes second must `git pull --rebase` before pushing to absorb the other's commit cleanly.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -25,10 +31,23 @@ Progress:
 - Phase v60-06: ✅ [██████████] 100% LOOP COMPLETE (8 of 8 plans closed)
 - Phase v60-07: [██████████] 100% LOOP COMPLETE (4 of 4 plans done — v60-07-01 hook + v60-07-02 create-style + v60-07-03 W2 strip + v60-07-04 W7 import-route refactor). Phase mandate fully met. v60-07-05 (W8/W9/W10 opportunistic strip + W11 cascade) is optional polish. v60-08 cleanup unblocked.
 - Phase v60-08: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mandate met: top-level tracks/{id} is sole source in code; readers + schema + interface all cleaned. v60-09/v60-10 (Wave 4) unblocked.
+- Phase v60-09: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Cross-device library sync delivered. Production delta ~+170 LOC (subscribe.ts new file); emulator coverage 5/5 GREEN; HFG 0/3 preserved.
+- Phase v60-10: [██████████] 100% LOOP COMPLETE (1 of 1 plans done — single-plan phase). Mobile AddBar variant delivered: coarse-pointer-only sticky-bottom positioning via CSS-driven `[@media(pointer:coarse)]:fixed` (no first-paint flash) + hide-on-virtual-keyboard via new useVirtualKeyboardOpen hook + Tailwind `hidden` display:none primitive. SetlistGrid.tsx unmodified (pb-32 = measured equivalent of plan's pb-20 request; DRIFT documented + plan-authorized). Suite +12; tsc + next build clean. HFG 0/3 preserved. /ui-ux-pro-max gate satisfied. **v6.0 Wave 4 complete from this session's perspective.** Pending: transition-phase commit + push (with git pull --rebase to absorb v60-09's parallel-session commit per STATE.md note). AC-6 PENDING-UAT carry-forward post-deploy.
 
-Loop position:
+Loop position (v60-09):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-08-01 LOOP COMPLETE; phase v60-08 LOOP COMPLETE; ready for transition]
+  ✓        ✓        ○     [v60-09-01 APPLY complete; SUMMARY written; UNIFY/transition next]
+
+Loop position (v60-10 — parallel session):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v60-10-01 LOOP COMPLETE; SUMMARY written; phase transition + commit/push next]
+
+### Decisions (v60-10-01 / 2026-05-13)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-13 | Sticky-shape strategy = Option A (`position: fixed` viewport-pinned) on `(pointer: coarse)` only | v60-10-01 | Locked at Task 2 checkpoint:decision after /ui-ux-pro-max consultation. Rejected Option B (sticky-in-scroll-container) — high regression risk against drag-and-drop autoscroll, modal positioning, EmptyState centering. Rejected Option C (FAB) — abandons v53-03 split-button shape; violates Track A precedent + Daniel muscle memory. Option A = smallest CSS surface; z-40 (per html-tailwind stack guideline, below Radix Dialog z-50); `env(safe-area-inset-bottom)` padding for iOS home indicator; spacer `[@media(pointer:coarse)]:pb-20` on row-list container. |
+| 2026-05-13 | Hide-on-keyboard visibility primitive = Tailwind `hidden` (display:none) | v60-10-01 | Removes sticky AddBar from a11y tree when keyboard is up (correct — bar should not be focusable behind keyboard). No motion — keyboard appearance is itself the visual transition; auto-satisfies prefers-reduced-motion. Rejected `visibility:hidden` (preserves layout space — wrong). Rejected translate-off-screen + pointer-events-none (adds motion behind a keyboard the user can't see). |
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -68,10 +87,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-08-01 LOOP COMPLETE; phase v60-08 closes)
-Stopped at: UNIFY complete. SUMMARY enhanced. Phase v60-08 mandate fully met. Awaiting phase-transition routing (ROADMAP update + git commit per workflow `transition-phase.md`).
-Next action: Execute transition (workflow `~/.claude/paul-framework/workflows/transition-phase.md`) — update ROADMAP, commit + push the v60-08-01 bundle including the entire .paul/phases/v60-08-migration-cleanup/ dir. After transition: v60-09 + v60-10 (Wave 4 parallel candidates) ready to plan.
-Resume file: .paul/phases/v60-08-migration-cleanup/v60-08-01-SUMMARY.md
+Last session: 2026-05-13 (v60-09-01 PLAN created; v60-10 underway in parallel session)
+Stopped at: v60-09-01 PLAN written; awaiting approval to enter APPLY. Will `/ui-ux-pro-max` consult before Task 1 + checkpoint:human-verify for two-device smoke after Task 2.
+Next action: Daniel reviews v60-09-01 PLAN; "approved" / "1" / "go" routes to /paul:apply v60-09-01. Before final commit, `git pull --rebase` to absorb v60-10's commit (parallel session). v60-10 changes are file-disjoint with v60-09 — clean rebase expected.
+Resume file: .paul/phases/v60-09-library-sync/v60-09-01-PLAN.md
 Resume context (v60-08-01 plan):
 - v60-08 = final cleanup phase of v6.0 Wave 3. After this, top-level tracks/{id} is the only source of truth in code (was already the only writer post-v60-07; this drops the reader fallback + schema field).
 - Files modified: src/lib/server-tracks.ts (drop unhydrated branch + buildLocalTracks/toMs helpers) + src/lib/client-tracks.ts (collapse both helper functions) + src/types/schemas.ts (drop tracks field from setlistSchema) + their 2 test files.
@@ -106,10 +125,12 @@ Resume context:
 
 ## Git State
 
-Last commit: `24e21e9` feat(v60-07-04): W7 import route seeds top-level tracks; phase v60-07 mandate complete — PUSHED 2026-05-13.
+Last commit: `6288c97` feat(v60-10-01): coarse-pointer sticky-bottom AddBar variant + virtual-keyboard hide-guard; phase v60-10 complete — PUSHED 2026-05-13 (parallel session).
 Branch: master
-Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
+Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent; v60-09 + v60-10 commits separated by file-disjoint selective staging, not branches)
 Push history this run:
+  - `6288c97` feat(v60-10-01): coarse-pointer sticky-bottom AddBar variant + virtual-keyboard hide-guard; phase v60-10 complete — PUSHED 2026-05-13 (parallel session — file-disjoint with v60-09 pending bundle in same working tree)
+  - `9eb05b6` feat(v60-08-01): drop embedded-tracks reader fallback + schema/interface field; phase v60-08 complete — PUSHED 2026-05-13
   - `a693d23` feat(v54-01-01): bootstrap songs/* + repair sticky thead — PUSHED
   - `c91d23f` docs(v54-01): close phase metadata — PUSHED
   - `6735f48` fix(v54-01-02): write track.fileId on pick + bind — PUSHED (Daniel UAT interrupt)
