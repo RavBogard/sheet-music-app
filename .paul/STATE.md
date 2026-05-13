@@ -2,7 +2,12 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
+See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE; v7.0 milestone structure created 2026-05-13 — awaits v6.0 close before opening)
+
+## Next Milestone Planned
+
+**v7.0 — Document-Driven Setlist Creation** — 8 phases in 6 waves, structure created 2026-05-13. Daniel feeds service-outline docs (May 15 Shir Shabbat .docx is canary) → system parses + resolves + interviews-for-gaps + commits a complete setlist. NEW domains: recordings collection, image-chart rendering (PNG/JPEG/HEIC), Gemini-driven structured extraction. End-of-milestone best-practice audit (v70-08) blocks close. Phase scaffold: v70-01 image-chart support → v70-02 recordings model → v70-03 media affordances (chart click-through + recording bind) || v70-04 doc upload → v70-05 Gemini extract → v70-06 resolve+bind → v70-07 interview+commit → v70-08 best-practice audit. **DOES NOT START until v6.0 closes via /paul:complete-milestone** post worship-cycle UAT.
+
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
 **Current focus:** v6.0 — Tracks Single-Source-of-Truth IN PROGRESS. **Wave 1 + Wave 2 closed** — v60-01 (silent LWW + conflict-pill rewire) + v60-02 (pagehide flush + engine drain) close the iPad-Safari save-loss class; v60-03 (H-SL-7 emulator canary + HFG counter reset 0/3) closes the Harness Fidelity Gate that has gated v6.0 since milestone open. **Wave 3 UNBLOCKED.** Next: Wave 3 migration spine — v60-04 (server-side reader migration via single `getTracksForSetlist` helper) → v60-05 (editor + perform-view readers) → v60-06 (dashboard + 15-setlist backfill) → v60-07 (writer removal + immediate strip) → v60-08 (cleanup). v5.0 + v5.2 + v5.3 + v5.4 + v60-01 + v60-02 all in PENDING-UAT close paths over the upcoming worship cycle.

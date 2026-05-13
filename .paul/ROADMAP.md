@@ -1,5 +1,50 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
+## Next Milestone (Planned)
+
+**v7.0 — Document-Driven Setlist Creation** *(created 2026-05-13 from .paul/MILESTONE-CONTEXT.md; awaits v6.0 milestone close before opening)*
+Status: 🔵 Planned — Structure created; doesn't START until v6.0 closes via `/paul:complete-milestone` post worship-cycle UAT (Fri PM + Sat AM)
+Theme: *"Feed a doc, get a setlist. AI parses, the system resolves, the form fills the gaps."*
+
+Daniel feeds any service-outline document (the May 15th Shir Shabbat .docx is the canary) and the system produces a complete setlist with charts bound, recordings linked, and gaps surfaced via a structured form. Major-version bump justified by NEW data domain (recordings) + NEW production input modality (doc-driven creation) + NEW chart-rendering modality (image charts).
+
+| Wave | Phase | Focus | Status |
+|------|-------|-------|--------|
+| 0 (foundation) | v70-01 | **Image-chart support** (PNG / JPEG / HEIC) — upload route ALLOWED_TYPES extended; chart viewer branches PDF→pdfjs vs image→`<img>`; print pipeline embeds images; AI chord detection + transposition DISABLED for image charts with explanation tooltip | 🔵 Not started |
+| 1 (foundation) | v70-02 | Recordings data model + Firestore rules + Storage paths — NEW `recordings/{id}` collection; foreign key `songId?`; `notes` field for attribution; Firebase Storage path; HFG-relevant (emulator coverage required) | 🔵 Not started |
+| 2 (parallel) | v70-03 | Per-track media affordances: (1) chart click-through opens chart in new tab via Storage URL; (2) recording-bind UI analogous to ChartBindPopover with inline `<audio>` playback | 🔵 Not started |
+| 2 (parallel) | v70-04 | Doc upload + text extraction — new `/api/setlist/import/upload` route; `mammoth` for .docx, pdfjs for .pdf, txt trivial; upload modal extends v51-03 CreationWizard with 4th "Import from document" option | 🔵 Not started |
+| 3 (sequential) | v70-05 | Gemini structured extraction — reuses chord-detection Gemini setup; prompt returns Zod-validated JSON `{ sections[], tracks[] }`; malformed extraction surfaces for human review; **May 15 canary depends on v70-01 image-chart support** | 🔵 Not started |
+| 3 (sequential) | v70-06 | Resolve + missing-chart + recording-match — library fuzzy match with confidence scoring; missing-chart routes to existing `/api/library/upload`; recording matching against audio-mime `songs/*` entries (post-v60-11); pre-creates `recordings/*` docs | 🔵 Not started |
+| 4 (commit) | v70-07 | Interview form + setlist preview + commit — structured form (NOT chat) for parser-unfillable fields; service date REQUIRED with auto-suggest; service type auto-inferred from doc keywords; commit writes via existing `createSetlistService` + `applyEdit` fanout | 🔵 Not started |
+| 5 (audit + close) | v70-08 | **Best-practice audit + remediation** — 4-5 parallel scope-narrowed researcher agents + synthesizer (reuses v5.4 architectural-audit pattern). 5 dimensions: security / accessibility / performance / code quality + data integrity / UX consistency. P0+P1 close in-phase via follow-up plans; P2+P3 fold-forward. **Milestone close BLOCKED on this phase completing.** | 🔵 Not started |
+
+Constraints (12 locked at creation):
+1. Recording storage = Firebase Storage (matches v1.6 chart pattern)
+2. Doc formats v7.0 = .docx + .pdf + .txt only; image OCR DEFERRED to v7.1
+3. Interview UX = structured form (NOT chat)
+4. Recording attribution = `notes` field on recording doc (free-form string)
+5. Recordings model = NEW `recordings/{id}` collection (NOT embedded array)
+6. AI extraction = Gemini API; Zod schema validation; malformed surfaces for human review
+7. Library resolution = fuzzy match with confidence scoring; low-confidence → interview
+8. Missing-chart pipeline = reuses existing `/api/library/upload` from v60-09
+9. Service date = REQUIRED interview field with filename auto-suggest
+10. Service type = auto-inferred from doc keywords, user confirms
+11. Image-chart support = PNG + JPEG + HEIC; AI chord detection + transposition disabled with tooltip
+12. End-of-milestone best-practice audit BLOCKS milestone close
+
+Additional rules:
+- HFG counter must stay at 0/3 (every data-layer phase ships emulator coverage; no clause-(b) waivers)
+- /ui-ux-pro-max BLOCKING for v70-01, v70-03, v70-04, v70-07 per SPECIAL-FLOWS.md; consults at v70-08 audit synthesis
+- "Do it right" directive (Daniel 2026-05-13) — no time pressure; quality > speed
+- Friday/Shabbat cadence respected (no risky deploys Thu PM → Sun)
+- No engine touches (routes through existing v6.0 applyEdit fanout)
+- Daniel-loop UAT discipline (codified v51-04) on every phase
+
+Canary doc for v70-05: `C:\Users\dsbog\Downloads\May 15th Shir Shabbat .docx` (extracted shape captured in MILESTONE-CONTEXT.md before deletion at milestone open).
+
+---
+
 ## Current Milestone
 
 **v6.0 — Tracks Single-Source-of-Truth** *(created 2026-05-12 from MILESTONE-CONTEXT.md; v60-11 milestone-close-gate added + closed 2026-05-13)*
