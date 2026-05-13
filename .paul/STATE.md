@@ -97,7 +97,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `37270dd` feat(v60-07-02): create-style writers route to engine-path seeding — PUSHED 2026-05-13.
+Last commit: `f8d1c13` feat(v60-07-03): W2 defensive strip + immediate FieldValue.delete on hydrated docs — PUSHED 2026-05-13.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -134,7 +134,9 @@ Push history this run:
   - `98b270d` docs(v60-06-08): correct commit SHA in STATE.md Git State section — PUSHED
   - `1790d8a` feat(v60-07-01): decommission mirrorTracksToTopLevel dual-write bridge — PUSHED
   - `cb1a7f7` docs(v60-07-01): correct commit SHA in STATE.md Git State section — PUSHED
-  - `37270dd` feat(v60-07-02): create-style writers route to engine-path seeding — PUSHED THIS RUN
+  - `37270dd` feat(v60-07-02): create-style writers route to engine-path seeding — PUSHED
+  - `2ebd5fd` docs(v60-07-02): correct commit SHA in STATE.md Git State section — PUSHED
+  - `f8d1c13` feat(v60-07-03): W2 defensive strip + immediate FieldValue.delete on hydrated docs — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
