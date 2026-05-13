@@ -12,6 +12,8 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
+import { getDb } from "@/lib/local/schema"
+import { getTracksForSetlistClient } from "@/lib/client-tracks"
 
 export function SetlistDrawer() {
     const router = useRouter()
@@ -131,10 +133,25 @@ export function SetlistDrawer() {
         }
     }, [open, showPublicPicker, user?.uid, user?.displayName])
 
-    const handleSelectSetlist = (setlist: Setlist) => {
-        if (!setlist.tracks || setlist.tracks.length === 0) return
+    const handleSelectSetlist = async (setlist: Setlist) => {
+        // v60-06-05: read tracks from Dexie (canonical) with embedded-array
+        // fallback via getTracksForSetlistClient — same 3-branch logic the
+        // perf-view destination uses via useSetlistPerformance.
+        let resolvedTracks
+        try {
+            const dexieTracks = await getDb()
+                .tracks.where("setlistId")
+                .equals(setlist.id)
+                .sortBy("order")
+            resolvedTracks = getTracksForSetlistClient(dexieTracks, setlist)
+        } catch (err) {
+            logger.error("[SetlistDrawer] failed to read tracks for setlist", err)
+            return
+        }
 
-        const queue = setlist.tracks
+        if (resolvedTracks.length === 0) return
+
+        const queue = resolvedTracks
             .filter(t => t.fileId)
             .map(t => ({
                 name: t.title,

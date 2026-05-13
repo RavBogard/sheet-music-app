@@ -11,9 +11,9 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 2 plans closed + v60-06-03 PLAN created)
 Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01 + v60-06-02 LOOP COMPLETE; v60-06-03 in PLAN; ~4 plans remaining after
-Plan: v60-06-04 LOOP COMPLETE — PENDING-UAT (committed `ef3b49e`; pushed to origin master). Daniel iPad browser-smoke: (1) PrepRecommendations urgent unviewed charts after song rename (Dexie auto-reactivity proof), (2) UpcomingTimeline expanded view titles + keys, (3) legacy setlists render via embedded fallback.
-Status: v60-06-04 closed: Task 1 PASS (49-LOC hook + 5 unit tests, 5/5 green); Task 2 DONE_WITH_CONCERNS (AC-7 per-file overshoots documented in SUMMARY). Wave 3 reader-migration spine COMPLETE — every dashboard read of "what's in this setlist" now routes through canonical sources (Dexie via useDexieTracksForSetlists, or denormalized parent-doc fields fileIds/songCount/trackCount). v60-07 writer removal UNBLOCKED. Architectural Option B (bulk Dexie hook) validated by implementation: zero new Firestore writes, zero new types, zero reconciler changes, auto-reactive to song renames via BroadcastChannel. Single combined commit `ef3b49e`. Verification baselines all green (tsc EXIT=0, next build clean, main suite 1586/52 = baseline +5 new hook tests with zero new failures, HFG 0/3 held, SetlistCards byte-identical).
-Last activity: 2026-05-12 — v60-06-04 LOOP COMPLETE; committed as `ef3b49e`; pushed to origin master.
+Plan: v60-06-05 APPLY complete — ready for UNIFY (1 of 1 task DONE_WITH_CONCERNS; AC-6 minor +2 LOC overshoot; functional ACs all PASS)
+Status: APPLY executed Task 1: SetlistDrawer.handleSelectSetlist migrated to async + one-shot Dexie read + getTracksForSetlistClient resolution + try/catch error logging. Imports added: getDb, getTracksForSetlistClient. QueueItem .filter().map() shape preserved verbatim. tsc EXIT=0, next build clean (Sentry deprecations pre-existing baseline), main suite 1586 pass / 52 fail (EXACT v60-06-04 baseline preserved — zero new failures). AC-7 boundary verified: all 10 protected reader-migration files byte-identical via empty git diff. AC-6 deviation: actual +17 net LOC vs +15 ceiling (try/catch + 3-line comment + multi-line await chain). DONE_WITH_CONCERNS reporting — minor overshoot, no functional impact, to document in SUMMARY.
+Last activity: 2026-05-12 — v60-06-05 APPLY complete; awaiting UNIFY.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -26,7 +26,7 @@ Progress:
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-06-04 LOOP COMPLETE; ready for /paul:plan v60-06-05]
+  ✓        ✓        ○     [v60-06-05 APPLY complete; ready for /paul:unify]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-12 (autonomous mode — v60-06-04 LOOP COMPLETE; committed `ef3b49e`; pushed)
-Stopped at: v60-06-04 LOOP COMPLETE — Wave 3 reader-migration spine COMPLETE; every dashboard read site routes through canonical sources. v60-07 (writer removal) unblocked. ~3 v60-06 plans remaining: v60-06-05 (SetlistDrawer perf-view nav queue), v60-06-06 (TemplatesSection), v60-06-07 (matrix/route.ts server-side reader), v60-06-08 (15-setlist backfill).
-Next action: `/paul:plan v60-06-05` — SetlistDrawer perf-view navigation queue migration. Likely consumer of useDexieTracksForSetlists OR single-setlist hook depending on drawer's nav-queue shape.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-04-SUMMARY.md
+Last session: 2026-05-12 (autonomous mode — v60-06-05 PLAN created)
+Stopped at: v60-06-05 PLAN created. Single-file (SetlistDrawer.tsx) click-time read migration. ≤+15 LOC.
+Next action: Review v60-06-05-PLAN.md, then `/paul:apply .paul/phases/v60-06-dashboard-reader-migration/v60-06-05-PLAN.md`. /ui-ux-pro-max transitively satisfied.
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-05-PLAN.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
