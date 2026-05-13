@@ -46,6 +46,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     const [allSetlists, setAllSetlists] = useState<Setlist[]>([])
     const [recentSetlists, setRecentSetlists] = useState<Setlist[]>([])
     const [setlistsLoaded, setSetlistsLoaded] = useState(false)
+    // v60-13-02 (2026-05-13): surface subscription failures visibly to the user
+    // (and the console). DashboardClient previously swallowed errors from
+    // subscribeToAllSetlists, leaving incognito + cold-load failures
+    // indistinguishable from "no setlists exist". This diagnostic surface
+    // tells us WHY the subscription fails so we can route the next fix.
+    const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
 
     // Cold-launch detection: animate only on first mount per session
     const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -105,18 +111,39 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     useEffect(() => {
         if (!setlistService) return
         setSetlistsLoaded(false)
+        setSubscriptionError(null)
 
-        const unsub = setlistService.subscribeToAllSetlists((setlists) => {
-            const upcoming = filterUpcoming(setlists)
-            setUpcomingSetlistsState(upcoming.slice(0, 5))
-            const recent = setlists
-                .filter(s => s.eventDate)
-                .sort((a, b) => (toDate(b.eventDate)?.getTime() || 0) - (toDate(a.eventDate)?.getTime() || 0))
-                .slice(0, 5)
-            setRecentSetlists(recent)
-            setAllSetlists(setlists)
-            setSetlistsLoaded(true)
-        })
+        // v60-13-02: pass an onError callback. Firestore subscription failures
+        // (permission denied, missing index, network gone) were previously only
+        // logged to console; the UI just stayed in skeleton → empty state.
+        // This surfaces the actual error so we can diagnose incognito blanks
+        // and other cold-load failures.
+        const unsub = setlistService.subscribeToAllSetlists(
+            (setlists) => {
+                const upcoming = filterUpcoming(setlists)
+                setUpcomingSetlistsState(upcoming.slice(0, 5))
+                const recent = setlists
+                    .filter(s => s.eventDate)
+                    .sort((a, b) => (toDate(b.eventDate)?.getTime() || 0) - (toDate(a.eventDate)?.getTime() || 0))
+                    .slice(0, 5)
+                setRecentSetlists(recent)
+                setAllSetlists(setlists)
+                setSetlistsLoaded(true)
+                setSubscriptionError(null)
+                // v60-13-02 diagnostic: log fromCache + count so we can correlate
+                // "blank dashboard" reports with whether Firestore actually
+                // returned data (cached or fresh) or zero results.
+                // eslint-disable-next-line no-console
+                console.info(`[Dashboard] subscription fired: ${setlists.length} setlists`)
+            },
+            (err) => {
+                const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+                // eslint-disable-next-line no-console
+                console.error('[Dashboard] subscription error:', msg, err)
+                setSubscriptionError(msg)
+                setSetlistsLoaded(true)
+            },
+        )
 
         return () => unsub()
     }, [setlistService, filterUpcoming])
@@ -247,6 +274,15 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                                 isPastSetlist={true}
                                 isBandLeader={isBandLeader}
                             />
+                        ) : subscriptionError ? (
+                            // v60-13-02 diagnostic surface — show the real reason
+                            // setlists couldn't load instead of "No services scheduled yet"
+                            // (which is misleading when a subscription error is the cause).
+                            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                                <p className="text-sm font-semibold text-destructive">Couldn’t load setlists</p>
+                                <p className="text-xs text-muted-foreground break-words">{subscriptionError}</p>
+                                <p className="text-[10px] text-muted-foreground">If this keeps happening, share this message with support.</p>
+                            </div>
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">
                                 No services scheduled yet
