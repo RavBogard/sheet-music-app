@@ -79,12 +79,15 @@ export function useSetlistDashboard({
     }, [user?.uid, user?.displayName])
 
     // Subscribe to all setlists (v4.0: single unified list).
-    // Gated on authUser?.uid: subscribing before Firebase JS finishes hydrating
-    // auth fires a Firestore read with no credential, which Firestore answers
-    // with "Missing or insufficient permissions" — a noisy false-alarm error
-    // during the pre-sign-in page load.
+    // v60-13-01 (2026-05-13): subscription runs even before auth hydrates.
+    // firestore.rules now allows `allow read: if true` on setlists/* (opened
+    // in v60-12 alongside tracks/*). The previous gate on authUser?.uid caused
+    // (a) incognito users to see no setlists at all, and (b) mobile cold-loads
+    // to flash setlists then blank them when the auth race resolved post-mount
+    // and triggered an empty re-sub. The Firestore client SDK handles
+    // auth-state changes natively; dropping the app-level gate is safe.
     useEffect(() => {
-        if (!setlistService || !authUser?.uid) {
+        if (!setlistService) {
             setLoading(false)
             return
         }

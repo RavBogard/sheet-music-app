@@ -26,17 +26,35 @@ Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone
 | Push origin/master | 95f83fa..291ea95 — 2 commits (101d619 feat + 291ea95 docs) live. Vercel auto-deploy triggered. |
 Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v7.0 milestone planning. Session shipped v60-11 fully (PLAN+audit+APPLY+UNIFY+commit+push+backfill --apply for 131 docs) and v60-12 fully (PLAN+audit+APPLY+UNIFY+commit+push+rules deploy) and created v7.0 milestone structure (8 phases in 6 waves; awaits v6.0 close before opening). HANDOFF at `.paul/HANDOFF-2026-05-13-evening.md`. master synced with origin/master @ `04499a4`.
 
-## Deferred Issues (out of v70-01-01 scope — captured 2026-05-13)
+## v70-01-01 PAUSE (2026-05-13)
 
-- **v60-13 candidate / Issue 2b:** Setlist editor auto-refresh during early-load. Daniel UAT 2026-05-13 on b4dbb19 reported: "when i'm editing a setlist, it is doing an auto refresh thing early on after loading that is a real pain, because i'll be in the middle of editing something, and it will refresh." Likely v60-09 cross-device library sync (subscribe.ts) firing on initial load + re-rendering setlist editor mid-edit. Same shape as the existing "Issue 2 setlist-missing cascade" — both point at sync-engine resilience as the v60-13 emergent phase scope. Triage during next pause; do NOT patch inside v70-01-01.
+**Status:** Paused mid-APPLY. Tasks 1, 2, 4 shipped (b4dbb19 + ab11850). Task 3 (toolbar transpose+AI disable + PrintModal banner + print-pipeline image-skip guard) deferred. Task 4 PNG-render UAT not formally confirmed by Daniel but presumed working (he didn't list PNG render among the 5 new issues he reported post-deploy).
+
+**Pause reason:** Daniel UAT 2026-05-13 surfaced 5 production issues, 3 of which (Issues 1/4/5) cluster around sync-engine resilience and qualify as P0 production blockers (incognito users can't see upcoming setlists; mobile dashboard blanks after a flash; "failed/conflict" toasts noisy during edits). Switching focus to v60-13 emergent hotfix phase.
+
+**Resume after v60-13 cluster ships.** Task 3 is ~20 min when resumed.
+
+## Active Phase: v60-13 Sync-Engine Resilience (EMERGENT 2026-05-13)
+
+**Trigger:** Daniel UAT 2026-05-13 reported 5 issues post-ab11850. Triage:
+
+| # | Issue | Severity | Routes to |
+|---|-------|----------|-----------|
+| 1 | Incognito → upcoming setlist invisible | P0 prod blocker | v60-13-01 (root cause: use-setlist-dashboard.ts:87 gates subscription on authUser?.uid; firestore.rules already allows public read since v60-12 — gate is now over-restrictive) |
+| 2 | No way to modify setlist name/date/etc | P1 UX gap | v70-09 (post-v60-13) |
+| 3 | Mobile date picker resets to today | P1 mobile bug | v60-14 OR roll into v60-13 |
+| 4 | "Failed/conflict" frequently during edit (saves anyway) | P1 noise | v60-13-02 (sync-engine VersionMismatch tuning) |
+| 5 | Mobile dashboard blanks after brief flash; click → forever loading | P0 prod blocker | v60-13-01 (likely same root as #1: subscription early-return on cold-load before authUser hydrates → empty state) |
+
+**v60-13-01 hypothesis:** dropping the !authUser?.uid gate at use-setlist-dashboard.ts:87 fixes both Issue 1 and Issue 5. firestore.rules public-read makes the gate's original purpose ("avoid noisy permissions errors pre-auth") moot.
 
 ## Session Continuity
 
-Last session: 2026-05-13 (mid-APPLY of v70-01-01; spec-issue mid-flight)
-Stopped at: Tasks 1+2 shipped (b4dbb19); Daniel UAT surfaced spec gap → Task 4 added; mimeType-persistence implementation in flight
-Next action: complete Task 4 implementation → commit + push → re-checkpoint Daniel UAT → Task 3 (toolbar guard + PrintModal banner)
-Resume file: .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md
-Git strategy: master (last pushed @ b4dbb19; mimeType-fix commit pending)
+Last session: 2026-05-13 (v70-01-01 paused mid-APPLY; v60-13 emergent hotfix opening)
+Stopped at: v60-13-01 PLAN about to be created
+Next action: create v60-13-01 PLAN → APPLY (single-file fix to use-setlist-dashboard.ts) → commit + push → Daniel UAT in incognito + mobile
+Resume file: .paul/phases/v60-13-sync-engine-resilience/v60-13-01-PLAN.md
+Git strategy: master (last pushed @ ab11850 — v70-01-01 Task 4 fix)
 
 Loop position (v70-01-01 — current):
 PLAN ──▶ APPLY ──▶ UNIFY
