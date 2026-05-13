@@ -139,7 +139,10 @@ Push history this run:
   - `cb1a7f7` docs(v60-07-01): correct commit SHA in STATE.md Git State section — PUSHED
   - `37270dd` feat(v60-07-02): create-style writers route to engine-path seeding — PUSHED
   - `2ebd5fd` docs(v60-07-02): correct commit SHA in STATE.md Git State section — PUSHED
-  - `f8d1c13` feat(v60-07-03): W2 defensive strip + immediate FieldValue.delete on hydrated docs — PUSHED THIS RUN
+  - `f8d1c13` feat(v60-07-03): W2 defensive strip + immediate FieldValue.delete on hydrated docs — PUSHED
+  - `eb3f4bd` docs(v60-07-03): correct commit SHA in STATE.md Git State section — PUSHED
+  - `24e21e9` feat(v60-07-04): W7 import route seeds top-level tracks; phase v60-07 mandate complete — PUSHED
+  - `1cd0c30` docs(v60-07-04): correct commit SHA in STATE.md Git State section — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
