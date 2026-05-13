@@ -3,6 +3,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
 import { getTemplate } from "@/lib/liturgical-templates"
+import { getTracksForSetlist } from "@/lib/server-tracks"
 import { Setlist } from "@/types/models"
 
 export const GET = createApiHandler(
@@ -64,16 +65,18 @@ export const GET = createApiHandler(
             .where('date', '<=', endDate)
             .get()
 
-        const setlists = snapshot.docs.map(doc => {
+        const setlists = await Promise.all(snapshot.docs.map(async doc => {
             const data = doc.data()
+            const tracks = await getTracksForSetlist(db, doc.id, data)
             return {
-                id: doc.id,
                 ...data,
+                id: doc.id,
+                tracks,
                 // Convert Firestore Timestamp to ISO string
                 date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
                 eventDate: data.eventDate?.toDate ? data.eventDate.toDate().toISOString() : data.eventDate
-            } as Setlist
-        })
+            } as unknown as Setlist
+        }))
 
         // 3. Map setlists to columns based on chronological proximity
         // A setlist "belongs" to a column if its eventDate or date falls within +/- 3 days of the column date
