@@ -125,10 +125,11 @@ Resume context:
 
 ## Git State
 
-Last commit: `6288c97` feat(v60-10-01): coarse-pointer sticky-bottom AddBar variant + virtual-keyboard hide-guard; phase v60-10 complete — PUSHED 2026-05-13 (parallel session).
+Last commit: `6909c01` feat(v60-09-01): cross-device library_index ↔ songs/* sync; phase v60-09 complete — PUSHED 2026-05-13 (after `6288c97` v60-10-01 from parallel session).
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent; v60-09 + v60-10 commits separated by file-disjoint selective staging, not branches)
 Push history this run:
+  - `6909c01` feat(v60-09-01): cross-device library_index ↔ songs/* sync; phase v60-09 complete — PUSHED 2026-05-13 (after `git pull --rebase` to absorb v60-10's `6288c97` from parallel session)
   - `6288c97` feat(v60-10-01): coarse-pointer sticky-bottom AddBar variant + virtual-keyboard hide-guard; phase v60-10 complete — PUSHED 2026-05-13 (parallel session — file-disjoint with v60-09 pending bundle in same working tree)
   - `9eb05b6` feat(v60-08-01): drop embedded-tracks reader fallback + schema/interface field; phase v60-08 complete — PUSHED 2026-05-13
   - `a693d23` feat(v54-01-01): bootstrap songs/* + repair sticky thead — PUSHED
