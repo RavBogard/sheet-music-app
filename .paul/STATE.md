@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-12 after v5.4 ✅ COMPLETE)
 
 ## Current Position
 
-Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (5 of 10 phases LOOP COMPLETE; v60-06 in progress with 7 plans closed)
-Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill (Wave 3 sequential) — v60-06-01..07 LOOP COMPLETE; 1 plan remaining (v60-06-08 backfill)
-Plan: v60-06-07 LOOP COMPLETE — PENDING-UAT (single file matrix/route.ts; +3 LOC net; auto-fixed TS2352 spread-narrowing via `as unknown as Setlist`; server reader spine COMPLETE — v60-07 writer strip UNBLOCKED).
-Status: v60-06-07 LOOP COMPLETE. Single task DONE/PASS: matrix/route.ts migrated through getTracksForSetlist with Promise.all parallel fetch. 7 of 7 verifiable ACs PASS; AC-8 PENDING-UAT (deferred to Daniel's next dashboard session). Auto-fixed: TS2352 spread-with-explicit-override narrowing → `as unknown as Setlist` cast (variant of v60-06-06 pattern class; documented). Verification: tsc EXIT=0, next build Compiled successfully (/api/setlists/matrix preserved), vitest 1591/52 baseline held exactly, +3 LOC net (88% under +25 ceiling). HFG 0/3 held. **Server reader spine COMPLETE** — every server-side Setlist constructor with downstream-consumed `tracks` now routes through the canonical Admin-SDK helper. **v60-07 writer strip UNBLOCKED.** Pending: single combined commit + push.
-Last activity: 2026-05-13 — v60-06-07 LOOP COMPLETE; SUMMARY written; awaiting combined commit + push.
+Milestone: 🚧 v6.0 — Tracks Single-Source-of-Truth (6 of 10 phases LOOP COMPLETE; v60-06 closed)
+Phase: 6 of 10 — v60-06 Dashboard reader migration + 15-setlist backfill ✅ LOOP COMPLETE (all 8 plans closed; ready for /paul:transition)
+Plan: v60-06-08 LOOP COMPLETE — PENDING-UAT (scripts/backfill-tracks-v60.ts + 22-test fake-only suite; production dry-run report captured: 5 MIGRATE / 5 SKIP-HYDRATED / 5 SKIP-EMPTY / 0 errors; rollback collection contract shipped).
+Status: v60-06-08 LOOP COMPLETE. SUMMARY created. 9 of 9 verifiable ACs PASS; AC-10 PENDING-UAT (Daniel runs --apply during safe Mon–Wed window). 2 auto-fixes documented (TS2352 marker-cast ×2; test expectation drift on --force re-run). Verification: tsc EXIT=0; vitest 1613/52 baseline held; --help + --dry-run exit 0; 22-test suite covers all 4 modes + 3 pure functions + determinism. **PHASE v60-06 FULLY DELIVERED** — Wave 3 reader-migration spine complete (client inventory + server spine + dashboard denorm + historical backfill tool). **PHASE TRANSITION REQUIRED.** Pending: combined commit + push + transition workflow.
+Last activity: 2026-05-13 — v60-06-08 LOOP COMPLETE; phase v60-06 ready for /paul:transition routing.
 
 Progress:
 - v6.0 Tracks Single-Source-of-Truth: [████░░░░░░] 40% (5 of 10 phases LOOP COMPLETE — v60-04/05 closed; v60-06 in progress)
@@ -22,11 +22,11 @@ Progress:
 - Phase v60-03: ✅ LOOP COMPLETE (Wave 2 closed; HFG counter 0/3; Wave 3 unblocked)
 - Phase v60-04: ✅ LOOP COMPLETE — PENDING-UAT (3 of 3 plans closed; entire server-reader spine now routes through getTracksForSetlist)
 - Phase v60-05: ✅ LOOP COMPLETE — PENDING-UAT (1 of 1 plans closed; editor side already Dexie-routed, only perf-view required helper extraction)
-- Phase v60-06: [█████████░] 95% (v60-06-01..07 LOOP COMPLETE — only v60-06-08 backfill remains. **Server reader spine COMPLETE.** **Client reader inventory COMPLETE.** v60-07 writer strip UNBLOCKED.)
+- Phase v60-06: ✅ [██████████] 100% LOOP COMPLETE (8 of 8 plans closed). **Wave 3 reader-migration spine fully delivered.** **Client reader inventory + Server reader spine + Dashboard denormalization + Historical backfill tool all complete.** v60-07 writer strip is the next phase.
 
 Loop position:
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-06-07 LOOP COMPLETE; ready for /paul:plan v60-06-08]
+  ✓        ✓        ✓     [v60-06-08 LOOP COMPLETE; PHASE TRANSITION REQUIRED]
 
 ### Decisions (v54-01-01 / 2026-05-08)
 
@@ -66,10 +66,10 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v60-06-07 LOOP COMPLETE; awaiting combined commit + push)
-Stopped at: SUMMARY written. Server reader spine COMPLETE. Only v60-06-08 backfill remains before v60-07 writer strip.
-Next action: `/paul:plan v60-06-08` — 15-setlist backfill script + `migration_snapshots/{setlistId}` rollback collection. Writes denormalized fields (trackCount/songCount/fileIds/hydrated) + top-level tracks for historical setlists.
-Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-07-SUMMARY.md
+Last session: 2026-05-13 (v60-06-08 LOOP COMPLETE; PHASE v60-06 fully delivered)
+Stopped at: SUMMARY written including verbatim dry-run report. Phase v60-06 complete. PHASE TRANSITION required: combined commit + push + ROADMAP update + route to v60-07.
+Next action: Commit + push the v60-06-08 work; execute phase-transition workflow; then route to `/paul:plan v60-07` (Embedded-array writer removal).
+Resume file: .paul/phases/v60-06-dashboard-reader-migration/v60-06-08-SUMMARY.md
 Resume context:
 - Wave 1 + Wave 2 of v6.0 done. v60-01 + v60-02 close iPad-Safari save-loss class. v60-03 closes Harness Fidelity Gate with documented proof.
 - HFG counter at 0/3. Future engine-adjacent plans extend `engine.emulator.test.ts` rather than re-taking clause-(b) waivers.
@@ -127,7 +127,8 @@ Push history this run:
   - `7205f2f` feat(v60-06-05): migrate SetlistDrawer click-time read to Dexie + getTracksForSetlistClient — PUSHED
   - `0fcf62a` docs(v60-06-05): correct commit SHA in STATE.md — PUSHED
   - `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED
-  - `35ed9d3` feat(v60-06-07): matrix endpoint migration to getTracksForSetlist + Promise.all parallel fetch — PUSHED THIS RUN
+  - `35ed9d3` feat(v60-06-07): matrix endpoint migration to getTracksForSetlist + Promise.all parallel fetch — PUSHED
+  - `7ad02b1` docs(v60-06-07): correct commit SHA in STATE.md Git State section — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
