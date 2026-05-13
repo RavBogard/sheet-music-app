@@ -38,6 +38,7 @@ export interface SetlistTrack {
     title: string
     fileId?: string // Linked Google Drive File ID (PDF/MusicXML)
     fileName?: string // Cached File Name
+    mimeType?: string // v70-01-01 Task 4: cached library_index.mimeType for type-aware viewer routing (image charts vs PDF/MusicXML/text).
     audioFileId?: string // Linked Audio File ID (MP3)
     audioFileName?: string // Cached Audio File Name
     key?: string

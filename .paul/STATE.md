@@ -26,13 +26,17 @@ Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone
 | Push origin/master | 95f83fa..291ea95 — 2 commits (101d619 feat + 291ea95 docs) live. Vercel auto-deploy triggered. |
 Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v7.0 milestone planning. Session shipped v60-11 fully (PLAN+audit+APPLY+UNIFY+commit+push+backfill --apply for 131 docs) and v60-12 fully (PLAN+audit+APPLY+UNIFY+commit+push+rules deploy) and created v7.0 milestone structure (8 phases in 6 waves; awaits v6.0 close before opening). HANDOFF at `.paul/HANDOFF-2026-05-13-evening.md`. master synced with origin/master @ `04499a4`.
 
+## Deferred Issues (out of v70-01-01 scope — captured 2026-05-13)
+
+- **v60-13 candidate / Issue 2b:** Setlist editor auto-refresh during early-load. Daniel UAT 2026-05-13 on b4dbb19 reported: "when i'm editing a setlist, it is doing an auto refresh thing early on after loading that is a real pain, because i'll be in the middle of editing something, and it will refresh." Likely v60-09 cross-device library sync (subscribe.ts) firing on initial load + re-rendering setlist editor mid-edit. Same shape as the existing "Issue 2 setlist-missing cascade" — both point at sync-engine resilience as the v60-13 emergent phase scope. Triage during next pause; do NOT patch inside v70-01-01.
+
 ## Session Continuity
 
-Last session: 2026-05-13 (post-/paul:plan v70-01)
-Stopped at: v70-01-01 PLAN created, awaiting approval
-Next action: /paul:apply .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md
+Last session: 2026-05-13 (mid-APPLY of v70-01-01; spec-issue mid-flight)
+Stopped at: Tasks 1+2 shipped (b4dbb19); Daniel UAT surfaced spec gap → Task 4 added; mimeType-persistence implementation in flight
+Next action: complete Task 4 implementation → commit + push → re-checkpoint Daniel UAT → Task 3 (toolbar guard + PrintModal banner)
 Resume file: .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md
-Git strategy: master (synced @ 7677dd9 — v6.0 milestone-close commit)
+Git strategy: master (last pushed @ b4dbb19; mimeType-fix commit pending)
 
 Loop position (v70-01-01 — current):
 PLAN ──▶ APPLY ──▶ UNIFY

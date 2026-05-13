@@ -48,6 +48,7 @@ import {
     type UndoEntry,
     type UndoableDoc,
 } from '@/lib/local/undo-store'
+import { useLibraryStore } from '@/lib/library-store'
 import { applyEdit } from '@/lib/local/write'
 import {
     propagateTrackEditToSong,
@@ -1103,6 +1104,11 @@ export function SetlistGrid({
     const handleBindChart = useCallback(
         async (track: LocalTrack, sel: ChartBindSelection) => {
             const defaults = await seedTrackFromSong(sel.songId)
+            // v70-01-01 Task 4: persist library_index.mimeType so the
+            // performance-view viewer routing can branch image/PDF/MusicXML
+            // without depending on a track.fileName extension that the
+            // picker never sets.
+            const libFile = useLibraryStore.getState().allFiles.find(f => f.id === sel.songId)
             const patch: Record<string, unknown> = {
                 songId: sel.songId,
                 // v54-01-02: same reason as handlePickSong above —
@@ -1113,6 +1119,7 @@ export function SetlistGrid({
                 fileId: sel.songId,
                 title: sel.title,
             }
+            if (libFile?.mimeType) patch.mimeType = libFile.mimeType
             if (defaults.key !== undefined) patch.key = defaults.key
             if (defaults.lead !== undefined) patch.leadMusician = defaults.lead
             if (defaults.bpm !== undefined) patch.bpm = defaults.bpm
@@ -1496,6 +1503,11 @@ export function SetlistGrid({
             const newId = makeId()
             const order = rows.length
             const defaults = await seedTrackFromSong(song.id)
+            // v70-01-01 Task 4: cache library_index.mimeType on the new track
+            // so queue-utils can route to ImageScoreViewer for image charts
+            // (PDF / MusicXML / text routing also benefits — extension on
+            // fileId is absent for upload-{uuid} and Google Drive IDs).
+            const libFile = useLibraryStore.getState().allFiles.find(f => f.id === song.id)
             await applyEdit({
                 op: 'set',
                 collection: 'tracks',
@@ -1514,6 +1526,7 @@ export function SetlistGrid({
                     order,
                     title: song.title,
                     type: 'song',
+                    ...(libFile?.mimeType ? { mimeType: libFile.mimeType } : {}),
                 },
             })
             if (Object.keys(defaults).length > 0) {

@@ -12,6 +12,20 @@ export function toQueueItem(track: SetlistTrack, index: number): QueueItem {
 
     const fileType = (() => {
         if (!track.fileId) return 'pdf'
+
+        // v70-01-01 Task 4: prefer mimeType when persisted on the track (set by
+        // the picker bind path from useLibraryStore.allFiles). The picker never
+        // sets fileName, so for picker-bound tracks the extension fallback below
+        // is dead code without this mimeType branch.
+        const mt = track.mimeType
+        if (mt) {
+            if (mt.startsWith('image/')) return 'image'
+            if (mt === 'application/pdf') return 'pdf'
+            if (mt === 'application/x-chordpro' || mt.endsWith('chordpro')) return 'chordpro'
+            if (mt.startsWith('text/')) return 'text'
+            if (mt.includes('xml') || mt === 'application/vnd.recordare.musicxml+xml') return 'musicxml'
+        }
+
         const idLower = track.fileId.toLowerCase()
         const nameLower = (track.fileName || '').toLowerCase()
 

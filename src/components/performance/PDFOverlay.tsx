@@ -6,6 +6,7 @@ import { SetlistTrack } from "@/types/models"
 import { PerformanceToolbar } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
+import { useLibraryStore } from "@/lib/library-store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
@@ -144,7 +145,16 @@ export function PDFOverlay({
     const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
     const isMusicXml = currentItem?.type === 'musicxml'
     const isText = currentItem?.type === 'text'
+    // v70-01-01 Task 4 backstop: legacy already-bound image tracks may have
+    // type='pdf' (default fallback) because their SetlistTrack predates
+    // mimeType persistence. useLibraryStore.allFiles holds the authoritative
+    // mimeType from library_index — read it here to upgrade the viewer
+    // routing on the fly without requiring a rebind or data migration.
+    const libMimeType = useLibraryStore(s =>
+        currentItem?.fileId ? s.allFiles.find(f => f.id === currentItem.fileId)?.mimeType : undefined,
+    )
     const isImage = currentItem?.type === 'image'
+        || (libMimeType?.startsWith('image/') ?? false)
 
     // Build the file URL from the track's fileId (used for both PDF and MusicXML).
     // Prefer the IDB blob when we have one so offline-preloaded charts render
