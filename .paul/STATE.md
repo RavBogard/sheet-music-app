@@ -100,7 +100,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `f8d1c13` feat(v60-07-03): W2 defensive strip + immediate FieldValue.delete on hydrated docs — PUSHED 2026-05-13.
+Last commit: `24e21e9` feat(v60-07-04): W7 import route seeds top-level tracks; phase v60-07 mandate complete — PUSHED 2026-05-13.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
