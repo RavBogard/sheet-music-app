@@ -96,7 +96,7 @@ Resume context:
 
 ## Git State
 
-Last commit: `35ed9d3` feat(v60-06-07): matrix endpoint migrated to getTracksForSetlist + Promise.all — PUSHED 2026-05-13.
+Last commit: `7f7e4f8` feat(v60-06-08): 15-setlist backfill script + rollback collection (phase v60-06 LOOP COMPLETE) — PUSHED 2026-05-13.
 Branch: master
 Feature branches merged: none (single-context single-commit per v53-02 / v53-03 / v60-01 / v60-02 / v60-03 precedent)
 Push history this run:
@@ -128,7 +128,8 @@ Push history this run:
   - `0fcf62a` docs(v60-06-05): correct commit SHA in STATE.md — PUSHED
   - `215222f` feat(v60-06-06): fetchTracksForSetlistClient + TemplatesSection admin migration — PUSHED
   - `35ed9d3` feat(v60-06-07): matrix endpoint migration to getTracksForSetlist + Promise.all parallel fetch — PUSHED
-  - `7ad02b1` docs(v60-06-07): correct commit SHA in STATE.md Git State section — PUSHED THIS RUN
+  - `7ad02b1` docs(v60-06-07): correct commit SHA in STATE.md Git State section — PUSHED
+  - `7f7e4f8` feat(v60-06-08): 15-setlist backfill script + rollback collection (phase v60-06 LOOP COMPLETE) — PUSHED THIS RUN
 
 ### Decisions (v53-02-01)
 
