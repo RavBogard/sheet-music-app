@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-14 after v70-01 ✅ COMPLETE; v7.0 milestone active — 1 of 8 phases done; next: /paul:plan v70-02)
+See: .paul/PROJECT.md (updated 2026-05-14 after v70-03 ✅ COMPLETE; v7.0 milestone active — 3 of 8 phases done; next: /paul:plan v70-04)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 2 of 8 complete (v70-01 image-chart support, v70-02 recordings data model). Next: v70-03 per-track media affordances (Wave 2).
+**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 3 of 8 complete (v70-01 image-chart support, v70-02 recordings data model, v70-03 per-track media affordances). Next: v70-04 doc upload + text extraction (Wave 2).
 
 ## Current Position
 
-Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 + v70-02 phases COMPLETE 2026-05-14)
+Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 + v70-02 + v70-03 phases COMPLETE 2026-05-14)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: 3 of 8 — v70-03 Per-track media affordances — Ready to plan
+Phase: 4 of 8 — v70-04 Doc upload + text extraction — Not started
 Plan: Not started
-Status: v70-02 phase COMPLETE — recordings data model foundation shipped (Recording type, getRecordingStoragePath, recordings/{id} rules block + composite index deployed to production, emulator rules test 10/10). Single-plan phase, 3 auto tasks all PASS, no deviations. HFG counter held at 0/3. Ready for /paul:plan v70-03. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
-Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
+Status: Ready to plan v70-04. Phase v70-03 ✅ COMPLETE 2026-05-14 — 2 plans LOOP CLOSED, phase transition done (PROJECT.md evolved, ROADMAP v70-03 → ✅ Complete, phase commit + push). v70-03 shipped per-track media affordances on MobileRowCard (the sole live render path): v70-03-01 chart click-through (`<a target="_blank">` to the existing /api/drive/file serving URL when bound; stopPropagation isolates the card tap-to-edit), v70-03-02 recording-bind UI (RecordingBindPopover + RecordingCell beside the chart icon — lists a song's recordings with inline `<audio>`, band-leader/admin upload; new /api/recordings/upload + /api/recordings/file/[id] routes + recordings-client.ts + firebase-storage.ts helpers, all on the v70-02 model, NO storage.rules change — admin-side serving route IS the access control). Both plans re-spec'd mid-flow (Spec issue): the original PLANs targeted SetlistGrid's dead TanStack table; MobileRowCard is the sole live path. next build ✓; live-path grid tests green; HFG 0/3 held. NEW standing pattern: human-verify checkpoints accumulate in .paul/UAT-PENDING.md (2 entries: v70-03-01 + v70-03-02), verified against the deployed build at milestone end. Tech debt flagged: the dead SetlistGrid TanStack-table block should be deleted in a future phase.
+Last activity: 2026-05-14 — Phase v70-03 complete + transitioned. v70-03-01 + v70-03-02 LOOP CLOSED; PROJECT.md Current State + Validated + footer evolved; ROADMAP v70-03 → ✅ Complete; bundled phase commit + push (covers v70-03-01 + v70-03-02 + all .paul/ phase files). UAT-PENDING.md deployed-commit SHA recorded for both v70-03 entries. Earlier this session: closed v70-01/v70-02 resume, created + re-spec'd both v70-03 plans, formalized the UAT-PENDING no-block pattern (feedback-uat-checklist memory).
 
 ### Production Verification (v60-11-01 / 2026-05-13)
 
@@ -85,11 +85,25 @@ Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase 
 v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
 Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
 
-Stopped at: v70-02 phase COMPLETE — loop closed, committed + pushed, phase transition done. v70-02-01 (recordings data model) shipped: Recording type in models.ts (songId? FK + notes field), getRecordingStoragePath helper (recordings/{id}.{ext}), recordings/{id} Firestore rules block (read isMember, write band-leader/admin) + composite index (songId ASC, createdAt DESC) — both deployed to production via firebase deploy. Emulator rules test 10/10 (HFG 0/3 held, no clause-(b) waiver). next build ✓; main suite 1650/52 (zero new regressions). 3 auto tasks all PASS, no deviations. Phase transition: PROJECT.md evolved, ROADMAP v70-02 → ✅ Complete, phase commit + push.
-Next action: /paul:plan v70-03 (per-track media affordances — Wave 2: chart click-through opens chart in new tab via Storage URL + recording-bind UI analogous to ChartBindPopover with inline `<audio>` playback; /ui-ux-pro-max BLOCKING). OR pull v70-09 (setlist metadata editor) forward if Issue 2 is higher priority for Daniel.
+Stopped at: Phase v70-03 COMPLETE + transitioned. Both plans LOOP CLOSED (SUMMARYs at .paul/phases/v70-03-per-track-media-affordances/v70-03-0{1,2}-SUMMARY.md). Transition done: PROJECT.md evolved (Current State → v7.0.0-dev 3 of 8 phases; v70-03 Validated entry; footer), ROADMAP v70-03 → ✅ Complete + milestone status 3 of 8, bundled phase commit + push to origin master. .paul/UAT-PENDING.md holds 2 carry-forward checklists (v70-03-01 chart click-through + v70-03-02 recording-bind) with the deployed-commit SHA — Daniel verifies against the deployed build at milestone end.
+Next action: /paul:plan v70-04 (doc upload + text extraction — Wave 2: new /api/setlist/import/upload route; mammoth for .docx, pdfjs for .pdf, txt trivial; upload modal extends the v51-03 CreationWizard with a 4th "Import from document" option; /ui-ux-pro-max BLOCKING). NOTE for v70-04 planning: heed the v70-03 dead-code lesson — verify any UI target is in the live render path (MobileCardList/MobileRowCard + the v51-03 CreationWizard), NOT SetlistGrid's dead TanStack table.
 Resume file: .paul/ROADMAP.md
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
+
+Loop position (v70-03 phase — COMPLETE, transitioned):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [Phase v70-03 COMPLETE 2026-05-14 — 2 of 2 plans LOOP CLOSED; phase transition done; ready for /paul:plan v70-04]
+
+Loop position (v70-03-02 — closed):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v70-03-02 LOOP COMPLETE 2026-05-14 — recording-bind UI; 4/4 auto tasks PASS; human-verify → UAT-PENDING]
+
+Loop position (v70-03-01 — closed):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v70-03-01 LOOP COMPLETE 2026-05-14 — chart click-through; re-spec'd mid-APPLY (dead-code spec defect); human-verify → UAT-PENDING carry-forward]
+
+Phase v70-03 — COMPLETE (2 of 2 plans LOOP CLOSED 2026-05-14; transitioned to v70-04)
 
 Loop position (v70-02-01 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY

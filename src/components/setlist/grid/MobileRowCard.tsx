@@ -20,8 +20,10 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import type { LocalTrack } from '@/lib/local/types'
-import { cn } from '@/lib/utils'
+import { cn, parseFileId } from '@/lib/utils'
 import { KEY_OPTIONS_DATA } from './cells/KeyCell'
+import { RecordingCell } from './cells/RecordingCell'
+import { RecordingBindPopover } from './RecordingBindPopover'
 
 export interface MobileRowCardProps {
     track: LocalTrack
@@ -293,24 +295,68 @@ export function MobileRowCard({
                             ) : null}
                         </div>
 
-                        <span
-                            aria-label={
-                                track.songId ? 'Chart bound' : 'No chart bound'
-                            }
-                            className="flex-none ml-2"
-                        >
-                            {track.songId ? (
-                                <Music
-                                    aria-hidden
-                                    className="h-5 w-5 text-brand opacity-80"
-                                />
-                            ) : (
+                        {track.songId ? (
+                            // Bound chart → click-through link that opens the
+                            // chart file in a new tab via the existing
+                            // Storage-backed serving route. stopPropagation
+                            // keeps the click from bubbling to the card's
+                            // tap-to-edit handler.
+                            <a
+                                href={
+                                    parseFileId(
+                                        (typeof track.fileId === 'string' &&
+                                            track.fileId) ||
+                                            track.songId,
+                                    ).apiUrl
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Open chart in new tab"
+                                onClick={(e) => e.stopPropagation()}
+                                className={cn(
+                                    'flex-none ml-2 inline-flex items-center justify-center rounded-md',
+                                    // 40px baseline hit area, 44px on touch.
+                                    'h-10 w-10',
+                                    '[@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
+                                    'cursor-pointer text-brand opacity-80 hover:opacity-100',
+                                    'transition-opacity motion-reduce:transition-none',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                                )}
+                            >
+                                <Music aria-hidden className="h-5 w-5" />
+                            </a>
+                        ) : (
+                            <span
+                                aria-label="No chart bound"
+                                className="flex-none ml-2"
+                            >
                                 <FileText
                                     aria-hidden
                                     className="h-5 w-5 text-muted-foreground/30"
                                 />
-                            )}
-                        </span>
+                            </span>
+                        )}
+
+                        {track.songId ? (
+                            // Recording affordance — opens RecordingBindPopover.
+                            // stopPropagation keeps the trigger click from
+                            // bubbling to the card's tap-to-edit handler
+                            // (same gesture-isolation pattern as the chart link).
+                            <RecordingBindPopover
+                                songId={track.songId}
+                                songTitle={track.title}
+                            >
+                                <RecordingCell
+                                    disabled={false}
+                                    className="ml-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </RecordingBindPopover>
+                        ) : (
+                            // No song bound → recordings attach to a song, so
+                            // the affordance renders disabled (no popover).
+                            <RecordingCell disabled className="ml-1" />
+                        )}
                     </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent

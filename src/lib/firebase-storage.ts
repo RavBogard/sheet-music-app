@@ -192,3 +192,59 @@ export async function downloadFromStorage(fileId: string, mimeType?: string): Pr
         return { success: false, reason: 'network', message: (err as Error).message || 'Storage download failed' }
     }
 }
+
+/**
+ * v70-03: Upload a recording audio buffer to its `recordings/{id}.{ext}` path.
+ * Recordings-specific — does NOT reuse uploadToStorage/getStoragePath, which
+ * hardcode the `library/` prefix. Returns the storage path written.
+ */
+export async function uploadRecordingToStorage(
+    recordingId: string,
+    buffer: Buffer,
+    mimeType: string,
+    ext: string,
+): Promise<string> {
+    const bucket = getBucket()
+    const path = getRecordingStoragePath(recordingId, ext)
+    await bucket.file(path).save(buffer, {
+        metadata: {
+            contentType: mimeType,
+            cacheControl: 'public, max-age=86400, s-maxage=604800',
+            metadata: {
+                recordingId,
+                uploadedAt: new Date().toISOString(),
+            },
+        },
+    })
+    return path
+}
+
+/**
+ * v70-03: Download a file from Storage at an EXACT known path.
+ * Unlike downloadFromStorage (which takes a fileId and guesses library/ paths),
+ * recordings docs already carry their exact `storagePath` — so this does a
+ * direct read with no path-guessing.
+ */
+export async function downloadFromStoragePath(
+    path: string,
+): Promise<StorageResult<{ buffer: Buffer; contentType: string }>> {
+    try {
+        const bucket = getBucket()
+        const file = bucket.file(path)
+        const [exists] = await file.exists()
+        if (!exists) {
+            return { success: false, reason: 'not_found', message: `File ${path} not found in storage` }
+        }
+        const [buffer] = await file.download()
+        const [metadata] = await file.getMetadata()
+        return {
+            success: true,
+            data: {
+                buffer: Buffer.from(buffer),
+                contentType: metadata.contentType || 'application/octet-stream',
+            },
+        }
+    } catch (err) {
+        return { success: false, reason: 'network', message: (err as Error).message || 'Storage download failed' }
+    }
+}
