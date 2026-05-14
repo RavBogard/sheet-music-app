@@ -355,6 +355,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // MCP OAUTH — server-only (Admin SDK)
+    // OAuth front door for Claude Desktop / web. `mcpOAuthClients` holds
+    // dynamically-registered public PKCE clients; `mcpOAuthCodes` holds
+    // single-use, short-lived (~10 min) authorization codes, stored hashed.
+    // Both are written/read exclusively by the /api/mcp/oauth/* routes via the
+    // Admin SDK. No client access.
+    match /mcpOAuthClients/{clientId} {
+      allow read, write: if false;
+    }
+    match /mcpOAuthCodes/{codeHash} {
+      allow read, write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

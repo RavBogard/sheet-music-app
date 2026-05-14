@@ -28,7 +28,11 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!loading && user) {
-            router.replace("/setlists")
+            // Honor ?next= (e.g. the MCP OAuth /authorize bounce). Only allow
+            // same-origin paths — never an absolute or protocol-relative URL.
+            const next = new URLSearchParams(window.location.search).get("next")
+            const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/setlists"
+            router.replace(dest)
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, loading, router])
