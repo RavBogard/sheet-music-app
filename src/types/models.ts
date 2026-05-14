@@ -95,6 +95,23 @@ export interface Setlist {
     hydrated?: boolean
 }
 
+/** v70-02: a reference audio recording. NEW top-level recordings/{id}
+ *  collection (NOT embedded on song/setlist docs — v7.0 constraint #5).
+ *  songId is an OPTIONAL foreign key to songs/{id} — a recording may be
+ *  standalone (uploaded before a song link is known) or song-linked. */
+export interface Recording {
+    id: string
+    songId?: string          // optional FK → songs/{id}
+    title: string
+    fileName?: string        // original uploaded filename
+    mimeType?: string        // audio mime, e.g. 'audio/mpeg'
+    storagePath: string      // recordings/{id}.{ext} — see getRecordingStoragePath
+    durationSeconds?: number // for the v70-03 inline <audio> UI
+    notes?: string           // free-form attribution (v7.0 constraint #4)
+    createdAt: FirestoreDate
+    createdBy: string        // uid of the uploader
+}
+
 export type UserRole = 'admin' | 'band_leader' | 'musician' | 'member' | 'pending' | 'denied'
 
 export interface UserProfile {

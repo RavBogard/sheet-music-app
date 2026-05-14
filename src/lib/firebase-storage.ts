@@ -46,6 +46,20 @@ function getStoragePath(fileId: string, mimeType?: string): string {
 }
 
 /**
+ * v70-02: Storage path convention for recording audio files.
+ * Recordings live under their own top-level `recordings/` prefix,
+ * keyed by recording doc id — parallel to library/{fileId} for charts.
+ */
+export function getRecordingStoragePath(recordingId: string, ext: string): string {
+    const clean = ext.replace(/^\.+/, '')           // tolerate caller passing '.mp3' or 'mp3'
+    if (!clean) return `recordings/${recordingId}`
+    if (recordingId.toLowerCase().endsWith(`.${clean.toLowerCase()}`)) {
+        return `recordings/${recordingId}`           // no double-extension (mirrors getStoragePath guard)
+    }
+    return `recordings/${recordingId}.${clean}`
+}
+
+/**
  * Build the list of candidate paths for a file ID,
  * trying both the original and hyphenated variant.
  */

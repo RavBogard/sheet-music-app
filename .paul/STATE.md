@@ -5,15 +5,15 @@
 See: .paul/PROJECT.md (updated 2026-05-14 after v70-01 ✅ COMPLETE; v7.0 milestone active — 1 of 8 phases done; next: /paul:plan v70-02)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 1 of 8 complete (v70-01 image-chart support). Next: v70-02 recordings data model (Wave 1 foundation).
+**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 2 of 8 complete (v70-01 image-chart support, v70-02 recordings data model). Next: v70-03 per-track media affordances (Wave 2).
 
 ## Current Position
 
-Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 phase COMPLETE 2026-05-14)
+Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 + v70-02 phases COMPLETE 2026-05-14)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: 2 of 8 — v70-02 Recordings data model — Planning
-Plan: v70-02-01 created 2026-05-14 (recordings data model foundation — Recording type + Storage path helper + Firestore rules + composite index + emulator rules test); awaiting approval.
-Status: PLAN ✓ created at .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md — standard track, 3 auto tasks, autonomous (no checkpoints). Data-layer-only phase: /ui-ux-pro-max N/A. HFG-relevant — emulator coverage required, no clause-(b) waiver. v6.0 milestone CLOSED. v70-01 phase COMPLETE @ `3389b58`. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
+Phase: 3 of 8 — v70-03 Per-track media affordances — Ready to plan
+Plan: Not started
+Status: v70-02 phase COMPLETE — recordings data model foundation shipped (Recording type, getRecordingStoragePath, recordings/{id} rules block + composite index deployed to production, emulator rules test 10/10). Single-plan phase, 3 auto tasks all PASS, no deviations. HFG counter held at 0/3. Ready for /paul:plan v70-03. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
 Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
@@ -85,15 +85,17 @@ Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase 
 v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
 Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
 
-Stopped at: v70-02-01 PLAN ✓ created, awaiting approval. v70-02 = recordings data model foundation: NEW `recordings/{id}` Firestore collection (Recording type in models.ts with songId? FK + notes field), `getRecordingStoragePath` helper (recordings/{id}.{ext} convention), Firestore rules block (read isMember, write band-leader/admin — mirrors songs/{id}) + composite index (songId ASC, createdAt DESC), emulator-backed rules test. Standard track, 3 auto tasks, autonomous. Data-layer only — /ui-ux-pro-max N/A. HFG-relevant: emulator coverage required, no clause-(b) waiver. NO upload route / UI / playback (those land in v70-03 / v70-06).
-Next action: /paul:apply .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md (optionally /paul:audit first — manual invocation; the audit added real value on v70-01-02). OR consider pulling v70-09 (setlist metadata editor) forward if Issue 2 is higher priority for Daniel.
-Resume file: .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md
+Stopped at: v70-02 phase COMPLETE — loop closed, committed + pushed, phase transition done. v70-02-01 (recordings data model) shipped: Recording type in models.ts (songId? FK + notes field), getRecordingStoragePath helper (recordings/{id}.{ext}), recordings/{id} Firestore rules block (read isMember, write band-leader/admin) + composite index (songId ASC, createdAt DESC) — both deployed to production via firebase deploy. Emulator rules test 10/10 (HFG 0/3 held, no clause-(b) waiver). next build ✓; main suite 1650/52 (zero new regressions). 3 auto tasks all PASS, no deviations. Phase transition: PROJECT.md evolved, ROADMAP v70-02 → ✅ Complete, phase commit + push.
+Next action: /paul:plan v70-03 (per-track media affordances — Wave 2: chart click-through opens chart in new tab via Storage URL + recording-bind UI analogous to ChartBindPopover with inline `<audio>` playback; /ui-ux-pro-max BLOCKING). OR pull v70-09 (setlist metadata editor) forward if Issue 2 is higher priority for Daniel.
+Resume file: .paul/ROADMAP.md
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
 
-Loop position (v70-02-01 — current):
+Loop position (v70-02-01 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v70-02-01 PLAN created 2026-05-14; autonomous, no checkpoints; ready for APPLY]
+  ✓        ✓        ✓     [v70-02-01 LOOP COMPLETE 2026-05-14 — phase v70-02 complete, 3/3 tasks PASS, rules+indexes deployed, emulator 10/10]
+
+Phase v70-02 — COMPLETE (1 of 1 plan LOOP CLOSED 2026-05-14)
 
 Loop position (v70-01-02 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
@@ -202,6 +204,13 @@ PLAN ──▶ APPLY ──▶ UNIFY
 Loop position (v60-10 — closed, parallel session):
 PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [LOOP COMPLETE — PENDING-UAT; pushed @ 6288c97]
+
+### Decisions (v70-02-01 / 2026-05-14)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-14 | `recordings/{id}` rules mirror `songs/{id}` (read isMember, write band-leader/admin) — recordings are band-internal, NOT public-perform-view content | v70-02 | Unauthenticated read REJECTED; recordings stay band-gated, unlike tracks/* |
+| 2026-05-14 | `songId` is an OPTIONAL FK on Recording; recordings get their own `recordings/` Storage prefix; composite index (songId+createdAt) shipped now not deferred | v70-02 | v70-03/v70-06 build on the model directly; chart sync engine never touches recordings; recording-by-song chronological query works immediately |
 
 ### Decisions (v70-01-02 / 2026-05-14)
 

@@ -134,6 +134,18 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
     }
 
+    // RECORDINGS Collection (v70-02 — reference audio for songs)
+    // NEW top-level collection; songId is an optional FK to songs/{id}.
+    // Read: members (band-internal content — recordings are NOT part of the
+    //   public perform view, unlike tracks/*). Write: band-leader/admin.
+    // Mirrors the songs/{songId} permission shape.
+    match /recordings/{recordingId} {
+      allow read: if isMember();
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+    }
+
     // TASKS Collection
     // Read: Any signed-in user can read tasks (to see them on setlists)
     // Write: All writes go through the secure API routes using the Admin SDK
