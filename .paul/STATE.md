@@ -177,6 +177,17 @@ Resume context:
 - HFG counter held at 0/3 throughout v6.0
 - After UAT clears: /paul:complete-milestone closes v6.0 → /paul:plan v70-01 (image-chart support — PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary)
 
+### Git State (v70-04 phase transition)
+Last commit: `667ed09` — feat(v70-04): doc upload + text extraction foundation
+Branch: master — synced with origin/master after push 2026-05-14 (`0811329..667ed09`)
+Feature branches merged: none (no feature branch for v70-04)
+Push: ✅ DONE 2026-05-14 — `0811329..667ed09` pushed to origin master; Vercel auto-deploy triggered
+Bundled phase commit: 11 files (v70-04-01 PLAN+SUMMARY + extract-document lib/route/test + pdf-chord-extractor export + package.json/lock + 3 .paul/ docs); 912 insertions / 15 deletions
+Production deploys: none — v70-04 is app-code only (no firestore.rules / indexes / functions change)
+HFG counter: 0/3 held (v70-04 touched no engine / Firestore-data-layer)
+New dependency: `mammoth@^1.12.0`
+UAT-PENDING: no new entries — v70-04 is backend-only with automated-test verification (no human-verify checkpoint); the 2 v70-03 entries remain open
+
 ### Git State (v70-03 phase transition)
 Last commit: `62c2b7c` — feat(v70-03): per-track media affordances — chart click-through + recording-bind UI
 Branch: master — synced with origin/master after push 2026-05-14 (`9cc346a..62c2b7c`)
