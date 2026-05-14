@@ -80,11 +80,20 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-13 (v70-01-01 paused mid-APPLY; v60-13 emergent hotfix opening)
-Stopped at: v60-13-01 PLAN about to be created
-Next action: create v60-13-01 PLAN → APPLY (single-file fix to use-setlist-dashboard.ts) → commit + push → Daniel UAT in incognito + mobile
-Resume file: .paul/phases/v60-13-sync-engine-resilience/v60-13-01-PLAN.md
-Git strategy: master (last pushed @ ab11850 — v70-01-01 Task 4 fix)
+Last session: 2026-05-13 night (v60-13 wave 1 shipped + v70-01-01 mid-APPLY; Daniel-explicit pause for context clearing)
+Stopped at: All in-flight work committed + pushed (HEAD `d81c3dc`). v60-13-06 / 14-01 / 70-09-01 PLANs written and ready. v70-01-01 Task 3 deferred.
+Next action: /paul:apply .paul/phases/v60-13-sync-engine-resilience/v60-13-06-PLAN.md (highest priority — Daniel's "real pain" auto-refresh fix)
+Resume file: .paul/HANDOFF-2026-05-13-night.md
+Git strategy: master (synced @ d81c3dc)
+Resume context:
+- v60-13 wave 1 SHIPPED: incognito blank + 49-row stuck outbox queue both FIXED per Daniel UAT (commits 26797e7 → d81c3dc; 5 plans / 1 STATE-update)
+- v60-13-06 PLAN ready: SetlistGridHydrator dedup to fix auto-refresh-during-edit ("real pain" per Daniel)
+- v70-01-01 PAUSED mid-APPLY: Tasks 1+2+4 shipped (b4dbb19, ab11850); Task 3 (toolbar disable + PrintModal banner) deferred ~20 min when resumed
+- v60-14-01 PLAN ready: mobile date picker reset (Issue 3) — discovery-first; may auto-resolve from v60-13-06
+- v70-09-01 PLAN ready: setlist metadata editor (Issue 2) — bigger UX work needing /ui-ux-pro-max consult
+- v60-13-07 (past desktop deletes propagation) presumed RESOLVED by v60-13-03 queue-drain fix; no action unless re-reported
+- Diagnostic logging still in DashboardClient.tsx (subscription + outbox console dumps) — keep through v60-13-06; remove in cleanup commit
+- HFG counter at 0/3 throughout this session
 
 Loop position (v70-01-01 — current):
 PLAN ──▶ APPLY ──▶ UNIFY
