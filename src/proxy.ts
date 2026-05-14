@@ -23,9 +23,11 @@ function decodeJwtPayload(token: string) {
 const publicExactRoutes = ['/login', '/', '/auth-error']
 
 // Prefix-match public routes — these serve public/unauthenticated content
-// /perform/* — musicians view shared setlists (may not be signed in)
-// /qr/*     — QR code sign-in flow (used *before* having a session)
-const publicPrefixes = ['/perform', '/qr']
+// /perform/*     — musicians view shared setlists (may not be signed in)
+// /qr/*          — QR code sign-in flow (used *before* having a session)
+// /.well-known/* — OAuth discovery metadata; Claude Desktop/web fetch these
+//                  unauthenticated to find the MCP authorization server
+const publicPrefixes = ['/perform', '/qr', '/.well-known']
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
