@@ -2,7 +2,7 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-13 after v6.0 ✅ COMPLETE via /paul:complete-milestone; v7.0 milestone now active — ready for /paul:plan v70-01)
+See: .paul/PROJECT.md (updated 2026-05-14 after v70-01 ✅ COMPLETE; v7.0 milestone active — 1 of 8 phases done; next: /paul:plan v70-02)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
 **Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 1 of 8 complete (v70-01 image-chart support). Next: v70-02 recordings data model (Wave 1 foundation).
@@ -142,6 +142,13 @@ Resume context:
 - /paul:audit is BROKEN in this repo per feedback_no_paul_audit — manual architectural audit inline instead (proven again on v60-12: cleared 5 concerns)
 - HFG counter held at 0/3 throughout v6.0
 - After UAT clears: /paul:complete-milestone closes v6.0 → /paul:plan v70-01 (image-chart support — PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary)
+
+### Git State (v70-01 phase transition)
+Last commit: `af26d2a` — feat(v70-01-02): image-chart print embed; v70-01 phase complete
+Branch: master — synced with origin/master after push 2026-05-14 (`2fbcb46..af26d2a`)
+Feature branches merged: none (no feature branch for v70-01)
+Push: ✅ DONE 2026-05-14 — `2fbcb46..af26d2a` pushed to origin master; Vercel auto-deploy triggered
+HFG counter: 0/3 held (v70-01 had no engine / Firestore-data-layer touches)
 
 ### Git State (v60-11-01 transition)
 Last commit: `291ea95` — docs(v60-11-01): backfill commit SHA + Git State block in STATE.md
