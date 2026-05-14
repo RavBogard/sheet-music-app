@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MusicianProfileSettings } from "@/components/settings/MusicianProfileSettings"
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings"
+import { McpAccessSettings } from "@/components/settings/McpAccessSettings"
 import { useTheme } from "next-themes"
 import { useMusicStore } from "@/lib/store"
 import { Switch } from "@/components/ui/switch"
@@ -292,6 +293,14 @@ export default function SettingsPage() {
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Instrument</h2>
                     <div className="bg-card border border-border p-5 rounded-2xl">
                         <MusicianProfileSettings />
+                    </div>
+                </section>
+
+                {/* Integrations */}
+                <section className="space-y-4">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integrations</h2>
+                    <div className="bg-card border border-border p-5 rounded-2xl">
+                        <McpAccessSettings />
                     </div>
                 </section>
 

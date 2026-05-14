@@ -346,6 +346,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // MCP TOKENS — server-only (Admin SDK)
+    // Per-user bearer tokens for connecting Claude (Desktop / web / Code) to
+    // the MCP route. Only `sha256(rawToken)` is stored, never the raw token.
+    // Minted, listed, and revoked exclusively via /api/mcp/tokens routes
+    // (Admin SDK); verifyBearer reads here via Admin SDK. No client access.
+    match /mcpTokens/{tokenId} {
+      allow read, write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {
