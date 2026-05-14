@@ -166,7 +166,7 @@ export function registerWriteTools(server: McpServer): void {
         "add_track_to_setlist",
         {
             description:
-                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library, or pass an explicit title) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Only the setlist's owner may add tracks.",
+                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Only the setlist's owner may add tracks.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 songId: z

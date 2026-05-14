@@ -55,6 +55,12 @@ export interface AddTrackInput {
     referenceLink?: string
     /** Library song id this row references, if any. */
     songId?: string
+    /** Bound chart file id. For a library song this equals `songId` (the
+     *  catalog is keyed by Drive file id). Written so the app's chart
+     *  rendering + the parent `fileIds` reconciler pick the row up. */
+    fileId?: string
+    /** Cached chart filename (the song's raw catalog title incl. extension). */
+    fileName?: string
     notes?: string
     /** 0-based insert index; out-of-range or omitted → append at the end. */
     position?: number
@@ -99,13 +105,23 @@ export async function addTrack(
     if (input.leadMusician !== undefined) payload.leadMusician = input.leadMusician
     if (input.referenceLink !== undefined) payload.referenceLink = input.referenceLink
     if (input.songId !== undefined) payload.songId = input.songId
+    if (input.fileId !== undefined) payload.fileId = input.fileId
+    if (input.fileName !== undefined) payload.fileName = input.fileName
     if (input.notes !== undefined) payload.notes = input.notes
     batch.set(db.collection("tracks").doc(trackId), payload)
 
-    batch.update(db.collection("setlists").doc(input.setlistId), {
+    const setlistPatch: Record<string, unknown> = {
         trackCount: existing.length + 1,
         updatedAt: FieldValue.serverTimestamp(),
-    })
+    }
+    // Bond the chart into the parent's denormalized fileIds set so the app
+    // renders it on the row without waiting for the client-side reconciler.
+    // arrayUnion is idempotent; the SetlistGridHydrator reconciler computes
+    // the same distinct set and will normalize ordering on next open.
+    if (input.fileId) {
+        setlistPatch.fileIds = FieldValue.arrayUnion(input.fileId)
+    }
+    batch.update(db.collection("setlists").doc(input.setlistId), setlistPatch)
 
     await batch.commit()
     logger.info("[mcp] track added", { setlistId: input.setlistId, trackId, order: insertAt })
@@ -164,7 +180,8 @@ export async function removeTrack(
     trackId: string,
 ): Promise<{ ok: true } | OwnershipError> {
     const existing = await getTracksForSetlist(db, setlistId, {})
-    if (!existing.some((t) => t.id === trackId)) {
+    const target = existing.find((t) => t.id === trackId)
+    if (!target) {
         return { ok: false, error: "Track not found in this setlist" }
     }
 
@@ -180,10 +197,20 @@ export async function removeTrack(
             })
         }
     })
-    batch.update(db.collection("setlists").doc(setlistId), {
+    const setlistPatch: Record<string, unknown> = {
         trackCount: remaining.length,
         updatedAt: FieldValue.serverTimestamp(),
-    })
+    }
+    // Drop the chart from the parent's fileIds set only when no other track
+    // still references it (the array is a distinct set across all tracks).
+    const removedFileId = (target as { fileId?: string }).fileId
+    if (
+        removedFileId &&
+        !remaining.some((t) => (t as { fileId?: string }).fileId === removedFileId)
+    ) {
+        setlistPatch.fileIds = FieldValue.arrayRemove(removedFileId)
+    }
+    batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
     await batch.commit()
     logger.info("[mcp] track removed", { setlistId, trackId })
     return { ok: true }

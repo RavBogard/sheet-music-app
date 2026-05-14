@@ -11,6 +11,9 @@ import { logger } from "@/lib/logger"
 export interface SongRecord {
     id: string
     title: string
+    /** Raw catalog title — the chart filename incl. extension (e.g.
+     *  "Oseh Shalom.pdf"). Cached onto setlist tracks as `fileName`. */
+    fileName?: string
     key?: string
     bpm?: number
     lead?: string
@@ -55,6 +58,9 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
     }
 
     const rec: SongRecord = { id, title: cleanTitle(data.title) }
+    if (typeof data.title === "string" && data.title.trim()) {
+        rec.fileName = data.title
+    }
     const key = pickString(defaults.key, "key")
     const bpm = pickNumber(defaults.bpm, "bpm")
     const lead = pickString(defaults.lead, "lead")

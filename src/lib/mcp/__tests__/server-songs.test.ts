@@ -64,7 +64,16 @@ describe("getAllSongs / toSongRecord", () => {
     it("omits key/bpm/lead when neither defaults nor recent carry them", async () => {
         mockCollectionGet.mockResolvedValue({ docs: [docOf("s1", { title: "Plain" })] })
         const [s] = await getAllSongs()
-        expect(s).toEqual({ id: "s1", title: "Plain" })
+        expect(s).toEqual({ id: "s1", title: "Plain", fileName: "Plain" })
+    })
+
+    it("exposes the raw catalog title as fileName (the chart filename incl. extension)", async () => {
+        mockCollectionGet.mockResolvedValue({
+            docs: [docOf("s1", { title: "Od Yavo Shalom Aleinu.pdf" })],
+        })
+        const [s] = await getAllSongs()
+        expect(s.title).toBe("Od Yavo Shalom Aleinu")
+        expect(s.fileName).toBe("Od Yavo Shalom Aleinu.pdf")
     })
 
     it("passes through the archived status", async () => {
@@ -91,6 +100,7 @@ describe("getSongById", () => {
         expect(await getSongById("s1")).toEqual({
             id: "s1",
             title: "Lecha Dodi",
+            fileName: "Lecha Dodi.pdf",
             key: "D",
         })
     })

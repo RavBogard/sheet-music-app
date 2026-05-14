@@ -134,12 +134,14 @@ export async function addTrackToSetlist(
     let title = args.title
     let key = args.key
     let leadMusician = args.leadMusician
+    let fileName: string | undefined
     if (args.songId) {
         const song = await getSongById(args.songId)
         if (!song) return { error: `Song ${args.songId} not found` }
         title = title ?? song.title
         key = key ?? song.key
         leadMusician = leadMusician ?? song.lead
+        fileName = song.fileName
     }
     if (!title || !title.trim()) {
         return { error: "title is required (or pass a songId to derive it)" }
@@ -153,6 +155,10 @@ export async function addTrackToSetlist(
         leadMusician,
         referenceLink: args.referenceLink,
         songId: args.songId,
+        // The library catalog is keyed by Drive file id, so a song's id IS its
+        // chart file id — bond it as the track's fileId so the chart renders.
+        fileId: args.songId,
+        fileName,
         notes: args.notes,
         position: args.position,
     })

@@ -88,6 +88,8 @@ export async function getSetlist(_uid: string, args: GetSetlistArgs) {
                 title: t.title ?? "",
                 type: typeof row.type === "string" ? row.type : "song",
                 songId: t.songId ?? null,
+                fileId: typeof row.fileId === "string" ? row.fileId : null,
+                fileName: typeof row.fileName === "string" ? row.fileName : null,
                 key: t.key ?? null,
                 bpm: t.bpm ?? null,
                 leadMusician: t.leadMusician ?? null,

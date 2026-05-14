@@ -154,6 +154,56 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(row.type).toBe("song")
     })
 
+    it("add_track_to_setlist bonds the song's chart — fileId/fileName on the row, fileIds on the parent", async () => {
+        const id = await newSetlist()
+        await addTrackToSetlist(OWNER, { setlistId: id, songId: "song-oseh" })
+
+        // The row carries the chart file id + cached filename — what the app's
+        // chart rendering keys off (a songId alone never renders a chart).
+        const [row] = await tracksOf(id)
+        expect(row.fileId).toBe("song-oseh")
+        expect(row.fileName).toBe("Oseh Shalom.pdf")
+
+        // The parent's denormalized fileIds set includes the chart.
+        const setlist = (await db().collection("setlists").doc(id).get()).data()!
+        expect(setlist.fileIds).toEqual(["song-oseh"])
+
+        // A header row contributes no chart — fileIds is unchanged.
+        await addTrackToSetlist(OWNER, { setlistId: id, title: "— Closing —", type: "header" })
+        const after = (await db().collection("setlists").doc(id).get()).data()!
+        expect(after.fileIds).toEqual(["song-oseh"])
+    })
+
+    it("remove_track drops the chart from fileIds only when no other row still uses it", async () => {
+        const id = await newSetlist()
+        // Two rows bound to the same chart, plus a distinct one.
+        const dup1 = (await addTrackToSetlist(OWNER, {
+            setlistId: id,
+            songId: "song-oseh",
+        })) as { trackId: string }
+        await addTrackToSetlist(OWNER, { setlistId: id, songId: "song-oseh" })
+        await db()
+            .collection("songs")
+            .doc("song-other")
+            .set({ title: "Hinei Ma Tov.pdf" })
+        const other = (await addTrackToSetlist(OWNER, {
+            setlistId: id,
+            songId: "song-other",
+        })) as { trackId: string }
+
+        // Removing one of the duplicates keeps the chart — the other row uses it.
+        await removeSetlistTrack(OWNER, { setlistId: id, trackId: dup1.trackId })
+        let fileIds = (await db().collection("setlists").doc(id).get()).data()!
+            .fileIds as string[]
+        expect([...fileIds].sort()).toEqual(["song-oseh", "song-other"])
+
+        // Removing the last row using a chart drops it from the set.
+        await removeSetlistTrack(OWNER, { setlistId: id, trackId: other.trackId })
+        fileIds = (await db().collection("setlists").doc(id).get()).data()!
+            .fileIds as string[]
+        expect(fileIds).toEqual(["song-oseh"])
+    })
+
     it("add_track_to_setlist supports header rows and rejects a titleless song", async () => {
         const id = await newSetlist()
         await addTrackToSetlist(OWNER, { setlistId: id, title: "— Opening —", type: "header" })
