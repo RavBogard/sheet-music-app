@@ -51,3 +51,26 @@ Check:
 - [ ] Opening the recording popover does NOT toggle the row's edit pane.
 - [ ] As a plain member: the popover lists + plays recordings but shows NO upload affordance; a direct POST to /api/recordings/upload as a member is rejected (403).
 - [ ] iPad: popover opens, audio plays, long-press still opens the context menu, drag handle still reorders, touch targets feel ≥44px.
+
+---
+
+## ⏳ v70-09-01 — Setlist metadata editor
+
+**Deployed commit:** _(pending — v70-09 phase commit + push)_
+
+What was built: a pencil/edit icon button in the setlist editor's top bar
+(`SetlistGridTopBar`, beside the setlist name) opens a mobile-friendly Sheet
+(`SetlistMetaEditSheet`) to edit a setlist's **name, event date, service type,
+and rabbi** after creation. Save writes through the v6.0 sync engine via
+`applyEdit('update','setlists',…)` with a changed-fields-only patch; the top bar
+reflects edits live via a `useLiveQuery` on the setlist doc. Cancel / Escape /
+an unchanged Save are non-destructive. Closes long-standing Issue 2.
+
+Check:
+- [ ] Open an existing setlist → a pencil icon sits next to the name in the top bar; tap it → the edit Sheet slides in, pre-filled with the current name / date / service type / rabbi.
+- [ ] Change the name → Save → the top-bar name updates immediately (no reload); reload the page → the new name persists.
+- [ ] Change the event date via the calendar → Save → persists across reload.
+- [ ] Change the service type and the rabbi → Save → both persist across reload.
+- [ ] Open the editor, change nothing, tap Save → nothing happens (no error, sheet closes).
+- [ ] Open the editor, make a change, tap Cancel (or press Escape / tap outside) → the change is discarded, setlist unchanged.
+- [ ] iPad: the Sheet is comfortable; the pencil trigger, inputs, date picker, service-type select, and Save/Cancel buttons all feel ≥44px and easy to tap.

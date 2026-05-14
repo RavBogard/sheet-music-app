@@ -39,8 +39,9 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { formatEventDate } from '@/lib/firestore-helpers'
 import { getDb } from '@/lib/local/schema'
-import type { EditDescriptor, LocalTrack } from '@/lib/local/types'
+import type { EditDescriptor, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import {
     flushAllBursts,
     useUndoStore,
@@ -73,9 +74,12 @@ import { KeyCell } from './cells/KeyCell'
 import { LeadCell } from './cells/LeadCell'
 import { TextCell } from './cells/TextCell'
 import { TypeCell } from './cells/TypeCell'
+import type { Setlist } from '@/types/models'
+
 import { EmptyState } from './EmptyState'
 import { MobileCardList } from './MobileCardList'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
+import { SetlistMetaEditSheet } from './SetlistMetaEditSheet'
 
 const EDITABLE_COL_IDS = [
     'type',
@@ -956,6 +960,21 @@ export function SetlistGrid({
     const isLoading = tracks === undefined
     const rows = tracks ?? []
 
+    // v70-09: live setlist doc — drives the metadata editor's seed values and
+    // lets the top bar reflect name/date edits immediately (no reload).
+    const liveSetlist = useLiveQuery(
+        () => getDb().setlists.get(setlistId),
+        [setlistId],
+    ) as LocalSetlist | undefined
+    const [metaSheetOpen, setMetaSheetOpen] = useState(false)
+
+    const displayName =
+        typeof liveSetlist?.name === 'string' && liveSetlist.name
+            ? (liveSetlist.name as string)
+            : (name ?? 'New Setlist')
+    const displayEventDateLabel =
+        formatEventDate(liveSetlist?.eventDate ?? null) ?? eventDateLabel
+
     const selection = useGridSelection()
     const allRowIds = useMemo(() => rows.map((r) => r.id), [rows])
 
@@ -1630,9 +1649,26 @@ export function SetlistGrid({
             </div>
 
             <SetlistGridTopBar
-                name={name ?? 'New Setlist'}
-                eventDateLabel={eventDateLabel}
+                name={displayName}
+                eventDateLabel={displayEventDateLabel}
                 onBack={onBack ?? (() => router.back())}
+                onEditMeta={() => setMetaSheetOpen(true)}
+            />
+
+            <SetlistMetaEditSheet
+                setlistId={setlistId}
+                open={metaSheetOpen}
+                onOpenChange={setMetaSheetOpen}
+                initial={{
+                    name: displayName,
+                    eventDate: liveSetlist?.eventDate ?? null,
+                    rabbi:
+                        typeof liveSetlist?.rabbi === 'string'
+                            ? (liveSetlist.rabbi as string)
+                            : undefined,
+                    templateType:
+                        liveSetlist?.templateType as Setlist['templateType'],
+                }}
             />
 
             <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6 flex-grow pb-32">

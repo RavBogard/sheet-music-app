@@ -11,10 +11,10 @@ See: .paul/PROJECT.md (updated 2026-05-14 after v70-04 ✅ COMPLETE; v7.0 milest
 
 Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 + v70-02 + v70-03 phases COMPLETE 2026-05-14)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: v70-09 — Setlist metadata editor — Not started (Daniel-directed jump 2026-05-14, out of roadmap sequence)
+Phase: v70-06 — Resolve + missing-chart + recording-match — Not started (next in roadmap sequence)
 Plan: Not started
-Status: Phase v70-05 ✅ COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED + transitioned (PROJECT.md evolved, ROADMAP v70-05 → ✅ Complete + milestone 5 of 8, bundled phase commit + push). v70-05 shipped the AI structure pass: `extractSetlistStructure` lib (raw text → geminiFlash() → Zod-validated `{ sections[], tracks[] }`; discriminated never-throws; malformed/empty/gemini_error carry `raw`) + `POST /api/setlists/import/extract-structure` route. next build ✓; setlist-import suite 18/18; zero deviations. NEXT (Daniel-directed): JUMP to v70-09 (setlist metadata editor — edit setlist name/date; closes long-standing Issue 2). /ui-ux-pro-max BLOCKING for v70-09 (Daniel explicit + SPECIAL-FLOWS.md). After v70-09 ships + pushes → return to v70-06 (resolve + missing-chart + recording-match) in roadmap sequence.
-Last activity: 2026-05-14 — Phase v70-05 complete + transitioned. v70-05-01 LOOP CLOSED; PROJECT.md Current State + Validated + footer evolved; ROADMAP v70-05 → ✅ Complete; bundled phase commit + push. Earlier this session: created + executed v70-05-01 PLAN; completed + transitioned phase v70-04.
+Status: Phase v70-09 ✅ COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED + transitioned (PROJECT.md evolved, ROADMAP v70-09 → ✅ Complete, bundled phase commit + push). v70-09 shipped the setlist metadata editor: SetlistMetaEditSheet (Sheet form, changed-fields-only applyEdit patch, eventDate as ISO string, non-destructive cancel) + pencil onEditMeta button in SetlistGridTopBar + SetlistGrid useLiveQuery for a live header. Closes Issue 2. next build ✓; 10 new tests PASS; zero new grid-suite regressions; zero deviations. **PARALLEL MCP WORKSTREAM ACTIVE** (Daniel handoff 2026-05-14) — milestone work stays in lane: src/components/setlist/**, src/lib/setlist-import/**, src/app/api/setlists/import/**, the setlist write path (setlist-firebase.ts, createSetlistService, applyEdit fanout), server-setlists/server-library/scheduling-firebase (read/extend; flag signature changes). DO NOT TOUCH: src/app/api/mcp/**, src/lib/mcp/**, settings MCP block (src/app/(main)/settings/**), mcpTokens in firestore.rules, bridge/** + src/app/api/bridge/**. DO NOT TOUCH SetlistGrid.tsx going forward (dead-code source of the 41/52-test baseline — v70-09 already did its necessary additive top-bar wiring there). Shared files (firestore.rules, firestore.indexes.json, package.json/lockfile, src/types/models.ts) — coordinate + rebase EOD. v70-07 coordination: the server-callable setlist-write module is authored in v70-07 + consumed by MCP write tools — ping Daniel to agree the signature BEFORE designing it. Next plans in order: v70-06 → v70-07 → v70-08 (milestone close blocked on v70-08). Stay in roadmap sequence; don't pull anything forward.
+Last activity: 2026-05-14 — Phase v70-09 complete + transitioned (LOOP CLOSED, PROJECT.md + ROADMAP evolved, bundled phase commit + push). Earlier this session: completed + transitioned phases v70-04 + v70-05; planned + executed v70-09.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
 
@@ -85,15 +85,19 @@ Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase 
 v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
 Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
 
-Stopped at: Phase v70-05 COMPLETE + transitioned. v70-05-01 LOOP CLOSED (SUMMARY at .paul/phases/v70-05-gemini-structured-extraction/v70-05-01-SUMMARY.md). Transition done: PROJECT.md evolved (Current State → 5 of 8 phases; v70-05 Validated entry; footer), ROADMAP v70-05 → ✅ Complete + milestone 5 of 8, bundled phase commit + push to origin master. doc → text → structure chain complete.
-Next action: /paul:plan v70-09 (Daniel-directed jump 2026-05-14 — setlist metadata editor: edit setlist name/date, closes Issue 2). /ui-ux-pro-max BLOCKING. After v70-09 ships + pushes → return to v70-06 in roadmap sequence.
+Stopped at: Phase v70-09 COMPLETE + transitioned. v70-09-01 LOOP CLOSED (SUMMARY at .paul/phases/v70-09-setlist-metadata-editor/v70-09-01-SUMMARY.md). Transition done: PROJECT.md evolved (Current State + v70-09 Validated entry + footer + MCP-workstream note), ROADMAP v70-09 → ✅ Complete, bundled phase commit + push to origin master. Setlist metadata editor shipped (Issue 2 closed).
+Next action: /paul:plan v70-06 (Resolve + missing-chart + recording-match — back in roadmap sequence; consumes v70-05's extractSetlistStructure tracks output; STAY IN LANE per the MCP-workstream handoff).
 Resume file: .paul/ROADMAP.md
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
 
+Loop position (v70-09 phase — COMPLETE, transitioned):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [Phase v70-09 COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED; phase transition done; next: /paul:plan v70-06]
+
 Loop position (v70-05 phase — COMPLETE, transitioned):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase v70-05 COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED; phase transition done; next: /paul:plan v70-09 (Daniel-directed jump)]
+  ✓        ✓        ✓     [Phase v70-05 COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED; phase transition done]
 
 Loop position (v70-04 phase — COMPLETE, transitioned):
 PLAN ──▶ APPLY ──▶ UNIFY
