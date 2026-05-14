@@ -91,7 +91,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 3, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: bumped 2→3 — image tracks now embed instead of skip; stale skip-era cached PDFs must not serve.
+        cacheVersion: 4, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
@@ -693,6 +693,32 @@ export async function generatePrintPdf(
         }
     }
 
+    // ── Step 2.5: library_index mimeType backstop ──
+    // Track docs bound via the picker / chart-binder don't reliably carry
+    // `mimeType` (and never carry `fileName`) — so the client-forwarded signal
+    // that isImageTrack() depends on is often absent, especially for
+    // Drive-synced charts. Resolve the missing mimeType server-side from the
+    // authoritative `library_index.{fileId}.mimeType` before per-track type
+    // routing, so image charts route to embedImageTrack instead of silently
+    // falling through to the PDF merge path. One batched read per print job.
+    const libIndexMime = new Map<string, string>()
+    const missingMimeFileIds = [
+        ...new Set(req.tracks.filter(t => t.fileId && !t.mimeType).map(t => t.fileId!)),
+    ]
+    if (missingMimeFileIds.length > 0) {
+        try {
+            const db = getFirestore()
+            const refs = missingMimeFileIds.map(id => db.collection("library_index").doc(id))
+            const snaps = await db.getAll(...refs)
+            for (const snap of snaps) {
+                const mt = snap.exists ? (snap.data()?.mimeType as string | undefined) : undefined
+                if (mt) libIndexMime.set(snap.id, mt)
+            }
+        } catch (err) {
+            logger.warn("[PrintPipeline] library_index mimeType backstop failed:", err)
+        }
+    }
+
     // ── Step 3: Process each track ──
     let trackIndex = 0
     for (const track of req.tracks) {
@@ -702,6 +728,12 @@ export async function generatePrintPdf(
         }
 
         if (!track.fileId || track.omitPdf) continue
+
+        // Apply the library_index mimeType backstop: a track bound without a
+        // persisted mimeType still gets correctly routed below.
+        if (!track.mimeType && libIndexMime.has(track.fileId)) {
+            track.mimeType = libIndexMime.get(track.fileId)
+        }
 
         // v70-01-02: image-typed tracks (PNG/JPEG) embed as their own letter-size
         // page via embedImageTrack. Image tracks carry fileId, so they are already

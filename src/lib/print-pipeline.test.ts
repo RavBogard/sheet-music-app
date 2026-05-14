@@ -128,6 +128,7 @@ const {
     mockDrawImage,
     mockEmbedJpg,
     mockEmbedPng,
+    mockGetAll,
 } = vi.hoisted(() => {
     const mockFetchFileById = vi.fn()
     const mockInitAdmin = vi.fn()
@@ -170,9 +171,13 @@ const {
         }),
     })
     const mockCollection = vi.fn().mockReturnValue({ doc: mockDoc })
+    // v70-01-02 follow-up: db.getAll() backs the library_index mimeType
+    // backstop. Defaults to [] (no backstop) so existing tests are unaffected.
+    const mockGetAll = vi.fn().mockResolvedValue([])
     const mockGetFirestoreFn = vi.fn().mockReturnValue({
         collection: mockCollection,
         batch: vi.fn().mockReturnValue({ set: mockBatchSet, commit: mockBatchCommit }),
+        getAll: mockGetAll,
     })
 
     // Storage mock chain (no cached result)
@@ -184,7 +189,7 @@ const {
 
     return {
         mockFetchFileById, mockInitAdmin, mockGetFirestoreFn, mockGetStorageFn,
-        mockDrawImage, mockEmbedJpg, mockEmbedPng,
+        mockDrawImage, mockEmbedJpg, mockEmbedPng, mockGetAll,
     }
 })
 
@@ -767,5 +772,40 @@ describe('Print Pipeline — Image Chart Embed', () => {
         expect(mockLoggerWarn).toHaveBeenCalledWith(
             expect.stringContaining('empty or missing file for "Missing PNG"')
         )
+    })
+
+    it('embeds an image track that carries NO mimeType/fileName, via the library_index backstop', async () => {
+        // Reproduces the v70-01-02 UAT failure: a Drive-synced image chart
+        // bound to a setlist whose track doc has neither mimeType nor fileName
+        // and a Drive-style fileId with no extension. isImageTrack() has no
+        // client signal — the print pipeline must resolve mimeType server-side
+        // from library_index.{fileId}.mimeType.
+        const driveImgId = '1TeiP5BlGnlP9ogYXO9yFL25J1Tz5k_RX'
+        const req: PrintRequestType = {
+            title: 'Shir Shabbat',
+            date: '2026-05-15',
+            tracks: [
+                { title: 'PDF Song', key: 'C', notes: '', fileId: 'pdf-1' },
+                // No mimeType, no fileName — exactly the production track shape.
+                { title: 'dodi li (sher)', key: 'D', notes: '', fileId: driveImgId },
+            ],
+        }
+
+        // library_index says this fileId is an image — the authoritative signal.
+        mockGetAll.mockResolvedValueOnce([
+            { id: driveImgId, exists: true, data: () => ({ mimeType: 'image/png' }) },
+        ])
+
+        mockFetchFileById.mockImplementation(async (fileId: string) => {
+            if (fileId === 'pdf-1') return { buffer: Buffer.from('fake-pdf'), contentType: 'application/pdf', source: 'firebase-storage' as const }
+            if (fileId === driveImgId) return { buffer: Buffer.from('IMG:100:100'), contentType: 'image/png', source: 'firebase-storage' as const }
+            return null
+        })
+
+        const result = await generatePrintPdf(req)
+
+        // Both tracks embed — the image is no longer silently dropped to the PDF path.
+        expect(result.stats.appendedTracks).toBe(2)
+        expect(mockEmbedPng).toHaveBeenCalledTimes(1)
     })
 })
