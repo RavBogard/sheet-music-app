@@ -18,20 +18,20 @@ Each token belongs to your account. Anything Claude does through it acts as you.
 The MCP endpoint is:
 
 ```
-https://centralreform.live/api/mcp
+https://www.centralreform.live/api/mcp
 ```
 
 ### Claude Desktop / Claude.ai (web)
 
 1. **Settings → Connectors → Add custom connector**.
-2. **URL:** `https://centralreform.live/api/mcp`
+2. **URL:** `https://www.centralreform.live/api/mcp`
 3. **Authentication:** Bearer token — paste your `crl_live_...` token.
 4. Save. Claude will list the available tools once connected.
 
 ### Claude Code
 
 ```bash
-claude mcp add centralreform-live https://centralreform.live/api/mcp \
+claude mcp add centralreform-live https://www.centralreform.live/api/mcp \
   --header "Authorization: Bearer crl_live_your_token_here"
 ```
 
