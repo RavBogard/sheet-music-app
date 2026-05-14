@@ -107,6 +107,30 @@ describe('useCreationWizard (single-step)', () => {
     expect(result.current.eventDate).toBeInstanceOf(Date)
   })
 
+  // v60-14-01 regression: when the user picks a date BEFORE selecting a template
+  // (the natural mobile flow — date → offer-strip → "Use a template"), the
+  // template select must NOT silently overwrite the user's chosen date with
+  // today. Pre-fix behavior: handleTemplateSelect always called
+  // setEventDate(new Date()), wiping Daniel's iPad date pick.
+  it('v60-14-01: template selection preserves the user\'s already-chosen eventDate', async () => {
+    const { result } = renderHook(() => useCreationWizard())
+
+    // Daniel picks May 15 in the Calendar first.
+    const userPick = new Date('2026-05-15T00:00:00.000Z')
+    act(() => { result.current.setEventDate(userPick) })
+    expect(result.current.eventDate?.getTime()).toBe(userPick.getTime())
+
+    // Then taps "Use a template" — must not blow the date away.
+    await act(async () => { await result.current.setSelectedTemplate('shabbat_morning') })
+
+    expect(result.current.eventDate?.getTime()).toBe(userPick.getTime())
+    // Name still auto-populates from the liturgical context using the
+    // user's chosen date (not today).
+    expect(result.current.name).toBe('Shabbat Morning — Bereshit')
+    // The liturgical context resolution used the user's date, not new Date().
+    expect(mockGetFullServiceContext).toHaveBeenCalledWith(userPick)
+  })
+
   it('template deselect leaves name as last-set value (no reset)', async () => {
     const { result } = renderHook(() => useCreationWizard())
     await act(async () => { await result.current.setSelectedTemplate('shabbat_morning') })

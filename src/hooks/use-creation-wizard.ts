@@ -84,6 +84,14 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
     // Selecting a template auto-fills name + date. Keeps the "shortcut" UX the
     // two-step wizard had, without the extra click-through.
+    //
+    // v60-14-01 fix: PRESERVE the user's already-chosen eventDate. The original
+    // implementation always called setEventDate(new Date()), which silently
+    // overwrote any date the user had picked via the Calendar before tapping
+    // "Use a template" (or selecting from the Template dropdown). Daniel UAT
+    // 2026-05-13: "when setting a date on mobile, it keeps accidently
+    // ressetting to the current date instead of the date that i have
+    // assigned…" — root cause located here, not in the picker UI.
     const handleTemplateSelect = useCallback(async (key: string | null) => {
         setSelectedTemplate(key)
         if (!key) return
@@ -92,16 +100,19 @@ export function useCreationWizard(): UseCreationWizardReturn {
         setMode('template')
 
         try {
-            const baseDate = new Date()
-            const context = await getFullServiceContext(baseDate)
+            // Use the user's chosen date for liturgical-context name
+            // generation when one is set; only fall back to today when the
+            // user hasn't picked anything yet.
+            const targetDate = eventDate ?? new Date()
+            const context = await getFullServiceContext(targetDate)
             context.type = key as ServiceType
             setName(generateSetlistName(context))
-            setEventDate(baseDate)
+            if (!eventDate) setEventDate(targetDate)
         } catch {
             const label = TEMPLATE_LABELS[key]?.label || 'Service'
             setName(label)
         }
-    }, [])
+    }, [eventDate])
 
     // When eventDate changes, query for the most recent prior setlist of the
     // inferred service type so the wizard can surface a Clone CTA. The lookup
