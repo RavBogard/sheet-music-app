@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { FieldValue } from 'firebase-admin/firestore'
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { createSetlistServerSide } from "@/lib/setlist-write"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { z } from "zod"
@@ -127,48 +127,32 @@ export const POST = createApiHandler(
             }
         }
 
-        // v60-07-04: Build the parent setlist doc WITHOUT embedded tracks.
-        // Top-level tracks/{id} rows are seeded via batch after the parent
-        // write. FieldValue.serverTimestamp() produces a proper Firestore
-        // Timestamp so the first editor edit round-trips cleanly through
-        // the v60-07-03 expectedUpdatedAt precondition (vs the prior
-        // ISO-string gap noted in RESEARCH/audit-writes.md W7).
-        const setlistId = crypto.randomUUID()
-        const setlistPayload = {
-            id: setlistId,
+        // v70-07-01: the parent-setlist-doc build + top-level tracks/{id} seed
+        // is now the shared server-side write path (src/lib/setlist-write.ts) —
+        // one write path consumed by this route, v70-07's doc-import commit,
+        // and the MCP write tools. `eventDate: new Date()` preserves this
+        // route's prior behavior of defaulting eventDate at import time (CSV
+        // import carries no service date); the module itself does not default.
+        const { setlistId } = await createSetlistServerSide({
             name: setName,
-            date: FieldValue.serverTimestamp(),
-            eventDate: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-            trackCount: resolvedTracks.length,
-            hydrated: true,
             ownerId: ctx.auth.uid,
             ownerName: ctx.auth.email || "Unknown",
-        }
-
-        await db.collection('setlists').doc(setlistId).set(setlistPayload)
-
-        // v60-07-04: Seed top-level tracks/{id} via Admin SDK batch.
-        // Server-side equivalent of v60-07-02's client-side seedTopLevelTracks
-        // (engine-path applyEdit fanout); on the server, we use a batched
-        // write because applyEdit is client-only. Sequential after the parent
-        // set() so partial failures leave a recoverable state (parent exists
-        // with hydrated:true + trackCount; reader fallback handles the gap
-        // until a retry or backfill seeds the rows).
-        if (resolvedTracks.length > 0) {
-            const batch = db.batch()
-            for (let i = 0; i < resolvedTracks.length; i++) {
-                const t = resolvedTracks[i]
-                const trackRef = db.collection('tracks').doc(t.id as string)
-                batch.set(trackRef, {
-                    ...t,
-                    setlistId,
-                    order: i,
-                    type: t.type ?? 'song',
-                })
-            }
-            await batch.commit()
-        }
+            eventDate: new Date(),
+            tracks: resolvedTracks.map((t) => {
+                // resolvedTracks is a union (header obj | song Record) — read
+                // through a Record view for the optional song fields.
+                const rec = t as Record<string, unknown>
+                return {
+                    type: (rec.type as 'song' | 'header') ?? 'song',
+                    title: (rec.title as string) ?? 'Untitled',
+                    key: rec.key as string | undefined,
+                    leadMusician: rec.leadMusician as string | undefined,
+                    referenceLink: rec.referenceLink as string | undefined,
+                    fileId: rec.fileId as string | undefined,
+                    fileName: rec.fileName as string | undefined,
+                }
+            }),
+        })
 
         logger.info(`[Setlist Importer] Importer generated setlist ${setlistId} with ${resolvedTracks.length} top-level tracks.`)
 
