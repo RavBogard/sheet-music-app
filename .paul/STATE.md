@@ -34,7 +34,37 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 **Resume after v60-13 cluster ships.** Task 3 is ~20 min when resumed.
 
-## Active Phase: v60-13 Sync-Engine Resilience (EMERGENT 2026-05-13)
+## v60-13 Sync-Engine Resilience — Wave 1 SHIPPED (2026-05-13)
+
+**Status:** 5 commits shipped. Critical-path P0 issues resolved. Outbox drain confirmed clean by Daniel UAT.
+
+### What Shipped (commits b4dbb19 → 9f21b74)
+
+| Commit | Plan | Issue addressed | UAT outcome |
+|--------|------|----------------|-------------|
+| 26797e7 | v60-13-01 | `/setlists` page auth gate over-restrictive | Did not fix homepage (wrong target — see 13e350d) |
+| 13e350d | v60-13-02 | Dashboard subscription errors silently swallowed | Surfaced — confirmed onError didn't fire |
+| da1a69e | v60-13-02b | Visible diag strip on empty-state | Showed "subscription has not fired yet" — pointed at incognito hang |
+| 6b7330c | v60-13-03 + v60-13-04 | (a) 49-row stuck outbox queue draining only one row per click; (b) Firestore listener silent-hang in incognito | **BOTH FIXED** per Daniel UAT 2026-05-13 |
+| 9f21b74 | v60-13-05 | Outbox console diagnostic on dashboard mount | Confirmed outbox=0 post-drain |
+
+### Daniel UAT — final state of session
+
+- Incognito Chrome → centralreform.live: **41 setlists load fresh** ✓
+- Desktop outbox: **0 rows** ✓ (was 49 stuck; v60-13-03 LWW-extend drained the queue)
+- Mobile ↔ desktop sync: confirmed working (mobile delete → desktop sees it within ~1s)
+- "Saved" status now accurate (was lying when queue was stuck)
+
+### Remaining v60-13 cluster work (open)
+
+| # | Issue | Status |
+|---|-------|--------|
+| v60-13-06 | Auto-refresh during edit ("real pain — refresh while I'm editing") | OPEN. Likely SetlistGridHydrator processing TWO snapshot emissions (cached then fresh) on initial load → useLiveQuery re-render → looks like a refresh. Needs dedup-by-content on hydrator writes. Deferred — not a one-line fix. |
+| v60-13-07 | Past desktop deletes (hashkiveinu, aleinu) didn't propagate | LIKELY ROOT-CAUSED by the 49-row queue jam (v60-13-03 fix). handleDeleteRow code path is correct (writes op:'delete' on tracks/{id}). Now that queue drains, future deletes should propagate. **No action needed unless Daniel re-reports after the fix.** |
+| Issue 2 | No UX to edit setlist name/date | OPEN. Routes to v70-09 polish phase (post-v7.0 main work). |
+| Issue 3 | Mobile date picker resets to today | OPEN. v60-14 OR v60-13-08. |
+
+### Active Phase: v60-13 Sync-Engine Resilience (EMERGENT 2026-05-13)
 
 **Trigger:** Daniel UAT 2026-05-13 reported 5 issues post-ab11850. Triage:
 
