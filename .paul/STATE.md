@@ -80,14 +80,20 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-14 (v60-13-06 LOOP CLOSED — auto-refresh-during-edit fix shipped + UAT'd + UNIFY'd)
-Stopped at: v60-13-06 LOOP COMPLETE @ HEAD `f684563`. PLAN ✓ APPLY ✓ UNIFY ✓. Content-hash dedup at hydrator write sites; 20/20 hydrator tests green; next build clean; Daniel UAT confirmed no mid-edit refresh. SUMMARY at .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md.
-Next action: Choose next priority — (a) /paul:apply v70-01-01 Task 3 (~20min, finishes image-chart phase), (b) /paul:apply v60-14-01 (mobile date picker — may auto-resolve from v60-13-06; discovery-first), (c) /paul:apply v70-09-01 (setlist metadata editor; needs /ui-ux-pro-max), (d) backfill v60-13-01 SUMMARY for cluster-close hygiene.
-Resume file: .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md
+Last session: 2026-05-14 (v60-13-06 + v60-14-01 BOTH LOOP CLOSED — emergent sync + UX cluster done)
+Stopped at: v60-14-01 LOOP COMPLETE @ HEAD `8a5fc3b`. PLAN ✓ APPLY ✓ UNIFY ✓. handleTemplateSelect preserves user's eventDate; 18/18 wizard tests green; next build clean; Daniel UAT carry-forward (v51-04 pattern, 6th use — "i'll check later"). SUMMARY at .paul/phases/v60-14-mobile-date-picker/v60-14-01-SUMMARY.md. v60-13-06 SUMMARY at .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md.
+Next action: /paul:apply v70-01-01 Task 3 (~20min — toolbar transpose+AI disable + PrintModal banner + print-pipeline image-skip guard; closes the v70-01 image-chart phase that's been paused mid-APPLY since 2026-05-13).
+Resume file: .paul/phases/v60-14-mobile-date-picker/v60-14-01-SUMMARY.md
 
-Loop position (v60-13-06):
+Loop position (v60-14-01):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-13-06 LOOP COMPLETE 2026-05-14]
+  ✓        ✓        ✓     [v60-14-01 LOOP COMPLETE 2026-05-14 — PENDING-UAT carry-forward]
+
+Emergent hot-fix cluster complete:
+  • v60-13 sync-engine resilience — wave 1 (5 commits) + v60-13-06 hydrator dedup (1 commit) all SHIPPED + UAT-confirmed (06 PENDING but Daniel approved on 2026-05-14)
+  • v60-14 mobile date picker — v60-14-01 SHIPPED (PENDING-UAT)
+  • v70-01-01 Task 3 still paused (will resume next)
+  • v70-09-01 (setlist metadata editor) still in queue (needs /ui-ux-pro-max consult)
 Git strategy: master (synced @ d81c3dc)
 Resume context:
 - v60-13 wave 1 SHIPPED: incognito blank + 49-row stuck outbox queue both FIXED per Daniel UAT (commits 26797e7 → d81c3dc; 5 plans / 1 STATE-update)
