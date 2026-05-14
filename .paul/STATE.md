@@ -80,20 +80,29 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-14 (v60-13-06 + v60-14-01 BOTH LOOP CLOSED — emergent sync + UX cluster done)
-Stopped at: v60-14-01 LOOP COMPLETE @ HEAD `8a5fc3b`. PLAN ✓ APPLY ✓ UNIFY ✓. handleTemplateSelect preserves user's eventDate; 18/18 wizard tests green; next build clean; Daniel UAT carry-forward (v51-04 pattern, 6th use — "i'll check later"). SUMMARY at .paul/phases/v60-14-mobile-date-picker/v60-14-01-SUMMARY.md. v60-13-06 SUMMARY at .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md.
-Next action: /paul:apply v70-01-01 Task 3 (~20min — toolbar transpose+AI disable + PrintModal banner + print-pipeline image-skip guard; closes the v70-01 image-chart phase that's been paused mid-APPLY since 2026-05-13).
-Resume file: .paul/phases/v60-14-mobile-date-picker/v60-14-01-SUMMARY.md
+Last session: 2026-05-14 (THREE LOOPS CLOSED in one session — v60-13-06 + v60-14-01 + v70-01-01)
+Stopped at: v70-01-01 LOOP COMPLETE @ HEAD `1c4f9f4`. PLAN ✓ APPLY ✓ UNIFY ✓. v7.0 milestone Wave 0 (image-chart support) shipped: PNG/JPEG/HEIC upload + ImageScoreViewer + transposer disabled with tooltip + PrintModal banner + print-pipeline skip guard. All 5 ACs Pass; AC-3/AC-4 PENDING-UAT carry-forward (v51-04 pattern, 7th use — "i'll check later"). 8/8 toolbar + 22/22 print-modal + 22/22 print-pipeline + 3/3 image-score-viewer tests green; next build exit 0. SUMMARY at .paul/phases/v70-01-image-chart-support/v70-01-01-SUMMARY.md.
+Next action: Choose next priority — (a) /paul:apply v70-01-02 (print embed — flip the SKIP guard to embedJpg/embedPng; ~1-2hr; scaffolding ready), (b) /paul:plan v70-02 (recordings data model — Wave 1 foundation), (c) /paul:apply v70-09-01 (setlist metadata editor — needs /ui-ux-pro-max consult; UX work), (d) small cleanup commit removing v60-13 diagnostic logging from DashboardClient.tsx.
+Resume file: .paul/phases/v70-01-image-chart-support/v70-01-01-SUMMARY.md
 
-Loop position (v60-14-01):
+Loop position (v70-01-01):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v60-14-01 LOOP COMPLETE 2026-05-14 — PENDING-UAT carry-forward]
+  ✓        ✓        ✓     [v70-01-01 LOOP COMPLETE 2026-05-14 — PENDING-UAT AC-3+AC-4 carry-forward]
 
-Emergent hot-fix cluster complete:
-  • v60-13 sync-engine resilience — wave 1 (5 commits) + v60-13-06 hydrator dedup (1 commit) all SHIPPED + UAT-confirmed (06 PENDING but Daniel approved on 2026-05-14)
-  • v60-14 mobile date picker — v60-14-01 SHIPPED (PENDING-UAT)
-  • v70-01-01 Task 3 still paused (will resume next)
-  • v70-09-01 (setlist metadata editor) still in queue (needs /ui-ux-pro-max consult)
+Session-wide accomplishments (2026-05-14 marathon):
+  • v60-13-06 hydrator dedup (auto-refresh-during-edit fix) — SHIPPED + UAT-confirmed
+  • v60-14-01 mobile date picker (handleTemplateSelect eventDate preservation) — SHIPPED + PENDING-UAT
+  • v70-01-01 Task 3 (transposer disabled + PrintModal banner + print-pipeline skip) — SHIPPED + PENDING-UAT
+  • v60-13 + v60-14 emergent rows closed in ROADMAP
+  • Three full PAUL loops closed end-to-end with discovery → APPLY → UNIFY discipline
+  • ui-ux-pro-max invoked for v70-01-01 Task 3 per SPECIAL-FLOWS.md requirement
+  • PENDING-UAT carry-forward count: 7 uses of v51-04 pattern this milestone
+
+Open queue:
+  • v70-01-02 (print embed) — scaffolding ready; flip a single guard
+  • v70-02..08 (recordings, doc upload, Gemini extraction, audit) — v7.0 main path
+  • v70-09-01 (setlist metadata editor) — UX work; needs /ui-ux-pro-max consult
+  • Cleanup: v60-13 diagnostic logging in DashboardClient.tsx (carry-forward)
 Git strategy: master (synced @ d81c3dc)
 Resume context:
 - v60-13 wave 1 SHIPPED: incognito blank + 49-row stuck outbox queue both FIXED per Daniel UAT (commits 26797e7 → d81c3dc; 5 plans / 1 STATE-update)
