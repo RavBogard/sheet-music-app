@@ -161,6 +161,15 @@ describe("PrintModal", () => {
         expect(screen.getByTestId("print-mode-selector")).toBeDefined()
     })
 
+    it("does not show an image-skip banner for image-containing setlists (v70-01-02 — images now embed)", () => {
+        const tracksWithImage: SetlistTrack[] = [
+            ...sampleTracks,
+            { id: "t4", title: "Dodi Li", type: "song", fileId: "upload-img", key: "C", mimeType: "image/png" },
+        ]
+        render(<PrintModal {...defaultProps} tracks={tracksWithImage} />)
+        expect(screen.queryByText(/included in printed packets/i)).toBeNull()
+    })
+
     // ── Mode switching ──
 
     it("defaults to just-me mode when user has musician profile", () => {

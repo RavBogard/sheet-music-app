@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Download, Loader2, Mail, FileStack, ListChecks, Image as ImageIcon } from "lucide-react"
+import { X, Printer, Download, Loader2, Mail, FileStack, ListChecks } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
@@ -18,17 +18,6 @@ import { toast } from "sonner"
 import { generatePdfBlob, generateZipBlob, downloadBlob } from "@/lib/print-generation"
 
 const STORAGE_KEY = "crc-print-selection"
-
-// v70-01-01 Task 3: image-typed tracks are skipped by the print pipeline
-// in this phase (full embed lands in v70-01-02). Mirror the queue-utils
-// extension matching here so the banner appears whenever Daniel's setlist
-// contains at least one image chart, even for legacy tracks bound before
-// mimeType was persisted on SetlistTrack.
-function isImageTrack(t: SetlistTrack): boolean {
-    if (t.mimeType?.startsWith('image/')) return true
-    const name = (t.fileName ?? t.fileId ?? '').toLowerCase()
-    return /\.(png|jpe?g|heic|heif)$/.test(name)
-}
 
 interface SavedSelection {
     mode: PrintMode
@@ -495,22 +484,6 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 showTranspositions={printMode !== "standard"}
                                 coverOnly={coverOnly}
                             />
-
-                            {/* v70-01-01 Task 3: notify when image charts will be skipped */}
-                            {(() => {
-                                const imageCount = tracks.filter(isImageTrack).length
-                                if (imageCount === 0) return null
-                                return (
-                                    <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground mt-2">
-                                        <ImageIcon className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-                                        <span>
-                                            {imageCount === 1
-                                                ? "1 image chart will be skipped — image charts aren't included in printed packets yet."
-                                                : `${imageCount} image charts will be skipped — image charts aren't included in printed packets yet.`}
-                                        </span>
-                                    </div>
-                                )
-                            })()}
 
                             {error && (
                                 <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm mt-2">

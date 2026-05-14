@@ -61,6 +61,12 @@ export const GET = createApiHandler(
                 notes: t.notes || '',
                 leadMusician: t.leadMusician || '',
                 fileId: t.fileId,
+                // v70-01-02: propagate fileName + mimeType so image-typed tracks
+                // are detected + embedded by the print pipeline. Without these,
+                // image tracks fall through to PDFDocument.load and are silently
+                // dropped by the PDF-parse catch.
+                fileName: t.fileName,
+                mimeType: t.mimeType,
                 type: t.type,
                 performer: t.performer,
                 estimatedMinutes: t.estimatedMinutes,

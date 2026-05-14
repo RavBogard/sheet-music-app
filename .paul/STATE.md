@@ -5,15 +5,15 @@
 See: .paul/PROJECT.md (updated 2026-05-13 after v6.0 ✅ COMPLETE via /paul:complete-milestone; v7.0 milestone now active — ready for /paul:plan v70-01)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 0 of 8 started. First phase: v70-01 image-chart support (PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary because the May 15 Shir Shabbat doc references `dodi li (sher).png`).
+**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 1 of 8 complete (v70-01 image-chart support). Next: v70-02 recordings data model (Wave 1 foundation).
 
 ## Current Position
 
-Version: v7.0.0-dev (v6.0 closed 2026-05-13; v7.0 first plan in PLAN phase)
+Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 phase COMPLETE 2026-05-14 — both plans LOOP COMPLETE)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: 1 of 8 — v70-01 Image-chart support — Planning
-Plan: v70-01-01 created 2026-05-13 (split: 01 = upload+view+toolbar; 02 = print-pipeline embed); awaiting approval
-Status: PLAN ✓ created at .paul/phases/v70-01-image-chart-support/v70-01-01-PLAN.md — ready for APPLY. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
+Phase: 2 of 8 — v70-02 Recordings data model — Ready to plan
+Plan: Not started
+Status: v70-01 phase COMPLETE — image charts end-to-end (upload + view + toolbar-guard + print embed). 2 plans LOOP COMPLETE: v70-01-01 (upload/view/toolbar) + v70-01-02 (print embed, enterprise-audited). Ready for /paul:plan v70-02. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
 Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
@@ -80,14 +80,22 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-14 (THREE LOOPS CLOSED in one session — v60-13-06 + v60-14-01 + v70-01-01)
-Stopped at: v70-01-01 LOOP COMPLETE @ HEAD `1c4f9f4`. PLAN ✓ APPLY ✓ UNIFY ✓. v7.0 milestone Wave 0 (image-chart support) shipped: PNG/JPEG/HEIC upload + ImageScoreViewer + transposer disabled with tooltip + PrintModal banner + print-pipeline skip guard. All 5 ACs Pass; AC-3/AC-4 PENDING-UAT carry-forward (v51-04 pattern, 7th use — "i'll check later"). 8/8 toolbar + 22/22 print-modal + 22/22 print-pipeline + 3/3 image-score-viewer tests green; next build exit 0. SUMMARY at .paul/phases/v70-01-image-chart-support/v70-01-01-SUMMARY.md.
-Next action: Choose next priority — (a) /paul:apply v70-01-02 (print embed — flip the SKIP guard to embedJpg/embedPng; ~1-2hr; scaffolding ready), (b) /paul:plan v70-02 (recordings data model — Wave 1 foundation), (c) /paul:apply v70-09-01 (setlist metadata editor — needs /ui-ux-pro-max consult; UX work), (d) small cleanup commit removing v60-13 diagnostic logging from DashboardClient.tsx.
-Resume file: .paul/phases/v70-01-image-chart-support/v70-01-01-SUMMARY.md
+Last session: 2026-05-14 (resumed post-reboot via /paul:resume; planned + audited + executed + unified v70-01-02 — phase v70-01 COMPLETE and pushed)
+Stopped at: v70-01 phase COMPLETE — both plans LOOP CLOSED, committed + pushed to origin master. v70-01-02 (print embed) shipped: print-pipeline isImageTrack SKIP replaced with embedImageTrack (18pt-margin aspect-fit page per /ui-ux-pro-max); personal-packet route mapper propagates fileName+mimeType; PrintModal deferral banner removed; cacheVersion 2→3. Enterprise-audit-hardened (try/catch around pdf-lib decode throws, graceful degradation with observable logger.warn, AC-6 + degraded-path test, 25MB upload-cap as documented image ceiling). next build ✓; print-pipeline 26/26 + print-modal 23/23; full suite 1649/52 (zero new regressions). HFG 0/3 held. Phase transition done: PROJECT.md evolved, ROADMAP.md v70-01 marked ✅ Complete, phase commit created + pushed.
+Next action: /paul:plan v70-02 (recordings data model — Wave 1 foundation; NEW recordings/{id} collection with songId? FK + notes field; HFG-relevant, emulator coverage required).
+Resume file: .paul/ROADMAP.md
 
-Loop position (v70-01-01):
+PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
+
+Loop position (v70-01-02 — closed):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v70-01-02 LOOP COMPLETE 2026-05-14 — print human-verify PENDING-UAT carry-forward]
+
+Loop position (v70-01-01 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [v70-01-01 LOOP COMPLETE 2026-05-14 — PENDING-UAT AC-3+AC-4 carry-forward]
+
+Phase v70-01 — COMPLETE (2 of 2 plans LOOP CLOSED 2026-05-14)
 
 Session-wide accomplishments (2026-05-14 marathon):
   • v60-13-06 hydrator dedup (auto-refresh-during-edit fix) — SHIPPED + UAT-confirmed
@@ -179,6 +187,12 @@ PLAN ──▶ APPLY ──▶ UNIFY
 Loop position (v60-10 — closed, parallel session):
 PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [LOOP COMPLETE — PENDING-UAT; pushed @ 6288c97]
+
+### Decisions (v70-01-02 / 2026-05-14)
+
+| Date | Decision | Phase | Impact |
+|------|----------|-------|--------|
+| 2026-05-14 | Enterprise audit performed on v70-01-02-PLAN.md. Applied 3 must-have, 4 strongly-recommended upgrades. Deferred 3. Verdict: conditionally acceptable → enterprise-ready post-upgrade | Phase 1 (v70-01) | Plan strengthened for enterprise standards — embed try/catch around pdf-lib decode throws, oversized-image guard, AC-6 graceful-degradation contract + degraded-path test, definitive totalTracks fact, non-square test fixture, EXIF-orientation known-limitation note, observable logger.warn on embed failure. AUDIT.md in phase dir. |
 
 ### Decisions (v60-10-01 / 2026-05-13)
 

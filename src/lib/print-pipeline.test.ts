@@ -125,9 +125,35 @@ const {
     mockInitAdmin,
     mockGetFirestoreFn,
     mockGetStorageFn,
+    mockDrawImage,
+    mockEmbedJpg,
+    mockEmbedPng,
 } = vi.hoisted(() => {
     const mockFetchFileById = vi.fn()
     const mockInitAdmin = vi.fn()
+
+    // ── Image embed mocks (v70-01-02) ──
+    // A mock image buffer encodes its intrinsic dimensions as "IMG:<w>:<h>".
+    // "IMG:BAD" makes the embed throw (simulates a corrupt/unsupported image)
+    // so the degraded-path resilience can be tested.
+    const mockDrawImage = vi.fn()
+    const makeMockImage = (buffer: Buffer) => {
+        const text = buffer.toString()
+        if (text.includes('IMG:BAD')) throw new Error('Invalid image data')
+        const m = text.match(/IMG:(\d+):(\d+)/)
+        const w = m ? Number(m[1]) : 100
+        const h = m ? Number(m[2]) : 100
+        return {
+            width: w,
+            height: h,
+            scaleToFit: (maxW: number, maxH: number) => {
+                const ratio = Math.min(maxW / w, maxH / h)
+                return { width: w * ratio, height: h * ratio }
+            },
+        }
+    }
+    const mockEmbedJpg = vi.fn(async (buffer: Buffer) => makeMockImage(buffer))
+    const mockEmbedPng = vi.fn(async (buffer: Buffer) => makeMockImage(buffer))
 
     // Firestore mock chain
     const mockGet = vi.fn().mockResolvedValue({ exists: false })
@@ -156,7 +182,10 @@ const {
     const mockBucket = vi.fn().mockReturnValue({ file: mockFile })
     const mockGetStorageFn = vi.fn().mockReturnValue({ bucket: mockBucket })
 
-    return { mockFetchFileById, mockInitAdmin, mockGetFirestoreFn, mockGetStorageFn }
+    return {
+        mockFetchFileById, mockInitAdmin, mockGetFirestoreFn, mockGetStorageFn,
+        mockDrawImage, mockEmbedJpg, mockEmbedPng,
+    }
 })
 
 vi.mock('@/lib/file-fetcher', () => ({
@@ -169,8 +198,10 @@ vi.mock('@/lib/firebase-admin', () => ({
     getStorage: mockGetStorageFn,
 }))
 
+const { mockLoggerWarn } = vi.hoisted(() => ({ mockLoggerWarn: vi.fn() }))
+
 vi.mock('@/lib/logger', () => ({
-    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    logger: { info: vi.fn(), warn: mockLoggerWarn, error: vi.fn() },
 }))
 
 // ── Dynamic import of the module under test ──
@@ -192,6 +223,7 @@ vi.mock('pdf-lib', () => {
         drawText: vi.fn(),
         drawLine: vi.fn(),
         drawRectangle: vi.fn(),
+        drawImage: mockDrawImage,
         getPageIndices: vi.fn().mockReturnValue([0]),
     }
 
@@ -202,6 +234,8 @@ vi.mock('pdf-lib', () => {
                 embedFont: vi.fn().mockResolvedValue({
                     widthOfTextAtSize: vi.fn().mockReturnValue(100),
                 }),
+                embedJpg: mockEmbedJpg,
+                embedPng: mockEmbedPng,
                 copyPages: vi.fn().mockResolvedValue([mockPage]),
                 getPageIndices: vi.fn().mockReturnValue([0]),
                 save: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])), // %PDF
@@ -605,5 +639,133 @@ describe('Print Pipeline — Cover-Only Mode', () => {
         expect(mockFetchFileById).not.toHaveBeenCalled()
         expect(result.pdf).toBeInstanceOf(Uint8Array)
         expect(result.stats.totalTracks).toBe(0)
+    })
+})
+
+// ══════════════════════════════════════════════════════════════════
+// Plan v70-01-02: Image-chart embed into print packets
+// ══════════════════════════════════════════════════════════════════
+
+describe('Print Pipeline — Image Chart Embed', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockGetStorageFn.mockReturnValue({
+            bucket: vi.fn().mockReturnValue({
+                file: vi.fn().mockReturnValue({
+                    exists: vi.fn().mockResolvedValue([false]),
+                    save: vi.fn().mockResolvedValue(undefined),
+                }),
+            }),
+        })
+    })
+
+    it('embeds PNG and JPEG image tracks — both count toward appendedTracks', async () => {
+        const req: PrintRequestType = {
+            title: 'Mixed Service',
+            date: '2026-05-15',
+            tracks: [
+                { title: 'PDF Song', key: 'C', notes: '', fileId: 'pdf-1' },
+                { title: 'PNG Chart', key: 'G', notes: '', fileId: 'upload-png', mimeType: 'image/png' },
+                { title: 'JPEG Chart', key: 'D', notes: '', fileId: 'upload-jpg', mimeType: 'image/jpeg' },
+            ],
+        }
+
+        mockFetchFileById.mockImplementation(async (fileId: string) => {
+            if (fileId === 'pdf-1') return { buffer: Buffer.from('fake-pdf'), contentType: 'application/pdf', source: 'firebase-storage' as const }
+            if (fileId === 'upload-png') return { buffer: Buffer.from('IMG:100:300'), contentType: 'image/png', source: 'firebase-storage' as const }
+            if (fileId === 'upload-jpg') return { buffer: Buffer.from('IMG:200:100'), contentType: 'image/jpeg', source: 'firebase-storage' as const }
+            return null
+        })
+
+        const result = await generatePrintPdf(req)
+
+        expect(result.stats.totalTracks).toBe(3)
+        expect(result.stats.appendedTracks).toBe(3) // 1 PDF + 2 images
+        expect(mockEmbedPng).toHaveBeenCalledTimes(1)
+        expect(mockEmbedJpg).toHaveBeenCalledTimes(1)
+        // fetchFileById receives the mimeType hint so Storage resolves the right object
+        expect(mockFetchFileById).toHaveBeenCalledWith('upload-png', 'image/png')
+        expect(mockFetchFileById).toHaveBeenCalledWith('upload-jpg', 'image/jpeg')
+    })
+
+    it('scales a non-square image aspect-preserved and centers it on the page', async () => {
+        const req: PrintRequestType = {
+            title: 'Wide Chart',
+            date: '2026-05-15',
+            tracks: [
+                { title: 'Landscape JPEG', key: 'A', notes: '', fileId: 'upload-wide', mimeType: 'image/jpeg' },
+            ],
+        }
+
+        // 2:1 landscape image (200x100)
+        mockFetchFileById.mockResolvedValue({
+            buffer: Buffer.from('IMG:200:100'),
+            contentType: 'image/jpeg',
+            source: 'firebase-storage' as const,
+        })
+
+        await generatePrintPdf(req)
+
+        // Letter page 612x792, 18pt margin → fit box 576x756.
+        // 2:1 image → ratio = min(576/200, 756/100) = 2.88 → 576x288.
+        // Centered: x=(612-576)/2=18, y=(792-288)/2=252.
+        expect(mockDrawImage).toHaveBeenCalledTimes(1)
+        const drawArgs = mockDrawImage.mock.calls[0][1]
+        expect(drawArgs.width).toBeCloseTo(576)
+        expect(drawArgs.height).toBeCloseTo(288)
+        expect(drawArgs.x).toBeCloseTo(18)
+        expect(drawArgs.y).toBeCloseTo(252)
+    })
+
+    it('degrades gracefully when an image track is corrupt — other tracks still embed', async () => {
+        const req: PrintRequestType = {
+            title: 'Service With Bad Image',
+            date: '2026-05-15',
+            tracks: [
+                { title: 'Good PDF', key: 'C', notes: '', fileId: 'pdf-good' },
+                { title: 'Corrupt PNG', key: 'G', notes: '', fileId: 'upload-bad', mimeType: 'image/png' },
+                { title: 'Good JPEG', key: 'D', notes: '', fileId: 'upload-good', mimeType: 'image/jpeg' },
+            ],
+        }
+
+        mockFetchFileById.mockImplementation(async (fileId: string) => {
+            if (fileId === 'pdf-good') return { buffer: Buffer.from('fake-pdf'), contentType: 'application/pdf', source: 'firebase-storage' as const }
+            if (fileId === 'upload-bad') return { buffer: Buffer.from('IMG:BAD'), contentType: 'image/png', source: 'firebase-storage' as const }
+            if (fileId === 'upload-good') return { buffer: Buffer.from('IMG:150:150'), contentType: 'image/jpeg', source: 'firebase-storage' as const }
+            return null
+        })
+
+        // Must NOT throw — the job completes
+        const result = await generatePrintPdf(req)
+
+        expect(result.stats.totalTracks).toBe(3)
+        expect(result.stats.appendedTracks).toBe(2) // PDF + good JPEG; corrupt PNG skipped
+        // The failed embed is observable in logs (never a silent drop)
+        expect(mockLoggerWarn).toHaveBeenCalledWith(
+            expect.stringContaining('Image embed failed for "Corrupt PNG"')
+        )
+    })
+
+    it('skips a missing image file and logs a warning without throwing', async () => {
+        const req: PrintRequestType = {
+            title: 'Service With Missing Image',
+            date: '2026-05-15',
+            tracks: [
+                { title: 'Missing PNG', key: 'G', notes: '', fileId: 'upload-missing', mimeType: 'image/png' },
+                { title: 'Good JPEG', key: 'D', notes: '', fileId: 'upload-good', mimeType: 'image/jpeg' },
+            ],
+        }
+
+        mockFetchFileById.mockImplementation(async (fileId: string) => {
+            if (fileId === 'upload-missing') return null
+            return { buffer: Buffer.from('IMG:150:150'), contentType: 'image/jpeg', source: 'firebase-storage' as const }
+        })
+
+        const result = await generatePrintPdf(req)
+
+        expect(result.stats.appendedTracks).toBe(1) // only the good JPEG
+        expect(mockLoggerWarn).toHaveBeenCalledWith(
+            expect.stringContaining('empty or missing file for "Missing PNG"')
+        )
     })
 })

@@ -91,7 +91,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 2, // Increment when PDF rendering logic changes to bypass stale cache
+        cacheVersion: 3, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: bumped 2→3 — image tracks now embed instead of skip; stale skip-era cached PDFs must not serve.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
@@ -558,6 +558,72 @@ async function renderServiceFlowItem(
     })
 }
 
+// ── Image Track Embed (v70-01-02) ──
+
+/**
+ * Embed an image-typed track (PNG / JPEG) as its own letter-size page.
+ *
+ * HEIC is server-converted to JPEG at upload time (v70-01-01 Task 1), so a raw
+ * HEIC byte stream should never reach here — if one does, it is logged and
+ * skipped rather than throwing.
+ *
+ * Returns `true` only on a successful embed. Every failure path (missing file,
+ * empty buffer, unsupported/corrupt image, pdf-lib decode throw) is caught,
+ * logged with a structured warning, and returns `false` so the rest of the
+ * packet still prints. Mirrors the per-track resilience of the PDF merge path.
+ *
+ * Known limitation: `embedJpg` draws raw pixels and does NOT honor EXIF
+ * orientation tags — a phone photo may embed rotated. Tracked as a carry-forward.
+ *
+ * Image source bytes are capped at 25MB by `/api/library/upload` (MAX_FILE_SIZE),
+ * so no separate size guard is needed here.
+ *
+ * Layout per /ui-ux-pro-max: 18pt margin (maximizes chart size for stage reading,
+ * consistent with the edge-merged PDF chart pages), aspect-preserved, centered,
+ * no title caption (the cover page already lists every track's title/key/lead).
+ */
+async function embedImageTrack(mergedPdf: PDFDocument, track: PrintTrack): Promise<boolean> {
+    try {
+        const fetched = await fetchFileById(track.fileId!, track.mimeType)
+        if (!fetched || fetched.buffer.byteLength === 0) {
+            logger.warn(`[PrintPipeline] Image embed: empty or missing file for "${track.title}" (fileId ${track.fileId})`)
+            return false
+        }
+
+        const signal = `${fetched.contentType} ${track.mimeType ?? ''} ${track.fileName ?? track.fileId ?? ''}`.toLowerCase()
+
+        if (/heic|heif/.test(signal)) {
+            logger.warn(`[PrintPipeline] Image embed: unexpected raw HEIC at print time for "${track.title}" (fileId ${track.fileId}) — skipping`)
+            return false
+        }
+
+        const isJpeg = /jpeg|jpg/.test(signal)
+        const isPng = /png/.test(signal)
+        if (!isJpeg && !isPng) {
+            logger.warn(`[PrintPipeline] Image embed: unsupported image type "${fetched.contentType}" for "${track.title}" (fileId ${track.fileId}) — skipping`)
+            return false
+        }
+
+        const image = isJpeg
+            ? await mergedPdf.embedJpg(fetched.buffer)
+            : await mergedPdf.embedPng(fetched.buffer)
+
+        const PAGE_W = 612, PAGE_H = 792, MARGIN = 18
+        const page = mergedPdf.addPage([PAGE_W, PAGE_H])
+        const dims = image.scaleToFit(PAGE_W - MARGIN * 2, PAGE_H - MARGIN * 2)
+        page.drawImage(image, {
+            x: (PAGE_W - dims.width) / 2,
+            y: (PAGE_H - dims.height) / 2,
+            width: dims.width,
+            height: dims.height,
+        })
+        return true
+    } catch (err) {
+        logger.warn(`[PrintPipeline] Image embed failed for "${track.title}" (fileId ${track.fileId}): ${err instanceof Error ? err.message : String(err)}`)
+        return false
+    }
+}
+
 // ── Main Pipeline ──
 
 export async function generatePrintPdf(
@@ -637,12 +703,19 @@ export async function generatePrintPdf(
 
         if (!track.fileId || track.omitPdf) continue
 
-        // v70-01-01 Task 3: skip image-typed tracks; v70-01-02 will replace
-        // this guard with an embedJpg/embedPng branch. Skipping (rather than
-        // failing) keeps mixed setlists printable in this phase — the
-        // PrintModal banner notifies Daniel up front.
+        // v70-01-02: image-typed tracks (PNG/JPEG) embed as their own letter-size
+        // page via embedImageTrack. Image tracks carry fileId, so they are already
+        // counted in stats.totalTracks — incrementing trackIndex + appendedTracks
+        // here keeps progress reporting and stats accurate. A failed embed returns
+        // false (logged) and is simply not counted; the rest of the packet prints.
         if (isImageTrack(track)) {
-            logger.info(`[PrintPipeline] Skipping image-typed track in v70-01-01: ${track.title}`)
+            trackIndex++
+            onProgress?.({
+                phase: 'processing', currentTrack: trackIndex, totalTracks: stats.totalTracks,
+                currentTitle: track.title, message: `Processing: ${track.title}`,
+            })
+            const embedded = await embedImageTrack(mergedPdf, track)
+            if (embedded) stats.appendedTracks++
             continue
         }
         trackIndex++
