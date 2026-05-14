@@ -9,11 +9,11 @@ See: .paul/PROJECT.md (updated 2026-05-14 after v70-01 ✅ COMPLETE; v7.0 milest
 
 ## Current Position
 
-Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 phase COMPLETE 2026-05-14 — both plans LOOP COMPLETE)
+Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 phase COMPLETE 2026-05-14)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: 2 of 8 — v70-02 Recordings data model — Ready to plan
-Plan: Not started
-Status: v70-01 phase COMPLETE — image charts end-to-end (upload + view + toolbar-guard + print embed). 2 plans LOOP COMPLETE: v70-01-01 (upload/view/toolbar) + v70-01-02 (print embed, enterprise-audited). Ready for /paul:plan v70-02. v6.0 milestone CLOSED. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
+Phase: 2 of 8 — v70-02 Recordings data model — Planning
+Plan: v70-02-01 created 2026-05-14 (recordings data model foundation — Recording type + Storage path helper + Firestore rules + composite index + emulator rules test); awaiting approval.
+Status: PLAN ✓ created at .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md — standard track, 3 auto tasks, autonomous (no checkpoints). Data-layer-only phase: /ui-ux-pro-max N/A. HFG-relevant — emulator coverage required, no clause-(b) waiver. v6.0 milestone CLOSED. v70-01 phase COMPLETE @ `3389b58`. 12 of 12 phases LOOP COMPLETE across 25 commits 2026-05-12 → 2026-05-13. Master HEAD `04499a4`. Top-level `tracks/{id}` is now sole source-of-truth; every reader + writer routes through helpers; HFG counter held at 0/3 throughout via emulator coverage on every data-layer phase. Production state: 131-doc shortcut backfill applied (songs 364 → 495); firestore.rules deployed for public tracks visibility; Vercel auto-deploy in flight for `04499a4`. Accumulated PENDING-UAT carry-forwards remain — v6.0 closed via Daniel "go" override per the 5th consecutive use of v51-04 pattern; UAT continues against deployed commits over worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans OR new emergent phases under v6.0 archive or v7.0 banner.
 Last activity: 2026-05-13 — v6.0 milestone closed via /paul:complete-milestone. ROADMAP reorganized (v7.0 promoted to Current Milestone; v6.0 collapsed to Previously Active with archive pointer); MILESTONES.md gained extensive v6.0 entry (12 phases / 24 plans / 25 commits / 0/3 HFG counter / 5 emergent close-gate phases / 13 key decisions / 8 patterns established); .paul/milestones/v6.0-ROADMAP.md archive snapshot created; package.json bumped 5.4.0 → 6.0.0; PROJECT.md Current State row updated to v6.0.0 COMPLETE.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
@@ -80,12 +80,20 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-14 (resumed post-reboot via /paul:resume; planned + audited + executed + unified v70-01-02 — phase v70-01 COMPLETE and pushed)
-Stopped at: v70-01 phase COMPLETE — both plans LOOP CLOSED, committed + pushed to origin master. v70-01-02 (print embed) shipped: print-pipeline isImageTrack SKIP replaced with embedImageTrack (18pt-margin aspect-fit page per /ui-ux-pro-max); personal-packet route mapper propagates fileName+mimeType; PrintModal deferral banner removed; cacheVersion 2→3. Enterprise-audit-hardened (try/catch around pdf-lib decode throws, graceful degradation with observable logger.warn, AC-6 + degraded-path test, 25MB upload-cap as documented image ceiling). next build ✓; print-pipeline 26/26 + print-modal 23/23; full suite 1649/52 (zero new regressions). HFG 0/3 held. Phase transition done: PROJECT.md evolved, ROADMAP.md v70-01 marked ✅ Complete, phase commit created + pushed.
-Next action: /paul:plan v70-02 (recordings data model — Wave 1 foundation; NEW recordings/{id} collection with songId? FK + notes field; HFG-relevant, emulator coverage required).
-Resume file: .paul/ROADMAP.md
+Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase v70-01; created v70-02-01 PLAN; then Daniel UAT surfaced + systematic-debugged + fixed a v70-01-02 print bug)
+
+v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
+Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
+
+Stopped at: v70-02-01 PLAN ✓ created, awaiting approval. v70-02 = recordings data model foundation: NEW `recordings/{id}` Firestore collection (Recording type in models.ts with songId? FK + notes field), `getRecordingStoragePath` helper (recordings/{id}.{ext} convention), Firestore rules block (read isMember, write band-leader/admin — mirrors songs/{id}) + composite index (songId ASC, createdAt DESC), emulator-backed rules test. Standard track, 3 auto tasks, autonomous. Data-layer only — /ui-ux-pro-max N/A. HFG-relevant: emulator coverage required, no clause-(b) waiver. NO upload route / UI / playback (those land in v70-03 / v70-06).
+Next action: /paul:apply .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md (optionally /paul:audit first — manual invocation; the audit added real value on v70-01-02). OR consider pulling v70-09 (setlist metadata editor) forward if Issue 2 is higher priority for Daniel.
+Resume file: .paul/phases/v70-02-recordings-data-model/v70-02-01-PLAN.md
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
+
+Loop position (v70-02-01 — current):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ○        ○     [v70-02-01 PLAN created 2026-05-14; autonomous, no checkpoints; ready for APPLY]
 
 Loop position (v70-01-02 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY
