@@ -74,3 +74,47 @@ Check:
 - [ ] Open the editor, change nothing, tap Save → nothing happens (no error, sheet closes).
 - [ ] Open the editor, make a change, tap Cancel (or press Escape / tap outside) → the change is discarded, setlist unchanged.
 - [ ] iPad: the Sheet is comfortable; the pencil trigger, inputs, date picker, service-type select, and Save/Cancel buttons all feel ≥44px and easy to tap.
+
+---
+
+## v70-07-02 — Document-import flow: upload → interview → preview
+
+The ImporterModal now has a third input option, **"Upload Document"** (.docx /
+.pdf / .txt). Selecting a document and submitting chains the v70-04→06 backend:
+extract text → Gemini structured extraction → library resolution, then walks a
+structured **interview form** (setlist name, REQUIRED service date auto-suggested
+from the filename, service type auto-inferred from document keywords, optional
+rabbi) and a read-only **setlist preview** grouped by section. This plan stops
+before commit — the "Create Setlist" button is intentionally inert (wired in
+v70-07-03).
+
+Check:
+- [ ] Open the importer → the input step shows three options: Google Sheets URL, Upload CSV, **Upload Document**. Selecting one clears the other two.
+- [ ] Upload a service-outline doc (the May 15 Shir Shabbat .docx canary) → button reads "Next: Analyze Document" → processing spinner → lands on the interview step. The existing URL/CSV flow still works unchanged.
+- [ ] Interview step: setlist name pre-filled from the filename; **service date pre-filled** by parsing the filename (e.g. "May 15th…" → that date); service type pre-selected from doc keywords; rabbi blank/optional.
+- [ ] Clear the service date → "Next: Preview" is disabled; set a date → it enables.
+- [ ] Preview step: header shows the interview values; tracks are grouped under their section headings in document order, as compact text rows (no cover art); each track shows key / vocal lead and either a **matched library chart** (name + confidence %) or an amber **"Missing chart"** flag; tracks with audio matches show a recording-count marker.
+- [ ] The "Create Setlist" button on the preview is present but **disabled** (commit lands in the next step). "Back" navigates preview → interview → input correctly.
+- [ ] Error path: upload a corrupt/empty doc → a toast surfaces the server error and the modal returns to the input step.
+- [ ] iPad: the new dropzone, the interview form inputs/select, and the preview rows are comfortable and tappable (≥44px).
+
+---
+
+## v70-07-03 — Document-import commit: "Create Setlist" works end to end
+
+The ImporterModal preview-step "Create Setlist" button is now wired. Clicking it
+POSTs the resolved structure + interview values to
+`POST /api/setlists/import/commit-document`, which flattens the structure
+(section headers interleaved before their songs, matched library charts bound,
+recording candidates ignored — recording binding deferred) and persists via
+`createSetlistServerSide`. This completes the v7.0 doc-driven pipeline:
+upload → interview → preview → real setlist.
+
+Check:
+- [ ] Run the full flow: open the importer → Upload Document (the May 15 Shir Shabbat .docx canary) → interview → preview → click **"Create Setlist"**.
+- [ ] The button shows a "Creating..." spinner while in flight, then the modal closes and the newly created setlist opens.
+- [ ] The created setlist has its **section headers** in place, in document order, with the songs grouped under them.
+- [ ] Songs that matched a library chart have the **chart bound** (openable from the setlist); songs flagged "missing chart" in the preview have no chart bound.
+- [ ] The setlist's **name, event date, service type, and rabbi** match what was entered in the interview form.
+- [ ] Error path: if the commit fails (e.g. offline), a toast surfaces the error and the modal stays on the preview step (no half-created setlist, button re-enables).
+- [ ] iPad: the "Create Setlist" / "Back" buttons are comfortably tappable; the loading state is clear.
