@@ -153,6 +153,15 @@ Resume context:
 - HFG counter held at 0/3 throughout v6.0
 - After UAT clears: /paul:complete-milestone closes v6.0 → /paul:plan v70-01 (image-chart support — PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary)
 
+### Git State (v70-02 phase transition)
+Last commit: `e90c6cb` — feat(v70-02): recordings data model — recordings/{id} collection foundation; phase complete
+Branch: master — synced with origin/master after push 2026-05-14 (`e44122f..e90c6cb`)
+Feature branches merged: none (no feature branch for v70-02)
+Push: ✅ DONE 2026-05-14 — `e44122f..e90c6cb` pushed to origin master; Vercel auto-deploy triggered
+Prior commits this session: `1fef342` (v70-01-02 UAT follow-up fix — print-pipeline library_index backstop), `e44122f` (v70-02-01 PLAN + STATE)
+Production deploys: firestore.rules + firestore.indexes deployed via firebase CLI (recordings/{id} rules block + songId+createdAt composite index)
+HFG counter: 0/3 held (v70-02 data-layer phase shipped emulator rules coverage — no clause-(b) waiver)
+
 ### Git State (v70-01 phase transition)
 Last commit: `af26d2a` — feat(v70-01-02): image-chart print embed; v70-01 phase complete
 Branch: master — synced with origin/master after push 2026-05-14 (`2fbcb46..af26d2a`)
